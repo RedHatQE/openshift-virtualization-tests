@@ -79,6 +79,7 @@ class CNIPluginOvnK8sConfig(CNIPluginConfig):
     netAttachDefName: str  # noqa: N815
     vlanID: int | None = None  # noqa: N815
     subnets: str | None = None
+    allowPersistentIPs: bool | None = None  # noqa: N815
 
     class Topology(Enum):
         LOCALNET = "localnet"
@@ -121,6 +122,16 @@ class NetConfig:
     name: str
     plugins: list[CNIPluginConfig]
     cniVersion: str = _DEFAULT_CNI_VERSION  # noqa: N815
+    allowPersistentIPs: bool | None = None  # noqa: N815
+
+
+class IPAMClaim(NamespacedResource):
+    """
+    IPAMClaim object — tracks persistent IP allocations for KubeVirt VMs
+    on OVN-K secondary networks with allowPersistentIPs enabled.
+    """
+
+    api_group = NamespacedResource.ApiGroup.K8S_CNI_CNCF_IO
 
 
 class NetworkAttachmentDefinition(NamespacedResource):
