@@ -3,6 +3,7 @@ import shlex
 import pytest
 from ocp_resources.service import Service
 
+from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
 from tests.network.network_service.libservice import (
     SERVICE_IP_FAMILY_POLICY_SINGLE_STACK,
     basic_expose_command,
@@ -79,8 +80,12 @@ def virtctl_expose_service(
 
 
 @pytest.fixture()
-def expected_num_families_in_service(request, dual_stack_cluster):
+def expected_num_families_in_service(request):
     ip_family_policy = request.param
-    if ip_family_policy != SERVICE_IP_FAMILY_POLICY_SINGLE_STACK and dual_stack_cluster:
+    if (
+        ip_family_policy != SERVICE_IP_FAMILY_POLICY_SINGLE_STACK
+        and ipv4_supported_cluster()
+        and ipv6_supported_cluster()
+    ):
         return 2
     return 1

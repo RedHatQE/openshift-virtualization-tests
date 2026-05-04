@@ -4,8 +4,8 @@ VM to VM connectivity via secondary (bridged) interfaces.
 
 import pytest
 
+from libs.net.ip import filter_link_local_addresses
 from libs.net.vmspec import lookup_iface_status, lookup_iface_status_ip
-from tests.network.libs.ip import filter_link_local_addresses
 from tests.network.utils import assert_no_ping
 from utilities.network import assert_ping_successful
 
@@ -74,6 +74,7 @@ class TestConnectivityOVSBridge:
     @pytest.mark.post_upgrade
     @pytest.mark.gating
     @pytest.mark.polarion("CNV-12556")
+    @pytest.mark.jira("CNV-85477", run=False)
     def test_ovs_bridge(
         self,
         subtests,

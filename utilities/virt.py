@@ -63,6 +63,7 @@ from utilities.constants import (
     IP_FAMILY_POLICY_PREFER_DUAL_STACK,
     LINUX_AMD_64,
     LINUX_STR,
+    MULTIARCH,
     OS_FLAVOR_ALPINE,
     OS_FLAVOR_CIRROS,
     OS_FLAVOR_FEDORA,
@@ -88,6 +89,7 @@ from utilities.constants import (
     VIRT_HANDLER,
     VIRT_LAUNCHER,
     VIRTCTL,
+    ArchImages,
     Images,
 )
 from utilities.data_collector import collect_vnc_screenshot_for_vms
@@ -1121,7 +1123,9 @@ class VirtualMachineForTests(VirtualMachine):
             else self.pvc.instance.spec.accessModes
             if self.pvc
             else self.data_volume_template["spec"][api_name].get("accessModes")
-            or StorageProfile(name=_sc_name_for_storage_api()).instance.status["claimPropertySets"][0]["accessModes"]
+            or StorageProfile(client=self.client, name=_sc_name_for_storage_api()).instance.status["claimPropertySets"][
+                0
+            ]["accessModes"]
         )
 
     @property
@@ -1517,26 +1521,33 @@ def vm_console_run_commands(
 def fedora_vm_body(name: str) -> dict[str, Any]:
     pull_secret = utilities.infra.generate_openshift_pull_secret_file()
 
-    # Make sure we can find the file even if utilities was installed via pip.
-    yaml_file = os.path.abspath("utilities/manifests/vm-fedora.yaml")
-
-    with open(yaml_file) as fd:
-        data = fd.read()
-
-    image = Images.Fedora.FEDORA_CONTAINER_IMAGE
+    image = getattr(ArchImages, py_config["cpu_arch"].upper()).Fedora.FEDORA_CONTAINER_IMAGE
     image_info = get_oc_image_info(
         image=image,
         pull_secret=pull_secret,
-        architecture=utilities.cpu.get_nodes_cpu_architecture(
-            nodes=list(Node.get(client=get_client())),
-        ),
+        architecture=py_config["cpu_arch"],
     )
     image_digest = image_info["digest"]
-    return generate_dict_from_yaml_template(
-        stream=io.StringIO(data),
-        name=name,
-        image=f"{image}@{image_digest}",
-    )
+
+    # TODO: Move to jinja2 template
+    if py_config["cluster_type"] == MULTIARCH:
+        with open(os.path.abspath("utilities/manifests/vm-fedora-multiarch.yaml")) as fd:
+            data = fd.read()
+
+        return generate_dict_from_yaml_template(
+            stream=io.StringIO(data),
+            name=name,
+            image=f"{image}@{image_digest}",
+            arch=py_config["cpu_arch"],
+        )
+    else:
+        with open(os.path.abspath("utilities/manifests/vm-fedora.yaml")) as fd:
+            data = fd.read()
+        return generate_dict_from_yaml_template(
+            stream=io.StringIO(data),
+            name=name,
+            image=f"{image}@{image_digest}",
+        )
 
 
 def kubernetes_taint_exists(node):
@@ -2198,13 +2209,21 @@ def get_hyperconverged_ovs_annotations(hyperconverged):
     return (hyperconverged.instance.to_dict()["metadata"].get("annotations", {})).get("deployOVS")
 
 
-def get_base_templates_list(client):
-    """Return SSP base templates"""
+def get_base_templates_list(client: DynamicClient) -> list[Template]:
+    """
+    Return base templates list.
+
+    Args:
+        client (DynamicClient): Client to use for getting base templates list.
+
+    Returns:
+        list[Template]: List of base templates.
+    """
     common_templates_list = list(
         Template.get(
             client=client,
             singular_name=Template.singular_name,
-            label_selector=Template.Labels.BASE,
+            label_selector=f"{Template.Labels.BASE},{Template.Labels.ARCHITECTURE}={py_config['cpu_arch']}",
         )
     )
     return [
@@ -2597,35 +2616,11 @@ def check_vm_xml_smbios(vm: VirtualMachineForTests, cm_values: Dict[str, str], a
         "product": smbios_vm_dict["product"] == cm_values["product"],
         "family": smbios_vm_dict["family"] == cm_values["family"],
         "version": smbios_vm_dict["version"] == cm_values["version"],
-        "sku": smbios_vm_dict["sku"] == cm_values["sku"],
         "serial": smbios_vm_dict.get("serial"),
         "uuid": smbios_vm_dict.get("uuid"),
     }
     LOGGER.info(f"Results: {results}")
     assert all(results.values())
-
-
-def assert_vm_xml_efi(
-    vm: VirtualMachineForTests, admin_client: DynamicClient, *, secure_boot_enabled: bool = True
-) -> None:
-    LOGGER.info("Verify VM XML - EFI secureBoot values.")
-    xml_dict_os = vm.vmi.get_xml_dict(privileged_client=admin_client)["domain"]["os"]
-    ovmf_path = "/usr/share/OVMF"
-    efi_path = f"{ovmf_path}/OVMF_CODE.secboot.fd"
-    # efi vars path when secure boot is enabled: /usr/share/OVMF/OVMF_VARS.secboot.fd
-    # efi vars path when secure boot is disabled: /usr/share/OVMF/OVMF_VARS.fd
-    efi_vars_path = f"{ovmf_path}/OVMF_VARS.{'secboot.' if secure_boot_enabled else ''}fd"
-    vmi_xml_efi_path = xml_dict_os["loader"]["#text"]
-    vmi_xml_efi_vars_path = xml_dict_os["nvram"]["@template"]
-    vmi_xml_os_secure = xml_dict_os["loader"]["@secure"]
-    os_secure = "yes" if secure_boot_enabled else "no"
-    assert vmi_xml_efi_path == efi_path, f"EFIPath value {vmi_xml_efi_path} does not match expected {efi_path} value"
-    assert vmi_xml_os_secure == os_secure, (
-        f"EFI secure value {vmi_xml_os_secure} does not seem to be set as {os_secure}"
-    )
-    assert vmi_xml_efi_vars_path == efi_vars_path, (
-        f"EFIVarsPath value {vmi_xml_efi_vars_path} does not match expected {efi_vars_path} value"
-    )
 
 
 def update_vm_efi_spec_and_restart(

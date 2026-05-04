@@ -14,6 +14,7 @@ from pytest_testconfig import py_config
 
 from tests.virt.constants import VM_LABEL
 from tests.virt.upgrade.utils import (
+    get_virt_launcher_image_from_csv,
     validate_vms_pod_updated,
     vm_from_template,
     wait_for_automatic_vm_migrations,
@@ -28,7 +29,7 @@ from utilities.constants import (
     Images,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile
-from utilities.infra import create_ns
+from utilities.infra import create_ns, get_csv_by_name
 from utilities.storage import (
     create_dv,
     data_volume_template_with_source_ref_dict,
@@ -164,14 +165,22 @@ def vms_for_upgrade_dict_before(vms_for_upgrade):
 
 @pytest.fixture()
 def unupdated_vmi_pods_names(
-    admin_client, hco_namespace, hco_target_csv_name, eus_hco_target_csv_name, virt_migratable_vms
+    admin_client,
+    virt_migratable_vms,
+    virt_launcher_from_csv_before_upgrade,
+    csv_after_upgrade,
 ):
+    virt_launcher_image_after_upgrade = get_virt_launcher_image_from_csv(csv=csv_after_upgrade)
+
+    if virt_launcher_from_csv_before_upgrade == virt_launcher_image_after_upgrade:
+        LOGGER.warning(f"virt-launcher unchanged, skipping migration check: {virt_launcher_from_csv_before_upgrade}")
+        return []
+
     wait_for_automatic_vm_migrations(vm_list=virt_migratable_vms, admin_client=admin_client)
 
     return validate_vms_pod_updated(
         admin_client=admin_client,
-        hco_namespace=hco_namespace,
-        hco_target_csv_name=hco_target_csv_name or eus_hco_target_csv_name,
+        expected_virt_launcher_image=virt_launcher_image_after_upgrade,
         vm_list=virt_migratable_vms,
     )
 
@@ -363,3 +372,17 @@ def parallel_live_migrations_increased(hyperconverged_resource_scope_session):
         wait_for_reconcile_post_update=True,
     ):
         yield
+
+
+@pytest.fixture(scope="session")
+def virt_launcher_from_csv_before_upgrade(csv_scope_session):
+    return get_virt_launcher_image_from_csv(csv=csv_scope_session)
+
+
+@pytest.fixture()
+def csv_after_upgrade(admin_client, hco_namespace, hco_target_csv_name, eus_hco_target_csv_name):
+    return get_csv_by_name(
+        admin_client=admin_client,
+        namespace=hco_namespace.name,
+        csv_name=hco_target_csv_name or eus_hco_target_csv_name,
+    )

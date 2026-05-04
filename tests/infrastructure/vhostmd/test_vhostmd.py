@@ -11,7 +11,7 @@ from ocp_resources.resource import Resource
 from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 
-from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS, RHEL_LATEST_OS
+from tests.os_params import RHEL_LATEST_LABELS
 from utilities.artifactory import get_artifactory_header
 from utilities.constants import S390X, TIMEOUT_3MIN, TIMEOUT_30SEC
 from utilities.hco import ResourceEditorValidateHCOReconcile
@@ -73,14 +73,14 @@ def vhostmd_vm1(
     request,
     unprivileged_client,
     namespace,
-    golden_image_data_source_scope_function,
+    latest_rhel_data_source,
     worker_node1,
 ):
     with vm_instance_from_template(
         request=request,
         unprivileged_client=unprivileged_client,
         namespace=namespace,
-        data_source=golden_image_data_source_scope_function,
+        data_source=latest_rhel_data_source,
         node_selector=get_node_selector_dict(node_selector=worker_node1.name),
     ) as vhostmd_vm1:
         vhostmd_vm1.start()
@@ -92,14 +92,14 @@ def vhostmd_vm2(
     request,
     unprivileged_client,
     namespace,
-    golden_image_data_source_scope_function,
+    latest_rhel_data_source,
     worker_node1,
 ):
     with vm_instance_from_template(
         request=request,
         unprivileged_client=unprivileged_client,
         namespace=namespace,
-        data_source=golden_image_data_source_scope_function,
+        data_source=latest_rhel_data_source,
         node_selector=get_node_selector_dict(node_selector=worker_node1.name),
     ) as vhostmd_vm2:
         vhostmd_vm2.start()
@@ -126,15 +126,9 @@ def run_vm_dump_metrics(vm):
 
 
 @pytest.mark.parametrize(
-    "golden_image_data_volume_scope_function, vhostmd_vm1, vhostmd_vm2,",
+    "vhostmd_vm1, vhostmd_vm2",
     [
         pytest.param(
-            {
-                "dv_name": RHEL_LATEST_OS,
-                "image": RHEL_LATEST["image_path"],
-                "storage_class": py_config["default_storage_class"],
-                "dv_size": RHEL_LATEST["dv_size"],
-            },
             {
                 "vm_name": "vhostmd1",
                 "vhostmd": True,

@@ -12,6 +12,7 @@ from ocp_resources.network_attachment_definition import OVNOverlayNetworkAttachm
 from ocp_resources.node import Node
 
 from libs.net import netattachdef as libnad
+from libs.net.ip import random_ipv4_address
 from libs.net.traffic_generator import PodTcpClient as TcpClient
 from libs.net.traffic_generator import TcpServer
 from libs.net.udn import UDN_BINDING_DEFAULT_PLUGIN_NAME, create_udn_namespace
@@ -30,7 +31,6 @@ from tests.network.libs.bgp import (
     generate_frr_conf,
     wait_for_bgp_connection_established,
 )
-from tests.network.libs.ip import random_ipv4_address
 from tests.network.libs.label_selector import LabelSelector
 from tests.network.libs.vm_factory import udn_vm
 from utilities.infra import get_node_selector_dict
@@ -45,7 +45,7 @@ IPERF3_SERVER_PORT: Final[int] = 2354
 LOCALNET_NETWORK_NAME: Final[str] = "localnet-network-bgp"
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="package")
 def nncp_localnet_node1(
     nmstate_dependent_placeholder,
     admin_client: DynamicClient,
@@ -70,7 +70,7 @@ def nncp_localnet_node1(
         yield nncp
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="package")
 def nad_localnet(
     admin_client: DynamicClient,
     nncp_localnet_node1: libnncp.NodeNetworkConfigurationPolicy,
@@ -86,7 +86,7 @@ def nad_localnet(
         yield nad
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="package")
 def frr_configmap(
     workers: list[Node],
     cnv_tests_utilities_namespace: Namespace,
@@ -111,7 +111,7 @@ def frr_configmap(
         yield cm
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="package")
 def cluster_network_resource_ra_enabled(
     network_operator: openshift_nc.Network,
     admin_client: DynamicClient,
@@ -171,7 +171,7 @@ def frr_configuration_created(admin_client: DynamicClient, frr_external_pod: Ext
         yield
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="package")
 def frr_external_pod(
     nad_localnet: libnad.NetworkAttachmentDefinition,
     worker_node1: Node,

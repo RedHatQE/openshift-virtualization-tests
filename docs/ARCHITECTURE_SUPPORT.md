@@ -1,16 +1,19 @@
 # Test Images Architecture Support
 
 The tests can dynamically select test images based on the system's architecture.
-By default, the architecture is extracted from the node's `arch` label.
+By default, the architecture is extracted from the cluster nodes' `arch` label.
 For CI, or to run `--collect-only` without cluster access, this is controlled by the environment variable `OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH`.
 Note: to run on the default architecture `amd64`, there's no need to set the environment variable.
 
-Supported architectures include:
+Supported architectures include (names aligned with Kubernetes/KubeVirt):
 
 - `amd64` (default, also refered to as x86_64)
 - `arm64`
 - `s390x` (currently work in progress)
 
+## Heterogeneous (multi-arch) clusters
+
+See [Multi-Architecture Clusters](MULTIARCH.md).
 
 ## Test markers
 To run tests on a specific architecture, add `-m <architecture>` to the pytest command.

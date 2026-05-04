@@ -2,31 +2,25 @@ import logging
 
 import pytest
 from ocp_resources.hyperconverged import HyperConverged
-from pytest_testconfig import config as py_config
 
 from tests.install_upgrade_operators.crypto_policy.constants import (
     CRYPTO_POLICY_SPEC_DICT,
 )
 from tests.install_upgrade_operators.crypto_policy.utils import (
     assert_crypto_policy_propagated_to_components,
-    get_resource_crypto_policy,
     set_hco_crypto_policy,
 )
-from utilities.constants import TLS_SECURITY_PROFILE
+from utilities.constants import TLS_OLD_POLICY, TLS_SECURITY_PROFILE
+from utilities.jira import is_jira_open
 
 LOGGER = logging.getLogger(__name__)
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.s390x]
 
 
 @pytest.fixture()
-def hco_crypto_policy(hco_namespace, admin_client):
-    return get_resource_crypto_policy(
-        resource=HyperConverged,
-        name=py_config["hco_cr_name"],
-        key_name=TLS_SECURITY_PROFILE,
-        admin_client=admin_client,
-        namespace=hco_namespace.name,
-    )
+def hco_crypto_policy(hyperconverged_resource_scope_function, updated_hco_crypto_policy):
+    tls_profile = hyperconverged_resource_scope_function.instance.spec.get(TLS_SECURITY_PROFILE)
+    return tls_profile.to_dict() if tls_profile else None
 
 
 @pytest.fixture()
@@ -34,6 +28,9 @@ def updated_hco_crypto_policy(
     hyperconverged_resource_scope_function,
     cnv_crypto_policy_matrix__function__,
 ):
+    if cnv_crypto_policy_matrix__function__ == TLS_OLD_POLICY and is_jira_open(jira_id="CNV-84496"):
+        pytest.xfail(reason="CNV-84496: kubevirt-ipam-controller crashes with Old TLS profile")
+
     with set_hco_crypto_policy(
         hco_resource=hyperconverged_resource_scope_function,
         tls_spec=CRYPTO_POLICY_SPEC_DICT[cnv_crypto_policy_matrix__function__],

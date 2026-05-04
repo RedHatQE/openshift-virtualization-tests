@@ -125,6 +125,9 @@ docs/source/rst
 # IntelliJ project folder
 .idea/
 
+# VSCode project folder
+.vscode/
+
 # Claude Code assistant
 .claude/
 

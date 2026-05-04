@@ -1,10 +1,10 @@
 import logging
 import os
-from ipaddress import ip_interface
 
 import pytest
 
-from libs.net.vmspec import lookup_iface_status_ip
+from libs.net.ip import filter_link_local_addresses
+from libs.net.vmspec import lookup_iface_status, lookup_iface_status_ip
 from tests.network.upgrade.libupgrade import KMP_DISABLED_LABEL
 from tests.network.upgrade.utils import assert_label_in_namespace
 from tests.upgrade_params import (
@@ -45,23 +45,21 @@ class TestUpgradeNetwork:
     def test_vm_have_2_interfaces_before_upgrade(self, running_vm_with_bridge):
         assert len(running_vm_with_bridge.vmi.interfaces) == 2
 
-    @pytest.mark.ipv4
     @pytest.mark.polarion("CNV-2750")
     @pytest.mark.order(before=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
     @pytest.mark.dependency(name=f"{DEPENDENCIES_NODE_ID_PREFIX}::test_linux_bridge_before_upgrade")
     def test_linux_bridge_before_upgrade(
         self,
+        subtests,
         running_vm_upgrade_a,
         running_vm_upgrade_b,
         upgrade_bridge_marker_nad,
         bridge_on_one_node,
     ):
-        assert_ping_successful(
-            src_vm=running_vm_upgrade_a,
-            dst_ip=lookup_iface_status_ip(
-                vm=running_vm_upgrade_b, iface_name=upgrade_bridge_marker_nad.name, ip_family=4
-            ),
-        )
+        iface = lookup_iface_status(vm=running_vm_upgrade_b, iface_name=upgrade_bridge_marker_nad.name)
+        for ip in filter_link_local_addresses(ip_addresses=iface.ipAddresses):
+            with subtests.test(msg=f"IPv{ip.version}"):
+                assert_ping_successful(src_vm=running_vm_upgrade_a, dst_ip=ip)
 
     @pytest.mark.sno
     @pytest.mark.polarion("CNV-5944")
@@ -167,13 +165,16 @@ class TestUpgradeNetwork:
     )
     def test_linux_bridge_after_upgrade(
         self,
+        subtests,
         running_vm_upgrade_a,
         running_vm_upgrade_b,
         upgrade_bridge_marker_nad,
         bridge_on_one_node,
     ):
-        dst_ip_address = ip_interface(address=running_vm_upgrade_b.vmi.instance.status.interfaces[1].ipAddress).ip
-        assert_ping_successful(src_vm=running_vm_upgrade_a, dst_ip=str(dst_ip_address))
+        iface = lookup_iface_status(vm=running_vm_upgrade_b, iface_name=upgrade_bridge_marker_nad.name)
+        for ip in filter_link_local_addresses(ip_addresses=iface.ipAddresses):
+            with subtests.test(msg=f"IPv{ip.version}"):
+                assert_ping_successful(src_vm=running_vm_upgrade_a, dst_ip=ip)
 
     @pytest.mark.polarion("CNV-2746")
     @pytest.mark.order(after=IUO_UPGRADE_TEST_ORDERING_NODE_ID)

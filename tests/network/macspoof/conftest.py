@@ -8,8 +8,8 @@ from ocp_resources.resource import ResourceEditor
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutSampler
 
+from libs.net.ip import random_ipv4_address
 from libs.net.vmspec import lookup_iface_status_ip
-from tests.network.libs.ip import random_ipv4_address
 from utilities.constants import LINUX_BRIDGE, TIMEOUT_30SEC
 from utilities.data_utils import name_prefix
 from utilities.infra import get_node_selector_dict

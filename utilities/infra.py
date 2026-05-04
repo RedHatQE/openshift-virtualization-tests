@@ -40,7 +40,7 @@ from ocp_resources.resource import Resource, ResourceEditor, get_client
 from ocp_resources.secret import Secret
 from ocp_resources.subscription import Subscription
 from packaging.version import Version
-from pyhelper_utils.shell import run_command
+from pyhelper_utils.shell import run_command, run_ssh_commands
 from pytest_testconfig import config as py_config
 from requests import HTTPError, Timeout, TooManyRedirects
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
@@ -77,7 +77,7 @@ from utilities.ssp import guest_agent_version_parser
 
 NON_EXIST_URL = "https://noneexist.test"  # Use 'test' domain rfc6761
 EXCLUDED_FROM_URL_VALIDATION = ("", NON_EXIST_URL)
-INTERNAL_HTTP_SERVER_ADDRESS = "internal-http.cnv-tests-utilities"
+INTERNAL_HTTP_SERVER_ADDRESS = "internal-http.cnv-tests-utilities.svc.cluster.local"
 HOST_MODEL_CPU_LABEL = f"host-model-cpu.node.{Resource.ApiGroup.KUBEVIRT_IO}"
 LOGGER = logging.getLogger(__name__)
 
@@ -1070,18 +1070,15 @@ def stable_channel_released_to_prod(channels: list[dict[str, str | bool]]) -> bo
 
 def get_latest_stable_released_z_stream_info(minor_version: str) -> dict[str, str] | None:
     builds = wait_for_version_explorer_response(
-        api_end_point="GetBuildsWithErrata",
-        query_string=f"minor_version={minor_version}",
+        api_end_point="GetReleasedBuilds",
+        query_string=f"minor_version={minor_version}&stage=false",
     )["builds"]
 
     latest_z_stream = None
     for build in builds:
-        if build["errata_status"] == "SHIPPED_LIVE" and stable_channel_released_to_prod(channels=build["channels"]):
+        if stable_channel_released_to_prod(channels=build["channels"]):
             build_version = Version(version=build["csv_version"])
-            if latest_z_stream:
-                if build_version > latest_z_stream:
-                    latest_z_stream = build_version
-            else:
+            if not latest_z_stream or build_version > latest_z_stream:
                 latest_z_stream = build_version
     return get_build_info_dict(version=str(latest_z_stream)) if latest_z_stream else None
 
@@ -1149,12 +1146,6 @@ def get_node_selector_dict(node_selector):
     return {f"{Resource.ApiGroup.KUBERNETES_IO}/hostname": node_selector}
 
 
-def delete_resources_from_namespace_by_type(resources_types, namespace, wait=False):
-    for resource_type in resources_types:
-        for resource in list(resource_type.get(namespace=namespace)):
-            resource.delete(wait=wait)
-
-
 def get_linux_guest_agent_version(ssh_exec):
     ssh_exec.sudo = True
     return guest_agent_version_parser(version_string=ssh_exec.package_manager.info("qemu-guest-agent"))
@@ -1190,3 +1181,11 @@ def validate_os_info_vmi_vs_linux_os(vm: utilities.virt.VirtualMachineForTests) 
     linux_info = get_linux_os_info(ssh_exec=vm.ssh_exec)["os"]
 
     assert vmi_info == linux_info, f"Data mismatch! VMI: {vmi_info}\nOS: {linux_info}"
+
+
+def assert_secure_boot_mokutil_status(
+    vm: utilities.virt.VirtualMachineForTests, *, expected_enabled: bool = True
+) -> None:
+    output = run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("mokutil --sb-state"))[0].lower()
+    expected = "enabled" if expected_enabled else "disabled"
+    assert expected in output, f"Secure Boot expected {expected}. Found: {output}"

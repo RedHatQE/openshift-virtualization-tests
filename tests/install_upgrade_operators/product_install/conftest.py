@@ -5,22 +5,14 @@ import pytest
 from ocp_resources.cluster_service_version import ClusterServiceVersion
 from ocp_resources.hostpath_provisioner import HostPathProvisioner
 from ocp_resources.hyperconverged import HyperConverged
-from ocp_resources.image_digest_mirror_set import ImageDigestMirrorSet
 from ocp_resources.installplan import InstallPlan
 from ocp_resources.persistent_volume import PersistentVolume
 from ocp_resources.storage_class import StorageClass
-from packaging.version import Version
 from pytest_testconfig import py_config
 from timeout_sampler import TimeoutSampler
 
 from tests.install_upgrade_operators.product_install.constants import (
     HCO_NOT_INSTALLED_ALERT,
-)
-from tests.install_upgrade_operators.utils import (
-    KONFLUX_IDMS_NAME,
-    KONFLUX_MIRROR_BASE_URL,
-    apply_konflux_idms,
-    idms_has_all_mirrors,
 )
 from utilities.constants import (
     CRITICAL_STR,
@@ -61,36 +53,6 @@ from utilities.storage import (
 INSTALLATION_VERSION_MISMATCH = "98"
 LOCAL_BLOCK_HPP = "local-block-hpp"
 LOGGER = logging.getLogger(__name__)
-
-
-@pytest.fixture(scope="module")
-def installed_konflux_idms(
-    admin_client,
-    is_production_source,
-    cnv_version_to_install_info,
-    nodes,
-    machine_config_pools,
-    machine_config_pools_conditions_scope_module,
-):
-    if is_production_source:
-        LOGGER.info("Production source install, IDMS update not needed.")
-        return
-
-    version = Version(version=cnv_version_to_install_info["version"])
-    required_mirrors = [f"{KONFLUX_MIRROR_BASE_URL}/v{version.major}-{version.minor}"]
-
-    idms = ImageDigestMirrorSet(name=KONFLUX_IDMS_NAME, client=admin_client)
-    if idms.exists and idms_has_all_mirrors(idms=idms, required_mirrors=required_mirrors):
-        LOGGER.info(f"IDMS {KONFLUX_IDMS_NAME} already contains required mirrors.")
-        return
-
-    apply_konflux_idms(
-        idms=idms,
-        required_mirrors=required_mirrors,
-        machine_config_pools=machine_config_pools,
-        mcp_conditions=machine_config_pools_conditions_scope_module,
-        nodes=nodes,
-    )
 
 
 @pytest.fixture(scope="module")
@@ -184,7 +146,6 @@ def cnv_install_plan_installed(
 def installed_openshift_virtualization(
     admin_client,
     disabled_default_sources_in_operatorhub_scope_module,
-    installed_konflux_idms,
     hyperconverged_catalog_source,
     created_cnv_namespace,
     created_cnv_operator_group,
@@ -270,12 +231,11 @@ def installed_hpp(admin_client, cluster_backend_storage, hpp_volume_size):
 @pytest.fixture(scope="session")
 def cnv_version_to_install_info(is_production_source, ocp_current_version, cnv_image_url):
     if is_production_source:
-        latest_z_stream = get_latest_stable_released_z_stream_info(
-            minor_version=f"v{ocp_current_version.major}.{ocp_current_version.minor}"
-        )
+        minor_version = f"{ocp_current_version.major}.{ocp_current_version.minor}"
+        latest_z_stream = get_latest_stable_released_z_stream_info(minor_version=f"v{minor_version}")
         LOGGER.info(
-            f"Using production catalog source for: {ocp_current_version},"
-            f" CNV latest stable released version info: {latest_z_stream}"
+            f"Using production catalog source for: {minor_version}. "
+            f"CNV latest stable released version info: {latest_z_stream}"
         )
     else:
         latest_z_stream = get_cnv_info_by_iib(iib=cnv_image_url.split(":")[-1])

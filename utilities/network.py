@@ -27,7 +27,7 @@ from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 import utilities.infra
-from tests.network.libs.ip import ICMP_HEADER_SIZE, IPV4_HEADER_SIZE, IPV6_HEADER_SIZE
+from libs.net.ip import ICMP_HEADER_SIZE, ip_header_size
 from utilities.constants import (
     ACTIVE_BACKUP,
     FLAT_OVERLAY_STR,
@@ -731,8 +731,7 @@ def assert_ping_successful(
 ):
     if packet_size and packet_size > 1500:
         # ICMP packet reductions:
-        ip_header_size = IPV4_HEADER_SIZE if ipaddress.ip_address(dst_ip).version == 4 else IPV6_HEADER_SIZE
-        packet_size = packet_size - ip_header_size - ICMP_HEADER_SIZE
+        packet_size = packet_size - ip_header_size(ipaddress.ip_address(dst_ip)) - ICMP_HEADER_SIZE
     assert (
         ping(
             src_vm=src_vm,

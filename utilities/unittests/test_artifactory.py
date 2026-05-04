@@ -292,6 +292,7 @@ class TestGetArtifactorySecret:
                 namespace="test-namespace",
                 accesskeyid="base64_test-user",
                 secretkey="base64_test-token",
+                client=None,
             )
 
             # Verify base64 encoding was called
@@ -394,6 +395,7 @@ class TestGetArtifactoryConfigMap:
             name="artifactory-configmap",
             namespace="test-namespace",
             data={"tlsregistry.crt": mock_cert},
+            client=None,
         )
 
         # Verify SSL certificate was retrieved

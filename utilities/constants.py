@@ -43,6 +43,11 @@ AMD_64 = "amd64"
 ARM_64 = "arm64"
 S390X = "s390x"
 X86_64 = "x86_64"
+MULTIARCH = "multiarch"
+# Supported architectures for multi-arch runs
+SUPPORTED_MULTIARCH_OPTIONS = {AMD_64, ARM_64}
+# Supported architectures for single-arch runs
+SUPPORTED_CPU_ARCHITECTURES = {AMD_64, ARM_64, S390X}
 
 #  OS constants
 OS_FLAVOR_CIRROS = "cirros"
@@ -56,11 +61,14 @@ FEDORA_DISK_DEMO = "fedora-cloud-registry-disk-demo"
 CIRROS_DISK_DEMO = "cirros-registry-disk-demo"
 CIRROS_QCOW2_IMG = "cirros-qcow2.img"
 
+ALPINE_VERSION = "3.20.1"
+
 
 class ArchImages:
     class AMD64:
         BASE_CIRROS_NAME = "cirros-0.4.0-x86_64-disk"
         BASE_ALPINE_NAME = "alpine-x86_64-disk"
+        BASE_VERSIONED_ALPINE_NAME = f"alpine-{ALPINE_VERSION}-x86_64-disk"
         Cirros = Cirros(
             RAW_IMG=f"{BASE_CIRROS_NAME}.raw",
             RAW_IMG_GZ=f"{BASE_CIRROS_NAME}.raw.gz",
@@ -73,6 +81,8 @@ class ArchImages:
 
         Alpine = Alpine(
             QCOW2_IMG=f"{BASE_ALPINE_NAME}.qcow2",
+            QCOW2_IMG_VERSIONED=f"{BASE_VERSIONED_ALPINE_NAME}.qcow2",
+            RAW_IMG_XZ=f"{BASE_VERSIONED_ALPINE_NAME}.raw.xz",
         )
 
         Rhel = Rhel(
@@ -100,7 +110,7 @@ class ArchImages:
             WIN2022_ISO_IMG="Windows_Server_2022_x64FRE_en-us.iso",
             WIN2025_ISO_IMG="windows_server_2025_x64_dvd_eval.iso",
         )
-        Windows.LATEST_RELEASE_STR = Windows.WIN2k19_IMG
+        Windows.LATEST_RELEASE_STR = Windows.WIN2022_IMG
 
         Fedora = Fedora(
             FEDORA42_IMG="Fedora-Cloud-Base-Generic-42-1.1.x86_64.qcow2",
@@ -118,6 +128,7 @@ class ArchImages:
     class ARM64:
         BASE_CIRROS_NAME = "cirros-0.5.2-aarch64-disk"
         BASE_ALPINE_NAME = "alpine-aarch64-disk"
+        BASE_VERSIONED_ALPINE_NAME = f"alpine-{ALPINE_VERSION}-aarch64-disk"
         Cirros = Cirros(
             RAW_IMG=f"{BASE_CIRROS_NAME}.raw",
             RAW_IMG_GZ=f"{BASE_CIRROS_NAME}.raw.gz",
@@ -130,6 +141,8 @@ class ArchImages:
 
         Alpine = Alpine(
             QCOW2_IMG=f"{BASE_ALPINE_NAME}.qcow2",
+            QCOW2_IMG_VERSIONED=f"{BASE_VERSIONED_ALPINE_NAME}.qcow2",
+            RAW_IMG_XZ=f"{BASE_VERSIONED_ALPINE_NAME}.raw.xz",
         )
 
         Rhel = Rhel(
@@ -153,6 +166,7 @@ class ArchImages:
 
     class S390X:
         BASE_ALPINE_NAME = "alpine-s390x-disk"
+        BASE_VERSIONED_ALPINE_NAME = f"alpine-{ALPINE_VERSION}-s390x-disk"
         Cirros = Cirros(
             # TODO: S390X does not support Cirros; this is a workaround until tests are moved to Fedora
             RAW_IMG="Fedora-Cloud-Base-Generic-41-1.4.s390x.raw",
@@ -170,6 +184,8 @@ class ArchImages:
 
         Alpine = Alpine(
             QCOW2_IMG=f"{BASE_ALPINE_NAME}.qcow2",
+            QCOW2_IMG_VERSIONED=f"{BASE_VERSIONED_ALPINE_NAME}.qcow2",
+            RAW_IMG_XZ=f"{BASE_VERSIONED_ALPINE_NAME}.raw.xz",
         )
 
         Rhel = Rhel(
@@ -203,8 +219,9 @@ class ArchImages:
         Windows = Windows()
 
 
-# Choose the Image class according to the architecture. Default: amd64
-Images = getattr(ArchImages, get_cluster_architecture().upper())
+# Choose the Image class according to the cluster architecture.
+# TODO: remove this when utilities modules are refactored
+Images = getattr(ArchImages, next(iter(get_cluster_architecture())).upper())
 
 
 # Virtctl constants
@@ -396,8 +413,8 @@ DATA_SOURCE_NAME = "DATA_SOURCE_NAME"
 DATA_SOURCE_NAMESPACE = "DATA_SOURCE_NAMESPACE"
 SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME = "dataImportCronTemplates"
 COMMON_TEMPLATES_KEY_NAME = "commonTemplates"
-
 KUBEVIRT_HYPERCONVERGED_PROMETHEUS_RULE = "kubevirt-hyperconverged-prometheus-rule"
+KUBEMACPOOL_PROMETHEUS_RULE = "kubemacpool-prometheus-rule"
 HYPERCONVERGED_CLUSTER_OPERATOR_METRICS = "hyperconverged-cluster-operator-metrics"
 KUBEVIRT_HYPERCONVERGED_OPERATOR_METRICS = "kubevirt-hyperconverged-operator-metrics"
 KUBEVIRT_CLUSTER_CRITICAL = "kubevirt-cluster-critical"
@@ -676,6 +693,7 @@ CNV_PROMETHEUS_RULES = [
     "prometheus-k8s-rules-cnv",
     "prometheus-kubevirt-rules",
     f"kubevirt-cnv-{PROMETHEUS_RULES_STR}",
+    KUBEMACPOOL_PROMETHEUS_RULE,
 ]
 
 
@@ -768,6 +786,7 @@ RHEL8_PREFERENCE = "rhel.8"
 RHEL9_PREFERENCE = "rhel.9"
 RHEL10_PREFERENCE = "rhel.10"
 U1_SMALL = "u1.small"
+U1_LARGE = "u1.large"
 PROMETHEUS_K8S = "prometheus-k8s"
 INSTANCE_TYPE_STR = "instance_type"
 U1_MEDIUM_STR = "u1.medium"

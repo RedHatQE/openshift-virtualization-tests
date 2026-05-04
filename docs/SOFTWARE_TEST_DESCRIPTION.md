@@ -30,7 +30,7 @@ This project follows a **two-phase development workflow** that separates test de
 1. **Create test stubs with docstrings only**:
    - Write the test function signature
    - Add the complete STD docstring (Preconditions/Steps/Expected)
-   - Include a link to the approved STP (Software Test Plan) in the **module docstring** (top of the test file)
+   - Include a link to the approved STP (Software Test Plan) directly in the **module docstring** (top of the test file).  This is needed for a standard format for traceability.
    - Add applicable pytest markers (architecture markers, etc.)
    - Add `__test__ = False` on unimplemented test(s).  For a single test, add `<test_name>.__test__ = False`
 
@@ -147,10 +147,21 @@ test_isolated_vms_cannot_communicate.__test__ = False
 
 When a test should run with multiple parameter combinations, add a `Parametrize:` section.
 
+Parameter values may have their own markers using inline `[Markers: ...]` syntax to differentiate between common test markers and parameter-specific ones:
+
+```text
+Parametrize:
+    - ip_family:
+        - ipv4 [Markers: ipv4]
+        - ipv6 [Markers: ipv6]
+```
 
 ### Markers Section
 
-When specific pytest markers are required, list them explicitly.
+When specific pytest markers are required, list them explicitly. Markers can be placed at any level:
+- **Module docstring** — markers that apply to all tests in the module
+- **Class docstring** — markers that apply to all tests in the class
+- **Test docstring** — markers specific to a single test
 
 ---
 
@@ -162,8 +173,9 @@ When specific pytest markers are required, list them explicitly.
 - Related tests are grouped in a **test class**
   - If a test needs a precondition that could be another test's outcome, place the tests under the class in the required order
   - Mention handling of early failures (i.e "fail fast")
-- **Shared preconditions** go in the class docstring
+- **Shared preconditions** go in the class/module docstring
 - **Test-specific preconditions** (if any) go in the test docstring
+- **Shared resources used directly by tests** must be mentioned at both levels: in the shared preconditions (class/module) AND in the test-level preconditions. E.g., a VM shared across the module and used in tests should appear in both the module/class preconditions and each test's preconditions.
 
 ### Class-Level Template
 
@@ -262,13 +274,18 @@ test_<specific_behavior>.__test__ = False
    - Good: `- Running Fedora virtual machine`
    - Bad: `- Running Fedora VM (vm_to_restart fixture)`
 
-5. **Single Expected Behavior per Test**: One assertion: clear pass/fail.
+5. **Name Resources by Function**: Name objects by their role, not generic labels.
+   - Good: `- Connectivity reference VM`, `- Client VM`
+   - Bad: `- VM-A`, `- VM-B`, `- First VM`
+   - This is especially important when multiple resources of the same kind are used, to clarify each resource's purpose.
+
+6. **Single Expected Behavior per Test**: One assertion: clear pass/fail.
    - Good: `Expected: - Ping succeeds with 0% packet loss`
    - Bad: `Expected: - Ping succeeds - VM remains running - No errors logged`
    - There may be **exceptions**, where multiple assertions are required to verify a **single** behavior.
      - Example: `Expected: - VM reports valid IP addres. Expected - User can access VM via SSH`
 
-6. **Tests Must Be Independent**: Tests should not depend on other tests.
+7. **Tests Must Be Independent**: Tests should not depend on other tests.
    - Dependencies between tests mean that one test depends on the result of a previous test.
    - If testing of a feature requires dependencies between tests, make sure that:
      - They are grouped under a class with shared preconditions
@@ -518,6 +535,61 @@ def test_online_disk_resize():
     """
 
 test_online_disk_resize.__test__ = False
+```
+
+---
+
+### Example 6: Module-Level Preconditions
+
+When a module contains multiple classes or standalone tests that share common setup, use the **module docstring** for shared preconditions. Resources used directly by tests must appear in both the module preconditions and the test-level preconditions:
+
+```python
+"""
+VM Live Migration Tests
+
+STP Reference: https://example.com/stp/vm-live-migration
+
+Markers:
+    - gating
+
+Preconditions:
+    - Two worker nodes available for migration
+    - Running VM, accessible via SSH
+
+"""
+__test__ = False
+
+ def test_ssh_connectivity_after_migration(self):
+     """
+     Test that SSH connectivity is preserved after live migration.
+
+     Preconditions:
+         - Running VM, accessible via SSH
+
+     Steps:
+         1. Live migrate the VM to another node
+         2. Wait for migration to complete
+         3. Connect to VM via SSH
+
+     Expected:
+         - SSH connection succeeds
+     """
+
+ def test_data_disk_accessible_after_migration(self):
+     """
+     Test that data disk content is preserved after live migration.
+
+     Preconditions:
+         - Running VM, accessible via SSH
+         - Data is written to a file in the VM
+
+     Steps:
+         1. Live migrate the VM to another node
+         2. Read data from the data disk
+
+     Expected:
+         - Data disk content equals the written test data
+     """
 ```
 
 ---

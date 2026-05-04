@@ -25,7 +25,7 @@ from utilities.virt import (
     restart_vm_wait_for_running_vm,
 )
 
-pytestmark = pytest.mark.rwx_default_storage
+pytestmark = [pytest.mark.rwx_default_storage, pytest.mark.data_collector_scope(scope="module")]
 
 
 LOGGER = logging.getLogger(__name__)

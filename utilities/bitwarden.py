@@ -6,6 +6,7 @@ from typing import Any
 
 from _pytest.main import Session
 from pyhelper_utils.shell import run_command
+from timeout_sampler import retry
 
 from utilities.exceptions import MissingEnvironmentVariableError
 
@@ -15,6 +16,9 @@ LOGGER = logging.getLogger(__name__)
 def _run_bws_command(args: list[str]) -> Any:
     """Run bws CLI command and return parsed JSON output.
 
+    Validates ACCESS_TOKEN then delegates to _run_bws_cli which retries
+    on transient failures for up to 60 seconds.
+
     Args:
         args: Command arguments to pass to bws (e.g., ['secret', 'list'])
 
@@ -23,20 +27,47 @@ def _run_bws_command(args: list[str]) -> Any:
 
     Raises:
         MissingEnvironmentVariableError: If ACCESS_TOKEN not set
+        TimeoutExpiredError: If bws CLI repeatedly fails within the retry window
     """
     access_token = os.getenv("ACCESS_TOKEN")
 
     if not access_token:
         raise MissingEnvironmentVariableError("Bitwarden client needs ACCESS_TOKEN environment variable set up")
 
-    _, stdout, _ = run_command(
-        command=["bws", "--access-token", access_token] + args,
+    return json.loads(_run_bws_cli(access_token=access_token, args=args))
+
+
+@retry(wait_timeout=60, sleep=10)
+def _run_bws_cli(access_token: str, args: list[str]) -> str:
+    """Execute bws CLI command with retry on transient failures.
+
+    Retries on any exception for up to 60 seconds with 10-second intervals.
+    Returns raw JSON string (always truthy) so the retry decorator does not
+    discard valid falsy parsed values like [] or {}.
+
+    Args:
+        access_token: Bitwarden access token
+        args: Command arguments to pass to bws
+
+    Returns:
+        str: Raw JSON response string from bws CLI
+
+    Raises:
+        TimeoutExpiredError: If bws CLI repeatedly fails within the retry window
+    """
+    # hide_log_command=True disables check (CalledProcessError not raised),
+    # so success must be checked explicitly below.
+    success, stdout, stderr = run_command(
+        command=["bws", "--access-token", access_token, *args],
         capture_output=True,
-        check=True,
         hide_log_command=True,
     )
 
-    return json.loads(stdout)
+    if not success:
+        raise RuntimeError(f"bws command failed: {stderr}")
+
+    json.loads(stdout)  # Validate JSON before returning
+    return stdout
 
 
 @cache

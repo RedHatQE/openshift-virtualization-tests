@@ -35,6 +35,7 @@ EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES = {
     "HotplugVolumes",
     "DecentralizedLiveMigration",
 }
+S390X_SPECIFIC_KUBEVIRT_FEATUREGATES = {"SecureExecution"}
 EXPECTED_CDI_HARDCODED_FEATUREGATES = {
     "DataVolumeClaimAdoption",
     "HonorWaitForFirstConsumer",
@@ -61,3 +62,10 @@ VALID_PRIORITY_CLASS = [
     "system-node-critical",
     "kubevirt-cluster-critical",
 ]
+KUBEMACPOOL_SERVICE = "kubemacpool-service"
+
+KONFLUX_IDMS_NAME = "zz-cnv-icsp-fallback"
+KONFLUX_MIRROR_BASE_URL = "quay.io/openshift-virtualization/konflux-builds"
+RH_IDMS_SOURCE = "registry.redhat.io/container-native-virtualization"
+KONFLUX_PIPELINE = "Konflux"
+BREW_MIRROR_BASE_URL = "brew.registry.redhat.io/container-native-virtualization"

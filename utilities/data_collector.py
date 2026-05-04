@@ -4,9 +4,11 @@ import os
 import shlex
 from functools import cache
 
+from _pytest.nodes import Collector
 from ocp_resources.namespace import Namespace
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_utilities.monitoring import Prometheus
+from pytest import Item
 from pytest_testconfig import config as py_config
 
 import utilities.hco
@@ -188,3 +190,22 @@ def prepare_pytest_item_data_dir(item, output_dir):
     )
     os.makedirs(item_dir_log, exist_ok=True)
     return item_dir_log
+
+
+def get_scope_identifier(node: Item | Collector, scope_value: str | None) -> str:
+    """
+    Get the identifier name based on data collection scope.
+
+    Args:
+        node: Pytest node (Item or Collector).
+        scope_value: Scope value from marker ("module", "class", or None for test).
+
+    Returns:
+        Database key for this scope.
+    """
+    if scope_value == "module":
+        return str(node.fspath)
+    elif scope_value == "class":
+        return f"{node.fspath}::{node.parent.name}" if node.parent else str(node.fspath)
+    else:
+        return f"{node.fspath}::{node.name}"

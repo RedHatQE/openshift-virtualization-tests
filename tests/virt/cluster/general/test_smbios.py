@@ -31,7 +31,6 @@ def smbios_defaults(cnv_current_version):
         "product": "OpenShift Virtualization",
         "manufacturer": "Red Hat",
         "version": cnv_current_version,
-        "sku": cnv_current_version,
     }
     return smbios_defaults
 

@@ -49,8 +49,8 @@ def nhc_vm_with_run_strategy_always(namespace, unprivileged_client):
 
 
 @pytest.fixture()
-def vm_node_before_failure(nhc_vm_with_run_strategy_always):
-    return nhc_vm_with_run_strategy_always.vmi.node
+def vm_node_before_failure(admin_client, nhc_vm_with_run_strategy_always):
+    return nhc_vm_with_run_strategy_always.vmi.get_node(privileged_client=admin_client)
 
 
 @pytest.fixture()
@@ -68,11 +68,15 @@ def refreshed_worker_utility_pods(admin_client, workers):
 
 
 @pytest.fixture()
-def performed_node_operation(nhc_vm_with_run_strategy_always, refreshed_worker_utility_pods, node_operation):
+def performed_node_operation(
+    admin_client, nhc_vm_with_run_strategy_always, refreshed_worker_utility_pods, node_operation
+):
     """
     Performs node operations like node start/stop, node kubelet start/stop
     node reboot, node shutdown. After remediation action, utility pods are recreated.
     """
     perform_node_operation(
-        utility_pods=refreshed_worker_utility_pods, node=nhc_vm_with_run_strategy_always.vmi.node, action=node_operation
+        utility_pods=refreshed_worker_utility_pods,
+        node=nhc_vm_with_run_strategy_always.vmi.get_node(privileged_client=admin_client),
+        action=node_operation,
     )

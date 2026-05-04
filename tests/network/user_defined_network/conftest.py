@@ -1,8 +1,8 @@
 import pytest
 from ocp_resources.user_defined_network import Layer2UserDefinedNetwork
 
+from libs.net.ip import random_ipv4_address
 from libs.vm import affinity
-from tests.network.libs.ip import random_ipv4_address
 from utilities.infra import create_ns
 
 

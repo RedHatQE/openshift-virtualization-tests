@@ -23,7 +23,7 @@ from utilities.virt import (
     wait_for_updated_kv_value,
 )
 
-pytestmark = pytest.mark.post_upgrade
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.data_collector_scope(scope="module")]
 LOGGER = logging.getLogger(__name__)
 
 
@@ -259,11 +259,11 @@ def test_major_release_machine_type(machine_type_from_kubevirt_config):
 
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-8561")
-def test_machine_type_as_rhel_9_6(machine_type_from_kubevirt_config):
-    """Verify that machine type in KubeVirt CR match the value pc-q35-rhel9.6.0"""
-    assert machine_type_from_kubevirt_config == MachineTypesNames.pc_q35_rhel9_6, (
+def test_machine_type_as_rhel_9_8(machine_type_from_kubevirt_config):
+    """Verify that machine type in KubeVirt CR match the value pc-q35-rhel9.8.0"""
+    assert machine_type_from_kubevirt_config == MachineTypesNames.pc_q35_rhel9_8, (
         f"Machine type value is {machine_type_from_kubevirt_config} "
-        f"does not match with {MachineTypesNames.pc_q35_rhel9_6}"
+        f"does not match with {MachineTypesNames.pc_q35_rhel9_8}"
     )
 
 

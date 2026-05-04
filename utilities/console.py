@@ -24,6 +24,7 @@ class Console(object):
         password: str | None = None,
         timeout: int = TIMEOUT_30SEC,
         prompt: str | list[str] | None = None,
+        kubeconfig: str | None = None,
     ) -> None:
         """
         Connect to VM console
@@ -34,10 +35,17 @@ class Console(object):
             password: VM password
             timeout: Connection timeout in seconds
             prompt: Shell prompt pattern(s) to expect
+            kubeconfig: Path to kubeconfig file for remote cluster access
 
         Examples:
             from utilities import console
+            # Local cluster
             with console.Console(vm=vm) as vmc:
+                vmc.sendline('some command')
+                vmc.expect('some output')
+
+            # Remote cluster with kubeconfig
+            with console.Console(vm=vm, kubeconfig="/path/to/kubeconfig") as vmc:
                 vmc.sendline('some command')
                 vmc.expect('some output')
         """
@@ -53,6 +61,7 @@ class Console(object):
         self.child = None
         self.login_prompt = "login:"
         self.prompt = prompt if prompt else [r"#", r"\$"]
+        self.kubeconfig = kubeconfig
         self.cmd = self._generate_cmd()
         self.base_dir = get_data_collector_base_directory()
 
@@ -120,6 +129,8 @@ class Console(object):
         cmd = f"{virtctl_str} console {self.vm.name}"
         if self.vm.namespace:
             cmd += f" -n {self.vm.namespace}"
+        if self.kubeconfig:
+            cmd += f" --kubeconfig {self.kubeconfig}"
         return cmd
 
     def __enter__(self):
