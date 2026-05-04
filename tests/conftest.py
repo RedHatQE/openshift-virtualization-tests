@@ -949,17 +949,6 @@ Windows-specific fixtures
 """
 
 
-@pytest.fixture()
-def started_windows_vm(
-    request,
-    vm_instance_from_template_multi_storage_scope_function,
-):
-    wait_for_windows_vm(
-        vm=vm_instance_from_template_multi_storage_scope_function,
-        version=request.param["os_version"],
-    )
-
-
 @pytest.fixture(scope="session")
 def worker_nodes_ipv4_false_secondary_nics(
     admin_client,

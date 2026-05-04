@@ -26,6 +26,16 @@ from tests.storage.utils import (
     wait_for_dv_condition_message,
 )
 from utilities.constants import (
+<<<<<<< HEAD
+=======
+    OS_FLAVOR_WINDOWS,
+    QUARANTINED,
+    TIMEOUT_1MIN,
+    TIMEOUT_5MIN,
+    TIMEOUT_60MIN,
+    U1_LARGE,
+    WINDOWS_2K22_PREFERENCE,
+>>>>>>> 21c67484 (increase timeout and remove unused code)
     Images,
 )
 from utilities.constants.images import OS_FLAVOR_WINDOWS
@@ -49,7 +59,7 @@ ISO_IMG = "Core-current.iso"
 TAR_IMG = "archive.tar"
 DEFAULT_DV_SIZE = Images.Alpine.DEFAULT_DV_SIZE
 SMALL_DV_SIZE = "200Mi"
-LATEST_WINDOWS_OS_DICT = py_config.get("latest_windows_os_dict", {})
+WINDOWS_VM_TIMEOUT = TIMEOUT_60MIN
 
 
 @pytest.mark.xfail(
@@ -362,5 +372,5 @@ def test_successful_vm_from_imported_dv_windows_with_vtpm(
         cpu_model=cpu_for_migration,
     ) as vm:
         vm.start()
-        wait_for_windows_vm(vm=vm, version="2022", timeout=TIMEOUT_40MIN)
+        wait_for_windows_vm(vm=vm, version="2022", timeout=WINDOWS_VM_TIMEOUT)
         validate_os_info_vmi_vs_windows_os(vm=vm)
