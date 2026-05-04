@@ -1,8 +1,10 @@
 import shlex
 
 import pytest
+from ocp_resources.multi_namespace_virtual_machine_storage_migration import MultiNamespaceVirtualMachineStorageMigration
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from pyhelper_utils.shell import run_ssh_commands
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.storage.storage_migration.constants import (
     CONTENT,
@@ -12,17 +14,10 @@ from tests.storage.storage_migration.constants import (
 )
 from utilities import console
 from utilities.constants import LS_COMMAND, TIMEOUT_2MIN, TIMEOUT_5SEC, TIMEOUT_20SEC
+from tests.storage.utils import check_file_in_vm
+from utilities.constants import TIMEOUT_2MIN, TIMEOUT_5SEC, TIMEOUT_10MIN, TIMEOUT_10SEC
+from utilities.exceptions import StorageMigrationError
 from utilities.virt import VirtualMachineForTests, get_vm_boot_time
-
-
-def check_file_in_vm(vm: VirtualMachineForTests, file_name: str, file_content: str) -> None:
-    if not vm.ready:
-        vm.start(wait=True)
-    with console.Console(vm=vm) as vm_console:
-        vm_console.sendline(LS_COMMAND)
-        vm_console.expect(file_name, timeout=TIMEOUT_20SEC)
-        vm_console.sendline(f"cat {file_name}")
-        vm_console.expect(file_content, timeout=TIMEOUT_20SEC)
 
 
 def verify_vms_boot_time_after_storage_migration(
@@ -110,3 +105,67 @@ def verify_file_in_windows_vm(windows_vm: VirtualMachineForTests, file_name_with
         0
     ].strip()
     assert out.strip() == file_content, f"'{out}' does not equal '{file_content}'"
+
+
+def wait_for_storage_migration_completed(
+    mig_migration: MultiNamespaceVirtualMachineStorageMigration, timeout: int = TIMEOUT_10MIN
+) -> None:
+    """Wait for all namespaces in the migration to have phase == Completed."""
+    last_sample = None
+    samples = TimeoutSampler(
+        wait_timeout=timeout,
+        sleep=TIMEOUT_10SEC,
+        func=lambda: mig_migration.instance.status,
+    )
+    try:
+        for sample in samples:
+            last_sample = sample
+            if sample and sample.namespaces:
+                all_completed = all(ns.get("phase") == mig_migration.Status.COMPLETED for ns in sample.namespaces)
+                if all_completed:
+                    return
+    except TimeoutExpiredError as err:
+        raise StorageMigrationError(
+            f"Timeout waiting for storage migration '{mig_migration.name}' to complete. "
+            f"Last status sample: {last_sample}"
+        ) from err
+
+
+def build_namespaces_spec_for_storage_migration(
+    vms: list[VirtualMachineForTests], target_storage_class: str
+) -> list[dict]:
+    """
+    Build namespaces spec for MultiNamespaceVirtualMachineStorageMigrationPlan:
+    [
+        {"name": "namespace1", "virtualMachines": [vm1, vm2, ...]},
+        {"name": "namespace2", "virtualMachines": [vm3, ...]},
+    ]
+
+    Args:
+        vms: List of VMs to include in the migration plan.
+        target_storage_class: Target storage class for the migration.
+
+    Returns:
+        List of namespace specs with VMs and their target migration PVCs.
+    """
+    namespaces_dict: dict[str, list] = {}
+    for vm in vms:
+        # Get volume names from VM spec
+        target_migration_pvcs = []
+        for volume in vm.instance.spec.template.spec.volumes:
+            if "dataVolume" in volume.keys():
+                target_migration_pvcs.append({
+                    "volumeName": volume.name,
+                    "destinationPVC": {
+                        "volumeMode": "Auto",
+                        "accessModes": ["Auto"],
+                        "storageClassName": target_storage_class,
+                    },
+                })
+        # Group VMs by namespace
+        namespaces_dict.setdefault(vm.namespace, []).append({
+            "name": vm.name,
+            "targetMigrationPVCs": target_migration_pvcs,
+        })
+
+    return [{"name": ns_name, "virtualMachines": vms} for ns_name, vms in namespaces_dict.items()]

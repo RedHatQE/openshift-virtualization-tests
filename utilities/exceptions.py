@@ -64,6 +64,10 @@ class StorageCheckupConditionTimeoutExpiredError(Exception):
     pass
 
 
+class StorageMigrationError(Exception):
+    pass
+
+
 class StorageSanityError(Exception):
     def __init__(self, err_str):
         self.err_str = err_str
