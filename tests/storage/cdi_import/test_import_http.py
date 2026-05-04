@@ -31,7 +31,7 @@ from utilities.constants import (
 from utilities.constants.images import OS_FLAVOR_WINDOWS
 from utilities.constants.instance_types import U1_LARGE, WINDOWS_2K22_PREFERENCE
 from utilities.constants.pytest import QUARANTINED
-from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_2MIN, TIMEOUT_5MIN
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_2MIN, TIMEOUT_5MIN, TIMEOUT_40MIN
 from utilities.ssp import validate_os_info_vmi_vs_windows_os
 from utilities.storage import (
     ErrorMsg,
@@ -361,6 +361,6 @@ def test_successful_vm_from_imported_dv_windows_with_vtpm(
         data_volume=data_volume_multi_storage_scope_function,
         cpu_model=cpu_for_migration,
     ) as vm:
-        running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
-        wait_for_windows_vm(vm=vm, version="2022")
+        vm.start()
+        wait_for_windows_vm(vm=vm, version="2022", timeout=TIMEOUT_40MIN)
         validate_os_info_vmi_vs_windows_os(vm=vm)
