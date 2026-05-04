@@ -358,10 +358,7 @@ def test_successful_vm_from_imported_dv_windows_with_vtpm(
         os_flavor=OS_FLAVOR_WINDOWS,
         vm_instance_type=VirtualMachineClusterInstancetype(name=U1_LARGE, client=unprivileged_client),
         vm_preference=VirtualMachineClusterPreference(name=WINDOWS_2K22_PREFERENCE, client=unprivileged_client),
-        data_volume_template={
-            "metadata": data_volume_multi_storage_scope_function.res["metadata"],
-            "spec": data_volume_multi_storage_scope_function.res["spec"],
-        },
+        data_volume=data_volume_multi_storage_scope_function,
         cpu_model=cpu_for_migration,
     ) as vm:
         running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
