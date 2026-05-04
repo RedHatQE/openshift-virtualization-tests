@@ -334,7 +334,8 @@ def validate_resource_request_fields(resource: Deployment | DaemonSet, cpu_min_v
     invalid_cpus = {
         key: value
         for key, value in cpu_values.items()
-        if cpu_value_pattern.findall(value) and int(cpu_value_pattern.findall(value)[0]) < cpu_min_value
+        if (match := cpu_value_pattern.findall(value)) and int(match[0]) < cpu_min_value
+    }
     }
     if invalid_cpus:
         raise ResourceMismatch(
