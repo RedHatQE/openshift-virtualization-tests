@@ -7,6 +7,7 @@ import pytest
 from libs.net.ip import filter_link_local_addresses
 from libs.net.vmspec import lookup_iface_status, lookup_iface_status_ip
 from tests.network.utils import assert_no_ping
+from utilities.constants import QUARANTINED
 from utilities.network import assert_ping_successful
 
 
@@ -69,6 +70,10 @@ class TestConnectivityLinuxBridge:
         )
 
 
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: OVS CNI tests shouldn't run; will be completely removed by PR-4664",
+    run=False,
+)
 @pytest.mark.usefixtures("hyperconverged_ovs_annotations_enabled_scope_session")
 class TestConnectivityOVSBridge:
     @pytest.mark.post_upgrade
