@@ -546,6 +546,21 @@ def data_volume_template_dict(
     size=None,
     storage_class=None,
 ):
+    """Build a DataVolume template dict for use in VM dataVolumeTemplates.
+
+    Args:
+        target_dv_name: Name for the target DataVolume.
+        target_dv_namespace: Namespace for the target DataVolume.
+        source_dv: Source DataVolume to clone from.
+        volume_mode: Override volume mode; defaults to source PVC volume mode.
+        size: Explicit target size (e.g. "10Gi"). When omitted, resources is set
+            to {} so CDI auto-detects capacity from the actual PVC size. Required
+            when minimumSupportedPvcSize causes provisioned PVC > DV spec size.
+        storage_class: Override storage class; defaults to source PVC storage class.
+
+    Returns:
+        dict: DataVolume resource dict suitable for dataVolumeTemplates.
+    """
     source_dv_pvc_spec = source_dv.pvc.instance.spec
     dv = DataVolume(
         name=target_dv_name,
