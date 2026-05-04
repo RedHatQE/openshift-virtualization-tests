@@ -10,9 +10,6 @@ from ocp_resources.datavolume import DataVolume
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.storage.cdi_import.utils import (
-    wait_dv_and_get_importer,
-)
 from tests.storage.constants import (
     ALPINE_QCOW2_IMG,
     HTTP,
@@ -24,7 +21,6 @@ from tests.storage.utils import (
     assert_num_files_in_pod,
     assert_use_populator,
     get_file_url,
-    wait_for_importer_container_message,
 )
 from utilities.constants import (
     QUARANTINED,
@@ -32,7 +28,7 @@ from utilities.constants import (
     TIMEOUT_5MIN,
     Images,
 )
-from utilities.ssp import validate_os_info_vmi_vs_windows_os
+from utilities.ssp import validate_os_info_vmi_vs_windows_os, wait_for_condition_message_value
 from utilities.storage import (
     ErrorMsg,
     create_dv,
@@ -215,16 +211,14 @@ def test_successful_import_basic_auth(
     indirect=True,
 )
 def test_wrong_content_type(
-    admin_client,
     dv_from_http_import,
 ):
-    wait_for_importer_container_message(
-        importer_pod=wait_dv_and_get_importer(
-            dv=dv_from_http_import,
-            admin_client=admin_client,
-        ),
-        msg=ErrorMsg.EXIT_STATUS_2,
+    dv_from_http_import.wait_for_status(
+        status=DataVolume.Status.IMPORT_IN_PROGRESS,
+        timeout=TIMEOUT_5MIN,
+        stop_status=DataVolume.Status.SUCCEEDED,
     )
+    wait_for_condition_message_value(resource=dv_from_http_import, expected_message=ErrorMsg.EXIT_STATUS_2)
 
 
 @pytest.mark.sno
@@ -256,13 +250,16 @@ def test_wrong_content_type(
 )
 @pytest.mark.s390x
 def test_certconfigmap_incorrect_cert(
-    admin_client,
     https_config_map,
     dv_from_http_import,
 ):
-    wait_for_importer_container_message(
-        importer_pod=wait_dv_and_get_importer(dv=dv_from_http_import, admin_client=admin_client),
-        msg=ErrorMsg.CERTIFICATE_SIGNED_UNKNOWN_AUTHORITY,
+    dv_from_http_import.wait_for_status(
+        status=DataVolume.Status.IMPORT_IN_PROGRESS,
+        timeout=TIMEOUT_5MIN,
+        stop_status=DataVolume.Status.SUCCEEDED,
+    )
+    wait_for_condition_message_value(
+        resource=dv_from_http_import, expected_message=ErrorMsg.CERTIFICATE_SIGNED_UNKNOWN_AUTHORITY
     )
 
 

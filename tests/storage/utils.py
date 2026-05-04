@@ -35,7 +35,6 @@ from utilities.constants import (
     CDI_UPLOADPROXY,
     LS_COMMAND,
     TIMEOUT_2MIN,
-    TIMEOUT_3MIN,
     TIMEOUT_5SEC,
     TIMEOUT_20SEC,
     TIMEOUT_30MIN,
@@ -278,47 +277,6 @@ def get_importer_pod(
                 return pod
     except TimeoutExpiredError:
         LOGGER.error("Importer pod not found")
-        raise
-
-
-def wait_for_importer_container_message(importer_pod, msg):
-    """
-    Wait for importer pod to crash with expected error message.
-
-    Polls the pod's lastState.terminated.message for the expected error message
-    after at least one container restart. Does not require the pod to be in
-    CrashLoopBackOff status, as that is a transient waiting state that may be
-    missed during polling, especially in CI environments with slow container
-    initialization.
-
-    Args:
-        importer_pod: Pod object for the CDI importer pod
-        msg: Expected error message substring to find in terminated container message
-
-    Raises:
-        TimeoutExpiredError: If message not found within timeout, logs actual
-            message from importer pod's last container termination state for debugging.
-    """
-    LOGGER.info(f"Wait for {importer_pod.name} container to show message: {msg}")
-    try:
-        sampled_msg = TimeoutSampler(
-            wait_timeout=TIMEOUT_3MIN,
-            sleep=5,
-            func=lambda: (
-                importer_pod.instance.status.containerStatuses[0].restartCount > 0
-                and msg
-                in importer_pod.instance.status
-                .containerStatuses[0]
-                .get("lastState", {})
-                .get("terminated", {})
-                .get("message", "")
-            ),
-        )
-        for sample in sampled_msg:
-            if sample:
-                return
-    except TimeoutExpiredError:
-        LOGGER.error(f"{importer_pod.name} did not get message: {msg}")
         raise
 
 

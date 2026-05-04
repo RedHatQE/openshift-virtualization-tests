@@ -7,10 +7,6 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.resource import Resource
 
 from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE
-from tests.storage.utils import (
-    get_importer_pod,
-    wait_for_importer_container_message,
-)
 from utilities.constants import OS_FLAVOR_FEDORA, REGISTRY_STR, TIMEOUT_5MIN, Images
 from utilities.ssp import wait_for_condition_message_value
 from utilities.storage import ErrorMsg, check_disk_count_in_vm, create_dv, create_vm_from_dv
@@ -54,11 +50,7 @@ def test_disk_image_not_conform_to_registry_disk(
             timeout=TIMEOUT_5MIN,
             stop_status=DataVolume.Status.SUCCEEDED,
         )
-        importer_pod = get_importer_pod(client=admin_client, namespace=dv.namespace)
-        wait_for_importer_container_message(
-            importer_pod=importer_pod,
-            msg=ErrorMsg.DISK_IMAGE_IN_CONTAINER_NOT_FOUND,
-        )
+        wait_for_condition_message_value(resource=dv, expected_message=ErrorMsg.DISK_IMAGE_IN_CONTAINER_NOT_FOUND)
 
 
 @pytest.mark.sno
