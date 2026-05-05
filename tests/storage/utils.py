@@ -302,7 +302,7 @@ def wait_for_dv_condition_message(dv: DataVolume, expected_message: str, timeout
     """
     LOGGER.info(f"Watching {dv.name} for message: {expected_message}")
     for event in dv.watcher(timeout=timeout):
-        if event["type"] != "MODIFIED":
+        if event["type"] not in ("ADDED", "MODIFIED"):
             continue
         conditions = (event["object"].status or {}).get("conditions", [])
         if any(expected_message in condition.get("message", "") for condition in conditions):
