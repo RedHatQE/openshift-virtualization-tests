@@ -21,6 +21,7 @@ from tests.storage.utils import (
     assert_num_files_in_pod,
     assert_use_populator,
     get_file_url,
+    wait_for_dv_error_message,
 )
 from utilities.constants import (
     QUARANTINED,
@@ -28,7 +29,7 @@ from utilities.constants import (
     TIMEOUT_5MIN,
     Images,
 )
-from utilities.ssp import validate_os_info_vmi_vs_windows_os, wait_for_condition_message_value
+from utilities.ssp import validate_os_info_vmi_vs_windows_os
 from utilities.storage import (
     ErrorMsg,
     create_dv,
@@ -218,7 +219,7 @@ def test_wrong_content_type(
         timeout=TIMEOUT_5MIN,
         stop_status=DataVolume.Status.SUCCEEDED,
     )
-    wait_for_condition_message_value(resource=dv_from_http_import, expected_message=ErrorMsg.EXIT_STATUS_2)
+    wait_for_dv_error_message(dv=dv_from_http_import, expected_message=ErrorMsg.EXIT_STATUS_2)
 
 
 @pytest.mark.sno
@@ -258,9 +259,7 @@ def test_certconfigmap_incorrect_cert(
         timeout=TIMEOUT_5MIN,
         stop_status=DataVolume.Status.SUCCEEDED,
     )
-    wait_for_condition_message_value(
-        resource=dv_from_http_import, expected_message=ErrorMsg.CERTIFICATE_SIGNED_UNKNOWN_AUTHORITY
-    )
+    wait_for_dv_error_message(dv=dv_from_http_import, expected_message=ErrorMsg.CERTIFICATE_SIGNED_UNKNOWN_AUTHORITY)
 
 
 @pytest.mark.parametrize(

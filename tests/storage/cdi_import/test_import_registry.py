@@ -7,8 +7,8 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.resource import Resource
 
 from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE
+from tests.storage.utils import wait_for_dv_error_message
 from utilities.constants import OS_FLAVOR_FEDORA, REGISTRY_STR, TIMEOUT_5MIN, Images
-from utilities.ssp import wait_for_condition_message_value
 from utilities.storage import ErrorMsg, check_disk_count_in_vm, create_dv, create_vm_from_dv
 from utilities.virt import running_vm
 
@@ -50,7 +50,7 @@ def test_disk_image_not_conform_to_registry_disk(
             timeout=TIMEOUT_5MIN,
             stop_status=DataVolume.Status.SUCCEEDED,
         )
-        wait_for_condition_message_value(resource=dv, expected_message=ErrorMsg.DISK_IMAGE_IN_CONTAINER_NOT_FOUND)
+        wait_for_dv_error_message(dv=dv, expected_message=ErrorMsg.DISK_IMAGE_IN_CONTAINER_NOT_FOUND)
 
 
 @pytest.mark.sno
@@ -138,7 +138,7 @@ def test_public_registry_data_volume_low_capacity(unprivileged_client, namespace
             timeout=TIMEOUT_5MIN,
             stop_status=DataVolume.Status.SUCCEEDED,
         )
-        wait_for_condition_message_value(resource=dv, expected_message=ErrorMsg.DATA_VOLUME_TOO_SMALL)
+        wait_for_dv_error_message(dv=dv, expected_message=ErrorMsg.DATA_VOLUME_TOO_SMALL)
     # positive flow
     with create_dv(
         client=unprivileged_client,

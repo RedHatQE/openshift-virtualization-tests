@@ -35,6 +35,7 @@ from utilities.constants import (
     CDI_UPLOADPROXY,
     LS_COMMAND,
     TIMEOUT_2MIN,
+    TIMEOUT_5MIN,
     TIMEOUT_5SEC,
     TIMEOUT_20SEC,
     TIMEOUT_30MIN,
@@ -278,6 +279,38 @@ def get_importer_pod(
     except TimeoutExpiredError:
         LOGGER.error("Importer pod not found")
         raise
+
+
+def wait_for_dv_error_message(dv: DataVolume, expected_message: str, timeout: int = TIMEOUT_5MIN) -> None:
+    """
+    Wait for DataVolume condition to contain expected error message.
+
+    Uses substring matching (not exact match) because CDI error messages
+    often include variable context like timestamps, pod names, or URLs.
+
+    Example:
+        Expected: "certificate signed by unknown authority"
+        Actual: "Unable to connect: ... x509: certificate signed by unknown authority
+
+    Args:
+        dv: DataVolume resource
+        expected_message: Expected error message substring to find in condition messages
+        timeout: Timeout for the operation, default is 5 minutes.
+
+    Raises:
+        TimeoutExpiredError: If expected message not found in conditions within timeout
+    """
+    LOGGER.info(f"Watching {dv.name} for error message: {expected_message}")
+    for event in dv.watcher(timeout=timeout):
+        if event["type"] != "MODIFIED":
+            continue
+        conditions = (event["object"].status or {}).get("conditions", [])
+        if any(expected_message in condition.get("message", "") for condition in conditions):
+            return
+
+    raise TimeoutExpiredError(
+        f"Expected error message '{expected_message}' not found in {dv.name} conditions within timeout"
+    )
 
 
 def assert_pvc_snapshot_clone_annotation(pvc, storage_class):
