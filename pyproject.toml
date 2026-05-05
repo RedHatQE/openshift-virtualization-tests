@@ -7,6 +7,36 @@ output-format = "grouped"
 [tool.ruff.format]
 exclude = [".git", ".venv", ".mypy_cache", ".tox", "__pycache__"]
 
+[tool.ruff.lint]
+# TODO: Each ignored rule below should be addressed in a dedicated PR.
+ignore = [
+  "SIM102",  # collapsible-if — nested ifs are often more readable
+  "SIM114",  # combine if branches using logical or — reduces readability
+  "SIM117",  # nested with statements — existing pattern, keep as-is
+  "C419",    # unnecessary-comprehension-in-call — may change list vs generator semantics
+  "RUF015",  # unnecessary-iterable-allocation-for-first-element — changes exception type
+  "DTZ005",  # datetime.now() without tz — requires careful refactoring
+  "DTZ006",  # datetime.fromtimestamp() without tz
+  "DTZ007",  # naive datetime from strptime()
+  "BLE001",  # blind exception catch — pre-existing, fix separately
+  "PYI036",  # __exit__ parameter annotations
+  "PYI034",  # __enter__ return type annotation
+  "EXE001",  # shebang present but file not executable
+  "EXE002",  # file executable but no shebang
+  "PLE0643", # expression likely to raise IndexError — needs per-case review
+  "PLW0604", # redundant global at module level — used in global_config files
+  "PLW1510", # subprocess.run without check — needs per-call review
+  "B005",    # .strip() with multi-char string — intent-dependent
+  "B018",    # useless expression — intent-dependent
+  "B023",    # loop variable not bound in function — needs careful refactor
+  "G201",    # .error(exc_info=True) vs .exception()
+  "SIM115",  # context manager for file opening — may need structural changes
+]
+
+[tool.ruff.lint.per-file-ignores]
+# F821: undefined name — global_config files use dynamic exec() loading via pytest_testconfig
+"tests/global_config*.py" = ["F821"]
+
 [tool.ruff.lint.isort]
 order-by-type = true
 known-third-party = [

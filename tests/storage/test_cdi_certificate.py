@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Automatic refresh of CDI certificates test suite
 """
