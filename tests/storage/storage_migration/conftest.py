@@ -1,6 +1,7 @@
 import shlex
 
 import pytest
+import shortuuid
 from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.multi_namespace_virtual_machine_storage_migration import MultiNamespaceVirtualMachineStorageMigration
@@ -52,6 +53,11 @@ from utilities.virt import (
 )
 
 DEFAULT_DV_SIZE = "1Gi"
+
+
+@pytest.fixture(scope="class")
+def unique_suffix():
+    return shortuuid.ShortUUID().random(length=4).lower()
 
 
 @pytest.fixture(scope="class")
