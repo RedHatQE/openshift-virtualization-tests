@@ -7,6 +7,7 @@ from tests.network.localnet.liblocalnet import LOCALNET_OVS_BRIDGE_INTERFACE
 from utilities.virt import vm_console_run_commands
 
 pytestmark = [
+    pytest.mark.localnet,
     pytest.mark.special_infra,
     pytest.mark.jumbo_frame,
 ]

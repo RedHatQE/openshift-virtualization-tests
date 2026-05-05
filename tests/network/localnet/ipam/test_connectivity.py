@@ -4,6 +4,8 @@ from libs.net.traffic_generator import client_server_active_connection, is_tcp_c
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.localnet.liblocalnet import LOCALNET_IPAM_INTERFACE
 
+pytestmark = pytest.mark.localnet
+
 
 @pytest.mark.ipv4
 @pytest.mark.polarion("CNV-14043")
