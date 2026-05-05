@@ -722,6 +722,7 @@ CNV_PROMETHEUS_RULES = [
     f"kubevirt-cnv-{PROMETHEUS_RULES_STR}",
     KUBEMACPOOL_PROMETHEUS_RULE,
 ]
+AAQ_PROMETHEUS_RULE = "prometheus-aaq-rules"
 
 
 class StorageClassNames:

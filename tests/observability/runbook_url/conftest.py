@@ -57,8 +57,17 @@ def available_runbook_urls():
             url=runbooks_api_url,
             timeout=TIMEOUT_10SEC,
         ):
-            if sample.status_code == requests.codes.ok:
-                return {entry["html_url"] for entry in sample.json()}
+            if sample:
+                try:
+                    runbook_urls = {entry["html_url"] for entry in sample.json()}
+                except ValueError:
+                    LOGGER.error(
+                        f"Failed to decode JSON from '{runbooks_api_url}', "
+                        f"status: {sample.status_code}, content-type: {sample.headers.get('Content-Type')}"
+                    )
+                    continue
+                if runbook_urls:
+                    return runbook_urls
     except TimeoutExpiredError:
         LOGGER.error(
             f"Failed to fetch runbooks directory listing from '{runbooks_api_url}', "

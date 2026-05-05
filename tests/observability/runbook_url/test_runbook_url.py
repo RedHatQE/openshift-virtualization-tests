@@ -2,7 +2,7 @@ import logging
 
 import pytest
 
-from utilities.constants import CNV_PROMETHEUS_RULES
+from utilities.constants import AAQ_PROMETHEUS_RULE, CNV_PROMETHEUS_RULES
 
 LOGGER = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ def validate_downstream_runbook_url(
 
 class TestRunbookUrlsAndPrometheusRules:
     @pytest.mark.polarion("CNV-10081")
-    def test_no_new_prometheus_rules(self, cnv_prometheus_rules_names, hpp_cr_installed):
+    def test_no_new_prometheus_rules(self, cnv_prometheus_rules_names, hpp_cr_installed, aaq_enabled):
         """
         Since validations for runbook url of all cnv alerts are done via polarion parameterization of prometheusrules,
         this test has been added to catch any new cnv prometheusrules that is not part of cnv_prometheus_rules_matrix
@@ -38,6 +38,8 @@ class TestRunbookUrlsAndPrometheusRules:
         if not hpp_cr_installed:
             LOGGER.warning("HPP CR is not installed, removing prometheus-hpp-rules from the list of prometheus rules")
             expected_prometheus_rules_names.remove("prometheus-hpp-rules")
+        if aaq_enabled:
+            expected_prometheus_rules_names.append(AAQ_PROMETHEUS_RULE)
         assert sorted(cnv_prometheus_rules_names) == sorted(expected_prometheus_rules_names), (
             f"New cnv prometheusrule found: {set(cnv_prometheus_rules_names) - set(expected_prometheus_rules_names)}"
         )

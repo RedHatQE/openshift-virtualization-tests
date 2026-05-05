@@ -1337,6 +1337,13 @@ def hpp_cr_installed(hostpath_provisioner_scope_session):
     return hostpath_provisioner_scope_session.exists
 
 
+@pytest.fixture(scope="session")
+def aaq_enabled(hyperconverged_resource_scope_session):
+    if not hyperconverged_resource_scope_session:
+        return False
+    return hyperconverged_resource_scope_session.instance.spec.get("enableApplicationAwareQuota", False)
+
+
 @pytest.fixture(scope="module")
 def cnv_pods(admin_client, hco_namespace):
     yield list(Pod.get(client=admin_client, namespace=hco_namespace.name))
