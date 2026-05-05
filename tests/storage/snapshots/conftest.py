@@ -22,18 +22,20 @@ from utilities.artifactory import (
     cleanup_artifactory_secret_and_config_map,
     get_artifactory_config_map,
     get_artifactory_secret,
-    get_http_image_url,
+    get_test_artifact_server_url,
 )
 from utilities.constants import (
-    OS_FLAVOR_WINDOWS,
+    OS_FLAVOR_WIN_CONTAINER_DISK,
     TIMEOUT_2MIN,
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
     U1_LARGE,
     UNPRIVILEGED_USER,
+    WIN_2K22,
     WINDOWS_2K22_PREFERENCE,
     Images,
 )
+from utilities.os_utils import get_windows_container_disk_path
 from utilities.virt import VirtualMachineForTests, running_vm, wait_for_windows_vm
 
 LOGGER = logging.getLogger(__name__)
@@ -72,10 +74,10 @@ def windows_vm_with_vtpm_for_snapshot(
     dv = DataVolume(
         name=request.param["dv_name"],
         namespace=namespace.name,
-        storage_class=[*storage_class_matrix_snapshot_matrix__module__][0],
-        source="http",
-        url=get_http_image_url(image_directory=Images.Windows.DIR, image_name=Images.Windows.WIN2022_IMG),
-        size=Images.Windows.DEFAULT_DV_SIZE,
+        storage_class=next(iter(storage_class_matrix_snapshot_matrix__module__)),
+        source="registry",
+        url=f"{get_test_artifact_server_url(schema='registry')}/{get_windows_container_disk_path(os_value=WIN_2K22)}",
+        size=Images.Windows.CONTAINER_DISK_DV_SIZE,
         client=unprivileged_client,
         api_name="storage",
         secret=artifactory_secret,
@@ -86,7 +88,7 @@ def windows_vm_with_vtpm_for_snapshot(
         name=request.param["vm_name"],
         namespace=namespace.name,
         client=unprivileged_client,
-        os_flavor=OS_FLAVOR_WINDOWS,
+        os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK,
         vm_instance_type=VirtualMachineClusterInstancetype(name=U1_LARGE, client=unprivileged_client),
         vm_preference=VirtualMachineClusterPreference(name=WINDOWS_2K22_PREFERENCE, client=unprivileged_client),
         data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
