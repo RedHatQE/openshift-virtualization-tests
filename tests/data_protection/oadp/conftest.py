@@ -6,7 +6,7 @@ from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClust
 from pytest_testconfig import config as py_config
 
 from tests.data_protection.oadp.utils import (
-    write_file_windows_vm_for_oadp,
+    FILE_PATH_FOR_WINDOWS_BACKUP,
 )
 from utilities.artifactory import (
     cleanup_artifactory_secret_and_config_map,
@@ -23,6 +23,7 @@ from utilities.constants import (
     TEXT_TO_TEST,
     TIMEOUT_8MIN,
     TIMEOUT_15MIN,
+    U1_LARGE,
     Images,
 )
 from utilities.infra import create_ns
@@ -39,6 +40,7 @@ from utilities.storage import (
     get_downloaded_artifact,
     virtctl_upload_dv,
     write_file,
+    write_file_windows_vm,
 )
 from utilities.virt import VirtualMachineForTests, running_vm
 
@@ -170,7 +172,10 @@ def windows_vm_with_data_volume_template(
             namespace=namespace_for_backup.name,
             storage_class=snapshot_storage_class_name_scope_module,
             source="registry",
-            url=f"{get_test_artifact_server_url(schema='registry')}/{py_config['latest_windows_os_dict'][CONTAINER_DISK_IMAGE_PATH_STR]}",
+            url=(
+                f"{get_test_artifact_server_url(schema='registry')}/"
+                f"{py_config['latest_windows_os_dict'][CONTAINER_DISK_IMAGE_PATH_STR]}"
+            ),
             size=Images.Windows.CONTAINER_DISK_DV_SIZE,
             client=admin_client,
             api_name="storage",
@@ -183,14 +188,13 @@ def windows_vm_with_data_volume_template(
             name="oadp-windows-vm",
             namespace=namespace_for_backup.name,
             client=admin_client,
-            vm_instance_type=VirtualMachineClusterInstancetype(client=admin_client, name="u1.large"),
+            vm_instance_type=VirtualMachineClusterInstancetype(client=admin_client, name=U1_LARGE),
             vm_preference=VirtualMachineClusterPreference(client=admin_client, name="windows.2k22"),
             data_volume_template=dv.res,
             os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK,
-            disk_type=None,
         ) as vm:
-            running_vm(vm=vm, wait_for_interfaces=True)
-            write_file_windows_vm_for_oadp(vm=vm)
+            running_vm(vm=vm)
+            write_file_windows_vm(vm=vm, file_path=FILE_PATH_FOR_WINDOWS_BACKUP, content=TEXT_TO_TEST)
             yield vm
     finally:
         cleanup_artifactory_secret_and_config_map(

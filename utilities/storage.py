@@ -1259,12 +1259,7 @@ def verify_file_in_windows_vm(
     Raises:
         AssertionError: If file content does not match expected content.
     """
-    cmd = [
-        "powershell",
-        "-NoProfile",
-        "-Command",
-        f"Get-Content -LiteralPath '{file_name_with_path}'",
-    ]
+    cmd = shlex.split(f"powershell -NoProfile -Command \"Get-Content -LiteralPath '{file_name_with_path}'\"")
     out = run_ssh_commands(host=windows_vm.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC)[
         0
     ].strip()
