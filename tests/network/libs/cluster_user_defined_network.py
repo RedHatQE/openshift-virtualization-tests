@@ -56,6 +56,33 @@ class Localnet:
 
 
 @dataclass
+class MacVRF:
+    vni: int
+    routeTarget: str | None = None  # noqa: N815
+
+
+@dataclass
+class IpVRF:
+    vni: int
+    routeTarget: str | None = None  # noqa: N815
+
+
+@dataclass
+class EvpnConfiguration:
+    vtep: str
+    macVRF: MacVRF | None = None  # noqa: N815
+    ipVRF: IpVRF | None = None  # noqa: N815
+
+
+class Transport(Enum):
+    EVPN = "EVPN"
+
+
+class VtepMode(Enum):
+    UNMANAGED = "Unmanaged"
+
+
+@dataclass
 class Network:
     class Topology(Enum):
         LAYER2 = "Layer2"
@@ -64,6 +91,8 @@ class Network:
     topology: str
     layer2: Layer2 | None = None
     localnet: Localnet | None = None
+    transport: str | None = None
+    evpn: EvpnConfiguration | None = None
 
 
 class ClusterUserDefinedNetwork(Cudn):

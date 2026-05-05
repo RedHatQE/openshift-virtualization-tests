@@ -110,7 +110,7 @@ class ArchImages:
             WIN2022_ISO_IMG="Windows_Server_2022_x64FRE_en-us.iso",
             WIN2025_ISO_IMG="windows_server_2025_x64_dvd_eval.iso",
         )
-        Windows.LATEST_RELEASE_STR = Windows.WIN2k19_IMG
+        Windows.LATEST_RELEASE_STR = Windows.WIN2022_IMG
 
         Fedora = Fedora(
             FEDORA42_IMG="Fedora-Cloud-Base-Generic-42-1.1.x86_64.qcow2",
@@ -873,7 +873,7 @@ POD_CONTAINER_SPEC = {
 
 EXCLUDED_CPU_MODELS_S390X = [
     # Below are deprecated & usable models, but violate RHEL 9 ALS (min z14) causing guest to crash (disable-wait)
-    # Ref: https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/automatically_installing_rhel/preparing-a-rhel-installation-on-64-bit-ibm-z_rhel-installer#planning-for-installation-on-ibm-z_preparing-a-rhel-installation-on-64-bit-ibm-z # noqa: E501
+    # Ref: https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/automatically_installing_rhel/preparing-a-rhel-installation-on-64-bit-ibm-z_rhel-installer#planning-for-installation-on-ibm-z_preparing-a-rhel-installation-on-64-bit-ibm-z
     "z114",
     "z114-base",
     "z13",
