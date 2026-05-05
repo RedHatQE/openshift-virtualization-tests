@@ -1,0 +1,16 @@
+[run]
+branch = True
+source = .
+parallel = True
+omit =
+    */test*
+    */tests/*
+    */conftest.py
+    coverport/*
+
+[report]
+show_missing = True
+precision = 2
+
+[lcov]
+output = coverage.lcov
