@@ -11,9 +11,20 @@ from ocp_resources.node import Node
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.vtep import VTEP
 
+from libs.net.ip import random_ipv4_address, random_ipv6_address
+from libs.net.traffic_generator import TcpServer
 from libs.net.udn import UDN_BINDING_DEFAULT_PLUGIN_NAME, create_udn_namespace
 from libs.vm.vm import BaseVirtualMachine
-from tests.network.bgp.evpn.libevpn import cudn_evpn_subnets
+from tests.network.bgp.evpn.libevpn import (
+    EndpointTcpClient,
+    EvpnEndpoint,
+    cudn_evpn_subnets,
+    deploy_evpn_bridge,
+    deploy_evpn_l2_endpoint,
+    evpn_workloads_active_connections,
+    teardown_evpn_bridge,
+    teardown_evpn_l2_endpoint,
+)
 from tests.network.libs import cluster_user_defined_network as libcudn
 from tests.network.libs.bgp import (
     EXTERNAL_FRR_POD_LABEL,
@@ -28,6 +39,8 @@ from tests.network.libs.vm_factory import udn_vm
 EVPN_ADVERTISE_LABEL: Final[dict] = {"advertise": "evpn"}
 APP_EVPN_CUDN_LABEL: Final[dict] = {**EVPN_ADVERTISE_LABEL, "app": "cudn-evpn"}
 CUDN_EVPN_BGP_LABEL: Final[dict] = {"cudn-bgp": "evpn"}
+EXTERNAL_L2_ENDPOINT_IPV4: Final[str] = f"{random_ipv4_address(net_seed=5, host_address=250)}/24"
+EXTERNAL_L2_ENDPOINT_IPV6: Final[str] = f"{random_ipv6_address(net_seed=5, host_address=250)}/64"
 EVPN_MAC_VRF_VNI: Final[int] = 10100
 EVPN_IP_VRF_VNI: Final[int] = 20102
 
@@ -165,7 +178,7 @@ def vm_evpn_target(
         yield vm
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture()
 def vm_evpn_reference(
     namespace_evpn: Namespace,
     cudn_evpn_layer2: libcudn.ClusterUserDefinedNetwork,
@@ -183,3 +196,46 @@ def vm_evpn_reference(
         vm.start(wait=True)
         vm.wait_for_agent_connected()
         yield vm
+
+
+@pytest.fixture(scope="module")
+def evpn_bridge(
+    frr_external_pod: ExternalFrrPodInfo,
+    workers: list[Node],
+) -> Generator[None]:
+    worker_ips = []
+    for worker in workers:
+        host_cidrs = json.loads(worker.instance.metadata.annotations["k8s.ovn.org/host-cidrs"])
+        host_ip = next(cidr.split("/")[0] for cidr in host_cidrs if "." in cidr)
+        worker_ips.append(host_ip)
+
+    deploy_evpn_bridge(
+        pod=frr_external_pod.pod,
+        local_vtep_ip=frr_external_pod.ipv4,
+        remote_vtep_ips=worker_ips,
+    )
+    yield
+    teardown_evpn_bridge(pod=frr_external_pod.pod)
+
+
+@pytest.fixture(scope="module")
+def external_l2_endpoint(
+    evpn_bridge: None,
+    frr_external_pod: ExternalFrrPodInfo,
+) -> Generator[EvpnEndpoint]:
+    endpoint = deploy_evpn_l2_endpoint(
+        pod=frr_external_pod.pod,
+        vni=EVPN_MAC_VRF_VNI,
+        endpoint_ips=[EXTERNAL_L2_ENDPOINT_IPV4, EXTERNAL_L2_ENDPOINT_IPV6],
+    )
+    yield endpoint
+    teardown_evpn_l2_endpoint(pod=frr_external_pod.pod)
+
+
+@pytest.fixture()
+def evpn_stretched_l2_active_connections(
+    external_l2_endpoint: EvpnEndpoint,
+    vm_evpn_target: BaseVirtualMachine,
+) -> Generator[list[tuple[EndpointTcpClient, TcpServer]]]:
+    with evpn_workloads_active_connections(endpoint=external_l2_endpoint, vm=vm_evpn_target) as connections:
+        yield connections
