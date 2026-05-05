@@ -98,7 +98,7 @@ class Multus:
 
 @dataclass
 class Affinity:
-    podAntiAffinity: PodAntiAffinity  # noqa: N815
+    podAntiAffinity: PodAntiAffinity | None = None  # noqa: N815
 
 
 @dataclass

@@ -12,6 +12,7 @@ from libs.vm.vm import BaseVirtualMachine
 from tests.network.localnet.liblocalnet import (
     LOCALNET_IPAM_INTERFACE,
     LOCALNET_OVS_BRIDGE_NETWORK,
+    LOCALNET_VM_ANTI_AFFINITY,
     localnet_vm,
     run_vms,
 )
@@ -65,6 +66,7 @@ def vm1_localnet_ipam(
         interfaces=[
             Interface(name=LOCALNET_IPAM_INTERFACE, bridge={}),
         ],
+        affinity=LOCALNET_VM_ANTI_AFFINITY,
     ) as vm:
         yield vm
 
@@ -88,6 +90,7 @@ def vm2_localnet_ipam(
         interfaces=[
             Interface(name=LOCALNET_IPAM_INTERFACE, bridge={}),
         ],
+        affinity=LOCALNET_VM_ANTI_AFFINITY,
     ) as vm:
         yield vm
 
