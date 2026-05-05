@@ -220,7 +220,6 @@ from utilities.virt import (
     running_vm,
     start_and_fetch_processid_on_linux_vm,
     vm_instance_from_template,
-    wait_for_windows_vm,
 )
 
 LOGGER = logging.getLogger(__name__)
