@@ -20,6 +20,8 @@ https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main
 
 import pytest
 
+pytestmark = pytest.mark.localnet
+
 __test__ = False
 
 """

@@ -13,6 +13,8 @@ from tests.network.localnet.liblocalnet import (
 )
 from utilities.virt import migrate_vm_and_verify
 
+pytestmark = pytest.mark.localnet
+
 
 @pytest.mark.s390x
 @pytest.mark.usefixtures("nncp_localnet_on_secondary_node_nic")
