@@ -195,6 +195,10 @@ themselves:
 - `TimeoutExpiredError` from `timeout_sampler` - Common wrapper signal; inspect WHAT
   timed out before classifying. A `TimeoutSampler` waiting for VM to reach `Running`
   is different from one waiting for SSH connectivity.
+- `AssertionError` from a guest SSH comparison - Verify the observable, unit,
+  rounding, and comparison are correct (see **Guest-visible validation vs API or spec**
+  below) before adding `TimeoutSampler`. An assertion that can never be satisfied by
+  the chosen metric is a `CODE ISSUE` regardless of poll duration.
 - `ApiException` - Check whether the test sent an invalid request (`CODE ISSUE`)
   or the API rejected a valid one (`PRODUCT BUG`).
 - `ResourceNotFoundError` or `NotFoundError` - Determine whether the resource was
@@ -237,6 +241,33 @@ Pattern guidance:
 - **Console access failure:** Wrong `pexpect` patterns or timeouts in test is
   `CODE ISSUE`; `virtctl console` unable to connect to a healthy VMI is `PRODUCT BUG`
 
+### Guest-visible validation vs API or spec (guest-side assertions)
+
+Guest SSH vs spec mismatches often look like timing but are **wrong observable, unit,
+rounding, or comparison** in the test. Before recommending `TimeoutSampler`:
+
+1. **Name the exact observable.** Which command, field, and unit does the helper use?
+   Do not equate informal labels ("total memory") with the kernel's accounting.
+2. **Verify the comparison is valid.** Spec strings (e.g. `"6Gi"`) may not be reachable
+   via a guest command. Consider **CR status fields**, a **different command**, or a
+   **relative assertion** (`>=`, value increased, within tolerance) instead of exact
+   string equality.
+3. **Discrete vs continuous—do not copy blindly.** CPU counts can match spec exactly.
+   Memory, storage, and other kernel-accounted values may **never** equal a nominal spec
+   string after unit conversion and rounding. A value between two spec steps is not
+   proof of partial application; verify with the math.
+4. **Known systematic mismatches** (polling does not fix these—change the observable,
+   comparison, or expected value):
+   - `MemTotal` in `/proc/meminfo` < `domain.memory.guest` due to firmware/reserved
+     overhead; kB→Gi rounding produces a stable wrong Gi string. Use `lsmem` or a
+     tolerance.
+   - `df` free space ≠ PVC capacity; reflects filesystem overhead.
+   - `/proc/meminfo HugePages_Total` is in pages, not bytes; requires page-size
+     conversion.
+5. **One sample ≠ timing issue.** Before “root cause = missing poll”, ask whether
+   repeated samples with the same helper would converge. If not, fix the **check**,
+   not the **wait**.
+
 ### Jira Search Keyword Guidance
 
 When classifying a failure as `PRODUCT BUG`, generate `jira_search_keywords` to help
@@ -271,6 +302,9 @@ When classifying `CODE ISSUE`, suggest a specific fix:
   call before `run_command_on_vm_and_check_output()`")
 - If the fix involves a pattern used elsewhere in the codebase, reference the working
   example
+- For guest SSH validation failures, **do not default** to copying **`TimeoutSampler`**
+  from unrelated waits until you have ruled out **wrong observable, units, or assertion**
+  per **Guest-visible validation vs API or spec (guest-side assertions)** above.
 
 ## 3. Analysis Thoroughness and Required Evidence Structure
 
