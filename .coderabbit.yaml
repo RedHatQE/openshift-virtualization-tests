@@ -47,8 +47,8 @@ reviews:
   changed_files_summary: true
 
   # Targeted pre-merge checks - only run on changed files
-  path_filters:
-    - "!**/*.md"  # Skip markdown-only changes for full review
+  # path_filters: markdown files are reviewed (AGENTS.md, docs/*.md contain coding standards)
+  path_filters: []
 
   # Abort review if PR is closed
   abort_on_close: true
