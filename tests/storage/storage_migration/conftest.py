@@ -10,7 +10,6 @@ from ocp_resources.multi_namespace_virtual_machine_storage_migration_plan import
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from pyhelper_utils.shell import run_ssh_commands
-from utilities.artifactory import get_http_image_url
 
 from tests.storage.storage_migration.constants import (
     CONTENT,
@@ -36,7 +35,7 @@ from utilities.constants import (
     U1_SMALL,
     Images,
 )
-from utilities.infra import create_ns
+from utilities.infra import create_ns, get_http_image_url
 from utilities.storage import (
     create_dv,
     data_volume_template_with_source_ref_dict,
