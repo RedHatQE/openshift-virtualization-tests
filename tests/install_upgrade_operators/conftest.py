@@ -275,6 +275,11 @@ def jira_76659_open():
     return is_jira_open(jira_id="CNV-76659")
 
 
+@pytest.fixture(scope="session")
+def jira_86102_open():
+    return is_jira_open(jira_id="CNV-86102")
+
+
 @pytest.fixture()
 def expected_value(request, is_s390x_cluster):
     if request.param == EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES and is_s390x_cluster:

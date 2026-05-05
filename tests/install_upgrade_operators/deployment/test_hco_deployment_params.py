@@ -11,6 +11,7 @@ from utilities.constants import (
     HCO_OPERATOR,
     HCO_WEBHOOK,
     HPP_POOL,
+    VIRT_PLATFORM_AUTOPILOT,
 )
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.arm64, pytest.mark.s390x]
@@ -70,9 +71,12 @@ def test_request_param(deployment_by_name, cpu_min_value):
 def test_cnv_deployment_priority_class_name(
     cnv_deployment_by_name,
     xfail_if_jira_76659_open_and_migration_controller_deployment,
+    jira_86102_open,
 ):
     if cnv_deployment_by_name.name.startswith(HPP_POOL):
         pytest.xfail("HPP pool deployment doesn't have priority class name")
+    elif cnv_deployment_by_name.name == VIRT_PLATFORM_AUTOPILOT and jira_86102_open:
+        pytest.xfail(f"{VIRT_PLATFORM_AUTOPILOT} deployment has no priority class name due to CNV-86102 bug")
     elif not cnv_deployment_by_name.instance.spec.template.spec.priorityClassName:
         pytest.fail(
             f"For cnv deployment {cnv_deployment_by_name.name}, spec.template.spec.priorityClassName has not been set."
