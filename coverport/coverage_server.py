@@ -1,7 +1,8 @@
 """CoverPort coverage server — exposes coverage data via HTTP on port 53700."""
+
 import http.server
-import threading
 import os
+import threading
 
 COVERAGE_PORT = int(os.environ.get("COVERAGE_PORT", "53700"))
 
@@ -13,9 +14,11 @@ class CoverageHandler(http.server.BaseHTTPRequestHandler):
         if self.path == "/coverage":
             try:
                 import coverage
+
                 cov = coverage.Coverage.current()
                 if cov:
                     import tempfile
+
                     with tempfile.NamedTemporaryFile(mode="w", suffix=".lcov", delete=False) as f:
                         cov.lcov_report(outfile=f.name)
                         data = open(f.name).read()
