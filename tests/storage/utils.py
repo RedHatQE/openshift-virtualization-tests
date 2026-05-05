@@ -281,11 +281,11 @@ def get_importer_pod(
         raise
 
 
-def wait_for_dv_error_message(dv: DataVolume, expected_message: str, timeout: int = TIMEOUT_5MIN) -> None:
+def wait_for_dv_condition_message(dv: DataVolume, expected_message: str, timeout: int = TIMEOUT_5MIN) -> None:
     """
-    Wait for DataVolume condition to contain expected error message.
+    Wait for DataVolume condition to contain expected message.
 
-    Uses substring matching (not exact match) because CDI error messages
+    Uses substring matching (not exact match) because CDI messages
     often include variable context like timestamps, pod names, or URLs.
 
     Example:
@@ -294,13 +294,13 @@ def wait_for_dv_error_message(dv: DataVolume, expected_message: str, timeout: in
 
     Args:
         dv: DataVolume resource
-        expected_message: Expected error message substring to find in condition messages
+        expected_message: Expected message substring to find in condition messages
         timeout: Timeout for the operation, default is 5 minutes.
 
     Raises:
         TimeoutExpiredError: If expected message not found in conditions within timeout
     """
-    LOGGER.info(f"Watching {dv.name} for error message: {expected_message}")
+    LOGGER.info(f"Watching {dv.name} for message: {expected_message}")
     for event in dv.watcher(timeout=timeout):
         if event["type"] != "MODIFIED":
             continue
@@ -308,9 +308,7 @@ def wait_for_dv_error_message(dv: DataVolume, expected_message: str, timeout: in
         if any(expected_message in condition.get("message", "") for condition in conditions):
             return
 
-    raise TimeoutExpiredError(
-        f"Expected error message '{expected_message}' not found in {dv.name} conditions within timeout"
-    )
+    raise TimeoutExpiredError(f"Expected message '{expected_message}' not found in {dv.name} conditions within timeout")
 
 
 def assert_pvc_snapshot_clone_annotation(pvc, storage_class):
