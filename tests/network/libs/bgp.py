@@ -26,6 +26,7 @@ _EXTERNAL_FRR_ASN: Final[int] = 64000
 _EXTERNAL_FRR_IMAGE: Final[str] = "quay.io/frrouting/frr:10.6.0"
 _FRR_DEPLOYMENT_NAME: Final[str] = "frr-k8s-statuscleaner"
 POD_SECONDARY_IFACE_NAME: Final[str] = "net1"
+NET_TOOLS_CONTAINER_NAME: Final[str] = "net-tools"
 EXTERNAL_FRR_POD_LABEL: Final[dict] = {"role": "frr-external"}
 
 
@@ -281,7 +282,7 @@ def deploy_external_frr_pod(
             "volumeMounts": [{"name": frr_configmap_name, "mountPath": "/etc/frr"}],
         },
         {
-            "name": "iperf3",
+            "name": NET_TOOLS_CONTAINER_NAME,
             "image": NET_UTIL_CONTAINER_IMAGE,
             "securityContext": {"privileged": True, "capabilities": {"add": ["NET_ADMIN"]}},
             "command": ["sleep", "infinity"],
@@ -306,9 +307,11 @@ def deploy_external_frr_pod(
 
 
 def _acquire_dhcp_ipv4(pod: Pod, iface_name: str) -> str:
-    pod.execute(command=shlex.split(f"dhclient {iface_name}"), container="iperf3")
+    pod.execute(command=shlex.split(f"dhclient {iface_name}"), container=NET_TOOLS_CONTAINER_NAME)
 
-    iface_info = json.loads(pod.execute(command=shlex.split(f"ip -j -4 addr show {iface_name}")))
+    iface_info = json.loads(
+        pod.execute(command=shlex.split(f"ip -j -4 addr show {iface_name}"), container=NET_TOOLS_CONTAINER_NAME)
+    )
     if iface_info and "addr_info" in iface_info[0]:
         for addr in iface_info[0]["addr_info"]:
             if addr["family"] == "inet":

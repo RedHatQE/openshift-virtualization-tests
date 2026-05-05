@@ -166,12 +166,20 @@ class PodTcpClient(BaseTcpClient):
         server_port (int): The port on which the server listens for connections.
         bind_interface (str): The interface or IP address to bind the client to (optional).
             If not specified, the client will use the default interface.
+        container (str): Container name to execute commands in.
     """
 
-    def __init__(self, pod: Pod, server_ip: str, server_port: int, bind_interface: str | None = None):
+    def __init__(
+        self,
+        pod: Pod,
+        server_ip: str,
+        server_port: int,
+        bind_interface: str | None = None,
+        container: str | None = None,
+    ) -> None:
         super().__init__(server_ip=server_ip, server_port=server_port)
         self._pod = pod
-        self._container = _IPERF_BIN
+        self._container = container or _IPERF_BIN
         self._cmd += f" --bind {bind_interface}" if bind_interface else ""
 
     def __enter__(self) -> "PodTcpClient":

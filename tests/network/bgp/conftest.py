@@ -22,6 +22,7 @@ from tests.network.libs import cluster_user_defined_network as libcudn
 from tests.network.libs import nodenetworkconfigurationpolicy as libnncp
 from tests.network.libs.bgp import (
     EXTERNAL_FRR_POD_LABEL,
+    NET_TOOLS_CONTAINER_NAME,
     POD_SECONDARY_IFACE_NAME,
     ExternalFrrPodInfo,
     create_cudn_route_advertisements,
@@ -244,5 +245,6 @@ def tcp_client_external_network(
         ),
         server_port=IPERF3_SERVER_PORT,
         bind_interface=EXTERNAL_PROVIDER_IP_V4.split("/")[0],
+        container=NET_TOOLS_CONTAINER_NAME,
     ) as client:
         yield client
