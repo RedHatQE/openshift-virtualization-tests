@@ -19,7 +19,7 @@ from tests.storage.cdi_upload.utils import get_storage_profile_minimum_supported
 from tests.storage.utils import assert_use_populator
 from utilities.constants import (
     CDI_UPLOADPROXY,
-    OS_FLAVOR_WINDOWS,
+    OS_FLAVOR_WIN_CONTAINER_DISK,
     QUARANTINED,
     TIMEOUT_1MIN,
     U1_LARGE,
@@ -430,34 +430,25 @@ def test_virtctl_image_upload_dv_with_exist_pvc(
 
 
 @pytest.mark.tier3
-@pytest.mark.parametrize(
-    "uploaded_dv_with_immediate_binding",
-    [
-        pytest.param(
-            {
-                "dv_size": Images.Windows.DEFAULT_DV_SIZE,
-                "remote_name": f"{Images.Windows.DIR}/{Images.Windows.WIN2022_IMG}",
-                "image_file": Images.Windows.WIN2022_IMG,
-            },
-            marks=(pytest.mark.polarion("CNV-3410")),
-        ),
-    ],
-    indirect=True,
-)
+@pytest.mark.polarion("CNV-3410")
 def test_successful_vm_from_uploaded_dv_windows_with_vtpm(
     unprivileged_client,
     namespace,
-    uploaded_dv_with_immediate_binding,
+    windows_dv_from_registry,
     cpu_for_migration,
 ):
+    """
+    Test Windows VM creation with vTPM using registry container disk.
+    Uses registry instead of upload to avoid SSH configuration requirements.
+    """
     with VirtualMachineForTests(
         name="win2022-vm",
         namespace=namespace.name,
         client=unprivileged_client,
-        os_flavor=OS_FLAVOR_WINDOWS,
+        os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK,
         vm_instance_type=VirtualMachineClusterInstancetype(name=U1_LARGE, client=unprivileged_client),
         vm_preference=VirtualMachineClusterPreference(name=WINDOWS_2K22_PREFERENCE, client=unprivileged_client),
-        data_volume=uploaded_dv_with_immediate_binding,
+        data_volume=windows_dv_from_registry,
         cpu_model=cpu_for_migration,
     ) as vm:
         running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
