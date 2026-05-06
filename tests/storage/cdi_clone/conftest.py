@@ -3,7 +3,12 @@ from ocp_resources.datavolume import DataVolume
 
 from tests.storage.cdi_clone.constants import WINDOWS_CLONE_TIMEOUT
 from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE
-from utilities.artifactory import get_artifactory_config_map, get_artifactory_secret, get_test_artifact_server_url
+from utilities.artifactory import (
+    cleanup_artifactory_secret_and_config_map,
+    get_artifactory_config_map,
+    get_artifactory_secret,
+    get_test_artifact_server_url,
+)
 from utilities.constants import REGISTRY_STR, WIN_2K22, Images
 from utilities.os_utils import get_windows_container_disk_path
 from utilities.storage import create_dv, data_volume
@@ -87,6 +92,7 @@ def source_dv_windows_registry_scope_function(
     ) as dv:
         dv.wait_for_dv_success(timeout=WINDOWS_CLONE_TIMEOUT)
         yield dv
+    cleanup_artifactory_secret_and_config_map(artifactory_secret=secret, artifactory_config_map=cert)
 
 
 @pytest.fixture()
