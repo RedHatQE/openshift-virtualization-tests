@@ -6,6 +6,7 @@ from libs.vm.spec import (
     Affinity,
     LabelSelector,
     LabelSelectorRequirement,
+    PodAffinity,
     PodAffinityTerm,
     PodAntiAffinity,
 )
@@ -34,6 +35,39 @@ def new_pod_anti_affinity(label: tuple[str, str], namespaces: list[str] | None =
     (key, value) = label
     return Affinity(
         podAntiAffinity=PodAntiAffinity(
+            requiredDuringSchedulingIgnoredDuringExecution=[
+                PodAffinityTerm(
+                    labelSelector=LabelSelector(
+                        matchExpressions=[LabelSelectorRequirement(key=key, values=[value], operator="In")]
+                    ),
+                    topologyKey=f"{Resource.ApiGroup.KUBERNETES_IO}/hostname",
+                    namespaces=namespaces,
+                    namespaceSelector={} if namespaces is None else None,
+                )
+            ]
+        )
+    )
+
+
+def new_pod_affinity(label: tuple[str, str], namespaces: list[str] | None = None) -> Affinity:
+    """Create pod affinity to co-locate with pods matching the label.
+
+    Kubernetes behavior: Omitting both namespaceSelector and namespaces limits
+    affinity to pods in the same namespace. Setting namespaceSelector={} makes the
+    rule cross-namespace.
+
+    Args:
+        label: Tuple of (key, value) to match pods for co-location.
+        namespaces: Optional list of namespaces to search for matching pods.
+            If None, matches pods across all namespaces (cluster-wide).
+            If provided, limits matching to those specific namespaces.
+
+    Returns:
+        Affinity: Affinity object with podAffinity configured.
+    """
+    (key, value) = label
+    return Affinity(
+        podAffinity=PodAffinity(
             requiredDuringSchedulingIgnoredDuringExecution=[
                 PodAffinityTerm(
                     labelSelector=LabelSelector(
