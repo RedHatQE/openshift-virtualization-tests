@@ -201,19 +201,11 @@ def rhel9_golden_image_vm(
     unprivileged_client,
     namespace,
 ):
-    dv = DataVolume(
-        name=f"{RHEL9_STR}-test-vm",
-        namespace=namespace.name,
-        size=rhel9_cached_snapshot.instance.status.get("restoreSize"),
-        storage_class=snapshot_storage_class_name_scope_module,
-        api_name="storage",
-    )
     with vm_instance_from_template(
         request=request,
         unprivileged_client=unprivileged_client,
         namespace=namespace,
         data_volume_template=data_volume_template_with_source_ref_dict(
-            dv=dv,
             data_source=rhel9_data_source_scope_module,
             storage_class=snapshot_storage_class_name_scope_module,
         ),
