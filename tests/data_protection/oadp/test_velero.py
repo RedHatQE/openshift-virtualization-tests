@@ -1,14 +1,17 @@
 import pytest
 from ocp_resources.datavolume import DataVolume
 
-from tests.data_protection.oadp.utils import wait_for_restored_dv
+from tests.data_protection.oadp.utils import FILE_PATH_FOR_WINDOWS_BACKUP, wait_for_restored_dv
 from utilities.constants import (
     FILE_NAME_FOR_BACKUP,
     TEXT_TO_TEST,
     TIMEOUT_10SEC,
+    TIMEOUT_15MIN,
     Images,
 )
 from utilities.oadp import check_file_in_running_vm
+from utilities.storage import verify_file_in_windows_vm
+from utilities.virt import wait_for_running_vm
 
 pytestmark = pytest.mark.usefixtures("skip_if_no_storage_class_for_snapshot")
 
@@ -93,6 +96,38 @@ def test_restore_multiple_namespaces(
 def test_backup_vm_data_volume_template_with_datamover(rhel_vm_with_data_volume_template):
     check_file_in_running_vm(
         vm=rhel_vm_with_data_volume_template, file_name=FILE_NAME_FOR_BACKUP, file_content=TEXT_TO_TEST
+    )
+
+
+@pytest.mark.tier3
+@pytest.mark.polarion("CNV-8696")
+@pytest.mark.usefixtures("velero_restore_first_namespace_without_datamover")
+def test_backup_and_restore_windows_vm(windows_vm_with_data_volume_template):
+    """
+    Test Windows VM backup and restore without Data Mover using Velero snapshot.
+
+    Preconditions:
+        - Windows VM with a marker file containing test data
+        - Velero backup created without Data Mover
+        - Velero restore completed
+
+    Steps:
+        1. Wait for Windows VM to reach Running state
+        2. Verify marker file exists at expected path
+        3. Verify file content matches pre-backup text
+
+    Expected:
+        - Windows VM is Running
+        - Marker file content equals TEXT_TO_TEST
+    """
+    wait_for_running_vm(
+        vm=windows_vm_with_data_volume_template,
+        wait_until_running_timeout=TIMEOUT_15MIN,
+    )
+    verify_file_in_windows_vm(
+        windows_vm=windows_vm_with_data_volume_template,
+        file_name_with_path=FILE_PATH_FOR_WINDOWS_BACKUP,
+        file_content=TEXT_TO_TEST,
     )
 
 
