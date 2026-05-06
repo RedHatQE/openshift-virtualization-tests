@@ -14,6 +14,14 @@ from libs.net.ip import random_ipv4_address
 from libs.net.udn import create_udn_namespace
 from utilities.constants import Images
 from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_2MIN
+from utilities.artifactory import (
+    cleanup_artifactory_secret_and_config_map,
+    get_artifactory_config_map,
+    get_artifactory_secret,
+    get_test_artifact_server_url,
+)
+from utilities.constants import TIMEOUT_1MIN, TIMEOUT_2MIN, WIN_2K22, Images
+from utilities.os_utils import get_windows_container_disk_path
 from utilities.storage import check_upload_virtctl_result, create_dv, get_downloaded_artifact, virtctl_upload_dv
 
 LOGGER = logging.getLogger(__name__)
@@ -117,3 +125,31 @@ def primary_udn_for_upload(admin_client, udn_namespace_for_dv_upload):
             status=udn.Condition.Status.TRUE,
         )
         yield udn
+@pytest.fixture()
+def windows_dv_from_registry(
+    unprivileged_client,
+    namespace,
+    storage_class_name_immediate_binding_scope_module,
+):
+    """
+    Creates a Windows Server 2022 DataVolume from registry for testing VM creation.
+    This avoids the upload process and SSH configuration issues with uploaded Windows images.
+    """
+    artifactory_secret = get_artifactory_secret(namespace=namespace.name)
+    artifactory_config_map = get_artifactory_config_map(namespace=namespace.name)
+    with create_dv(
+        client=unprivileged_client,
+        dv_name="windows-2022-registry-dv",
+        namespace=namespace.name,
+        source="registry",
+        size=Images.Windows.CONTAINER_DISK_DV_SIZE,
+        storage_class=storage_class_name_immediate_binding_scope_module,
+        url=f"{get_test_artifact_server_url(schema='registry')}/{get_windows_container_disk_path(os_value=WIN_2K22)}",
+        secret=artifactory_secret,
+        cert_configmap=artifactory_config_map.name,
+    ) as dv:
+        dv.wait_for_dv_success(timeout=TIMEOUT_2MIN)
+        yield dv
+    cleanup_artifactory_secret_and_config_map(
+        artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
+    )
