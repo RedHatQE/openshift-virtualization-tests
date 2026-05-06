@@ -20,7 +20,7 @@ from utilities.hco import (
 )
 from utilities.ssp import wait_for_deleted_data_import_crons
 from utilities.storage import (
-    data_volume_dict_modify_to_source_ref,
+    data_volume_template_with_source_ref_dict,
     verify_dv_and_pvc_does_not_exist,
     wait_for_succeeded_dv,
     wait_for_volume_snapshot_ready_to_use,
@@ -212,9 +212,10 @@ def rhel9_golden_image_vm(
         request=request,
         unprivileged_client=unprivileged_client,
         namespace=namespace,
-        data_volume_template=data_volume_dict_modify_to_source_ref(
+        data_volume_template=data_volume_template_with_source_ref_dict(
             dv=dv,
             data_source=rhel9_data_source_scope_module,
+            storage_class=snapshot_storage_class_name_scope_module,
         ),
     ) as vm:
         yield vm
