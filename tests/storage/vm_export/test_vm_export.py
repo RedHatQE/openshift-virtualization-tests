@@ -9,12 +9,12 @@ from kubernetes.client import ApiException
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.resource import Resource
 from ocp_resources.virtual_machine_export import VirtualMachineExport
-from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 
 from tests.storage.vm_export.constants import VM_EXPORT_TEST_FILE_CONTENT, VM_EXPORT_TEST_FILE_NAME
 from utilities.constants import Images
 from utilities.infra import run_virtctl_command
+from utilities.storage import run_command_on_vm_and_check_output
 from utilities.virt import running_vm
 
 VIRTUALMACHINEEXPORTS = "virtualmachineexports"
@@ -67,11 +67,9 @@ def test_vmexport_snapshot_manifests(
     vm_from_vmexport,
 ):
     running_vm(vm=vm_from_vmexport)
-
-    result = run_ssh_commands(host=vm_from_vmexport.ssh_exec, commands=shlex.split(f"cat {VM_EXPORT_TEST_FILE_NAME}"))
-    file_content = result[0].strip()
-
-    assert file_content == VM_EXPORT_TEST_FILE_CONTENT
+    run_command_on_vm_and_check_output(
+        vm=vm_from_vmexport, command=f"cat {VM_EXPORT_TEST_FILE_NAME}", expected_result=VM_EXPORT_TEST_FILE_CONTENT
+    )
 
 
 @pytest.mark.polarion("CNV-11597")

@@ -23,10 +23,10 @@ from tests.storage.snapshots.utils import (
     assert_directory_existence,
     expected_output_after_restore,
     fail_to_create_snapshot_no_permissions,
-    run_command_on_vm_and_check_output,
     start_windows_vm_after_restore,
 )
 from utilities.constants import LS_COMMAND
+from utilities.storage import run_command_on_vm_and_check_output
 from utilities.virt import restart_vm_wait_for_running_vm, running_vm
 
 LOGGER = logging.getLogger(__name__)

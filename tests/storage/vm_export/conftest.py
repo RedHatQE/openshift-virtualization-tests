@@ -3,7 +3,6 @@ Pytest conftest file for CNV VMExport tests
 """
 
 import base64
-import shlex
 from subprocess import check_output
 
 import pytest
@@ -18,14 +17,13 @@ from ocp_resources.virtual_machine_cluster_preference import (
 )
 from ocp_resources.virtual_machine_export import VirtualMachineExport
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
-from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import py_config
 
 from tests.storage.vm_export.constants import VM_EXPORT_TEST_FILE_CONTENT, VM_EXPORT_TEST_FILE_NAME
 from tests.storage.vm_export.utils import get_manifest_from_vmexport, get_manifest_url
 from utilities.constants import OS_FLAVOR_RHEL, TIMEOUT_1MIN, U1_SMALL, UNPRIVILEGED_PASSWORD, UNPRIVILEGED_USER
 from utilities.infra import create_ns, login_with_user_password
-from utilities.storage import create_dv, data_volume_template_with_source_ref_dict
+from utilities.storage import create_dv, data_volume_template_with_source_ref_dict, write_file_via_ssh
 from utilities.virt import VirtualMachineForTests, running_vm
 
 
@@ -208,10 +206,7 @@ def rhel_vm_for_snapshot_with_content(
         ),
     ) as vm:
         running_vm(vm=vm)
-
-        cmd = shlex.split(f"echo '{VM_EXPORT_TEST_FILE_CONTENT}' > {VM_EXPORT_TEST_FILE_NAME} && sync")
-        run_ssh_commands(host=vm.ssh_exec, commands=cmd)
-
+        write_file_via_ssh(vm=vm, filename=VM_EXPORT_TEST_FILE_NAME, content=VM_EXPORT_TEST_FILE_CONTENT)
         yield vm
 
 

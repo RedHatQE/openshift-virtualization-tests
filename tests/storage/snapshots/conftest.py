@@ -16,7 +16,7 @@ from pyhelper_utils.shell import run_ssh_commands
 from tests.storage.snapshots.constants import WINDOWS_DIRECTORY_PATH
 from tests.storage.snapshots.utils import assert_directory_existence
 from tests.storage.utils import create_windows19_vm, set_permissions
-from utilities.constants import TIMEOUT_10MIN, UNPRIVILEGED_USER
+from utilities.constants import TIMEOUT_2MIN, TIMEOUT_5SEC, TIMEOUT_10MIN, UNPRIVILEGED_USER
 
 LOGGER = logging.getLogger(__name__)
 
@@ -64,7 +64,7 @@ def snapshot_windows_directory(windows_vm_for_snapshot):
     cmd = shlex.split(
         f'powershell -command "New-Item -Path {WINDOWS_DIRECTORY_PATH} -ItemType Directory"',
     )
-    run_ssh_commands(host=windows_vm_for_snapshot.ssh_exec, commands=cmd)
+    run_ssh_commands(host=windows_vm_for_snapshot.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC)
     assert_directory_existence(
         expected_result=True,
         windows_vm=windows_vm_for_snapshot,
@@ -91,7 +91,7 @@ def snapshot_dirctory_removed(windows_vm_for_snapshot, windows_snapshot):
     cmd = shlex.split(
         f'powershell -command "Remove-Item -Path {WINDOWS_DIRECTORY_PATH} -Recurse"',
     )
-    run_ssh_commands(host=windows_vm_for_snapshot.ssh_exec, commands=cmd)
+    run_ssh_commands(host=windows_vm_for_snapshot.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC)
     assert_directory_existence(
         expected_result=False,
         windows_vm=windows_vm_for_snapshot,
@@ -106,6 +106,6 @@ def file_created_during_snapshot(windows_vm_for_snapshot, windows_snapshot):
     cmd = shlex.split(
         f'powershell -command "for($i=1; $i -le 100; $i++){{$i| Out-File -FilePath {file} -Append}}"',
     )
-    run_ssh_commands(host=windows_vm_for_snapshot.ssh_exec, commands=cmd)
+    run_ssh_commands(host=windows_vm_for_snapshot.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC)
     windows_snapshot.wait_snapshot_done(timeout=TIMEOUT_10MIN)
     windows_vm_for_snapshot.stop(wait=True)
