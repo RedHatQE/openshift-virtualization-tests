@@ -125,7 +125,7 @@ def windows_dv_from_registry(
         secret=artifactory_secret,
         cert_configmap=artifactory_config_map.name,
     ) as dv:
-        dv.wait_for_dv_success(timeout=TIMEOUT_2MIN)
+        dv.wait_for_dv_success()
         yield dv
     cleanup_artifactory_secret_and_config_map(
         artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
