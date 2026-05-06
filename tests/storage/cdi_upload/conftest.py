@@ -14,7 +14,7 @@ from utilities.artifactory import (
     get_artifactory_secret,
     get_test_artifact_server_url,
 )
-from utilities.constants import TIMEOUT_1MIN, TIMEOUT_2MIN, WIN_2K22, Images
+from utilities.constants import TIMEOUT_2MIN, WIN_2K22, Images
 from utilities.os_utils import get_windows_container_disk_path
 from utilities.storage import check_upload_virtctl_result, create_dv, get_downloaded_artifact, virtctl_upload_dv
 
@@ -41,35 +41,6 @@ def download_specified_image(request, tmpdir_factory):
     local_path = tmpdir_factory.mktemp("cdi_upload").join(request.param.get("image_file"))
     get_downloaded_artifact(remote_name=request.param.get("image_path"), local_name=local_path)
     return local_path
-
-
-@pytest.fixture()
-def uploaded_dv_with_immediate_binding(
-    request,
-    namespace,
-    storage_class_name_immediate_binding_scope_module,
-    tmpdir,
-    unprivileged_client,
-):
-    image_file = request.param.get("image_file")
-    dv_name = image_file.split(".")[0].replace("_", "-").lower()
-    local_path = f"{tmpdir}/{image_file}"
-    get_downloaded_artifact(remote_name=request.param.get("remote_name"), local_name=local_path)
-    with virtctl_upload_dv(
-        client=namespace.client,
-        namespace=namespace.name,
-        name=dv_name,
-        size=request.param.get("dv_size"),
-        storage_class=storage_class_name_immediate_binding_scope_module,
-        image_path=local_path,
-        insecure=True,
-    ) as res:
-        check_upload_virtctl_result(result=res)
-        dv = DataVolume(namespace=namespace.name, name=dv_name, client=unprivileged_client)
-        dv.wait_for_dv_success(timeout=TIMEOUT_1MIN)
-        assert dv.pvc.bound(), f"PVC status is {dv.pvc.status}"
-        yield dv
-        dv.delete(wait=True)
 
 
 @pytest.fixture(scope="class")
