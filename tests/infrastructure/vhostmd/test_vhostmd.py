@@ -13,7 +13,7 @@ from pytest_testconfig import config as py_config
 
 from tests.os_params import RHEL_LATEST_LABELS
 from utilities.artifactory import get_artifactory_header
-from utilities.constants import S390X, TIMEOUT_3MIN, TIMEOUT_30SEC
+from utilities.constants import S390X, TIMEOUT_3MIN, TIMEOUT_5SEC, TIMEOUT_30SEC
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import get_node_selector_dict, get_node_selector_name
 from utilities.virt import (
@@ -43,6 +43,8 @@ def download_and_install_vm_dump_metrics(vm, rpm_file_name):
             ),
             shlex.split(f"sudo yum install -y ./{rpm_file_name}"),
         ],
+        wait_timeout=TIMEOUT_3MIN,
+        sleep=TIMEOUT_5SEC,
     )
 
 
