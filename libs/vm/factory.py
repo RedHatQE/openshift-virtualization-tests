@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from kubernetes.dynamic import DynamicClient
+from pytest_testconfig import config as py_config
 
 from libs.vm.spec import CPU, Devices, Domain, Memory, Metadata, Template, VMISpec, VMSpec
 from libs.vm.vm import BaseVirtualMachine, container_image, containerdisk_storage
-from utilities.constants import OS_FLAVOR_FEDORA, Images
+from utilities.constants import OS_FLAVOR_FEDORA
 
 
 def fedora_vm(
@@ -29,7 +30,10 @@ def fedora_vm(
 
 
 def fedora_image() -> str:
-    return container_image(base_image=Images.Fedora.FEDORA_CONTAINER_IMAGE)
+    from utilities.constants import ArchImages
+
+    arch_images = getattr(ArchImages, py_config["cpu_arch"].upper())
+    return container_image(base_image=arch_images.Fedora.FEDORA_CONTAINER_IMAGE)
 
 
 def _fill_vm_spec_defaults(spec: VMSpec | None) -> VMSpec:
@@ -37,6 +41,7 @@ def _fill_vm_spec_defaults(spec: VMSpec | None) -> VMSpec:
 
     vmi_spec = spec.template.spec
 
+    vmi_spec.architecture = vmi_spec.architecture or py_config["cpu_arch"]
     vmi_spec.domain.devices = vmi_spec.domain.devices or Devices(rng={})
     vmi_spec.domain.devices.disks = vmi_spec.domain.devices.disks or []
     vmi_spec.volumes = vmi_spec.volumes or []
