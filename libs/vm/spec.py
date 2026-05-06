@@ -99,10 +99,16 @@ class Multus:
 @dataclass
 class Affinity:
     podAntiAffinity: PodAntiAffinity | None = None  # noqa: N815
+    podAffinity: PodAffinity | None = None  # noqa: N815
 
 
 @dataclass
 class PodAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution: list[PodAffinityTerm]  # noqa: N815
+
+
+@dataclass
+class PodAffinity:
     requiredDuringSchedulingIgnoredDuringExecution: list[PodAffinityTerm]  # noqa: N815
 
 
