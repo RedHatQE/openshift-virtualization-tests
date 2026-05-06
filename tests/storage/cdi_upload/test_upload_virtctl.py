@@ -24,10 +24,7 @@ from tests.storage.utils import assert_use_populator
 from tests.utils import create_windows2022_vm_with_vtpm_from_registry
 from utilities.constants import (
     CDI_UPLOADPROXY,
-<<<<<<< HEAD
-=======
     OS_FLAVOR_WIN_CONTAINER_DISK,
->>>>>>> 03f4b73c (use regirsty image)
     QUARANTINED,
     TIMEOUT_1MIN,
     Images,
@@ -469,7 +466,6 @@ def test_virtctl_image_upload_dv_in_pudn_namespace(
 
 @pytest.mark.tier3
 @pytest.mark.polarion("CNV-3410")
-<<<<<<< HEAD
 def test_successful_vm_from_dv_windows(
     unprivileged_client,
     namespace,
@@ -482,28 +478,9 @@ def test_successful_vm_from_dv_windows(
         client=unprivileged_client,
         vm_name="win2022-vm",
         cpu_model=modern_cpu_for_migration,
-=======
-def test_successful_vm_from_uploaded_dv_windows_with_vtpm(
-    unprivileged_client,
-    namespace,
-    windows_dv_from_registry,
-    cpu_for_migration,
-):
-    """
-    Test Windows VM creation with vTPM using registry container disk.
-    Uses registry instead of upload to avoid SSH configuration requirements.
-    """
-    with VirtualMachineForTests(
-        name="win2022-vm",
-        namespace=namespace.name,
-        client=unprivileged_client,
-        os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK,
-        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_LARGE, client=unprivileged_client),
-        vm_preference=VirtualMachineClusterPreference(name=WINDOWS_2K22_PREFERENCE, client=unprivileged_client),
-        data_volume=windows_dv_from_registry,
-        cpu_model=cpu_for_migration,
->>>>>>> 03f4b73c (use regirsty image)
     ) as vm:
+        running_vm(vm=vm)
+        wait_for_windows_vm(vm=vm, version="2022")
         validate_os_info_vmi_vs_windows_os(vm=vm)
 
 
