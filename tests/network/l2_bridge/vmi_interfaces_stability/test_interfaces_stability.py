@@ -12,6 +12,7 @@ STABILITY_PERIOD_IN_SECONDS: Final[int] = 300
 
 
 @pytest.mark.incremental
+@pytest.mark.tier3
 class TestInterfacesStability:
     @pytest.mark.polarion("CNV-14339")
     def test_interfaces_stability(self, running_linux_bridge_vm, stable_ips):
