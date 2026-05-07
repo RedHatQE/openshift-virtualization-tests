@@ -275,10 +275,12 @@ def utilization_imbalance(
 @pytest.fixture(scope="class")
 def node_to_run_stress(schedulable_nodes, deployed_vms_for_descheduler_test):
     vm_per_node_counters = vms_per_nodes(vms=vm_nodes(vms=deployed_vms_for_descheduler_test))
-    for node in schedulable_nodes:
-        if vm_per_node_counters[node.name] > 0:
-            LOGGER.info(f"Node to run stress: {node.name}")
-            return node
+    node_with_most_vms = max(schedulable_nodes, key=lambda node: vm_per_node_counters.get(node.name, 0))
+    if vm_per_node_counters[node_with_most_vms.name] > 0:
+        LOGGER.info(
+            f"Node to run stress: {node_with_most_vms.name} with {vm_per_node_counters[node_with_most_vms.name]} VMs"
+        )
+        return node_with_most_vms
 
     raise ValueError("No suitable node to run stress")
 
