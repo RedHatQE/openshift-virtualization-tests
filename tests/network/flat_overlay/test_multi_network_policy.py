@@ -7,7 +7,7 @@ from utilities.network import assert_ping_successful
 
 pytestmark = [
     pytest.mark.usefixtures(
-        "enable_multi_network_policy_usage",
+        "multi_network_policy_enabled",
         "flat_l2_port",
     ),
     pytest.mark.ipv4,
