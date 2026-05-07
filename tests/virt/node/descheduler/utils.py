@@ -19,7 +19,6 @@ from utilities.constants import (
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
-    TIMEOUT_15MIN,
     TIMEOUT_20SEC,
     NamespacesNames,
 )
@@ -93,52 +92,6 @@ def calculate_vm_deployment(
     LOGGER.info(f"calculated vm_deployment: {vm_deployment}")
 
     return vm_deployment
-
-
-def wait_vmi_failover(vm, orig_node):
-    samples = TimeoutSampler(wait_timeout=TIMEOUT_15MIN, sleep=TIMEOUT_5SEC, func=lambda: vm.vmi.node.name)
-    LOGGER.info(f"Waiting for {vm.name} to be moved from node {orig_node.name}")
-    try:
-        for sample in samples:
-            if sample and sample != orig_node.name:
-                return
-    except TimeoutExpiredError:
-        LOGGER.error(f"VM {vm.name} failed to deploy on new node")
-        raise
-
-
-def assert_vms_distribution_after_failover(vms, nodes, all_nodes=True):
-    def _get_vms_per_nodes():
-        return vms_per_nodes(vms=vm_nodes(vms=vms))
-
-    # Allow the descheduler to cycle multiple times before returning.
-    # The value can be affected by high pod counts or load within
-    # the cluster which increases the descheduler runtime.
-    descheduling_failover_timeout = DESCHEDULING_INTERVAL_120SEC * 3
-
-    if all_nodes:
-        LOGGER.info("Verify all nodes have at least one VM running")
-    else:
-        LOGGER.info("Verify at least one node has a VM running")
-
-    samples = TimeoutSampler(
-        wait_timeout=descheduling_failover_timeout,
-        sleep=TIMEOUT_5SEC,
-        func=_get_vms_per_nodes,
-    )
-    vms_per_nodes_dict = None
-    try:
-        for vms_per_nodes_dict in samples:
-            vm_counts = [vm_count for vm_count in vms_per_nodes_dict.values() if vm_count]
-            if all_nodes and len(vm_counts) == len(nodes):
-                LOGGER.info(f"Every node has at least one VM running on it: {vms_per_nodes_dict}")
-                return
-            elif vm_counts and not all_nodes:
-                LOGGER.info(f"There is at least one node with a VM running on it: {vms_per_nodes_dict}")
-                return
-    except TimeoutExpiredError:
-        LOGGER.error(f"Running VMs missing from nodes: {vms_per_nodes_dict}")
-        raise
 
 
 def vms_per_nodes(vms):
