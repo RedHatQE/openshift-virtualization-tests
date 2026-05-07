@@ -67,6 +67,15 @@ class StorageCheckupConditionTimeoutExpiredError(Exception):
     pass
 
 
+class DataVolumeConditionMessageNotFoundError(Exception):
+    def __init__(self, dv_name, expected_message):
+        self.dv_name = dv_name
+        self.expected_message = expected_message
+
+    def __str__(self):
+        return f"Expected message '{self.expected_message}' not found in DataVolume '{self.dv_name}' conditions."
+
+
 class StorageMigrationError(Exception):
     pass
 

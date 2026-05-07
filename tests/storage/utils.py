@@ -41,6 +41,7 @@ from utilities.constants import (
     TIMEOUT_30MIN,
     Images,
 )
+from utilities.exceptions import DataVolumeConditionMessageNotFoundError
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import (
     get_pod_by_name_prefix,
@@ -298,9 +299,9 @@ def wait_for_dv_condition_message(dv: DataVolume, expected_message: str, timeout
         timeout: Timeout for the operation, default is 5 minutes.
 
     Raises:
-        TimeoutExpiredError: If expected message not found in conditions within timeout
+        DataVolumeConditionMessageNotFoundError: If expected message not found in conditions within timeout
     """
-    LOGGER.info(f"Watching {dv.name} for message: {expected_message}")
+    LOGGER.info(f"Watching {dv.name} for message: {expected_message} for up to {timeout} seconds.")
     for event in dv.watcher(timeout=timeout):
         if event["type"] not in ("ADDED", "MODIFIED"):
             continue
@@ -308,7 +309,7 @@ def wait_for_dv_condition_message(dv: DataVolume, expected_message: str, timeout
         if any(expected_message in condition.get("message", "") for condition in conditions):
             return
 
-    raise TimeoutExpiredError(f"Expected message '{expected_message}' not found in {dv.name} conditions within timeout")
+    raise DataVolumeConditionMessageNotFoundError(dv_name=dv.name, expected_message=expected_message)
 
 
 def assert_pvc_snapshot_clone_annotation(pvc, storage_class):
