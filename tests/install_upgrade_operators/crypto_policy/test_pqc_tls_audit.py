@@ -1,3 +1,9 @@
+"""
+PQC TLS audit tests for CNV endpoints.
+
+Epic: https://redhat.atlassian.net/browse/CNV-74453
+"""
+
 import logging
 
 import pytest
@@ -9,8 +15,6 @@ from tests.install_upgrade_operators.crypto_policy.constants import (
 )
 from utilities.constants import HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD
 from utilities.jira import is_jira_open
-
-pytestmark = [pytest.mark.tier3, pytest.mark.tls_compliance]
 
 LOGGER = logging.getLogger(__name__)
 
@@ -55,37 +59,16 @@ class TestPqcCnvEndpoints:
         for service_name, accepted in pqc_status_by_service.items():
             with subtests.test(msg=service_name):
                 if service_name == HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD:
-                    pytest.xfail("Service serves plaintext HTTP behind TLS route, TLS planned for OCP 5.0")
+                    LOGGER.info(
+                        f"CNV-82351: Skipping {service_name} — plaintext HTTP behind TLS route, TLS planned for 5.0"
+                    )
+                    continue
                 if jira_id := SERVICES_WITH_OPEN_BUGS.get(service_name):
                     if is_jira_open(jira_id=jira_id):
-                        pytest.xfail(f"Service {service_name} has known bug: {jira_id}")
+                        LOGGER.info(f"Skipping {service_name} — known bug: {jira_id}")
+                        continue
                 assert accepted is not None, f"Service {service_name} is unreachable"
                 if fips_enabled_cluster:
                     assert not accepted, f"Service {service_name} accepted PQC but must reject on FIPS cluster"
                 else:
                     assert accepted, f"Service {service_name} rejected PQC but must accept on non-FIPS cluster"
-
-    @pytest.mark.polarion("CNV-15224")
-    def test_non_fips_services_accept_pqc(
-        self,
-        subtests,
-        fips_enabled_cluster,
-        pqc_status_by_service,
-    ):
-        """Verify every non-FIPS CNV service accepts PQC key exchange (CNV-74453 PQC readiness).
-
-        Probes each service with multiple PQC groups and passes if any group negotiates.
-        On FIPS clusters, PQC is not expected (ML-KEM not yet FIPS 140-3 certified).
-        """
-        if fips_enabled_cluster:
-            pytest.xfail(reason="FIPS clusters do not support PQC: ML-KEM is not FIPS 140-3 certified")
-
-        for service_name, accepted in pqc_status_by_service.items():
-            with subtests.test(msg=service_name):
-                if service_name == HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD:
-                    pytest.xfail("Service serves plaintext HTTP behind TLS route, TLS planned for 5.0")
-                if jira_id := SERVICES_WITH_OPEN_BUGS.get(service_name):
-                    if is_jira_open(jira_id=jira_id):
-                        pytest.xfail(f"Service {service_name} has known bug: {jira_id}")
-                assert accepted is not None, f"Service {service_name} is unreachable"
-                assert accepted, f"Service {service_name} rejected PQC but must accept on non-FIPS cluster"

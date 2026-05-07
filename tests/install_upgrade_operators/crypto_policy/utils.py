@@ -1,11 +1,14 @@
 import logging
 from contextlib import contextmanager
+from typing import TYPE_CHECKING
 
 import deepdiff
 from benedict import benedict
 from kubernetes.dynamic import DynamicClient
-from kubernetes.dynamic.resource import ResourceField
 from ocp_resources.exceptions import ExecOnPodError
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic.resource import ResourceField
 from ocp_resources.hyperconverged import HyperConverged
 from ocp_resources.resource import Resource, ResourceEditor
 from packaging.version import Version

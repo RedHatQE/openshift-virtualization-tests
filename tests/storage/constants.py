@@ -1,4 +1,6 @@
-from utilities.constants import Images, StorageClassNames
+from pytest_testconfig import py_config
+
+from utilities.constants import ArchImages, Images, StorageClassNames
 from utilities.storage import HppCsiStorageClass
 
 CIRROS_QCOW2_IMG = f"{Images.Cirros.DIR}/{Images.Cirros.QCOW2_IMG}"
@@ -18,7 +20,9 @@ HTTPS_CONFIG_MAP_NAME = "https-cert"
 HTTP = "http"
 HTTPS = "https"
 
-QUAY_FEDORA_CONTAINER_IMAGE = f"docker://{Images.Fedora.FEDORA_CONTAINER_IMAGE}"
+QUAY_FEDORA_CONTAINER_IMAGE = (
+    f"docker://{getattr(ArchImages, py_config['cpu_arch'].upper()).Fedora.FEDORA_CONTAINER_IMAGE}"
+)
 
 TEST_FILE_NAME = "test-file.txt"
 TEST_FILE_CONTENT = "test-content"

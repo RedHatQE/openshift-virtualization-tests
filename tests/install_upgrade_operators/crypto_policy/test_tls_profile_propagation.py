@@ -1,10 +1,10 @@
-import logging
+"""
+TLS profile propagation tests for CNV endpoints.
+
+Epic: https://redhat.atlassian.net/browse/CNV-74453
+"""
 
 import pytest
-
-pytestmark = [pytest.mark.tier3, pytest.mark.tls_compliance]
-
-LOGGER = logging.getLogger(__name__)
 
 
 class TestTlsProfilePropagation:

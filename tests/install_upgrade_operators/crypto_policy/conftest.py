@@ -21,6 +21,8 @@ from tests.install_upgrade_operators.constants import (
     RESOURCE_TYPE_STR,
 )
 from tests.install_upgrade_operators.crypto_policy.constants import (
+    CONSOLE_PLUGIN_SERVICE_NAME,
+    CONSOLE_PLUGIN_SERVICE_PORT,
     CRYPTO_POLICY_SPEC_DICT,
     KUBEVIRT_TLS_CONFIG_STR,
     MANAGED_CRS_LIST,
@@ -136,10 +138,6 @@ def services_to_check_connectivity(hco_namespace, admin_client):
         raise MissingResourceException(f"Services: {missing_services}.")
 
     return services_list
-
-
-CONSOLE_PLUGIN_SERVICE_NAME = "kubevirt-console-plugin-service"
-CONSOLE_PLUGIN_SERVICE_PORT = 9443
 
 
 @pytest.fixture(scope="session")

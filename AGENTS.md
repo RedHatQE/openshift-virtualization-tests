@@ -91,8 +91,8 @@ New feature tests MUST follow the STD-first workflow:
 
 ### Coverage Tracking
 
-- **STP link REQUIRED** — every new feature test module MUST include an STP link in the module docstring
-- **RFE/Jira link REQUIRED when no STP exists** — if there is no STP, the module docstring MUST include a link to the RFE or Jira epic (not support cases) for coverage tracking
+- **STP link REQUIRED** — every new feature test file MUST include an STP link in the module, class, or test docstring
+- **RFE/Jira link REQUIRED when no STP exists** — if there is no STP, the module, class, or test docstring MUST include a link to the RFE or Jira epic (not support cases) for coverage tracking
 
 ### Test Requirements
 
@@ -122,7 +122,7 @@ When writing or reviewing STD (Software Test Description) test docstrings, follo
 - ❌ **NEVER** use alternative section names.
 - Each test verifies ONE thing with ONE `Expected:` assertion (rare exceptions allowed when multiple assertions verify a single behavior — see STD doc)
 - **No implementation details in STD docstrings** — no fixture names, no code references, no variable names; describe behavior in natural language
-- **STP link REQUIRED** — module docstring must contain the STP (Software Test Plan) link directly, not a reference to a README or other file
+- **STP link REQUIRED** — must appear directly in the module, class, or test docstring (not a reference to a README or other file); place it at the level that applies
 - **Markers can be at any level** — module, class, or test docstring; place them at the level they apply to
 - **Parametrized markers** — parameter values may have inline markers using `[Markers: ...]` syntax (e.g., `- ipv4 [Markers: ipv4]`) to differentiate common markers from parameter-specific ones
 - **Name resources by function** — in Preconditions, name objects by their role (e.g., "client VM", "server VM", "under-test VM"), not generic labels (e.g., "VM-A", "VM-B")
