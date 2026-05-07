@@ -506,8 +506,7 @@ def query_alerts_fired_in_range(
     """
     duration_seconds = int((datetime.now(tz=timezone.utc) - start_time).total_seconds())
     query = f'ALERTS{{alertstate="{FIRING_STATE}",kubernetes_operator_part_of="kubevirt"}}[{duration_seconds}s]'
-    response = prometheus.query(query=query)
-    return response["data"]["result"]
+    return prometheus.query_sampler(query=query)
 
 
 def get_alerts_fired_during_upgrade(
