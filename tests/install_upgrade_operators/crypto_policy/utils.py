@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 import deepdiff
 from benedict import benedict
 from kubernetes.dynamic import DynamicClient
-from ocp_resources.exceptions import ExecOnPodError
 
 if TYPE_CHECKING:
     from kubernetes.dynamic.resource import ResourceField
@@ -120,7 +119,9 @@ def wait_for_crypto_policy_update(
             LOGGER.info(f"{resource_name} actual: {sample}, expected: {expected_policy}")
             # Filter actual to only keys present in expected — OCP 4.22+ API adds empty
             # profile-type keys (e.g. intermediate: {}, modern: {}) as CRD defaults.
-            filtered_sample = {k: v for k, v in sample.items() if k in expected_policy} if sample else sample
+            filtered_sample = (
+                {key: value for key, value in sample.items() if key in expected_policy} if sample else sample
+            )
             if filtered_sample and not deepdiff.DeepDiff(
                 filtered_sample,
                 expected_policy,
@@ -230,7 +231,7 @@ def assert_tls_version_connection(utility_pods, node, services, minimal_version,
 def assert_tls_ciphers_blocked(utility_pods, node, services, tls_version, allowed_ciphers):
     failed_service = {}
     for service in services:
-        service_name = service.instance.metadata.name
+        service_name = service.name
         service_spec = service.instance.spec
         LOGGER.info(f"Checking service: {service_name}")
         for cipher_openssl in TLS_INTERMEDIATE_CIPHERS_IANA_OPENSSL_SYNTAX.values():
@@ -297,41 +298,8 @@ def check_service_accepts_tls_version(utility_pods: list, node: Resource, servic
         version=tls_version,
         extra_arguments="| grep 'Protocol version:'",
     )
-    try:
-        output = ExecCommandOnPod(utility_pods=utility_pods, node=node).exec(command=command, ignore_rc=True)
-    except ExecOnPodError:
-        service_name = service.instance.metadata.name
-        LOGGER.warning(f"Service {service_name} is unreachable during TLS {tls_version} check, treating as rejected")
-        return False
+    output = ExecCommandOnPod(utility_pods=utility_pods, node=node).exec(command=command, ignore_rc=True)
     return tls_version in output
-
-
-def get_services_accepting_tls_version(
-    utility_pods: list, node: Resource, services: list[Resource], tls_version: str
-) -> dict[str, bool]:
-    """Probes each service for TLS version acceptance.
-
-    Args:
-        utility_pods: List of utility pods for command execution.
-        node: Node resource to run the command from.
-        services: List of Service resources to check.
-        tls_version: TLS version string (e.g. "1.2", "1.3").
-
-    Returns:
-        dict[str, bool]: Mapping of service name to whether it accepts the given TLS version.
-    """
-    results = {}
-    for service in services:
-        service_name = service.instance.metadata.name
-        accepts = check_service_accepts_tls_version(
-            utility_pods=utility_pods,
-            node=node,
-            service=service,
-            tls_version=tls_version,
-        )
-        LOGGER.info(f"Service {service_name} accepts TLS {tls_version}: {accepts}")
-        results[service_name] = accepts
-    return results
 
 
 def get_node_available_tls_groups(utility_pods: list, node: Resource) -> list[str]:
@@ -387,7 +355,7 @@ def get_services_pqc_status(
     """
     results: dict[str, bool | None] = {}
     for service in services:
-        service_name = service.instance.metadata.name
+        service_name = service.name
         LOGGER.info(f"Probing PQC on service: {service_name}")
         accepted = False
         unreachable = True

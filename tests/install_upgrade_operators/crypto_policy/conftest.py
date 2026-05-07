@@ -2,7 +2,6 @@ import logging
 
 import pytest
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
-from ocp_resources.aaq import AAQ
 from ocp_resources.api_server import APIServer
 from ocp_resources.cdi import CDI
 from ocp_resources.deployment import Deployment
@@ -21,22 +20,19 @@ from tests.install_upgrade_operators.constants import (
     RESOURCE_TYPE_STR,
 )
 from tests.install_upgrade_operators.crypto_policy.constants import (
-    CONSOLE_PLUGIN_SERVICE_NAME,
     CONSOLE_PLUGIN_SERVICE_PORT,
     CRYPTO_POLICY_SPEC_DICT,
     KUBEVIRT_TLS_CONFIG_STR,
-    MANAGED_CRS_LIST,
+    MANAGED_CRS_LIST_WITH_AAQ,
     PQC_GROUP_SECP256R1_MLKEM768,
     PQC_GROUP_SECP384R1_MLKEM1024,
     PQC_GROUP_X25519_MLKEM768,
     TLS_MODERN_PROFILE,
-    TLS_VERSION_1_2,
     VIRT_TEMPLATE_DEPLOYMENT_NAMES,
 )
 from tests.install_upgrade_operators.crypto_policy.utils import (
     get_node_available_tls_groups,
     get_resource_crypto_policy,
-    get_services_accepting_tls_version,
     get_services_pqc_status,
     update_apiserver_crypto_policy,
 )
@@ -141,11 +137,6 @@ def services_to_check_connectivity(hco_namespace, admin_client):
 
 
 @pytest.fixture(scope="session")
-def worker_node(workers):
-    return workers[0]
-
-
-@pytest.fixture(scope="session")
 def enabled_template_feature_gate(admin_client, hco_namespace, hyperconverged_resource_scope_session):
     """Enables the Template feature gate via HCO annotation and waits for virt-template deployments."""
     with update_hco_annotations(
@@ -165,14 +156,14 @@ def enabled_template_feature_gate(admin_client, hco_namespace, hyperconverged_re
 
 @pytest.fixture(scope="session")
 def cnv_services_with_template(enabled_template_feature_gate, hco_namespace, admin_client):
-    """Discovers all TLS-capable CNV services, including virt-template services."""
+    """Discovers all CNV services with a clusterIP, including virt-template services."""
     services_list = [
         service
         for service in Service.get(namespace=hco_namespace.name, client=admin_client)
-        if service.instance.spec.clusterIP not in (None, "", "None")
+        if service.instance.spec.clusterIP not in (None, "")
     ]
     assert services_list, f"No services found in {hco_namespace.name}"
-    service_names = [svc.instance.metadata.name for svc in services_list]
+    service_names = [svc.name for svc in services_list]
     LOGGER.info(f"Discovered {len(services_list)} TLS-capable services: {service_names}")
     return services_list
 
@@ -200,58 +191,28 @@ def modern_tls_profile_applied(admin_client, hco_namespace, api_server, enabled_
         wait_for_hco_conditions(
             admin_client=admin_client,
             hco_namespace=hco_namespace,
-            list_dependent_crs_to_check=[*MANAGED_CRS_LIST, AAQ],
+            list_dependent_crs_to_check=MANAGED_CRS_LIST_WITH_AAQ,
         )
         yield
 
 
-@pytest.fixture()
-def tls12_status_under_modern_profile(
-    enabled_aaq,
-    modern_tls_profile_applied,
-    workers_utility_pods,
-    worker_node,
-    cnv_services_with_template,
-    console_plugin_test_network_policy,
-):
-    """TLS 1.2 acceptance status per service after Modern profile is applied."""
-    return get_services_accepting_tls_version(
+@pytest.fixture(scope="module")
+def verified_node_pqc_support(workers_utility_pods, worker_node1):
+    """Verifies that worker node OpenSSL supports required PQC TLS groups."""
+    available_groups = get_node_available_tls_groups(
         utility_pods=workers_utility_pods,
-        node=worker_node,
-        services=cnv_services_with_template,
-        tls_version=TLS_VERSION_1_2,
+        node=worker_node1,
     )
-
-
-@pytest.fixture(scope="session")
-def node_available_tls_groups(workers_utility_pods, worker_node):
-    return get_node_available_tls_groups(
-        utility_pods=workers_utility_pods,
-        node=worker_node,
-    )
-
-
-@pytest.fixture(scope="session")
-def worker_exec(workers_utility_pods, worker_node):
-    return ExecCommandOnPod(utility_pods=workers_utility_pods, node=worker_node)
+    required_groups = [PQC_GROUP_X25519_MLKEM768, PQC_GROUP_SECP256R1_MLKEM768, PQC_GROUP_SECP384R1_MLKEM1024]
+    missing_groups = [group for group in required_groups if group not in available_groups]
+    assert not missing_groups, f"PQC groups not found on node: {missing_groups}. Available: {available_groups}"
 
 
 @pytest.fixture(scope="session")
 def console_plugin_test_network_policy(hco_namespace, admin_client):
     """Temporarily allows ingress to kubevirt-console-plugin pods for TLS testing."""
-    network_policy_name = "allow-tls-test-console-plugin"
-    stale_policy = NetworkPolicy(
-        name=network_policy_name,
-        namespace=hco_namespace.name,
-        client=admin_client,
-    )
-    if stale_policy.exists:
-        LOGGER.warning(f"Deleting stale NetworkPolicy {network_policy_name} from previous run")
-        stale_policy.delete(wait=True)
-
-    LOGGER.info(f"Creating temporary NetworkPolicy to allow test access to {CONSOLE_PLUGIN_SERVICE_NAME}")
     with NetworkPolicy(
-        name=network_policy_name,
+        name="allow-tls-test-console-plugin",
         namespace=hco_namespace.name,
         client=admin_client,
         pod_selector={"matchLabels": {"app.kubernetes.io/component": "kubevirt-console-plugin"}},
@@ -261,22 +222,31 @@ def console_plugin_test_network_policy(hco_namespace, admin_client):
         yield
 
 
-@pytest.fixture(scope="session")
-def pqc_status_by_service(enabled_aaq, worker_exec, cnv_services_with_template, console_plugin_test_network_policy):
+@pytest.fixture(scope="module")
+def pqc_status_by_service(
+    verified_node_pqc_support,
+    enabled_aaq,
+    workers_utility_pods,
+    worker_node1,
+    cnv_services_with_template,
+    console_plugin_test_network_policy,
+):
     """PQC acceptance status for each CNV service."""
     results = get_services_pqc_status(
-        worker_exec=worker_exec,
+        worker_exec=ExecCommandOnPod(utility_pods=workers_utility_pods, node=worker_node1),
         services=cnv_services_with_template,
         pqc_groups=[PQC_GROUP_X25519_MLKEM768, PQC_GROUP_SECP256R1_MLKEM768, PQC_GROUP_SECP384R1_MLKEM1024],
     )
-    accepted = [name for name, status in results.items() if status is True]
-    rejected = [name for name, status in results.items() if status is False]
-    unreachable = [name for name, status in results.items() if status is None]
+    accepted, rejected, unreachable = [], [], []
+    for name, status in results.items():
+        if status is True:
+            accepted.append(name)
+        elif status is False:
+            rejected.append(name)
+        else:
+            unreachable.append(name)
     LOGGER.info(
-        f"PQC probe summary: {len(accepted)} accepted, {len(rejected)} rejected, {len(unreachable)} unreachable"
+        f"PQC probe summary: {len(accepted)} accepted, {len(rejected)} rejected ({rejected}),"
+        f" {len(unreachable)} unreachable ({unreachable})"
     )
-    if rejected:
-        LOGGER.info(f"PQC rejected by: {rejected}")
-    if unreachable:
-        LOGGER.warning(f"Unreachable services: {unreachable}")
     return results
