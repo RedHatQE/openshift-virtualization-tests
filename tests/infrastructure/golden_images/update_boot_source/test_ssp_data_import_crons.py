@@ -283,15 +283,15 @@ class TestDataImportCronDefaultStorageClass:
 
     @pytest.mark.polarion("CNV-7594")
     def test_data_import_cron_uses_default_storage_class(
-        self, updated_default_storage_class_scope_function, created_data_import_cron, created_persistent_volume_claim
+        self, updated_default_storage_class_scope_function, created_data_import_cron, data_import_cron_pvc
     ):
         LOGGER.info(
             "Test DataImportCron and DV creation when using default storage class "
             f"{updated_default_storage_class_scope_function.name}"
         )
-        current_sc = created_persistent_volume_claim.instance.spec.storageClassName
+        current_sc = data_import_cron_pvc.instance.spec.storageClassName
         assert current_sc == updated_default_storage_class_scope_function.name, (
-            f"PVC {created_persistent_volume_claim.name} expected storage class: "
+            f"PVC {data_import_cron_pvc.name} expected storage class: "
             f"{updated_default_storage_class_scope_function.name}, "
             f"current storage class: {current_sc}"
         )
