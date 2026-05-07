@@ -1,4 +1,4 @@
-from pytest_testconfig import py_config
+from pytest_testconfig import config as py_config
 
 from utilities.constants import ArchImages, Images, StorageClassNames
 from utilities.storage import HppCsiStorageClass
