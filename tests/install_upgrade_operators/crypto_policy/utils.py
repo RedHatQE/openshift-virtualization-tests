@@ -4,6 +4,8 @@ from contextlib import contextmanager
 import deepdiff
 from benedict import benedict
 from kubernetes.dynamic import DynamicClient
+from kubernetes.dynamic.resource import ResourceField
+from ocp_resources.exceptions import ExecOnPodError
 from ocp_resources.hyperconverged import HyperConverged
 from ocp_resources.resource import Resource, ResourceEditor
 from packaging.version import Version
@@ -18,6 +20,8 @@ from tests.install_upgrade_operators.crypto_policy.constants import (
     CRYPTO_POLICY_EXPECTED_DICT,
     MANAGED_CRS_LIST,
     MIN_TLS_VERSIONS,
+    OPENSSL_CONNECTION_SUCCESS_INDICATOR,
+    PQC_HANDSHAKE_FAILURE_INDICATOR,
     TLS_INTERMEDIATE_CIPHERS_IANA_OPENSSL_SYNTAX,
 )
 from tests.install_upgrade_operators.utils import (
@@ -27,6 +31,7 @@ from tests.install_upgrade_operators.utils import (
 from utilities.constants import (
     CLUSTER,
     TIMEOUT_2MIN,
+    TIMEOUT_40MIN,
     TLS_SECURITY_PROFILE,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_conditions
@@ -110,8 +115,11 @@ def wait_for_crypto_policy_update(
         for sample in sampler:
             # TODO: remove log message once the test and feature deemed to be stable
             LOGGER.info(f"{resource_name} actual: {sample}, expected: {expected_policy}")
-            if sample and not deepdiff.DeepDiff(
-                sample,
+            # Filter actual to only keys present in expected — OCP 4.22+ API adds empty
+            # profile-type keys (e.g. intermediate: {}, modern: {}) as CRD defaults.
+            filtered_sample = {k: v for k, v in sample.items() if k in expected_policy} if sample else sample
+            if filtered_sample and not deepdiff.DeepDiff(
+                filtered_sample,
                 expected_policy,
                 ignore_type_in_groups=[(benedict, dict)],
             ):
@@ -261,9 +269,144 @@ def update_apiserver_crypto_policy(
         patches={apiserver: {"spec": {TLS_SECURITY_PROFILE: tls_spec}}},
     ):
         yield
-    wait_for_cluster_operator_stabilize(admin_client=admin_client)
+    wait_for_cluster_operator_stabilize(admin_client=admin_client, wait_timeout=TIMEOUT_40MIN)
     wait_for_hco_conditions(
         admin_client=admin_client,
         hco_namespace=hco_namespace,
         list_dependent_crs_to_check=MANAGED_CRS_LIST,
     )
+
+
+def check_service_accepts_tls_version(utility_pods: list, node: Resource, service: Resource, tls_version: str) -> bool:
+    """Checks whether a service accepts a connection with the given TLS version.
+
+    Args:
+        utility_pods: List of utility pods for command execution.
+        node: Node resource to run the command from.
+        service: Service resource to connect to.
+        tls_version: TLS version string (e.g. "1.2", "1.3").
+
+    Returns:
+        bool: True if the service accepted the TLS connection.
+    """
+    command = compose_openssl_command(
+        service_spec=service.instance.spec,
+        version=tls_version,
+        extra_arguments="| grep 'Protocol version:'",
+    )
+    try:
+        output = ExecCommandOnPod(utility_pods=utility_pods, node=node).exec(command=command, ignore_rc=True)
+    except ExecOnPodError:
+        service_name = service.instance.metadata.name
+        LOGGER.warning(f"Service {service_name} is unreachable during TLS {tls_version} check, treating as rejected")
+        return False
+    return tls_version in output
+
+
+def get_services_accepting_tls_version(
+    utility_pods: list, node: Resource, services: list[Resource], tls_version: str
+) -> dict[str, bool]:
+    """Probes each service for TLS version acceptance.
+
+    Args:
+        utility_pods: List of utility pods for command execution.
+        node: Node resource to run the command from.
+        services: List of Service resources to check.
+        tls_version: TLS version string (e.g. "1.2", "1.3").
+
+    Returns:
+        dict[str, bool]: Mapping of service name to whether it accepts the given TLS version.
+    """
+    results = {}
+    for service in services:
+        service_name = service.instance.metadata.name
+        accepts = check_service_accepts_tls_version(
+            utility_pods=utility_pods,
+            node=node,
+            service=service,
+            tls_version=tls_version,
+        )
+        LOGGER.info(f"Service {service_name} accepts TLS {tls_version}: {accepts}")
+        results[service_name] = accepts
+    return results
+
+
+def get_node_available_tls_groups(utility_pods: list, node: Resource) -> list[str]:
+    """Returns the list of TLS groups supported by OpenSSL on the given node.
+
+    Args:
+        utility_pods: List of utility pods for command execution.
+        node: Node resource to query.
+
+    Returns:
+        list[str]: TLS group names available on the node.
+    """
+    output = ExecCommandOnPod(utility_pods=utility_pods, node=node).exec(
+        command="openssl list -tls-groups",
+    )
+    return [group.strip() for group in output.strip().split(":") if group.strip()]
+
+
+def compose_openssl_pqc_command(service_spec: ResourceField, groups: str, connect_timeout: int = 10) -> str:
+    """Builds an openssl s_client command with PQC group negotiation.
+
+    Args:
+        service_spec: Service spec object with clusterIP and ports.
+        groups: Colon-separated TLS group names to offer (e.g. "SecP256r1MLKEM768:secp256r1").
+        connect_timeout: Timeout in seconds for the TLS connection attempt.
+
+    Returns:
+        str: The openssl command string.
+    """
+    return (
+        f"echo | timeout {connect_timeout}"
+        f" openssl s_client -connect {service_spec.clusterIP}:{service_spec.ports[0].port} -groups {groups} 2>&1"
+    )
+
+
+def get_services_pqc_status(
+    worker_exec: ExecCommandOnPod,
+    services: list[Resource],
+    pqc_groups: list[str],
+) -> dict[str, bool | None]:
+    """Probes each service for PQC key exchange acceptance.
+
+    Tries each PQC group in order and accepts if any group negotiates successfully.
+
+    Args:
+        worker_exec: ExecCommandOnPod instance for running commands on a worker node.
+        services: List of Service resources to check.
+        pqc_groups: List of PQC group names to try (e.g. ["X25519MLKEM768", "SecP256r1MLKEM768"]).
+
+    Returns:
+        dict[str, bool | None]: Mapping of service name to PQC status:
+            True = accepted PQC, False = rejected PQC, None = unreachable.
+    """
+    results: dict[str, bool | None] = {}
+    for service in services:
+        service_name = service.instance.metadata.name
+        LOGGER.info(f"Probing PQC on service: {service_name}")
+        accepted = False
+        unreachable = True
+        for group in pqc_groups:
+            command = compose_openssl_pqc_command(
+                service_spec=service.instance.spec,
+                groups=group,
+            )
+            output = worker_exec.exec(command=command, ignore_rc=True)
+            if OPENSSL_CONNECTION_SUCCESS_INDICATOR not in output and PQC_HANDSHAKE_FAILURE_INDICATOR not in output:
+                continue
+            unreachable = False
+            if PQC_HANDSHAKE_FAILURE_INDICATOR not in output:
+                LOGGER.info(f"Service {service_name} accepts PQC ({group})")
+                accepted = True
+                break
+        if unreachable:
+            LOGGER.warning(f"Service {service_name} is unreachable during PQC probe")
+            results[service_name] = None
+        elif accepted:
+            results[service_name] = True
+        else:
+            LOGGER.info(f"Service {service_name} rejected all PQC groups: {pqc_groups}")
+            results[service_name] = False
+    return results
