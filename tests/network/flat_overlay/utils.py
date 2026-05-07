@@ -1,15 +1,12 @@
 import logging
 import shlex
 
-from ocp_resources.custom_resource_definition import CustomResourceDefinition
-from ocp_resources.resource import NamespacedResource, Resource
-from timeout_sampler import TimeoutExpiredError, TimeoutSampler
+from ocp_resources.resource import Resource
 
 from libs.net.ip import random_ipv4_address
 from tests.network.flat_overlay.constants import (
     HTTP_SUCCESS_RESPONSE_STR,
 )
-from utilities.constants import TIMEOUT_3MIN, TIMEOUT_5SEC
 from utilities.exceptions import ResourceValueError
 from utilities.infra import ExecCommandOnPod, get_node_selector_dict
 from utilities.network import compose_cloud_init_data_dict
@@ -64,31 +61,6 @@ def get_vm_kubevirt_domain_label(vm):
 def create_ip_block(ip_address, ingress=True):
     network_direction = "from" if ingress else "to"
     return [{network_direction: [{"ipBlock": {"cidr": ip_address}}]}]
-
-
-def wait_for_multi_network_policy_resources(admin_client, deploy_mnp_crd=False):
-    sample = None
-    consecutive_check = 0
-    mnp_crd = CustomResourceDefinition(
-        name=f"multi-networkpolicies.{NamespacedResource.ApiGroup.K8S_CNI_CNCF_IO}", client=admin_client
-    )
-    try:
-        sampler = TimeoutSampler(
-            wait_timeout=TIMEOUT_3MIN,
-            sleep=TIMEOUT_5SEC,
-            func=lambda: mnp_crd.exists,
-        )
-        for sample in sampler:
-            if deploy_mnp_crd == bool(sample):
-                # We should make sure that the change in the MNP CRD is stable
-                consecutive_check += 1
-                if consecutive_check == 3:
-                    return
-    except TimeoutExpiredError:
-        LOGGER.error(
-            f"Value for deploying the multi-networkpolicies crd is {deploy_mnp_crd}, but the CRD status doesn't match."
-        )
-        raise
 
 
 def get_vm_connection_reply(
