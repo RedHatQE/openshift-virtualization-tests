@@ -110,7 +110,7 @@ def expand_pvc(dv, size_change):
 
 
 def get_resize_count(vm):
-    commands = shlex.split("dmesg | grep -c 'new size' || true")
+    commands = shlex.split("sudo dmesg | grep -c 'new size' || true")
     return int(
         run_ssh_commands(
             host=vm.ssh_exec,
@@ -150,7 +150,7 @@ def wait_for_resize(vm, count=1):
     except TimeoutExpiredError:
         dmesg = run_ssh_commands(
             host=vm.ssh_exec,
-            commands=shlex.split("dmesg"),
+            commands=shlex.split("sudo dmesg"),
             wait_timeout=TIMEOUT_2MIN,
             sleep=TIMEOUT_5SEC,
         )[0]
