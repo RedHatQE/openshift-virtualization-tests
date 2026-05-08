@@ -303,25 +303,20 @@ def wait_for_dv_condition_message(dv: DataVolume, expected_message: str, timeout
 
     Raises:
         DataVolumeConditionMessageNotFoundError: If expected message not found in conditions within timeout
-            or if the watcher fails unexpectedly (e.g., API connection error)
     """
     LOGGER.info(f"Watching {dv.name} for message: {expected_message} for up to {timeout} seconds.")
-    try:
-        for event in dv.watcher(timeout=timeout):
-            event_type = event["type"]
-            if event_type == "DELETED":
-                LOGGER.warning(f"DataVolume {dv.name} was deleted while waiting for message: {expected_message}")
-                continue
-            if event_type not in ("ADDED", "MODIFIED"):
-                LOGGER.info(f"Ignoring {event_type} event for DataVolume {dv.name}")
-                continue
-            conditions = (event["object"].status or {}).get("conditions", [])
-            if any(expected_message in condition.get("message", "") for condition in conditions):
-                LOGGER.info(f"Found expected message in {dv.name}: {expected_message}")
-                return
-    except Exception as exc:
-        LOGGER.error(f"Error while watching DataVolume {dv.name}: {exc}")
-        raise DataVolumeConditionMessageNotFoundError(dv_name=dv.name, expected_message=expected_message) from exc
+    for event in dv.watcher(timeout=timeout):
+        event_type = event["type"]
+        if event_type == "DELETED":
+            LOGGER.warning(f"DataVolume {dv.name} was deleted while waiting for message: {expected_message}")
+            continue
+        if event_type not in ("ADDED", "MODIFIED"):
+            LOGGER.info(f"Ignoring {event_type} event for DataVolume {dv.name}")
+            continue
+        conditions = (event["object"].status or {}).get("conditions", [])
+        if any(expected_message in condition.get("message", "") for condition in conditions):
+            LOGGER.info(f"Found expected message in {dv.name}: {expected_message}")
+            return
 
     raise DataVolumeConditionMessageNotFoundError(dv_name=dv.name, expected_message=expected_message)
 
