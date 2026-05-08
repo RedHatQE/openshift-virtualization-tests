@@ -8,6 +8,7 @@ import pytest
 
 from utilities.exceptions import (
     ClusterSanityError,
+    DataVolumeConditionMessageNotFoundError,
     MissingEnvironmentVariableError,
     MissingResourceException,
     OsDictNotFoundError,
@@ -158,6 +159,26 @@ class TestOsDictNotFoundError:
         """Test OsDictNotFoundError can be raised"""
         with pytest.raises(OsDictNotFoundError):
             raise OsDictNotFoundError("Test error")
+
+
+class TestDataVolumeConditionMessageNotFoundError:
+    """Test cases for DataVolumeConditionMessageNotFoundError exception"""
+
+    def test_data_volume_condition_message_not_found_error_init(self):
+        """Test DataVolumeConditionMessageNotFoundError initialization"""
+        dv_name = "test-dv"
+        expected_message = "Test message"
+        error = DataVolumeConditionMessageNotFoundError(dv_name=dv_name, expected_message=expected_message)
+        assert error.dv_name == dv_name
+        assert error.expected_message == expected_message
+
+    def test_data_volume_condition_message_not_found_error_str(self):
+        """Test DataVolumeConditionMessageNotFoundError string representation"""
+        dv_name = "test-dv"
+        expected_message = "Test message"
+        error = DataVolumeConditionMessageNotFoundError(dv_name=dv_name, expected_message=expected_message)
+        expected = f"Expected message '{expected_message}' not found in DataVolume '{dv_name}' conditions."
+        assert str(error) == expected
 
 
 class TestStorageSanityError:
