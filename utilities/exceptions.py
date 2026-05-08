@@ -71,6 +71,7 @@ class DataVolumeConditionMessageNotFoundError(Exception):
     def __init__(self, dv_name: str, expected_message: str) -> None:
         self.dv_name = dv_name
         self.expected_message = expected_message
+        super().__init__(str(self))
 
     def __str__(self) -> str:
         return f"Expected message '{self.expected_message}' not found in DataVolume '{self.dv_name}' conditions."

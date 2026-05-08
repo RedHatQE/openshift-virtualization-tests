@@ -180,6 +180,25 @@ class TestDataVolumeConditionMessageNotFoundError:
         expected = f"Expected message '{expected_message}' not found in DataVolume '{dv_name}' conditions."
         assert str(error) == expected
 
+    def test_data_volume_condition_message_not_found_error_args(self):
+        """Test DataVolumeConditionMessageNotFoundError populates args via super().__init__()"""
+        dv_name = "test-dv"
+        expected_message = "Test message"
+        error = DataVolumeConditionMessageNotFoundError(dv_name=dv_name, expected_message=expected_message)
+        # Verify args is populated (not empty tuple)
+        assert len(error.args) == 1
+        assert error.args[0] == str(error)
+
+    def test_data_volume_condition_message_not_found_error_raise_and_catch(self):
+        """Test DataVolumeConditionMessageNotFoundError can be raised and caught"""
+        dv_name = "test-dv"
+        expected_message = "Test message"
+        with pytest.raises(DataVolumeConditionMessageNotFoundError) as exc_info:
+            raise DataVolumeConditionMessageNotFoundError(dv_name=dv_name, expected_message=expected_message)
+        assert exc_info.value.dv_name == dv_name
+        assert exc_info.value.expected_message == expected_message
+        assert isinstance(exc_info.value, Exception)
+
 
 class TestStorageSanityError:
     """Test cases for StorageSanityError exception"""

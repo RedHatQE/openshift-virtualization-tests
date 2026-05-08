@@ -289,30 +289,39 @@ def wait_for_dv_condition_message(dv: DataVolume, expected_message: str, timeout
     Uses substring matching (not exact match) because CDI messages
     often include variable context like timestamps, pod names, or URLs.
 
+    Monitors ADDED and MODIFIED events. DELETED events are logged as warnings
+    but do not stop monitoring. Other event types are logged and ignored.
+
     Example:
         Expected: "certificate signed by unknown authority"
-        Actual: "Unable to connect: ... x509: certificate signed by unknown authority
+        Actual message: "Unable to connect: ... x509: certificate signed by unknown authority"
 
     Args:
-        dv: DataVolume resource
+        dv: DataVolume resource to monitor for condition messages
         expected_message: Expected message substring to find in condition messages
-        timeout: Timeout for the operation, default is 5 minutes.
+        timeout: Timeout in seconds for the operation, default is 5 minutes (300 seconds).
 
     Raises:
         DataVolumeConditionMessageNotFoundError: If expected message not found in conditions within timeout
+            or if the watcher fails unexpectedly (e.g., API connection error)
     """
     LOGGER.info(f"Watching {dv.name} for message: {expected_message} for up to {timeout} seconds.")
-    for event in dv.watcher(timeout=timeout):
-        event_type = event["type"]
-        if event_type == "DELETED":
-            LOGGER.warning(f"DataVolume {dv.name} was deleted while waiting for message: {expected_message}")
-            continue
-        if event_type not in ("ADDED", "MODIFIED"):
-            LOGGER.info(f"Ignoring {event_type} event for DataVolume {dv.name}")
-            continue
-        conditions = (event["object"].status or {}).get("conditions", [])
-        if any(expected_message in condition.get("message", "") for condition in conditions):
-            return
+    try:
+        for event in dv.watcher(timeout=timeout):
+            event_type = event["type"]
+            if event_type == "DELETED":
+                LOGGER.warning(f"DataVolume {dv.name} was deleted while waiting for message: {expected_message}")
+                continue
+            if event_type not in ("ADDED", "MODIFIED"):
+                LOGGER.info(f"Ignoring {event_type} event for DataVolume {dv.name}")
+                continue
+            conditions = (event["object"].status or {}).get("conditions", [])
+            if any(expected_message in condition.get("message", "") for condition in conditions):
+                LOGGER.info(f"Found expected message in {dv.name}: {expected_message}")
+                return
+    except Exception as exc:
+        LOGGER.error(f"Error while watching DataVolume {dv.name}: {exc}")
+        raise DataVolumeConditionMessageNotFoundError(dv_name=dv.name, expected_message=expected_message) from exc
 
     raise DataVolumeConditionMessageNotFoundError(dv_name=dv.name, expected_message=expected_message)
 
