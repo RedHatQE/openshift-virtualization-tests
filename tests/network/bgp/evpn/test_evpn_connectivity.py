@@ -100,7 +100,7 @@ def test_stretched_l2_connectivity_is_preserved_over_live_migration(
 
 
 @pytest.mark.polarion("CNV-15230")
-def test_routed_l3_connectivity_udn_vm_and_external_provider():
+def test_routed_l3_connectivity_udn_vm_and_external_provider(external_l3_endpoint, vm_evpn_target, subtests):
     """
     Preconditions:
     - External Source Provider L3 endpoint.
@@ -112,13 +112,18 @@ def test_routed_l3_connectivity_udn_vm_and_external_provider():
     Expected:
     - The VM successfully communicates with the external L3 endpoint.
     """
-
-
-test_routed_l3_connectivity_udn_vm_and_external_provider.__test__ = False
+    with evpn_workloads_active_connections(endpoint=external_l3_endpoint, vm=vm_evpn_target) as connections:
+        for client, server in connections:
+            with subtests.test(f"IPv{ipaddress.ip_address(client.server_ip).version}"):
+                assert is_tcp_connection(server=server, client=client)
 
 
 @pytest.mark.polarion("CNV-15231")
-def test_routed_l3_connectivity_is_preserved_over_live_migration():
+def test_routed_l3_connectivity_is_preserved_over_live_migration(
+    evpn_routed_l3_active_connections,
+    vm_evpn_target,
+    subtests,
+):
     """
     Preconditions:
     - External Source Provider L3 endpoint.
@@ -126,14 +131,15 @@ def test_routed_l3_connectivity_is_preserved_over_live_migration():
     - Established TCP connectivity between the target under-test VM and the external L3 endpoint.
 
     Steps:
-    1. Live-migrate UDN VM and wait for completion.
+    1. Live-migrate the target under-test VM and wait for completion.
 
     Expected:
     - The initial TCP connection is preserved (no disconnection).
     """
-
-
-test_routed_l3_connectivity_is_preserved_over_live_migration.__test__ = False
+    migrate_vm_and_verify(vm=vm_evpn_target)
+    for client, server in evpn_routed_l3_active_connections:
+        with subtests.test(f"IPv{ipaddress.ip_address(client.server_ip).version}"):
+            assert is_tcp_connection(server=server, client=client)
 
 
 @pytest.mark.polarion("CNV-15232")
