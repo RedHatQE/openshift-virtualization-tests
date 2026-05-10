@@ -266,3 +266,4 @@ tox -e utilities-unittests
 - [`docs/SOFTWARE_TEST_DESCRIPTION.md`](SOFTWARE_TEST_DESCRIPTION.md) — STD docstring format and requirements
 - [`docs/CODING_AND_STYLE_GUIDE.md`](docs/CODING_AND_STYLE_GUIDE.md) — Detailed coding and style conventions
 - [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) — Contribution guidelines
+- [`tests/network/README.md`](tests/network/README.md) — Network domain knowledge: terminology, naming conventions and functionality.
