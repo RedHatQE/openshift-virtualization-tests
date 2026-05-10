@@ -21,9 +21,11 @@ from tests.network.bgp.evpn.libevpn import (
     cudn_evpn_subnets,
     deploy_evpn_bridge,
     deploy_evpn_l2_endpoint,
+    deploy_evpn_l3_endpoint,
     evpn_workloads_active_connections,
     teardown_evpn_bridge,
     teardown_evpn_l2_endpoint,
+    teardown_evpn_l3_endpoint,
 )
 from tests.network.libs import cluster_user_defined_network as libcudn
 from tests.network.libs.bgp import (
@@ -41,6 +43,10 @@ APP_EVPN_CUDN_LABEL: Final[dict] = {**EVPN_ADVERTISE_LABEL, "app": "cudn-evpn"}
 CUDN_EVPN_BGP_LABEL: Final[dict] = {"cudn-bgp": "evpn"}
 EXTERNAL_L2_ENDPOINT_IPV4: Final[str] = f"{random_ipv4_address(net_seed=5, host_address=250)}/24"
 EXTERNAL_L2_ENDPOINT_IPV6: Final[str] = f"{random_ipv6_address(net_seed=5, host_address=250)}/64"
+EXTERNAL_L3_ENDPOINT_IPV4: Final[str] = "192.168.100.100/24"
+EXTERNAL_L3_ENDPOINT_IPV6: Final[str] = "fd01:1234:5678::64/64"
+EXTERNAL_L3_GATEWAY_IPV4: Final[str] = "192.168.100.1/24"
+EXTERNAL_L3_GATEWAY_IPV6: Final[str] = "fd01:1234:5678::1/64"
 EVPN_MAC_VRF_VNI: Final[int] = 10100
 EVPN_IP_VRF_VNI: Final[int] = 20102
 
@@ -232,10 +238,34 @@ def external_l2_endpoint(
     teardown_evpn_l2_endpoint(pod=frr_external_pod.pod)
 
 
+@pytest.fixture(scope="module")
+def external_l3_endpoint(
+    evpn_bridge: None,
+    frr_external_pod: ExternalFrrPodInfo,
+) -> Generator[EvpnEndpoint]:
+    endpoint = deploy_evpn_l3_endpoint(
+        pod=frr_external_pod.pod,
+        vni=EVPN_IP_VRF_VNI,
+        endpoint_ips=[EXTERNAL_L3_ENDPOINT_IPV4, EXTERNAL_L3_ENDPOINT_IPV6],
+        gateway_ips=[EXTERNAL_L3_GATEWAY_IPV4, EXTERNAL_L3_GATEWAY_IPV6],
+    )
+    yield endpoint
+    teardown_evpn_l3_endpoint(pod=frr_external_pod.pod)
+
+
 @pytest.fixture()
 def evpn_stretched_l2_active_connections(
     external_l2_endpoint: EvpnEndpoint,
     vm_evpn_target: BaseVirtualMachine,
 ) -> Generator[list[tuple[EndpointTcpClient, TcpServer]]]:
     with evpn_workloads_active_connections(endpoint=external_l2_endpoint, vm=vm_evpn_target) as connections:
+        yield connections
+
+
+@pytest.fixture()
+def evpn_routed_l3_active_connections(
+    external_l3_endpoint: EvpnEndpoint,
+    vm_evpn_target: BaseVirtualMachine,
+) -> Generator[list[tuple[EndpointTcpClient, TcpServer]]]:
+    with evpn_workloads_active_connections(endpoint=external_l3_endpoint, vm=vm_evpn_target) as connections:
         yield connections

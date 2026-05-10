@@ -21,10 +21,10 @@ from libs.net.vmspec import IpNotFound
 from utilities.constants import NET_UTIL_CONTAINER_IMAGE, NamespacesNames
 from utilities.infra import get_resources_by_name_prefix
 
-_CLUSTER_FRR_ASN: Final[int] = 64512
-_EXTERNAL_FRR_ASN: Final[int] = 64000
 _EXTERNAL_FRR_IMAGE: Final[str] = "quay.io/frrouting/frr:10.6.0"
 _FRR_DEPLOYMENT_NAME: Final[str] = "frr-k8s-statuscleaner"
+CLUSTER_FRR_ASN: Final[int] = 64512
+EXTERNAL_FRR_ASN: Final[int] = 64000
 POD_SECONDARY_IFACE_NAME: Final[str] = "net1"
 NET_TOOLS_CONTAINER_NAME: Final[str] = "net-tools"
 EXTERNAL_FRR_POD_LABEL: Final[dict] = {"role": "frr-external"}
@@ -130,11 +130,11 @@ def create_frr_configuration(
     bgp_config = {
         "routers": [
             {
-                "asn": _CLUSTER_FRR_ASN,
+                "asn": CLUSTER_FRR_ASN,
                 "neighbors": [
                     {
                         "address": frr_pod_ipv4,
-                        "asn": _EXTERNAL_FRR_ASN,
+                        "asn": EXTERNAL_FRR_ASN,
                         "disableMP": True,
                         "toReceive": {"allowed": {"mode": "filtered", "prefixes": [{"prefix": external_subnet_ipv4}]}},
                     }
@@ -163,11 +163,11 @@ def create_evpn_frr_configuration(
     bgp_config = {
         "routers": [
             {
-                "asn": _CLUSTER_FRR_ASN,
+                "asn": CLUSTER_FRR_ASN,
                 "neighbors": [
                     {
                         "address": frr_pod_ipv4,
-                        "asn": _EXTERNAL_FRR_ASN,
+                        "asn": EXTERNAL_FRR_ASN,
                     }
                 ],
             }
@@ -199,7 +199,7 @@ def generate_frr_conf(
     # Route-map: strips cluster ASN from AS_PATH for eBGP EVPN re-advertisement
     lines = [
         f"route-map {evpn_route_map} permit 10",
-        f" set as-path exclude {_CLUSTER_FRR_ASN}",
+        f" set as-path exclude {CLUSTER_FRR_ASN}",
         " set ip next-hop unchanged",
         "exit",
         "",
@@ -207,13 +207,13 @@ def generate_frr_conf(
 
     # BGP router and neighbor definitions
     lines.extend([
-        f"router bgp {_EXTERNAL_FRR_ASN}",
+        f"router bgp {EXTERNAL_FRR_ASN}",
         " no bgp ebgp-requires-policy",
         " no bgp default ipv4-unicast",
         " no bgp network import-check",
         "",
     ])
-    lines.extend([f" neighbor {ip} remote-as {_CLUSTER_FRR_ASN}" for ip in nodes_ipv4_list])
+    lines.extend([f" neighbor {ip} remote-as {CLUSTER_FRR_ASN}" for ip in nodes_ipv4_list])
     lines.append("")
 
     # IPv4 unicast: advertise external subnet, activate neighbors
