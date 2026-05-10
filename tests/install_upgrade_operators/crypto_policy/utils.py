@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 import deepdiff
 from benedict import benedict
+from kubernetes.client.exceptions import ApiException
 from kubernetes.dynamic import DynamicClient
 
 if TYPE_CHECKING:
@@ -284,6 +285,8 @@ def update_apiserver_crypto_policy(
 def check_service_accepts_tls_version(utility_pods: list, node: Resource, service: Resource, tls_version: str) -> bool:
     """Checks whether a service accepts a connection with the given TLS version.
 
+    Retries on transient API failures (e.g. node unavailability during TLS rollover).
+
     Args:
         utility_pods: List of utility pods for command execution.
         node: Node resource to run the command from.
@@ -298,8 +301,17 @@ def check_service_accepts_tls_version(utility_pods: list, node: Resource, servic
         version=tls_version,
         extra_arguments="| grep 'Protocol version:'",
     )
-    output = ExecCommandOnPod(utility_pods=utility_pods, node=node).exec(command=command, ignore_rc=True)
-    return tls_version in output
+    sampler = TimeoutSampler(
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=10,
+        func=ExecCommandOnPod(utility_pods=utility_pods, node=node).exec,
+        exceptions_dict={ApiException: []},
+        command=command,
+        ignore_rc=True,
+    )
+    for output in sampler:
+        return tls_version in output
+    return False
 
 
 def get_node_available_tls_groups(utility_pods: list, node: Resource) -> list[str]:

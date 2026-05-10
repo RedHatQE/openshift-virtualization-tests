@@ -136,7 +136,7 @@ def services_to_check_connectivity(hco_namespace, admin_client):
     return services_list
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def enabled_template_feature_gate(admin_client, hco_namespace, hyperconverged_resource_scope_session):
     """Enables the Template feature gate via HCO annotation and waits for virt-template deployments."""
     with update_hco_annotations(
@@ -154,13 +154,13 @@ def enabled_template_feature_gate(admin_client, hco_namespace, hyperconverged_re
         yield
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def cnv_services_with_template(enabled_template_feature_gate, hco_namespace, admin_client):
     """Discovers all CNV services with a clusterIP, including virt-template services."""
     services_list = [
         service
         for service in Service.get(namespace=hco_namespace.name, client=admin_client)
-        if service.instance.spec.clusterIP not in (None, "")
+        if service.instance.spec.clusterIP not in (None, "", "None")
     ]
     assert services_list, f"No services found in {hco_namespace.name}"
     service_names = [svc.name for svc in services_list]
@@ -168,7 +168,7 @@ def cnv_services_with_template(enabled_template_feature_gate, hco_namespace, adm
     return services_list
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def enabled_aaq(admin_client, hco_namespace, hyperconverged_resource_scope_session):
     with enabled_aaq_in_hco(
         client=admin_client,
@@ -197,18 +197,21 @@ def modern_tls_profile_applied(admin_client, hco_namespace, api_server, enabled_
 
 
 @pytest.fixture(scope="module")
-def verified_node_pqc_support(workers_utility_pods, worker_node1):
+def verified_node_pqc_support(workers_utility_pods, worker_node1, fips_enabled_cluster):
     """Verifies that worker node OpenSSL supports required PQC TLS groups."""
     available_groups = get_node_available_tls_groups(
         utility_pods=workers_utility_pods,
         node=worker_node1,
     )
-    required_groups = [PQC_GROUP_X25519_MLKEM768, PQC_GROUP_SECP256R1_MLKEM768, PQC_GROUP_SECP384R1_MLKEM1024]
+    # X25519MLKEM768 is non-NIST and blocked by the FIPS crypto module
+    required_groups = [PQC_GROUP_SECP256R1_MLKEM768, PQC_GROUP_SECP384R1_MLKEM1024]
+    if not fips_enabled_cluster:
+        required_groups.append(PQC_GROUP_X25519_MLKEM768)
     missing_groups = [group for group in required_groups if group not in available_groups]
     assert not missing_groups, f"PQC groups not found on node: {missing_groups}. Available: {available_groups}"
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def console_plugin_test_network_policy(hco_namespace, admin_client):
     """Temporarily allows ingress to kubevirt-console-plugin pods for TLS testing."""
     with NetworkPolicy(

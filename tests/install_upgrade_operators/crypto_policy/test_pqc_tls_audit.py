@@ -13,10 +13,6 @@ from utilities.jira import is_jira_open
 
 LOGGER = logging.getLogger(__name__)
 
-SERVICES_WITH_OPEN_BUGS = {
-    "hpp-prometheus-metrics": "CNV-82350",
-}
-
 
 @pytest.mark.polarion("CNV-15222")
 def test_cnv_services_pqc_key_exchange(subtests, fips_enabled_cluster, pqc_status_by_service):
@@ -35,6 +31,7 @@ def test_cnv_services_pqc_key_exchange(subtests, fips_enabled_cluster, pqc_statu
            (X25519MLKEM768, SecP256r1MLKEM768, SecP384r1MLKEM1024)
 
     Expected:
+        - No service is unreachable
         - On non-FIPS clusters: every service accepts PQC with at least one group
         - On FIPS clusters: every service rejects PQC (ML-KEM not FIPS-certified)
     """
@@ -42,9 +39,8 @@ def test_cnv_services_pqc_key_exchange(subtests, fips_enabled_cluster, pqc_statu
         with subtests.test(msg=service_name):
             if service_name == HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD:
                 pytest.xfail(f"CNV-82351: {service_name} — plaintext HTTP behind TLS route, TLS planned for 5.0")
-            if jira_id := SERVICES_WITH_OPEN_BUGS.get(service_name):
-                if is_jira_open(jira_id=jira_id):
-                    pytest.xfail(f"{service_name} — known bug: {jira_id}")
+            if service_name == "kubevirt-migration-prometheus" and is_jira_open(jira_id="CNV-87302"):
+                pytest.xfail(f"{service_name} — known bug: CNV-87302")
             assert accepted is not None, f"Service {service_name} is unreachable"
             if fips_enabled_cluster:
                 assert not accepted, f"Service {service_name} accepted PQC but must reject on FIPS cluster"
