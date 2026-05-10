@@ -111,6 +111,7 @@ knowledge_base:
     enabled: true
     filePatterns:
       - "AGENTS.md"
+      - "docs/AI_CONTRIBUTION_POLICY.md"
 
   # Enable learning from repository patterns
   learnings:
