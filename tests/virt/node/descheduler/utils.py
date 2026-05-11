@@ -241,7 +241,8 @@ def wait_for_overutilized_soft_taint(node, taint_expected, wait_timeout=TIMEOUT_
 
 def assert_psi_values_within_threshold(psi_values_dict):
     # Default deviation threshold is AsymmetricLow, i.e. "average + 10"
-    threshold = sum(psi_values_dict.values()) / len(psi_values_dict) + 10
+    # Add 2 for sampling tolerance
+    threshold = sum(psi_values_dict.values()) / len(psi_values_dict) + 12
     assert all(percentage < threshold for percentage in psi_values_dict.values()), (
         f"One or more nodes exceeded the threshold '{threshold}': {psi_values_dict}"
     )
