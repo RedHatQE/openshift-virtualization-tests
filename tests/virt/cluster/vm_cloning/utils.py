@@ -38,6 +38,17 @@ def check_if_files_present_after_cloning(vm):
 
 
 def assert_target_vm_has_new_pvc_disks(source_vm: VirtualMachine, target_vm: VirtualMachine, prefix: str) -> None:
+    """Validate cloned VM DataVolume names for PrefixTargetName policy.
+
+    Args:
+        source_vm: Source VM used for cloning.
+        target_vm: Cloned target VM.
+        prefix: Expected DataVolume name prefix.
+            Note: this is only for PrefixTargetName volumeNamePolicy.
+            Target VM disk names will be the same as source VM disk names.
+            Target VM DataVolume names will be of format {prefix}-{source_vm_disk_name}.
+    """
+
     def _get_data_volumes_list(vm: VirtualMachine) -> list[str]:
         return [volume["dataVolume"]["name"] for volume in vm.vmi.instance.spec.volumes if "dataVolume" in dict(volume)]
 
