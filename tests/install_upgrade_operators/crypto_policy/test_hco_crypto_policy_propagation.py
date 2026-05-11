@@ -10,8 +10,7 @@ from tests.install_upgrade_operators.crypto_policy.utils import (
     assert_crypto_policy_propagated_to_components,
     set_hco_crypto_policy,
 )
-from utilities.constants import TLS_OLD_POLICY, TLS_SECURITY_PROFILE
-from utilities.jira import is_jira_open
+from utilities.constants import TLS_SECURITY_PROFILE
 
 LOGGER = logging.getLogger(__name__)
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.s390x]
@@ -28,9 +27,6 @@ def updated_hco_crypto_policy(
     hyperconverged_resource_scope_function,
     cnv_crypto_policy_matrix__function__,
 ):
-    if cnv_crypto_policy_matrix__function__ == TLS_OLD_POLICY and is_jira_open(jira_id="CNV-84496"):
-        pytest.xfail(reason="CNV-84496: kubevirt-ipam-controller crashes with Old TLS profile")
-
     with set_hco_crypto_policy(
         hco_resource=hyperconverged_resource_scope_function,
         tls_spec=CRYPTO_POLICY_SPEC_DICT[cnv_crypto_policy_matrix__function__],
