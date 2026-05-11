@@ -2145,6 +2145,7 @@ def create_vm_cloning_job(
     annotation_filters=None,
     new_mac_addresses=None,
     new_smbios_serial=None,
+    volume_name_policy=None,
 ):
     """
     Create VirtualMachineClone object.
@@ -2170,6 +2171,7 @@ def create_vm_cloning_job(
         annotation_filters=annotation_filters,
         new_mac_addresses=new_mac_addresses,
         new_smbios_serial=new_smbios_serial,
+        volume_name_policy=volume_name_policy,
     ) as vmc:
         vmc.wait_for_status(status=VirtualMachineClone.Status.SUCCEEDED)
         yield vmc
