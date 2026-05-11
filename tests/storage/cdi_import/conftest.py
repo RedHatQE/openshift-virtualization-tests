@@ -23,7 +23,6 @@ from utilities.constants import (
     OS_FLAVOR_FEDORA,
     REGISTRY_STR,
     TIMEOUT_1MIN,
-    ArchImages,
     Images,
 )
 from utilities.infra import NON_EXIST_URL
@@ -154,7 +153,7 @@ def created_vm_list(unprivileged_client, created_blank_dv_list, storage_class_na
                 namespace=dv.namespace,
                 os_flavor=OS_FLAVOR_FEDORA,
                 data_volume=dv,
-                image=getattr(ArchImages, py_config["cpu_arch"].upper()).Fedora.FEDORA_CONTAINER_IMAGE,
+                image=Images.Fedora.FEDORA_CONTAINER_IMAGE,
                 memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
             )
             vm.deploy(wait=True)
