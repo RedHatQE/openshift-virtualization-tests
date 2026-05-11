@@ -20,6 +20,7 @@ from libs.vm.spec import Devices, Metadata
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.bgp.evpn.libevpn import (
     CUDN_EVPN_SUBNET_IPV6,
+    EVPN_CUDN_NET_SEED,
     EndpointTcpClient,
     EvpnEndpoint,
     cudn_evpn_subnets,
@@ -45,7 +46,7 @@ from tests.network.libs.vm_factory import udn_vm
 EVPN_ADVERTISE_LABEL: Final[dict] = {"advertise": "evpn"}
 APP_EVPN_CUDN_LABEL: Final[dict] = {**EVPN_ADVERTISE_LABEL, "app": "cudn-evpn"}
 CUDN_EVPN_BGP_LABEL: Final[dict] = {"cudn-bgp": "evpn"}
-EXTERNAL_L2_ENDPOINT_IPV4: Final[str] = f"{random_ipv4_address(net_seed=5, host_address=250)}/24"
+EXTERNAL_L2_ENDPOINT_IPV4: Final[str] = f"{random_ipv4_address(net_seed=EVPN_CUDN_NET_SEED, host_address=250)}/24"
 EXTERNAL_L2_ENDPOINT_IPV6: Final[str] = f"{ipaddress.ip_network(CUDN_EVPN_SUBNET_IPV6, strict=False)[250]}/64"
 EXTERNAL_L2_ENDPOINT_MAC: Final[str] = "02:00:05:00:fa:00"
 EXTERNAL_L3_ENDPOINT_IPV4: Final[str] = "192.168.100.100/24"

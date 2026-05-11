@@ -24,8 +24,9 @@ from tests.network.libs.bgp import CLUSTER_FRR_ASN, EXTERNAL_FRR_ASN, NET_TOOLS_
 
 LOGGER = logging.getLogger(__name__)
 
-CUDN_EVPN_SUBNET_IPV4: str = f"{random_ipv4_address(net_seed=5, host_address=0)}/24"
-CUDN_EVPN_SUBNET_IPV6: str = f"{random_ipv6_address(net_seed=5, host_address=0)}/64"
+EVPN_CUDN_NET_SEED: int = 5
+CUDN_EVPN_SUBNET_IPV4: str = f"{random_ipv4_address(net_seed=EVPN_CUDN_NET_SEED, host_address=0)}/24"
+CUDN_EVPN_SUBNET_IPV6: str = f"{random_ipv6_address(net_seed=EVPN_CUDN_NET_SEED, host_address=0)}/64"
 
 _BRIDGE_NAME: str = "br0"
 _VXLAN_NAME: str = "vxlan0"
@@ -197,7 +198,6 @@ def _build_l2_endpoint_commands(
     endpoint_ips: list[str],
     mac_address: str | None = None,
 ) -> list[str]:
-    mac_cmd = [f"ip netns exec {_L2_ENDPOINT_NETNS} ip link set dev {_L2_VETH_EP_SIDE} address {mac_address}"]
     return [
         f"bridge vlan add dev {_BRIDGE_NAME} vid {_L2_VID} self",
         f"bridge vlan add dev {_VXLAN_NAME} vid {_L2_VID}",
@@ -210,7 +210,11 @@ def _build_l2_endpoint_commands(
         f"ip netns add {_L2_ENDPOINT_NETNS}",
         f"ip link set {_L2_VETH_EP_SIDE} netns {_L2_ENDPOINT_NETNS}",
         *(f"ip netns exec {_L2_ENDPOINT_NETNS} ip addr add {ip} dev {_L2_VETH_EP_SIDE}" for ip in endpoint_ips),
-        *(mac_cmd if mac_address else []),
+        *(
+            [f"ip netns exec {_L2_ENDPOINT_NETNS} ip link set dev {_L2_VETH_EP_SIDE} address {mac_address}"]
+            if mac_address
+            else []
+        ),
         f"ip netns exec {_L2_ENDPOINT_NETNS} ip link set {_L2_VETH_EP_SIDE} up",
         f"ip netns exec {_L2_ENDPOINT_NETNS} ip link set lo up",
     ]
