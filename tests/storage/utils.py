@@ -539,6 +539,25 @@ def check_file_in_vm(
         vm_console.expect(pattern=file_content, timeout=TIMEOUT_20SEC)
 
 
+class VirtualMachineRestoreWithPolicy(VirtualMachineRestore):
+    """VirtualMachineRestore with custom volumeRestorePolicy."""
+
+    def __init__(self, volume_restore_policy: str, **kwargs):
+        """
+        Initialize VirtualMachineRestore with volumeRestorePolicy.
+
+        Args:
+            volume_restore_policy: Policy for volume restoration (e.g., "PrefixTargetName")
+            **kwargs: Arguments for VirtualMachineRestore parent class
+        """
+        super().__init__(**kwargs)
+        self.volume_restore_policy = volume_restore_policy
+
+    def to_dict(self):
+        super().to_dict()
+        self.res["spec"]["volumeRestorePolicy"] = self.volume_restore_policy
+
+
 @contextmanager
 def vm_restore_with_prefix_policy(
     name: str,
@@ -568,17 +587,14 @@ def vm_restore_with_prefix_policy(
     Yields:
         VirtualMachineRestore: Configured restore object
     """
-    restore = VirtualMachineRestore(
+    with VirtualMachineRestoreWithPolicy(
         name=name,
         namespace=namespace,
         vm_name=vm_name,
         snapshot_name=snapshot_name,
         client=client,
         dry_run=dry_run,
+        volume_restore_policy=prefix_policy,
         **kwargs,
-    )
-    restore.to_dict()
-    restore.res["spec"]["volumeRestorePolicy"] = prefix_policy
-
-    with restore:
+    ) as restore:
         yield restore
