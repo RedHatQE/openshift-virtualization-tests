@@ -24,6 +24,7 @@ from libs.net.ip import random_ipv4_address, random_ipv6_address
 from libs.net.traffic_generator import active_tcp_connections, is_tcp_connection
 from libs.net.vmspec import lookup_primary_network
 from tests.network.bgp.evpn.libevpn import (
+    EVPN_CUDN_NET_SEED,
     assert_evpn_workloads_connectivity,
     deploy_evpn_l2_endpoint,
     evpn_workloads_active_connections,
@@ -31,8 +32,8 @@ from tests.network.bgp.evpn.libevpn import (
 )
 from utilities.virt import migrate_vm_and_verify
 
-_L2_ENDPOINT_IPV4: str = f"{random_ipv4_address(net_seed=5, host_address=249)}/24"
-_L2_ENDPOINT_IPV6: str = f"{random_ipv6_address(net_seed=5, host_address=249)}/64"
+_L2_ENDPOINT_IPV4: str = f"{random_ipv4_address(net_seed=EVPN_CUDN_NET_SEED, host_address=249)}/24"
+_L2_ENDPOINT_IPV6: str = f"{random_ipv6_address(net_seed=EVPN_CUDN_NET_SEED, host_address=249)}/64"
 
 pytestmark = [
     pytest.mark.bgp,
