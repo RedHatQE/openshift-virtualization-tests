@@ -2,6 +2,7 @@ import logging
 
 import pytest
 from ocp_resources.node import Node
+from pytest_testconfig import config as py_config
 
 from tests.install_upgrade_operators.node_component.utils import (
     SELECTORS,
@@ -20,6 +21,7 @@ from utilities.constants import (
     IMAGE_CRON_STR,
     KUBE_CNI_LINUX_BRIDGE_PLUGIN,
     KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
+    KUBERNETES_ARCH_LABEL,
     TIMEOUT_5MIN,
     VIRT_API,
     VIRT_CONTROLLER,
@@ -257,12 +259,21 @@ def vm_placement_vm_work3(
     namespace,
     unprivileged_client,
     nodes_labeled,
+    np_nodes_labels_dict,
 ):
+    arch_work_nodes = [
+        node_name
+        for label_key in ("work3", "work2", "work1")
+        for node_name in nodes_labeled.get(label_key, [])
+        if np_nodes_labels_dict[node_name].get(KUBERNETES_ARCH_LABEL) == py_config["cpu_arch"]
+    ]
+    assert arch_work_nodes, f"No work-labeled node found with arch {py_config['cpu_arch']}"
+    target_node = arch_work_nodes[0]
     name = "vm-placement-sanity-tests-vm"
     with VirtualMachineForTests(
         namespace=namespace.name,
         name=name,
-        node_selector=get_node_selector_dict(node_selector=nodes_labeled["work3"][0]),
+        node_selector=get_node_selector_dict(node_selector=target_node),
         body=fedora_vm_body(name=name),
         client=unprivileged_client,
         teardown=False,

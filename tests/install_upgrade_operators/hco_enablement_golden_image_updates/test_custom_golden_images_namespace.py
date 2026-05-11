@@ -9,12 +9,15 @@ from ocp_resources.image_stream import ImageStream
 from ocp_resources.resource import Resource
 from ocp_resources.ssp import SSP
 from ocp_resources.volume_snapshot import VolumeSnapshot
+from pytest_testconfig import config as py_config
 
 from tests.install_upgrade_operators.hco_enablement_golden_image_updates.utils import (
     COMMON_TEMPLATE,
     get_templates_by_type_from_hco_status,
 )
+from utilities.architecture import get_cluster_architecture
 from utilities.constants import (
+    MULTIARCH,
     TIMEOUT_3MIN,
     TIMEOUT_10MIN,
 )
@@ -33,12 +36,22 @@ pytestmark = [pytest.mark.arm64, pytest.mark.s390x]
 
 def get_templates_resources_names_dict(templates):
     resource_dict = {}
+    is_multiarch = py_config.get("cluster_type") == MULTIARCH
+    cluster_architectures = get_cluster_architecture() if is_multiarch else set()
     for template in templates:
         image_stream_name = template["spec"]["template"]["spec"]["source"]["registry"].get("imageStream")
         if image_stream_name:
             resource_dict.setdefault(ImageStream.kind, set()).add(image_stream_name)
-        resource_dict.setdefault(DataImportCron.kind, set()).add(template["metadata"]["name"])
-        resource_dict.setdefault(DataSource.kind, set()).add(template["spec"]["managedDataSource"])
+        cron_name = template["metadata"]["name"]
+        managed_ds = template["spec"]["managedDataSource"]
+        if is_multiarch:
+            for arch in cluster_architectures:
+                resource_dict.setdefault(DataImportCron.kind, set()).add(f"{cron_name}-{arch}")
+                resource_dict.setdefault(DataSource.kind, set()).add(f"{managed_ds}-{arch}")
+            resource_dict.setdefault(DataSource.kind, set()).add(managed_ds)
+        else:
+            resource_dict.setdefault(DataImportCron.kind, set()).add(cron_name)
+            resource_dict.setdefault(DataSource.kind, set()).add(managed_ds)
     return resource_dict
 
 

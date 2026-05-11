@@ -96,6 +96,7 @@ from utilities.constants import (
     KUBECONFIG,
     KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
     KUBEMACPOOL_MAC_RANGE_CONFIG,
+    KUBERNETES_ARCH_LABEL,
     LINUX_BRIDGE,
     MIGRATION_POLICY_VM_LABEL,
     NODE_HUGE_PAGES_1GI_KEY,
@@ -1028,8 +1029,10 @@ def nodes_cpu_architecture():
 
 @pytest.fixture(scope="session")
 def cluster_node_cpus(schedulable_nodes):
-    # Get cpu model information from the nodes
-    return get_nodes_cpu_model(nodes=schedulable_nodes)
+    filtered_nodes = [
+        node for node in schedulable_nodes if node.labels.get(KUBERNETES_ARCH_LABEL) == py_config["cpu_arch"]
+    ]
+    return get_nodes_cpu_model(nodes=filtered_nodes)
 
 
 @pytest.fixture(scope="session")

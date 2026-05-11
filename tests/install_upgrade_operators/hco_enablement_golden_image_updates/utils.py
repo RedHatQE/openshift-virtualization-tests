@@ -4,9 +4,11 @@ import re
 from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.data_import_cron import DataImportCron
+from pytest_testconfig import config as py_config
 
 from tests.install_upgrade_operators.constants import CUSTOM_DATASOURCE_NAME
 from utilities.constants import (
+    MULTIARCH,
     OUTDATED,
     SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
     WILDCARD_CRON_EXPRESSION,
@@ -97,7 +99,13 @@ def get_data_import_cron_by_name(namespace: str, cron_name: str, admin_client: D
     data_import_cron = DataImportCron(name=cron_name, namespace=namespace, client=admin_client)
     if data_import_cron.exists:
         return data_import_cron
-    raise ResourceNotFoundError(f"DataImportCron: {data_import_cron} not found in namespace: {namespace}")
+    if py_config.get("cluster_type") == MULTIARCH:
+        arch_cron = DataImportCron(
+            name=f"{cron_name}-{py_config['cpu_arch']}", namespace=namespace, client=admin_client
+        )
+        if arch_cron.exists:
+            return arch_cron
+    raise ResourceNotFoundError(f"DataImportCron: {cron_name} not found in namespace: {namespace}")
 
 
 def get_template_dict_by_name(template_name, templates):
