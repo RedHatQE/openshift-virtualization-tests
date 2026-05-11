@@ -290,7 +290,7 @@ def wait_for_dv_condition_message(dv: DataVolume, expected_message: str, timeout
     often include variable context like timestamps, pod names, or URLs.
 
     Monitors ADDED and MODIFIED events. DELETED events are logged as warnings
-    but do not stop monitoring. Other event types are logged and ignored.
+    and stop monitoring. Other event types are logged and ignored.
 
     Example:
         Expected: "certificate signed by unknown authority"
