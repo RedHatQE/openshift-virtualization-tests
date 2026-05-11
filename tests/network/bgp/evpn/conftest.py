@@ -235,7 +235,7 @@ def external_l2_endpoint(
         endpoint_ips=[EXTERNAL_L2_ENDPOINT_IPV4, EXTERNAL_L2_ENDPOINT_IPV6],
     )
     yield endpoint
-    teardown_evpn_l2_endpoint(pod=frr_external_pod.pod)
+    teardown_evpn_l2_endpoint(pod=frr_external_pod.pod, vni=EVPN_MAC_VRF_VNI)
 
 
 @pytest.fixture(scope="module")

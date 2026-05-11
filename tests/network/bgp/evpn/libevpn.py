@@ -169,11 +169,20 @@ def deploy_evpn_l2_endpoint(
     return EvpnEndpoint(pod=pod, ip_addresses=bare_ips, netns_name=_L2_ENDPOINT_NETNS)
 
 
-def teardown_evpn_l2_endpoint(pod: Pod) -> None:
-    """Removes the EVPN L2 endpoint (netns, veth) from the FRR pod."""
+def teardown_evpn_l2_endpoint(pod: Pod, vni: int) -> None:
+    """Removes the EVPN L2 endpoint (netns, veth, VLAN/VNI mappings) from the FRR pod.
+
+    Args:
+        pod: The FRR pod hosting the endpoint.
+        vni: MAC-VRF VNI used during deployment.
+    """
     for cmd in [
         f"ip netns delete {_L2_ENDPOINT_NETNS}",
         f"ip link delete {_L2_VETH_POD_SIDE}",
+        f"bridge vlan del dev {_VXLAN_NAME} vid {_L2_VID} tunnel_info id {vni}",
+        f"bridge vni del dev {_VXLAN_NAME} vni {vni}",
+        f"bridge vlan del dev {_VXLAN_NAME} vid {_L2_VID}",
+        f"bridge vlan del dev {_BRIDGE_NAME} vid {_L2_VID} self",
     ]:
         pod.execute(command=shlex.split(cmd), container=NET_TOOLS_CONTAINER_NAME, ignore_rc=True)
 
