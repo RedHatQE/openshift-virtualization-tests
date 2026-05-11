@@ -1,7 +1,6 @@
 import logging
 
 import pytest
-from ocp_resources.node import Node
 from pytest_testconfig import config as py_config
 
 from tests.install_upgrade_operators.node_component.utils import (
@@ -21,7 +20,6 @@ from utilities.constants import (
     IMAGE_CRON_STR,
     KUBE_CNI_LINUX_BRIDGE_PLUGIN,
     KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
-    KUBERNETES_ARCH_LABEL,
     TIMEOUT_5MIN,
     VIRT_API,
     VIRT_CONTROLLER,
@@ -105,8 +103,8 @@ def expected_node_by_label(node_placement_labels):
 
 
 @pytest.fixture(scope="class")
-def np_nodes_labels_dict(admin_client):
-    return {node.name: node.instance.metadata.labels for node in Node.get(client=admin_client)}
+def np_nodes_labels_dict(schedulable_nodes):
+    return {node.name: node.instance.metadata.labels for node in schedulable_nodes}
 
 
 @pytest.fixture(scope="class")
@@ -259,13 +257,9 @@ def vm_placement_vm_work3(
     namespace,
     unprivileged_client,
     nodes_labeled,
-    np_nodes_labels_dict,
 ):
     arch_work_nodes = [
-        node_name
-        for label_key in ("work3", "work2", "work1")
-        for node_name in nodes_labeled.get(label_key, [])
-        if np_nodes_labels_dict[node_name].get(KUBERNETES_ARCH_LABEL) == py_config["cpu_arch"]
+        node_name for label_key in ("work3", "work2", "work1") for node_name in nodes_labeled.get(label_key, [])
     ]
     assert arch_work_nodes, f"No work-labeled node found with arch {py_config['cpu_arch']}"
     target_node = arch_work_nodes[0]

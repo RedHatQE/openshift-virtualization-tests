@@ -451,6 +451,7 @@ def schedulable_nodes(nodes):
         and not node.instance.spec.unschedulable
         and not kubernetes_taint_exists(node)
         and node.kubelet_ready
+        and node.labels.get(KUBERNETES_ARCH_LABEL) == py_config["cpu_arch"]
     ]
 
 
@@ -1029,10 +1030,7 @@ def nodes_cpu_architecture():
 
 @pytest.fixture(scope="session")
 def cluster_node_cpus(schedulable_nodes):
-    filtered_nodes = [
-        node for node in schedulable_nodes if node.labels.get(KUBERNETES_ARCH_LABEL) == py_config["cpu_arch"]
-    ]
-    return get_nodes_cpu_model(nodes=filtered_nodes)
+    return get_nodes_cpu_model(nodes=schedulable_nodes)
 
 
 @pytest.fixture(scope="session")
