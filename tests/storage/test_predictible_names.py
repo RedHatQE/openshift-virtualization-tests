@@ -59,9 +59,10 @@ def snapshot_for_predictable_names(
     """Create snapshot from VM for predictable names testing."""
     vm_data = vm_for_predictable_names
     source_vm_name = vm_data["source_vm_name"]
+    snapshot_name = f"{source_vm_name}-snapshot"[:63]
 
     with VirtualMachineSnapshot(
-        name=f"{source_vm_name}-snapshot",
+        name=snapshot_name,
         namespace=namespace.name,
         vm_name=source_vm_name,
         client=admin_client,
@@ -95,7 +96,6 @@ def restore_data_for_predictable_names(
         snapshot_name=snapshot.name,
         client=admin_client,
         prefix_policy=VOLUME_RESTORE_POLICY,
-        dry_run=False,
     ) as restored_vm:
         restored_vm.wait_restore_done(timeout=TIMEOUT_10MIN)
 

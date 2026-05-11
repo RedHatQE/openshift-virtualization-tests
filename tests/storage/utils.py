@@ -3,6 +3,7 @@ import logging
 import shlex
 from collections.abc import Generator
 from contextlib import contextmanager
+from typing import Any
 
 import requests
 from kubernetes.dynamic import DynamicClient
@@ -566,8 +567,8 @@ def vm_restore_with_prefix_policy(
     snapshot_name: str,
     client: DynamicClient,
     prefix_policy: str,
-    dry_run: bool,
-    **kwargs,
+    dry_run: bool = False,
+    **kwargs: Any,
 ) -> Generator[VirtualMachineRestore]:
     """
     Creates VirtualMachineRestore with volumeRestorePolicy: PrefixTargetName.
