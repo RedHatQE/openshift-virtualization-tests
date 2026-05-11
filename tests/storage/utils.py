@@ -309,7 +309,7 @@ def wait_for_dv_condition_message(dv: DataVolume, expected_message: str, timeout
         event_type = event["type"]
         if event_type == "DELETED":
             LOGGER.warning(f"DataVolume {dv.name} was deleted while waiting for message: {expected_message}")
-            continue
+            break
         if event_type not in ("ADDED", "MODIFIED"):
             LOGGER.info(f"Ignoring {event_type} event for DataVolume {dv.name}")
             continue
