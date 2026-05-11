@@ -20,10 +20,19 @@ import ipaddress
 
 import pytest
 
+from libs.net.ip import random_ipv4_address, random_ipv6_address
 from libs.net.traffic_generator import active_tcp_connections, is_tcp_connection
 from libs.net.vmspec import lookup_primary_network
-from tests.network.bgp.evpn.libevpn import assert_evpn_workloads_connectivity, evpn_workloads_active_connections
+from tests.network.bgp.evpn.libevpn import (
+    assert_evpn_workloads_connectivity,
+    deploy_evpn_l2_endpoint,
+    evpn_workloads_active_connections,
+    teardown_evpn_l2_endpoint,
+)
 from utilities.virt import migrate_vm_and_verify
+
+_L2_ENDPOINT_IPV4: str = f"{random_ipv4_address(net_seed=5, host_address=249)}/24"
+_L2_ENDPOINT_IPV6: str = f"{random_ipv6_address(net_seed=5, host_address=249)}/64"
 
 pytestmark = [
     pytest.mark.bgp,
@@ -175,7 +184,15 @@ def test_connectivity_after_udn_vm_cold_reboot(
 
 
 @pytest.mark.polarion("CNV-15233")
-def test_source_provider_migration():
+@pytest.mark.order("last")
+def test_source_provider_migration(
+    external_l3_endpoint,
+    cudn_evpn_layer2,
+    vm_source_provider,
+    vm_evpn_target,
+    frr_external_pod,
+    subtests,
+):
     """
     Scenario emulates a migration of an external workload (Source Provider) into the OCP cluster as a CUDN VM,
     while preserving its IP and MAC addresses, and maintaining connectivity.
@@ -184,6 +201,7 @@ def test_source_provider_migration():
     - External Source Provider L2 and L3 endpoints.
     - Running connectivity reference VM with a primary EVPN-enabled CUDN.
     - TCP connectivity exists between the connectivity reference VM and the external L2 and L3 endpoints.
+      Precondition is verified in preceding tests.
 
     Steps:
     1. Shut down/remove the external L2 endpoint.
@@ -193,6 +211,23 @@ def test_source_provider_migration():
     Expected:
     - New connections are established after new UDN VM deployment.
     """
+    mac_vrf_vni = cudn_evpn_layer2.instance.spec.network.evpn.macVRF.vni
 
+    teardown_evpn_l2_endpoint(pod=frr_external_pod.pod, vni=mac_vrf_vni)
 
-test_source_provider_migration.__test__ = False
+    vm_source_provider.start(wait=True)
+    vm_source_provider.wait_for_agent_connected()
+
+    new_l2_endpoint = deploy_evpn_l2_endpoint(
+        pod=frr_external_pod.pod,
+        vni=mac_vrf_vni,
+        endpoint_ips=[_L2_ENDPOINT_IPV4, _L2_ENDPOINT_IPV6],
+    )
+
+    assert_evpn_workloads_connectivity(
+        target_vm=vm_evpn_target,
+        ref_vm=vm_source_provider,
+        l2_endpoint=new_l2_endpoint,
+        l3_endpoint=external_l3_endpoint,
+        subtests=subtests,
+    )

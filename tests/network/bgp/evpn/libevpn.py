@@ -51,6 +51,7 @@ class EvpnEndpoint:
     pod: Pod
     ip_addresses: list[str]
     netns_name: str
+    mac_address: str | None = None
 
 
 class EndpointTcpClient(PodTcpClient):
@@ -143,6 +144,7 @@ def deploy_evpn_l2_endpoint(
     pod: Pod,
     vni: int,
     endpoint_ips: list[str],
+    mac_address: str | None = None,
 ) -> EvpnEndpoint:
     """Creates a stretched L2 endpoint on the shared SVD bridge.
 
@@ -155,18 +157,19 @@ def deploy_evpn_l2_endpoint(
         pod: The FRR pod hosting the endpoint.
         vni: MAC-VRF VNI (must match CUDN's macVRF VNI).
         endpoint_ips: IPs with prefix length (e.g. ["10.0.5.250/24", "fd00::fa/64"]).
+        mac_address: Explicit MAC for the endpoint interface (locally-administered).
 
     Returns:
         EvpnEndpoint.
     """
-    commands = _build_l2_endpoint_commands(vni=vni, endpoint_ips=endpoint_ips)
+    commands = _build_l2_endpoint_commands(vni=vni, endpoint_ips=endpoint_ips, mac_address=mac_address)
     for command in commands:
         pod.execute(command=shlex.split(command), container=NET_TOOLS_CONTAINER_NAME)
 
     bare_ips = [ip.split("/")[0] for ip in endpoint_ips]
     LOGGER.info(f"EVPN L2 endpoint deployed: {bare_ips} in namespace {_L2_ENDPOINT_NETNS}")
 
-    return EvpnEndpoint(pod=pod, ip_addresses=bare_ips, netns_name=_L2_ENDPOINT_NETNS)
+    return EvpnEndpoint(pod=pod, ip_addresses=bare_ips, netns_name=_L2_ENDPOINT_NETNS, mac_address=mac_address)
 
 
 def teardown_evpn_l2_endpoint(pod: Pod, vni: int) -> None:
@@ -189,7 +192,12 @@ def teardown_evpn_l2_endpoint(pod: Pod, vni: int) -> None:
     LOGGER.info(f"EVPN L2 endpoint removed: namespace={_L2_ENDPOINT_NETNS}")
 
 
-def _build_l2_endpoint_commands(vni: int, endpoint_ips: list[str]) -> list[str]:
+def _build_l2_endpoint_commands(
+    vni: int,
+    endpoint_ips: list[str],
+    mac_address: str | None = None,
+) -> list[str]:
+    mac_cmd = [f"ip netns exec {_L2_ENDPOINT_NETNS} ip link set dev {_L2_VETH_EP_SIDE} address {mac_address}"]
     return [
         f"bridge vlan add dev {_BRIDGE_NAME} vid {_L2_VID} self",
         f"bridge vlan add dev {_VXLAN_NAME} vid {_L2_VID}",
@@ -202,6 +210,7 @@ def _build_l2_endpoint_commands(vni: int, endpoint_ips: list[str]) -> list[str]:
         f"ip netns add {_L2_ENDPOINT_NETNS}",
         f"ip link set {_L2_VETH_EP_SIDE} netns {_L2_ENDPOINT_NETNS}",
         *(f"ip netns exec {_L2_ENDPOINT_NETNS} ip addr add {ip} dev {_L2_VETH_EP_SIDE}" for ip in endpoint_ips),
+        *(mac_cmd if mac_address else []),
         f"ip netns exec {_L2_ENDPOINT_NETNS} ip link set {_L2_VETH_EP_SIDE} up",
         f"ip netns exec {_L2_ENDPOINT_NETNS} ip link set lo up",
     ]
