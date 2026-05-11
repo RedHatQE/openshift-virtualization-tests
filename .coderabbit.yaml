@@ -106,6 +106,32 @@ chat:
 knowledge_base:
   opt_out: false
 
+  linked_repositories:
+    # Link to design-docs repo for STP ↔ test traceability
+    - repository: "RedHatQE/openshift-virtualization-tests-design-docs"
+      instructions: |
+        Contains Software Test Plans (STPs) under stps/<sig>/ that define
+        test requirements, scenarios, and acceptance criteria.
+
+        STRICT ENFORCEMENT (applied to STD (Software Test Description)
+        and test implementation PRs):
+        - CRITICAL: Every STD PR MUST cover ALL test scenarios from the
+          referenced STP, except scenarios explicitly excluded with
+          justification and a follow-up Jira link. Any other missing
+          scenario blocks merge.
+        - CRITICAL: Every test MUST link to its STP. The link can be at
+          module, class, or test level docstring — place it at the level
+          that applies. Missing or invalid STP links block merge.
+        - HIGH: STD docstring preconditions, steps, and expected results
+          MUST align with the STP scenario description.
+        - HIGH: If an STP scenario is intentionally excluded, the PR
+          description MUST explain why and include a follow-up Jira link.
+        - HIGH: Every test scenario defined in the STP must have a
+          corresponding STD test implementation.
+        - HIGH: Negative and edge-case scenarios defined in the STP
+          MUST have corresponding tests — do not skip error paths.
+        - Partial coverage without justification blocks merge.
+
   # Enable code guidelines enforcement from AGENTS.md (single source of truth)
   code_guidelines:
     enabled: true
