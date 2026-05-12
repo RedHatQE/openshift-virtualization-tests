@@ -108,6 +108,7 @@ from utilities.constants.components import (
     VIRTCTL_CLI_DOWNLOADS,
 )
 from utilities.constants.hco import (
+    DATA_SOURCE_NAME,
     FEATURE_GATES,
     HCO_SUBSCRIPTION,
     HOTFIX_STR,
@@ -914,6 +915,17 @@ def rhel10_data_source_scope_session(golden_images_namespace):
         namespace=golden_images_namespace.name,
         name="rhel10",
         client=golden_images_namespace.client,
+        ensure_exists=True,
+    )
+
+
+@pytest.fixture(scope="session")
+def latest_rhel_data_source(golden_images_namespace):
+    """Provide the DataSource for the latest RHEL version supported on this architecture."""
+    return DataSource(
+        client=golden_images_namespace.client,
+        name=py_config["latest_instance_type_rhel_os_dict"][DATA_SOURCE_NAME],
+        namespace=golden_images_namespace.name,
         ensure_exists=True,
     )
 
