@@ -1,13 +1,16 @@
 import logging
 
 import pytest
+from kubernetes.client.exceptions import ApiException
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.api_server import APIServer
 from ocp_resources.cdi import CDI
 from ocp_resources.deployment import Deployment
+from ocp_resources.exceptions import ExecOnPodError
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.network_addons_config import NetworkAddonsConfig
 from ocp_resources.network_policy import NetworkPolicy
+from ocp_resources.pod import Pod
 from ocp_resources.service import Service
 from ocp_resources.ssp import SSP
 
@@ -164,8 +167,28 @@ def cnv_services_with_template(enabled_template_feature_gate, hco_namespace, adm
     ]
     assert services_list, f"No services found in {hco_namespace.name}"
     service_names = [svc.name for svc in services_list]
-    LOGGER.info(f"Discovered {len(services_list)} TLS-capable services: {service_names}")
+    LOGGER.info(f"Discovered {len(services_list)} services with clusterIP: {service_names}")
     return services_list
+
+
+@pytest.fixture(scope="package")
+def services_tls_runtime(cnv_services_with_template, admin_client, hco_namespace, fips_enabled_cluster):
+    """Detects TLS runtime (Go or OpenSSL) for each service's backing pod. Only runs on FIPS clusters."""
+    if not fips_enabled_cluster:
+        return {}
+    runtime_map: dict[str, str] = {}
+    for service in cnv_services_with_template:
+        service_name = service.name
+        label_selector = ",".join(f"{key}={value}" for key, value in service.instance.spec.selector.items())
+        pods = list(Pod.get(client=admin_client, namespace=hco_namespace.name, label_selector=label_selector))
+        try:
+            output = pods[0].execute(command=["sh", "-c", "grep -q libssl /proc/1/maps && echo openssl || echo go"])
+            runtime_map[service_name] = output.strip()
+        except ExecOnPodError, ApiException:
+            LOGGER.warning(f"Failed to detect runtime for {service_name}, defaulting to Go")
+            runtime_map[service_name] = "go"
+    LOGGER.info(f"TLS runtime detection: {runtime_map}")
+    return runtime_map
 
 
 @pytest.fixture(scope="package")

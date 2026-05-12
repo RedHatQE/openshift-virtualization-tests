@@ -12,10 +12,11 @@ from utilities.constants import HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD
 from utilities.jira import is_jira_open
 
 LOGGER = logging.getLogger(__name__)
+pytestmark = pytest.mark.post_upgrade
 
 
 @pytest.mark.polarion("CNV-15222")
-def test_cnv_services_pqc_key_exchange(subtests, fips_enabled_cluster, pqc_status_by_service):
+def test_cnv_services_pqc_key_exchange(subtests, fips_enabled_cluster, pqc_status_by_service, services_tls_runtime):
     """
     Test that every CNV service negotiates PQC key exchange.
 
@@ -25,6 +26,7 @@ def test_cnv_services_pqc_key_exchange(subtests, fips_enabled_cluster, pqc_statu
         - NetworkPolicy allowing test access to console-plugin pods
         - Worker node OpenSSL supports PQC groups
         - All CNV services with a clusterIP discovered
+        - TLS runtime type (Go/OpenSSL) detected for each service
 
     Steps:
         1. For each CNV service, probe PQC key exchange using post-quantum TLS groups
@@ -33,7 +35,8 @@ def test_cnv_services_pqc_key_exchange(subtests, fips_enabled_cluster, pqc_statu
     Expected:
         - No service is unreachable
         - On non-FIPS clusters: every service accepts PQC with at least one group
-        - On FIPS clusters: every service rejects PQC (ML-KEM not FIPS-certified)
+        - On FIPS clusters: Go services reject PQC (ML-KEM not FIPS-certified),
+          OpenSSL services accept PQC with NIST curves
     """
     for service_name, accepted in pqc_status_by_service.items():
         with subtests.test(msg=service_name):
@@ -43,6 +46,12 @@ def test_cnv_services_pqc_key_exchange(subtests, fips_enabled_cluster, pqc_statu
                 pytest.xfail(f"{service_name} — known bug: CNV-87302")
             assert accepted is not None, f"Service {service_name} is unreachable"
             if fips_enabled_cluster:
-                assert not accepted, f"Service {service_name} accepted PQC but must reject on FIPS cluster"
+                runtime = services_tls_runtime.get(service_name, "go")
+                if runtime == "go":
+                    assert not accepted, f"Go FIPS service {service_name} accepted PQC but must reject"
+                else:
+                    assert accepted, (
+                        f"OpenSSL service {service_name} rejected PQC on FIPS but should accept NIST curves"
+                    )
             else:
                 assert accepted, f"Service {service_name} rejected PQC but must accept on non-FIPS cluster"

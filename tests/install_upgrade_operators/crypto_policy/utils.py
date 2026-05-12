@@ -6,11 +6,10 @@ import deepdiff
 from benedict import benedict
 from kubernetes.client.exceptions import ApiException
 from kubernetes.dynamic import DynamicClient
-
-if TYPE_CHECKING:
-    from kubernetes.dynamic.resource import ResourceField
 from ocp_resources.hyperconverged import HyperConverged
+from ocp_resources.node import Node
 from ocp_resources.resource import Resource, ResourceEditor
+from ocp_resources.service import Service
 from packaging.version import Version
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
@@ -41,6 +40,8 @@ from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_condi
 from utilities.infra import ExecCommandOnPod
 from utilities.operator import wait_for_cluster_operator_stabilize
 
+if TYPE_CHECKING:
+    from kubernetes.dynamic.resource import ResourceField
 LOGGER = logging.getLogger(__name__)
 
 
@@ -121,7 +122,13 @@ def wait_for_crypto_policy_update(
             # Filter actual to only keys present in expected — OCP 4.22+ API adds empty
             # profile-type keys (e.g. intermediate: {}, modern: {}) as CRD defaults.
             filtered_sample = (
-                {key: value for key, value in sample.items() if key in expected_policy} if sample else sample
+                {
+                    policy_key: policy_value
+                    for policy_key, policy_value in sample.items()
+                    if policy_key in expected_policy
+                }
+                if sample
+                else sample
             )
             if filtered_sample and not deepdiff.DeepDiff(
                 filtered_sample,
@@ -282,7 +289,7 @@ def update_apiserver_crypto_policy(
     )
 
 
-def check_service_accepts_tls_version(utility_pods: list, node: Resource, service: Resource, tls_version: str) -> bool:
+def check_service_accepts_tls_version(utility_pods: list, node: Node, service: Resource, tls_version: str) -> bool:
     """Checks whether a service accepts a connection with the given TLS version.
 
     Retries on transient API failures (e.g. node unavailability during TLS rollover).
@@ -314,7 +321,7 @@ def check_service_accepts_tls_version(utility_pods: list, node: Resource, servic
     return False
 
 
-def get_node_available_tls_groups(utility_pods: list, node: Resource) -> list[str]:
+def get_node_available_tls_groups(utility_pods: list, node: Node) -> list[str]:
     """Returns the list of TLS groups supported by OpenSSL on the given node.
 
     Args:
@@ -349,7 +356,7 @@ def compose_openssl_pqc_command(service_spec: ResourceField, groups: str, connec
 
 def get_services_pqc_status(
     worker_exec: ExecCommandOnPod,
-    services: list[Resource],
+    services: list[Service],
     pqc_groups: list[str],
 ) -> dict[str, bool | None]:
     """Probes each service for PQC key exchange acceptance.
@@ -390,6 +397,6 @@ def get_services_pqc_status(
         elif accepted:
             results[service_name] = True
         else:
-            LOGGER.info(f"Service {service_name} rejected all PQC groups: {pqc_groups}")
+            LOGGER.warning(f"Service {service_name} rejected all PQC groups: {pqc_groups}")
             results[service_name] = False
     return results
