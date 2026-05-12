@@ -498,7 +498,7 @@ class TestWaitForHcoConditions:
     @patch("utilities.hco.Namespace")
     def test_wait_for_hco_conditions_with_dependent_crs(self, mock_namespace_class, mock_wait_conditions):
         """Test wait_for_hco_conditions with dependent CRs"""
-        from utilities.hco import CDI, KubeVirt
+        from utilities.hco import CDI, KubeVirt  # noqa: PLC0415
 
         mock_admin_client = MagicMock()
         mock_namespace = MagicMock()
@@ -639,7 +639,7 @@ class TestModuleConstants:
 
     def test_default_hco_progressing_conditions(self):
         """Test DEFAULT_HCO_PROGRESSING_CONDITIONS constant"""
-        from utilities.hco import Resource
+        from utilities.hco import Resource  # noqa: PLC0415
 
         assert "Progressing" in DEFAULT_HCO_PROGRESSING_CONDITIONS
         assert DEFAULT_HCO_PROGRESSING_CONDITIONS[Resource.Condition.PROGRESSING] == Resource.Condition.Status.TRUE
