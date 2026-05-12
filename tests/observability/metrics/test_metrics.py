@@ -59,6 +59,7 @@ class TestMetricsWindows:
 @pytest.mark.polarion("CNV-10438")
 @pytest.mark.s390x
 @pytest.mark.conformance
+@pytest.mark.usefixtures("skip_when_hco_metrics_scraping_bug_open")
 def test_cnv_installation_with_hco_cr_metrics(
     prometheus,
 ):

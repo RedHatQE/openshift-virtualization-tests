@@ -94,6 +94,7 @@ class TestVirtHCOSingleStackIpv6:
     @pytest.mark.ipv6
     @pytest.mark.polarion("CNV-11740")
     @pytest.mark.s390x
+    @pytest.mark.usefixtures("skip_when_hco_metrics_scraping_bug_open")
     def test_metric_kubevirt_hco_single_stack_ipv6(self, prometheus):
         validate_metrics_value(
             prometheus=prometheus,
