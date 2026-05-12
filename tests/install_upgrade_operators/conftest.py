@@ -13,7 +13,11 @@ from ocp_resources.storage_class import StorageClass
 from pytest_testconfig import py_config
 
 from tests.install_upgrade_operators.constants import (
+    DISABLE_MDEV_CONFIGURATION,
+    ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT,
     EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES,
+    FG_ENABLED,
+    HCO_DEFAULT_FEATUREGATES,
     RESOURCE_NAME_STR,
     RESOURCE_NAMESPACE_STR,
     RESOURCE_TYPE_STR,
@@ -24,7 +28,7 @@ from tests.install_upgrade_operators.utils import (
     get_resource_by_name,
     get_resource_from_module_name,
 )
-from utilities.constants import HOSTPATH_PROVISIONER_CSI, HPP_POOL
+from utilities.constants import HOSTPATH_PROVISIONER_CSI, HPP_POOL, MULTIARCH
 from utilities.hco import ResourceEditorValidateHCOReconcile, get_hco_version
 from utilities.infra import (
     get_daemonset_by_name,
@@ -149,6 +153,11 @@ def kubevirt_resource(admin_client, hco_namespace):
 @pytest.fixture()
 def cdi_resource_scope_function(admin_client):
     return get_hyperconverged_cdi(admin_client=admin_client)
+
+
+@pytest.fixture()
+def cdi_feature_gates(cdi_resource_scope_function):
+    return cdi_resource_scope_function.instance.spec.config.get("featureGates")
 
 
 @pytest.fixture()
@@ -280,8 +289,19 @@ def jira_86102_open():
     return is_jira_open(jira_id="CNV-86102")
 
 
+@pytest.fixture(scope="session")
+def jira_86639_open():
+    return is_jira_open(jira_id="CNV-86639")
+
+
 @pytest.fixture()
-def expected_value(request, is_s390x_cluster):
-    if request.param == EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES and is_s390x_cluster:
-        return request.param | S390X_SPECIFIC_KUBEVIRT_FEATUREGATES
-    return request.param
+def expected_value(request, is_s390x_cluster, jira_86639_open):
+    expected = request.param.copy()
+    if expected == EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES and is_s390x_cluster:
+        expected |= S390X_SPECIFIC_KUBEVIRT_FEATUREGATES
+    if expected == HCO_DEFAULT_FEATUREGATES:
+        if py_config["cluster_type"] == MULTIARCH:
+            expected[ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT] = FG_ENABLED
+        if jira_86639_open:
+            expected[DISABLE_MDEV_CONFIGURATION] = FG_ENABLED
+    return expected
