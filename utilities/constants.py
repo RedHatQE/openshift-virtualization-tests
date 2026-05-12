@@ -958,6 +958,10 @@ WIN_2K25 = "win2k25"
 WIN_2K22 = "win2k22"
 WIN_2K19 = "win2k19"
 
+# Windows VirtualMachine preferences
+WINDOWS_11_PREFERENCE = "windows.11"
+WINDOWS_2K22_PREFERENCE = "windows.2k22"
+
 HYPERV_FEATURES_LABELS_DOM_XML = [
     "relaxed",
     "vapic",
