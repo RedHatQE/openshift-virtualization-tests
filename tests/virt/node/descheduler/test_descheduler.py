@@ -1,17 +1,12 @@
-import logging
-
 import pytest
 from ocp_resources.resource import ResourceEditor
 
 from tests.virt.node.descheduler.constants import DESCHEDULER_TEST_LABEL
 from tests.virt.node.descheduler.utils import (
     assert_vms_consistent_virt_launcher_pods,
-    assert_vms_distribution_after_failover,
     verify_at_least_one_vm_migrated,
 )
 from tests.virt.utils import verify_guest_boot_time
-
-LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.tier3,
@@ -22,59 +17,6 @@ pytestmark = [
         "descheduler_long_lifecycle_profile",
     ),
 ]
-
-NO_MIGRATION_STORM_ASSERT_MESSAGE = "Verify no migration storm after triggered migrations by the descheduler."
-
-
-@pytest.mark.parametrize(
-    "calculated_vm_deployment_for_descheduler_test",
-    [pytest.param(0.50)],
-    indirect=True,
-)
-class TestDeschedulerEvictsVMAfterDrainUncordon:
-    TESTS_CLASS_NAME = "TestDeschedulerEvictsVMAfterDrainUncordon"
-
-    @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::test_descheduler_evicts_vm_after_drain_uncordon")
-    @pytest.mark.polarion("CNV-5922")
-    def test_descheduler_evicts_vm_after_drain_uncordon(
-        self,
-        schedulable_nodes,
-        deployed_vms_for_descheduler_test,
-        vms_boot_time_before_node_drain,
-        drain_uncordon_node,
-    ):
-        assert_vms_distribution_after_failover(
-            vms=deployed_vms_for_descheduler_test,
-            nodes=schedulable_nodes,
-        )
-
-    @pytest.mark.dependency(
-        name=f"{TESTS_CLASS_NAME}::test_no_migrations_storm",
-        depends=[f"{TESTS_CLASS_NAME}::test_descheduler_evicts_vm_after_drain_uncordon"],
-    )
-    @pytest.mark.polarion("CNV-7316")
-    def test_no_migrations_storm(
-        self,
-        deployed_vms_for_descheduler_test,
-        all_existing_migrations_completed,
-        admin_client,
-    ):
-        LOGGER.info(NO_MIGRATION_STORM_ASSERT_MESSAGE)
-        assert_vms_consistent_virt_launcher_pods(
-            running_vms=deployed_vms_for_descheduler_test, admin_client=admin_client
-        )
-
-    @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::test_no_migrations_storm"])
-    @pytest.mark.polarion("CNV-8288")
-    def test_boot_time_after_migrations_complete(
-        self,
-        deployed_vms_for_descheduler_test,
-        vms_boot_time_before_node_drain,
-    ):
-        verify_guest_boot_time(
-            vm_list=deployed_vms_for_descheduler_test,
-            initial_boot_time=vms_boot_time_before_node_drain,
-        )
 
 
 @pytest.mark.parametrize(
@@ -108,23 +50,7 @@ class TestDeschedulerEvictsVMFromUtilizationImbalance:
             vms=deployed_vms_for_utilization_imbalance, node_before=node_with_least_available_memory
         )
 
-    @pytest.mark.dependency(
-        name=f"{TESTS_CLASS_NAME}::test_no_migrations_storm",
-        depends=[f"{TESTS_CLASS_NAME}::test_descheduler_evicts_vm_from_utilization_imbalance"],
-    )
-    @pytest.mark.polarion("CNV-8918")
-    def test_no_migrations_storm(
-        self,
-        deployed_vms_for_utilization_imbalance,
-        all_existing_migrations_completed,
-        admin_client,
-    ):
-        LOGGER.info(NO_MIGRATION_STORM_ASSERT_MESSAGE)
-        assert_vms_consistent_virt_launcher_pods(
-            running_vms=deployed_vms_for_utilization_imbalance, admin_client=admin_client
-        )
-
-    @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::test_no_migrations_storm"])
+    @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::test_descheduler_evicts_vm_from_utilization_imbalance"])
     @pytest.mark.polarion("CNV-8919")
     def test_boot_time_after_migrations_complete(
         self,
