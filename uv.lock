@@ -1225,7 +1225,7 @@ requires-dist = [
     { name = "kubernetes", specifier = ">=34.1.0" },
     { name = "netaddr", specifier = ">=1.3.0" },
     { name = "openshift-python-utilities", specifier = ">=6.0.0" },
-    { name = "openshift-python-wrapper", specifier = ">=11.0.126" },
+    { name = "openshift-python-wrapper", specifier = ">=11.0.128" },
     { name = "openstacksdk", specifier = ">=4.1.0" },
     { name = "pexpect", specifier = ">=4.9.0" },
     { name = "podman", specifier = ">=5.2.0" },
