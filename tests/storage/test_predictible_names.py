@@ -39,6 +39,7 @@ def vm_for_predictable_names(
             storage_class=py_config["default_storage_class"],
         ),
         cloud_init_data=None,
+        generate_unique_name=False,
     ) as vm:
         source_volume_name = vm.instance.spec.template.spec.volumes[0].name
 
@@ -59,7 +60,8 @@ def snapshot_for_predictable_names(
     """Create snapshot from VM for predictable names testing."""
     vm_data = vm_for_predictable_names
     source_vm_name = vm_data["source_vm_name"]
-    snapshot_name = f"{source_vm_name}-snapshot"[:63]
+    # Ensure snapshot name fits within 63 char limit with full "-snapshot" suffix
+    snapshot_name = f"{source_vm_name}-snapshot"
 
     with VirtualMachineSnapshot(
         name=snapshot_name,
