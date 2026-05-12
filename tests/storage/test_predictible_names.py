@@ -138,6 +138,13 @@ def restore_data_for_predictable_names(
                 "source_vm_name": "very-long-source-vm-name-that-might-exceed-limits",
                 "restored_vm_name": "very-long-restored-vm-name-that-might-exceed-limits",
             },
+            id="long_names_not_truncated",
+        ),
+        pytest.param(
+            {
+                "source_vm_name": "very-long-source-vm-name-that-definitely-absolutely-exceeds-set-limits",
+                "restored_vm_name": "very-long-restored-vm-name-that-definitely-absolutely-exceeds-set-limits",
+            },
             id="long_names_truncated",
         ),
         pytest.param(
