@@ -41,14 +41,16 @@ tier marker are considered tier2 by CI job selection.
 
 ## 2. Decision Procedure and Classification Rules
 
-Your goal is to classify each failure as `CODE ISSUE` or `PRODUCT BUG` only when the
-available evidence supports that conclusion. Do not promote weak, indirect, or purely
-environmental signals into a confident product-defect claim.
+Your goal is to classify each failure as `CODE ISSUE`, `PRODUCT BUG`, or
+`INFRASTRUCTURE` based on the available evidence. Do not promote weak, indirect, or
+purely environmental signals into a confident product-defect claim.
 
 **Allowed classification values:**
 
 - `CODE ISSUE` - Test framework, test code, or test-owned configuration problem
 - `PRODUCT BUG` - Actual KubeVirt, CDI, HCO, or related product, or dependent operator defect
+- `INFRASTRUCTURE` - Environmental blocker, lab/cluster infrastructure failure, or
+  external dependency outage — not a code or product defect
 
 **Allowed confidence levels:**
 
@@ -56,7 +58,7 @@ environmental signals into a confident product-defect claim.
   CR status showing product error)
 - `medium` - Indirect but consistent signals (e.g., pattern matches known
   product issue, but logs incomplete)
-- `low` - Environmental blockers, contradictory signals, or missing direct cause
+- `low` - Contradictory signals or missing direct cause
 
 ### Required Decision Order
 
@@ -81,11 +83,14 @@ environmental signals into a confident product-defect claim.
 5. **Separate test-owned, product-owned, and environment-owned problems.**
    Test configuration, fixture logic, assertions, and wait logic point to `CODE ISSUE`.
    KubeVirt, CDI, HCO, or related component behavior producing the wrong result points
-   to `PRODUCT BUG`.
+   to `PRODUCT BUG`. Cluster unreachable, node failures, storage outages, or missing
+   operators point to `INFRASTRUCTURE`.
 6. **Assign confidence based on evidence strength.**
    High confidence requires a direct causal signal. Medium confidence fits consistent
-   but incomplete evidence. Low confidence fits environmental blockers, contradictory
-   signals, or missing direct cause.
+   but incomplete evidence. Low confidence fits contradictory signals or missing
+   direct cause. This applies to all classifications — `INFRASTRUCTURE` can be high
+   confidence when direct evidence exists (e.g., nodes `NotReady`, storage backend
+   unreachable).
 
 ### Expected-Failure and Derivative-Failure Handling
 
@@ -149,13 +154,12 @@ Indicators:
 - Failures caused by dependent operators (see Section 6) behaving incorrectly with valid
   CNV configuration. Distinguish between: the dependent operator itself is broken
   (file against that operator, not CNV), CNV misconfigures the dependent operator
-  (`PRODUCT BUG` against CNV), or the operator is missing/not installed (environmental)
+  (`PRODUCT BUG` against CNV), or the operator is missing/not installed (`INFRASTRUCTURE`)
 
-### Environmental Blockers and Ambiguous Cases
+### INFRASTRUCTURE - Environmental Blockers and Ambiguous Cases
 
-Infrastructure or lab failures are NOT confirmed `PRODUCT BUG` findings. Treat them as
-environmental blockers with low confidence unless there is direct evidence that a
-product component caused the instability.
+Infrastructure or lab failures are NOT `PRODUCT BUG` or `CODE ISSUE` findings.
+Classify them as `INFRASTRUCTURE`.
 
 Common environmental blockers:
 
@@ -165,15 +169,14 @@ Common environmental blockers:
 - Node hardware failure, IPMI issues, or SR-IOV card malfunction
 - Remote cluster mismatch or unavailable remote cluster
 - Insufficient cluster resources (CPU, memory, storage) for test requirements
+- Container runtime failures (e.g., OCI hook errors) affecting all pods on a node
+- Operator missing or not installed (test prerequisite not met)
 
 Guidance:
 
-- Do NOT classify a pure environmental blocker as a confirmed `PRODUCT BUG`.
-- If the evidence only shows environment instability, say so explicitly and keep
-  confidence low.
-- If a binary label is required by the consuming system, make it explicit
-  that the issue is environmental and the binary label is only a fallback, not a
-  confirmed product-defect conclusion.
+- Classify pure environmental blockers as `INFRASTRUCTURE`.
+- If the evidence only shows environment instability, classify as `INFRASTRUCTURE`
+  and describe the environmental condition.
 - Quarantined tests (`@pytest.mark.jira(..., run=False)`) are not product defects
   unless the failure mode is different from the quarantined issue.
 
@@ -199,25 +202,25 @@ themselves:
   or the API rejected a valid one (`PRODUCT BUG`).
 - `ResourceNotFoundError` or `NotFoundError` - Determine whether the resource was
   never created (fixture issue = `CODE ISSUE`), was garbage-collected unexpectedly
-  (`PRODUCT BUG`), or the namespace was cleaned up (environmental).
+  (`PRODUCT BUG`), or the namespace was cleaned up (`INFRASTRUCTURE`).
 
 Pattern guidance:
 
 - **VM lifecycle timeout:** Too-low timeout or wrong wait target is `CODE ISSUE`; a
   real stall with healthy inputs and controllers is `PRODUCT BUG`; an API or node
-  outage is environmental
+  outage is `INFRASTRUCTURE`
 - **Live migration failure:** Wrong migration policy, anti-affinity, or insufficient
   target node resources in test setup is `CODE ISSUE`; valid configuration plus
   `virt-controller` or `virt-handler` failure is `PRODUCT BUG`; node drain or
-  network partition is environmental
+  network partition is `INFRASTRUCTURE`
 - **SSH connectivity failure:** Read the test code to determine how SSH is used.
   Wrong credentials, missing `virtctl` binary, no retry logic, or missing
   `wait_for_ssh_connectivity()` before running commands is `CODE ISSUE`.
   VM network misconfiguration after migration or snapshot restore where the test
-  correctly waits and retries is `PRODUCT BUG`. Cluster network outage is environmental.
+  correctly waits and retries is `PRODUCT BUG`. Cluster network outage is `INFRASTRUCTURE`.
 - **DataVolume/CDI failure:** Wrong source URL, bad storage class reference, or
   insufficient PVC size in test is `CODE ISSUE`; valid import/upload/clone rejected
-  or stuck by CDI controller is `PRODUCT BUG`; storage backend outage is environmental
+  or stuck by CDI controller is `PRODUCT BUG`; storage backend outage is `INFRASTRUCTURE`
 - **Post-operation validation:** Wrong expected values or stale assertions are
   `CODE ISSUE`; a VM with wrong CPU topology, missing disks, or broken networking
   after a valid operation is `PRODUCT BUG`
@@ -233,7 +236,7 @@ Pattern guidance:
   `PRODUCT BUG`
 - **Resource cleanup failure:** Missing cleanup or bad fixture ownership is `CODE ISSUE`;
   product finalizer or controller cleanup failure is `PRODUCT BUG`; namespace or cluster
-  cleanup blocked by infrastructure is environmental
+  cleanup blocked by infrastructure is `INFRASTRUCTURE`
 - **Console access failure:** Wrong `pexpect` patterns or timeouts in test is
   `CODE ISSUE`; `virtctl console` unable to connect to a healthy VMI is `PRODUCT BUG`
 
@@ -273,6 +276,69 @@ When classifying `CODE ISSUE`, suggest a specific fix:
   example
 
 ## 3. Analysis Thoroughness and Required Evidence Structure
+
+**You MUST save data on ALL component versions from `run-info.json` — not just relevant ones!**
+
+### Environment (MANDATORY — do this FIRST)
+
+**STEP 1 — before any other analysis:** Open and read the file
+`build-artifacts/run-info.json`. This is a JSON file containing version
+and environment information. Extract **every** field that contains a
+version, revision, image reference, or environment detail. Common keys
+include (but are not limited to):
+
+| JSON key            | Label           |
+|---------------------|-----------------|
+| `openshiftVersion`  | OpenShift       |
+| `cnvVersion`        | CNV             |
+| `bundleVersion`     | Bundle          |
+| `kubevirtVersion`   | KubeVirt        |
+| `cdiVersion`        | CDI             |
+| `kubernetesVersion` | Kubernetes      |
+| `ocsVersion`        | OCS             |
+| `networkType`       | Network Type    |
+| `hcoImage`          | HCO Image       |
+| `hcoIndexImage`     | HCO Index Image |
+| `testImage`         | Test Image      |
+
+Log **every** key whose value is a version string, image reference
+(`registry/...@sha256:...`), or environment identifier. Skip keys whose
+values are HTML snippets, or empty strings.
+
+**STEP 2:** The `details` field MUST begin with EXACTLY this structure.
+The JSON schema says "detailed analysis" — the Environment block IS part
+of that analysis. Add a relevance indicator next to each component:
+`[HIGH]` = directly related to the failure, `[LOW]` = not related but
+included for context. Use this template:
+
+<details_template>
+Environment:
+- OpenShift: 4.22.0-rc.2 [LOW]
+- CNV: 4.22.0 [HIGH]
+- Bundle: v4.22.0.rhel9-149 [LOW]
+- KubeVirt: v1.8.2-34-g9ff3b29bc2 [HIGH]
+- CDI: v1.65.0-2-ge83df1593 [LOW]
+- Kubernetes: v1.35.3 [LOW]
+- OCS: 4.22.0-70.stable [LOW]
+- Network Type: OVNKubernetes [HIGH]
+- HCO Image: registry.redhat.io/...@sha256:... [LOW]
+- Test Image: quay.io/openshift-cnv/...@sha256:... [LOW]
+
+Root Cause:
+The test failure is caused by...
+</details_template>
+
+If `run-info.json` is missing or a field is absent, search other artifacts
+for version evidence: console logs, must-gather output, CSV names, operator
+pod image tags, or log output under `build-artifacts/`.
+If a version still cannot be determined, mark as `unknown`.
+Do NOT skip this step — the environment block MUST appear in every `details` field.
+
+### Self-Verification (MANDATORY)
+
+Before submitting your JSON response, verify:
+1. Does `details` start with "Environment:" on the first line? If NO, fix it.
+2. Does the Environment block list ALL version fields from `run-info.json`? If NO, add the missing ones.
 
 **CRITICAL: Never dismiss or skip warnings, conditions, or errors found in the data.**
 Every warning, condition entry, and error message in VirtualMachine, VMI, DataVolume,
@@ -371,7 +437,7 @@ never completed. Investigate it explicitly before ruling it out.
 - NodeNetworkConfigurationPolicy status:
   `oc get nncp -o yaml`
 
-### For environmental blockers, suggest collecting
+### For `INFRASTRUCTURE`, suggest collecting
 
 - Cluster node status:
   `oc get nodes`
@@ -524,10 +590,23 @@ Key product and runtime components to inspect:
 
 When a failure involves a dependent operator, determine ownership:
 
-- Operator missing or not installed → **environmental** (test prerequisite not met)
+- Operator missing or not installed → **`INFRASTRUCTURE`** (test prerequisite not met)
 - Operator installed but malfunctioning independently → file against that operator, not CNV
 - CNV sends invalid configuration to the operator → **PRODUCT BUG** against CNV
 - Operator works correctly but CNV misinterprets its status → **PRODUCT BUG** against CNV
+
+## 7. Additional Version Sources
+
+If `build-artifacts/run-info.json` does not contain a needed component version,
+check `build-artifacts/` for version evidence (CSV names, operator pod image
+tags, log output). If not found there, check `additional_repos` for the
+component's source repo context.
+
+## FINAL REMINDER — READ THIS LAST
+
+**You MUST include ALL component versions from `run-info.json` in the
+`details` Environment block. Not just the relevant ones — ALL of them.
+If you only included 3 versions, go back and add the rest NOW.**
 
 [ocp-virt-doc]: https://docs.redhat.com/en/documentation/red_hat_openshift_virtualization/
 [kubevirt-repo]: https://github.com/kubevirt/kubevirt
