@@ -100,6 +100,22 @@ class Multus:
 class Affinity:
     podAntiAffinity: PodAntiAffinity | None = None  # noqa: N815
     podAffinity: PodAffinity | None = None  # noqa: N815
+    nodeAffinity: NodeAffinity | None = None  # noqa: N815
+
+
+@dataclass
+class NodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution: NodeSelectorTerms  # noqa: N815
+
+
+@dataclass
+class NodeSelectorTerms:
+    nodeSelectorTerms: list[NodeSelectorTerm]  # noqa: N815
+
+
+@dataclass
+class NodeSelectorTerm:
+    matchExpressions: list[LabelSelectorRequirement]  # noqa: N815
 
 
 @dataclass
@@ -129,7 +145,7 @@ class LabelSelector:
 class LabelSelectorRequirement:
     operator: str
     key: str
-    values: list[str]
+    values: list[str] | None = None
 
 
 @dataclass
