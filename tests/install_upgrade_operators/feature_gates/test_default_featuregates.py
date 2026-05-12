@@ -19,9 +19,9 @@ from tests.install_upgrade_operators.constants import (
     RESOURCE_TYPE_STR,
 )
 from tests.install_upgrade_operators.utils import (
-    get_resource_by_name,
     get_resource_key_value,
 )
+from tests.utils import get_resource_by_name
 from utilities.constants import CDI_KUBEVIRT_HYPERCONVERGED, KUBEVIRT_HCO_NAME
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.s390x, pytest.mark.skip_must_gather_collection]

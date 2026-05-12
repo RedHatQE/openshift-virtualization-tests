@@ -21,9 +21,9 @@ from tests.install_upgrade_operators.crypto_policy.constants import (
     TLS_INTERMEDIATE_CIPHERS_IANA_OPENSSL_SYNTAX,
 )
 from tests.install_upgrade_operators.utils import (
-    get_resource_by_name,
     get_resource_key_value,
 )
+from tests.utils import get_resource_by_name
 from utilities.constants import (
     CLUSTER,
     TIMEOUT_2MIN,
