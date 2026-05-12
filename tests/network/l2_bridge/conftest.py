@@ -7,6 +7,7 @@ from pyhelper_utils.shell import run_ssh_commands
 
 import tests.network.libs.nodenetworkconfigurationpolicy as libnncp
 from libs.net.ip import random_ipv4_address
+from libs.net.netattachdef import CNIPluginBridgeConfig, NetConfig, NetworkAttachmentDefinition
 from tests.network.l2_bridge.libl2bridge import DHCP_INTERFACE_NAME, bridge_attached_vm
 from tests.network.libs.dhcpd import (
     DHCP_IP_RANGE_END,
@@ -313,3 +314,22 @@ def bridge_nncp(
     ) as nncp_br:
         nncp_br.wait_for_status_success()
         yield nncp_br
+
+
+@pytest.fixture(scope="class")
+def bridge_nad(
+    admin_client: DynamicClient,
+    namespace,
+    bridge_nncp: libnncp.NodeNetworkConfigurationPolicy,
+) -> Generator[NetworkAttachmentDefinition]:
+    config = NetConfig(
+        name="test-bridge-network",
+        plugins=[CNIPluginBridgeConfig(bridge=bridge_nncp.desired_state_spec.interfaces[0].name)],  # type: ignore
+    )
+    with NetworkAttachmentDefinition(
+        name="test-bridge-network",
+        namespace=namespace.name,
+        config=config,
+        client=admin_client,
+    ) as nad:
+        yield nad
