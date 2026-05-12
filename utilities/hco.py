@@ -126,20 +126,17 @@ def wait_for_hco_conditions(
                 expected_conditions=EXPECTED_STATUS_CONDITIONS[resource],
                 consecutive_checks_count=consecutive_checks_count,
             )
-    try:
-        utilities.infra.wait_for_consistent_resource_conditions(
-            dynamic_client=admin_client,
-            namespace=hco_namespace.name,
-            expected_conditions=expected_conditions or DEFAULT_HCO_CONDITIONS,
-            resource_kind=HyperConverged,
-            condition_key1=condition_key1,
-            condition_key2=condition_key2,
-            total_timeout=wait_timeout,
-            polling_interval=sleep,
-            consecutive_checks_count=consecutive_checks_count,
-        )
-    except TimeoutExpiredError:
-        raise
+    utilities.infra.wait_for_consistent_resource_conditions(
+        dynamic_client=admin_client,
+        namespace=hco_namespace.name,
+        expected_conditions=expected_conditions or DEFAULT_HCO_CONDITIONS,
+        resource_kind=HyperConverged,
+        condition_key1=condition_key1,
+        condition_key2=condition_key2,
+        total_timeout=wait_timeout,
+        polling_interval=sleep,
+        consecutive_checks_count=consecutive_checks_count,
+    )
 
 
 def wait_for_ds(ds):

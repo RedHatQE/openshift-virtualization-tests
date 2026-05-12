@@ -110,7 +110,7 @@ def verify_base_templates_exist_in_namespace(client, original_base_templates, na
 
 def extract_template_labels(template_labels):
     extracted_vm_template_labels = {}
-    for key in template_labels.keys():
+    for key in template_labels:
         label_prefix, label_name = key.split("/")
         if label_prefix in (
             Template.Labels.OS,

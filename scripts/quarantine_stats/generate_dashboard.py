@@ -1615,10 +1615,8 @@ class DashboardGenerator:
         all_tab_buttons: list[str] = []
         all_tab_contents: list[str] = []
         first_tab = True
-        repo_index = 0
 
-        for _, version_stats_list in self.repo_stats.items():
-            repo_index += 1
+        for repo_index, version_stats_list in enumerate(self.repo_stats.values(), start=1):
             repo_id = f"repo{repo_index}"
 
             for version_stat in version_stats_list:

@@ -52,8 +52,7 @@ def vm_network_config(mac_pool, all_nads, end_ip_octet, mac_uid):
 def create_vm(name, namespace, iface_config, node_selector, client, mac_pool):
     network_data_data = {}
     _data = {
-        iface: {"addresses": [f"{iface_config[iface].ip_address}/24"]}
-        for iface in ("eth%d" % idx for idx in range(1, 5))
+        iface: {"addresses": [f"{iface_config[iface].ip_address}/24"]} for iface in (f"eth{idx}" for idx in range(1, 5))
     }
     runcmd = [
         # 2 kernel flags are used to disable wrong arp behavior

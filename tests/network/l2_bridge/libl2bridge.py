@@ -140,7 +140,7 @@ def hot_plug_interface(
 def hot_unplug_interface(vm, hot_plugged_interface_name):
     interfaces = vm.get_interfaces()
     unplugged_interface = next(interface for interface in interfaces if interface["name"] == hot_plugged_interface_name)
-    unplugged_interface.update(dict(state="absent"))
+    unplugged_interface.update({"state": "absent"})
 
     update_hot_plug_config_in_vm(vm=vm, interfaces=interfaces)
 

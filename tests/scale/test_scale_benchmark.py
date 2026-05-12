@@ -110,7 +110,7 @@ def delete_resources(resources):
 def save_must_gather_logs(must_gather_image_url):
     logs_path = os.path.join(
         os.path.expanduser("~"),
-        f"must_gather_{datetime.datetime.utcnow().strftime('%Y_%m_%d_%H_%M_%S')}",
+        f"must_gather_{datetime.datetime.now(tz=datetime.UTC).strftime('%Y_%m_%d_%H_%M_%S')}",
     )
     os.makedirs(logs_path)
     return run_must_gather(
@@ -239,15 +239,15 @@ def vms_info(scale_test_param):
         OS_FLAVOR_FEDORA: {"latest_labels": FEDORA_LATEST_LABELS},
         OS_FLAVOR_WINDOWS: {"latest_labels": WINDOWS_LATEST_LABELS},
     }
-    for os_name in vms_info_dict:
+    for os_name, os_info in vms_info_dict.items():
         for storage_type_key in SCALE_STORAGE_TYPES:
-            vms_info_dict[os_name][storage_type_key] = {
+            os_info[storage_type_key] = {
                 "vms_per_batch": scale_test_param["vms"][os_name][storage_type_key]["vms_per_batch"],
                 "number_of_batches": scale_test_param["vms"][os_name][storage_type_key]["number_of_batches"],
             }
-        vms_info_dict[os_name]["cores"] = int(scale_test_param["vms"][os_name]["cores"])
-        vms_info_dict[os_name]["memory"] = scale_test_param["vms"][os_name]["memory"]
-        vms_info_dict[os_name]["run_strategy"] = scale_test_param["vms"][os_name]["run_strategy"]
+        os_info["cores"] = int(scale_test_param["vms"][os_name]["cores"])
+        os_info["memory"] = scale_test_param["vms"][os_name]["memory"]
+        os_info["run_strategy"] = scale_test_param["vms"][os_name]["run_strategy"]
     return vms_info_dict
 
 

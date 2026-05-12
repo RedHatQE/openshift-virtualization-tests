@@ -348,9 +348,9 @@ def nodes_taints_before_descheduler_test_run(nodes):
 
     # clean up taints leftovers
     nodes_taints_after = {node: node.instance.spec.taints for node in nodes}
-    for node in nodes_taints_before:
-        if nodes_taints_after[node] != nodes_taints_before[node]:
-            ResourceEditor(patches={node: {"spec": {"taints": nodes_taints_before[node]}}}).update()
+    for node, taints_before in nodes_taints_before.items():
+        if nodes_taints_after[node] != taints_before:
+            ResourceEditor(patches={node: {"spec": {"taints": taints_before}}}).update()
 
 
 @pytest.fixture()

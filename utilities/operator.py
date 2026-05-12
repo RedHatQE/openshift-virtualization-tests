@@ -722,7 +722,7 @@ def get_generated_icsp_idms(
     filter_options: str = "",
 ) -> str:
     pull_secret = None
-    if image_url.startswith(tuple([BREW_REGISTERY_SOURCE, "quay.io"])):
+    if image_url.startswith((BREW_REGISTERY_SOURCE, "quay.io")):
         registry_source = BREW_REGISTERY_SOURCE
         pull_secret = generated_pulled_secret
     cnv_mirror_cmd = create_icsp_idms_command(

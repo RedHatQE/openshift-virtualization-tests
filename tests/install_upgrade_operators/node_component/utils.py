@@ -324,7 +324,7 @@ def verify_components_exist_only_on_selected_node(
         admin_client(DynamicClient): DynamicClient object
         hco_namespace(Namespace): Namespace object
     """
-    unselected_nodes = [node_name for node_name in hco_pods_per_nodes.keys() if node_name != selected_node]
+    unselected_nodes = [node_name for node_name in hco_pods_per_nodes if node_name != selected_node]
     verify_all_components_on_node(
         component_list=component_list,
         node_name=selected_node,

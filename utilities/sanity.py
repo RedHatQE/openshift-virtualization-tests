@@ -37,7 +37,7 @@ def storage_sanity_check(cluster_storage_classes_names: list[str]) -> bool:
         True if all expected storage classes from configuration exist on the cluster,
         False otherwise.
     """
-    config_sc = list([[*csc][0] for csc in py_config["storage_class_matrix"]])
+    config_sc = [[*csc][0] for csc in py_config["storage_class_matrix"]]
     exists_sc = [scn for scn in config_sc if scn in cluster_storage_classes_names]
     if sorted(config_sc) != sorted(exists_sc):
         LOGGER.error(f"Expected {config_sc}, On cluster {exists_sc}")

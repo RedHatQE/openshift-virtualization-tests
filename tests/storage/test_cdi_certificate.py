@@ -57,7 +57,7 @@ def x509_cert_is_valid(cert, seconds):
     except subprocess.CalledProcessError as e:
         if "Certificate will expire" in e.output:
             return False
-        raise e
+        raise
     return True
 
 

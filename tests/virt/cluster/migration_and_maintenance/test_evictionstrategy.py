@@ -91,7 +91,7 @@ def test_evictionstrategy_not_in_templates(base_templates):
     templates_with_evictionstrategy = [
         template.name
         for template in base_templates
-        if EVICTIONSTRATEGY in template.instance.objects[0].spec.template.spec.keys()
+        if EVICTIONSTRATEGY in template.instance.objects[0].spec.template.spec
     ]
     assert not templates_with_evictionstrategy, (
         f"{EVICTIONSTRATEGY} field present in templates {templates_with_evictionstrategy}"

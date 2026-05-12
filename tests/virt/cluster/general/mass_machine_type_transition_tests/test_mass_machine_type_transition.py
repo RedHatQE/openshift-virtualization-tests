@@ -18,7 +18,7 @@ def test_nodes_have_machine_type_labels(workers):
     nodes_without_machine_type_label = [
         node.name
         for node in workers
-        if not any(label.startswith("machine-type.node.kubevirt") for label in node.labels.keys())
+        if not any(label.startswith("machine-type.node.kubevirt") for label in node.labels)
     ]
     assert not nodes_without_machine_type_label, (
         f"Nodes {nodes_without_machine_type_label} does not have 'machine-type' label"

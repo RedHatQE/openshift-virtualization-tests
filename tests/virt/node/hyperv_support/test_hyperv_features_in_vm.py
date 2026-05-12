@@ -44,7 +44,7 @@ def get_hyperv_enabled_labels(instance_labels):
 def verify_evmcs_related_attributes(vmi_xml_dict):
     LOGGER.info("Verify vmx policy 'required' and 'vapic' hyperv feature are added when using evcms feature")
     cpu_feature = vmi_xml_dict["domain"]["cpu"]["feature"]
-    vmx_feature = [feature for feature in cpu_feature for policy, name in feature.items() if name == "vmx"]
+    vmx_feature = [feature for feature in cpu_feature for policy, name in feature.items() if name == "vmx"]  # noqa: PERF102
     assert vmx_feature and vmx_feature[0]["@policy"] == "require", (
         f"Wrong vmx policy. Actual: {vmx_feature}, expected: 'require'"
     )

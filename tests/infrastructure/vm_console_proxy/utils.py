@@ -56,7 +56,7 @@ def create_vnc_console_token(
         response.raise_for_status()  # Raise HTTPError for bad responses <4xx><5xx>
         return response.json()["token"]
     except requests.RequestException as exp:
-        logging.error(f"Request error occurred: {exp}")
+        LOGGER.error(f"Request error occurred: {exp}")
         raise
 
 

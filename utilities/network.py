@@ -624,7 +624,7 @@ class MacPool:
         return self.mac_sampler(func=random.choice, seq=self.pool)
 
     def mac_sampler(self, func, *args, **kwargs):
-        sampler = TimeoutSampler(wait_timeout=20, sleep=1, func=func, *args, **kwargs)
+        sampler = TimeoutSampler(wait_timeout=20, sleep=1, func=func, *args, **kwargs)  # noqa: B026
         for sample in sampler:
             mac = self.int_to_mac(num=sample)
             if mac not in self.used_macs:
@@ -999,8 +999,7 @@ def wait_for_node_marked_by_bridge(bridge_nad: LinuxBridgeNetworkAttachmentDefin
         wait_timeout=TIMEOUT_3MIN,
         sleep=5,
         func=lambda: (
-            bridge_annotation in node.instance.status.capacity.keys()
-            and bridge_annotation in node.instance.status.allocatable.keys()
+            bridge_annotation in node.instance.status.capacity and bridge_annotation in node.instance.status.allocatable
         ),
     )
     try:

@@ -65,7 +65,7 @@ def restore_and_log_error(
     updated_resource.restore()  # Only restore explicitly, if virt-operator fails to revert automatically.
     LOGGER.error(f"Timeout waiting for {resource.kind}: {resource.name} resource being reconciled.")
     LOGGER.error(f"Expected: {expected_value}\n Actual: {actual_value}")
-    raise
+    raise  # noqa: PLE0704
 
 
 def verify_resource_reconciled(admin_client, hco_namespace, resource):

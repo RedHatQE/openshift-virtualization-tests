@@ -240,16 +240,16 @@ def data_sources_managed_by_data_import_crons_scope_function(
     return [
         data_source
         for data_source in golden_images_data_sources_scope_function
-        if DATA_SOURCE_MANAGED_BY_CDI_LABEL in data_source.labels.keys()
+        if DATA_SOURCE_MANAGED_BY_CDI_LABEL in data_source.labels
     ]
 
 
 @pytest.fixture()
 def data_sources_names_from_templates_scope_function(base_templates):
-    return set([
+    return {
         get_parameters_from_template(template=template, parameter_subset=DATA_SOURCE_NAME)[DATA_SOURCE_NAME]
         for template in base_templates
-    ])
+    }
 
 
 @pytest.fixture()

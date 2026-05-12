@@ -143,7 +143,7 @@ def os_base_templates(request, base_templates):
     os_templates = [
         template
         for template in base_templates
-        if any(label.startswith(f"{Template.Labels.OS}/{os_name}") for label in template.labels.keys())
+        if any(label.startswith(f"{Template.Labels.OS}/{os_name}") for label in template.labels)
     ]
     assert os_templates, f"No {os_name} templates found"
     return os_templates
@@ -367,7 +367,7 @@ def test_common_templates_golden_images_params(base_templates):
             for gi_params in template_parameters_dict
             if gi_params["name"] in [DATA_SOURCE_NAME, DATA_SOURCE_NAMESPACE]
         ]
-        if not len(golden_images_params) == 2:
+        if len(golden_images_params) != 2:
             unmatched_templates.update({template.name: "Missing golden images parameters"})
         for gi_params in golden_images_params:
             # DATA_SOURCE_NAME contains either:
@@ -430,7 +430,7 @@ def test_vm_annotations_in_template(base_templates):
             if not (
                 (
                     annotation_name == Template.VMAnnotations.OS
-                    and [True for label in template_labels.keys() if label_name in label]
+                    and [True for label in template_labels if label_name in label]
                 )
                 or template_labels.get(label_name)
             ):
@@ -514,7 +514,7 @@ def test_hyperv_features_exist_in_windows_templates(os_base_templates):
     templates_with_wrong_hyperv_labels = {}
     for template in os_base_templates:
         template_hyperv_features = template.instance.objects[0].spec.template.spec.domain.features.get("hyperv")
-        if sorted(list(template_hyperv_features.keys())) != sorted(HYPERV_FEATURES_LABELS_VM_YAML):
+        if sorted(template_hyperv_features.keys()) != sorted(HYPERV_FEATURES_LABELS_VM_YAML):
             templates_with_wrong_hyperv_labels[template.name] = list(template_hyperv_features.keys())
     assert not templates_with_wrong_hyperv_labels, (
         f"Windows templates are missing hyperV labels.\n"

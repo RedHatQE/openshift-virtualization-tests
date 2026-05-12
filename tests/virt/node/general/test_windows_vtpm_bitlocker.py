@@ -49,7 +49,8 @@ def enable_bitlocker(vm):
             for sample in sampler:
                 if sample:
                     if all([
-                        True if msg in sample[0] else False for msg in ["100.0%", "Fully Encrypted", "Protection On"]
+                        True if msg in sample[0] else False  # noqa: SIM210
+                        for msg in ["100.0%", "Fully Encrypted", "Protection On"]
                     ]):
                         return
         except TimeoutExpiredError:

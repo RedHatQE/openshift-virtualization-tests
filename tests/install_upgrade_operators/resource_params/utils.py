@@ -13,7 +13,7 @@ def assert_status_condition(conditions, field_dict):
     """
 
     for field in field_dict:
-        condition_match = [condition for condition in conditions if field in condition.keys()]
+        condition_match = [condition for condition in conditions if field in condition]
         assert bool(condition_match) == field_dict[field], (
             f"Expected key: {field} to be present:{field_dict[field]} in hyperconverged object's status.condition."
             f" Actual result: {condition_match}"

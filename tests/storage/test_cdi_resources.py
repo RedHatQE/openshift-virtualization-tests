@@ -46,7 +46,7 @@ def verify_label(cdi_resources):
     for rcs in cdi_resources:
         if rcs.name.startswith(CDI_OPERATOR):
             continue
-        if CDI_LABEL not in rcs.labels.keys():
+        if CDI_LABEL not in rcs.labels:
             bad_pods.append(rcs.name)
     assert not bad_pods, " ".join(bad_pods)
 

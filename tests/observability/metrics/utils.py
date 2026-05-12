@@ -360,7 +360,7 @@ def network_packets_received(
 def compare_network_traffic_bytes_and_metrics(
     prometheus: Prometheus, vm: VirtualMachineForTests, network_packet_received: dict[str, str]
 ) -> bool:
-    rx_tx_indicator = False
+    rx_tx_indicator: bool = False
     metric_result = (
         prometheus
         .query(query=f"kubevirt_vmi_network_traffic_bytes_total{{name='{vm.name}'}}")
@@ -373,9 +373,7 @@ def compare_network_traffic_bytes_and_metrics(
             rx_tx_indicator = True
         else:
             break
-    if rx_tx_indicator:
-        return True
-    return False
+    return rx_tx_indicator
 
 
 def validate_network_traffic_metrics_value(

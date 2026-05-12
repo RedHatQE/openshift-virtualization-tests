@@ -445,7 +445,7 @@ def schedulable_nodes(nodes):
     yield [
         node
         for node in nodes
-        if schedulable_label in node.labels.keys()
+        if schedulable_label in node.labels
         and node.labels[schedulable_label] == "true"
         and not node.instance.spec.unschedulable
         and not kubernetes_taint_exists(node)
@@ -670,7 +670,7 @@ def nodes_active_nics(
 
 @pytest.fixture(scope="session")
 def nodes_available_nics(nodes_active_nics):
-    return {node: nodes_active_nics[node]["available"] for node in nodes_active_nics.keys()}
+    return {node: nodes_active_nics[node]["available"] for node in nodes_active_nics}
 
 
 @pytest.fixture(scope="module")
