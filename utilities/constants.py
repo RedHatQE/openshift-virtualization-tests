@@ -898,6 +898,10 @@ WIN_2K22 = "win2k22"
 WIN_2K16 = "win2k16"
 WIN_2K19 = "win2k19"
 
+# Windows VirtualMachine preferences
+WINDOWS_11_PREFERENCE = "windows.11"
+WINDOWS_2K22_PREFERENCE = "windows.2k22"
+
 HYPERV_FEATURES_LABELS_DOM_XML = [
     "relaxed",
     "vapic",
