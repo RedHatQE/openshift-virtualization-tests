@@ -1,5 +1,6 @@
 import logging
 import shlex
+from typing import TYPE_CHECKING
 
 from ocp_resources.virtual_machine_clone import VirtualMachineClone
 from pyhelper_utils.shell import run_ssh_commands
@@ -11,6 +12,9 @@ from tests.virt.cluster.vm_cloning.constants import (
     SECOND_DISK_TEST_FILE_STR,
 )
 from utilities.constants import TIMEOUT_1SEC, TIMEOUT_10SEC
+
+if TYPE_CHECKING:
+    from ocp_resources.virtual_machine import VirtualMachine
 
 LOGGER = logging.getLogger(__name__)
 
@@ -33,18 +37,39 @@ def check_if_files_present_after_cloning(vm):
     )
 
 
-def assert_target_vm_has_new_pvc_disks(source_vm, target_vm):
-    def _get_data_volumes_list(vm):
+def assert_target_vm_has_new_pvc_disks(source_vm: VirtualMachine, target_vm: VirtualMachine, prefix: str) -> None:
+    """Validate cloned VM DataVolume names for PrefixTargetName policy.
+
+    Args:
+        source_vm: Source VM used for cloning.
+        target_vm: Cloned target VM.
+        prefix: Expected DataVolume name prefix.
+            Note: this is only for PrefixTargetName volumeNamePolicy.
+            Target VM disk names will be the same as source VM disk names.
+            Target VM DataVolume names will be of format {prefix}-{source_vm_disk_name}.
+    """
+
+    def _get_data_volumes_list(vm: VirtualMachine) -> list[str]:
         return [volume["dataVolume"]["name"] for volume in vm.vmi.instance.spec.volumes if "dataVolume" in dict(volume)]
 
-    LOGGER.info("Checking that the target VM created new DataVolumes")
+    def _get_disk_names_list(vm: VirtualMachine) -> list[str]:
+        return [volume["name"] for volume in vm.vmi.instance.spec.volumes if "dataVolume" in dict(volume)]
+
+    LOGGER.info(f"Checking that the target VM created new DataVolumes with unique names and names with prefix {prefix}")
+
     source_vm_volumes_list = _get_data_volumes_list(vm=source_vm)
     target_vm_volumes_list = _get_data_volumes_list(vm=target_vm)
-
     assert set(source_vm_volumes_list) != set(target_vm_volumes_list), (
         f"DataVolume on VMs should be unique. \n "
         f"Source VM: {source_vm_volumes_list},\n "
         f"Target VM: {target_vm_volumes_list}"
+    )
+
+    expected_target_volumes_names_list = [f"{prefix}-{volume}" for volume in _get_disk_names_list(vm=source_vm)]
+    assert set(target_vm_volumes_list) == set(expected_target_volumes_names_list), (
+        f"DataVolume on target VM should have names with prefix {prefix}. \n "
+        f"Target VM: {target_vm_volumes_list},\n "
+        f"Expected: {expected_target_volumes_names_list}"
     )
 
 
