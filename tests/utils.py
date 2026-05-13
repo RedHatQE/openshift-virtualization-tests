@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import http
 import logging
 import re
 import shlex
@@ -11,6 +12,7 @@ from typing import Generator, Optional
 import bitmath
 import requests
 import xmltodict
+from bs4 import BeautifulSoup
 from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.datavolume import DataVolume
@@ -145,6 +147,27 @@ def wait_for_cr_labels_change(expected_value, component, timeout=TIMEOUT_10MIN):
             f" current value:'{label}'"
         )
         raise
+
+
+def validate_runbook_url_exists(url, alert_name=None, production=False):
+    response = requests.get(url, allow_redirects=False)
+    LOGGER.info(response)
+    if response.status_code != http.HTTPStatus.OK:
+        return f"{url} validation failed: {response}"
+    if production:
+        assert alert_name
+        url_link = f"#virt-runbook-{alert_name}"
+        if NOT_PUBLISHED_MESSAGE in response.text:
+            LOGGER.error(f"{url} found with message {NOT_PUBLISHED_MESSAGE}: {response.content}")
+            return f"{url} not published yet."
+        soup = BeautifulSoup(response.content)
+        for link in soup.findAll("a"):
+            url_str = link.get("href")
+            if url_str and url_str.endswith(url_link):
+                LOGGER.info(f"Alert link is found : {link}")
+                return
+        LOGGER.warning(f"Alert url {url} not found for alert {alert_name}")
+        return f"Alert url {url} not found"
 
 
 def get_image_from_csv(image_string, csv_related_images):
@@ -282,6 +305,13 @@ def wait_for_guest_os_cpu_count(vm, spec_cpu_amount):
             f"Timed out waiting for guest OS CPU count to match VMI spec. Guest: {sample}; VMI: {spec_cpu_amount}"
         )
         raise
+
+
+def assert_guest_os_cpu_count(vm, spec_cpu_amount):
+    guest_os_cpu_amount = get_os_cpu_count(vm=vm)
+    assert guest_os_cpu_amount == spec_cpu_amount, (
+        f"Wrong amount of CPUs! Guest: {guest_os_cpu_amount}; VMI: {spec_cpu_amount}"
+    )
 
 
 def assert_guest_os_memory_amount(vm, spec_memory_amount):

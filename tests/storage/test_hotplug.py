@@ -9,12 +9,12 @@ import pytest
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.storage_profile import StorageProfile
-from utilities.jira import is_jira_open
 
 from tests.storage.utils import assert_disk_bus
 from tests.utils import create_windows2022_dv_from_registry, create_windows2022_vm_with_vtpm_from_registry
 from utilities.constants import HOTPLUG_DISK_SCSI_BUS, HOTPLUG_DISK_SERIAL, HOTPLUG_DISK_VIRTIO_BUS, Images
 from utilities.hco import ResourceEditorValidateHCOReconcile
+from utilities.infra import is_jira_open
 from utilities.storage import (
     assert_disk_serial,
     assert_hotplugvolume_nonexist_optional_restart,
