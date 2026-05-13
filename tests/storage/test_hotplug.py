@@ -9,15 +9,16 @@ import pytest
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.storage_profile import StorageProfile
+from utilities.jira import is_jira_open
 
-from tests.os_params import WINDOWS_LATEST, WINDOWS_LATEST_LABELS
-from utilities.constants import HOTPLUG_DISK_SERIAL
+from tests.storage.utils import assert_disk_bus
+from tests.utils import create_windows2022_dv_from_registry, create_windows2022_vm_with_vtpm_from_registry
+from utilities.constants import HOTPLUG_DISK_SCSI_BUS, HOTPLUG_DISK_SERIAL, HOTPLUG_DISK_VIRTIO_BUS, Images
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.storage import (
     assert_disk_serial,
     assert_hotplugvolume_nonexist_optional_restart,
     create_dv,
-    data_volume,
     virtctl_volume,
     wait_for_vm_volume_ready,
 )
@@ -26,8 +27,6 @@ from utilities.virt import (
     fedora_vm_body,
     migrate_vm_and_verify,
     running_vm,
-    vm_instance_from_template,
-    wait_for_windows_vm,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -73,51 +72,37 @@ def hotplug_volume_windows_scope_class(
 
 
 @pytest.fixture(scope="class")
-def vm_instance_from_template_multi_storage_scope_class(
-    request,
+def windows_dv_from_registry_scope_class(
     unprivileged_client,
     namespace,
-    data_volume_multi_storage_scope_class,
-    cpu_for_migration,
+    storage_class_matrix__class__,
 ):
-    """Calls vm_instance_from_template contextmanager
+    """Creates a Windows 2022 DataVolume from registry container disk."""
+    with create_windows2022_dv_from_registry(
+        dv_name="dv-windows-2022-hotplug",
+        namespace=namespace.name,
+        client=unprivileged_client,
+        storage_class=next(iter(storage_class_matrix__class__)),
+    ) as dv_dict:
+        yield dv_dict
 
-    Creates a VM from template and starts it (if requested).
-    """
-    with vm_instance_from_template(
-        request=request,
-        unprivileged_client=unprivileged_client,
-        namespace=namespace,
-        existing_data_volume=data_volume_multi_storage_scope_class,
-        vm_cpu_model=cpu_for_migration if request.param.get("set_vm_common_cpu") else None,
+
+@pytest.fixture(scope="class")
+def vm_instance_from_template_multi_storage_scope_class(
+    unprivileged_client,
+    namespace,
+    modern_cpu_for_migration,
+    windows_dv_from_registry_scope_class,
+):
+    """Creates a Windows 2022 VM with vTPM from registry container disk."""
+    with create_windows2022_vm_with_vtpm_from_registry(
+        dv_dict=windows_dv_from_registry_scope_class,
+        namespace=namespace.name,
+        client=unprivileged_client,
+        vm_name="vm-win-2022-hotplug",
+        cpu_model=modern_cpu_for_migration,
     ) as vm:
         yield vm
-
-
-@pytest.fixture(scope="class")
-def started_windows_vm_scope_class(
-    request,
-    vm_instance_from_template_multi_storage_scope_class,
-):
-    wait_for_windows_vm(
-        vm=vm_instance_from_template_multi_storage_scope_class,
-        version=request.param["os_version"],
-    )
-
-
-@pytest.fixture(scope="class")
-def data_volume_multi_storage_scope_class(
-    request,
-    namespace,
-    storage_class_matrix__class__,
-    schedulable_nodes,
-):
-    yield from data_volume(
-        request=request,
-        namespace=namespace,
-        storage_class_matrix=storage_class_matrix__class__,
-        schedulable_nodes=schedulable_nodes,
-    )
 
 
 @pytest.fixture(scope="class")
@@ -142,21 +127,36 @@ def param_substring_scope_class(storage_class_name_scope_class):
 
 
 @pytest.fixture(scope="class")
-def fedora_vm_for_hotplug_scope_class(namespace, param_substring_scope_class, cpu_for_migration):
+def fedora_vm_for_hotplug_scope_class(unprivileged_client, namespace, param_substring_scope_class, cpu_for_migration):
     name = f"fedora-hotplug-{param_substring_scope_class}"
+    memory_requests = None
+    cpu_requests = None
+
+    if is_jira_open(jira_id="CNV-76658"):
+        memory_requests = f"{float(Images.Fedora.DEFAULT_MEMORY_SIZE[:-2]) * 2}Gi"
+        cpu_requests = 1
+
     with VirtualMachineForTests(
+        client=unprivileged_client,
         name=name,
+        memory_requests=memory_requests,
+        memory_limits=memory_requests,
         namespace=namespace.name,
         body=fedora_vm_body(name=name),
         cpu_model=cpu_for_migration,
+        cpu_limits=cpu_requests,
+        cpu_requests=cpu_requests,
     ) as vm:
         running_vm(vm=vm)
         yield vm
 
 
 @pytest.fixture(scope="class")
-def blank_disk_dv_multi_storage_scope_class(namespace, param_substring_scope_class, storage_class_name_scope_class):
+def blank_disk_dv_multi_storage_scope_class(
+    unprivileged_client, namespace, param_substring_scope_class, storage_class_name_scope_class
+):
     with create_dv(
+        client=unprivileged_client,
         source="blank",
         dv_name=f"blank-dv-{param_substring_scope_class}",
         namespace=namespace.name,
@@ -168,36 +168,45 @@ def blank_disk_dv_multi_storage_scope_class(namespace, param_substring_scope_cla
 
 
 @pytest.mark.parametrize(
-    "hotplug_volume_scope_class",
+    ("hotplug_volume_scope_class", "expected_bus"),
     [
-        pytest.param({"persist": True}),
+        pytest.param({"persist": True, "bus": HOTPLUG_DISK_VIRTIO_BUS}, HOTPLUG_DISK_VIRTIO_BUS, id="virtio-bus"),
+        pytest.param({"persist": True, "bus": HOTPLUG_DISK_SCSI_BUS}, HOTPLUG_DISK_SCSI_BUS, id="scsi-bus"),
     ],
-    indirect=True,
+    indirect=["hotplug_volume_scope_class"],
 )
 @pytest.mark.conformance
 @pytest.mark.gating
+@pytest.mark.usefixtures("hotplug_volume_scope_class")
 class TestHotPlugWithPersist:
     @pytest.mark.sno
     @pytest.mark.polarion("CNV-6014")
-    @pytest.mark.dependency(name="test_hotplug_volume_with_persist")
+    @pytest.mark.dependency(name="test_hotplug_volume_with_bus_and_persist")
     @pytest.mark.s390x
-    def test_hotplug_volume_with_persist(
+    def test_hotplug_volume_with_bus_and_persist(
         self,
         blank_disk_dv_multi_storage_scope_class,
         fedora_vm_for_hotplug_scope_class,
-        hotplug_volume_scope_class,
+        expected_bus,
     ):
-        wait_for_vm_volume_ready(vm=fedora_vm_for_hotplug_scope_class)
-        assert_hotplugvolume_nonexist_optional_restart(vm=fedora_vm_for_hotplug_scope_class, restart=True)
+        wait_for_vm_volume_ready(
+            vm=fedora_vm_for_hotplug_scope_class, volume_name=blank_disk_dv_multi_storage_scope_class.name
+        )
+        assert_hotplugvolume_nonexist_optional_restart(vm=fedora_vm_for_hotplug_scope_class)
+        assert_disk_bus(
+            vm=fedora_vm_for_hotplug_scope_class,
+            volume=blank_disk_dv_multi_storage_scope_class,
+            expected_bus=expected_bus,
+        )
 
     @pytest.mark.polarion("CNV-11390")
-    @pytest.mark.dependency(depends=["test_hotplug_volume_with_persist"])
+    @pytest.mark.dependency(depends=["test_hotplug_volume_with_bus_and_persist"])
     @pytest.mark.s390x
-    def test_hotplug_volume_with_persist_migrate(
+    def test_hotplug_volume_with_bus_and_persist_migrate(
         self,
         blank_disk_dv_multi_storage_scope_class,
         fedora_vm_for_hotplug_scope_class,
-        hotplug_volume_scope_class,
+        expected_bus,
     ):
         if is_dv_migratable(dv=blank_disk_dv_multi_storage_scope_class):
             migrate_vm_and_verify(vm=fedora_vm_for_hotplug_scope_class, check_ssh_connectivity=True)
@@ -212,6 +221,7 @@ class TestHotPlugWithPersist:
 )
 @pytest.mark.conformance
 @pytest.mark.gating
+@pytest.mark.usefixtures("hotplug_volume_scope_class")
 class TestHotPlugWithSerialPersist:
     @pytest.mark.sno
     @pytest.mark.polarion("CNV-6425")
@@ -221,11 +231,12 @@ class TestHotPlugWithSerialPersist:
         self,
         blank_disk_dv_multi_storage_scope_class,
         fedora_vm_for_hotplug_scope_class,
-        hotplug_volume_scope_class,
     ):
-        wait_for_vm_volume_ready(vm=fedora_vm_for_hotplug_scope_class)
+        wait_for_vm_volume_ready(
+            vm=fedora_vm_for_hotplug_scope_class, volume_name=blank_disk_dv_multi_storage_scope_class.name
+        )
         assert_disk_serial(vm=fedora_vm_for_hotplug_scope_class)
-        assert_hotplugvolume_nonexist_optional_restart(vm=fedora_vm_for_hotplug_scope_class, restart=True)
+        assert_hotplugvolume_nonexist_optional_restart(vm=fedora_vm_for_hotplug_scope_class)
 
     @pytest.mark.polarion("CNV-6425b")
     @pytest.mark.dependency(depends=["test_hotplug_volume_with_persist"])
@@ -234,34 +245,21 @@ class TestHotPlugWithSerialPersist:
         self,
         blank_disk_dv_multi_storage_scope_class,
         fedora_vm_for_hotplug_scope_class,
-        hotplug_volume_scope_class,
     ):
         if is_dv_migratable(dv=blank_disk_dv_multi_storage_scope_class):
             migrate_vm_and_verify(vm=fedora_vm_for_hotplug_scope_class, check_ssh_connectivity=True)
 
 
 @pytest.mark.parametrize(
-    "data_volume_multi_storage_scope_class,"
-    "vm_instance_from_template_multi_storage_scope_class,"
-    "started_windows_vm_scope_class,"
     "hotplug_volume_windows_scope_class",
     [
         pytest.param(
-            {
-                "dv_name": "dv-windows",
-                "image": WINDOWS_LATEST.get("image_path"),
-                "dv_size": WINDOWS_LATEST.get("dv_size"),
-            },
-            {
-                "vm_name": f"vm-win-{WINDOWS_LATEST.get('os_version')}",
-                "template_labels": WINDOWS_LATEST_LABELS,
-            },
-            {"os_version": WINDOWS_LATEST.get("os_version")},
             {"persist": True, "serial": HOTPLUG_DISK_SERIAL},
         ),
     ],
     indirect=True,
 )
+@pytest.mark.usefixtures("hotplug_volume_windows_scope_class")
 @pytest.mark.tier3
 class TestHotPlugWindows:
     @pytest.mark.polarion("CNV-6525")
@@ -269,20 +267,17 @@ class TestHotPlugWindows:
     def test_windows_hotplug(
         self,
         blank_disk_dv_multi_storage_scope_class,
-        data_volume_multi_storage_scope_class,
         vm_instance_from_template_multi_storage_scope_class,
-        started_windows_vm_scope_class,
-        hotplug_volume_windows_scope_class,
     ):
-        wait_for_vm_volume_ready(vm=vm_instance_from_template_multi_storage_scope_class)
+        wait_for_vm_volume_ready(
+            vm=vm_instance_from_template_multi_storage_scope_class,
+            volume_name=blank_disk_dv_multi_storage_scope_class.name,
+        )
         assert_disk_serial(
             command=shlex.split("wmic diskdrive get SerialNumber"),
             vm=vm_instance_from_template_multi_storage_scope_class,
         )
-        assert_hotplugvolume_nonexist_optional_restart(
-            vm=vm_instance_from_template_multi_storage_scope_class,
-            restart=True,
-        )
+        assert_hotplugvolume_nonexist_optional_restart(vm=vm_instance_from_template_multi_storage_scope_class)
 
     @pytest.mark.polarion("CNV-11391")
     @pytest.mark.dependency(depends=["test_windows_hotplug"])
@@ -290,10 +285,7 @@ class TestHotPlugWindows:
         self,
         unprivileged_client,
         blank_disk_dv_multi_storage_scope_class,
-        data_volume_multi_storage_scope_class,
         vm_instance_from_template_multi_storage_scope_class,
-        started_windows_vm_scope_class,
-        hotplug_volume_windows_scope_class,
     ):
         if is_dv_migratable(dv=blank_disk_dv_multi_storage_scope_class):
             migrate_vm_and_verify(
