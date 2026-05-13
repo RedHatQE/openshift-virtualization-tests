@@ -17,20 +17,16 @@ from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
-from ocp_resources.node import Node
 from ocp_resources.resource import ResourceEditor
-from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
 from pyhelper_utils.shell import run_ssh_commands
-from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 
 from utilities.constants import (
     DISK_SERIAL,
     HCO_DEFAULT_CPU_MODEL_KEY,
     OS_FLAVOR_WIN_CONTAINER_DISK,
-    OS_FLAVOR_WINDOWS,
     RHSM_SECRET_NAME,
     TCP_TIMEOUT_30SEC,
     TIMEOUT_1MIN,
@@ -47,8 +43,6 @@ from utilities.constants import (
     WINDOWS_2K22_PREFERENCE,
     Images,
 )
-from utilities.data_collector import get_data_collector_dir, write_to_file
-from utilities.exceptions import ResourceValueError
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import (
     ExecCommandOnPod,
@@ -261,50 +255,6 @@ def get_os_memory_value(vm):
         cmd = shlex.split("awk \"'{print$2/1024/1024;exit}'\" /proc/meminfo")
         meminfo = run_ssh_commands(host=vm.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN)[0].strip()
         return f"{round(float(meminfo))}Gi"
-
-
-def _collect_cpu_diagnostic_info(vm):
-    """Collect CPU diagnostic information when CPU count mismatch occurs."""
-    base_dir = get_data_collector_dir()
-    LOGGER.info(f"Collecting CPU diagnostic information for VM {vm.name}")
-
-    if vm.os_flavor == OS_FLAVOR_WINDOWS:
-        cmd = shlex.split('powershell.exe -command "Get-WinEvent -LogName System -MaxEvents 30 | Format-List"')
-    else:
-        cmd = shlex.split("bash -c 'dmesg | tail -n 30'")
-
-    output = run_ssh_commands(host=vm.ssh_exec, commands=cmd)[0]
-    write_to_file(base_directory=base_dir, file_name=f"{vm.name}_cpu_diagnostic.txt", content=output)
-
-
-def wait_for_guest_os_cpu_count(vm, spec_cpu_amount):
-    """Wait for the guest OS CPU count to match the VMI spec.
-
-    Args:
-        vm (VirtualMachineForTests): Target VM.
-        spec_cpu_amount (int): Expected CPU socket count from VMI spec.
-
-    Raises:
-        TimeoutExpiredError: If the guest OS CPU count does not match within the timeout.
-    """
-    sampler = TimeoutSampler(
-        wait_timeout=TIMEOUT_1MIN,
-        sleep=TIMEOUT_5SEC,
-        func=get_os_cpu_count,
-        vm=vm,
-    )
-    sample = None
-    try:
-        for sample in sampler:
-            if sample == spec_cpu_amount:
-                LOGGER.info(f"Guest OS CPU count matches VMI spec: {spec_cpu_amount}")
-                return
-    except TimeoutExpiredError:
-        _collect_cpu_diagnostic_info(vm=vm)
-        LOGGER.error(
-            f"Timed out waiting for guest OS CPU count to match VMI spec. Guest: {sample}; VMI: {spec_cpu_amount}"
-        )
-        raise
 
 
 def assert_guest_os_cpu_count(vm, spec_cpu_amount):
@@ -697,55 +647,6 @@ def verify_wsl2_guest_works(vm: VirtualMachineForTests) -> None:
     except TimeoutExpiredError:
         LOGGER.error(f"VM {vm.name} failed to start WSL2")
         raise
-
-
-def verify_cpumanager_workers(schedulable_nodes: list[Node]) -> None:
-    """Verify cluster nodes have CPU Manager labels
-
-    Args:
-        schedulable_nodes (list[Node]): List of schedulable node objects.
-
-    Raises:
-        ResourceValueError: If no node has CPU Manager enabled.
-    """
-    LOGGER.info("Verifying cluster nodes have CPU Manager labels")
-    if not any(node.labels.cpumanager == "true" for node in schedulable_nodes):
-        raise ResourceValueError("Cluster does not have CPU Manager enabled on any node")
-
-
-def verify_hugepages_1gi(hugepages_gib_values: list[float | int]) -> None:
-    """Verify that cluster nodes have 1Gi hugepages enabled.
-
-    Args:
-        hugepages_gib_values (list[float | int]): List of hugepage sizes (in GiB) from worker nodes.
-
-    Raises:
-        ResourceValueError: If 1Gi hugepages are not configured or are insufficient.
-    """
-    LOGGER.info("Verifying cluster has 1Gi hugepages enabled")
-    if not hugepages_gib_values or max(hugepages_gib_values) < 1:
-        raise ResourceValueError("Cluster does not have sufficient 1Gi hugepages")
-
-
-def verify_rwx_default_storage(client: DynamicClient) -> None:
-    """Verify default storage class supports RWX mode.
-
-    Args:
-        client (DynamicClient): Kubernetes dynamic client used to query cluster resources.
-
-    Raises:
-       ResourceValueError: access mode is not RWX
-    """
-    storage_class = py_config["default_storage_class"]
-    LOGGER.info(f"Verifying default storage class {storage_class} supports RWX mode")
-
-    access_modes = StorageProfile(client=client, name=storage_class).first_claim_property_set_access_modes()
-    found_mode = access_modes[0] if access_modes else None
-    if found_mode != DataVolume.AccessMode.RWX:
-        raise ResourceValueError(
-            f"Default storage class '{storage_class}' doesn't support RWX mode "
-            f"(required: RWX, found: {found_mode or 'none'})"
-        )
 
 
 @contextmanager
