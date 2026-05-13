@@ -4,11 +4,13 @@ from ocp_resources.pod import Pod
 from ocp_utilities.infra import get_pods_by_name_prefix
 
 from tests.install_upgrade_operators.hco_enablement_golden_image_updates.utils import (
+    COMMON_TEMPLATE,
     CUSTOM_TEMPLATE,
     HCO_CR_DATA_IMPORT_SCHEDULE_KEY,
     get_modifed_common_template_names,
     get_random_minutes_hours_fields_from_data_import_schedule,
     get_templates_by_type_from_hco_status,
+    get_templates_resources_names_dict,
 )
 from utilities.constants import (
     COMMON_TEMPLATES_KEY_NAME,
@@ -113,3 +115,15 @@ def ssp_spec_templates_scope_function(ssp_resource_scope_function):
 @pytest.fixture(scope="session")
 def common_templates_scope_session(hyperconverged_status_scope_session):
     return hyperconverged_status_scope_session[SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME]
+
+
+@pytest.fixture(scope="class")
+def default_common_template_hco_status(hyperconverged_status_templates_scope_class):
+    return get_templates_by_type_from_hco_status(
+        hco_status_templates=hyperconverged_status_templates_scope_class, template_type=COMMON_TEMPLATE
+    )
+
+
+@pytest.fixture(scope="class")
+def default_common_templates_related_resources(default_common_template_hco_status):
+    return get_templates_resources_names_dict(templates=default_common_template_hco_status)

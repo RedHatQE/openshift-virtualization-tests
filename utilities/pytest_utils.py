@@ -598,6 +598,9 @@ def update_cpu_arch_related_config(cpu_arch_option: str) -> None:
     cpu_arch = cpu_arch_option.split(",") if cpu_arch_option else list(get_cluster_architecture())
 
     if len(cpu_arch) > 1:
+        # Multi-arch: cpu_arch is a list. nodes_cpu_architecture fixture is unreliable
+        # in multi-arch runs; multiarch tests should use worker_architectures instead.
+        py_config["cpu_arch"] = cpu_arch
         LOGGER.warning("OS matrix generation is not supported for multi-arch runs!")
     else:
         arch = cpu_arch[0]
