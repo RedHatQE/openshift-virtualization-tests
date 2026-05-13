@@ -1,6 +1,7 @@
 from copy import deepcopy
 from typing import Any
 
+from ocp_resources.aaq import AAQ
 from ocp_resources.cdi import CDI
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.network_addons_config import NetworkAddonsConfig
@@ -10,6 +11,7 @@ from tests.install_upgrade_operators.constants import KEY_PATH_SEPARATOR
 from utilities.constants import TLS_CUSTOM_POLICY, TLS_OLD_POLICY
 
 MANAGED_CRS_LIST = [KubeVirt, CDI, NetworkAddonsConfig, SSP]
+MANAGED_CRS_LIST_WITH_AAQ = [*MANAGED_CRS_LIST, AAQ]
 
 TLS_MODERN_POLICY = "modern"
 TLS_INTERMEDIATE_POLICY = "intermediate"
@@ -117,3 +119,20 @@ MIN_TLS_VERSIONS = {
     TLS_MODERN_POLICY: "1.3",
     TLS_CUSTOM_POLICY: str(float(TLS_CUSTOM_VERSION[-2:]) / 10),
 }
+
+TLS_MODERN_PROFILE = {TLS_MODERN_POLICY: {}, "type": "Modern"}
+TLS_VERSION_1_2 = "1.2"
+TLS_VERSION_1_3 = "1.3"
+
+VIRT_TEMPLATE_DEPLOYMENT_NAMES = [
+    "virt-template-apiserver",
+    "virt-template-controller",
+]
+
+PQC_GROUP_SECP256R1_MLKEM768 = "SecP256r1MLKEM768"
+PQC_GROUP_SECP384R1_MLKEM1024 = "SecP384r1MLKEM1024"
+PQC_GROUP_X25519_MLKEM768 = "X25519MLKEM768"
+PQC_HANDSHAKE_FAILURE_INDICATOR = "alert handshake failure"
+OPENSSL_CONNECTION_SUCCESS_INDICATOR = "Certificate chain"
+
+CONSOLE_PLUGIN_SERVICE_PORT = 9443
