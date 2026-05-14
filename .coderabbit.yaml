@@ -41,8 +41,16 @@ reviews:
   auto_title_placeholder: "@coderabbitai"
   review_status: true
   commit_status: true
+  review_details: true
   poem: false
   collapse_walkthrough: true
+
+  # Auto-suggest labels
+  labeling_instructions:
+    - label: "new-tests"
+      instructions: "Apply when the PR adds new test files (test_*.py) or new test functions (def test_*)."
+    - label: "docs-only"
+      instructions: "Apply when the PR only changes .md files."
   sequence_diagrams: false
   changed_files_summary: true
 
@@ -53,18 +61,37 @@ reviews:
   # Abort review if PR is closed
   abort_on_close: true
 
+  # Pre-merge checks for PR quality
+  pre_merge_checks:
+    title:
+      mode: error
+      requirements: "Must be under 120 chars and clearly describe the change."
+    description:
+      mode: error
+    custom_checks:
+      - name: "STP link required"
+        mode: error
+        instructions: |
+          Every new test file (test_*.py) MUST include an STP link in the
+          module, class, or test docstring. If no STP exists, an RFE or
+          Jira link is required instead. Fail if a new test file has
+          neither.
+
   # Auto-review configuration
   auto_review:
     enabled: true
     auto_incremental_review: true
     drafts: false
+    auto_pause_after_reviewed_commits: 10
     ignore_title_keywords:
       - "WIP"
     base_branches:
       - main
+      - cnv-4.21
       - cnv-4.20
       - cnv-4.19
       - cnv-4.18
+
 
   # Enabled linting and security tools
   tools:
@@ -99,6 +126,23 @@ reviews:
     github-checks:
       enabled: true
       timeout_ms: 90000
+    # Disabled tools (no JS/TS, PHP, Ruby, Kotlin, Rust, or Terraform in this repo)
+    biome:
+      enabled: false
+    eslint:
+      enabled: false
+    phpstan:
+      enabled: false
+    rubocop:
+      enabled: false
+    detekt:
+      enabled: false
+    clippy:
+      enabled: false
+    checkov:
+      enabled: false
+    tflint:
+      enabled: false
 
 chat:
   auto_reply: true
