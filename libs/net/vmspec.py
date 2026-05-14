@@ -59,10 +59,14 @@ def lookup_iface_status(
     Raises:
         VMInterfaceStatusNotFoundError: If the requested interface was not found in the vmi status.
     """
-    if iface := _lookup_iface_status(interfaces=vm.vmi.interfaces, iface_name=iface_name, predicate=predicate):
+    vmi = vm.vmi
+    vmi_instance = vmi.instance
+    if iface := _lookup_iface_status(
+        interfaces=vmi_instance.status.interfaces, iface_name=iface_name, predicate=predicate
+    ):
         return iface
 
-    for event in vm.vmi.watcher(timeout=timeout):
+    for event in vmi.watcher(timeout=timeout, resource_version=vmi_instance.metadata.resourceVersion):
         if event["type"] != "MODIFIED":
             continue
         if interfaces := event["object"].status.interfaces:
