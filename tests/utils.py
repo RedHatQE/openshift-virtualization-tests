@@ -668,8 +668,7 @@ def create_windows2022_dv_from_registry(
     Yields:
         dict: DataVolume template dictionary with metadata and spec
     """
-    from utilities.artifactory import cleanup_artifactory_secret_and_config_map, get_test_artifact_server_url
-
+    from utilities.infra import cleanup_artifactory_secret_and_config_map, get_test_artifact_server_url
     from utilities.os_utils import get_windows_container_disk_path
 
     artifactory_secret = get_artifactory_secret(namespace=namespace)
