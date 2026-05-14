@@ -1,14 +1,8 @@
 import json
 from typing import Final
 
-from kubernetes.dynamic import DynamicClient
-
-from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
 from libs.net.traffic_generator import IPERF_SERVER_PORT, TcpServer
-from libs.vm.factory import base_vmspec, fedora_vm
-from libs.vm.spec import CloudInitNoCloud, Interface, Multus, Network
-from libs.vm.vm import BaseVirtualMachine, add_volume_disk, cloudinitdisk_storage
-from tests.network.libs import cloudinit
+from libs.vm.vm import BaseVirtualMachine
 
 BANDWIDTH_SECONDARY_IFACE_NAME: Final[str] = "secondary"
 BANDWIDTH_RATE_BPS: Final[int] = 10_000_000  # 10 Mbps
@@ -84,64 +78,3 @@ def assert_bidir_throughput_within_limit(
             f"Measured {direction} throughput {throughput_bps:.0f} bps exceeds "
             f"configured limit {rate_bps} bps for {server_ip}"
         )
-
-
-def secondary_network_vm(
-    namespace: str,
-    name: str,
-    client: DynamicClient,
-    nad_name: str,
-    secondary_iface_name: str,
-    secondary_iface_addresses: list[str],
-) -> BaseVirtualMachine:
-    """Create a Fedora VM with a masquerade primary interface and a secondary Linux bridge interface.
-
-    Args:
-        namespace: Namespace to deploy the VM in.
-        name: VM name.
-        client: Kubernetes dynamic client.
-        nad_name: NetworkAttachmentDefinition name for the secondary interface.
-        secondary_iface_name: Name of the secondary network interface in the VM spec.
-        secondary_iface_addresses: CIDR addresses to assign to the secondary interface via cloud-init.
-    """
-    spec = base_vmspec()
-    spec.template.spec.domain.devices.interfaces = [  # type: ignore
-        Interface(name="default", masquerade={}),
-        Interface(name=secondary_iface_name, bridge={}),
-    ]
-    spec.template.spec.networks = [
-        Network(name="default", pod={}),
-        Network(name=secondary_iface_name, multus=Multus(networkName=nad_name)),
-    ]
-
-    ethernets = {}
-    primary = _masquerade_iface_cloud_init()
-    if primary:
-        ethernets["eth0"] = primary
-    ethernets["eth1"] = cloudinit.EthernetDevice(addresses=secondary_iface_addresses)
-
-    userdata = cloudinit.UserData(users=[])
-    disk, volume = cloudinitdisk_storage(
-        data=CloudInitNoCloud(
-            networkData=cloudinit.asyaml(no_cloud=cloudinit.NetworkData(ethernets=ethernets)),
-            userData=cloudinit.format_cloud_config(userdata=userdata),
-        )
-    )
-    spec.template.spec = add_volume_disk(vmi_spec=spec.template.spec, volume=volume, disk=disk)
-    return fedora_vm(namespace=namespace, name=name, client=client, spec=spec)
-
-
-def _masquerade_iface_cloud_init() -> cloudinit.EthernetDevice | None:
-    """Return cloud-init ethernet config for a masquerade (primary) interface.
-
-    Returns:
-        EthernetDevice with static IPv6 and optional DHCP4, or None if IPv6 is not supported.
-    """
-    if not ipv6_supported_cluster():
-        return None
-    return cloudinit.EthernetDevice(
-        addresses=["fd10:0:2::2/120"],
-        gateway6="fd10:0:2::1",
-        dhcp4=ipv4_supported_cluster(),
-        dhcp6=False,
-    )
