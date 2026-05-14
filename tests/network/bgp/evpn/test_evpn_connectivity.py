@@ -22,7 +22,7 @@ import pytest
 
 from libs.net.traffic_generator import active_tcp_connections, is_tcp_connection
 from libs.net.vmspec import lookup_primary_network
-from tests.network.bgp.evpn.libevpn import evpn_workloads_active_connections
+from tests.network.bgp.evpn.libevpn import assert_evpn_workloads_connectivity, evpn_workloads_active_connections
 from utilities.virt import migrate_vm_and_verify
 
 pytestmark = [
@@ -143,7 +143,13 @@ def test_routed_l3_connectivity_is_preserved_over_live_migration(
 
 
 @pytest.mark.polarion("CNV-15232")
-def test_connectivity_after_udn_vm_cold_reboot():
+def test_connectivity_after_udn_vm_cold_reboot(
+    vm_evpn_target,
+    vm_evpn_reference,
+    external_l2_endpoint,
+    external_l3_endpoint,
+    subtests,
+):
     """
     Preconditions:
     - External Source Provider L2 and L3 endpoints.
@@ -152,14 +158,21 @@ def test_connectivity_after_udn_vm_cold_reboot():
 
     Steps:
     1. Restart the target under-test VM.
-    3. Initiate TCP traffic between target under-test VM and the external endpoints/connectivity reference VM.
+    2. Initiate TCP traffic between target under-test VM and the external endpoints/connectivity reference VM.
 
     Expected:
     - New connections are established after the cold reboot.
     """
+    vm_evpn_target.restart(wait=True)
+    vm_evpn_target.wait_for_agent_connected()
 
-
-test_connectivity_after_udn_vm_cold_reboot.__test__ = False
+    assert_evpn_workloads_connectivity(
+        target_vm=vm_evpn_target,
+        ref_vm=vm_evpn_reference,
+        l2_endpoint=external_l2_endpoint,
+        l3_endpoint=external_l3_endpoint,
+        subtests=subtests,
+    )
 
 
 @pytest.mark.polarion("CNV-15233")

@@ -1,15 +1,23 @@
 import contextlib
+import ipaddress
 import logging
 import shlex
 from collections.abc import Generator
 from dataclasses import dataclass
 
 from ocp_resources.pod import Pod
+from pytest import Subtests
 from timeout_sampler import retry
 
 from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
 from libs.net.ip import filter_link_local_addresses, random_ipv4_address, random_ipv6_address
-from libs.net.traffic_generator import IPERF_SERVER_PORT, PodTcpClient, TcpServer
+from libs.net.traffic_generator import (
+    IPERF_SERVER_PORT,
+    PodTcpClient,
+    TcpServer,
+    active_tcp_connections,
+    is_tcp_connection,
+)
 from libs.net.vmspec import lookup_iface_status, lookup_primary_network
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs.bgp import CLUSTER_FRR_ASN, EXTERNAL_FRR_ASN, NET_TOOLS_CONTAINER_NAME
@@ -361,3 +369,41 @@ def _evpn_workloads_connection(
             container=NET_TOOLS_CONTAINER_NAME,
         ) as tcp_client:
             yield tcp_client, tcp_server
+
+
+def assert_evpn_workloads_connectivity(
+    target_vm: BaseVirtualMachine,
+    ref_vm: BaseVirtualMachine,
+    l2_endpoint: EvpnEndpoint,
+    l3_endpoint: EvpnEndpoint,
+    subtests: Subtests,
+) -> None:
+    """Verifies EVPN connectivity: VM-to-VM, stretched L2, and routed L3.
+
+    Args:
+        target_vm: The under-test VM (server).
+        ref_vm: The reference VM (client for VM-to-VM check).
+        l2_endpoint: External L2 endpoint (client for stretched L2 check).
+        l3_endpoint: External L3 endpoint (client for routed L3 check).
+        subtests: pytest-subtests fixture for per-check reporting.
+    """
+    iface_name = lookup_primary_network(vm=target_vm).name
+
+    with active_tcp_connections(
+        client_vm=ref_vm,
+        server_vm=target_vm,
+        iface_name=iface_name,
+    ) as vm_connections:
+        for vm_client, vm_server in vm_connections:
+            with subtests.test(f"VM-to-VM IPv{ipaddress.ip_address(vm_client.server_ip).version}"):
+                assert is_tcp_connection(server=vm_server, client=vm_client)
+
+    with evpn_workloads_active_connections(endpoint=l2_endpoint, vm=target_vm) as l2_connections:
+        for l2_client, l2_server in l2_connections:
+            with subtests.test(f"stretched-L2 IPv{ipaddress.ip_address(l2_client.server_ip).version}"):
+                assert is_tcp_connection(server=l2_server, client=l2_client)
+
+    with evpn_workloads_active_connections(endpoint=l3_endpoint, vm=target_vm) as l3_connections:
+        for l3_client, l3_server in l3_connections:
+            with subtests.test(f"routed-L3 IPv{ipaddress.ip_address(l3_client.server_ip).version}"):
+                assert is_tcp_connection(server=l3_server, client=l3_client)
