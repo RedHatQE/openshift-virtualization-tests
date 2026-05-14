@@ -13,8 +13,7 @@ on which IPv4/IPv6 static addresses will be defined according to the environment
 Client - The connectivity initiator VM that runs continuous ping toward the server VM.
 Server - The connectivity listener VM that receives the ping and responds.
 
-STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main
-/stps/sig-network/stuntime_measurement.md
+STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-network/stuntime_measurement.md
 """
 
 import pytest
