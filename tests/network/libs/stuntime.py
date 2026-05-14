@@ -1,4 +1,4 @@
-"""Helpers for OVN localnet migration stuntime tests."""
+"""Helpers for migration stuntime tests."""
 
 import ipaddress
 import logging
