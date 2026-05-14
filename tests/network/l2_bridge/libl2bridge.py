@@ -40,6 +40,8 @@ from utilities.virt import VirtualMachineForTests, fedora_vm_body, prepare_cloud
 
 LOGGER = logging.getLogger(__name__)
 
+RHCOS9_WORKER_LABEL: Final[str] = f"{NODE_ROLE_KUBERNETES_IO}/worker-rhcos9"
+
 NETWORK_MANAGER_UNMANAGE_RUNCMD = [
     'sudo echo -e "[main]\nno-auto-default=*\nignore-carrier=*" > /etc/NetworkManager/conf.d/no-nm-ownership.conf',
     "sudo systemctl restart NetworkManager",
