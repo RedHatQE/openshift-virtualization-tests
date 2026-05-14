@@ -12,7 +12,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 from libs.net.ip import random_ipv4_address
 from libs.net.vmspec import lookup_iface_status, lookup_iface_status_ip, wait_for_missing_iface_status
 from libs.vm.factory import base_vmspec, fedora_vm
-from libs.vm.spec import Affinity, CloudInitNoCloud, Interface, Multus, Network
+from libs.vm.spec import Affinity, CloudInitNoCloud, Interface, Metadata, Multus, Network
 from libs.vm.vm import BaseVirtualMachine, add_volume_disk, cloudinitdisk_storage
 from tests.network.libs import cloudinit
 from tests.network.libs.cloudinit import primary_iface_cloud_init
@@ -383,6 +383,7 @@ def secondary_network_vm(
     secondary_iface_name: str,
     secondary_iface_addresses: list[str],
     affinity: Affinity | None = None,
+    labels: dict[str, str] | None = None,
 ) -> BaseVirtualMachine:
     """Create a Fedora VM with a masquerade primary interface and a secondary Linux bridge interface.
 
@@ -394,6 +395,7 @@ def secondary_network_vm(
         secondary_iface_name: Name of the secondary network interface in the VM spec.
         secondary_iface_addresses: CIDR addresses to assign to the secondary interface via cloud-init.
         affinity: Optional node or pod affinity rules for scheduling.
+        labels: Optional labels to apply to the VM template metadata for pod scheduling.
     """
     spec = base_vmspec()
     spec.template.spec.domain.devices.interfaces = [  # type: ignore
@@ -406,6 +408,11 @@ def secondary_network_vm(
     ]
     if affinity:
         spec.template.spec.affinity = affinity
+
+    if labels:
+        spec.template.metadata = spec.template.metadata or Metadata()
+        spec.template.metadata.labels = spec.template.metadata.labels or {}
+        spec.template.metadata.labels.update(labels)
 
     ethernets = {}
     primary = primary_iface_cloud_init()
