@@ -21,8 +21,8 @@ from tests.network.l2_bridge.bandwidth.lib_helpers import (
     BANDWIDTH_RATE_BPS,
     BANDWIDTH_SECONDARY_IFACE_NAME,
     GUEST_2ND_IFACE_NAME,
-    secondary_network_vm,
 )
+from tests.network.l2_bridge.libl2bridge import secondary_network_vm
 
 _NAD_NAME: Final[str] = "br-bw-test-nad"
 
