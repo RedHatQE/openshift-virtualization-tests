@@ -203,6 +203,8 @@ FLAT_OVERLAY_STR = "layer2"
 KUBEMACPOOL_CERT_MANAGER = "kubemacpool-cert-manager"
 KUBEMACPOOL_MAC_CONTROLLER_MANAGER = "kubemacpool-mac-controller-manager"
 KUBEVIRT_IPAM_CONTROLLER_MANAGER = "kubevirt-ipam-controller-manager"
+KUBEVIRT_MIGRATION_OPERATOR = "kubevirt-migration-operator"
+KUBEVIRT_MIGRATION_CONTROLLER = "kubevirt-migration-controller"
 KUBEMACPOOL_MAC_RANGE_CONFIG = "kubemacpool-mac-range-config"
 NMSTATE_HANDLER = "nmstate-handler"
 ISTIO_SYSTEM_DEFAULT_NS = "istio-system"
@@ -412,6 +414,7 @@ KUBEVIRT_UI_CONFIG_READER_ROLE_BINDING = "kubevirt-ui-config-reader-rolebinding"
 HCO_BEARER_AUTH = "hco-bearer-auth"
 KUBEVIRT_CONSOLE_PLUGIN_NP = "kubevirt-console-plugin-np"
 KUBEVIRT_APISERVER_PROXY_NP = "kubevirt-apiserver-proxy-np"
+MIGCONTROLLER_KUBEVIRT_HYPERCONVERGED = "migcontroller-kubevirt-hyperconverged"
 # components kind
 ROLEBINDING_STR = "RoleBinding"
 POD_STR = "Pod"
@@ -432,6 +435,7 @@ CONSOLE_PLUGIN_STR = "ConsolePlugin"
 KUBEVIRT_PLUGIN = "kubevirt-plugin"
 CDI_STR = "CDI"
 SSP_STR = "SSP"
+MIGCONTROLLER_STR = "MigController"
 SECRET_STR = "Secret"
 KUBEVIRT_APISERVER_PROXY = "kubevirt-apiserver-proxy"
 NETWORKPOLICY_STR = "NetworkPolicy"
@@ -476,6 +480,7 @@ ALL_HCO_RELATED_OBJECTS = [
     {HCO_BEARER_AUTH: SECRET_STR},
     {KUBEVIRT_CONSOLE_PLUGIN_NP: NETWORKPOLICY_STR},
     {KUBEVIRT_APISERVER_PROXY_NP: NETWORKPOLICY_STR},
+    {MIGCONTROLLER_KUBEVIRT_HYPERCONVERGED: MIGCONTROLLER_STR},
 ]
 CNV_PODS_NO_HPP_CSI_HPP_POOL = [
     AAQ_OPERATOR,
@@ -493,6 +498,8 @@ CNV_PODS_NO_HPP_CSI_HPP_POOL = [
     KUBEMACPOOL_CERT_MANAGER,
     KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
     KUBEVIRT_CONSOLE_PLUGIN,
+    KUBEVIRT_MIGRATION_CONTROLLER,
+    KUBEVIRT_MIGRATION_OPERATOR,
     SSP_OPERATOR,
     VIRT_API,
     VIRT_CONTROLLER,
@@ -518,6 +525,8 @@ ALL_CNV_DEPLOYMENTS_NO_HPP_POOL = [
     KUBEMACPOOL_CERT_MANAGER,
     KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
     KUBEVIRT_CONSOLE_PLUGIN,
+    KUBEVIRT_MIGRATION_CONTROLLER,
+    KUBEVIRT_MIGRATION_OPERATOR,
     SSP_OPERATOR,
     VIRT_API,
     VIRT_CONTROLLER,
@@ -543,6 +552,7 @@ CNV_OPERATORS = [
     HOSTPATH_PROVISIONER_OPERATOR,
     HYPERCONVERGED_CLUSTER_OPERATOR,
     "kubevirt-operator",
+    KUBEVIRT_MIGRATION_OPERATOR,
     SSP_OPERATOR,
     HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD,
 ]
@@ -615,7 +625,12 @@ ALL_CNV_CRDS = [
     f"hostpathprovisioners.{Resource.ApiGroup.HOSTPATHPROVISIONER_KUBEVIRT_IO}",
     f"hyperconvergeds.{Resource.ApiGroup.HCO_KUBEVIRT_IO}",
     f"kubevirts.{Resource.ApiGroup.KUBEVIRT_IO}",
+    f"migcontrollers.{Resource.ApiGroup.MIGRATIONS_KUBEVIRT_IO}",
     f"migrationpolicies.{Resource.ApiGroup.MIGRATIONS_KUBEVIRT_IO}",
+    f"multinamespacevirtualmachinestoragemigrationplans.{Resource.ApiGroup.MIGRATIONS_KUBEVIRT_IO}",
+    f"multinamespacevirtualmachinestoragemigrations.{Resource.ApiGroup.MIGRATIONS_KUBEVIRT_IO}",
+    f"virtualmachinestoragemigrationplans.{Resource.ApiGroup.MIGRATIONS_KUBEVIRT_IO}",
+    f"virtualmachinestoragemigrations.{Resource.ApiGroup.MIGRATIONS_KUBEVIRT_IO}",
     f"networkaddonsconfigs.{Resource.ApiGroup.NETWORKADDONSOPERATOR_NETWORK_KUBEVIRT_IO}",
     f"objecttransfers.{Resource.ApiGroup.CDI_KUBEVIRT_IO}",
     f"ssps.{Resource.ApiGroup.SSP_KUBEVIRT_IO}",
