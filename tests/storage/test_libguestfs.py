@@ -21,17 +21,18 @@ def virtctl_libguestfs_by_user(
         f"virtctl guestfs {dv_created_by_specific_user.name} -n {dv_created_by_specific_user.namespace} \
         {fs_group_flag}"
     )
-
+    libguestfs_pod = Pod(
+        name=f"libguestfs-tools-{dv_created_by_specific_user.name}",
+        namespace=dv_created_by_specific_user.namespace,
+    )
+    libguestfs_pod.wait_for_status(status=Pod.Status.RUNNING, timeout=TIMEOUT_1MIN)
     guestfs_proc.send("\n\n")
-    guestfs_proc.expect("$", timeout=TIMEOUT_1MIN)
+    guestfs_proc.expect(r"\$", timeout=TIMEOUT_1MIN)
     yield guestfs_proc
     guestfs_proc.send("exit\n")
     guestfs_proc.expect(pexpect.EOF, timeout=TIMEOUT_1MIN)
     guestfs_proc.close()
-    Pod(
-        name=f"libguestfs-tools-{dv_created_by_specific_user.name}",
-        namespace=dv_created_by_specific_user.namespace,
-    ).wait_deleted()
+    libguestfs_pod.wait_deleted()
 
 
 @pytest.fixture
