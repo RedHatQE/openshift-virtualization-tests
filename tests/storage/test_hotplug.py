@@ -189,9 +189,7 @@ class TestHotPlugWithPersist:
         fedora_vm_for_hotplug_scope_class,
         expected_bus,
     ):
-        wait_for_vm_volume_ready(
-            vm=fedora_vm_for_hotplug_scope_class, volume_name=blank_disk_dv_multi_storage_scope_class.name
-        )
+        wait_for_vm_volume_ready(vm=fedora_vm_for_hotplug_scope_class)
         assert_hotplugvolume_nonexist_optional_restart(vm=fedora_vm_for_hotplug_scope_class)
         assert_disk_bus(
             vm=fedora_vm_for_hotplug_scope_class,
@@ -232,9 +230,7 @@ class TestHotPlugWithSerialPersist:
         blank_disk_dv_multi_storage_scope_class,
         fedora_vm_for_hotplug_scope_class,
     ):
-        wait_for_vm_volume_ready(
-            vm=fedora_vm_for_hotplug_scope_class, volume_name=blank_disk_dv_multi_storage_scope_class.name
-        )
+        wait_for_vm_volume_ready(vm=fedora_vm_for_hotplug_scope_class)
         assert_disk_serial(vm=fedora_vm_for_hotplug_scope_class)
         assert_hotplugvolume_nonexist_optional_restart(vm=fedora_vm_for_hotplug_scope_class)
 
@@ -269,10 +265,7 @@ class TestHotPlugWindows:
         blank_disk_dv_multi_storage_scope_class,
         vm_instance_from_template_multi_storage_scope_class,
     ):
-        wait_for_vm_volume_ready(
-            vm=vm_instance_from_template_multi_storage_scope_class,
-            volume_name=blank_disk_dv_multi_storage_scope_class.name,
-        )
+        wait_for_vm_volume_ready(vm=vm_instance_from_template_multi_storage_scope_class)
         assert_disk_serial(
             command=shlex.split("wmic diskdrive get SerialNumber"),
             vm=vm_instance_from_template_multi_storage_scope_class,
