@@ -2110,9 +2110,22 @@ def vm_instance_from_template(
         yield vm
 
 
+def uncordon_node(admin_client, node):
+    """Uncordon node and wait for it to stabilize.
+
+    Args:
+        admin_client (DynamicClient): Admin client
+        node (Node): Node to uncordon
+    """
+    hco_namespace = get_hco_namespace(admin_client=admin_client)
+    LOGGER.info(f"Uncordon node {node.name}")
+    run(f"oc adm uncordon {node.name}", shell=True)
+    wait_for_node_schedulable_status(node=node, status=True)
+    wait_for_kv_stabilize(admin_client=admin_client, hco_namespace=hco_namespace)
+
+
 @contextmanager
 def node_mgmt_console(admin_client, node, node_mgmt):
-    hco_namespace = get_hco_namespace(admin_client=admin_client)
     try:
         LOGGER.info(f"{node_mgmt.capitalize()} the node {node.name}")
         extra_opts = "--delete-emptydir-data --ignore-daemonsets=true --force" if node_mgmt == "drain" else ""
@@ -2127,10 +2140,7 @@ def node_mgmt_console(admin_client, node, node_mgmt):
             run(
                 shlex.split('pkill -f "oc adm drain"'),
             )
-        LOGGER.info(f"Uncordon node {node.name}")
-        run(f"oc adm uncordon {node.name}", shell=True)
-        wait_for_node_schedulable_status(node=node, status=True)
-        wait_for_kv_stabilize(admin_client=admin_client, hco_namespace=hco_namespace)
+        uncordon_node(admin_client=admin_client, node=node)
 
 
 @contextmanager

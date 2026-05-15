@@ -192,6 +192,7 @@ def deploy_vms(
 
 
 def verify_at_least_one_vm_migrated(vms, node_before):
+    LOGGER.info(f"Waiting for at least one VM to migrate from node {node_before.name}")
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_5MIN,
         sleep=TIMEOUT_20SEC,

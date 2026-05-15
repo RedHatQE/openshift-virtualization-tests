@@ -41,6 +41,7 @@ class TestDeschedulerEvictsVMFromUtilizationImbalance:
         self,
         node_with_least_available_memory,
         node_with_min_memory_labeled_for_descheduler_test,
+        unloaded_migration_target_node,
         deployed_vms_for_utilization_imbalance,
         vms_boot_time_before_utilization_imbalance,
         utilization_imbalance,
@@ -100,12 +101,10 @@ class TestDeschedulerNodeLabel:
         self,
         node_with_least_available_memory,
         node_with_min_memory_labeled_for_descheduler_test,
-        node_with_most_available_memory,
+        unloaded_migration_target_node,
         deployed_vms_on_labeled_node,
     ):
-        with ResourceEditor(
-            patches={node_with_most_available_memory: {"metadata": {"labels": DESCHEDULER_TEST_LABEL}}}
-        ):
+        with ResourceEditor(patches={unloaded_migration_target_node: {"metadata": {"labels": DESCHEDULER_TEST_LABEL}}}):
             verify_at_least_one_vm_migrated(
                 vms=deployed_vms_on_labeled_node, node_before=node_with_least_available_memory
             )

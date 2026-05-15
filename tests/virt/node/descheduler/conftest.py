@@ -1,4 +1,5 @@
 import logging
+import shlex
 
 import pytest
 from kubernetes.utils.quantity import parse_quantity
@@ -7,6 +8,7 @@ from ocp_resources.pod_disruption_budget import PodDisruptionBudget
 from ocp_resources.resource import Resource, ResourceEditor
 from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
 from ocp_utilities.infra import get_pods_by_name_prefix
+from pyhelper_utils.shell import run_command
 
 from tests.utils import start_stress_on_vm
 from tests.virt.node.descheduler.constants import (
@@ -28,7 +30,10 @@ from tests.virt.utils import (
 )
 from utilities.constants import TIMEOUT_5MIN, TIMEOUT_5SEC
 from utilities.infra import wait_for_pods_deletion
-from utilities.virt import wait_for_migration_finished
+from utilities.virt import (
+    uncordon_node,
+    wait_for_migration_finished,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -135,6 +140,20 @@ def node_with_min_memory_labeled_for_descheduler_test(node_with_least_available_
 def node_with_max_memory_labeled_for_descheduler_test(node_with_most_available_memory):
     with ResourceEditor(patches={node_with_most_available_memory: {"metadata": {"labels": DESCHEDULER_TEST_LABEL}}}):
         yield
+
+
+@pytest.fixture(scope="class")
+def unloaded_migration_target_node(admin_client, node_with_most_available_memory):
+    """Drain and uncordon node to reduce loadage."""
+    LOGGER.info(f"Draining node {node_with_most_available_memory.name} to reduce loadage")
+    run_command(
+        command=shlex.split(
+            f"oc adm drain {node_with_most_available_memory.name} --delete-emptydir-data --ignore-daemonsets=true --force --timeout=60s"
+        ),
+        check=False,
+    )
+    uncordon_node(admin_client=admin_client, node=node_with_most_available_memory)
+    yield node_with_most_available_memory
 
 
 @pytest.fixture(scope="class")
