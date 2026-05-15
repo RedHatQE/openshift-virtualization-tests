@@ -1495,8 +1495,8 @@ def vm_console_run_commands(
         Dict of the commands outputs, where the key is the command and the value is the output as a list of lines.
     """
     output = {}
-    # Source: https://www.tutorialspoint.com/how-can-i-remove-the-ansi-escape-sequences-from-a-string-in-python
-    ansi_escape = re.compile(r"(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]")
+    # Strip CSI (ESC[…) and OSC (ESC]…BEL/ST) terminal escape sequences
+    ansi_escape = re.compile(r"(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]|\x1B\][^\x07\x1B]*(?:\x07|\x1B\\)")
     prompt = r"\$ "
     with Console(vm=vm, prompt=prompt) as vmc:
         for command in commands:
