@@ -28,7 +28,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 import utilities.infra
 from libs.net.ip import ICMP_HEADER_SIZE, ip_header_size
-from libs.net.vmspec import VMInterfaceStatusNotFoundError
+from libs.net.vmspec import IpNotFound, VMInterfaceStatusNotFoundError, lookup_iface_status_ip
 from utilities.constants import (
     ACTIVE_BACKUP,
     FLAT_OVERLAY_STR,
@@ -753,10 +753,15 @@ def get_ip_from_vm_or_virt_handler_pod(family, vm=None, virt_handler_pod=None):
         raise ValueError("must send VM or virt-handler pod")
 
     if vm:
-        addr_list = vm.vmi.interfaces[0]["ipAddresses"]
-    else:
-        addr_list = [ip_addr["ip"] for ip_addr in virt_handler_pod.instance.status.podIPs]
+        iface_name = vm.vmi.interfaces[0]["name"]
+        ip_family = 4 if family == IPV4_STR else 6
+        try:
+            ip = lookup_iface_status_ip(vm=vm, iface_name=iface_name, ip_family=ip_family)
+        except IpNotFound:
+            return None
+        return str(ip) if ip else None
 
+    addr_list = [ip_addr["ip"] for ip_addr in virt_handler_pod.instance.status.podIPs]
     ip_list = [ip for ip in addr_list if get_valid_ip_address(dst_ip=ip, family=family)]
     return ip_list[0] if ip_list else None
 
