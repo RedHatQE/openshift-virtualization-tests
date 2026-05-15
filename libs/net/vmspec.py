@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import ipaddress
 from collections.abc import Callable
-from typing import Any, Final
+from typing import TYPE_CHECKING, Any, Final
 
 from kubernetes.dynamic.client import ResourceField
 from ocp_resources.utils.resource_constants import ResourceConstants
@@ -8,7 +10,9 @@ from ocp_resources.virtual_machine import VirtualMachine
 from timeout_sampler import retry
 
 from libs.vm.spec import Network
-from libs.vm.vm import BaseVirtualMachine
+
+if TYPE_CHECKING:
+    from libs.vm.vm import BaseVirtualMachine
 
 LOOKUP_IFACE_STATUS_TIMEOUT_SEC: Final[int] = 30
 WAIT_FOR_MISSING_IFACE_STATUS_TIMEOUT_SEC: Final[int] = 120

@@ -28,6 +28,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 import utilities.infra
 from libs.net.ip import ICMP_HEADER_SIZE, ip_header_size
+from libs.net.vmspec import VMInterfaceStatusNotFoundError
 from utilities.constants import (
     ACTIVE_BACKUP,
     FLAT_OVERLAY_STR,
@@ -652,19 +653,11 @@ class MacPool:
         return self.mac_to_int(mac) in self.pool
 
 
-class IfaceNotFound(Exception):
-    def __init__(self, name: str) -> None:
-        self.name = name
-
-    def __str__(self) -> str:
-        return f"Interface not found for NAD {self.name}"
-
-
 def get_vmi_mac_address_by_iface_name(vmi, iface_name):
     for iface in vmi.interfaces:
         if iface.name == iface_name:
             return iface.mac
-    raise IfaceNotFound(name=iface_name)
+    raise VMInterfaceStatusNotFoundError(f"Interface {iface_name} not found in VMI {vmi.name} status")
 
 
 def cloud_init_network_data(data):
