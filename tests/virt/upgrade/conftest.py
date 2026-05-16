@@ -381,9 +381,9 @@ def virt_launcher_from_csv_before_upgrade(csv_scope_session):
 
 
 @pytest.fixture()
-def csv_after_upgrade(admin_client, hco_namespace, hco_target_csv_name, eus_hco_target_csv_name):
+def csv_after_upgrade(admin_client, hco_namespace, hco_target_csv_name):
     return get_csv_by_name(
         admin_client=admin_client,
         namespace=hco_namespace.name,
-        csv_name=hco_target_csv_name or eus_hco_target_csv_name,
+        csv_name=hco_target_csv_name,
     )
