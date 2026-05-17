@@ -16,7 +16,7 @@ from tests.install_upgrade_operators.crypto_policy.utils import check_service_ac
 from utilities.constants import HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD
 
 LOGGER = logging.getLogger(__name__)
-pytestmark = pytest.mark.post_upgrade
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.tier3]
 
 
 @pytest.mark.polarion("CNV-15973")
