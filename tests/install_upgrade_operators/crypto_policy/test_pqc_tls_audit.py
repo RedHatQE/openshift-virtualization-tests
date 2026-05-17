@@ -9,7 +9,6 @@ import logging
 import pytest
 
 from utilities.constants import HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD
-from utilities.jira import is_jira_open
 
 LOGGER = logging.getLogger(__name__)
 pytestmark = pytest.mark.post_upgrade
@@ -42,8 +41,6 @@ def test_cnv_services_pqc_key_exchange(subtests, fips_enabled_cluster, pqc_statu
         with subtests.test(msg=service_name):
             if service_name == HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD:
                 pytest.xfail(f"CNV-82351: {service_name} — plaintext HTTP behind TLS route, TLS planned for 5.0")
-            if service_name == "kubevirt-migration-prometheus" and is_jira_open(jira_id="CNV-87302"):
-                pytest.xfail(f"{service_name} — known bug: CNV-87302")
             assert accepted is not None, f"Service {service_name} is unreachable"
             if fips_enabled_cluster:
                 runtime = services_tls_runtime.get(service_name, "go")
