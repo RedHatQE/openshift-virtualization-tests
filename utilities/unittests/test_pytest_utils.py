@@ -11,6 +11,7 @@ from utilities.exceptions import MissingEnvironmentVariableError, UnsupportedCPU
 
 # Circular dependencies are already mocked in conftest.py
 from utilities.pytest_utils import (
+    assert_incremental_classes_fully_collected,
     config_default_storage_class,
     deploy_run_in_progress_config_map,
     deploy_run_in_progress_namespace,
@@ -2181,3 +2182,141 @@ class TestUpdateCpuArchRelatedConfig:
             mock_get_cluster_arch.assert_not_called()
             mock_generate_common.assert_not_called()
             mock_generate_instance.assert_not_called()
+
+
+class TestAssertIncrementalClassesFullyCollected:
+    """Test cases for assert_incremental_classes_fully_collected function."""
+
+    def test_all_tests_collected_no_error(self):
+        """No error when all tests in an incremental class are collected."""
+
+        class MyClass:
+            def test_one(self): ...
+
+            def test_two(self): ...
+
+        parent = self._make_class_parent(cls=MyClass)
+        items = [
+            self._make_function_item(test_name="test_one", parent=parent),
+            self._make_function_item(test_name="test_two", parent=parent),
+        ]
+
+        assert_incremental_classes_fully_collected(items=items)
+
+    def test_missing_test_raises_usage_error(self):
+        """UsageError raised when a test in an incremental class is not collected."""
+
+        class MyClass:
+            def test_one(self): ...
+
+            def test_two(self): ...
+
+            def test_three(self): ...
+
+        parent = self._make_class_parent(cls=MyClass)
+        items = [self._make_function_item(test_name="test_one", parent=parent)]
+
+        with pytest.raises(pytest.UsageError, match="test_two"):
+            assert_incremental_classes_fully_collected(items=items)
+
+    def test_no_incremental_items_no_error(self):
+        """No error when no items carry the incremental marker."""
+
+        class MyClass:
+            def test_one(self): ...
+
+        parent = self._make_class_parent(cls=MyClass)
+        items = [self._make_function_item(test_name="test_one", parent=parent, is_incremental=False)]
+
+        assert_incremental_classes_fully_collected(items=items)
+
+    def test_non_function_items_ignored(self):
+        """Non-Function items are ignored even with the incremental keyword."""
+        item = MagicMock()
+        item.keywords = {"incremental": True}
+
+        assert_incremental_classes_fully_collected(items=[item])
+
+    def test_non_class_parent_ignored(self):
+        """Function items whose parent is not pytest.Class are ignored."""
+        item = MagicMock()
+        item.__class__ = pytest.Function
+        item.keywords = {"incremental": True}
+        item.parent = MagicMock()
+
+        assert_incremental_classes_fully_collected(items=[item])
+
+    def test_multiple_classes_all_errors_reported(self):
+        """All partial-collection errors across multiple incremental classes are reported together."""
+
+        class ClassA:
+            def test_one(self): ...
+
+            def test_two(self): ...
+
+        class ClassB:
+            def test_alpha(self): ...
+
+            def test_beta(self): ...
+
+        parent_a = self._make_class_parent(cls=ClassA)
+        parent_b = self._make_class_parent(cls=ClassB)
+        items = [
+            self._make_function_item(test_name="test_one", parent=parent_a),
+            self._make_function_item(test_name="test_alpha", parent=parent_b),
+        ]
+
+        with pytest.raises(pytest.UsageError) as exc_info:
+            assert_incremental_classes_fully_collected(items=items)
+
+        error_message = str(exc_info.value)
+        assert "test_two" in error_message
+        assert "test_beta" in error_message
+
+    def test_std_placeholder_methods_excluded(self):
+        """Methods with __test__ = False are treated as STD placeholders and not flagged as missing."""
+
+        class MyClass:
+            def test_one(self): ...
+
+            def test_two(self): ...
+
+        MyClass.test_two.__test__ = False
+
+        parent = self._make_class_parent(cls=MyClass)
+        items = [self._make_function_item(test_name="test_one", parent=parent)]
+
+        assert_incremental_classes_fully_collected(items=items)
+
+    def test_xfail_no_run_methods_excluded(self):
+        """Methods marked xfail(run=False) are not flagged as missing."""
+
+        class MyClass:
+            def test_one(self): ...
+
+            def test_two(self): ...
+
+        MyClass.test_two.pytestmark = [pytest.mark.xfail(run=False)]
+
+        parent = self._make_class_parent(cls=MyClass)
+        items = [self._make_function_item(test_name="test_one", parent=parent)]
+
+        assert_incremental_classes_fully_collected(items=items)
+
+    def test_empty_items_no_error(self):
+        """No error when the items list is empty."""
+        assert_incremental_classes_fully_collected(items=[])
+
+    def _make_class_parent(self, cls):
+        parent = MagicMock()
+        parent.__class__ = pytest.Class
+        parent.cls = cls
+        return parent
+
+    def _make_function_item(self, test_name, parent, is_incremental=True):
+        item = MagicMock()
+        item.__class__ = pytest.Function
+        item.parent = parent
+        item.function.__name__ = test_name
+        item.keywords = {"incremental": True} if is_incremental else {}
+        return item

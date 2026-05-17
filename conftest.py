@@ -50,6 +50,7 @@ from utilities.exceptions import MissingEnvironmentVariableError, StorageSanityE
 from utilities.junit_ai_utils import enrich_junit_xml, setup_ai_analysis
 from utilities.logger import setup_logging
 from utilities.pytest_utils import (
+    assert_incremental_classes_fully_collected,
     config_default_storage_class,
     deploy_run_in_progress_config_map,
     deploy_run_in_progress_namespace,
@@ -844,6 +845,7 @@ def pytest_sessionstart(session):
 
 
 def pytest_collection_finish(session):
+    assert_incremental_classes_fully_collected(items=session.items)
     validate_collected_tests_arch_params(session=session)
     if session.config.getoption("--collect-tests-markers"):
         get_tests_cluster_markers(items=session.items, filepath=session.config.getoption("--tests-markers-file"))
