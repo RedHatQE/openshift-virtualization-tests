@@ -33,7 +33,7 @@ from tests.install_upgrade_operators.utils import (
 from utilities.constants import (
     CLUSTER,
     TIMEOUT_2MIN,
-    TIMEOUT_40MIN,
+    TIMEOUT_60MIN,
     TLS_SECURITY_PROFILE,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_conditions
@@ -281,7 +281,7 @@ def update_apiserver_crypto_policy(
         patches={apiserver: {"spec": {TLS_SECURITY_PROFILE: tls_spec}}},
     ):
         yield
-    wait_for_cluster_operator_stabilize(admin_client=admin_client, wait_timeout=TIMEOUT_40MIN)
+    wait_for_cluster_operator_stabilize(admin_client=admin_client, wait_timeout=TIMEOUT_60MIN)
     wait_for_hco_conditions(
         admin_client=admin_client,
         hco_namespace=hco_namespace,

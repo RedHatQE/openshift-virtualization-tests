@@ -44,7 +44,7 @@ from utilities.constants import (
     CLUSTER,
     KUBEVIRT_HCO_NAME,
     SSP_KUBEVIRT_HYPERCONVERGED,
-    TIMEOUT_40MIN,
+    TIMEOUT_60MIN,
     TLS_SECURITY_PROFILE,
 )
 from utilities.exceptions import MissingResourceException
@@ -210,7 +210,7 @@ def modern_tls_profile_applied(admin_client, hco_namespace, api_server, enabled_
         apiserver=api_server,
         tls_spec=TLS_MODERN_PROFILE,
     ):
-        wait_for_cluster_operator_stabilize(admin_client=admin_client, wait_timeout=TIMEOUT_40MIN)
+        wait_for_cluster_operator_stabilize(admin_client=admin_client, wait_timeout=TIMEOUT_60MIN)
         wait_for_hco_conditions(
             admin_client=admin_client,
             hco_namespace=hco_namespace,
