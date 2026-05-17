@@ -455,11 +455,20 @@ def windows_vm_info_to_compare(windows_vm_for_test):
     return get_vm_comparison_info_dict(vm=windows_vm_for_test)
 
 
-@pytest.fixture(scope="module")
-def windows_vm_for_test(namespace, unprivileged_client):
+@pytest.fixture(scope="package")
+def windows_vm_namespace(admin_client, unprivileged_client):
+    yield from create_ns(
+        admin_client=admin_client,
+        unprivileged_client=unprivileged_client,
+        name=unique_name(name="observability-win-vm"),
+    )
+
+
+@pytest.fixture(scope="package")
+def windows_vm_for_test(windows_vm_namespace, unprivileged_client):
     with create_windows11_wsl2_vm(
         dv_name="dv-for-windows",
-        namespace=namespace.name,
+        namespace=windows_vm_namespace.name,
         client=unprivileged_client,
         vm_name="win-vm-for-test",
         storage_class=py_config["default_storage_class"],
