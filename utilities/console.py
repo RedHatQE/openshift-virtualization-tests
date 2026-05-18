@@ -82,7 +82,10 @@ class Console(object):
     def _connect(self):
         self.child.send("\n\n")
         if self.username:
-            self.child.expect(self.login_prompt)
+            prompt_patterns = self.prompt if isinstance(self.prompt, list) else [self.prompt]
+            if self.child.expect([self.login_prompt] + prompt_patterns) != 0:
+                LOGGER.info(f"{self.vm.name}: Got prompt {self.prompt}")
+                return
             LOGGER.info(f"{self.vm.name}: Using username {self.username}")
             self.child.sendline(self.username)
             if self.password:
@@ -100,11 +103,17 @@ class Console(object):
 
         try:
             self.child.send("\n\n")
-            self.child.expect(self.prompt)
+            try:
+                self.child.expect(self.prompt)
+            except pexpect.exceptions.EOF, pexpect.exceptions.TIMEOUT:
+                pass
             if self.username:
                 self.child.send("exit")
                 self.child.send("\n\n")
-                self.child.expect("login:")
+                try:
+                    self.child.expect("login:")
+                except pexpect.exceptions.EOF, pexpect.exceptions.TIMEOUT:
+                    pass
         finally:
             self.child.close()
 

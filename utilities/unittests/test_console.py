@@ -209,12 +209,13 @@ class TestConsole:
 
         console = Console(vm=mock_vm)
         console.child = MagicMock()
+        console.child.expect.return_value = 0  # simulate login prompt found
 
         console._connect()
 
         # Verify connection sequence
         console.child.send.assert_any_call("\n\n")
-        console.child.expect.assert_any_call("login:")
+        console.child.expect.assert_any_call(["login:", r"#", r"\$"])
         console.child.sendline.assert_any_call("testuser")
         console.child.expect.assert_any_call("Password:")
         console.child.sendline.assert_any_call("testpass")
@@ -233,12 +234,13 @@ class TestConsole:
 
         console = Console(vm=mock_vm)
         console.child = MagicMock()
+        console.child.expect.return_value = 0  # simulate login prompt found
 
         console._connect()
 
         # Verify connection sequence without password
         console.child.send.assert_any_call("\n\n")
-        console.child.expect.assert_any_call("login:")
+        console.child.expect.assert_any_call(["login:", r"#", r"\$"])
         console.child.sendline.assert_any_call("testuser")
         # Should not expect or send password
         password_calls = [call for call in console.child.expect.call_args_list if "Password:" in str(call)]
