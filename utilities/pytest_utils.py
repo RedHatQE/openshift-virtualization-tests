@@ -399,27 +399,6 @@ def exit_pytest_execution(
     pytest.exit(reason=log_message, returncode=return_code)
 
 
-def mark_nmstate_dependent_tests(items: list[pytest.Item]) -> list[pytest.Item]:
-    """
-    Dynamically mark tests that depend on NMState with the 'nmstate' marker.
-
-    Tests are identified by checking if they depend (directly or indirectly) on the
-    nmstate_dependent_placeholder fixture. This placeholder is used as a dependency tracker
-    by all fixtures that interact with NMState Custom Resources (NNCP, NNCE, NNS) either
-    for viewing or for changing the network configuration.
-    This allows filtering tests using pytest markers (e.g., -m nmstate or -m "not nmstate").
-
-    Args:
-        items: List of collected test items.
-
-    Returns:
-        List of collected test items.
-    """
-    for item in items:
-        if "nmstate_dependent_placeholder" in getattr(item, "fixturenames", []):
-            item.add_marker(marker=pytest.mark.nmstate)
-
-    return items
 
 
 def generate_os_matrix_dicts(os_dict: dict[str, list[str]]) -> None:
