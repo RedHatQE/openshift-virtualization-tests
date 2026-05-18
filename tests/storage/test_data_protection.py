@@ -34,7 +34,7 @@ def _assert_cdi_delete(exc_info):
     ],
     indirect=True,
 )
-def test_remove_cdi_dv(skip_test_if_no_hpp_sc, data_volume_multi_storage_scope_function, cdi):
+def test_remove_cdi_dv(data_volume_multi_storage_scope_function, cdi):
     """
     Test the CDI cannot be removed when DataVolume exists
     """
@@ -79,7 +79,6 @@ def test_remove_cdi_dv(skip_test_if_no_hpp_sc, data_volume_multi_storage_scope_f
     indirect=True,
 )
 def test_remove_cdi_vm(
-    skip_test_if_no_hpp_sc,
     data_volume_multi_storage_scope_function,
     vm_instance_from_template_multi_storage_scope_function,
     cdi,

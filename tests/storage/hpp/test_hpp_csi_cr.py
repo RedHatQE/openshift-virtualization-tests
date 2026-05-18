@@ -31,7 +31,7 @@ STORAGE_CLASS_TO_STORAGE_POOL_MAPPING = {
     SC_NAME.HOSTPATH_CSI_PVC_TEMPLATE_OCS_BLOCK: SC_POOL.HOSTPATH_CSI_PVC_TEMPLATE_OCS_BLOCK,
 }
 
-pytestmark = pytest.mark.usefixtures("skip_test_if_no_hpp_requested")
+pytestmark = pytest.mark.hpp
 
 
 @pytest.fixture(scope="module")

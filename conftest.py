@@ -549,6 +549,16 @@ def filter_deprecated_api_tests(items: list[Item], config: Config) -> list[Item]
     return items
 
 
+def filter_hpp_tests(items: list[Item], config: Config) -> list[Item]:
+    marker_expression = config.getoption("-m")
+    if not marker_expression or "hpp" not in marker_expression:
+        discard_tests, items_to_return = remove_tests_from_list(items=items, filter_str="hpp")
+        config.hook.pytest_deselected(items=discard_tests)
+        return items_to_return
+
+    return items
+
+
 def filter_sno_only_tests(items: list[Item], config: Config) -> list[Item]:
     if config.getoption("-m") and "sno" not in config.getoption("-m"):
         discard_tests, items_to_return = remove_tests_from_list(items=items, filter_str="single_node_tests")
@@ -634,6 +644,7 @@ def pytest_collection_modifyitems(session, config, items):
         config.hook.pytest_deselected(items=discard)
     items[:] = filter_deprecated_api_tests(items=items, config=config)
     items[:] = filter_sno_only_tests(items=items, config=config)
+    items[:] = filter_hpp_tests(items=items, config=config)
     items[:] = mark_nmstate_dependent_tests(items=items)
 
 

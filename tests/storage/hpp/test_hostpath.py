@@ -33,7 +33,7 @@ LOGGER = logging.getLogger(__name__)
 HOSTPATH_PROVISIONER_ADMIN = "hostpath-provisioner-admin"
 VOLUME_BINDING_MODE = "volumeBindingMode"
 
-pytestmark = pytest.mark.usefixtures("skip_test_if_no_hpp_sc")
+pytestmark = pytest.mark.hpp
 
 
 def skipped_hco_resources():
