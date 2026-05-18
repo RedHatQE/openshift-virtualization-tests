@@ -1711,11 +1711,12 @@ def determine_upgrade_stream(current_version, target_version):
 
 
 @pytest.fixture(scope="session")
-def upgrade_namespace_scope_session(admin_client, unprivileged_client):
+def upgrade_namespace_scope_session(admin_client, unprivileged_client, pytestconfig):
     yield from create_ns(
         unprivileged_client=unprivileged_client,
         admin_client=admin_client,
         name="test-upgrade-namespace",
+        teardown=not pytestconfig.getoption("--no-teardown"),
     )
 
 

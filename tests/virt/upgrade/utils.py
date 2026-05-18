@@ -187,6 +187,7 @@ def vm_from_template(
     node_selector=None,
     vm_affinity=None,
     gpu_name=None,
+    teardown=True,
 ):
     with VirtualMachineForTestsFromTemplate(
         name=vm_name,
@@ -202,5 +203,6 @@ def vm_from_template(
         node_selector=node_selector,
         vm_affinity=vm_affinity,
         gpu_name=gpu_name,
+        teardown=teardown,
     ) as vm:
         yield vm

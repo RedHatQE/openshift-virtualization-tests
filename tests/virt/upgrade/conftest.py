@@ -47,7 +47,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="session")
-def virt_upgrade_namespace(admin_client, unprivileged_client):
+def virt_upgrade_namespace(admin_client, unprivileged_client, pytestconfig):
     """
     Namespace for optin test VMs with no node selectors/special resources in spec that may block live migration.
     """
@@ -55,11 +55,12 @@ def virt_upgrade_namespace(admin_client, unprivileged_client):
         unprivileged_client=unprivileged_client,
         admin_client=admin_client,
         name="test-virt-upgrade-namespace",
+        teardown=not pytestconfig.getoption("--no-teardown"),
     )
 
 
 @pytest.fixture(scope="session")
-def datasources_for_upgrade(admin_client, dvs_for_upgrade):
+def datasources_for_upgrade(admin_client, dvs_for_upgrade, pytestconfig):
     data_source_list = []
     for dv in dvs_for_upgrade:
         data_source = DataSource(
@@ -73,8 +74,9 @@ def datasources_for_upgrade(admin_client, dvs_for_upgrade):
 
     yield data_source_list
 
-    for data_source in data_source_list:
-        data_source.clean_up()
+    if not pytestconfig.getoption("--no-teardown"):
+        for data_source in data_source_list:
+            data_source.clean_up()
 
 
 @pytest.fixture(scope="session")
@@ -111,8 +113,9 @@ def vms_for_upgrade(
         yield vms_list
 
     finally:
-        for vm in vms_list:
-            vm.clean_up()
+        if not pytestconfig.getoption("--no-teardown"):
+            for vm in vms_list:
+                vm.clean_up()
 
 
 @pytest.fixture(scope="session")
@@ -142,6 +145,7 @@ def vm_with_instancetypes_for_upgrade(
     vm_cluster_instancetype_for_upgrade,
     vm_cluster_preference_for_upgrade,
     datasources_for_upgrade,
+    pytestconfig,
 ):
     with VirtualMachineForTests(
         client=unprivileged_client,
@@ -151,6 +155,7 @@ def vm_with_instancetypes_for_upgrade(
         vm_instance_type=vm_cluster_instancetype_for_upgrade,
         vm_preference=vm_cluster_preference_for_upgrade,
         data_volume_template=data_volume_template_with_source_ref_dict(data_source=datasources_for_upgrade[0]),
+        teardown=not pytestconfig.getoption("--no-teardown"),
     ) as vm:
         yield vm
 
@@ -199,6 +204,7 @@ def manual_run_strategy_vm(
     run_strategy_golden_image_data_source,
     cpu_for_migration,
     rhel_latest_os_params,
+    pytestconfig,
 ):
     with vm_from_template(
         vm_name="manual-run-strategy-vm",
@@ -209,6 +215,7 @@ def manual_run_strategy_vm(
         run_strategy=VirtualMachine.RunStrategy.MANUAL,
         cpu_model=cpu_for_migration,
         eviction_strategy=ES_LIVE_MIGRATE_IF_POSSIBLE,
+        teardown=not pytestconfig.getoption("--no-teardown"),
     ) as vm:
         vm.start()
         yield vm
@@ -221,6 +228,7 @@ def always_run_strategy_vm(
     run_strategy_golden_image_data_source,
     cpu_for_migration,
     rhel_latest_os_params,
+    pytestconfig,
 ):
     with vm_from_template(
         vm_name="always-run-strategy-vm",
@@ -231,6 +239,7 @@ def always_run_strategy_vm(
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
         cpu_model=cpu_for_migration,
         eviction_strategy=ES_LIVE_MIGRATE_IF_POSSIBLE,
+        teardown=not pytestconfig.getoption("--no-teardown"),
     ) as vm:
         # No need to start the VM as the VM will be automatically started (RunStrategy Always)
         yield vm
@@ -252,6 +261,7 @@ def windows_vm(
     unprivileged_client,
     virt_upgrade_namespace,
     modern_cpu_for_migration,
+    pytestconfig,
 ):
     latest_windows_dict = py_config["latest_windows_os_dict"]
     with create_dv(
@@ -278,6 +288,7 @@ def windows_vm(
                 template_labels=latest_windows_dict["template_labels"],
                 data_source=ds,
                 cpu_model=modern_cpu_for_migration,
+                teardown=not pytestconfig.getoption("--no-teardown"),
             ) as vm:
                 running_vm(vm=vm)
                 yield vm
@@ -344,7 +355,7 @@ def post_copy_migration_policy_for_upgrade(admin_client):
 
 
 @pytest.fixture(scope="session")
-def vm_for_post_copy_upgrade(virt_upgrade_namespace, unprivileged_client, cpu_for_migration):
+def vm_for_post_copy_upgrade(virt_upgrade_namespace, unprivileged_client, cpu_for_migration, pytestconfig):
     vm_name = "vm-for-post-copy-upgrade-test"
     with VirtualMachineForTests(
         name=vm_name,
@@ -353,6 +364,7 @@ def vm_for_post_copy_upgrade(virt_upgrade_namespace, unprivileged_client, cpu_fo
         client=unprivileged_client,
         cpu_model=cpu_for_migration,
         additional_labels=VM_LABEL,
+        teardown=not pytestconfig.getoption("--no-teardown"),
     ) as vm:
         running_vm(vm=vm)
         yield vm

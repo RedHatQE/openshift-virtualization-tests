@@ -331,6 +331,12 @@ def pytest_addoption(parser):
             "If not provided, HCO's liveMigrationConfig.network will not be set by the tests setup"
         ),
     )
+    session_group.addoption(
+        "--no-teardown",
+        action="store_true",
+        default=False,
+        help="Skip resource cleanup after test session completes. Useful for post-test cluster inspection.",
+    )
 
     # CI group
     ci_group.addoption(
@@ -405,6 +411,7 @@ def pytest_cmdline_main(config):
     py_config["upgraded_product"] = upgrade_option or config.getoption("--upgrade_custom") or "cnv"
     py_config["cnv_source"] = config.getoption("--cnv-source")
     py_config["cnv_subscription_channel"] = config.getoption("--cnv-channel")
+    py_config["no_teardown"] = config.getoption("--no-teardown")
 
     # Store conformance_tests value for access from utilities
     marker_args = config.getoption("-m")
