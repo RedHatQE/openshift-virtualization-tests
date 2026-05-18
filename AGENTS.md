@@ -39,7 +39,7 @@ Before writing ANY new code:
 - **Use `TYPE_CHECKING` for type-only imports** - wrap imports needed solely for type hints in `if TYPE_CHECKING:` to avoid runtime overhead and circular imports
 - **Google-format docstrings REQUIRED** - for all public functions with non-obvious return values OR side effects
 - **No defensive programming** - fail-fast, don't hide bugs with fake defaults (see exceptions below)
-- **ALWAYS use `uv run`** - NEVER execute `python`, `pip`, or `pytest` directly. Use `uv run python`, `uv run pytest`, `uv add` for package installation.
+- **ALWAYS use `uv run`** - NEVER execute `python`, `pip`, `pytest`, `tox`, or `pre-commit` directly. Use `uv run python`, `uv run pytest`, `uv run tox`, `uv run pre-commit`, `uv add` for package installation.
 - **ALWAYS use absolute imports** - NEVER use relative imports
 - **Prefer specific imports** - use `from module import func` for functions and constants. Use `from package import module` (then `module.Name`) when retaining the module name at the call site meaningfully improves readability (e.g. `libstuntime.ContinuousPing` vs a bare `ContinuousPing` that loses its origin). Never use bare `import module` without a `from` clause.
 - **ALWAYS use named arguments** - for function calls with more than one argument
@@ -248,13 +248,13 @@ Before committing, these checks MUST pass:
 
 ```bash
 # Required before every commit
-pre-commit run --all-files  # Linting and formatting
+uv run pre-commit run --all-files  # Linting and formatting
 
 # Full CI checks
-tox
+uv run tox
 
 # Run utilities unit tests
-tox -e utilities-unittests
+uv run tox -e utilities-unittests
 
 ```
 
