@@ -508,14 +508,14 @@ def generate_instance_type_matrix_dicts(os_dict: dict[str, Any], cpu_arch: str |
             "instance_type_rhel_os_list").
         cpu_arch: Optional architecture suffix.
     """
-    arch_in_preference = cpu_arch != AMD_64
+    add_arch_suffix = cpu_arch != AMD_64
 
     if instance_type_rhel_os_list := os_dict.get("instance_type_rhel_os_list"):
         py_config["instance_type_rhel_os_matrix"] = generate_linux_instance_type_os_matrix(
             os_name="rhel",
             preferences=instance_type_rhel_os_list,
             arch_suffix=cpu_arch,
-            arch_in_preference=arch_in_preference,
+            add_arch_suffix=add_arch_suffix,
         )
         py_config["latest_instance_type_rhel_os_dict"] = generate_latest_os_dict(
             os_matrix=py_config["instance_type_rhel_os_matrix"]
@@ -525,14 +525,14 @@ def generate_instance_type_matrix_dicts(os_dict: dict[str, Any], cpu_arch: str |
             os_name="fedora",
             preferences=instance_type_fedora_os_list,
             arch_suffix=cpu_arch,
-            arch_in_preference=arch_in_preference,
+            add_arch_suffix=add_arch_suffix,
         )
     if instance_type_centos_os_list := os_dict.get("instance_type_centos_os_list"):
         py_config["instance_type_centos_os_matrix"] = generate_linux_instance_type_os_matrix(
             os_name="centos.stream",
             preferences=instance_type_centos_os_list,
             arch_suffix=cpu_arch,
-            arch_in_preference=False,
+            add_arch_suffix=False,
         )
 
 

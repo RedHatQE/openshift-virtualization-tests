@@ -1558,7 +1558,7 @@ class TestGenerateInstanceTypeMatrixDicts:
         ]
 
     @pytest.mark.parametrize(
-        ("cpu_arch", "expected_arch_in_preference"),
+        ("cpu_arch", "expected_add_arch_suffix"),
         [
             (None, True),
             (ARM_64, True),
@@ -1577,7 +1577,7 @@ class TestGenerateInstanceTypeMatrixDicts:
         mock_generate_instance_type,
         sample_instance_type_matrix,
         cpu_arch,
-        expected_arch_in_preference,
+        expected_add_arch_suffix,
     ):
         """Test RHEL matrix generation across architecture variants."""
         mock_generate_instance_type.return_value = sample_instance_type_matrix
@@ -1590,7 +1590,7 @@ class TestGenerateInstanceTypeMatrixDicts:
             os_name="rhel",
             preferences=[RHEL9_PREFERENCE],
             arch_suffix=cpu_arch,
-            arch_in_preference=expected_arch_in_preference,
+            add_arch_suffix=expected_add_arch_suffix,
         )
         assert mock_py_config["instance_type_rhel_os_matrix"] == sample_instance_type_matrix
         assert mock_py_config["latest_instance_type_rhel_os_dict"] == sample_instance_type_matrix[0][RHEL9_PREFERENCE]
@@ -1605,7 +1605,7 @@ class TestGenerateInstanceTypeMatrixDicts:
                     "os_name": OS_FLAVOR_FEDORA,
                     "preferences": [OS_FLAVOR_FEDORA],
                     "arch_suffix": None,
-                    "arch_in_preference": True,
+                    "add_arch_suffix": True,
                 },
                 "instance_type_fedora_os_matrix",
                 [{OS_FLAVOR_FEDORA: {"preference": OS_FLAVOR_FEDORA}}],
@@ -1617,7 +1617,7 @@ class TestGenerateInstanceTypeMatrixDicts:
                     "os_name": OS_FLAVOR_FEDORA,
                     "preferences": [OS_FLAVOR_FEDORA],
                     "arch_suffix": AMD_64,
-                    "arch_in_preference": False,
+                    "add_arch_suffix": False,
                 },
                 "instance_type_fedora_os_matrix",
                 [{OS_FLAVOR_FEDORA: {"preference": OS_FLAVOR_FEDORA}}],
@@ -1629,7 +1629,7 @@ class TestGenerateInstanceTypeMatrixDicts:
                     "os_name": "centos.stream",
                     "preferences": [CENTOS_STREAM9_PREFERENCE],
                     "arch_suffix": None,
-                    "arch_in_preference": False,
+                    "add_arch_suffix": False,
                 },
                 "instance_type_centos_os_matrix",
                 [{CENTOS_STREAM9_PREFERENCE: {"preference": CENTOS_STREAM9_PREFERENCE}}],
@@ -1641,7 +1641,7 @@ class TestGenerateInstanceTypeMatrixDicts:
                     "os_name": "centos.stream",
                     "preferences": [CENTOS_STREAM9_PREFERENCE],
                     "arch_suffix": S390X,
-                    "arch_in_preference": False,
+                    "add_arch_suffix": False,
                 },
                 "instance_type_centos_os_matrix",
                 [{CENTOS_STREAM9_PREFERENCE: {"preference": CENTOS_STREAM9_PREFERENCE}}],
@@ -1653,7 +1653,7 @@ class TestGenerateInstanceTypeMatrixDicts:
                     "os_name": "centos.stream",
                     "preferences": [CENTOS_STREAM9_PREFERENCE],
                     "arch_suffix": ARM_64,
-                    "arch_in_preference": False,
+                    "add_arch_suffix": False,
                 },
                 "instance_type_centos_os_matrix",
                 [{CENTOS_STREAM9_PREFERENCE: {"preference": CENTOS_STREAM9_PREFERENCE}}],
