@@ -3,7 +3,6 @@ import logging
 import shlex
 from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Any
 
 import requests
 from kubernetes.dynamic import DynamicClient
@@ -22,7 +21,6 @@ from ocp_resources.storage_class import StorageClass
 from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.template import Template
 from ocp_resources.upload_token_request import UploadTokenRequest
-from ocp_resources.virtual_machine_restore import VirtualMachineRestore
 from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
@@ -538,64 +536,3 @@ def check_file_in_vm(
         vm_console.expect(pattern=file_name, timeout=TIMEOUT_20SEC)
         vm_console.sendline(f"cat {file_name}")
         vm_console.expect(pattern=file_content, timeout=TIMEOUT_20SEC)
-
-
-class VirtualMachineRestoreWithPolicy(VirtualMachineRestore):
-    """VirtualMachineRestore with custom volumeRestorePolicy."""
-
-    def __init__(self, volume_restore_policy: str, **kwargs):
-        """
-        Initialize VirtualMachineRestore with volumeRestorePolicy.
-
-        Args:
-            volume_restore_policy: Policy for volume restoration (e.g., "PrefixTargetName")
-            **kwargs: Arguments for VirtualMachineRestore parent class
-        """
-        super().__init__(**kwargs)
-        self.volume_restore_policy = volume_restore_policy
-
-    def to_dict(self):
-        super().to_dict()
-        self.res["spec"]["volumeRestorePolicy"] = self.volume_restore_policy
-
-
-@contextmanager
-def vm_restore_with_prefix_policy(
-    name: str,
-    namespace: str,
-    vm_name: str,
-    snapshot_name: str,
-    client: DynamicClient,
-    prefix_policy: str,
-    dry_run: bool = False,
-    **kwargs: Any,
-) -> Generator[VirtualMachineRestore]:
-    """
-    Creates VirtualMachineRestore with volumeRestorePolicy: PrefixTargetName.
-
-    This allows restoring snapshots to new VMs without overwriting original PVCs.
-    The restored PVCs will be prefixed with the target VM name.
-
-    Args:
-        name: Restore object name
-        namespace: Kubernetes namespace
-        client: Kubernetes client (must be admin)
-        vm_name: Target VM name (will be created/updated)
-        snapshot_name: VirtualMachineSnapshot name to restore from
-        prefix_policy: VolumeRestorePolicy to use
-        **kwargs: Additional arguments for VirtualMachineRestore
-
-    Yields:
-        VirtualMachineRestore: Configured restore object
-    """
-    with VirtualMachineRestoreWithPolicy(
-        name=name,
-        namespace=namespace,
-        vm_name=vm_name,
-        snapshot_name=snapshot_name,
-        client=client,
-        dry_run=dry_run,
-        volume_restore_policy=prefix_policy,
-        **kwargs,
-    ) as restore:
-        yield restore
