@@ -155,13 +155,13 @@ def test_successful_vm_restart_with_cloned_dv(
 
 @pytest.mark.tier3
 @pytest.mark.polarion("CNV-3638")
-def test_successful_vm_from_cloned_dv_windows_with_vtpm(
+def test_successful_vm_from_cloned_dv_windows(
     unprivileged_client,
     namespace,
-    cloned_windows_dv_from_registry_scope_function,
+    modern_cpu_for_migration,
+    cloned_windows_with_vtpm_dv_from_registry_scope_function,
 ):
     """Test cloning Windows 2022 DV and creating VM with vTPM using instance types."""
-
     with VirtualMachineForTests(
         name=f"vm-{WIN_2K22}-vtpm",
         namespace=namespace.name,
@@ -169,9 +169,10 @@ def test_successful_vm_from_cloned_dv_windows_with_vtpm(
         os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK,
         vm_instance_type=VirtualMachineClusterInstancetype(name=U1_LARGE, client=unprivileged_client),
         vm_preference=VirtualMachineClusterPreference(name=WINDOWS_2K22_PREFERENCE, client=unprivileged_client),
-        data_volume=cloned_windows_dv_from_registry_scope_function,
+        data_volume=cloned_windows_with_vtpm_dv_from_registry_scope_function,
+        cpu_model=modern_cpu_for_migration,
     ) as vm:
-        vm.start()
+        running_vm(vm=vm)
         wait_for_windows_vm(vm=vm, version="2022", timeout=WINDOWS_CLONE_TIMEOUT)
         validate_os_info_vmi_vs_windows_os(vm=vm)
 

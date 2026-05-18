@@ -70,7 +70,7 @@ def fedora_dv_with_block_volume_mode(
 
 
 @pytest.fixture()
-def source_dv_windows_registry_scope_function(
+def source_dv_windows_with_vtpm_registry_scope_function(
     unprivileged_client,
     namespace,
     storage_class_name_scope_function,
@@ -79,36 +79,38 @@ def source_dv_windows_registry_scope_function(
     secret = get_artifactory_secret(namespace=namespace.name)
     cert = get_artifactory_config_map(namespace=namespace.name)
 
-    with create_dv(
-        client=unprivileged_client,
-        dv_name=f"dv-source-{WIN_2K22}-registry",
-        namespace=namespace.name,
-        source="registry",
-        size=Images.Windows.CONTAINER_DISK_DV_SIZE,
-        storage_class=storage_class_name_scope_function,
-        url=f"{get_test_artifact_server_url(schema='registry')}/{get_windows_container_disk_path(os_value=WIN_2K22)}",
-        secret=secret,
-        cert_configmap=cert.name,
-    ) as dv:
-        dv.wait_for_dv_success(timeout=WINDOWS_CLONE_TIMEOUT)
-        yield dv
-    cleanup_artifactory_secret_and_config_map(artifactory_secret=secret, artifactory_config_map=cert)
+    try:
+        with create_dv(
+            client=unprivileged_client,
+            dv_name=f"dv-source-{WIN_2K22}-registry",
+            namespace=namespace.name,
+            source="registry",
+            size=Images.Windows.CONTAINER_DISK_DV_SIZE,
+            storage_class=storage_class_name_scope_function,
+            url=f"{get_test_artifact_server_url(schema='registry')}/{get_windows_container_disk_path(os_value=WIN_2K22)}",
+            secret=secret,
+            cert_configmap=cert.name,
+        ) as dv:
+            dv.wait_for_dv_success(timeout=WINDOWS_CLONE_TIMEOUT)
+            yield dv
+    finally:
+        cleanup_artifactory_secret_and_config_map(artifactory_secret=secret, artifactory_config_map=cert)
 
 
 @pytest.fixture()
-def cloned_windows_dv_from_registry_scope_function(
+def cloned_windows_with_vtpm_dv_from_registry_scope_function(
     unprivileged_client,
-    source_dv_windows_registry_scope_function,
+    source_dv_windows_with_vtpm_registry_scope_function,
 ):
     """Fixture that creates a cloned DataVolume from registry source."""
     with create_dv(
         client=unprivileged_client,
         source="pvc",
         dv_name=f"dv-target-{WIN_2K22}-vtpm",
-        namespace=source_dv_windows_registry_scope_function.namespace,
-        size=source_dv_windows_registry_scope_function.size,
-        source_pvc=source_dv_windows_registry_scope_function.name,
-        storage_class=source_dv_windows_registry_scope_function.storage_class,
+        namespace=source_dv_windows_with_vtpm_registry_scope_function.namespace,
+        size=source_dv_windows_with_vtpm_registry_scope_function.size,
+        source_pvc=source_dv_windows_with_vtpm_registry_scope_function.name,
+        storage_class=source_dv_windows_with_vtpm_registry_scope_function.storage_class,
     ) as cdv:
         cdv.wait_for_dv_success(timeout=WINDOWS_CLONE_TIMEOUT)
         yield cdv
