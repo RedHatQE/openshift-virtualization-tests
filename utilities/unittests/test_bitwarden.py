@@ -204,7 +204,7 @@ class TestGetCnvTestsSecretByName:
     @patch("bitwarden.get_all_cnv_tests_secrets")
     def test_get_cnv_tests_secret_by_name_disabled_bitwarden(self, mock_get_all):
         """Test that --disabled-bitwarden flag returns empty dict without calling Bitwarden"""
-        from unittest.mock import MagicMock
+        from unittest.mock import MagicMock  # noqa: PLC0415
 
         # Clear cache before test
         get_cnv_tests_secret_by_name.cache_clear()

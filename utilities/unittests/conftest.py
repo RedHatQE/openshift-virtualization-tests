@@ -55,7 +55,7 @@ utilities.data_collector = mock_data_collector  # type: ignore[attr-defined]
 @pytest.fixture(autouse=True)
 def setup_py_config():
     """Setup py_config for tests that need data_collector configuration"""
-    from pytest_testconfig import config as py_config
+    from pytest_testconfig import config as py_config  # noqa: PLC0415
 
     # Ensure data_collector config is set up
     if "data_collector" not in py_config:
@@ -127,7 +127,7 @@ def mock_vm_no_namespace():
 @pytest.fixture(autouse=True)
 def mock_logger():
     """Auto-mock logger for all tests to prevent logging issues"""
-    import logging
+    import logging  # noqa: PLC0415
 
     # Save original getLogger to avoid recursion
     original_get_logger = logging.getLogger

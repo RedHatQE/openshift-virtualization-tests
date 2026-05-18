@@ -594,7 +594,7 @@ def update_cpu_arch_related_config(cpu_arch_option: str) -> None:
         py_config["cpu_arch"] = arch
 
         # TODO: remove this when utilities modules are refactored
-        import utilities.constants as constants_module
+        import utilities.constants as constants_module  # noqa: PLC0415
 
         # Due to the way the constants module is structured, there's no way to set correctly Images value there
         # This is due to change when constants (and other utilities modules) are refactored

@@ -8,6 +8,7 @@ output-format = "grouped"
 exclude = [".git", ".venv", ".mypy_cache", ".tox", "__pycache__"]
 
 [tool.ruff.lint]
+extend-select = ["PLC0415"]
 # TODO: Each ignored rule below should be addressed in a dedicated PR.
 ignore = [
   "SIM102",  # collapsible-if — nested ifs are often more readable
