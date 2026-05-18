@@ -68,21 +68,35 @@ reviews:
       requirements: "Must be under 120 chars and clearly describe the change."
     description:
       mode: error
+    docstrings:
+      mode: "off"
     custom_checks:
       - name: "STP link required"
         mode: error
         instructions: |
-          Every new test file (test_*.py) MUST include an STP link in the
-          module, class, or test docstring. If no STP exists, an RFE or
-          Jira link is required instead. Fail if a new test file has
-          neither.
+          Check ONLY code that is newly added (not modified) in this PR's diff.
+          This applies to two cases:
+          A) A newly added test file (test_*.py)
+          B) A newly added test function (def test_*) in an existing test file
+
+          For each case, at least one of the following MUST appear in the
+          module, class, or test function docstring:
+          - A line with "STP:" followed by a URL
+          - A line with "RFE:" followed by an issue tracker URL
+          - A line with "Jira:" followed by an issue tracker URL
+
+          If a module-level or class-level STP link already exists in the file,
+          newly added test functions in that same file are considered covered.
+          The @pytest.mark.polarion decorator alone does NOT satisfy this requirement.
+
+          Pass if no new test files and no new test functions are added in this PR.
 
   # Auto-review configuration
   auto_review:
     enabled: true
     auto_incremental_review: true
     drafts: false
-    auto_pause_after_reviewed_commits: 10
+    auto_pause_after_reviewed_commits: 0
     ignore_title_keywords:
       - "WIP"
     base_branches:
