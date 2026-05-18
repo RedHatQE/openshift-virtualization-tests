@@ -3,7 +3,8 @@ from collections import namedtuple
 from ipaddress import ip_interface
 
 from libs.net.ip import random_ipv4_address
-from utilities.network import cloud_init_network_data, get_vmi_mac_address_by_iface_name
+from libs.net.vmspec import lookup_iface_status
+from utilities.network import cloud_init_network_data
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
@@ -144,8 +145,14 @@ class VirtualMachineWithMultipleAttachments(VirtualMachineForTests):
 
 def assert_macs_preseved(vm):
     for iface in vm.get_interfaces():
-        assert iface.macAddress == get_vmi_mac_address_by_iface_name(vmi=vm.vmi, iface_name=iface.name)
+        assert (
+            iface.macAddress
+            == lookup_iface_status(vm=vm, iface_name=iface.name, predicate=lambda _: True, timeout=1).mac
+        )
 
 
 def assert_manual_mac_configured(vm, iface_config):
-    assert iface_config.mac_address == get_vmi_mac_address_by_iface_name(vmi=vm.vmi, iface_name=iface_config.name)
+    assert (
+        iface_config.mac_address
+        == lookup_iface_status(vm=vm, iface_name=iface_config.name, predicate=lambda _: True, timeout=1).mac
+    )

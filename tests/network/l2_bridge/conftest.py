@@ -7,6 +7,7 @@ from pyhelper_utils.shell import run_ssh_commands
 
 import tests.network.libs.nodenetworkconfigurationpolicy as libnncp
 from libs.net.ip import random_ipv4_address
+from libs.net.vmspec import lookup_iface_status
 from tests.network.l2_bridge.libl2bridge import DHCP_INTERFACE_NAME, bridge_attached_vm
 from tests.network.libs.dhcpd import (
     DHCP_IP_RANGE_END,
@@ -21,7 +22,6 @@ from utilities.constants import LINUX_BRIDGE, WORKER_NODE_LABEL_KEY
 from utilities.data_utils import name_prefix
 from utilities.infra import get_node_selector_dict
 from utilities.network import (
-    get_vmi_mac_address_by_iface_name,
     network_device,
     network_nad,
 )
@@ -182,7 +182,9 @@ def l2_bridge_running_vm_a(
         DHCP_IP_SUBNET=DHCP_IP_SUBNET,
         DHCP_IP_RANGE_START=DHCP_IP_RANGE_START,
         DHCP_IP_RANGE_END=DHCP_IP_RANGE_END,
-        CLIENT_MAC_ADDRESS=get_vmi_mac_address_by_iface_name(vmi=l2_bridge_running_vm_b.vmi, iface_name=dhcp_nad.name),
+        CLIENT_MAC_ADDRESS=lookup_iface_status(
+            vm=l2_bridge_running_vm_b, iface_name=dhcp_nad.name, predicate=lambda _: True, timeout=1
+        ).mac,
         UNIQUE_CLIENT_ID=UNIQUE_CLIENT_ID,
     )
     cloud_init_extra_user_data = {
