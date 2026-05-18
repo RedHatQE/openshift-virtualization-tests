@@ -238,7 +238,6 @@ This is a test suite - internal APIs have NO backward compatibility requirements
   - `##### Which issue(s) this PR fixes:` — must be present (may be empty)
   - `##### Special notes for reviewer:` — must be present (may be empty)
   - `##### jira-ticket:` — must be present (may be empty)
-  - `##### Short description:` and `##### More details:` are optional and may be omitted
 
 ## Essential Commands
 
