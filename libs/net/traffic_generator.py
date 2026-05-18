@@ -53,6 +53,9 @@ class TcpServer:
         vm (BaseVirtualMachine): The virtual machine where the server runs.
         port (int): The port on which the server listens for client connections.
         bind_ip (str): The IP address to bind the server to (optional).
+        netns (str): When set, launches iperf3 inside this network namespace via
+            ``sudo ip netns exec <netns>``. pgrep/pkill still use the bare iperf3
+            cmdline, which is visible from the default namespace via /proc.
     """
 
     def __init__(
@@ -60,15 +63,18 @@ class TcpServer:
         vm: BaseVirtualMachine,
         port: int,
         bind_ip: str | None = None,
+        netns: str | None = None,
     ):
         self._vm = vm
         self._port = port
-        self._cmd = f"{_IPERF_BIN} --server --port {self._port} --one-off"
+        self._cmd = f"{_IPERF_BIN} --server --port {self._port}"
+        self._cmd += "" if netns else " --one-off"
         self._cmd += f" --bind {bind_ip}" if bind_ip else ""
+        self._exec_cmd = f"sudo ip netns exec {netns} {self._cmd}" if netns else self._cmd
 
     def __enter__(self) -> "TcpServer":
         self._vm.console(
-            commands=[f"{self._cmd} &"],
+            commands=[f"{self._exec_cmd} >/dev/null 2>&1 &"],
             timeout=_DEFAULT_CMD_TIMEOUT_SEC,
         )
         self._ensure_is_running()
@@ -108,14 +114,16 @@ class VMTcpClient(BaseTcpClient):
         server_ip: str,
         server_port: int,
         maximum_segment_size: int = 0,
+        bind_ip: str | None = None,
     ):
         super().__init__(server_ip=server_ip, server_port=server_port)
         self._vm = vm
+        self._cmd += f" --bind {bind_ip}" if bind_ip else ""
         self._cmd += f" --set-mss {maximum_segment_size}" if maximum_segment_size else ""
 
     def __enter__(self) -> "VMTcpClient":
         self._vm.console(
-            commands=[f"{self._cmd} &"],
+            commands=[f"{self._cmd} >/dev/null 2>&1 &"],
             timeout=_DEFAULT_CMD_TIMEOUT_SEC,
         )
         self._ensure_is_running()
@@ -243,6 +251,36 @@ def active_tcp_connections(
 
 
 @contextlib.contextmanager
+def ns_client_server_active_connection(
+    client_vm: BaseVirtualMachine,
+    server_vm: BaseVirtualMachine,
+    server_ip: str,
+    server_netns: str,
+    port: int = IPERF_SERVER_PORT,
+    client_bind_ip: str | None = None,
+) -> Generator[tuple[TcpServer, VMTcpClient], None, None]:
+    """Start iperf3 client-server connection with the server inside a network namespace.
+
+    The server binds to server_ip inside server_netns on server_vm.
+    The client connects normally from the default namespace on client_vm.
+
+    Args:
+        client_vm: VM running the iperf3 client.
+        server_vm: VM running the iperf3 server.
+        server_ip: IP address the server binds to (must be configured inside server_netns).
+        server_netns: Network namespace name on server_vm where the server listens.
+        port: TCP port for iperf3 connection.
+        client_bind_ip: Source IP to bind the iperf3 client to.
+
+    Yields:
+        tuple[TcpServer, VMTcpClient]: Server and client with active traffic flowing.
+    """
+    with TcpServer(vm=server_vm, port=port, bind_ip=server_ip, netns=server_netns) as server:
+        with VMTcpClient(vm=client_vm, server_ip=server_ip, server_port=port, bind_ip=client_bind_ip) as client:
+            yield server, client
+
+
+@contextlib.contextmanager
 def client_server_active_connection(
     client_vm: BaseVirtualMachine,
     server_vm: BaseVirtualMachine,
@@ -250,6 +288,7 @@ def client_server_active_connection(
     port: int = IPERF_SERVER_PORT,
     maximum_segment_size: int = 0,
     ip_family: int = 4,
+    client_bind_ip: str | None = None,
 ) -> Generator[tuple[VMTcpClient, TcpServer], None, None]:
     """Start iperf3 client-server connection with continuous TCP traffic flow.
 
@@ -265,6 +304,9 @@ def client_server_active_connection(
                               Use for jumbo frame testing.
                               Default value is 0 (do not change mss).
         ip_family: IP version to use (4 for IPv4, 6 for IPv6). Default is 4.
+        client_bind_ip: Source IP to bind the iperf3 client to. When set, forces traffic
+                        through the interface that owns this IP — use to verify connectivity
+                        on a specific VM interface after a NAD reference change.
 
     Yields:
         tuple[VMTcpClient, TcpServer]: Client and server objects with active traffic flowing.
@@ -279,5 +321,6 @@ def client_server_active_connection(
             server_ip=server_ip,
             server_port=port,
             maximum_segment_size=maximum_segment_size,
+            bind_ip=client_bind_ip,
         ) as client:
             yield client, server
