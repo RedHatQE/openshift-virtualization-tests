@@ -100,6 +100,7 @@ def test_successful_clone_of_large_image(
 @pytest.mark.polarion("CNV-2148")
 @pytest.mark.gating()
 @pytest.mark.post_upgrade()
+@pytest.mark.s390x
 def test_successful_vm_restart_with_cloned_dv(
     unprivileged_client,
     namespace,
@@ -211,6 +212,7 @@ def test_successful_vm_from_cloned_dv_windows(
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_successful_snapshot_clone(
     unprivileged_client,
     data_volume_snapshot_capable_storage_scope_function,

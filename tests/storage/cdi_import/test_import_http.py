@@ -101,6 +101,7 @@ def test_empty_url(namespace, storage_class_name_scope_module, unprivileged_clie
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_successful_import_image(
     dv_from_http_import,
     storage_class_name_scope_module,
@@ -158,6 +159,7 @@ def test_successful_import_secure_archive(
 )
 @pytest.mark.sno
 @pytest.mark.gating
+@pytest.mark.s390x
 def test_successful_import_secure_image(internal_http_configmap, dv_from_http_import):
     dv_from_http_import.wait_for_dv_success()
 

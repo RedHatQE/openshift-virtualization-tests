@@ -38,6 +38,7 @@ pytestmark = pytest.mark.usefixtures("xfail_if_gcp_storage_class")
     ],
     indirect=True,
 )
+@pytest.mark.s390x
 def test_sequential_disk_expand(
     rhel_dv_for_online_resize,
     rhel_vm_for_online_resize,
