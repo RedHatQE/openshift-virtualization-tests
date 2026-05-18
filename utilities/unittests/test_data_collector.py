@@ -301,7 +301,7 @@ class TestSetDataCollectorDirectory:
         set_data_collector_directory(mock_item, "/output/dir")
 
         mock_prepare_dir.assert_called_once_with(item=mock_item, output_dir="/output/dir")
-        from utilities.data_collector import py_config
+        from utilities.data_collector import py_config  # noqa: PLC0415
 
         assert py_config["data_collector"]["collector_directory"] == "/prepared/dir/path"
 

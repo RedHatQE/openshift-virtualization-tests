@@ -19,7 +19,7 @@ class TestStorageSanityCheck:
     @patch("utilities.sanity.LOGGER")
     def test_storage_sanity_check_matching_storage_classes(self, mock_logger):
         """Test with matching storage classes - should return True"""
-        from utilities.sanity import storage_sanity_check
+        from utilities.sanity import storage_sanity_check  # noqa: PLC0415
 
         cluster_storage_classes = ["sc1", "sc2", "sc3"]
 
@@ -32,7 +32,7 @@ class TestStorageSanityCheck:
     @patch("utilities.sanity.LOGGER")
     def test_storage_sanity_check_missing_storage_classes(self, mock_logger):
         """Test with missing storage classes - should return False and log error"""
-        from utilities.sanity import storage_sanity_check
+        from utilities.sanity import storage_sanity_check  # noqa: PLC0415
 
         cluster_storage_classes = ["sc1", "sc2"]  # sc3 is missing
 
@@ -48,7 +48,7 @@ class TestStorageSanityCheck:
     @patch("utilities.sanity.LOGGER")
     def test_storage_sanity_check_extra_storage_classes(self, mock_logger):
         """Test with extra storage classes on cluster - should return True (extra classes are allowed)"""
-        from utilities.sanity import storage_sanity_check
+        from utilities.sanity import storage_sanity_check  # noqa: PLC0415
 
         # The function only checks if all expected storage classes exist
         # Extra storage classes on the cluster are allowed
@@ -65,7 +65,7 @@ class TestStorageSanityCheck:
     @patch("utilities.sanity.LOGGER")
     def test_storage_sanity_check_different_order(self, mock_logger):
         """Test with matching storage classes in different order - should return True"""
-        from utilities.sanity import storage_sanity_check
+        from utilities.sanity import storage_sanity_check  # noqa: PLC0415
 
         cluster_storage_classes = ["sc1", "sc2", "sc3"]  # different order from config
 
@@ -78,7 +78,7 @@ class TestStorageSanityCheck:
     @patch("utilities.sanity.LOGGER")
     def test_storage_sanity_check_empty_storage_class_matrix(self, mock_logger):
         """Test with empty storage class matrix - should return True"""
-        from utilities.sanity import storage_sanity_check
+        from utilities.sanity import storage_sanity_check  # noqa: PLC0415
 
         cluster_storage_classes = []
 
@@ -91,7 +91,7 @@ class TestStorageSanityCheck:
     @patch("utilities.sanity.LOGGER")
     def test_storage_sanity_check_logging_behavior(self, mock_logger):
         """Test logging behavior for mismatches"""
-        from utilities.sanity import storage_sanity_check
+        from utilities.sanity import storage_sanity_check  # noqa: PLC0415
 
         cluster_storage_classes = ["sc1"]  # sc2 is missing
 
@@ -109,7 +109,7 @@ class TestClusterSanity:
     @patch("utilities.sanity.LOGGER")
     def test_cluster_sanity_skip_cluster_health_check_marker(self, mock_logger):
         """Test skip when '-m cluster_health_check' marker is present"""
-        from utilities.sanity import cluster_sanity
+        from utilities.sanity import cluster_sanity  # noqa: PLC0415
 
         mock_request = MagicMock()
         mock_request.config.getoption.return_value = "cluster_health_check"
@@ -127,7 +127,7 @@ class TestClusterSanity:
     @patch("utilities.sanity.LOGGER")
     def test_cluster_sanity_skip_check_flag(self, mock_logger):
         """Test skip when --cluster-sanity-skip-check flag is set"""
-        from utilities.sanity import cluster_sanity
+        from utilities.sanity import cluster_sanity  # noqa: PLC0415
 
         mock_request = MagicMock()
         mock_request.config.getoption.return_value = ""
@@ -154,7 +154,7 @@ class TestClusterSanity:
         self, mock_logger, _mock_wait_hco, mock_storage_sanity, _mock_check_vm, _mock_check_webhook
     ):
         """Test skip storage check when --cluster-sanity-skip-storage-check flag is set"""
-        from utilities.sanity import cluster_sanity
+        from utilities.sanity import cluster_sanity  # noqa: PLC0415
 
         mock_request = MagicMock()
         mock_request.config.getoption.return_value = ""
@@ -194,7 +194,7 @@ class TestClusterSanity:
         _mock_check_webhook,
     ):
         """Test skip nodes check when --cluster-sanity-skip-nodes-check flag is set"""
-        from utilities.sanity import cluster_sanity
+        from utilities.sanity import cluster_sanity  # noqa: PLC0415
 
         mock_request = MagicMock()
         mock_request.config.getoption.return_value = ""
@@ -236,7 +236,7 @@ class TestClusterSanity:
         mock_check_webhook,
     ):
         """Test successful full sanity check (all checks pass)"""
-        from utilities.sanity import cluster_sanity
+        from utilities.sanity import cluster_sanity  # noqa: PLC0415
 
         mock_request = MagicMock()
         mock_request.config.getoption.return_value = ""
@@ -281,7 +281,7 @@ class TestClusterSanity:
         _mock_check_webhook,
     ):
         """Test StorageSanityError raised and exit_pytest_execution called"""
-        from utilities.sanity import cluster_sanity
+        from utilities.sanity import cluster_sanity  # noqa: PLC0415
 
         mock_request = MagicMock()
         mock_request.config.getoption.return_value = ""
@@ -319,7 +319,7 @@ class TestClusterSanity:
         _mock_check_webhook,
     ):
         """Test NodeUnschedulableError caught and exit_pytest_execution called"""
-        from utilities.sanity import cluster_sanity
+        from utilities.sanity import cluster_sanity  # noqa: PLC0415
 
         mock_request = MagicMock()
         mock_request.config.getoption.return_value = ""
@@ -360,7 +360,7 @@ class TestClusterSanity:
         _mock_check_webhook,
     ):
         """Test NodeNotReadyError caught and exit_pytest_execution called"""
-        from utilities.sanity import cluster_sanity
+        from utilities.sanity import cluster_sanity  # noqa: PLC0415
 
         mock_request = MagicMock()
         mock_request.config.getoption.return_value = ""
@@ -401,7 +401,7 @@ class TestClusterSanity:
         _mock_check_webhook,
     ):
         """Test ClusterSanityError caught and exit_pytest_execution called"""
-        from utilities.sanity import cluster_sanity
+        from utilities.sanity import cluster_sanity  # noqa: PLC0415
 
         mock_request = MagicMock()
         mock_request.config.getoption.return_value = ""
@@ -446,7 +446,7 @@ class TestClusterSanity:
         _mock_check_webhook,
     ):
         """Test TimeoutExpiredError during wait_for_pods_running converted to ClusterSanityError"""
-        from utilities.sanity import cluster_sanity
+        from utilities.sanity import cluster_sanity  # noqa: PLC0415
 
         mock_request = MagicMock()
         mock_request.config.getoption.return_value = ""
@@ -492,7 +492,7 @@ class TestClusterSanity:
         mock_check_webhook,
     ):
         """Test all components called in correct order (storage, nodes, webhook, HCO)"""
-        from utilities.sanity import cluster_sanity
+        from utilities.sanity import cluster_sanity  # noqa: PLC0415
 
         mock_request = MagicMock()
         mock_request.config.getoption.return_value = ""
@@ -563,7 +563,7 @@ class TestClusterSanity:
         _mock_check_webhook,
     ):
         """Test assert_nodes_in_healthy_condition called with correct parameters"""
-        from utilities.sanity import cluster_sanity
+        from utilities.sanity import cluster_sanity  # noqa: PLC0415
 
         mock_request = MagicMock()
         mock_request.config.getoption.return_value = ""
@@ -602,7 +602,7 @@ class TestClusterSanity:
         _mock_check_webhook,
     ):
         """Test assert_nodes_schedulable called"""
-        from utilities.sanity import cluster_sanity
+        from utilities.sanity import cluster_sanity  # noqa: PLC0415
 
         mock_request = MagicMock()
         mock_request.config.getoption.return_value = ""
@@ -642,7 +642,7 @@ class TestClusterSanity:
         _mock_check_webhook,
     ):
         """Test wait_for_pods_running called with correct namespace and filter"""
-        from utilities.sanity import cluster_sanity
+        from utilities.sanity import cluster_sanity  # noqa: PLC0415
 
         mock_request = MagicMock()
         mock_request.config.getoption.return_value = ""
@@ -686,7 +686,7 @@ class TestClusterSanity:
         _mock_check_webhook,
     ):
         """Test wait_for_hco_conditions called"""
-        from utilities.sanity import cluster_sanity
+        from utilities.sanity import cluster_sanity  # noqa: PLC0415
 
         mock_request = MagicMock()
         mock_request.config.getoption.return_value = ""
@@ -731,7 +731,7 @@ class TestClusterSanity:
         _mock_check_webhook,
     ):
         """Test junitxml_property passed to exit_pytest_execution"""
-        from utilities.sanity import cluster_sanity
+        from utilities.sanity import cluster_sanity  # noqa: PLC0415
 
         mock_request = MagicMock()
         mock_request.config.getoption.return_value = ""
@@ -762,7 +762,7 @@ class TestClusterSanity:
         self, mock_logger, _mock_wait_hco, mock_storage_sanity, mock_check_vm, mock_check_webhook
     ):
         """Test skip webhook check when --cluster-sanity-skip-webhook-check flag is set"""
-        from utilities.sanity import cluster_sanity
+        from utilities.sanity import cluster_sanity  # noqa: PLC0415
 
         mock_request = MagicMock()
         mock_request.config.getoption.return_value = ""
@@ -796,7 +796,7 @@ class TestDiscoverWebhookServices:
         self, _mock_logger, mock_mutating_class, mock_validating_class
     ):
         """Test discovery finds services in the HCO namespace"""
-        from utilities.sanity import _discover_webhook_services
+        from utilities.sanity import _discover_webhook_services  # noqa: PLC0415
 
         # Set __name__ attributes for the mocks
         mock_mutating_class.__name__ = "MutatingWebhookConfiguration"
@@ -833,7 +833,7 @@ class TestDiscoverWebhookServices:
         self, _mock_logger, mock_mutating_class, mock_validating_class
     ):
         """Test discovery ignores services in other namespaces"""
-        from utilities.sanity import _discover_webhook_services
+        from utilities.sanity import _discover_webhook_services  # noqa: PLC0415
 
         # Set __name__ attributes for the mocks
         mock_mutating_class.__name__ = "MutatingWebhookConfiguration"
@@ -862,7 +862,7 @@ class TestDiscoverWebhookServices:
         self, _mock_logger, mock_mutating_class, mock_validating_class
     ):
         """Test discovery skips URL-based webhooks (no service config)"""
-        from utilities.sanity import _discover_webhook_services
+        from utilities.sanity import _discover_webhook_services  # noqa: PLC0415
 
         # Set __name__ attributes for the mocks
         mock_mutating_class.__name__ = "MutatingWebhookConfiguration"
@@ -890,7 +890,7 @@ class TestDiscoverWebhookServices:
     @patch("utilities.sanity.LOGGER")
     def test_discover_webhook_services_empty_webhooks(self, _mock_logger, mock_mutating_class, mock_validating_class):
         """Test discovery handles webhook configs with no webhooks"""
-        from utilities.sanity import _discover_webhook_services
+        from utilities.sanity import _discover_webhook_services  # noqa: PLC0415
 
         # Set __name__ attributes for the mocks
         mock_mutating_class.__name__ = "MutatingWebhookConfiguration"
@@ -914,7 +914,7 @@ class TestDiscoverWebhookServices:
     @patch("utilities.sanity.LOGGER")
     def test_discover_webhook_services_deduplicates(self, _mock_logger, mock_mutating_class, mock_validating_class):
         """Test discovery deduplicates services referenced by multiple webhooks"""
-        from utilities.sanity import _discover_webhook_services
+        from utilities.sanity import _discover_webhook_services  # noqa: PLC0415
 
         # Set __name__ attributes for the mocks
         mock_mutating_class.__name__ = "MutatingWebhookConfiguration"
@@ -950,7 +950,7 @@ class TestCheckWebhookEndpointsHealth:
     @patch("utilities.sanity.LOGGER")
     def test_check_webhook_endpoints_health_all_healthy(self, _mock_logger, mock_endpoints_class, mock_discover):
         """Test successful check when all endpoints are healthy"""
-        from utilities.sanity import check_webhook_endpoints_health
+        from utilities.sanity import check_webhook_endpoints_health  # noqa: PLC0415
 
         mock_discover.return_value = {"virt-api", "cdi-api", "kubevirt-operator-webhook"}
 
@@ -976,7 +976,7 @@ class TestCheckWebhookEndpointsHealth:
     @patch("utilities.sanity.LOGGER")
     def test_check_webhook_endpoints_health_missing_endpoint(self, _mock_logger, mock_endpoints_class, mock_discover):
         """Test error when endpoint does not exist"""
-        from utilities.sanity import check_webhook_endpoints_health
+        from utilities.sanity import check_webhook_endpoints_health  # noqa: PLC0415
 
         mock_discover.return_value = {"virt-api"}
 
@@ -999,7 +999,7 @@ class TestCheckWebhookEndpointsHealth:
     @patch("utilities.sanity.LOGGER")
     def test_check_webhook_endpoints_health_no_subsets(self, _mock_logger, mock_endpoints_class, mock_discover):
         """Test error when endpoint has no subsets"""
-        from utilities.sanity import check_webhook_endpoints_health
+        from utilities.sanity import check_webhook_endpoints_health  # noqa: PLC0415
 
         mock_discover.return_value = {"virt-api"}
 
@@ -1024,7 +1024,7 @@ class TestCheckWebhookEndpointsHealth:
     @patch("utilities.sanity.LOGGER")
     def test_check_webhook_endpoints_health_no_addresses(self, _mock_logger, mock_endpoints_class, mock_discover):
         """Test error when endpoint has no ready addresses"""
-        from utilities.sanity import check_webhook_endpoints_health
+        from utilities.sanity import check_webhook_endpoints_health  # noqa: PLC0415
 
         mock_discover.return_value = {"virt-api"}
 
@@ -1053,7 +1053,7 @@ class TestCheckWebhookEndpointsHealth:
         self, _mock_logger, mock_endpoints_class, mock_discover
     ):
         """Test that warning is logged when no webhooks are discovered"""
-        from utilities.sanity import check_webhook_endpoints_health
+        from utilities.sanity import check_webhook_endpoints_health  # noqa: PLC0415
 
         mock_discover.return_value = set()  # No webhooks discovered
 
@@ -1073,9 +1073,9 @@ class TestCheckWebhookEndpointsHealth:
     @patch("utilities.sanity.LOGGER")
     def test_check_webhook_endpoints_health_api_exception(self, _mock_logger, mock_endpoints_class, mock_discover):
         """Test error when API exception occurs while checking endpoints"""
-        from kubernetes.client import ApiException
+        from kubernetes.client import ApiException  # noqa: PLC0415
 
-        from utilities.sanity import check_webhook_endpoints_health
+        from utilities.sanity import check_webhook_endpoints_health  # noqa: PLC0415
 
         mock_discover.return_value = {"virt-api"}
         mock_endpoints_class.side_effect = ApiException(status=500, reason="Internal Server Error")
@@ -1098,7 +1098,7 @@ class TestCheckVmCreationCapability:
     @patch("utilities.sanity.LOGGER")
     def test_check_vm_creation_capability_success(self, _mock_logger, mock_vm_class):
         """Test successful dry-run VM creation"""
-        from utilities.sanity import check_vm_creation_capability
+        from utilities.sanity import check_vm_creation_capability  # noqa: PLC0415
 
         mock_vm = MagicMock()
         mock_vm_class.return_value = mock_vm
@@ -1114,9 +1114,9 @@ class TestCheckVmCreationCapability:
     @patch("utilities.sanity.LOGGER")
     def test_check_vm_creation_capability_api_error(self, _mock_logger, mock_vm_class):
         """Test error when VM creation fails due to API error"""
-        from kubernetes.client import ApiException
+        from kubernetes.client import ApiException  # noqa: PLC0415
 
-        from utilities.sanity import check_vm_creation_capability
+        from utilities.sanity import check_vm_creation_capability  # noqa: PLC0415
 
         mock_vm = MagicMock()
         mock_vm.create.side_effect = ApiException(status=400, reason="Bad Request")
@@ -1135,7 +1135,7 @@ class TestCheckVmCreationCapability:
     @patch("utilities.sanity.LOGGER")
     def test_check_vm_creation_capability_unexpected_error(self, _mock_logger, mock_vm_class):
         """Test error when VM creation fails due to unexpected error"""
-        from utilities.sanity import check_vm_creation_capability
+        from utilities.sanity import check_vm_creation_capability  # noqa: PLC0415
 
         mock_vm = MagicMock()
         mock_vm.create.side_effect = Exception("Unexpected error")
@@ -1154,7 +1154,7 @@ class TestCheckVmCreationCapability:
     @patch("utilities.sanity.LOGGER")
     def test_check_vm_creation_capability_connection_error(self, _mock_logger, mock_vm_class):
         """Test error when VM creation fails due to connection error"""
-        from utilities.sanity import check_vm_creation_capability
+        from utilities.sanity import check_vm_creation_capability  # noqa: PLC0415
 
         mock_vm = MagicMock()
         mock_vm.create.side_effect = ConnectionError("Connection refused")
@@ -1173,7 +1173,7 @@ class TestCheckVmCreationCapability:
     @patch("utilities.sanity.LOGGER")
     def test_check_vm_creation_capability_timeout_error(self, _mock_logger, mock_vm_class):
         """Test error when VM creation fails due to timeout"""
-        from utilities.sanity import check_vm_creation_capability
+        from utilities.sanity import check_vm_creation_capability  # noqa: PLC0415
 
         mock_vm = MagicMock()
         mock_vm.create.side_effect = TimeoutError("Connection timed out")

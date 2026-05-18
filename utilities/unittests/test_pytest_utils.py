@@ -267,7 +267,7 @@ class TestConfigDefaultStorageClass:
 
         config_default_storage_class(mock_session)
 
-        from utilities.pytest_utils import py_config
+        from utilities.pytest_utils import py_config  # noqa: PLC0415
 
         assert py_config["default_storage_class"] == "new-sc"
         assert py_config["default_volume_mode"] == "Filesystem"
@@ -293,7 +293,7 @@ class TestConfigDefaultStorageClass:
 
         config_default_storage_class(mock_session)
 
-        from utilities.pytest_utils import py_config
+        from utilities.pytest_utils import py_config  # noqa: PLC0415
 
         assert py_config["default_storage_class"] == "first-sc"
         assert py_config["default_volume_mode"] == "Filesystem"
@@ -319,7 +319,7 @@ class TestConfigDefaultStorageClass:
 
         config_default_storage_class(mock_session)
 
-        from utilities.pytest_utils import py_config
+        from utilities.pytest_utils import py_config  # noqa: PLC0415
 
         # Should keep original-sc since it's in the matrix
         assert py_config["default_storage_class"] == "original-sc"
@@ -335,7 +335,7 @@ class TestConfigDefaultStorageClass:
 
         config_default_storage_class(mock_session)
 
-        from utilities.pytest_utils import py_config
+        from utilities.pytest_utils import py_config  # noqa: PLC0415
 
         # Should remain unchanged
         assert py_config["default_storage_class"] == "original-sc"
