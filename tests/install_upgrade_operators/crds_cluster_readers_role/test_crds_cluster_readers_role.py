@@ -3,10 +3,12 @@ import shlex
 from subprocess import check_output
 
 import pytest
+from kubernetes.dynamic import DynamicClient
 from ocp_resources.custom_resource_definition import CustomResourceDefinition
 from ocp_resources.resource import Resource
+from timeout_sampler import retry
 
-from utilities.infra import is_jira_open
+from utilities.constants import BASE_EXCEPTIONS_DICT, TIMEOUT_3MIN, TIMEOUT_10SEC
 
 LOGGER = logging.getLogger(__name__)
 pytestmark = [
@@ -15,36 +17,32 @@ pytestmark = [
     pytest.mark.skip_must_gather_collection,
 ]
 
-MTV_VOLUME_POPULATOR_CRDS = [
-    f"openstackvolumepopulators.forklift.cdi.{Resource.ApiGroup.KUBEVIRT_IO}",
-    f"ovirtvolumepopulators.forklift.cdi.{Resource.ApiGroup.KUBEVIRT_IO}",
-]
 
+@retry(
+    wait_timeout=TIMEOUT_3MIN,
+    sleep=TIMEOUT_10SEC,
+    exceptions_dict=BASE_EXCEPTIONS_DICT,
+)
+def get_cnv_crds(admin_client: DynamicClient) -> list[CustomResourceDefinition]:
+    """
+    Fetch CNV-related CRDs with retry logic to handle large responses and network instability.
 
-@pytest.fixture()
-def crds(admin_client):
-    crds_to_check = []
-    bug_status = is_jira_open(jira_id="CNV-51065")
-    for crd in CustomResourceDefinition.get(dyn_client=admin_client):
-        if bug_status and crd.name in MTV_VOLUME_POPULATOR_CRDS:
-            continue
-        if any([
-            crd.name.endswith(suffix)
-            for suffix in [
-                Resource.ApiGroup.KUBEVIRT_IO,
-                Resource.ApiGroup.NMSTATE_IO,
-            ]
-        ]):
-            crds_to_check.append(crd)
-    return crds_to_check
+    Large CRD listings (10MB+) can trigger ProtocolError/IncompleteRead under unstable
+    network conditions. Retries mitigate transient failures; repeated failures may indicate
+    cluster or network issues.
+    """
+    return [
+        crd
+        for crd in CustomResourceDefinition.get(dyn_client=admin_client)
+        if crd.name.endswith(Resource.ApiGroup.KUBEVIRT_IO)
+    ]
 
 
 @pytest.mark.polarion("CNV-8263")
-def test_crds_cluster_readers_role(crds):
-    LOGGER.info(f"CRds: {crds}")
+def test_crds_cluster_readers_role(admin_client):
     cluster_readers = "system:cluster-readers"
     cannot_read = []
-    for crd in crds:
+    for crd in get_cnv_crds(admin_client=admin_client):
         can_read = check_output(shlex.split(f"oc adm policy who-can get {crd.name}"))
         if cluster_readers not in str(can_read):
             cannot_read.append(crd.name)
