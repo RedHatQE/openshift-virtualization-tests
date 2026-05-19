@@ -8,14 +8,8 @@ import uuid
 import pytest
 from ocp_resources.datavolume import DataVolume
 
-from utilities.artifactory import (
-    cleanup_artifactory_secret_and_config_map,
-    get_artifactory_config_map,
-    get_artifactory_secret,
-    get_test_artifact_server_url,
-)
-from utilities.constants import TIMEOUT_2MIN, WIN_2K22, Images
-from utilities.os_utils import get_windows_container_disk_path
+from tests.utils import create_windows2022_dv_from_registry
+from utilities.constants import TIMEOUT_2MIN, Images
 from utilities.storage import check_upload_virtctl_result, create_dv, get_downloaded_artifact, virtctl_upload_dv
 
 LOGGER = logging.getLogger(__name__)
@@ -79,25 +73,9 @@ def windows_dv_from_registry(
     namespace,
     storage_class_name_immediate_binding_scope_module,
 ):
-    """
-    Creates a Windows Server 2022 DataVolume from registry for testing VM creation.
-    This avoids the upload process and SSH configuration issues with uploaded Windows images.
-    """
-    artifactory_secret = get_artifactory_secret(namespace=namespace.name)
-    artifactory_config_map = get_artifactory_config_map(namespace=namespace.name)
-    with create_dv(
-        client=unprivileged_client,
+    yield from create_windows2022_dv_from_registry(
         dv_name="windows-2022-registry-dv",
         namespace=namespace.name,
-        source="registry",
-        size=Images.Windows.CONTAINER_DISK_DV_SIZE,
+        client=unprivileged_client,
         storage_class=storage_class_name_immediate_binding_scope_module,
-        url=f"{get_test_artifact_server_url(schema='registry')}/{get_windows_container_disk_path(os_value=WIN_2K22)}",
-        secret=artifactory_secret,
-        cert_configmap=artifactory_config_map.name,
-    ) as dv:
-        dv.wait_for_dv_success()
-        yield dv
-    cleanup_artifactory_secret_and_config_map(
-        artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
     )

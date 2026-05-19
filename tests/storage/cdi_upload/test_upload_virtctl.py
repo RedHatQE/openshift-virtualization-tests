@@ -10,20 +10,16 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.route import Route
 from ocp_resources.storage_class import StorageClass
-from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
-from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from pytest_testconfig import config as py_config
 
 from libs.net.cluster import is_ipv6_single_stack_cluster
 from tests.storage.cdi_upload.utils import get_storage_profile_minimum_supported_pvc_size
 from tests.storage.utils import assert_use_populator
+from tests.utils import create_windows2022_vm_with_vtpm_from_registry
 from utilities.constants import (
     CDI_UPLOADPROXY,
-    OS_FLAVOR_WIN_CONTAINER_DISK,
     QUARANTINED,
     TIMEOUT_1MIN,
-    U1_LARGE,
-    WINDOWS_2K22_PREFERENCE,
     Images,
 )
 from utilities.ssp import validate_os_info_vmi_vs_windows_os
@@ -36,7 +32,7 @@ from utilities.storage import (
     sc_volume_binding_mode_is_wffc,
     virtctl_upload_dv,
 )
-from utilities.virt import VirtualMachineForTests, running_vm, wait_for_windows_vm
+from utilities.virt import VirtualMachineForTests, running_vm
 
 pytestmark = pytest.mark.post_upgrade
 
@@ -431,28 +427,19 @@ def test_virtctl_image_upload_dv_with_exist_pvc(
 
 @pytest.mark.tier3
 @pytest.mark.polarion("CNV-3410")
-def test_successful_vm_from_uploaded_dv_windows_with_vtpm(
+def test_successful_vm_from_dv_windows(
     unprivileged_client,
     namespace,
     windows_dv_from_registry,
-    cpu_for_migration,
+    modern_cpu_for_migration,
 ):
-    """
-    Test Windows VM creation with vTPM using registry container disk.
-    Uses registry instead of upload to avoid SSH configuration requirements.
-    """
-    with VirtualMachineForTests(
-        name="win2022-vm",
+    with create_windows2022_vm_with_vtpm_from_registry(
+        dv_dict=windows_dv_from_registry,
         namespace=namespace.name,
         client=unprivileged_client,
-        os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK,
-        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_LARGE, client=unprivileged_client),
-        vm_preference=VirtualMachineClusterPreference(name=WINDOWS_2K22_PREFERENCE, client=unprivileged_client),
-        data_volume=windows_dv_from_registry,
-        cpu_model=cpu_for_migration,
+        vm_name="win2022-vm",
+        cpu_model=modern_cpu_for_migration,
     ) as vm:
-        running_vm(vm=vm)
-        wait_for_windows_vm(vm=vm, version="2022")
         validate_os_info_vmi_vs_windows_os(vm=vm)
 
 
