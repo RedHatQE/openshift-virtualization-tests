@@ -9,6 +9,7 @@ from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
 from libs.net.ip import filter_link_local_addresses, random_ipv4_address, random_ipv6_address
 from libs.net.traffic_generator import TcpServer, VMTcpClient, active_tcp_connections
 from libs.net.vmspec import lookup_iface_status
+from libs.vm.oper import run_vms
 from libs.vm.spec import Interface, Multus, Network
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs import cloudinit
@@ -29,7 +30,6 @@ from tests.network.localnet.liblocalnet import (
     ip_addresses_from_pool,
     localnet_cudn,
     localnet_vm,
-    run_vms,
 )
 from utilities.constants import (
     WORKER_NODE_LABEL_KEY,
