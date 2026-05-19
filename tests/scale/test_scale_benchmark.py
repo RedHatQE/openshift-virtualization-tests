@@ -455,7 +455,6 @@ class TestScale:
         for batch in scale_vms:
             for vm in batch:
                 wait_for_migration_finished(
-                    namespace=vm.namespace,
                     migration=vm_migration_info[vm.name][MIGRATION_INSTANCE_STR],
                 )
                 verify_vm_migrated(

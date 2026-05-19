@@ -358,13 +358,14 @@ def test_connectivity_after_migration_and_restart(
     ],
 )
 def test_migration_with_masquerade(
+    admin_client,
     running_vma,
     running_vmb,
     ip_family,
 ):
     http_port_accessible(
         vm=running_vma,
-        server_ip=running_vmb.custom_service.service_ip(ip_family=ip_family),
+        server_ip=running_vmb.custom_service.service_ip(admin_client=admin_client, ip_family=ip_family),
         server_port=running_vmb.custom_service.service_port,
     )
 
