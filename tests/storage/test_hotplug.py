@@ -174,6 +174,7 @@ def blank_disk_dv_multi_storage_scope_class(
         pytest.param({"persist": True, "bus": HOTPLUG_DISK_SCSI_BUS}, HOTPLUG_DISK_SCSI_BUS, id="scsi-bus"),
     ],
     indirect=["hotplug_volume_scope_class"],
+    scope="class",
 )
 @pytest.mark.conformance
 @pytest.mark.gating
