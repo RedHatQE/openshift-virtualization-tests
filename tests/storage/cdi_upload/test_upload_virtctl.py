@@ -24,7 +24,6 @@ from tests.storage.utils import assert_use_populator
 from tests.utils import create_windows2022_vm_with_vtpm_from_registry
 from utilities.constants import (
     CDI_UPLOADPROXY,
-    OS_FLAVOR_WIN_CONTAINER_DISK,
     QUARANTINED,
     TIMEOUT_1MIN,
     Images,
@@ -479,8 +478,6 @@ def test_successful_vm_from_dv_windows(
         vm_name="win2022-vm",
         cpu_model=modern_cpu_for_migration,
     ) as vm:
-        running_vm(vm=vm)
-        wait_for_windows_vm(vm=vm, version="2022")
         validate_os_info_vmi_vs_windows_os(vm=vm)
 
 
