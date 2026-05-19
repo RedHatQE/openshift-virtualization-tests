@@ -147,3 +147,15 @@ class TestGetClusterArchitecture:
                 match="Cluster architecture could not be determined",
             ):
                 get_cluster_architecture()
+
+    @pytest.mark.parametrize("exit_flag", ["--help", "-h", "--version"])
+    @patch("utilities.architecture.cache_admin_client")
+    @patch("utilities.architecture.Node")
+    def test_get_cluster_architecture_skips_cluster_on_exit_flag(self, mock_node_class, mock_cache_client, exit_flag):
+        """Test that pytest exit flags skip cluster connection and return default architecture"""
+        with patch.dict(in_dict=os.environ, values={}, clear=True), patch("utilities.architecture.sys") as mock_sys:
+            mock_sys.argv = ["pytest", exit_flag]
+            result = get_cluster_architecture()
+            assert result == {"amd64"}
+            mock_cache_client.assert_not_called()
+            mock_node_class.get.assert_not_called()
