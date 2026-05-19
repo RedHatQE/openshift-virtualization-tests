@@ -399,8 +399,6 @@ def exit_pytest_execution(
     pytest.exit(reason=log_message, returncode=return_code)
 
 
-
-
 def generate_os_matrix_dicts(os_dict: dict[str, list[str]]) -> None:
     """
     Generate and populate OS matrix and related dictionaries in py_config.
