@@ -145,11 +145,11 @@ def wait_for_automatic_vm_migrations(vm_list: list[VirtualMachine], admin_client
 
 
 def validate_vms_pod_updated(
-    admin_client: DynamicClient, expected_virt_launcher_images: set[str], vm_list: list[VirtualMachine]
+    expected_virt_launcher_images: set[str], vm_list: list[VirtualMachine]
 ) -> list[dict[str, str]]:
     return [
         {pod.name: pod.instance.spec.containers[0].image}
-        for pod in [vm.vmi.get_virt_launcher_pod(privileged_client=admin_client) for vm in vm_list]
+        for pod in [vm.vmi.virt_launcher_pod for vm in vm_list]
         if pod.instance.spec.containers[0].image not in expected_virt_launcher_images
     ]
 

@@ -179,7 +179,6 @@ def unupdated_vmi_pods_names(
 
     wait_for_automatic_vm_migrations(vm_list=virt_migratable_vms, admin_client=admin_client)
     return validate_vms_pod_updated(
-        admin_client=admin_client,
         expected_virt_launcher_images=virt_launcher_images_after_upgrade,
         vm_list=virt_migratable_vms,
     )
