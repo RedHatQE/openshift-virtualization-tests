@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, mock_open, patch
 import pytest
 
 import utilities.constants
+from utilities.constants import AMD_64, ARM_64, CENTOS_STREAM9_PREFERENCE, OS_FLAVOR_FEDORA, RHEL9_PREFERENCE, S390X
 from utilities.exceptions import MissingEnvironmentVariableError, UnsupportedCPUArchitectureError
 
 # Circular dependencies are already mocked in conftest.py
@@ -1549,127 +1550,136 @@ class TestGenerateInstanceTypeMatrixDicts:
         """Sample instance type OS matrix for testing"""
         return [
             {
-                "rhel.9": {
-                    "preference": "rhel.9",
+                RHEL9_PREFERENCE: {
+                    "preference": RHEL9_PREFERENCE,
                     "latest_released": True,
                 }
             }
         ]
 
+    @pytest.mark.parametrize(
+        ("cpu_arch", "expected_add_arch_suffix"),
+        [
+            (None, True),
+            (ARM_64, True),
+            (S390X, True),
+            (AMD_64, False),
+        ],
+        ids=["no_arch", "arm64", "s390x", "amd64"],
+    )
     @patch("utilities.pytest_utils.generate_linux_instance_type_os_matrix")
     @patch("utilities.pytest_utils.generate_latest_os_dict")
     @patch("utilities.pytest_utils.py_config", new_callable=dict)
-    def test_generate_instance_type_rhel_matrix_no_arch(
+    def test_generate_instance_type_rhel_matrix(
         self,
         mock_py_config,
         mock_generate_latest,
         mock_generate_instance_type,
         sample_instance_type_matrix,
+        cpu_arch,
+        expected_add_arch_suffix,
     ):
-        """Test generating instance type RHEL matrix without cpu_arch parameter"""
+        """Test RHEL matrix generation across architecture variants."""
         mock_generate_instance_type.return_value = sample_instance_type_matrix
-        mock_generate_latest.return_value = sample_instance_type_matrix[0]["rhel.9"]
+        mock_generate_latest.return_value = sample_instance_type_matrix[0][RHEL9_PREFERENCE]
 
-        os_dict = {"instance_type_rhel_os_list": ["rhel.9"]}
-        generate_instance_type_matrix_dicts(os_dict=os_dict)
-
-        mock_generate_instance_type.assert_called_once_with(os_name="rhel", preferences=["rhel.9"], arch_suffix=None)
-        assert mock_py_config["instance_type_rhel_os_matrix"] == sample_instance_type_matrix
-
-    @patch("utilities.pytest_utils.generate_linux_instance_type_os_matrix")
-    @patch("utilities.pytest_utils.generate_latest_os_dict")
-    @patch("utilities.pytest_utils.py_config", new_callable=dict)
-    def test_generate_instance_type_rhel_matrix_with_arch(
-        self,
-        mock_py_config,
-        mock_generate_latest,
-        mock_generate_instance_type,
-        sample_instance_type_matrix,
-    ):
-        """Test generating instance type RHEL matrix with cpu_arch parameter"""
-        mock_generate_instance_type.return_value = sample_instance_type_matrix
-        mock_generate_latest.return_value = sample_instance_type_matrix[0]["rhel.9"]
-
-        os_dict = {"instance_type_rhel_os_list": ["rhel.9"]}
-        generate_instance_type_matrix_dicts(os_dict=os_dict, cpu_arch="arm64")
-
-        mock_generate_instance_type.assert_called_once_with(os_name="rhel", preferences=["rhel.9"], arch_suffix="arm64")
-        assert mock_py_config["latest_instance_type_rhel_os_dict"] is not None
-
-    @patch("utilities.pytest_utils.generate_linux_instance_type_os_matrix")
-    @patch("utilities.pytest_utils.py_config", new_callable=dict)
-    def test_generate_instance_type_fedora_matrix(
-        self,
-        mock_py_config,
-        mock_generate_instance_type,
-    ):
-        """Test generating instance type Fedora matrix"""
-        sample_fedora_instance_type = [{"fedora": {"preference": "fedora"}}]
-        mock_generate_instance_type.return_value = sample_fedora_instance_type
-
-        os_dict = {"instance_type_fedora_os_list": ["fedora"]}
-        generate_instance_type_matrix_dicts(os_dict=os_dict)
-
-        mock_generate_instance_type.assert_called_once_with(os_name="fedora", preferences=["fedora"], arch_suffix=None)
-        assert mock_py_config["instance_type_fedora_os_matrix"] == sample_fedora_instance_type
-
-    @patch("utilities.pytest_utils.generate_linux_instance_type_os_matrix")
-    @patch("utilities.pytest_utils.py_config", new_callable=dict)
-    def test_generate_instance_type_centos_matrix(
-        self,
-        mock_py_config,
-        mock_generate_instance_type,
-    ):
-        """Test generating instance type CentOS matrix"""
-        sample_centos_instance_type = [{"centos.stream9": {"preference": "centos.stream9"}}]
-        mock_generate_instance_type.return_value = sample_centos_instance_type
-
-        os_dict = {"instance_type_centos_os_list": ["centos.stream9"]}
-        generate_instance_type_matrix_dicts(os_dict=os_dict)
+        os_dict = {"instance_type_rhel_os_list": [RHEL9_PREFERENCE]}
+        generate_instance_type_matrix_dicts(os_dict=os_dict, cpu_arch=cpu_arch)
 
         mock_generate_instance_type.assert_called_once_with(
-            os_name="centos.stream", preferences=["centos.stream9"], arch_suffix=None
+            os_name="rhel",
+            preferences=[RHEL9_PREFERENCE],
+            arch_suffix=cpu_arch,
+            add_arch_suffix=expected_add_arch_suffix,
         )
-        assert mock_py_config["instance_type_centos_os_matrix"] == sample_centos_instance_type
-
-    @patch("utilities.pytest_utils.generate_linux_instance_type_os_matrix")
-    @patch("utilities.pytest_utils.py_config", new_callable=dict)
-    def test_generate_instance_type_centos_matrix_with_s390x_uses_none(
-        self,
-        mock_py_config,
-        mock_generate_instance_type,
-    ):
-        """Test CentOS instance type with s390x cpu_arch passes None as arch_suffix"""
-        sample_centos_instance_type = [{"centos.stream9": {"preference": "centos.stream9"}}]
-        mock_generate_instance_type.return_value = sample_centos_instance_type
-
-        os_dict = {"instance_type_centos_os_list": ["centos.stream9"]}
-        generate_instance_type_matrix_dicts(os_dict=os_dict, cpu_arch="s390x")
-
-        mock_generate_instance_type.assert_called_once_with(
-            os_name="centos.stream", preferences=["centos.stream9"], arch_suffix=None
-        )
-        assert mock_py_config["instance_type_centos_os_matrix"] == sample_centos_instance_type
-
-    @patch("utilities.pytest_utils.generate_linux_instance_type_os_matrix")
-    @patch("utilities.pytest_utils.generate_latest_os_dict")
-    @patch("utilities.pytest_utils.py_config", new_callable=dict)
-    def test_generate_instance_type_rhel_matrix_with_s390x(
-        self,
-        mock_py_config,
-        mock_generate_latest,
-        mock_generate_instance_type,
-        sample_instance_type_matrix,
-    ):
-        """Test generating instance type RHEL matrix with s390x cpu_arch parameter"""
-        mock_generate_instance_type.return_value = sample_instance_type_matrix
-        mock_generate_latest.return_value = sample_instance_type_matrix[0]["rhel.9"]
-
-        os_dict = {"instance_type_rhel_os_list": ["rhel.9"]}
-        generate_instance_type_matrix_dicts(os_dict=os_dict, cpu_arch="s390x")
-
-        mock_generate_instance_type.assert_called_once_with(os_name="rhel", preferences=["rhel.9"], arch_suffix="s390x")
         assert mock_py_config["instance_type_rhel_os_matrix"] == sample_instance_type_matrix
+        assert mock_py_config["latest_instance_type_rhel_os_dict"] == sample_instance_type_matrix[0][RHEL9_PREFERENCE]
+
+    @pytest.mark.parametrize(
+        ("os_dict", "cpu_arch", "expected_call", "config_key", "matrix_value"),
+        [
+            (
+                {"instance_type_fedora_os_list": [OS_FLAVOR_FEDORA]},
+                None,
+                {
+                    "os_name": OS_FLAVOR_FEDORA,
+                    "preferences": [OS_FLAVOR_FEDORA],
+                    "arch_suffix": None,
+                    "add_arch_suffix": True,
+                },
+                "instance_type_fedora_os_matrix",
+                [{OS_FLAVOR_FEDORA: {"preference": OS_FLAVOR_FEDORA}}],
+            ),
+            (
+                {"instance_type_fedora_os_list": [OS_FLAVOR_FEDORA]},
+                AMD_64,
+                {
+                    "os_name": OS_FLAVOR_FEDORA,
+                    "preferences": [OS_FLAVOR_FEDORA],
+                    "arch_suffix": AMD_64,
+                    "add_arch_suffix": False,
+                },
+                "instance_type_fedora_os_matrix",
+                [{OS_FLAVOR_FEDORA: {"preference": OS_FLAVOR_FEDORA}}],
+            ),
+            (
+                {"instance_type_centos_os_list": [CENTOS_STREAM9_PREFERENCE]},
+                None,
+                {
+                    "os_name": "centos.stream",
+                    "preferences": [CENTOS_STREAM9_PREFERENCE],
+                    "arch_suffix": None,
+                    "add_arch_suffix": False,
+                },
+                "instance_type_centos_os_matrix",
+                [{CENTOS_STREAM9_PREFERENCE: {"preference": CENTOS_STREAM9_PREFERENCE}}],
+            ),
+            (
+                {"instance_type_centos_os_list": [CENTOS_STREAM9_PREFERENCE]},
+                S390X,
+                {
+                    "os_name": "centos.stream",
+                    "preferences": [CENTOS_STREAM9_PREFERENCE],
+                    "arch_suffix": S390X,
+                    "add_arch_suffix": False,
+                },
+                "instance_type_centos_os_matrix",
+                [{CENTOS_STREAM9_PREFERENCE: {"preference": CENTOS_STREAM9_PREFERENCE}}],
+            ),
+            (
+                {"instance_type_centos_os_list": [CENTOS_STREAM9_PREFERENCE]},
+                ARM_64,
+                {
+                    "os_name": "centos.stream",
+                    "preferences": [CENTOS_STREAM9_PREFERENCE],
+                    "arch_suffix": ARM_64,
+                    "add_arch_suffix": False,
+                },
+                "instance_type_centos_os_matrix",
+                [{CENTOS_STREAM9_PREFERENCE: {"preference": CENTOS_STREAM9_PREFERENCE}}],
+            ),
+        ],
+        ids=["fedora_default", "fedora_amd64", "centos_default", "centos_s390x", "centos_arm64"],
+    )
+    @patch("utilities.pytest_utils.generate_linux_instance_type_os_matrix")
+    @patch("utilities.pytest_utils.py_config", new_callable=dict)
+    def test_generate_instance_type_non_rhel_matrix(
+        self,
+        mock_py_config,
+        mock_generate_instance_type,
+        os_dict,
+        cpu_arch,
+        expected_call,
+        config_key,
+        matrix_value,
+    ):
+        """Test Fedora and CentOS matrix generation call signatures."""
+        mock_generate_instance_type.return_value = matrix_value
+
+        generate_instance_type_matrix_dicts(os_dict=os_dict, cpu_arch=cpu_arch)
+
+        mock_generate_instance_type.assert_called_once_with(**expected_call)
+        assert mock_py_config[config_key] == matrix_value
 
     @patch("utilities.pytest_utils.generate_linux_instance_type_os_matrix")
     @patch("utilities.pytest_utils.generate_latest_os_dict")
@@ -1683,10 +1693,10 @@ class TestGenerateInstanceTypeMatrixDicts:
     ):
         """Test that latest_instance_type_rhel_os_dict is populated correctly"""
         mock_generate_instance_type.return_value = sample_instance_type_matrix
-        expected_latest = {"preference": "rhel.9", "latest_released": True}
+        expected_latest = {"preference": RHEL9_PREFERENCE, "latest_released": True}
         mock_generate_latest.return_value = expected_latest
 
-        os_dict = {"instance_type_rhel_os_list": ["rhel.9"]}
+        os_dict = {"instance_type_rhel_os_list": [RHEL9_PREFERENCE]}
         generate_instance_type_matrix_dicts(os_dict=os_dict)
 
         assert mock_py_config["latest_instance_type_rhel_os_dict"] == expected_latest
@@ -1704,24 +1714,6 @@ class TestGenerateInstanceTypeMatrixDicts:
 
         mock_generate_instance_type.assert_not_called()
         assert mock_py_config == {}
-
-    @patch("utilities.pytest_utils.generate_linux_instance_type_os_matrix")
-    @patch("utilities.pytest_utils.py_config", new_callable=dict)
-    def test_generate_instance_type_centos_matrix_with_non_s390x_arch(
-        self,
-        mock_py_config,
-        mock_generate_instance_type,
-    ):
-        """Test CentOS instance type with non-s390x cpu_arch passes arch_suffix"""
-        sample_centos_instance_type = [{"centos.stream9": {"preference": "centos.stream9"}}]
-        mock_generate_instance_type.return_value = sample_centos_instance_type
-
-        os_dict = {"instance_type_centos_os_list": ["centos.stream9"]}
-        generate_instance_type_matrix_dicts(os_dict=os_dict, cpu_arch="arm64")
-
-        mock_generate_instance_type.assert_called_once_with(
-            os_name="centos.stream", preferences=["centos.stream9"], arch_suffix=None
-        )
 
 
 class TestUpdateLatestOsConfig:

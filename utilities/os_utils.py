@@ -255,7 +255,10 @@ def generate_os_matrix_dict(
 
 
 def generate_linux_instance_type_os_matrix(
-    os_name: str, preferences: list[str], arch_suffix: str | None = None
+    os_name: str,
+    preferences: list[str],
+    arch_suffix: str | None = None,
+    add_arch_suffix: bool = True,
 ) -> list[dict[str, dict[str, Any]]]:
     """
     Generate a list of dictionaries representing the instance type matrix for a Linux OS type.
@@ -265,6 +268,9 @@ def generate_linux_instance_type_os_matrix(
         os_name (str): The name of the OS.
         preferences (list[str]): A list of preferences for the instance types. Preference format is "<os>.<version>".
         arch_suffix: Optional architecture suffix. Example: "s390x", "arm64" . Omit to keep original preference.
+        add_arch_suffix: When True, append arch_suffix to the preference name. Set to False for OSes whose
+            ClusterPreferences have no arch suffix (e.g. centos — "centos.stream10" exists,
+            "centos.stream10.arm64" does not).
 
     Returns:
         list[dict[str, dict[str, Any]]]: A list of dictionaries representing the instance type matrix.
@@ -285,10 +291,11 @@ def generate_linux_instance_type_os_matrix(
     instance_types: list[dict[str, dict[str, Any]]] = []
 
     for preference in preferences:
-        arch_preference = f"{preference}.{arch_suffix}" if arch_suffix else preference
+        arch_preference = f"{preference}.{arch_suffix}" if arch_suffix and add_arch_suffix else preference
+        data_source_name = _format_data_source_name(preference_name=preference)
         preference_config: dict[str, Any] = {
             PREFERENCE_STR: arch_preference,
-            DATA_SOURCE_NAME: _format_data_source_name(preference_name=preference),
+            DATA_SOURCE_NAME: f"{data_source_name}-{arch_suffix}" if arch_suffix else data_source_name,
         }
 
         if preference == latest_os:

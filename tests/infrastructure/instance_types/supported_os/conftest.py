@@ -131,7 +131,9 @@ def golden_image_windows_vm(
         vm_instance_type=VirtualMachineClusterInstancetype(client=unprivileged_client, name="u1.large"),
         vm_preference=VirtualMachineClusterPreference(
             client=unprivileged_client,
-            name=windows_os_matrix__module__[os_name][DATA_SOURCE_STR].replace("win", "windows."),
+            name=windows_os_matrix__module__[os_name][DATA_SOURCE_STR]
+            .removesuffix(f"-{py_config.get('cpu_arch', '')}")
+            .replace("win", "windows."),
         ),
         data_volume_template=windows_data_volume_template.res,
         os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK,
