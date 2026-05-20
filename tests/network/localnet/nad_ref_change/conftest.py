@@ -80,8 +80,8 @@ def ref_vm_localnet(
         run_vm(
             vm=vm,
             ip_addresses_by_spec_net_name={
-                IFACE_A_NAME: [addr.split("/")[0] for addr in iface_a_ips],
-                IFACE_B_NAME: [addr.split("/")[0] for addr in iface_b_ips],
+                IFACE_A_NAME: [str(addr.ip) for addr in iface_a_ips],
+                IFACE_B_NAME: [str(addr.ip) for addr in iface_b_ips],
             },
         )
         yield vm
@@ -109,7 +109,7 @@ def under_test_vm_localnet(
         run_vm(
             vm=vm,
             ip_addresses_by_spec_net_name={
-                IFACE_A_NAME: [addr.split("/")[0] for addr in iface_a_ips],
+                IFACE_A_NAME: [str(addr.ip) for addr in iface_a_ips],
             },
         )
         yield vm

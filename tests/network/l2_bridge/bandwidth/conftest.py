@@ -1,4 +1,3 @@
-import ipaddress
 from collections.abc import Generator
 from ipaddress import ip_interface
 from typing import Final
@@ -8,7 +7,7 @@ from kubernetes.dynamic import DynamicClient
 from ocp_resources.namespace import Namespace
 
 from libs.net import nodenetworkconfigurationpolicy as libnncp
-from libs.net.ip import random_ip_addresses_by_family
+from libs.net.ip import random_cidr_addresses_by_family
 from libs.net.netattachdef import (
     CNIPluginBandwidthConfig,
     CNIPluginBridgeConfig,
@@ -62,10 +61,7 @@ def server_vm(
     namespace: Namespace,
     bandwidth_nad: NetworkAttachmentDefinition,
 ) -> Generator[BaseVirtualMachine]:
-    addresses = [
-        f"{ip}/64" if ipaddress.ip_address(ip).version == 6 else f"{ip}/24"
-        for ip in random_ip_addresses_by_family(net_seed=0, host_address=1)
-    ]
+    addresses = random_cidr_addresses_by_family(net_seed=0, host_address=1)
     with secondary_network_vm(
         namespace=namespace.name,
         name="bw-server-vm",
@@ -92,10 +88,7 @@ def client_vm(
     namespace: Namespace,
     bandwidth_nad: NetworkAttachmentDefinition,
 ) -> Generator[BaseVirtualMachine]:
-    addresses = [
-        f"{ip}/64" if ipaddress.ip_address(ip).version == 6 else f"{ip}/24"
-        for ip in random_ip_addresses_by_family(net_seed=0, host_address=2)
-    ]
+    addresses = random_cidr_addresses_by_family(net_seed=0, host_address=2)
     with secondary_network_vm(
         namespace=namespace.name,
         name="bw-client-vm",
