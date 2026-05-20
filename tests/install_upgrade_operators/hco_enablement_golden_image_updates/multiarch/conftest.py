@@ -20,7 +20,6 @@ from utilities.hco import (
     apply_np_changes,
     update_hco_templates_spec,
 )
-from utilities.ssp import wait_for_at_least_one_auto_update_data_import_cron
 
 LOGGER = logging.getLogger(__name__)
 
@@ -29,10 +28,7 @@ ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT = "enableMultiArchBootImageImport"
 
 @pytest.fixture(scope="class")
 def disabled_multiarch_feature_gate(
-    admin_client,
-    hco_namespace,
     hyperconverged_resource_scope_class,
-    golden_images_namespace,
 ):
     with ResourceEditorValidateHCOReconcile(
         patches={
@@ -64,10 +60,6 @@ def enabled_multiarch_feature_gate(
             list_resource_reconcile=MANAGED_CRS_LIST,
             wait_for_reconcile_post_update=True,
         ):
-            wait_for_at_least_one_auto_update_data_import_cron(
-                admin_client=admin_client,
-                namespace=golden_images_namespace,
-            )
             yield
 
 
