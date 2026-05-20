@@ -5,7 +5,6 @@ from contextlib import contextmanager
 from typing import Generator
 
 import requests
-from ocp_resources.cdi import CDI
 from ocp_resources.cluster_role import ClusterRole
 from ocp_resources.config_map import ConfigMap
 from ocp_resources.daemonset import DaemonSet
@@ -31,7 +30,6 @@ from utilities.constants import (
     TIMEOUT_30MIN,
     Images,
 )
-from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import (
     cleanup_artifactory_secret_and_config_map,
     get_artifactory_config_map,
@@ -371,27 +369,6 @@ def create_windows19_vm(dv_name, namespace, client, vm_name, cpu_model, storage_
     cleanup_artifactory_secret_and_config_map(
         artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
     )
-
-
-@contextmanager
-def update_scratch_space_sc(cdi_config, new_sc, hco):
-    def _wait_for_sc_update():
-        samples = TimeoutSampler(
-            wait_timeout=30,
-            sleep=1,
-            func=lambda: cdi_config.scratch_space_storage_class_from_status == new_sc,
-        )
-        for sample in samples:
-            if sample:
-                return
-
-    with ResourceEditorValidateHCOReconcile(
-        patches={hco: {"spec": {"scratchSpaceStorageClass": new_sc}}},
-        list_resource_reconcile=[CDI],
-    ) as edited_cdi_config:
-        _wait_for_sc_update()
-
-        yield edited_cdi_config
 
 
 def create_cirros_dv(
