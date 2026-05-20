@@ -5,7 +5,7 @@ from typing import Final, Generator
 
 from ocp_resources.pod import Pod
 from ocp_utilities.exceptions import CommandExecFailed
-from timeout_sampler import retry
+from timeout_sampler import TimeoutExpiredError, retry
 
 from libs.net.vmspec import lookup_iface_status_ip
 from libs.vm.vm import BaseVirtualMachine
@@ -107,12 +107,29 @@ class VMTcpClient(BaseTcpClient):
 
     def __enter__(self) -> "VMTcpClient":
         self._vm.console(
-            commands=[f"{self._cmd} &"],
+            commands=[f"{self._cmd} >/tmp/iperf3_client.log 2>&1 &"],
             timeout=_DEFAULT_CMD_TIMEOUT_SEC,
         )
-        self._ensure_is_running()
+        try:
+            self._ensure_is_running()
+        except TimeoutExpiredError:
+            self._dump_client_log()
+            raise
 
         return self
+
+    def _dump_client_log(self) -> None:
+        try:
+            output = self._vm.console(
+                commands=["cat /tmp/iperf3_client.log"],
+                timeout=_DEFAULT_CMD_TIMEOUT_SEC,
+            )
+            LOGGER.error(
+                "iperf3 client log:\n%s",
+                "\n".join((output or {}).get("cat /tmp/iperf3_client.log", [])),
+            )
+        except CommandExecFailed as exc:
+            LOGGER.error("Failed to read iperf3 client log: %s", exc)
 
     def __exit__(self, exc_type: BaseException, exc_value: BaseException, traceback: object) -> None:
         _stop_process(vm=self._vm, cmd=self._cmd)
