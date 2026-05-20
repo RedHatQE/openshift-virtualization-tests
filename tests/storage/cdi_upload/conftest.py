@@ -110,7 +110,7 @@ def primary_udn_for_upload(admin_client, udn_namespace_for_dv_upload):
         name="layer2-udn-upload",
         namespace=udn_namespace_for_dv_upload.name,
         role="Primary",
-        subnets=[f"{random_ipv4_address(net_seed=0, host_address=0)}/24"],
+        subnets=[random_ipv4_address(net_seed=0, host_address=0)],
         ipam={"lifecycle": "Persistent"},
         client=admin_client,
     ) as udn:

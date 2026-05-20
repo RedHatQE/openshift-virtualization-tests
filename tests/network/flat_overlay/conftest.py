@@ -351,7 +351,7 @@ def vmb_ingress_multi_network_policy(
         network_name=flat_overlay_vma_vmb_nad.name,
         policy_types=["Ingress"],
         ingress=create_ip_block(
-            ip_address=f"{random_ipv4_address(net_seed=0, host_address=123)}/{SPECIFIC_HOST_MASK}",
+            ip_address=f"{random_ipv4_address(net_seed=0, host_address=123, cidr_required=False)}/{SPECIFIC_HOST_MASK}",
         ),
         client=admin_client,
     ) as mnp:

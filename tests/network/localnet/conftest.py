@@ -125,12 +125,12 @@ def cudn_localnet_no_vlan(
 
 @pytest.fixture(scope="module")
 def ipv4_localnet_address_pool() -> Generator[str]:
-    return (f"{random_ipv4_address(net_seed=0, host_address=host_value)}/24" for host_value in range(1, 254))
+    return (random_ipv4_address(net_seed=0, host_address=host_value) for host_value in range(1, 254))
 
 
 @pytest.fixture(scope="module")
 def ipv6_localnet_address_pool() -> Generator[str]:
-    return (f"{random_ipv6_address(net_seed=0, host_address=host_value)}/64" for host_value in range(1, 254))
+    return (random_ipv6_address(net_seed=0, host_address=host_value) for host_value in range(1, 254))
 
 
 @pytest.fixture(scope="module")

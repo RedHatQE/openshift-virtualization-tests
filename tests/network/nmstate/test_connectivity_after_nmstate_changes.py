@@ -101,7 +101,7 @@ def nmstate_linux_bridge_attached_vma(
     networks[nmstate_linux_nad.name] = nmstate_linux_nad.name
     network_data_data = {
         "ethernets": {
-            "eth1": {"addresses": [f"{random_ipv4_address(net_seed=0, host_address=1)}/24"]},
+            "eth1": {"addresses": [random_ipv4_address(net_seed=0, host_address=1)]},
         }
     }
 
@@ -135,7 +135,7 @@ def nmstate_linux_bridge_attached_vmb(
     networks[nmstate_linux_nad.name] = nmstate_linux_nad.name
     network_data_data = {
         "ethernets": {
-            "eth1": {"addresses": [f"{random_ipv4_address(net_seed=0, host_address=2)}/24"]},
+            "eth1": {"addresses": [random_ipv4_address(net_seed=0, host_address=2)]},
         }
     }
 

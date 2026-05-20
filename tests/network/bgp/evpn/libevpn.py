@@ -25,8 +25,8 @@ from tests.network.libs.bgp import CLUSTER_FRR_ASN, EXTERNAL_FRR_ASN, NET_TOOLS_
 LOGGER = logging.getLogger(__name__)
 
 EVPN_CUDN_NET_SEED: int = 5
-CUDN_EVPN_SUBNET_IPV4: str = f"{random_ipv4_address(net_seed=EVPN_CUDN_NET_SEED, host_address=0)}/24"
-CUDN_EVPN_SUBNET_IPV6: str = f"{random_ipv6_address(net_seed=EVPN_CUDN_NET_SEED, host_address=0)}/64"
+CUDN_EVPN_SUBNET_IPV4: str = random_ipv4_address(net_seed=EVPN_CUDN_NET_SEED, host_address=0)
+CUDN_EVPN_SUBNET_IPV6: str = random_ipv6_address(net_seed=EVPN_CUDN_NET_SEED, host_address=0)
 
 _BRIDGE_NAME: str = "br0"
 _VXLAN_NAME: str = "vxlan0"

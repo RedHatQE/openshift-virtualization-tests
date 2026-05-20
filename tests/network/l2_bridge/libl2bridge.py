@@ -92,15 +92,7 @@ def create_vm_with_secondary_interface_on_setup(
     networks = {bridge_nad.name: bridge_nad.name}
     cloud_init_data = compose_cloud_init_data_dict(
         network_data={
-            "ethernets": {
-                "eth1": {
-                    "addresses": [
-                        f"{random_ipv4_address(net_seed=0, host_address=ipv4_address_suffix)}/{
-                            IPV4_ADDRESS_SUBNET_PREFIX_LENGTH
-                        }"
-                    ]
-                }
-            }
+            "ethernets": {"eth1": {"addresses": [random_ipv4_address(net_seed=0, host_address=ipv4_address_suffix)]}}
         }
     )
     cloud_init_data["userData"] = {}

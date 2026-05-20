@@ -29,7 +29,7 @@ def namespaced_layer2_user_defined_network(admin_client, udn_namespace):
         name="layer2-udn",
         namespace=udn_namespace.name,
         role="Primary",
-        subnets=[f"{random_ipv4_address(net_seed=0, host_address=0)}/24"],
+        subnets=[random_ipv4_address(net_seed=0, host_address=0)],
         ipam={"lifecycle": "Persistent"},
         client=admin_client,
     ) as udn:

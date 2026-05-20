@@ -156,9 +156,7 @@ def bond_bridge_attached_vma(
     name = "bond-vma"
     networks = OrderedDict()
     networks[br1bond_nad.name] = br1bond_nad.name
-    network_data_data = {
-        "ethernets": {"eth1": {"addresses": [f"{random_ipv4_address(net_seed=0, host_address=1)}/24"]}}
-    }
+    network_data_data = {"ethernets": {"eth1": {"addresses": [random_ipv4_address(net_seed=0, host_address=1)]}}}
     cloud_init_data = cloud_init_network_data(data=network_data_data)
 
     with VirtualMachineForTests(
@@ -186,9 +184,7 @@ def bond_bridge_attached_vmb(
     name = "bond-vmb"
     networks = OrderedDict()
     networks[br1bond_nad.name] = br1bond_nad.name
-    network_data_data = {
-        "ethernets": {"eth1": {"addresses": [f"{random_ipv4_address(net_seed=0, host_address=2)}/24"]}}
-    }
+    network_data_data = {"ethernets": {"eth1": {"addresses": [random_ipv4_address(net_seed=0, host_address=2)]}}}
     cloud_init_data = cloud_init_network_data(data=network_data_data)
 
     with VirtualMachineForTests(

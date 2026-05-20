@@ -40,8 +40,8 @@ APP_CUDN_LABEL: Final[dict] = {"app": "cudn"}
 BGP_DATA_PATH: Final[Path] = Path(__file__).resolve().parent / "data" / "frr-config"
 CUDN_BGP_LABEL: Final[dict] = {"cudn-bgp": "blue"}
 CUDN_SUBNET_IPV4: Final[str] = "192.168.10.0/24"
-EXTERNAL_PROVIDER_SUBNET_IPV4: Final[str] = f"{random_ipv4_address(net_seed=1, host_address=0)}/24"
-EXTERNAL_PROVIDER_IP_V4: Final[str] = f"{random_ipv4_address(net_seed=1, host_address=150)}/24"
+EXTERNAL_PROVIDER_SUBNET_IPV4: Final[str] = random_ipv4_address(net_seed=1, host_address=0)
+EXTERNAL_PROVIDER_IP_V4: Final[str] = random_ipv4_address(net_seed=1, host_address=150)
 IPERF3_SERVER_PORT: Final[int] = 2354
 LOCALNET_NETWORK_NAME: Final[str] = "localnet-network-bgp"
 

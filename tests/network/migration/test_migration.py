@@ -121,9 +121,7 @@ def vma(
 ):
     name = "vma"
     networks = {br1test_nad.name: br1test_nad.name}
-    network_data_data = {
-        "ethernets": {"eth1": {"addresses": [f"{random_ipv4_address(net_seed=0, host_address=1)}/24"]}}
-    }
+    network_data_data = {"ethernets": {"eth1": {"addresses": [random_ipv4_address(net_seed=0, host_address=1)]}}}
     cloud_init_data = compose_cloud_init_data_dict(
         network_data=network_data_data,
         ipv6_network_data=ipv6_primary_interface_cloud_init_data,
@@ -153,9 +151,7 @@ def vmb(
 ):
     name = "vmb"
     networks = {br1test_nad.name: br1test_nad.name}
-    network_data_data = {
-        "ethernets": {"eth1": {"addresses": [f"{random_ipv4_address(net_seed=0, host_address=2)}/24"]}}
-    }
+    network_data_data = {"ethernets": {"eth1": {"addresses": [random_ipv4_address(net_seed=0, host_address=2)]}}}
     cloud_init_data = compose_cloud_init_data_dict(
         network_data=network_data_data,
         ipv6_network_data=ipv6_primary_interface_cloud_init_data,

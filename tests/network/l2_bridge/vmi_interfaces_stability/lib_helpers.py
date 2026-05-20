@@ -60,8 +60,7 @@ def secondary_network_vm(
 
 
 def secondary_iface_cloud_init(host_address: int) -> cloudinit.EthernetDevice:
-    ips = secondary_iface_ips(host_address=host_address)
-    addresses = [f"{ip}/64" if ipaddress.ip_address(ip).version == 6 else f"{ip}/24" for ip in ips]
+    addresses = secondary_iface_ips(host_address=host_address)
     return cloudinit.EthernetDevice(addresses=addresses)
 
 
