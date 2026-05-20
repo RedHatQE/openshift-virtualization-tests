@@ -8,12 +8,11 @@ import shlex
 import pytest
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.role_binding import RoleBinding
+from ocp_resources.virtual_machine_restore import VirtualMachineRestore
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 from pyhelper_utils.shell import run_ssh_commands
 
 from tests.storage.snapshots.constants import WINDOWS_DIRECTORY_PATH
-from ocp_resources.virtual_machine_restore import VirtualMachineRestore
-
 from tests.storage.utils import (
     assert_windows_directory_existence,
     create_windows19_vm,

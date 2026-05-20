@@ -44,4 +44,3 @@ def fail_to_create_snapshot_no_permissions(snapshot_name, namespace, vm_name, cl
 def start_windows_vm_after_restore(vm_restore, windows_vm):
     vm_restore.wait_restore_done(timeout=TIMEOUT_10MIN)
     running_vm(vm=windows_vm)
-
