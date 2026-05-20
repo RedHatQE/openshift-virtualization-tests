@@ -1624,8 +1624,8 @@ class ServiceForVirtualMachineForTests(Service):
 
             return self.instance.spec.clusterIP
 
-        vm_node = self.vm.vmi.get_node(privileged_client=admin_client)
         if self.service_type == Service.Type.NODE_PORT:
+            vm_node = self.vm.vmi.get_node(privileged_client=admin_client)
             if ip_family:
                 internal_ips = [
                     internal_ip
