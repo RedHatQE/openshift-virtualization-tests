@@ -802,8 +802,10 @@ class TestEnableCommonBootImageImportSpecWaitForDataImportCron:
     @patch("utilities.hco.wait_for_at_least_one_auto_update_data_import_cron")
     @patch("utilities.hco.update_common_boot_image_import_spec")
     @patch("utilities.hco.Namespace")
+    @patch("utilities.hco.verify_boot_sources_reimported", return_value=True)
     def test_enable_spec(
         self,
+        mock_verify_boot,
         mock_namespace_class,
         mock_update_spec,
         mock_wait_dic,
@@ -822,6 +824,11 @@ class TestEnableCommonBootImageImportSpecWaitForDataImportCron:
         mock_wait_dic.assert_called_once()
         mock_wait_ssp.assert_called_once()
         mock_wait_hco.assert_called_once()
+        mock_verify_boot.assert_called_once_with(
+            admin_client=mock_admin_client,
+            namespace=mock_namespace.name,
+            consecutive_checks_count=1,
+        )
 
 
 class TestUpdateCommonBootImageImportSpec:
