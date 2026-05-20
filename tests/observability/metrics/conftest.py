@@ -16,6 +16,8 @@ from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.metrics.constants import (
+    BINDING_NAME,
+    BINDING_TYPE,
     GUEST_LOAD_TIME_PERIODS,
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
     KUBEVIRT_VM_CREATED_BY_POD_TOTAL,
@@ -27,6 +29,7 @@ from tests.observability.metrics.constants import (
 )
 from tests.observability.metrics.utils import (
     SINGLE_VM,
+    binding_name_and_type_from_vm_or_vmi,
     create_windows11_wsl2_vm,
     disk_file_system_info,
     enable_swap_fedora_vm,
@@ -47,6 +50,7 @@ from utilities.constants import (
     KUBEVIRT_VMI_MEMORY_SWAP_OUT_TRAFFIC_BYTES,
     KUBEVIRT_VMI_MEMORY_UNUSED_BYTES,
     KUBEVIRT_VMI_MEMORY_USABLE_BYTES,
+    LINUX_BRIDGE,
     MIGRATION_POLICY_VM_LABEL,
     ONE_CPU_CORE,
     ONE_CPU_THREAD,
@@ -65,15 +69,23 @@ from utilities.constants import (
     VIRT_TEMPLATE_VALIDATOR,
     Images,
 )
+from utilities.data_utils import name_prefix
 from utilities.hco import ResourceEditorValidateHCOReconcile, enabled_aaq_in_hco
 from utilities.infra import (
     create_ns,
     get_linux_guest_agent_version,
+    get_node_selector_dict,
     get_pod_by_name_prefix,
     unique_name,
 )
 from utilities.monitoring import get_metrics_value
-from utilities.network import assert_ping_successful, get_ip_from_vm_or_virt_handler_pod, ping
+from utilities.network import (
+    assert_ping_successful,
+    get_ip_from_vm_or_virt_handler_pod,
+    network_device,
+    network_nad,
+    ping,
+)
 from utilities.ssp import verify_ssp_pod_is_running
 from utilities.storage import (
     data_volume_template_with_source_ref_dict,
@@ -84,6 +96,7 @@ from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
     running_vm,
+    wait_for_migration_finished,
 )
 from utilities.vnc_utils import VNCConnection
 
@@ -100,6 +113,7 @@ METRICS_WITH_WINDOWS_VM_BUGS = [
     KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL,
 ]
 MINIMUM_QEMU_GUEST_AGENT_VERSION_FOR_GUEST_LOAD_METRICS = "9.6"
+NAD_SWAP_BRIDGE_NAME = "brnadswaptest"
 
 
 @pytest.fixture(scope="module")
@@ -438,6 +452,158 @@ def vnic_info_from_vm_or_vmi_linux(request, running_metric_vm):
 @pytest.fixture()
 def vnic_info_from_vmi_windows(windows_vm_for_test):
     return vnic_info_from_vm_or_vmi(vm_or_vmi="vmi", vm=windows_vm_for_test)
+
+
+@pytest.fixture(scope="class")
+def nad_swap_bridge_device_worker_1(
+    admin_client,
+    worker_node1,
+    hosts_common_available_ports,
+):
+    with network_device(
+        interface_type=LINUX_BRIDGE,
+        nncp_name=f"nad-swap-br-{name_prefix(name=worker_node1.name)}",
+        interface_name=NAD_SWAP_BRIDGE_NAME,
+        node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
+        ports=[hosts_common_available_ports[-1]],
+        client=admin_client,
+    ) as bridge:
+        yield bridge
+
+
+@pytest.fixture(scope="class")
+def nad_swap_bridge_device_worker_2(
+    admin_client,
+    worker_node2,
+    hosts_common_available_ports,
+):
+    with network_device(
+        interface_type=LINUX_BRIDGE,
+        nncp_name=f"nad-swap-br-{name_prefix(name=worker_node2.name)}",
+        interface_name=NAD_SWAP_BRIDGE_NAME,
+        node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
+        ports=[hosts_common_available_ports[-1]],
+        client=admin_client,
+    ) as bridge:
+        yield bridge
+
+
+@pytest.fixture(scope="class")
+def nad_a_for_vnic_info(
+    admin_client,
+    namespace,
+    nad_swap_bridge_device_worker_1,
+    nad_swap_bridge_device_worker_2,
+):
+    vlan_tag_a = 2901
+    with network_nad(
+        namespace=namespace,
+        nad_type=LINUX_BRIDGE,
+        nad_name=f"{NAD_SWAP_BRIDGE_NAME}-nad-a-vlan-{vlan_tag_a}",
+        interface_name=NAD_SWAP_BRIDGE_NAME,
+        vlan=vlan_tag_a,
+        client=admin_client,
+    ) as nad:
+        yield nad
+
+
+@pytest.fixture(scope="class")
+def nad_b_for_vnic_info(
+    admin_client,
+    namespace,
+    nad_swap_bridge_device_worker_1,
+    nad_swap_bridge_device_worker_2,
+):
+    vlan_tag_b = 2902
+    with network_nad(
+        namespace=namespace,
+        nad_type=LINUX_BRIDGE,
+        nad_name=f"{NAD_SWAP_BRIDGE_NAME}-nad-b-vlan-{vlan_tag_b}",
+        interface_name=NAD_SWAP_BRIDGE_NAME,
+        vlan=vlan_tag_b,
+        client=admin_client,
+    ) as nad:
+        yield nad
+
+
+@pytest.fixture(scope="class")
+def vm_for_nad_swap_test(
+    unprivileged_client,
+    namespace,
+    nad_a_for_vnic_info,
+):
+    name = "vm-nad-swap-test"
+    with VirtualMachineForTests(
+        name=name,
+        namespace=namespace.name,
+        client=unprivileged_client,
+        body=fedora_vm_body(name=name),
+        interfaces=["secondary"],
+        networks={"secondary": nad_a_for_vnic_info.name},
+    ) as vm:
+        running_vm(vm=vm, wait_for_cloud_init=False)
+        yield vm
+
+
+@pytest.fixture(scope="class")
+def swapped_nad_vm(
+    vm_for_nad_swap_test,
+    nad_b_for_vnic_info,
+):
+    networks = vm_for_nad_swap_test.instance.to_dict()["spec"]["template"]["spec"]["networks"]
+    for net in networks:
+        if net["name"] == "secondary":
+            net["multus"]["networkName"] = nad_b_for_vnic_info.name
+            break
+
+    with ResourceEditor(
+        patches={
+            vm_for_nad_swap_test: {
+                "spec": {
+                    "template": {
+                        "spec": {
+                            "networks": networks,
+                        }
+                    }
+                }
+            }
+        }
+    ):
+        yield vm_for_nad_swap_test
+
+
+@pytest.fixture(scope="class")
+def completed_nad_swap_migration(
+    swapped_nad_vm,
+    admin_client,
+    namespace,
+):
+    for sample in TimeoutSampler(
+        wait_timeout=TIMEOUT_5MIN,
+        sleep=5,
+        func=lambda: list(VirtualMachineInstanceMigration.get(client=admin_client, namespace=namespace.name)),
+    ):
+        if sample:
+            for migration in sample:
+                wait_for_migration_finished(namespace=namespace.name, migration=migration)
+            break
+
+    return swapped_nad_vm
+
+
+@pytest.fixture(scope="class")
+def expected_vnic_info_after_swap(
+    completed_nad_swap_migration,
+):
+    vm_spec = completed_nad_swap_migration.instance.spec.template.spec
+    secondary_interface = vm_spec.domain.devices.interfaces[1]
+    binding_info = binding_name_and_type_from_vm_or_vmi(vm_interface=secondary_interface)
+    return {
+        "vnic_name": vm_spec.networks[1].name,
+        BINDING_NAME: binding_info[BINDING_NAME],
+        BINDING_TYPE: binding_info[BINDING_TYPE],
+        "network": vm_spec.networks[1].multus.networkName,
+    }
 
 
 @pytest.fixture()
