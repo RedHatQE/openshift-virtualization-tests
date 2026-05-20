@@ -1966,7 +1966,7 @@ def wait_for_migration_finished(migration: VirtualMachineInstanceMigration, time
         TimeoutExpiredError: If the migration does not finish within the timeout.
     """
 
-    def _abort_migration_wait(_migration: VirtualMachineInstanceMigration) -> None:
+    def _abort_stuck_scheduling_migration(_migration: VirtualMachineInstanceMigration) -> None:
         for pod in utilities.infra.get_pod_by_name_prefix(
             client=_migration.client, pod_prefix=VIRT_LAUNCHER, namespace=_migration.namespace, get_all=True
         ):
@@ -1996,7 +1996,7 @@ def wait_for_migration_finished(migration: VirtualMachineInstanceMigration, time
                 # If migration stuck in Scheduling state for more than 4 minutes - most likely it will be failed
                 # Need to collect data before 5 min timeout reached and target POD is removed
                 if counter >= TIMEOUT_4MIN / sleep:
-                    _abort_migration_wait(_migration=migration)
+                    _abort_stuck_scheduling_migration(_migration=migration)
     except TimeoutExpiredError:
         if sample:
             LOGGER.error(f"Status of VMIM {migration.name} is {sample}")
