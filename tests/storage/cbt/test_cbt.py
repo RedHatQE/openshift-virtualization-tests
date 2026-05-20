@@ -39,9 +39,7 @@ class TestFullBackupRestore:
             6. Start the restored VM
 
         Expected:
-            - Full backup completes successfully
-            - Restored VM boots successfully and is accessible
-            - Test data is present in restored VM
+            - Restored VM boots successfully and test data is present
         """
 
     @pytest.mark.polarion("CNV-15996")
@@ -61,9 +59,7 @@ class TestFullBackupRestore:
             6. Start the restored VM
 
         Expected:
-            - Full backup completes successfully
-            - Restored VM boots successfully and is accessible
-            - Test data is present in restored VM
+            - Restored VM boots successfully and test data is present
         """
 
 
@@ -97,9 +93,7 @@ class TestIncrementalBackupRestore:
             6. Start the restored VM
 
         Expected:
-            - Incremental backup completes successfully
-            - Restored VM boots successfully and is accessible
-            - Original test data and new test data are present in restored VM
+            - Restored VM boots successfully and all test data is present
         """
 
     @pytest.mark.polarion("CNV-16000")
@@ -119,9 +113,7 @@ class TestIncrementalBackupRestore:
             6. Start the restored VM
 
         Expected:
-            - Incremental backup completes successfully
-            - Restored VM boots successfully and is accessible
-            - Original test data and new test data are present in restored VM
+            - Restored VM boots successfully and all test data is present
         """
 
 
@@ -157,9 +149,7 @@ class TestMultipleIncrementalBackups:
             8. Start the restored VM
 
         Expected:
-            - All incremental backups complete successfully
-            - Restored VM boots successfully and is accessible
-            - All test data is present in restored VM
+            - Restored VM boots successfully and all test data is present
         """
 
     @pytest.mark.polarion("CNV-16001")
@@ -181,9 +171,7 @@ class TestMultipleIncrementalBackups:
             8. Start the restored VM
 
         Expected:
-            - All incremental backups complete successfully
-            - Restored VM boots successfully and is accessible
-            - All test data is present in restored VM
+            - Restored VM boots successfully and all test data is present
         """
 
 
@@ -217,9 +205,7 @@ class TestMultipleDiskBackup:
             6. Start the restored VM
 
         Expected:
-            - Backup completes successfully for both disks
-            - Restored VM boots successfully and is accessible
-            - Test data from both disks is present in restored VM
+            - Restored VM boots successfully and test data from both disks is present
         """
 
     @pytest.mark.polarion("CNV-16004")
@@ -239,9 +225,7 @@ class TestMultipleDiskBackup:
             6. Start the restored VM
 
         Expected:
-            - Backup completes successfully for both disks
-            - Restored VM boots successfully and is accessible
-            - Test data from both disks is present in restored VM
+            - Restored VM boots successfully and test data from both disks is present
         """
 
 
@@ -279,10 +263,7 @@ class TestBackupAfterMigration:
             8. Start the restored VM
 
         Expected:
-            - Migration completes successfully
-            - Incremental backup after migration completes successfully
-            - Restored VM boots successfully and is accessible
-            - Pre-migration and post-migration test data are present in restored VM
+            - Restored VM boots successfully and pre-migration and post-migration test data are present
         """
 
     @pytest.mark.polarion("CNV-16006")
@@ -305,10 +286,7 @@ class TestBackupAfterMigration:
             8. Start the restored VM
 
         Expected:
-            - Migration completes successfully
-            - Incremental backup after migration completes successfully
-            - Restored VM boots successfully and is accessible
-            - Pre-migration and post-migration test data are present in restored VM
+            - Restored VM boots successfully and pre-migration and post-migration test data are present
         """
 
     @pytest.mark.polarion("CNV-16007")
@@ -331,10 +309,7 @@ class TestBackupAfterMigration:
             8. Start the restored VM
 
         Expected:
-            - Migration completes successfully
-            - Incremental backup after migration completes successfully
-            - Restored VM boots successfully and is accessible
-            - Pre-migration and post-migration test data are present in restored VM
+            - Restored VM boots successfully and pre-migration and post-migration test data are present
         """
 
     @pytest.mark.polarion("CNV-16008")
@@ -357,10 +332,7 @@ class TestBackupAfterMigration:
             8. Start the restored VM
 
         Expected:
-            - Migration completes successfully
-            - Incremental backup after migration completes successfully
-            - Restored VM boots successfully and is accessible
-            - Pre-migration and post-migration test data are present in restored VM
+            - Restored VM boots successfully and pre-migration and post-migration test data are present
         """
 
 
@@ -396,9 +368,7 @@ class TestHotplugBackup:
             8. Start the restored VM
 
         Expected:
-            - Backup completes successfully for all disks
-            - Restored VM boots successfully and is accessible
-            - Test data from both original and hotplugged disks is present in restored VM
+            - Restored VM boots successfully and test data from both original and hotplugged disks is present
         """
 
     @pytest.mark.polarion("CNV-16010")
@@ -420,9 +390,7 @@ class TestHotplugBackup:
             8. Start the restored VM
 
         Expected:
-            - Backup completes successfully for all disks
-            - Restored VM boots successfully and is accessible
-            - Test data from both original and hotplugged disks is present in restored VM
+            - Restored VM boots successfully and test data from both original and hotplugged disks is present
         """
 
 
@@ -559,9 +527,7 @@ class TestConcurrentBackups:
             6. Start all restored VMs
 
         Expected:
-            - All backups complete successfully
-            - All restored VMs boot and are accessible
-            - All test data is present in each restored VM
+            - All restored VMs boot successfully and test data is present in each VM
         """
 
     @pytest.mark.polarion("CNV-16012")
@@ -581,9 +547,7 @@ class TestConcurrentBackups:
             6. Start all restored VMs
 
         Expected:
-            - All backups complete successfully
-            - All restored VMs boot and are accessible
-            - All test data is present in each restored VM
+            - All restored VMs boot successfully and test data is present in each VM
         """
 
 
@@ -617,9 +581,7 @@ class TestWindowsVMFullBackup:
             6. Start the restored VM
 
         Expected:
-            - Full backup completes successfully
-            - Restored Windows VM boots successfully and is accessible
-            - Test data is present in restored VM
+            - Restored Windows VM boots successfully and test data is present
         """
 
     @pytest.mark.polarion("CNV-16014")
@@ -639,9 +601,7 @@ class TestWindowsVMFullBackup:
             6. Start the restored VM
 
         Expected:
-            - Full backup completes successfully
-            - Restored Windows VM boots successfully and is accessible
-            - Test data is present in restored VM
+            - Restored Windows VM boots successfully and test data is present
         """
 
 
@@ -676,9 +636,7 @@ class TestWindowsVMIncrementalBackup:
             6. Start the restored VM
 
         Expected:
-            - Incremental backup completes successfully
-            - Restored Windows VM boots successfully and is accessible
-            - Original test data and new test data are present in restored VM
+            - Restored Windows VM boots successfully and all test data is present
         """
 
     @pytest.mark.polarion("CNV-16016")
@@ -698,7 +656,5 @@ class TestWindowsVMIncrementalBackup:
             6. Start the restored VM
 
         Expected:
-            - Incremental backup completes successfully
-            - Restored Windows VM boots successfully and is accessible
-            - Original test data and new test data are present in restored VM
+            - Restored Windows VM boots successfully and all test data is present
         """
