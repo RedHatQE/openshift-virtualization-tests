@@ -12,9 +12,26 @@ Preconditions:
 
 import pytest
 
+from libs.net.ip import filter_link_local_addresses
+from libs.net.vmspec import lookup_iface_status
+from tests.network.libs.connectivity import poll_tcp_connectivity
+from tests.network.libs.nad_ref import update_nad_references
+from tests.network.localnet.liblocalnet import (
+    GUEST_1ST_IFACE_NAME,
+    GUEST_2ND_IFACE_NAME,
+    IFACE_A_NAME,
+    IFACE_B_NAME,
+)
 
+
+@pytest.mark.usefixtures("nncp_localnet", "baseline_connectivity_localnet")
 @pytest.mark.polarion("CNV-15948")
-def test_running_vm_vlan_change():
+def test_running_vm_vlan_change(
+    subtests,
+    under_test_vm_localnet,
+    ref_vm_localnet,
+    cudn_nad_ref_vlan_b,
+):
     """
     Test that a running VM can change the VLAN of its secondary localnet network, without rebooting.
     The VM should establish TCP connectivity on the new VLAN.
@@ -33,6 +50,28 @@ def test_running_vm_vlan_change():
         - Under-test VM eventually has TCP connectivity to the reference VM on NAD-VLAN-B
         - Under-test VM has no TCP connectivity to the reference VM on NAD-VLAN-A
     """
+    update_nad_references(vm=under_test_vm_localnet, nad_name_by_net={IFACE_A_NAME: cudn_nad_ref_vlan_b.name})
 
-
-test_running_vm_vlan_change.__test__ = False
+    for server_ip in filter_link_local_addresses(
+        ip_addresses=lookup_iface_status(vm=ref_vm_localnet, iface_name=IFACE_B_NAME).ipAddresses
+    ):
+        with subtests.test(msg=f"IPv{server_ip.version} connectivity on {IFACE_B_NAME}"):
+            poll_tcp_connectivity(
+                client_vm=under_test_vm_localnet,
+                server_vm=ref_vm_localnet,
+                server_ip=str(server_ip),
+                server_bind_dev=GUEST_2ND_IFACE_NAME,
+                client_bind_dev=GUEST_1ST_IFACE_NAME,
+            )
+    for server_ip in filter_link_local_addresses(
+        ip_addresses=lookup_iface_status(vm=ref_vm_localnet, iface_name=IFACE_A_NAME).ipAddresses
+    ):
+        with subtests.test(msg=f"IPv{server_ip.version} no connectivity on {IFACE_A_NAME}"):
+            poll_tcp_connectivity(
+                client_vm=under_test_vm_localnet,
+                server_vm=ref_vm_localnet,
+                server_ip=str(server_ip),
+                server_bind_dev=GUEST_1ST_IFACE_NAME,
+                client_bind_dev=GUEST_1ST_IFACE_NAME,
+                expect_connectivity=False,
+            )
