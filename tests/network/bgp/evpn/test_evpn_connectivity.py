@@ -32,8 +32,8 @@ from tests.network.bgp.evpn.libevpn import (
 )
 from utilities.virt import migrate_vm_and_verify
 
-_L2_ENDPOINT_IPV4: str = f"{random_ipv4_address(net_seed=EVPN_CUDN_NET_SEED, host_address=249)}/24"
-_L2_ENDPOINT_IPV6: str = f"{random_ipv6_address(net_seed=EVPN_CUDN_NET_SEED, host_address=249)}/64"
+_L2_ENDPOINT_IPV4: str = random_ipv4_address(net_seed=EVPN_CUDN_NET_SEED, host_address=249)
+_L2_ENDPOINT_IPV6: str = random_ipv6_address(net_seed=EVPN_CUDN_NET_SEED, host_address=249)
 
 pytestmark = [
     pytest.mark.bgp,

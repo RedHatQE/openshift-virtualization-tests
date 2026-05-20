@@ -113,7 +113,7 @@ def linux_bridge_attached_vma(
 ):
     name = "vma"
     networks, network_data_data = _networks_data(
-        nad=linux_macspoof_nad, ip=f"{random_ipv4_address(net_seed=0, host_address=1)}/24"
+        nad=linux_macspoof_nad, ip=random_ipv4_address(net_seed=0, host_address=1)
     )
     cloud_init_data = compose_cloud_init_data_dict(
         network_data=network_data_data,
@@ -141,7 +141,7 @@ def linux_bridge_attached_vmb(
 ):
     name = "vmb"
     networks, network_data_data = _networks_data(
-        nad=linux_macspoof_nad, ip=f"{random_ipv4_address(net_seed=0, host_address=2)}/24"
+        nad=linux_macspoof_nad, ip=random_ipv4_address(net_seed=0, host_address=2)
     )
     cloud_init_data = compose_cloud_init_data_dict(
         network_data=network_data_data,
