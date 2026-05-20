@@ -12,6 +12,8 @@ from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 from pyhelper_utils.shell import run_ssh_commands
 
 from tests.storage.snapshots.constants import WINDOWS_DIRECTORY_PATH
+from ocp_resources.virtual_machine_restore import VirtualMachineRestore
+
 from tests.storage.utils import (
     assert_windows_directory_existence,
     create_windows19_vm,
@@ -104,3 +106,31 @@ def file_created_during_snapshot(windows_vm_for_snapshot, windows_snapshot):
     run_ssh_commands(host=windows_vm_for_snapshot.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC)
     windows_snapshot.wait_snapshot_done(timeout=TIMEOUT_10MIN)
     windows_vm_for_snapshot.stop(wait=True)
+
+
+@pytest.fixture()
+def vm_restore_with_predictable_names(
+    admin_client,
+    rhel_vm_for_snapshot,
+    snapshot_with_content,
+):
+    if rhel_vm_for_snapshot.ready:
+        rhel_vm_for_snapshot.stop(wait=True)
+
+    source_volume_name = rhel_vm_for_snapshot.instance.spec.template.spec.volumes[0].name
+    restored_vm_name = f"{rhel_vm_for_snapshot.name}-restored"
+
+    with VirtualMachineRestore(
+        name=f"{restored_vm_name}-restore",
+        namespace=rhel_vm_for_snapshot.namespace,
+        vm_name=restored_vm_name,
+        snapshot_name=snapshot_with_content[0].name,
+        client=admin_client,
+        volume_restore_policy="PrefixTargetName",
+    ) as vm_restore:
+        vm_restore.wait_restore_done(timeout=TIMEOUT_10MIN)
+        yield {
+            "restored_vm_name": restored_vm_name,
+            "source_volume_name": source_volume_name,
+            "vm_restore": vm_restore,
+        }

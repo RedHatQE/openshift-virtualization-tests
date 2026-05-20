@@ -18,14 +18,12 @@ from tests.storage.snapshots.constants import (
     WINDOWS_DIRECTORY_PATH,
 )
 from tests.storage.snapshots.utils import (
-    assert_restored_dv_pvc_predictable_names,
     expected_output_after_restore,
     fail_to_create_snapshot_no_permissions,
     start_windows_vm_after_restore,
-    vm_restore_with_prefix_policy,
 )
 from tests.storage.utils import assert_windows_directory_existence
-from utilities.constants import LS_COMMAND, TIMEOUT_1MIN, TIMEOUT_10MIN, TIMEOUT_10SEC
+from utilities.constants import LS_COMMAND, TIMEOUT_1MIN, TIMEOUT_10SEC
 from utilities.storage import run_command_on_vm_and_check_output
 from utilities.virt import restart_vm_wait_for_running_vm, running_vm
 
@@ -279,34 +277,25 @@ class TestRestoreSnapshots:
     )
     def test_restore_snapshot_with_predictable_names(
         self,
-        admin_client,
-        rhel_vm_for_snapshot,
-        snapshot_with_content,
+        vm_restore_with_predictable_names,
     ):
-        if rhel_vm_for_snapshot.ready:
-            rhel_vm_for_snapshot.stop(wait=True)
+        restored_vm_name = vm_restore_with_predictable_names["restored_vm_name"]
+        source_volume_name = vm_restore_with_predictable_names["source_volume_name"]
+        vm_restore = vm_restore_with_predictable_names["vm_restore"]
 
-        source_volume_name = rhel_vm_for_snapshot.instance.spec.template.spec.volumes[0].name
-        restored_vm_name = f"{rhel_vm_for_snapshot.name}-restored"
+        restore_status = vm_restore.instance.status
+        expected_name = f"{restored_vm_name}-{source_volume_name}"[:63]
 
-        with vm_restore_with_prefix_policy(
-            name=f"{restored_vm_name}-restore",
-            namespace=rhel_vm_for_snapshot.namespace,
-            vm_name=restored_vm_name,
-            snapshot_name=snapshot_with_content[0].name,
-            client=admin_client,
-            prefix_policy="PrefixTargetName",
-        ) as vm_restore:
-            vm_restore.wait_restore_done(timeout=TIMEOUT_10MIN)
-
-            restore_status = vm_restore.instance.status
-            assert_restored_dv_pvc_predictable_names(
-                restored_vm_name=restored_vm_name,
-                source_volume_name=source_volume_name,
-                restored_dv_name=restore_status.restores[0].dataVolumeName,
-                restored_pvc_name=restore_status.restores[0].persistentVolumeClaim,
-                volume_restore_policy=vm_restore.instance.spec.get("volumeRestorePolicy"),
-            )
+        assert vm_restore.instance.spec.get("volumeRestorePolicy") == "PrefixTargetName", (
+            f"volumeRestorePolicy is '{vm_restore.instance.spec.get('volumeRestorePolicy')}', "
+            "expected 'PrefixTargetName'"
+        )
+        assert restore_status.restores[0].dataVolumeName == expected_name, (
+            f"Restored DV name is '{restore_status.restores[0].dataVolumeName}', expected '{expected_name}'"
+        )
+        assert restore_status.restores[0].persistentVolumeClaim == expected_name, (
+            f"Restored PVC name is '{restore_status.restores[0].persistentVolumeClaim}', expected '{expected_name}'"
+        )
 
 
 @pytest.mark.parametrize(
