@@ -289,8 +289,8 @@ def wait_for_dv_condition_message(dv: DataVolume, expected_message: str, timeout
     Uses substring matching (not exact match) because CDI messages
     often include variable context like timestamps, pod names, or URLs.
 
-    Monitors ADDED and MODIFIED events. DELETED events are logged as warnings
-    and stop monitoring. Other event types are logged and ignored.
+    Monitors ADDED and MODIFIED events. DELETED events cause immediate failure.
+    Other event types are logged and ignored.
 
     Example:
         Expected: "certificate signed by unknown authority"
@@ -299,26 +299,33 @@ def wait_for_dv_condition_message(dv: DataVolume, expected_message: str, timeout
     Args:
         dv: DataVolume resource to monitor for condition messages
         expected_message: Expected message substring to find in condition messages
-        timeout: Timeout in seconds for the operation, default is 5 minutes (300 seconds).
+        timeout: Timeout in seconds for the operation, default is TIMEOUT_5MIN.
 
     Raises:
-        DataVolumeConditionMessageNotFoundError: If expected message not found in conditions within timeout
+        DataVolumeConditionMessageNotFoundError: If expected message not found within timeout
+            or if the DataVolume is deleted during monitoring.
     """
     LOGGER.info(f"Watching {dv.name} for message: {expected_message} for up to {timeout} seconds.")
+    last_conditions: list[dict[str, str]] = []
+    deleted = False
     for event in dv.watcher(timeout=timeout):
         event_type = event["type"]
         if event_type == "DELETED":
-            LOGGER.warning(f"DataVolume {dv.name} was deleted while waiting for message: {expected_message}")
+            deleted = True
             break
         if event_type not in ("ADDED", "MODIFIED"):
             LOGGER.info(f"Ignoring {event_type} event for DataVolume {dv.name}")
             continue
-        conditions = (event["object"].status or {}).get("conditions", [])
-        if any(expected_message in condition.get("message", "") for condition in conditions):
+        last_conditions = (event["object"].status or {}).get("conditions", [])
+        if any(expected_message in condition.get("message", "") for condition in last_conditions):
             LOGGER.info(f"Found expected message in {dv.name}: {expected_message}")
             return
 
-    raise DataVolumeConditionMessageNotFoundError(dv_name=dv.name, expected_message=expected_message)
+    reason = f"DataVolume '{dv.name}' was deleted" if deleted else f"Timed out after {timeout} seconds"
+    LOGGER.error(f"{reason} while waiting for message: {expected_message}")
+    raise DataVolumeConditionMessageNotFoundError(
+        dv_name=dv.name, expected_message=expected_message, last_conditions=last_conditions
+    )
 
 
 def assert_pvc_snapshot_clone_annotation(pvc, storage_class):

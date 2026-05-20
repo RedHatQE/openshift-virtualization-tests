@@ -171,6 +171,17 @@ class TestDataVolumeConditionMessageNotFoundError:
         error = DataVolumeConditionMessageNotFoundError(dv_name=dv_name, expected_message=expected_message)
         assert error.dv_name == dv_name
         assert error.expected_message == expected_message
+        assert error.last_conditions is None
+
+    def test_data_volume_condition_message_not_found_error_init_with_conditions(self):
+        """Test DataVolumeConditionMessageNotFoundError initialization with last conditions"""
+        dv_name = "test-dv"
+        expected_message = "Test message"
+        last_conditions = [{"type": "Ready", "message": "some other message"}]
+        error = DataVolumeConditionMessageNotFoundError(
+            dv_name=dv_name, expected_message=expected_message, last_conditions=last_conditions
+        )
+        assert error.last_conditions == last_conditions
 
     def test_data_volume_condition_message_not_found_error_str(self):
         """Test DataVolumeConditionMessageNotFoundError string representation"""
@@ -179,6 +190,19 @@ class TestDataVolumeConditionMessageNotFoundError:
         error = DataVolumeConditionMessageNotFoundError(dv_name=dv_name, expected_message=expected_message)
         expected = f"Expected message '{expected_message}' not found in DataVolume '{dv_name}' conditions."
         assert str(error) == expected
+
+    def test_data_volume_condition_message_not_found_error_str_with_conditions(self):
+        """Test DataVolumeConditionMessageNotFoundError string includes last conditions when provided"""
+        dv_name = "test-dv"
+        expected_message = "Test message"
+        last_conditions = [{"type": "Ready", "message": "Import complete"}]
+        error = DataVolumeConditionMessageNotFoundError(
+            dv_name=dv_name, expected_message=expected_message, last_conditions=last_conditions
+        )
+        error_str = str(error)
+        assert expected_message in error_str
+        assert dv_name in error_str
+        assert "Import complete" in error_str
 
     def test_data_volume_condition_message_not_found_error_args(self):
         """Test DataVolumeConditionMessageNotFoundError populates args via super().__init__()"""
