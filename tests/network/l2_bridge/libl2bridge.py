@@ -42,6 +42,15 @@ LOGGER = logging.getLogger(__name__)
 
 RHCOS9_WORKER_LABEL: Final[str] = f"{NODE_ROLE_KUBERNETES_IO}/worker-rhcos9"
 
+MULTI_IFACE_ARP_RUNCMD = [
+    # Only answer ARP for the IP assigned to the receiving interface —
+    # prevents eth1 from responding to ARP for eth2's IP when queried from the same VLAN.
+    "sysctl -w net.ipv4.conf.all.arp_ignore=1",
+    # Use the sender IP belonging to the outgoing interface in ARP requests,
+    # preventing the peer from caching a wrong MAC for the wrong IP.
+    "sysctl -w net.ipv4.conf.all.arp_announce=2",
+]
+
 NETWORK_MANAGER_UNMANAGE_RUNCMD = [
     'sudo echo -e "[main]\nno-auto-default=*\nignore-carrier=*" > /etc/NetworkManager/conf.d/no-nm-ownership.conf',
     "sudo systemctl restart NetworkManager",
@@ -500,8 +509,7 @@ def _cloud_init_data(
         "modprobe mpls_router",  # In order to test mpls we need to load driver
         "sysctl -w net.mpls.platform_labels=1000",  # Activate mpls labeling feature
         "sysctl -w net.mpls.conf.eth4.input=1",  # Allow incoming mpls traffic
-        "sysctl -w net.ipv4.conf.all.arp_ignore=1",  # 2 kernel flags are used to disable wrong arp behavior
-        "sysctl -w net.ipv4.conf.all.arp_announce=2",  # Send arp reply only if ip belongs to the interface
+        *MULTI_IFACE_ARP_RUNCMD,
         f"ip addr add {mpls_local_ip} dev lo",
         f"ip -f mpls route add {mpls_local_tag} dev lo",
         "nmcli connection up eth4",  # In order to add mpls route we need to make sure that connection is UP
