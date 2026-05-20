@@ -1,8 +1,8 @@
 """
 CBT (Changed Block Tracking) backup and restore validation
 
-STP Reference: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
-Jira Epic: CNV-61530
+STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
+Jira: https://issues.redhat.com/browse/CNV-61530
 """
 
 import pytest
