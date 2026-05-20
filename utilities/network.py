@@ -660,13 +660,6 @@ class IfaceNotFound(Exception):
         return f"Interface not found for NAD {self.name}"
 
 
-def get_vmi_mac_address_by_iface_name(vmi, iface_name):
-    for iface in vmi.interfaces:
-        if iface.name == iface_name:
-            return iface.mac
-    raise IfaceNotFound(name=iface_name)
-
-
 def cloud_init_network_data(data):
     """
     Generate cloud init network data.

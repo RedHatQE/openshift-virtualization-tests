@@ -1,8 +1,9 @@
 import pytest
 from kubernetes.client.rest import ApiException
 
+from libs.net.vmspec import lookup_iface_status
 from tests.network.kubemacpool import utils as kmp_utils
-from utilities.network import assert_ping_successful, get_vmi_mac_address_by_iface_name
+from utilities.network import assert_ping_successful
 from utilities.virt import VirtualMachineForTests
 
 pytestmark = [pytest.mark.ipv4]
@@ -44,7 +45,9 @@ class TestKMPConnectivity:
         from kubemacpool belongs to range and connectivity is OK"""
         for vm in (running_vm_a, running_vm_b):
             assert mac_pool.mac_is_within_range(
-                mac=get_vmi_mac_address_by_iface_name(vmi=vm.vmi, iface_name=vm.default_masquerade_iface_config.name),
+                mac=lookup_iface_status(
+                    vm=vm, iface_name=vm.default_masquerade_iface_config.name, predicate=lambda _: True, timeout=1
+                ).mac,
             )
         assert_ping_successful(
             src_vm=running_vm_a,
@@ -59,7 +62,9 @@ class TestKMPConnectivity:
         from kubemacpool belongs to range and connectivity is OK"""
         for vm in (running_vm_a, running_vm_b):
             assert mac_pool.mac_is_within_range(
-                mac=get_vmi_mac_address_by_iface_name(vmi=vm.vmi, iface_name=vm.auto_mac_iface_config.name),
+                mac=lookup_iface_status(
+                    vm=vm, iface_name=vm.auto_mac_iface_config.name, predicate=lambda _: True, timeout=1
+                ).mac,
             )
         assert_ping_successful(src_vm=running_vm_a, dst_ip=running_vm_b.auto_mac_iface_config.ip_address)
 
@@ -69,7 +74,9 @@ class TestKMPConnectivity:
         from kubemacpool is belongs to range and connectivity is OK"""
         for vm in (running_vm_a, running_vm_b):
             assert mac_pool.mac_is_within_range(
-                mac=get_vmi_mac_address_by_iface_name(vmi=vm.vmi, iface_name=vm.auto_mac_tuning_iface_config.name),
+                mac=lookup_iface_status(
+                    vm=vm, iface_name=vm.auto_mac_tuning_iface_config.name, predicate=lambda _: True, timeout=1
+                ).mac,
             )
         assert_ping_successful(
             src_vm=running_vm_a,
@@ -93,7 +100,9 @@ class TestKMPConnectivity:
         enabled_ns_vm,
     ):
         assert mac_pool.mac_is_within_range(
-            mac=get_vmi_mac_address_by_iface_name(vmi=enabled_ns_vm.vmi, iface_name=enabled_ns_nad.name)
+            mac=lookup_iface_status(
+                vm=enabled_ns_vm, iface_name=enabled_ns_nad.name, predicate=lambda _: True, timeout=1
+            ).mac
         )
 
     @pytest.mark.polarion("CNV-4217")
@@ -105,7 +114,9 @@ class TestKMPConnectivity:
         no_label_ns_vm,
     ):
         assert mac_pool.mac_is_within_range(
-            mac=get_vmi_mac_address_by_iface_name(vmi=no_label_ns_vm.vmi, iface_name=no_label_ns_nad.name)
+            mac=lookup_iface_status(
+                vm=no_label_ns_vm, iface_name=no_label_ns_nad.name, predicate=lambda _: True, timeout=1
+            ).mac
         )
 
 
@@ -121,7 +132,9 @@ class TestNegatives:
     ):
         # KMP should not allocate.
         assert not mac_pool.mac_is_within_range(
-            mac=get_vmi_mac_address_by_iface_name(vmi=disabled_ns_vm.vmi, iface_name=disabled_ns_nad.name)
+            mac=lookup_iface_status(
+                vm=disabled_ns_vm, iface_name=disabled_ns_nad.name, predicate=lambda _: True, timeout=1
+            ).mac
         )
 
 

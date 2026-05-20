@@ -15,10 +15,7 @@ from utilities.constants import (
     DEPENDENCY_SCOPE_SESSION,
     KMP_VM_ASSIGNMENT_LABEL,
 )
-from utilities.network import (
-    assert_ping_successful,
-    get_vmi_mac_address_by_iface_name,
-)
+from utilities.network import assert_ping_successful
 
 LOGGER = logging.getLogger(__name__)
 DEPENDENCIES_NODE_ID_PREFIX = f"{os.path.abspath(__file__)}::TestUpgradeNetwork"
@@ -87,7 +84,9 @@ class TestUpgradeNetwork:
     ):
         for vm in (running_vm_upgrade_a, running_vm_upgrade_b):
             assert mac_pool.mac_is_within_range(
-                mac=get_vmi_mac_address_by_iface_name(vmi=vm.vmi, iface_name=upgrade_bridge_marker_nad.name)
+                mac=lookup_iface_status(
+                    vm=vm, iface_name=upgrade_bridge_marker_nad.name, predicate=lambda _: True, timeout=1
+                ).mac
             )
 
     @pytest.mark.sno
@@ -194,7 +193,9 @@ class TestUpgradeNetwork:
     ):
         for vm in (running_vm_upgrade_a, running_vm_upgrade_b):
             assert mac_pool.mac_is_within_range(
-                mac=get_vmi_mac_address_by_iface_name(vmi=vm.vmi, iface_name=upgrade_bridge_marker_nad.name)
+                mac=lookup_iface_status(
+                    vm=vm, iface_name=upgrade_bridge_marker_nad.name, predicate=lambda _: True, timeout=1
+                ).mac
             )
 
     @pytest.mark.sno
