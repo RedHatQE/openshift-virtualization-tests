@@ -1120,8 +1120,18 @@ def get_data_sources_managed_by_data_import_cron(client: DynamicClient, namespac
 def verify_boot_sources_reimported(
     admin_client: DynamicClient, namespace: str, consecutive_checks_count: int = 6
 ) -> bool:
-    """
-    Verify that the boot sources are re-imported while changing a storage class.
+    """Verify all DataImportCron-managed DataSources reach Ready=True.
+
+    Checks DataSources sequentially each with its own timeout. Stops on the first
+    DataSource that does not become ready.
+
+    Args:
+        admin_client: Cluster admin client.
+        namespace: Namespace containing the DataImportCron-managed DataSources.
+        consecutive_checks_count: Consecutive Ready=True polls required for stability.
+
+    Returns:
+        True if all DataSources reached Ready=True otherwise false
     """
     try:
         for data_source in get_data_sources_managed_by_data_import_cron(client=admin_client, namespace=namespace):
@@ -1136,13 +1146,11 @@ def verify_boot_sources_reimported(
                 resource_name=data_source.name,
             )
         return True
-    except (TimeoutExpiredError, Exception) as exception:
-        fail_message = (
-            "Failed to re-import boot sources, exiting the pytest execution"
-            if isinstance(exception, TimeoutExpiredError)
-            else str(exception)
+    except TimeoutExpiredError as exception:
+        LOGGER.error(
+            f"Boot source DataSource did not reach Ready=True within {TIMEOUT_10MIN}s. "
+            f"namespace={namespace!r}, data_source={data_source.name!r}, timeout_error={exception!r}"
         )
-        LOGGER.error(fail_message)
         return False
 
 
