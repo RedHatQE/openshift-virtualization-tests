@@ -6,6 +6,9 @@ from libs.vm.spec import (
     Affinity,
     LabelSelector,
     LabelSelectorRequirement,
+    NodeAffinity,
+    NodeSelectorTerm,
+    NodeSelectorTerms,
     PodAffinity,
     PodAffinityTerm,
     PodAntiAffinity,
@@ -78,5 +81,28 @@ def new_pod_affinity(label: tuple[str, str], namespaces: list[str] | None = None
                     namespaceSelector={} if namespaces is None else None,
                 )
             ]
+        )
+    )
+
+
+def new_node_affinity(key: str, exists: bool) -> Affinity:
+    """Create a node affinity based on whether target nodes must carry the given label.
+
+    Args:
+        key: Node role label key to match.
+        exists: If True, target nodes must carry the label (Exists operator).
+            If False, target nodes must NOT carry the label (DoesNotExist operator).
+
+    Returns:
+        Affinity object with nodeAffinity configured.
+    """
+    operator = "Exists" if exists else "DoesNotExist"
+    return Affinity(
+        nodeAffinity=NodeAffinity(
+            requiredDuringSchedulingIgnoredDuringExecution=NodeSelectorTerms(
+                nodeSelectorTerms=[
+                    NodeSelectorTerm(matchExpressions=[LabelSelectorRequirement(key=key, operator=operator)])
+                ]
+            )
         )
     )
