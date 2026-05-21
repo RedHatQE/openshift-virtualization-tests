@@ -8,6 +8,7 @@ from ocp_resources.cdi import CDI
 from ocp_resources.deployment import Deployment
 from ocp_resources.exceptions import ExecOnPodError
 from ocp_resources.kubevirt import KubeVirt
+from ocp_resources.mig_controller import MigController
 from ocp_resources.network_addons_config import NetworkAddonsConfig
 from ocp_resources.network_policy import NetworkPolicy
 from ocp_resources.pod import Pod
@@ -43,6 +44,7 @@ from utilities.constants import (
     CDI_KUBEVIRT_HYPERCONVERGED,
     CLUSTER,
     KUBEVIRT_HCO_NAME,
+    MIGCONTROLLER_KUBEVIRT_HYPERCONVERGED,
     SSP_KUBEVIRT_HYPERCONVERGED,
     TIMEOUT_60MIN,
     TLS_SECURITY_PROFILE,
@@ -74,6 +76,11 @@ def resources_dict(hco_namespace):
         },
         NetworkAddonsConfig: {
             RESOURCE_NAME_STR: CLUSTER,
+            KEY_NAME_STR: TLS_SECURITY_PROFILE,
+        },
+        MigController: {
+            RESOURCE_NAME_STR: MIGCONTROLLER_KUBEVIRT_HYPERCONVERGED,
+            RESOURCE_NAMESPACE_STR: hco_namespace.name,
             KEY_NAME_STR: TLS_SECURITY_PROFILE,
         },
     }

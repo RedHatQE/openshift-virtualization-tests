@@ -2,9 +2,11 @@ import logging
 
 import pytest
 from ocp_resources.hyperconverged import HyperConverged
+from ocp_resources.mig_controller import MigController
 
 from tests.install_upgrade_operators.crypto_policy.constants import (
     CRYPTO_POLICY_SPEC_DICT,
+    MANAGED_CRS_LIST,
 )
 from tests.install_upgrade_operators.crypto_policy.utils import (
     assert_crypto_policy_propagated_to_components,
@@ -17,9 +19,16 @@ pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.s390x]
 
 
 @pytest.fixture()
-def hco_crypto_policy(hyperconverged_resource_scope_function, updated_hco_crypto_policy):
+def hco_crypto_policy(
+    hyperconverged_resource_scope_function, updated_hco_crypto_policy, cnv_crypto_policy_matrix__function__
+):
     tls_profile = hyperconverged_resource_scope_function.instance.spec.get(TLS_SECURITY_PROFILE)
-    return tls_profile.to_dict() if tls_profile else None
+    if not tls_profile:
+        return None
+    tls_dict = tls_profile.to_dict()
+    # OCP 4.22+ API adds empty profile-type keys (e.g. old: {}, custom: {}) as CRD defaults
+    expected = CRYPTO_POLICY_SPEC_DICT[cnv_crypto_policy_matrix__function__]
+    return {policy_key: policy_value for policy_key, policy_value in tls_dict.items() if policy_key in expected}
 
 
 @pytest.fixture()
@@ -52,4 +61,5 @@ def test_set_hco_crypto_policy(
         resources_dict=resources_dict,
         updated_resource_kind=HyperConverged.kind,
         admin_client=admin_client,
+        managed_crs_list=[*MANAGED_CRS_LIST, MigController],
     )

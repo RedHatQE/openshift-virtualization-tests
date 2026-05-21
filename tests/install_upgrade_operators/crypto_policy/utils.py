@@ -150,6 +150,7 @@ def assert_crypto_policy_propagated_to_components(
     resources_dict: dict,
     updated_resource_kind: str,
     admin_client: DynamicClient,
+    managed_crs_list: list[Resource] | None = None,
 ) -> None:
     """
     This function is used to assert whether the updated crypto policy settings
@@ -168,7 +169,8 @@ def assert_crypto_policy_propagated_to_components(
         & CDI) doesn't match with the expected 'crypto_policy'
     """
     conflicting_resources = []
-    for resource in MANAGED_CRS_LIST:
+    selected_managed_crs = managed_crs_list if managed_crs_list else MANAGED_CRS_LIST
+    for resource in selected_managed_crs:
         expected_value = CRYPTO_POLICY_EXPECTED_DICT[crypto_policy][resource]
         error_message = wait_for_crypto_policy_update(
             resource=resource,
