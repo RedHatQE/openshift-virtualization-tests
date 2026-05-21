@@ -14,6 +14,7 @@ from libs.vm.factory import base_vmspec, fedora_vm
 from libs.vm.spec import CloudInitNoCloud, Interface, Multus, Network
 from libs.vm.vm import BaseVirtualMachine, add_volume_disk, cloudinitdisk_storage
 from tests.network.libs import cloudinit
+from tests.network.libs.cloudinit import primary_iface_cloud_init
 from tests.network.localnet.liblocalnet import GUEST_1ST_IFACE_NAME, GUEST_3RD_IFACE_NAME
 
 LOGGER = logging.getLogger(__name__)
@@ -59,17 +60,6 @@ def secondary_network_vm(
     spec.template.spec = add_volume_disk(vmi_spec=spec.template.spec, volume=volume, disk=disk)
 
     return fedora_vm(namespace=namespace, name=name, client=client, spec=spec)
-
-
-def primary_iface_cloud_init() -> cloudinit.EthernetDevice | None:
-    if not ipv6_supported_cluster():
-        return None
-    return cloudinit.EthernetDevice(
-        addresses=["fd10:0:2::2/120"],
-        gateway6="fd10:0:2::1",
-        dhcp4=ipv4_supported_cluster(),
-        dhcp6=False,
-    )
 
 
 def secondary_iface_cloud_init(host_address: int) -> cloudinit.EthernetDevice:
