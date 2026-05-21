@@ -4,30 +4,20 @@ Clone tests
 
 import pytest
 from ocp_resources.datavolume import DataVolume
-from ocp_resources.virtual_machine_cluster_instancetype import (
-    VirtualMachineClusterInstancetype,
-)
-from ocp_resources.virtual_machine_cluster_preference import (
-    VirtualMachineClusterPreference,
-)
 
 from tests.os_params import FEDORA_LATEST
-from tests.storage.cdi_clone.constants import WINDOWS_CLONE_TIMEOUT
 from tests.storage.utils import (
     assert_pvc_snapshot_clone_annotation,
     assert_use_populator,
     validate_os_info_vmi_vs_windows_os,
-    wait_for_windows_vm,
 )
+from tests.utils import create_windows2022_vm_with_vtpm
 from utilities.constants import (
     OS_FLAVOR_FEDORA,
-    OS_FLAVOR_WIN_CONTAINER_DISK,
     OS_FLAVOR_WINDOWS,
     TIMEOUT_1MIN,
     TIMEOUT_40MIN,
-    U1_LARGE,
     WIN_2K22,
-    WINDOWS_2K22_PREFERENCE,
     Images,
 )
 from utilities.storage import (
@@ -159,21 +149,16 @@ def test_successful_vm_from_cloned_dv_windows(
     unprivileged_client,
     namespace,
     modern_cpu_for_migration,
-    cloned_windows_with_vtpm_dv_from_registry_scope_function,
+    cloned_windows_dv_template_from_registry_scope_function,
 ):
     """Test cloning Windows 2022 DV and creating VM with vTPM using instance types."""
-    with VirtualMachineForTests(
-        name=f"vm-{WIN_2K22}-vtpm",
+    with create_windows2022_vm_with_vtpm(
+        dv_template=cloned_windows_dv_template_from_registry_scope_function,
         namespace=namespace.name,
         client=unprivileged_client,
-        os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK,
-        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_LARGE, client=unprivileged_client),
-        vm_preference=VirtualMachineClusterPreference(name=WINDOWS_2K22_PREFERENCE, client=unprivileged_client),
-        data_volume=cloned_windows_with_vtpm_dv_from_registry_scope_function,
+        vm_name=f"vm-{WIN_2K22}",
         cpu_model=modern_cpu_for_migration,
     ) as vm:
-        running_vm(vm=vm)
-        wait_for_windows_vm(vm=vm, version="2022", timeout=WINDOWS_CLONE_TIMEOUT)
         validate_os_info_vmi_vs_windows_os(vm=vm)
 
 
