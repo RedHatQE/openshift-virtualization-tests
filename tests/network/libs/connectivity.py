@@ -1,4 +1,14 @@
 import ipaddress
+from typing import Final
+
+ARP_ISOLATION_SYSCTL_CMD: Final[list[str]] = [
+    # Only answer ARP for the IP assigned to the receiving interface —
+    # prevents eth1 from responding to ARP for eth2's IP when queried from the same VLAN.
+    "sysctl -w net.ipv4.conf.all.arp_ignore=1",
+    # Use the sender IP belonging to the outgoing interface in ARP requests,
+    # preventing the peer from caching a wrong MAC for the wrong IP.
+    "sysctl -w net.ipv4.conf.all.arp_announce=2",
+]
 
 
 def build_ping_command(dst_ip: str, count: int, timeout: int) -> str:

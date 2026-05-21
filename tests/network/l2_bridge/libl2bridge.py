@@ -16,6 +16,7 @@ from libs.vm.spec import Affinity, CloudInitNoCloud, Interface, Multus, Network
 from libs.vm.vm import BaseVirtualMachine, add_volume_disk, cloudinitdisk_storage
 from tests.network.libs import cloudinit
 from tests.network.libs.cloudinit import primary_iface_cloud_init
+from tests.network.libs.connectivity import ARP_ISOLATION_SYSCTL_CMD
 from tests.network.utils import update_cloud_init_extra_user_data
 from utilities import console
 from utilities.constants import (
@@ -485,8 +486,7 @@ def _cloud_init_data(
         "modprobe mpls_router",  # In order to test mpls we need to load driver
         "sysctl -w net.mpls.platform_labels=1000",  # Activate mpls labeling feature
         "sysctl -w net.mpls.conf.eth4.input=1",  # Allow incoming mpls traffic
-        "sysctl -w net.ipv4.conf.all.arp_ignore=1",  # 2 kernel flags are used to disable wrong arp behavior
-        "sysctl -w net.ipv4.conf.all.arp_announce=2",  # Send arp reply only if ip belongs to the interface
+        *ARP_ISOLATION_SYSCTL_CMD,
         f"ip addr add {mpls_local_ip} dev lo",
         f"ip -f mpls route add {mpls_local_tag} dev lo",
         "nmcli connection up eth4",  # In order to add mpls route we need to make sure that connection is UP
