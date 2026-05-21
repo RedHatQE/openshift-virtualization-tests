@@ -4,9 +4,10 @@ import logging
 import re
 import shlex
 import tarfile
+from collections.abc import Generator
 from contextlib import contextmanager
 from io import BytesIO
-from typing import Generator, Optional
+from typing import Any, Optional
 
 import bitmath
 import requests
@@ -702,7 +703,7 @@ def verify_rwx_default_storage(client: DynamicClient) -> None:
 
 
 @contextmanager
-def create_windows2022_dv_from_registry(
+def create_windows2022_dv_template_from_registry(
     dv_name: str,
     namespace: str,
     client: DynamicClient,
@@ -746,8 +747,8 @@ def create_windows2022_dv_from_registry(
 
 
 @contextmanager
-def create_windows2022_vm_with_vtpm_from_registry(
-    dv_dict: dict,
+def create_windows2022_vm_with_vtpm(
+    dv_template: dict,
     namespace: str,
     client: DynamicClient,
     vm_name: str,
@@ -773,7 +774,7 @@ def create_windows2022_vm_with_vtpm_from_registry(
         os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK,
         vm_instance_type=VirtualMachineClusterInstancetype(name=U1_LARGE, client=client),
         vm_preference=VirtualMachineClusterPreference(name=WINDOWS_2K22_PREFERENCE, client=client),
-        data_volume_template=dv_dict,
+        data_volume_template=dv_template,
         cpu_model=cpu_model,
     ) as vm:
         running_vm(vm=vm)
