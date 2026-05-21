@@ -60,11 +60,16 @@ class NetworkData:
 class UserData:
     """Represents user configuration for cloud-init."""
 
-    users: list[Any]
     """
     Part of cloud-init's 'users and groups' module:
     https://cloudinit.readthedocs.io/en/latest/reference/modules.html#users-and-groups
     """
+    users: list[Any]
+    """
+    Commands to run on first boot:
+    https://cloudinit.readthedocs.io/en/latest/reference/modules.html#runcmd
+    """
+    runcmd: list[str] | None = None
 
 
 def todict(no_cloud: NetworkData | UserData) -> dict[str, Any]:
