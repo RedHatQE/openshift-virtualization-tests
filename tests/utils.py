@@ -7,7 +7,7 @@ import tarfile
 from collections.abc import Generator
 from contextlib import contextmanager
 from io import BytesIO
-from typing import Any, Optional
+from typing import Optional
 
 import bitmath
 import requests
