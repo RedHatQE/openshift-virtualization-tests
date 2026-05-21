@@ -18,25 +18,14 @@ from tests.storage.utils import (
     create_windows_directory,
     set_permissions,
 )
-from utilities.artifactory import (
-    cleanup_artifactory_secret_and_config_map,
-    get_artifactory_config_map,
-    get_artifactory_secret,
-    get_test_artifact_server_url,
-)
+from tests.utils import create_windows2022_dv_template_from_registry, create_windows2022_vm_with_vtpm
 from utilities.constants import (
-    OS_FLAVOR_WIN_CONTAINER_DISK,
     TIMEOUT_2MIN,
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
-    U1_LARGE,
     UNPRIVILEGED_USER,
-    WIN_2K22,
-    WINDOWS_2K22_PREFERENCE,
-    Images,
 )
-from utilities.os_utils import get_windows_container_disk_path
-from utilities.virt import VirtualMachineForTests, running_vm, wait_for_windows_vm
+from utilities.virt import running_vm, wait_for_windows_vm
 
 LOGGER = logging.getLogger(__name__)
 
@@ -62,44 +51,35 @@ def permissions_for_dv(namespace, admin_client):
 
 
 @pytest.fixture()
-def windows_vm_with_vtpm_for_snapshot(
+def windows_dv_template_from_registry(
     request,
     namespace,
     unprivileged_client,
-    modern_cpu_for_migration,
     storage_class_matrix_snapshot_matrix__module__,
 ):
-    artifactory_secret = get_artifactory_secret(namespace=namespace.name)
-    artifactory_config_map = get_artifactory_config_map(namespace=namespace.name)
-    dv = DataVolume(
-        name=request.param["dv_name"],
+    with create_windows2022_dv_template_from_registry(
+        dv_name=request.param["dv_name"],
         namespace=namespace.name,
+        client=unprivileged_client,
         storage_class=next(iter(storage_class_matrix_snapshot_matrix__module__)),
-        source="registry",
-        url=f"{get_test_artifact_server_url(schema='registry')}/{get_windows_container_disk_path(os_value=WIN_2K22)}",
-        size=Images.Windows.CONTAINER_DISK_DV_SIZE,
-        client=unprivileged_client,
-        api_name="storage",
-        secret=artifactory_secret,
-        cert_configmap=artifactory_config_map.name,
-    )
-    dv.to_dict()
-    with VirtualMachineForTests(
-        name=request.param["vm_name"],
+    ) as dv_template:
+        yield dv_template
+
+
+@pytest.fixture()
+def windows_vm_with_vtpm_for_snapshot(
+    request, namespace, unprivileged_client, modern_cpu_for_migration, windows_dv_template_from_registry
+):
+    with create_windows2022_vm_with_vtpm(
+        dv_template=windows_dv_template_from_registry,
         namespace=namespace.name,
         client=unprivileged_client,
-        os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK,
-        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_LARGE, client=unprivileged_client),
-        vm_preference=VirtualMachineClusterPreference(name=WINDOWS_2K22_PREFERENCE, client=unprivileged_client),
-        data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
+        vm_name=request.param["vm_name"],
         cpu_model=modern_cpu_for_migration,
     ) as vm:
         running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
         wait_for_windows_vm(vm=vm, version="2022")
         yield vm
-    cleanup_artifactory_secret_and_config_map(
-        artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
-    )
 
 
 @pytest.fixture()
