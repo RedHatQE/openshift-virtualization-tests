@@ -347,27 +347,6 @@ def get_hpp_daemonset(hco_namespace, hpp_cr_suffix, admin_client):
     return daemonset
 
 
-@contextmanager
-def update_scratch_space_sc(cdi_config, new_sc, hco):
-    def _wait_for_sc_update():
-        samples = TimeoutSampler(
-            wait_timeout=30,
-            sleep=1,
-            func=lambda: cdi_config.scratch_space_storage_class_from_status == new_sc,
-        )
-        for sample in samples:
-            if sample:
-                return
-
-    with ResourceEditorValidateHCOReconcile(
-        patches={hco: {"spec": {"scratchSpaceStorageClass": new_sc}}},
-        list_resource_reconcile=[CDI],
-    ) as edited_cdi_config:
-        _wait_for_sc_update()
-
-        yield edited_cdi_config
-
-
 def create_cirros_dv(
     namespace,
     name,
