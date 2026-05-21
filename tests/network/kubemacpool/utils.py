@@ -3,6 +3,7 @@ from collections import namedtuple
 from ipaddress import ip_interface
 
 from libs.net.ip import random_ipv4_address
+from tests.network.libs.connectivity import ARP_ISOLATION_SYSCTL_CMD
 from utilities.network import cloud_init_network_data, get_vmi_mac_address_by_iface_name
 from utilities.virt import (
     VirtualMachineForTests,
@@ -55,14 +56,7 @@ def create_vm(name, namespace, iface_config, node_selector, client, mac_pool):
         iface: {"addresses": [f"{iface_config[iface].ip_address}/24"]}
         for iface in ("eth%d" % idx for idx in range(1, 5))
     }
-    runcmd = [
-        # 2 kernel flags are used to disable wrong arp behavior
-        "sysctl -w net.ipv4.conf.all.arp_ignore=1",
-        # Send arp reply only if ip belongs to the interface
-        "sysctl -w net.ipv4.conf.all.arp_announce=2",
-    ]
-
-    cloud_init_data = prepare_cloud_init_user_data(section="runcmd", data=runcmd)
+    cloud_init_data = prepare_cloud_init_user_data(section="runcmd", data=ARP_ISOLATION_SYSCTL_CMD)
 
     network_data_data["ethernets"] = _data
     cloud_init_data.update(cloud_init_network_data(data=network_data_data))
