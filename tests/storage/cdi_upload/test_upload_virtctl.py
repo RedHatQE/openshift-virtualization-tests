@@ -15,7 +15,7 @@ from pytest_testconfig import config as py_config
 from libs.net.cluster import is_ipv6_single_stack_cluster
 from tests.storage.cdi_upload.utils import get_storage_profile_minimum_supported_pvc_size
 from tests.storage.utils import assert_use_populator
-from tests.utils import create_windows2022_vm_with_vtpm_from_registry
+from tests.utils import create_windows2022_vm_with_vtpm
 from utilities.constants import (
     CDI_UPLOADPROXY,
     QUARANTINED,
@@ -427,14 +427,14 @@ def test_virtctl_image_upload_dv_with_exist_pvc(
 
 @pytest.mark.tier3
 @pytest.mark.polarion("CNV-3410")
-def test_successful_vm_from_dv_windows(
+def test_successful_vm_from_uploaded_dv_windows_with_vtpm(
     unprivileged_client,
     namespace,
-    windows_dv_from_registry,
+    uploaded_windows_dv,
     modern_cpu_for_migration,
 ):
-    with create_windows2022_vm_with_vtpm_from_registry(
-        dv_dict=windows_dv_from_registry,
+    with create_windows2022_vm_with_vtpm(
+        dv=uploaded_windows_dv,
         namespace=namespace.name,
         client=unprivileged_client,
         vm_name="win2022-vm",

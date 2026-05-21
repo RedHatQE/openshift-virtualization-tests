@@ -8,8 +8,7 @@ import uuid
 import pytest
 from ocp_resources.datavolume import DataVolume
 
-from tests.utils import create_windows2022_dv_from_registry
-from utilities.constants import TIMEOUT_2MIN, Images
+from utilities.constants import TIMEOUT_2MIN, TIMEOUT_40MIN, Images
 from utilities.storage import check_upload_virtctl_result, create_dv, get_downloaded_artifact, virtctl_upload_dv
 
 LOGGER = logging.getLogger(__name__)
@@ -68,14 +67,28 @@ def uploaded_dv_scope_class(unprivileged_client, namespace, storage_class_name_s
 
 
 @pytest.fixture()
-def windows_dv_from_registry(
+def uploaded_windows_dv(
     unprivileged_client,
     namespace,
     storage_class_name_immediate_binding_scope_module,
+    tmpdir_factory,
 ):
-    yield from create_windows2022_dv_from_registry(
-        dv_name="windows-2022-registry-dv",
-        namespace=namespace.name,
-        client=unprivileged_client,
-        storage_class=storage_class_name_immediate_binding_scope_module,
+    local_path = str(tmpdir_factory.mktemp("cdi_upload").join(Images.Windows.WIN2022_IMG))
+    get_downloaded_artifact(
+        remote_name=f"{Images.Windows.DIR}/{Images.Windows.WIN2022_IMG}",
+        local_name=local_path,
     )
+    dv_name = "dv-win2022-uploaded"
+    with virtctl_upload_dv(
+        client=namespace.client,
+        namespace=namespace.name,
+        name=dv_name,
+        size=Images.Windows.DEFAULT_DV_SIZE,
+        image_path=local_path,
+        storage_class=storage_class_name_immediate_binding_scope_module,
+        insecure=True,
+    ) as upload_result:
+        check_upload_virtctl_result(result=upload_result)
+        dv = DataVolume(namespace=namespace.name, name=dv_name, client=unprivileged_client)
+        dv.wait_for_dv_success(timeout=TIMEOUT_40MIN)
+        yield dv
