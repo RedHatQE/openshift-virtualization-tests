@@ -42,5 +42,9 @@ class TestInterfacesStability:
         Expected:
             - Interface IPs reported in VMI status remain unchanged throughout the monitoring period
         """
-
-    test_interfaces_stability_after_guest_agent_restart.__test__ = False
+        running_linux_bridge_vm.console(
+            commands=["sudo systemctl restart qemu-guest-agent.service"],
+            timeout=30,
+        )
+        for vmi_obj in monitor_vmi_events(vm=running_linux_bridge_vm, timeout=STABILITY_PERIOD_IN_SECONDS):
+            assert_interfaces_stable(stable_ips=stable_ips, vmi=vmi_obj, expected_num_ifaces=len(stable_ips))
