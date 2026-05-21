@@ -9,7 +9,20 @@ import pytest
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.user_defined_network import Layer2UserDefinedNetwork
 
-<<<<<<< HEAD
+from libs.net.ip import random_ipv4_address
+from libs.net.udn import create_udn_namespace
+from utilities.constants import Images
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_2MIN
+from utilities.artifactory import (
+    cleanup_artifactory_secret_and_config_map,
+    get_artifactory_config_map,
+    get_artifactory_secret,
+    get_test_artifact_server_url,
+)
+from utilities.constants import TIMEOUT_2MIN, WIN_2K22, Images
+from utilities.os_utils import get_windows_container_disk_path
+from tests.utils import create_windows2022_dv_from_registry
+from utilities.constants import TIMEOUT_2MIN, Images
 from utilities.constants import TIMEOUT_2MIN, TIMEOUT_40MIN, Images
 from utilities.storage import check_upload_virtctl_result, create_dv, get_downloaded_artifact, virtctl_upload_dv
 
@@ -115,14 +128,28 @@ def primary_udn_for_upload(admin_client, udn_namespace_for_dv_upload):
         )
         yield udn
 @pytest.fixture()
-def windows_dv_from_registry(
+def uploaded_windows_dv(
     unprivileged_client,
     namespace,
     storage_class_name_immediate_binding_scope_module,
+    tmpdir_factory,
 ):
-    yield from create_windows2022_dv_from_registry(
-        dv_name="windows-2022-registry-dv",
-        namespace=namespace.name,
-        client=unprivileged_client,
-        storage_class=storage_class_name_immediate_binding_scope_module,
+    local_path = str(tmpdir_factory.mktemp("cdi_upload").join(Images.Windows.WIN2022_IMG))
+    get_downloaded_artifact(
+        remote_name=f"{Images.Windows.DIR}/{Images.Windows.WIN2022_IMG}",
+        local_name=local_path,
     )
+    dv_name = "dv-win2022-uploaded"
+    with virtctl_upload_dv(
+        client=namespace.client,
+        namespace=namespace.name,
+        name=dv_name,
+        size=Images.Windows.DEFAULT_DV_SIZE,
+        image_path=local_path,
+        storage_class=storage_class_name_immediate_binding_scope_module,
+        insecure=True,
+    ) as upload_result:
+        check_upload_virtctl_result(result=upload_result)
+        dv = DataVolume(namespace=namespace.name, name=dv_name, client=unprivileged_client)
+        dv.wait_for_dv_success(timeout=TIMEOUT_40MIN)
+        yield dv
