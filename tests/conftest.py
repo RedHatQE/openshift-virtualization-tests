@@ -173,7 +173,6 @@ from utilities.network import (
     wait_for_ovs_status,
 )
 from utilities.operator import (
-    cluster_with_icsp,
     disable_default_sources_in_operatorhub,
     get_hco_csv_name_by_version,
     get_machine_config_pool_by_name,
@@ -539,11 +538,6 @@ def utility_daemonset(
         with DaemonSet(client=admin_client, yaml_file=modified_ds_yaml_file) as ds:
             ds.wait_until_deployed()
             yield ds
-
-
-@pytest.fixture(scope="session")
-def pull_secret_directory(tmpdir_factory):
-    yield tmpdir_factory.mktemp("pullsecret-folder")
 
 
 @pytest.fixture(scope="session")
@@ -2331,11 +2325,6 @@ def worker_machine1(worker_node1):
     if machine.exists:
         return machine
     raise ResourceNotFoundError(f"Machine object for {worker_node1.name} doesn't exists")
-
-
-@pytest.fixture(scope="session")
-def is_idms_cluster():
-    return not cluster_with_icsp()
 
 
 @pytest.fixture(scope="session")
