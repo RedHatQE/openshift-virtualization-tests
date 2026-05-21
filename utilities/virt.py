@@ -2145,6 +2145,7 @@ def create_vm_cloning_job(
     annotation_filters=None,
     new_mac_addresses=None,
     new_smbios_serial=None,
+    volume_name_policy=None,
 ):
     """
     Create VirtualMachineClone object.
@@ -2170,6 +2171,7 @@ def create_vm_cloning_job(
         annotation_filters=annotation_filters,
         new_mac_addresses=new_mac_addresses,
         new_smbios_serial=new_smbios_serial,
+        volume_name_policy=volume_name_policy,
     ) as vmc:
         vmc.wait_for_status(status=VirtualMachineClone.Status.SUCCEEDED)
         yield vmc
@@ -2560,8 +2562,8 @@ def wait_for_vmi_relocation_and_running(initial_node, vm, timeout=TIMEOUT_5MIN):
 
 
 def check_qemu_guest_agent_installed(ssh_exec: Host) -> bool:
-    ssh_exec.sudo = True
-    return ssh_exec.package_manager.exist(package="qemu-guest-agent")
+    rc, _, _ = ssh_exec.executor().run_cmd(cmd=shlex.split("rpm -q qemu-guest-agent"))
+    return rc == 0
 
 
 def validate_libvirt_persistent_domain(vm, admin_client):
@@ -2638,8 +2640,9 @@ def delete_guestosinfo_keys(data: dict[str, Any]) -> dict[str, Any]:
     supportedCommands - removed as the data is used for internal guest agent validations
     fsInfo, userList - checked in validate_fs_info_virtctl_vs_linux_os / validate_user_info_virtctl_vs_linux_os
     fsFreezeStatus - removed as it is not related to GA validations
+    load - present in virtctl/cnv guest-agent output but not in libvirt/linux
     """
-    removed_keys = ["supportedCommands", "fsInfo", "userList", "fsFreezeStatus"]
+    removed_keys = ["supportedCommands", "fsInfo", "userList", "fsFreezeStatus", "load"]
     [data.pop(key, None) for key in removed_keys]
 
     return data

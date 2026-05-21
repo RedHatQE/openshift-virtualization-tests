@@ -7,10 +7,12 @@ from unittest.mock import MagicMock, mock_open, patch
 import pytest
 
 import utilities.constants
+from utilities.constants import AMD_64, ARM_64, CENTOS_STREAM9_PREFERENCE, OS_FLAVOR_FEDORA, RHEL9_PREFERENCE, S390X
 from utilities.exceptions import MissingEnvironmentVariableError, UnsupportedCPUArchitectureError
 
 # Circular dependencies are already mocked in conftest.py
 from utilities.pytest_utils import (
+    assert_incremental_classes_fully_collected,
     config_default_storage_class,
     deploy_run_in_progress_config_map,
     deploy_run_in_progress_namespace,
@@ -267,7 +269,7 @@ class TestConfigDefaultStorageClass:
 
         config_default_storage_class(mock_session)
 
-        from utilities.pytest_utils import py_config
+        from utilities.pytest_utils import py_config  # noqa: PLC0415
 
         assert py_config["default_storage_class"] == "new-sc"
         assert py_config["default_volume_mode"] == "Filesystem"
@@ -293,7 +295,7 @@ class TestConfigDefaultStorageClass:
 
         config_default_storage_class(mock_session)
 
-        from utilities.pytest_utils import py_config
+        from utilities.pytest_utils import py_config  # noqa: PLC0415
 
         assert py_config["default_storage_class"] == "first-sc"
         assert py_config["default_volume_mode"] == "Filesystem"
@@ -319,7 +321,7 @@ class TestConfigDefaultStorageClass:
 
         config_default_storage_class(mock_session)
 
-        from utilities.pytest_utils import py_config
+        from utilities.pytest_utils import py_config  # noqa: PLC0415
 
         # Should keep original-sc since it's in the matrix
         assert py_config["default_storage_class"] == "original-sc"
@@ -335,7 +337,7 @@ class TestConfigDefaultStorageClass:
 
         config_default_storage_class(mock_session)
 
-        from utilities.pytest_utils import py_config
+        from utilities.pytest_utils import py_config  # noqa: PLC0415
 
         # Should remain unchanged
         assert py_config["default_storage_class"] == "original-sc"
@@ -1548,127 +1550,136 @@ class TestGenerateInstanceTypeMatrixDicts:
         """Sample instance type OS matrix for testing"""
         return [
             {
-                "rhel.9": {
-                    "preference": "rhel.9",
+                RHEL9_PREFERENCE: {
+                    "preference": RHEL9_PREFERENCE,
                     "latest_released": True,
                 }
             }
         ]
 
+    @pytest.mark.parametrize(
+        ("cpu_arch", "expected_add_arch_suffix"),
+        [
+            (None, True),
+            (ARM_64, True),
+            (S390X, True),
+            (AMD_64, False),
+        ],
+        ids=["no_arch", "arm64", "s390x", "amd64"],
+    )
     @patch("utilities.pytest_utils.generate_linux_instance_type_os_matrix")
     @patch("utilities.pytest_utils.generate_latest_os_dict")
     @patch("utilities.pytest_utils.py_config", new_callable=dict)
-    def test_generate_instance_type_rhel_matrix_no_arch(
+    def test_generate_instance_type_rhel_matrix(
         self,
         mock_py_config,
         mock_generate_latest,
         mock_generate_instance_type,
         sample_instance_type_matrix,
+        cpu_arch,
+        expected_add_arch_suffix,
     ):
-        """Test generating instance type RHEL matrix without cpu_arch parameter"""
+        """Test RHEL matrix generation across architecture variants."""
         mock_generate_instance_type.return_value = sample_instance_type_matrix
-        mock_generate_latest.return_value = sample_instance_type_matrix[0]["rhel.9"]
+        mock_generate_latest.return_value = sample_instance_type_matrix[0][RHEL9_PREFERENCE]
 
-        os_dict = {"instance_type_rhel_os_list": ["rhel.9"]}
-        generate_instance_type_matrix_dicts(os_dict=os_dict)
-
-        mock_generate_instance_type.assert_called_once_with(os_name="rhel", preferences=["rhel.9"], arch_suffix=None)
-        assert mock_py_config["instance_type_rhel_os_matrix"] == sample_instance_type_matrix
-
-    @patch("utilities.pytest_utils.generate_linux_instance_type_os_matrix")
-    @patch("utilities.pytest_utils.generate_latest_os_dict")
-    @patch("utilities.pytest_utils.py_config", new_callable=dict)
-    def test_generate_instance_type_rhel_matrix_with_arch(
-        self,
-        mock_py_config,
-        mock_generate_latest,
-        mock_generate_instance_type,
-        sample_instance_type_matrix,
-    ):
-        """Test generating instance type RHEL matrix with cpu_arch parameter"""
-        mock_generate_instance_type.return_value = sample_instance_type_matrix
-        mock_generate_latest.return_value = sample_instance_type_matrix[0]["rhel.9"]
-
-        os_dict = {"instance_type_rhel_os_list": ["rhel.9"]}
-        generate_instance_type_matrix_dicts(os_dict=os_dict, cpu_arch="arm64")
-
-        mock_generate_instance_type.assert_called_once_with(os_name="rhel", preferences=["rhel.9"], arch_suffix="arm64")
-        assert mock_py_config["latest_instance_type_rhel_os_dict"] is not None
-
-    @patch("utilities.pytest_utils.generate_linux_instance_type_os_matrix")
-    @patch("utilities.pytest_utils.py_config", new_callable=dict)
-    def test_generate_instance_type_fedora_matrix(
-        self,
-        mock_py_config,
-        mock_generate_instance_type,
-    ):
-        """Test generating instance type Fedora matrix"""
-        sample_fedora_instance_type = [{"fedora": {"preference": "fedora"}}]
-        mock_generate_instance_type.return_value = sample_fedora_instance_type
-
-        os_dict = {"instance_type_fedora_os_list": ["fedora"]}
-        generate_instance_type_matrix_dicts(os_dict=os_dict)
-
-        mock_generate_instance_type.assert_called_once_with(os_name="fedora", preferences=["fedora"], arch_suffix=None)
-        assert mock_py_config["instance_type_fedora_os_matrix"] == sample_fedora_instance_type
-
-    @patch("utilities.pytest_utils.generate_linux_instance_type_os_matrix")
-    @patch("utilities.pytest_utils.py_config", new_callable=dict)
-    def test_generate_instance_type_centos_matrix(
-        self,
-        mock_py_config,
-        mock_generate_instance_type,
-    ):
-        """Test generating instance type CentOS matrix"""
-        sample_centos_instance_type = [{"centos.stream9": {"preference": "centos.stream9"}}]
-        mock_generate_instance_type.return_value = sample_centos_instance_type
-
-        os_dict = {"instance_type_centos_os_list": ["centos.stream9"]}
-        generate_instance_type_matrix_dicts(os_dict=os_dict)
+        os_dict = {"instance_type_rhel_os_list": [RHEL9_PREFERENCE]}
+        generate_instance_type_matrix_dicts(os_dict=os_dict, cpu_arch=cpu_arch)
 
         mock_generate_instance_type.assert_called_once_with(
-            os_name="centos.stream", preferences=["centos.stream9"], arch_suffix=None
+            os_name="rhel",
+            preferences=[RHEL9_PREFERENCE],
+            arch_suffix=cpu_arch,
+            add_arch_suffix=expected_add_arch_suffix,
         )
-        assert mock_py_config["instance_type_centos_os_matrix"] == sample_centos_instance_type
-
-    @patch("utilities.pytest_utils.generate_linux_instance_type_os_matrix")
-    @patch("utilities.pytest_utils.py_config", new_callable=dict)
-    def test_generate_instance_type_centos_matrix_with_s390x_uses_none(
-        self,
-        mock_py_config,
-        mock_generate_instance_type,
-    ):
-        """Test CentOS instance type with s390x cpu_arch passes None as arch_suffix"""
-        sample_centos_instance_type = [{"centos.stream9": {"preference": "centos.stream9"}}]
-        mock_generate_instance_type.return_value = sample_centos_instance_type
-
-        os_dict = {"instance_type_centos_os_list": ["centos.stream9"]}
-        generate_instance_type_matrix_dicts(os_dict=os_dict, cpu_arch="s390x")
-
-        mock_generate_instance_type.assert_called_once_with(
-            os_name="centos.stream", preferences=["centos.stream9"], arch_suffix=None
-        )
-        assert mock_py_config["instance_type_centos_os_matrix"] == sample_centos_instance_type
-
-    @patch("utilities.pytest_utils.generate_linux_instance_type_os_matrix")
-    @patch("utilities.pytest_utils.generate_latest_os_dict")
-    @patch("utilities.pytest_utils.py_config", new_callable=dict)
-    def test_generate_instance_type_rhel_matrix_with_s390x(
-        self,
-        mock_py_config,
-        mock_generate_latest,
-        mock_generate_instance_type,
-        sample_instance_type_matrix,
-    ):
-        """Test generating instance type RHEL matrix with s390x cpu_arch parameter"""
-        mock_generate_instance_type.return_value = sample_instance_type_matrix
-        mock_generate_latest.return_value = sample_instance_type_matrix[0]["rhel.9"]
-
-        os_dict = {"instance_type_rhel_os_list": ["rhel.9"]}
-        generate_instance_type_matrix_dicts(os_dict=os_dict, cpu_arch="s390x")
-
-        mock_generate_instance_type.assert_called_once_with(os_name="rhel", preferences=["rhel.9"], arch_suffix="s390x")
         assert mock_py_config["instance_type_rhel_os_matrix"] == sample_instance_type_matrix
+        assert mock_py_config["latest_instance_type_rhel_os_dict"] == sample_instance_type_matrix[0][RHEL9_PREFERENCE]
+
+    @pytest.mark.parametrize(
+        ("os_dict", "cpu_arch", "expected_call", "config_key", "matrix_value"),
+        [
+            (
+                {"instance_type_fedora_os_list": [OS_FLAVOR_FEDORA]},
+                None,
+                {
+                    "os_name": OS_FLAVOR_FEDORA,
+                    "preferences": [OS_FLAVOR_FEDORA],
+                    "arch_suffix": None,
+                    "add_arch_suffix": True,
+                },
+                "instance_type_fedora_os_matrix",
+                [{OS_FLAVOR_FEDORA: {"preference": OS_FLAVOR_FEDORA}}],
+            ),
+            (
+                {"instance_type_fedora_os_list": [OS_FLAVOR_FEDORA]},
+                AMD_64,
+                {
+                    "os_name": OS_FLAVOR_FEDORA,
+                    "preferences": [OS_FLAVOR_FEDORA],
+                    "arch_suffix": AMD_64,
+                    "add_arch_suffix": False,
+                },
+                "instance_type_fedora_os_matrix",
+                [{OS_FLAVOR_FEDORA: {"preference": OS_FLAVOR_FEDORA}}],
+            ),
+            (
+                {"instance_type_centos_os_list": [CENTOS_STREAM9_PREFERENCE]},
+                None,
+                {
+                    "os_name": "centos.stream",
+                    "preferences": [CENTOS_STREAM9_PREFERENCE],
+                    "arch_suffix": None,
+                    "add_arch_suffix": False,
+                },
+                "instance_type_centos_os_matrix",
+                [{CENTOS_STREAM9_PREFERENCE: {"preference": CENTOS_STREAM9_PREFERENCE}}],
+            ),
+            (
+                {"instance_type_centos_os_list": [CENTOS_STREAM9_PREFERENCE]},
+                S390X,
+                {
+                    "os_name": "centos.stream",
+                    "preferences": [CENTOS_STREAM9_PREFERENCE],
+                    "arch_suffix": S390X,
+                    "add_arch_suffix": False,
+                },
+                "instance_type_centos_os_matrix",
+                [{CENTOS_STREAM9_PREFERENCE: {"preference": CENTOS_STREAM9_PREFERENCE}}],
+            ),
+            (
+                {"instance_type_centos_os_list": [CENTOS_STREAM9_PREFERENCE]},
+                ARM_64,
+                {
+                    "os_name": "centos.stream",
+                    "preferences": [CENTOS_STREAM9_PREFERENCE],
+                    "arch_suffix": ARM_64,
+                    "add_arch_suffix": False,
+                },
+                "instance_type_centos_os_matrix",
+                [{CENTOS_STREAM9_PREFERENCE: {"preference": CENTOS_STREAM9_PREFERENCE}}],
+            ),
+        ],
+        ids=["fedora_default", "fedora_amd64", "centos_default", "centos_s390x", "centos_arm64"],
+    )
+    @patch("utilities.pytest_utils.generate_linux_instance_type_os_matrix")
+    @patch("utilities.pytest_utils.py_config", new_callable=dict)
+    def test_generate_instance_type_non_rhel_matrix(
+        self,
+        mock_py_config,
+        mock_generate_instance_type,
+        os_dict,
+        cpu_arch,
+        expected_call,
+        config_key,
+        matrix_value,
+    ):
+        """Test Fedora and CentOS matrix generation call signatures."""
+        mock_generate_instance_type.return_value = matrix_value
+
+        generate_instance_type_matrix_dicts(os_dict=os_dict, cpu_arch=cpu_arch)
+
+        mock_generate_instance_type.assert_called_once_with(**expected_call)
+        assert mock_py_config[config_key] == matrix_value
 
     @patch("utilities.pytest_utils.generate_linux_instance_type_os_matrix")
     @patch("utilities.pytest_utils.generate_latest_os_dict")
@@ -1682,10 +1693,10 @@ class TestGenerateInstanceTypeMatrixDicts:
     ):
         """Test that latest_instance_type_rhel_os_dict is populated correctly"""
         mock_generate_instance_type.return_value = sample_instance_type_matrix
-        expected_latest = {"preference": "rhel.9", "latest_released": True}
+        expected_latest = {"preference": RHEL9_PREFERENCE, "latest_released": True}
         mock_generate_latest.return_value = expected_latest
 
-        os_dict = {"instance_type_rhel_os_list": ["rhel.9"]}
+        os_dict = {"instance_type_rhel_os_list": [RHEL9_PREFERENCE]}
         generate_instance_type_matrix_dicts(os_dict=os_dict)
 
         assert mock_py_config["latest_instance_type_rhel_os_dict"] == expected_latest
@@ -1703,24 +1714,6 @@ class TestGenerateInstanceTypeMatrixDicts:
 
         mock_generate_instance_type.assert_not_called()
         assert mock_py_config == {}
-
-    @patch("utilities.pytest_utils.generate_linux_instance_type_os_matrix")
-    @patch("utilities.pytest_utils.py_config", new_callable=dict)
-    def test_generate_instance_type_centos_matrix_with_non_s390x_arch(
-        self,
-        mock_py_config,
-        mock_generate_instance_type,
-    ):
-        """Test CentOS instance type with non-s390x cpu_arch passes arch_suffix"""
-        sample_centos_instance_type = [{"centos.stream9": {"preference": "centos.stream9"}}]
-        mock_generate_instance_type.return_value = sample_centos_instance_type
-
-        os_dict = {"instance_type_centos_os_list": ["centos.stream9"]}
-        generate_instance_type_matrix_dicts(os_dict=os_dict, cpu_arch="arm64")
-
-        mock_generate_instance_type.assert_called_once_with(
-            os_name="centos.stream", preferences=["centos.stream9"], arch_suffix=None
-        )
 
 
 class TestUpdateLatestOsConfig:
@@ -2181,3 +2174,141 @@ class TestUpdateCpuArchRelatedConfig:
             mock_get_cluster_arch.assert_not_called()
             mock_generate_common.assert_not_called()
             mock_generate_instance.assert_not_called()
+
+
+class TestAssertIncrementalClassesFullyCollected:
+    """Test cases for assert_incremental_classes_fully_collected function."""
+
+    def test_all_tests_collected_no_error(self):
+        """No error when all tests in an incremental class are collected."""
+
+        class MyClass:
+            def test_one(self): ...
+
+            def test_two(self): ...
+
+        parent = self._make_class_parent(cls=MyClass)
+        items = [
+            self._make_function_item(test_name="test_one", parent=parent),
+            self._make_function_item(test_name="test_two", parent=parent),
+        ]
+
+        assert_incremental_classes_fully_collected(items=items)
+
+    def test_missing_test_raises_usage_error(self):
+        """UsageError raised when a test in an incremental class is not collected."""
+
+        class MyClass:
+            def test_one(self): ...
+
+            def test_two(self): ...
+
+            def test_three(self): ...
+
+        parent = self._make_class_parent(cls=MyClass)
+        items = [self._make_function_item(test_name="test_one", parent=parent)]
+
+        with pytest.raises(pytest.UsageError, match="test_two"):
+            assert_incremental_classes_fully_collected(items=items)
+
+    def test_no_incremental_items_no_error(self):
+        """No error when no items carry the incremental marker."""
+
+        class MyClass:
+            def test_one(self): ...
+
+        parent = self._make_class_parent(cls=MyClass)
+        items = [self._make_function_item(test_name="test_one", parent=parent, is_incremental=False)]
+
+        assert_incremental_classes_fully_collected(items=items)
+
+    def test_non_function_items_ignored(self):
+        """Non-Function items are ignored even with the incremental keyword."""
+        item = MagicMock()
+        item.keywords = {"incremental": True}
+
+        assert_incremental_classes_fully_collected(items=[item])
+
+    def test_non_class_parent_ignored(self):
+        """Function items whose parent is not pytest.Class are ignored."""
+        item = MagicMock()
+        item.__class__ = pytest.Function
+        item.keywords = {"incremental": True}
+        item.parent = MagicMock()
+
+        assert_incremental_classes_fully_collected(items=[item])
+
+    def test_multiple_classes_all_errors_reported(self):
+        """All partial-collection errors across multiple incremental classes are reported together."""
+
+        class ClassA:
+            def test_one(self): ...
+
+            def test_two(self): ...
+
+        class ClassB:
+            def test_alpha(self): ...
+
+            def test_beta(self): ...
+
+        parent_a = self._make_class_parent(cls=ClassA)
+        parent_b = self._make_class_parent(cls=ClassB)
+        items = [
+            self._make_function_item(test_name="test_one", parent=parent_a),
+            self._make_function_item(test_name="test_alpha", parent=parent_b),
+        ]
+
+        with pytest.raises(pytest.UsageError) as exc_info:
+            assert_incremental_classes_fully_collected(items=items)
+
+        error_message = str(exc_info.value)
+        assert "test_two" in error_message
+        assert "test_beta" in error_message
+
+    def test_std_placeholder_methods_excluded(self):
+        """Methods with __test__ = False are treated as STD placeholders and not flagged as missing."""
+
+        class MyClass:
+            def test_one(self): ...
+
+            def test_two(self): ...
+
+        MyClass.test_two.__test__ = False
+
+        parent = self._make_class_parent(cls=MyClass)
+        items = [self._make_function_item(test_name="test_one", parent=parent)]
+
+        assert_incremental_classes_fully_collected(items=items)
+
+    def test_xfail_no_run_methods_excluded(self):
+        """Methods marked xfail(run=False) are not flagged as missing."""
+
+        class MyClass:
+            def test_one(self): ...
+
+            def test_two(self): ...
+
+        MyClass.test_two.pytestmark = [pytest.mark.xfail(run=False)]
+
+        parent = self._make_class_parent(cls=MyClass)
+        items = [self._make_function_item(test_name="test_one", parent=parent)]
+
+        assert_incremental_classes_fully_collected(items=items)
+
+    def test_empty_items_no_error(self):
+        """No error when the items list is empty."""
+        assert_incremental_classes_fully_collected(items=[])
+
+    def _make_class_parent(self, cls):
+        parent = MagicMock()
+        parent.__class__ = pytest.Class
+        parent.cls = cls
+        return parent
+
+    def _make_function_item(self, test_name, parent, is_incremental=True):
+        item = MagicMock()
+        item.__class__ = pytest.Function
+        item.parent = parent
+        item.function.__name__ = test_name
+        item.keywords = {"incremental": True} if is_incremental else {}
+        return item

@@ -3,7 +3,6 @@ import logging
 import re
 import shlex
 from datetime import datetime, timedelta, timezone
-from functools import cache
 from typing import Generator, Optional
 
 import bitmath
@@ -31,7 +30,6 @@ from utilities.infra import (
     get_linux_os_info,
     run_virtctl_command,
 )
-from utilities.jira import is_jira_open
 from utilities.ssp import get_windows_os_info
 from utilities.virt import VirtualMachineForTestsFromTemplate, delete_guestosinfo_keys, get_virtctl_os_info
 
@@ -59,8 +57,6 @@ def validate_os_info_virtctl_vs_linux_os(vm, admin_client):
     data_mismatch = []
     virtctl_info = get_virtctl_os_info(vm=vm)
     linux_info = get_linux_os_info(ssh_exec=vm.ssh_exec)
-    if is_jira_76697_bug_open():
-        virtctl_info.pop("load", None)
 
     for os_param_name, os_param_value in virtctl_info.items():
         if os_param_value != linux_info.get(os_param_name):
@@ -519,8 +515,3 @@ def matrix_os_vm_from_template(
         vm_dict=param_dict.get("vm_dict"),
         cpu_model=cpu_model,
     )
-
-
-@cache
-def is_jira_76697_bug_open():
-    return is_jira_open(jira_id="CNV-76697")

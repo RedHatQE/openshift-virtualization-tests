@@ -3,9 +3,13 @@ from __future__ import annotations
 import json
 import logging
 import re
+from datetime import datetime, timezone
 from pprint import pformat
 from threading import Thread
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from ocp_utilities.monitoring import Prometheus
 
 from deepdiff import DeepDiff
 from kubernetes.dynamic import DynamicClient
@@ -59,9 +63,6 @@ from utilities.operator import (
 
 LOGGER = logging.getLogger(__name__)
 TIER_2_PODS_TYPE = "tier-2"
-
-# list of whitelisted alerts
-WHITELIST_ALERTS_UPGRADE_LIST = ["OutdatedVirtualMachineInstanceWorkloads"]
 
 
 def wait_for_pod_replacement(client, hco_namespace, pod_name, related_images, status_dict):
@@ -462,20 +463,23 @@ def verify_upgrade_ocp(
     )
 
 
-def get_all_cnv_alerts(prometheus, file_name, base_directory):
-    cnv_alerts = []
-    alerts_fired = prometheus.alerts()
-    for alert in alerts_fired["data"].get("alerts"):
-        if (
-            alert["labels"].get("kubernetes_operator_part_of")
-            and alert["labels"]["kubernetes_operator_part_of"] == "kubevirt"
-        ):
-            alert_name = alert["labels"]["alertname"]
-            if alert_name in WHITELIST_ALERTS_UPGRADE_LIST:
-                LOGGER.info(f"Whitelist alert {alert_name}")
-                continue
-            cnv_alerts.append(alert)
+def get_all_firing_cnv_alerts(prometheus: Prometheus, file_name: str, base_directory: str) -> list[dict[str, Any]]:
+    """Returns all currently firing CNV alerts.
 
+    Args:
+        prometheus: Prometheus client instance.
+        file_name: Name of the file to write alert data to.
+        base_directory: Directory path for writing alert data files.
+
+    Returns:
+        List of alert dicts for firing alerts with kubernetes_operator_part_of=kubevirt.
+    """
+    cnv_alerts = [
+        alert
+        for alert in prometheus.alerts()["data"]["alerts"]
+        if alert["labels"].get("kubernetes_operator_part_of") == "kubevirt" and alert["state"] == FIRING_STATE
+    ]
+    LOGGER.info(f"Firing CNV alerts: {[alert['labels']['alertname'] for alert in cnv_alerts]}")
     write_to_file(
         base_directory=base_directory,
         file_name=file_name,
@@ -484,73 +488,66 @@ def get_all_cnv_alerts(prometheus, file_name, base_directory):
     return cnv_alerts
 
 
-def get_alerts_fired_during_upgrade(prometheus, before_upgrade_alerts, base_directory):
-    after_upgrade_alerts = get_all_cnv_alerts(
+def query_alerts_fired_in_range(
+    prometheus: Prometheus,
+    start_time: datetime,
+) -> list[dict[str, Any]]:
+    """Returns raw CNV firing-alert results since start_time using a range vector selector.
+
+    Uses an instant query with a PromQL range vector selector to retrieve all alert
+    samples since start_time, including alerts that have since resolved.
+
+    Args:
+        prometheus: Prometheus client instance.
+        start_time: Start of the lookback window.
+
+    Returns:
+        List of result dicts, each containing 'metric' labels and 'values' timestamps.
+    """
+    duration_seconds = int((datetime.now(tz=timezone.utc) - start_time).total_seconds())
+    query = f'ALERTS{{alertstate="{FIRING_STATE}",kubernetes_operator_part_of="kubevirt"}}[{duration_seconds}s]'
+    return prometheus.query_sampler(query=query)
+
+
+def get_alerts_fired_during_upgrade(
+    prometheus: Prometheus,
+    before_upgrade_alert_names: set[str],
+    upgrade_start_time: datetime,
+    base_directory: str,
+) -> dict[str, list[dict[str, Any]]]:
+    """Returns new alerts that fired during the upgrade, grouped by alertname.
+
+    Uses an instant query with a PromQL range vector selector over the upgrade window to
+    catch all alerts that reached firing state, including those that resolved before this
+    function runs. Filters out alerts that were already firing before the upgrade started.
+
+    Args:
+        prometheus: Prometheus client instance.
+        before_upgrade_alert_names: Alert names captured before upgrade.
+        upgrade_start_time: Datetime of when the upgrade started.
+        base_directory: Directory path for writing alert data files.
+
+    Returns:
+        Dict mapping alertname to the list of full result objects (metric + values) for that alert.
+    """
+    fired_alerts = query_alerts_fired_in_range(
         prometheus=prometheus,
-        file_name="after_upgrade_alerts.json",
-        base_directory=base_directory,
+        start_time=upgrade_start_time,
     )
-    before_upgrade_alert_names = [alert["labels"]["alertname"] for alert in before_upgrade_alerts]
-    fired_during_upgrade = []
-    for alert in after_upgrade_alerts:
-        alert_name = alert["labels"]["alertname"]
-        if alert_name in before_upgrade_alert_names:
-            continue
-        LOGGER.info(f"Alert {alert_name}, state: {alert['state']} fired during upgrade.")
-        fired_during_upgrade.append(alert)
-    return fired_during_upgrade
 
+    alerts_by_name: dict[str, list[dict[str, Any]]] = {}
+    for alert in fired_alerts:
+        alert_name = alert["metric"]["alertname"]
+        if alert_name not in before_upgrade_alert_names:
+            alerts_by_name.setdefault(alert_name, []).append(alert)
 
-def process_alerts_fired_during_upgrade(prometheus, fired_alerts_during_upgrade):
-    pending_alerts = []
-    for alert in fired_alerts_during_upgrade:
-        if alert["state"] == "pending":
-            pending_alerts.append(alert["labels"]["alertname"])
-
-    LOGGER.info(f"Pending alerts: {pending_alerts}")
-    if pending_alerts:
-        # wait for the pending alerts to be fired within 10 minutes, since pending alerts would be part of alerts fired
-        # during upgrade, we don't need to fail, if pending alerts did not fire.
-        wait_for_pending_alerts_to_fire(prometheus=prometheus, pending_alerts=pending_alerts)
-
-
-def wait_for_pending_alerts_to_fire(pending_alerts, prometheus):
-    def _get_fired_alerts(_prometheus, _alert_list):
-        _all_alerts = _prometheus.alerts()
-        current_firing_alerts = []
-        current_pending_alerts = []
-        for _alert in _all_alerts["data"].get("alerts"):
-            if (
-                not _alert["labels"].get("kubernetes_operator_part_of")
-                or _alert["labels"]["kubernetes_operator_part_of"] != "kubevirt"
-            ):
-                continue
-            _alert_name = _alert["labels"]["alertname"]
-            if _alert["state"] == FIRING_STATE:
-                current_firing_alerts.append(_alert_name)
-            elif _alert["state"] == "pending":
-                current_pending_alerts.append(_alert_name)
-
-        not_fired = [_alert for _alert in _alert_list if _alert not in current_firing_alerts]
-        LOGGER.warning(f"Out of {_alert_list}, following alerts are still not fired: {not_fired}")
-        return not_fired
-
-    _pending_alerts = pending_alerts
-    sampler = TimeoutSampler(
-        wait_timeout=TIMEOUT_10MIN,
-        sleep=2,
-        func=_get_fired_alerts,
-        _prometheus=prometheus,
-        _alert_list=_pending_alerts,
-    )
-    try:
-        for sample in sampler:
-            if not sample:
-                return
-            _pending_alerts = sample
-            LOGGER.warning(f"Waiting on alerts: {_pending_alerts}")
-    except TimeoutExpiredError:
-        LOGGER.error(f"Out of {pending_alerts}, following alerts did not get to {FIRING_STATE}: {_pending_alerts}")
+    if alerts_by_name:
+        write_to_file(
+            base_directory=base_directory,
+            file_name="alerts_fired_during_upgrade.json",
+            content=json.dumps(fired_alerts, indent=2),
+        )
+    return alerts_by_name
 
 
 def get_upgrade_path(target_version: str) -> dict[str, list[dict[str, str | list[str]]]]:

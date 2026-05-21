@@ -2,9 +2,9 @@ import contextlib
 import copy
 import logging
 import uuid
-from typing import Final, Generator
+from collections.abc import Generator
+from typing import Final
 
-from kubernetes.client import ApiException
 from kubernetes.dynamic import DynamicClient
 
 from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
@@ -58,20 +58,6 @@ def ip_addresses_from_pool(
     return addresses
 
 
-def run_vms(vms: tuple[BaseVirtualMachine, ...]) -> tuple[BaseVirtualMachine, ...]:
-    for vm in vms:
-        try:
-            vm.start()  # type: ignore[no-untyped-call]
-        except ApiException as vm_exception:
-            if "VM is already running" in vm_exception.body:
-                LOGGER.warning(f"VM {vm.name} is already running")
-                continue
-    for vm in vms:
-        vm.wait_for_ready_status(status=True)  # type: ignore[no-untyped-call]
-        vm.wait_for_agent_connected()
-    return vms
-
-
 def localnet_vm(
     namespace: str,
     name: str,
@@ -80,6 +66,7 @@ def localnet_vm(
     interfaces: list[Interface],
     network_data: cloudinit.NetworkData | None = None,
     affinity: Affinity | None = None,
+    vm_labels: dict[str, str] | None = None,
 ) -> BaseVirtualMachine:
     """
     Create a Fedora-based Virtual Machine connected to localnet network(s).
@@ -100,6 +87,9 @@ def localnet_vm(
             configuration for the VM interfaces. If None, no network configuration is applied via cloud-init.
         affinity (Affinity | None): Optional Affinity object for VM scheduling. Controls the VM scheduling
             location. If None, no affinity constraints are applied.
+        vm_labels (dict[str, str] | None): Optional labels to apply to the VM template metadata.
+            These labels are set on the VMI pod and can be used for affinity/anti-affinity matching.
+            If None, no additional labels are applied beyond LOCALNET_TEST_LABEL.
 
     Returns:
         BaseVirtualMachine: The configured VM object ready for creation.
@@ -124,6 +114,8 @@ def localnet_vm(
     spec.template.metadata = spec.template.metadata or Metadata()
     spec.template.metadata.labels = spec.template.metadata.labels or {}
     spec.template.metadata.labels.update(LOCALNET_TEST_LABEL)
+    if vm_labels:
+        spec.template.metadata.labels.update(vm_labels)
 
     vmi_spec = spec.template.spec
     vmi_spec.networks = networks

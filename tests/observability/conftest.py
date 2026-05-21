@@ -41,12 +41,16 @@ def workers_rhcos_version(schedulable_nodes):
 
 
 @pytest.fixture(scope="session")
-def is_postcopy_migration_bug_open(workers_rhcos_version) -> bool:  # skip-unused-code
-    """Check if CNV-84023 is open and cluster has RHCOS 10+ nodes.
+def cluster_has_rhcos10_or_above(workers_rhcos_version):
+    return any(Version(ver) >= Version("10") for ver in workers_rhcos_version.values())
 
-    Returns:
-        bool: True if post-copy migration is broken on this cluster.
-    """
-    return any(Version(ver) >= Version("10") for ver in workers_rhcos_version.values()) and is_jira_open(
-        jira_id="CNV-84023"
-    )
+
+@pytest.fixture(scope="session")
+def skip_when_hco_metrics_scraping_bug_open(cluster_has_rhcos10_or_above):
+    if cluster_has_rhcos10_or_above and is_jira_open(jira_id="CNV-87184"):
+        pytest.xfail(reason="CNV-87184: HCO metrics scraping fails with 401 Unauthorized on RHCOS 10+")
+
+
+@pytest.fixture(scope="session")
+def is_postcopy_migration_bug_open(cluster_has_rhcos10_or_above):
+    return cluster_has_rhcos10_or_above and is_jira_open(jira_id="CNV-84023")

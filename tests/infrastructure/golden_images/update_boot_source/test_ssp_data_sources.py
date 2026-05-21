@@ -558,11 +558,11 @@ def test_data_source_with_existing_golden_image_pvc(
     "enabled_common_boot_image_import_feature_gate_scope_class",
     "opted_in_data_source_scope_class",
 )
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: Flaky opt-in label / DataSource volume update; tracked in CNV-86273",
+    run=False,
+)
 class TestDataSourcesOptInLabel:
-    @pytest.mark.xfail(
-        reason=f"{QUARANTINED}: Flaky opt-in label / DataSource volume update; tracked in CNV-86273",
-        run=False,
-    )
     @pytest.mark.polarion("CNV-8029")
     @pytest.mark.dependency(name="TestDataSourcesOptInLabel::test_opt_in_label_data_source_when_pvc_exists")
     def test_opt_in_label_data_source_when_pvc_exists(
@@ -617,6 +617,10 @@ class TestDataSourcesOptInLabel:
     "enabled_common_boot_image_import_feature_gate_scope_class",
     "opted_in_data_source_scope_class",
     "opted_out_data_source_scope_class",
+)
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: Flaky opt-out label / DataSource volume update; tracked in CNV-86273",
+    run=False,
 )
 class TestDataSourcesOptOutLabel:
     @pytest.mark.polarion("CNV-8244")

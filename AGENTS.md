@@ -39,9 +39,9 @@ Before writing ANY new code:
 - **Use `TYPE_CHECKING` for type-only imports** - wrap imports needed solely for type hints in `if TYPE_CHECKING:` to avoid runtime overhead and circular imports
 - **Google-format docstrings REQUIRED** - for all public functions with non-obvious return values OR side effects
 - **No defensive programming** - fail-fast, don't hide bugs with fake defaults (see exceptions below)
-- **ALWAYS use `uv run`** - NEVER execute `python`, `pip`, or `pytest` directly. Use `uv run python`, `uv run pytest`, `uv add` for package installation.
+- **ALWAYS use `uv run`** - NEVER execute `python`, `pip`, `pytest`, `tox`, or `pre-commit` directly. Use `uv run python`, `uv run pytest`, `uv run tox`, `uv run pre-commit`, `uv add` for package installation.
 - **ALWAYS use absolute imports** - NEVER use relative imports
-- **ALWAYS import specific functions** - use `from module import func`, NEVER `import module`
+- **Prefer specific imports** - use `from module import func` for functions and constants. Use `from package import module` (then `module.Name`) when retaining the module name at the call site meaningfully improves readability (e.g. `libstuntime.ContinuousPing` vs a bare `ContinuousPing` that loses its origin). Never use bare `import module` without a `from` clause.
 - **ALWAYS use named arguments** - for function calls with more than one argument
 - **NEVER use single-letter variable names** - ALWAYS use descriptive, meaningful names
 - **No dead code** - every function, variable, fixture MUST be used or removed. Code marked with `# skip-unused-code` is excluded from dead code analysis (enforced via custom ruff plugin).
@@ -238,7 +238,6 @@ This is a test suite - internal APIs have NO backward compatibility requirements
   - `##### Which issue(s) this PR fixes:` — must be present (may be empty)
   - `##### Special notes for reviewer:` — must be present (may be empty)
   - `##### jira-ticket:` — must be present (may be empty)
-  - `##### Short description:` and `##### More details:` are optional and may be omitted
 
 ## Essential Commands
 
@@ -248,13 +247,13 @@ Before committing, these checks MUST pass:
 
 ```bash
 # Required before every commit
-pre-commit run --all-files  # Linting and formatting
+uv run pre-commit run --all-files  # Linting and formatting
 
 # Full CI checks
-tox
+uv run tox
 
 # Run utilities unit tests
-tox -e utilities-unittests
+uv run tox -e utilities-unittests
 
 ```
 
@@ -266,3 +265,4 @@ tox -e utilities-unittests
 - [`docs/SOFTWARE_TEST_DESCRIPTION.md`](SOFTWARE_TEST_DESCRIPTION.md) — STD docstring format and requirements
 - [`docs/CODING_AND_STYLE_GUIDE.md`](docs/CODING_AND_STYLE_GUIDE.md) — Detailed coding and style conventions
 - [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) — Contribution guidelines
+- [`tests/network/README.md`](tests/network/README.md) — Network domain knowledge: terminology, naming conventions and functionality.
