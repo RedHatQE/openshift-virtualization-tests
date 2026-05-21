@@ -116,20 +116,29 @@ def vm_restore_with_predictable_names(
     if rhel_vm_for_snapshot.ready:
         rhel_vm_for_snapshot.stop(wait=True)
 
-    source_volume_name = rhel_vm_for_snapshot.instance.spec.template.spec.volumes[0].name
-    restored_vm_name = f"{rhel_vm_for_snapshot.name}-restored"
+    source_volume_name = next(
+        volume.name
+        for volume in rhel_vm_for_snapshot.instance.spec.template.spec.volumes
+        if getattr(volume, "dataVolume", None) or getattr(volume, "persistentVolumeClaim", None)
+    )
 
-    with VirtualMachineRestore(
-        name=f"{restored_vm_name}-restore",
+    vm_restore = VirtualMachineRestore(
+        name=f"{rhel_vm_for_snapshot.name}-restored",
         namespace=rhel_vm_for_snapshot.namespace,
-        vm_name=restored_vm_name,
+        vm_name=rhel_vm_for_snapshot.name,
         snapshot_name=snapshot_with_content[0].name,
         client=admin_client,
         volume_restore_policy="PrefixTargetName",
-    ) as vm_restore:
+    )
+    # Manually set volumeRestorePolicy since ocp-resources incorrectly maps to volumeNamePolicy
+    vm_restore.to_dict()
+
+    vm_restore.deploy()
+    try:
         vm_restore.wait_restore_done(timeout=TIMEOUT_10MIN)
         yield {
-            "restored_vm_name": restored_vm_name,
             "source_volume_name": source_volume_name,
             "vm_restore": vm_restore,
         }
+    finally:
+        vm_restore.clean_up()

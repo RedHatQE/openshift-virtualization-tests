@@ -279,16 +279,18 @@ class TestRestoreSnapshots:
         self,
         vm_restore_with_predictable_names,
     ):
-        restored_vm_name = vm_restore_with_predictable_names["restored_vm_name"]
+        """
+        Test restore snapshot where the DV/PVC restored has a predictable name derived from the soruce vm name and
+        source volume name when `volumeRestorePolicy` is set to `PrefixTargetName`.
+        """
         source_volume_name = vm_restore_with_predictable_names["source_volume_name"]
         vm_restore = vm_restore_with_predictable_names["vm_restore"]
 
         restore_status = vm_restore.instance.status
-        expected_name = f"{restored_vm_name}-{source_volume_name}"[:63]
+        expected_name = f"{vm_restore.vm_name}-{source_volume_name}"[:63]
 
         assert vm_restore.instance.spec.get("volumeRestorePolicy") == "PrefixTargetName", (
-            f"volumeRestorePolicy is '{vm_restore.instance.spec.get('volumeRestorePolicy')}', "
-            "expected 'PrefixTargetName'"
+            f"volumeRestorePolicy is '{vm_restore.instance.spec.get('volumeRestorePolicy')}', expected 'PrefixTargetName'"
         )
         assert restore_status.restores[0].dataVolumeName == expected_name, (
             f"Restored DV name is '{restore_status.restores[0].dataVolumeName}', expected '{expected_name}'"
