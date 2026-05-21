@@ -10,10 +10,11 @@ import secrets
 import shlex
 from collections import defaultdict
 from contextlib import contextmanager
+from copy import deepcopy
 from functools import cache
 from json import JSONDecodeError
 from subprocess import run
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any
 
 import bitmath
 import jinja2
@@ -954,7 +955,7 @@ class VirtualMachineForTests(VirtualMachine):
     def update_vm_cpu_configuration(self, template_spec):
         # cpu settings
         if self.cpu_flags:
-            template_spec.setdefault("domain", {})["cpu"] = self.cpu_flags
+            template_spec.setdefault("domain", {})["cpu"] = deepcopy(self.cpu_flags)
 
         if self.cpu_limits:
             template_spec.setdefault("domain", {}).setdefault("resources", {}).setdefault("limits", {})
@@ -1674,7 +1675,7 @@ def generate_dict_from_yaml_template(stream, **kwargs):
     # Find all template variables
     template_vars = [i.split()[1] for i in re.findall(r"{{ .* }}", data)]
     for var in template_vars:
-        if var not in kwargs.keys():
+        if var not in kwargs:
             raise MissingTemplateVariables(var=var, template=data)
     template = jinja2.Template(data)
     out = template.render(**kwargs)
@@ -2144,6 +2145,7 @@ def create_vm_cloning_job(
     annotation_filters=None,
     new_mac_addresses=None,
     new_smbios_serial=None,
+    volume_name_policy=None,
 ):
     """
     Create VirtualMachineClone object.
@@ -2169,6 +2171,7 @@ def create_vm_cloning_job(
         annotation_filters=annotation_filters,
         new_mac_addresses=new_mac_addresses,
         new_smbios_serial=new_smbios_serial,
+        volume_name_policy=volume_name_policy,
     ) as vmc:
         vmc.wait_for_status(status=VirtualMachineClone.Status.SUCCEEDED)
         yield vmc
@@ -2559,8 +2562,8 @@ def wait_for_vmi_relocation_and_running(initial_node, vm, timeout=TIMEOUT_5MIN):
 
 
 def check_qemu_guest_agent_installed(ssh_exec: Host) -> bool:
-    ssh_exec.sudo = True
-    return ssh_exec.package_manager.exist(package="qemu-guest-agent")
+    rc, _, _ = ssh_exec.executor().run_cmd(cmd=shlex.split("rpm -q qemu-guest-agent"))
+    return rc == 0
 
 
 def validate_libvirt_persistent_domain(vm, admin_client):
@@ -2601,7 +2604,7 @@ def validate_pause_unpause_linux_vm(vm: VirtualMachineForTests, pre_pause_pid: i
     )
 
 
-def check_vm_xml_smbios(vm: VirtualMachineForTests, cm_values: Dict[str, str], admin_client: DynamicClient) -> None:
+def check_vm_xml_smbios(vm: VirtualMachineForTests, cm_values: dict[str, str], admin_client: DynamicClient) -> None:
     """
     Verify SMBIOS on VM XML [sysinfo type=smbios][system] match kubevirt-config
     config map.
@@ -2632,13 +2635,14 @@ def update_vm_efi_spec_and_restart(
     restart_vm_wait_for_running_vm(vm=vm, wait_for_interfaces=wait_for_interfaces)
 
 
-def delete_guestosinfo_keys(data: Dict[str, Any]) -> Dict[str, Any]:
+def delete_guestosinfo_keys(data: dict[str, Any]) -> dict[str, Any]:
     """
     supportedCommands - removed as the data is used for internal guest agent validations
     fsInfo, userList - checked in validate_fs_info_virtctl_vs_linux_os / validate_user_info_virtctl_vs_linux_os
     fsFreezeStatus - removed as it is not related to GA validations
+    load - present in virtctl/cnv guest-agent output but not in libvirt/linux
     """
-    removed_keys = ["supportedCommands", "fsInfo", "userList", "fsFreezeStatus"]
+    removed_keys = ["supportedCommands", "fsInfo", "userList", "fsFreezeStatus", "load"]
     [data.pop(key, None) for key in removed_keys]
 
     return data
@@ -2753,7 +2757,7 @@ def guest_reboot(vm: VirtualMachineForTests, os_type: str) -> None:
     run_os_command(vm=vm, command=commands["reboot"][os_type])
 
 
-def run_os_command(vm: VirtualMachineForTests, command: str) -> Optional[str]:
+def run_os_command(vm: VirtualMachineForTests, command: str) -> str | None:
     try:
         return run_ssh_commands(
             host=vm.ssh_exec,
@@ -2782,7 +2786,7 @@ def wait_for_user_agent_down(vm: VirtualMachineForTests, timeout: int) -> None:
             break
 
 
-def get_virt_handler_pods(client: DynamicClient, namespace: Namespace) -> List[Pod]:
+def get_virt_handler_pods(client: DynamicClient, namespace: Namespace) -> list[Pod]:
     return utilities.infra.get_pods(
         client=client,
         namespace=namespace,
@@ -2792,7 +2796,7 @@ def get_virt_handler_pods(client: DynamicClient, namespace: Namespace) -> List[P
 
 def check_virt_handler_pods_for_migration_network(
     client: DynamicClient, namespace: Namespace, network_name: str, migration_network: bool = True
-) -> List[Pod]:
+) -> list[Pod]:
     """
     Checks whether virt-handler pods have migration network.
 

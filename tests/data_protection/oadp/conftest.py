@@ -1,14 +1,29 @@
 import pytest
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.namespace import Namespace
+from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
+from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
+from pytest_testconfig import config as py_config
 
+from tests.data_protection.oadp.utils import (
+    FILE_PATH_FOR_WINDOWS_BACKUP,
+)
+from utilities.artifactory import (
+    cleanup_artifactory_secret_and_config_map,
+    get_artifactory_config_map,
+    get_artifactory_secret,
+    get_test_artifact_server_url,
+)
 from utilities.constants import (
     BACKUP_STORAGE_LOCATION,
+    CONTAINER_DISK_IMAGE_PATH_STR,
     FILE_NAME_FOR_BACKUP,
     OS_FLAVOR_RHEL,
+    OS_FLAVOR_WIN_CONTAINER_DISK,
     TEXT_TO_TEST,
     TIMEOUT_8MIN,
     TIMEOUT_15MIN,
+    U1_LARGE,
     Images,
 )
 from utilities.infra import create_ns
@@ -25,8 +40,9 @@ from utilities.storage import (
     get_downloaded_artifact,
     virtctl_upload_dv,
     write_file,
+    write_file_windows_vm,
 )
-from utilities.virt import running_vm
+from utilities.virt import VirtualMachineForTests, running_vm
 
 
 @pytest.fixture()
@@ -135,6 +151,87 @@ def rhel_vm_with_data_volume_template(
             stop_vm=False,
         )
         yield vm
+
+
+@pytest.fixture()
+def windows_vm_with_data_volume_template(
+    admin_client,
+    namespace_for_backup,
+    snapshot_storage_class_name_scope_module,
+):
+    """Windows 2022 VM with InstanceType and Preference in the backup namespace for OADP backup testing."""
+    artifactory_secret = None
+    artifactory_config_map = None
+
+    try:
+        artifactory_secret = get_artifactory_secret(namespace=namespace_for_backup.name)
+        artifactory_config_map = get_artifactory_config_map(namespace=namespace_for_backup.name)
+
+        dv = DataVolume(
+            name="oadp-windows-dv",
+            namespace=namespace_for_backup.name,
+            storage_class=snapshot_storage_class_name_scope_module,
+            source="registry",
+            url=(
+                f"{get_test_artifact_server_url(schema='registry')}/"
+                f"{py_config['latest_windows_os_dict'][CONTAINER_DISK_IMAGE_PATH_STR]}"
+            ),
+            size=Images.Windows.CONTAINER_DISK_DV_SIZE,
+            client=admin_client,
+            api_name="storage",
+            secret=artifactory_secret,
+            cert_configmap=artifactory_config_map.name,
+        )
+        dv.to_dict()
+
+        with VirtualMachineForTests(
+            name="oadp-windows-vm",
+            namespace=namespace_for_backup.name,
+            client=admin_client,
+            vm_instance_type=VirtualMachineClusterInstancetype(client=admin_client, name=U1_LARGE),
+            vm_preference=VirtualMachineClusterPreference(client=admin_client, name="windows.2k22"),
+            data_volume_template=dv.res,
+            os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK,
+        ) as vm:
+            running_vm(vm=vm)
+            write_file_windows_vm(vm=vm, file_path=FILE_PATH_FOR_WINDOWS_BACKUP, content=TEXT_TO_TEST)
+            yield vm
+    finally:
+        cleanup_artifactory_secret_and_config_map(
+            artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
+        )
+
+
+@pytest.fixture()
+def velero_backup_first_namespace_without_datamover(
+    admin_client,
+    namespace_for_backup,
+    windows_vm_with_data_volume_template,
+):
+    with VeleroBackup(
+        client=admin_client,
+        included_namespaces=[
+            namespace_for_backup.name,
+        ],
+        name="backup-windows-dvt-ns",
+    ) as backup:
+        yield backup
+
+
+@pytest.fixture()
+def velero_restore_first_namespace_without_datamover(
+    admin_client,
+    velero_backup_first_namespace_without_datamover,
+):
+    Namespace(name=velero_backup_first_namespace_without_datamover.included_namespaces[0]).delete(wait=True)
+    with VeleroRestore(
+        client=admin_client,
+        included_namespaces=velero_backup_first_namespace_without_datamover.included_namespaces,
+        name="restore-windows-dvt-ns",
+        backup_name=velero_backup_first_namespace_without_datamover.name,
+        timeout=TIMEOUT_8MIN,
+    ) as restore:
+        yield restore
 
 
 @pytest.fixture()

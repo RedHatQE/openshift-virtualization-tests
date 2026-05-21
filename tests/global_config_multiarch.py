@@ -58,12 +58,13 @@ os_matrix = {
         "centos_os_list": ["centos-stream-9"],
         "instance_type_rhel_os_list": [RHEL10_PREFERENCE],
         "instance_type_fedora_os_list": [OS_FLAVOR_FEDORA],
+        "instance_type_centos_os_list": [CENTOS_STREAM10_PREFERENCE],
     },
 }
 
 
 for _dir in dir():
-    if not config:  # noqa: F821
+    if not config:
         config: dict[str, Any] = {}
     val = locals()[_dir]
     if type(val) not in [bool, list, dict, str]:
@@ -72,4 +73,4 @@ for _dir in dir():
     if _dir in ["encoding", "py_file"]:
         continue
 
-    config[_dir] = locals()[_dir]  # noqa: F821
+    config[_dir] = locals()[_dir]

@@ -8,6 +8,7 @@ import re
 import shutil
 import socket
 import sys
+from collections import defaultdict
 from typing import Any
 
 import pytest
@@ -507,22 +508,31 @@ def generate_instance_type_matrix_dicts(os_dict: dict[str, Any], cpu_arch: str |
             "instance_type_rhel_os_list").
         cpu_arch: Optional architecture suffix.
     """
+    add_arch_suffix = cpu_arch != AMD_64
+
     if instance_type_rhel_os_list := os_dict.get("instance_type_rhel_os_list"):
         py_config["instance_type_rhel_os_matrix"] = generate_linux_instance_type_os_matrix(
-            os_name="rhel", preferences=instance_type_rhel_os_list, arch_suffix=cpu_arch
+            os_name="rhel",
+            preferences=instance_type_rhel_os_list,
+            arch_suffix=cpu_arch,
+            add_arch_suffix=add_arch_suffix,
         )
         py_config["latest_instance_type_rhel_os_dict"] = generate_latest_os_dict(
             os_matrix=py_config["instance_type_rhel_os_matrix"]
         )
     if instance_type_fedora_os_list := os_dict.get("instance_type_fedora_os_list"):
         py_config["instance_type_fedora_os_matrix"] = generate_linux_instance_type_os_matrix(
-            os_name="fedora", preferences=instance_type_fedora_os_list, arch_suffix=cpu_arch
+            os_name="fedora",
+            preferences=instance_type_fedora_os_list,
+            arch_suffix=cpu_arch,
+            add_arch_suffix=add_arch_suffix,
         )
     if instance_type_centos_os_list := os_dict.get("instance_type_centos_os_list"):
         py_config["instance_type_centos_os_matrix"] = generate_linux_instance_type_os_matrix(
             os_name="centos.stream",
             preferences=instance_type_centos_os_list,
-            arch_suffix=None,
+            arch_suffix=cpu_arch,
+            add_arch_suffix=False,
         )
 
 
@@ -594,7 +604,7 @@ def update_cpu_arch_related_config(cpu_arch_option: str) -> None:
         py_config["cpu_arch"] = arch
 
         # TODO: remove this when utilities modules are refactored
-        import utilities.constants as constants_module
+        import utilities.constants as constants_module  # noqa: PLC0415
 
         # Due to the way the constants module is structured, there's no way to set correctly Images value there
         # This is due to change when constants (and other utilities modules) are refactored
@@ -609,3 +619,49 @@ def update_cpu_arch_related_config(cpu_arch_option: str) -> None:
                 generate_instance_type_matrix_dicts(os_dict=py_config, cpu_arch=arch)
             else:
                 generate_instance_type_matrix_dicts(os_dict=py_config)
+
+
+def assert_incremental_classes_fully_collected(items: list[pytest.Item]) -> None:
+    """Verify that all tests defined in incremental classes were collected.
+
+    Incremental classes require ordered execution — running a subset produces
+    misleading results.  Fail early (at collection time) if any test in an
+    incremental class was filtered out, so the problem is caught before any
+    test runs.
+
+    Args:
+        items: The full list of collected pytest items.
+
+    Raises:
+        pytest.UsageError: When one or more incremental classes are missing collected tests.
+    """
+    incremental_parents: dict[pytest.Class, list[str]] = defaultdict(list)
+    for item in items:
+        if (
+            isinstance(item, pytest.Function)
+            and isinstance(item.parent, pytest.Class)
+            and "incremental" in item.keywords
+        ):
+            incremental_parents[item.parent].append(item.function.__name__)
+
+    errors = []
+    for parent, collected_names in incremental_parents.items():
+        cls = parent.cls
+        all_tests = [
+            name
+            for name in cls.__dict__
+            if name.startswith("test")
+            and callable(getattr(cls, name))
+            and getattr(getattr(cls, name), "__test__", True)
+            and not _is_xfail_no_run(getattr(cls, name))
+        ]
+        missing = [name for name in all_tests if name not in set(collected_names)]
+        if missing:
+            errors.append(f"{cls.__qualname__}: not collected: {missing}")
+
+    if errors:
+        raise pytest.UsageError("Incremental classes partially collected:\n" + "\n".join(errors))
+
+
+def _is_xfail_no_run(method: object) -> bool:
+    return any(mark.name == "xfail" and mark.kwargs.get("run") is False for mark in getattr(method, "pytestmark", []))

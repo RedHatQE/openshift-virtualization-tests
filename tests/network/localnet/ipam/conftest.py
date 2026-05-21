@@ -7,13 +7,14 @@ from ocp_resources.namespace import Namespace
 import tests.network.libs.nodenetworkconfigurationpolicy as libnncp
 from libs.net import netattachdef as libnad
 from libs.net.ip import random_ipv4_address
+from libs.vm.oper import run_vms
 from libs.vm.spec import Interface, Multus, Network
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.localnet.liblocalnet import (
     LOCALNET_IPAM_INTERFACE,
     LOCALNET_OVS_BRIDGE_NETWORK,
+    LOCALNET_VM_ANTI_AFFINITY,
     localnet_vm,
-    run_vms,
 )
 
 
@@ -65,6 +66,7 @@ def vm1_localnet_ipam(
         interfaces=[
             Interface(name=LOCALNET_IPAM_INTERFACE, bridge={}),
         ],
+        affinity=LOCALNET_VM_ANTI_AFFINITY,
     ) as vm:
         yield vm
 
@@ -88,6 +90,7 @@ def vm2_localnet_ipam(
         interfaces=[
             Interface(name=LOCALNET_IPAM_INTERFACE, bridge={}),
         ],
+        affinity=LOCALNET_VM_ANTI_AFFINITY,
     ) as vm:
         yield vm
 

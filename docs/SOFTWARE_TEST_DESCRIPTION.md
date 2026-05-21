@@ -30,7 +30,7 @@ This project follows a **two-phase development workflow** that separates test de
 1. **Create test stubs with docstrings only**:
    - Write the test function signature
    - Add the complete STD docstring (Preconditions/Steps/Expected)
-   - Include a link to the approved STP (Software Test Plan) directly in the **module docstring** (top of the test file).  This is needed for a standard format for traceability.
+   - Include a link to the approved STP (Software Test Plan) directly in the **module, class, or test docstring**. Place it at the level that applies (module for all tests in the file, class for all tests in the class, test for a specific test). This is needed for a standard format for traceability.
    - Add applicable pytest markers (architecture markers, etc.)
    - Add `__test__ = False` on unimplemented test(s).  For a single test, add `<test_name>.__test__ = False`
 
@@ -50,6 +50,11 @@ This project follows a **two-phase development workflow** that separates test de
    - Create any required fixtures
    - Implement helper functions as needed
    - Remove `__test__ = False` from implemented tests
+   - Convert `Markers:` entries from STD docstrings to real pytest expressions:
+     - Module-level markers → `pytestmark = [pytest.mark.<marker>]` at module scope
+     - Class-level markers → `@pytest.mark.<marker>` on the class
+     - Test-level markers → `@pytest.mark.<marker>` on the test function
+     - `pytestmark` is a **Phase 2 addition** — it is intentionally absent from STD placeholders
    - If needed, update the test description. This change must be approved by the team's qe sig owner / lead.
 
 2. **Submit PR for review**:
@@ -327,7 +332,7 @@ test_<specific_behavior>.__test__ = False
 
 #### Phase 1: Test Description PR
 
-- [ ] STP link in module docstring
+- [ ] STP link in module, class, or test docstring
 - [ ] Tests grouped in class with shared preconditions
 - [ ] Each test has: description, Preconditions, Steps, Expected
 - [ ] Each test verifies ONE thing with ONE Expected
@@ -340,6 +345,7 @@ test_<specific_behavior>.__test__ = False
 - [ ] Fixtures implement preconditions
 - [ ] Assertions match Expected
 - [ ] No changes to STD docstrings
+- [ ] `Markers:` entries from STD docstrings converted to `pytestmark` or `@pytest.mark` decorators
 
 ---
 
@@ -399,6 +405,8 @@ class TestSnapshotRestore:
 class TestVMLifecycle:
     """
     Tests for VM lifecycle operations.
+
+    STP Reference: https://example.com/stp/vm-lifecycle
 
     Preconditions:
         - VM Running latest Fedora virtual machine
