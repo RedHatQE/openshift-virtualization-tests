@@ -6,6 +6,7 @@ import pytest
 from ocp_resources.datavolume import DataVolume
 
 from tests.os_params import FEDORA_LATEST
+from tests.storage.cdi_clone.constants import WINDOWS_CLONE_TIMEOUT
 from tests.storage.utils import (
     assert_pvc_snapshot_clone_annotation,
     assert_use_populator,
@@ -93,7 +94,7 @@ def test_successful_clone_of_large_image(
         storage_class=data_volume_multi_storage_scope_function.storage_class,
         client=namespace.client,
     ) as cdv:
-        cdv.wait_for_dv_success(timeout=TIMEOUT_40MIN)
+        cdv.wait_for_dv_success(timeout=WINDOWS_CLONE_TIMEOUT)
 
 
 @pytest.mark.sno
