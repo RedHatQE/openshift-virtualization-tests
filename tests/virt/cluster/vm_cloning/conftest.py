@@ -63,6 +63,8 @@ def cloning_job_scope_function(request, unprivileged_client, namespace):
         source_name=request.param["source_name"],
         label_filters=request.param.get("label_filters"),
         annotation_filters=request.param.get("annotation_filters"),
+        volume_name_policy=request.param.get("volume_name_policy"),
+        target_name=request.param.get("target_name"),
     ) as vmc:
         yield vmc
 

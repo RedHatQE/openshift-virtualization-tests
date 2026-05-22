@@ -42,6 +42,7 @@ from utilities.storage import (
     virtctl_volume,
     wait_for_vm_volume_ready,
     write_file,
+    write_file_windows_vm,
 )
 from utilities.virt import (
     VirtualMachineForTests,
@@ -403,10 +404,7 @@ def created_windows_directory(booted_vms_for_storage_class_migration):
 @pytest.fixture(scope="class")
 def written_file_to_windows_vms_before_migration(booted_vms_for_storage_class_migration, created_windows_directory):
     for vm in booted_vms_for_storage_class_migration:
-        cmd = shlex.split(
-            f'powershell -command "\\"{CONTENT}\\" | Out-File -FilePath {WINDOWS_FILE_WITH_PATH} -Append"'
-        )
-        run_ssh_commands(host=vm.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC)
+        write_file_windows_vm(vm=vm, file_path=WINDOWS_FILE_WITH_PATH, content=CONTENT)
     yield booted_vms_for_storage_class_migration
 
 
