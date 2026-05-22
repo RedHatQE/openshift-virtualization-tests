@@ -5,74 +5,43 @@ import bitmath
 import pytest
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
-from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
-from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from pytest_testconfig import config as py_config
 
 from tests.storage.memory_dump.utils import wait_for_memory_dump_status_completed
-from utilities.artifactory import (
-    cleanup_artifactory_secret_and_config_map,
-    get_artifactory_config_map,
-    get_artifactory_secret,
-    get_test_artifact_server_url,
-)
+from tests.utils import create_windows2022_dv_template_from_registry, create_windows2022_vm_with_vtpm
 from utilities.constants import (
-    OS_FLAVOR_WIN_CONTAINER_DISK,
     TIMEOUT_2MIN,
-    U1_LARGE,
-    WIN_2K22,
-    WINDOWS_2K22_PREFERENCE,
     Images,
 )
-from utilities.os_utils import get_windows_container_disk_path
 from utilities.storage import (
     PodWithPVC,
     get_containers_for_pods_with_pvc,
     virtctl_memory_dump,
 )
-from utilities.virt import VirtualMachineForTests, running_vm, wait_for_windows_vm
 
 
 @pytest.fixture()
 def windows_vm_with_vtpm_for_memory_dump(
     unprivileged_client,
     namespace,
-    cpu_for_migration,
+    modern_cpu_for_migration,
 ):
-    artifactory_secret = get_artifactory_secret(namespace=namespace.name)
-    artifactory_config_map = get_artifactory_config_map(namespace=namespace.name)
-
-    dv = DataVolume(
-        name="windows-2022-dv",
-        namespace=namespace.name,
-        storage_class=py_config["default_storage_class"],
-        source="registry",
-        url=f"{get_test_artifact_server_url(schema='registry')}/{get_windows_container_disk_path(os_value=WIN_2K22)}",
-        size=Images.Windows.CONTAINER_DISK_DV_SIZE,
-        client=unprivileged_client,
-        api_name="storage",
-        secret=artifactory_secret,
-        cert_configmap=artifactory_config_map.name,
-    )
-    dv.to_dict()
-
-    with VirtualMachineForTests(
-        name="windows-vm-mem",
-        namespace=namespace.name,
-        client=unprivileged_client,
-        os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK,
-        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_LARGE, client=unprivileged_client),
-        vm_preference=VirtualMachineClusterPreference(name=WINDOWS_2K22_PREFERENCE, client=unprivileged_client),
-        data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
-        cpu_model=cpu_for_migration,
-    ) as vm:
-        running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
-        wait_for_windows_vm(vm=vm, version="2022")
+    with (
+        create_windows2022_dv_template_from_registry(
+            dv_name="windows-2022-dv",
+            namespace=namespace.name,
+            client=unprivileged_client,
+            storage_class=py_config["default_storage_class"],
+        ) as dv_template,
+        create_windows2022_vm_with_vtpm(
+            vm_name="windows-2022-vm",
+            namespace=namespace.name,
+            client=unprivileged_client,
+            dv_template=dv_template,
+            cpu_model=modern_cpu_for_migration,
+        ) as vm,
+    ):
         yield vm
-
-    cleanup_artifactory_secret_and_config_map(
-        artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
-    )
 
 
 @pytest.fixture()
