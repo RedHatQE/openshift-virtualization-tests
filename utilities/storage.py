@@ -1118,9 +1118,12 @@ def get_data_sources_managed_by_data_import_cron(client: DynamicClient, namespac
 
 
 def verify_boot_sources_reimported(
-    admin_client: DynamicClient, namespace: str, consecutive_checks_count: int = 6
+    admin_client: DynamicClient,
+    namespace: str,
+    consecutive_checks_count: int = 6,
+    data_source_names: list[str] | None = None,
 ) -> bool:
-    """Verify all DataImportCron-managed DataSources reach Ready=True.
+    """Verify DataImportCron-managed DataSources reach Ready=True.
 
     Checks DataSources sequentially each with its own timeout. Stops on the first
     DataSource that does not become ready.
@@ -1129,12 +1132,18 @@ def verify_boot_sources_reimported(
         admin_client: Cluster admin client.
         namespace: Namespace containing the DataImportCron-managed DataSources.
         consecutive_checks_count: Consecutive Ready=True polls required for stability.
+        data_source_names: Verify DataSources whose name is in this
+            set. DataSources outside the set (e.g. from custom DIC templates) are
+            skipped. When None, all DIC-managed DataSources are verified.
 
     Returns:
         True if all DataSources reached Ready=True otherwise false
     """
     try:
         for data_source in get_data_sources_managed_by_data_import_cron(client=admin_client, namespace=namespace):
+            if data_source_names is not None and data_source.name not in data_source_names:
+                LOGGER.info(f"Skipping DataSource {data_source.name}: not in golden image data source list")
+                continue
             LOGGER.info(f"Waiting for DataSource {data_source.name} consistent ready status")
             utilities.infra.wait_for_consistent_resource_conditions(
                 dynamic_client=admin_client,
