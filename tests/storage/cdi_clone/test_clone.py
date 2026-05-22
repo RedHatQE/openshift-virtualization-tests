@@ -17,7 +17,6 @@ from utilities.constants import (
     OS_FLAVOR_FEDORA,
     OS_FLAVOR_WINDOWS,
     TIMEOUT_1MIN,
-    TIMEOUT_40MIN,
     WIN_2K22,
     Images,
 )
