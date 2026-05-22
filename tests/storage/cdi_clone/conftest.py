@@ -3,8 +3,14 @@ from ocp_resources.datavolume import DataVolume
 
 from tests.storage.cdi_clone.constants import WINDOWS_CLONE_TIMEOUT
 from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE
-from tests.utils import create_windows2022_dv_template_from_registry
+from utilities.artifactory import (
+    cleanup_artifactory_secret_and_config_map,
+    get_artifactory_config_map,
+    get_artifactory_secret,
+    get_test_artifact_server_url,
+)
 from utilities.constants import REGISTRY_STR, WIN_2K22, Images
+from utilities.os_utils import get_windows_container_disk_path
 from utilities.storage import create_dv, data_volume
 
 
@@ -70,20 +76,30 @@ def source_dv_windows_registry_scope_function(
     storage_class_name_scope_function,
 ):
     """Fixture that creates a Windows 2022 DataVolume from registry."""
-    with (
-        create_windows2022_dv_template_from_registry(
+    artifactory_secret = get_artifactory_secret(namespace=namespace.name)
+    artifactory_config_map = get_artifactory_config_map(namespace=namespace.name)
+    registry_url = (
+        f"{get_test_artifact_server_url(schema='registry')}/{get_windows_container_disk_path(os_value=WIN_2K22)}"
+    )
+    try:
+        with create_dv(
             dv_name=f"dv-source-{WIN_2K22}-registry",
             namespace=namespace.name,
             client=unprivileged_client,
+            source=REGISTRY_STR,
+            url=registry_url,
+            size=Images.Windows.CONTAINER_DISK_DV_SIZE,
             storage_class=storage_class_name_scope_function,
-        ) as dv_template,
-        DataVolume(
-            kind_dict={"apiVersion": f"{DataVolume.api_group}/v1beta1", "kind": "DataVolume", **dv_template},
-            client=unprivileged_client,
-        ) as dv,
-    ):
-        dv.wait_for_dv_success(timeout=WINDOWS_CLONE_TIMEOUT)
-        yield dv
+            secret=artifactory_secret,
+            cert_configmap=artifactory_config_map.name,
+        ) as dv:
+            dv.wait_for_dv_success(timeout=WINDOWS_CLONE_TIMEOUT)
+            yield dv
+    finally:
+        cleanup_artifactory_secret_and_config_map(
+            artifactory_secret=artifactory_secret,
+            artifactory_config_map=artifactory_config_map,
+        )
 
 
 @pytest.fixture()
