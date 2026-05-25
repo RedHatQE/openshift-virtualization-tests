@@ -420,9 +420,7 @@ class TestForcedFullBackup:
             2. Wait for backup to complete
 
         Expected:
-            - Full backup completes successfully
-            - New backup is independent of previous backup chain
-            - Existing backup chain checkpoints are preserved and unchanged
+            - Forced full backup completes as a new independent backup while preserving existing checkpoint chain unchanged
         """
 
     @pytest.mark.polarion("CNV-16022")
@@ -438,9 +436,7 @@ class TestForcedFullBackup:
             2. Wait for backup to complete
 
         Expected:
-            - Full backup completes successfully
-            - New backup is independent of previous backup chain
-            - Existing backup chain checkpoints are preserved and unchanged
+            - Forced full backup completes as a new independent backup while preserving existing checkpoint chain unchanged
         """
 
 
@@ -471,9 +467,7 @@ class TestBackupErrorHandling:
             3. Wait for backup operation to complete
 
         Expected:
-            - Backup fails with storage full error
-            - No partial backup data remains on PVC
-            - VM remains accessible and unaffected
+            - Backup fails with storage full error, leaves no partial backup data on the target PVC, and the VM remains accessible and unaffected
         """
 
     @pytest.mark.polarion("CNV-16024")
@@ -491,9 +485,7 @@ class TestBackupErrorHandling:
             3. Wait for backup operation to complete
 
         Expected:
-            - Backup fails with storage full error
-            - No partial backup data remains on scratch PVC
-            - VM remains accessible and unaffected
+            - Backup fails with storage full error, leaves no partial backup data on the scratch PVC, and the VM remains accessible and unaffected
         """
 
 
