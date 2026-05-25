@@ -4,6 +4,7 @@ from typing import Any
 from ocp_resources.aaq import AAQ
 from ocp_resources.cdi import CDI
 from ocp_resources.kubevirt import KubeVirt
+from ocp_resources.mig_controller import MigController
 from ocp_resources.network_addons_config import NetworkAddonsConfig
 from ocp_resources.ssp import SSP
 
@@ -97,18 +98,21 @@ CRYPTO_POLICY_EXPECTED_DICT = {
         SSP: TLS_INTERMEDIATE_PROFILE,
         CDI: TLS_INTERMEDIATE_PROFILE,
         NetworkAddonsConfig: TLS_INTERMEDIATE_PROFILE,
+        MigController: TLS_INTERMEDIATE_PROFILE,
     },
     TLS_CUSTOM_POLICY: {
         KubeVirt: TLS_CUSTOM_PROFILE_KUBEVIRT[TLS_CUSTOM_POLICY],
         SSP: TLS_CUSTOM_PROFILE,
         CDI: TLS_CUSTOM_PROFILE,
         NetworkAddonsConfig: TLS_CUSTOM_PROFILE,
+        MigController: TLS_CUSTOM_PROFILE,
     },
     TLS_OLD_POLICY: {
         KubeVirt: KUBEVIRT_OLD_PROFILE,
         SSP: TLS_OLD_PROFILE,
         CDI: TLS_OLD_PROFILE,
         NetworkAddonsConfig: TLS_OLD_PROFILE,
+        MigController: TLS_OLD_PROFILE,
     },
 }
 

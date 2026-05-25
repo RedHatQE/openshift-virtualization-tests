@@ -3,6 +3,7 @@ from typing import Any, Final
 
 import yaml
 
+from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
 from tests.network.libs.apimachinery import dict_normalization_for_dataclass
 
 NETWORK_DATA: Final[str] = "networkData"
@@ -85,3 +86,22 @@ def format_cloud_config(userdata: UserData) -> str:
 
 def cloudinit(netdata: NetworkData) -> dict[str, Any]:
     return {NETWORK_DATA: todict(no_cloud=netdata)}
+
+
+def primary_iface_cloud_init() -> EthernetDevice | None:
+    """Return cloud-init ethernet config for the masquerade primary interface.
+
+    Configures a static IPv6 address on eth0 when the cluster supports IPv6,
+    enabling per-family connectivity verification. Returns None on IPv4-only clusters.
+
+    Returns:
+        EthernetDevice with static IPv6 and optional DHCP4, or None if IPv6 is not supported.
+    """
+    if not ipv6_supported_cluster():
+        return None
+    return EthernetDevice(
+        addresses=["fd10:0:2::2/120"],
+        gateway6="fd10:0:2::1",
+        dhcp4=ipv4_supported_cluster(),
+        dhcp6=False,
+    )
