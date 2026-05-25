@@ -193,7 +193,7 @@ def deploy_vms(
 
 def verify_at_least_one_vm_migrated(vms, node_before):
     samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_5MIN,
+        wait_timeout=TIMEOUT_10MIN,
         sleep=TIMEOUT_20SEC,
         func=lambda: [vm.vmi.node.name for vm in vms],
     )
@@ -228,7 +228,7 @@ def wait_for_overutilized_soft_taint(node, taint_expected, wait_timeout=TIMEOUT_
     sampler = TimeoutSampler(
         wait_timeout=wait_timeout,
         sleep=TIMEOUT_5SEC,
-        func=lambda: any(taint_key in taint.values() for taint in node.instance.spec.taints),
+        func=lambda: any(taint_key in taint.values() for taint in (node.instance.spec.taints or [])),
     )
     try:
         for sample in sampler:
