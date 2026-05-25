@@ -793,13 +793,7 @@ def run_command_on_vm_and_check_output(
     )
 
 
-def run_command_on_cirros_vm_and_check_output(vm, command, expected_result):
-    with console.Console(vm=vm) as vm_console:
-        vm_console.sendline(command)
-        vm_console.expect(expected_result, timeout=20)
-
-
-def assert_disk_serial(vm, command=_DEFAULT_DISK_SERIAL_COMMAND):
+def assert_disk_serial(vm, command=shlex.split("sudo ls /dev/disk/by-id")):
     assert (
         HOTPLUG_DISK_SERIAL
         in run_ssh_commands(host=vm.ssh_exec, commands=command, wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC)[0]

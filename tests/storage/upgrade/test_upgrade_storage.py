@@ -7,6 +7,11 @@ import pytest
 from ocp_resources.virtual_machine_restore import VirtualMachineRestore
 
 from tests.storage.utils import assert_disk_bus
+from tests.storage.upgrade.constants import (
+    UPGRADE_FIRST_FILE_CONTENT,
+    UPGRADE_FIRST_FILE_NAME,
+    UPGRADE_SECOND_FILE_NAME,
+)
 from tests.upgrade_params import (
     HOTPLUG_VM_AFTER_UPGRADE_NODE_ID,
     IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID,
@@ -21,10 +26,10 @@ from utilities.constants.storage import HOTPLUG_DISK_VIRTIO_BUS
 from utilities.storage import (
     assert_disk_serial,
     assert_hotplugvolume_nonexist,
-    run_command_on_cirros_vm_and_check_output,
+    run_command_on_vm_and_check_output,
     wait_for_vm_volume_ready,
 )
-from utilities.virt import migrate_vm_and_verify
+from utilities.virt import migrate_vm_and_verify, running_vm
 
 if TYPE_CHECKING:
     from kubernetes.dynamic import DynamicClient
@@ -54,22 +59,33 @@ class TestUpgradeStorage:
         self,
         admin_client,
         skip_if_no_storage_class_for_snapshot,
-        cirros_vm_for_upgrade_a,
+        rhel_vm_for_upgrade_a,
         snapshots_for_upgrade_a,
     ):
         with VirtualMachineRestore(
-            name=f"restore-snapshot-{cirros_vm_for_upgrade_a.name}",
+            client=admin_client,
+            name=f"restore-snapshot-{rhel_vm_for_upgrade_a.name}",
             namespace=snapshots_for_upgrade_a.namespace,
-            vm_name=cirros_vm_for_upgrade_a.name,
+            vm_name=rhel_vm_for_upgrade_a.name,
             snapshot_name=snapshots_for_upgrade_a.name,
             client=admin_client,
         ) as vm_restore:
+            if rhel_vm_for_upgrade_a.ready:
+                rhel_vm_for_upgrade_a.stop(wait=True)
             vm_restore.wait_restore_done()
-            cirros_vm_for_upgrade_a.start(wait=True)
-            run_command_on_cirros_vm_and_check_output(
-                vm=cirros_vm_for_upgrade_a,
-                command=LS_COMMAND,
-                expected_result="1",
+            running_vm(vm=rhel_vm_for_upgrade_a)
+            # Verify first file exists (created before snapshot)
+            run_command_on_vm_and_check_output(
+                vm=rhel_vm_for_upgrade_a,
+                command=f"cat {UPGRADE_FIRST_FILE_NAME}",
+                expected_result=UPGRADE_FIRST_FILE_CONTENT,
+            )
+
+            # Verify second file does NOT exist (created after snapshot)
+            run_command_on_vm_and_check_output(
+                vm=rhel_vm_for_upgrade_a,
+                command=f"test ! -f {UPGRADE_SECOND_FILE_NAME} && echo 'file not found'",
+                expected_result="file not found",
             )
 
     @pytest.mark.sno
@@ -119,12 +135,21 @@ class TestUpgradeStorage:
     )
     def test_vm_snapshot_restore_check_after_upgrade(
         self,
-        cirros_vm_for_upgrade_a,
+        rhel_vm_for_upgrade_a,
     ):
-        run_command_on_cirros_vm_and_check_output(
-            vm=cirros_vm_for_upgrade_a,
-            command=LS_COMMAND,
-            expected_result="1",
+        running_vm(vm=rhel_vm_for_upgrade_a)
+        # Verify first file exists (created before snapshot, should still be there after upgrade)
+        run_command_on_vm_and_check_output(
+            vm=rhel_vm_for_upgrade_a,
+            command=f"cat {UPGRADE_FIRST_FILE_NAME}",
+            expected_result=UPGRADE_FIRST_FILE_CONTENT,
+        )
+
+        # Verify second file does NOT exist (was created after snapshot, should not be present after restore)
+        run_command_on_vm_and_check_output(
+            vm=rhel_vm_for_upgrade_a,
+            command=f"test ! -f {UPGRADE_SECOND_FILE_NAME} && echo 'file not found'",
+            expected_result="file not found",
         )
 
     @pytest.mark.sno
@@ -139,21 +164,34 @@ class TestUpgradeStorage:
         scope=DEPENDENCY_SCOPE_SESSION,
     )
     def test_vm_snapshot_restore_create_after_upgrade(
-        self, admin_client, cirros_vm_for_upgrade_b, snapshots_for_upgrade_b
+        self, admin_client, rhel_vm_for_upgrade_b, snapshots_for_upgrade_b
     ):
         with VirtualMachineRestore(
-            name=f"restore-snapshot-{cirros_vm_for_upgrade_b.name}",
+            client=admin_client,
+            name=f"restore-snapshot-{rhel_vm_for_upgrade_b.name}",
             namespace=snapshots_for_upgrade_b.namespace,
-            vm_name=cirros_vm_for_upgrade_b.name,
+            vm_name=rhel_vm_for_upgrade_b.name,
             snapshot_name=snapshots_for_upgrade_b.name,
             client=admin_client,
         ) as vm_restore:
+            if rhel_vm_for_upgrade_b.ready:
+                rhel_vm_for_upgrade_b.stop(wait=True)
             vm_restore.wait_restore_done()
-            cirros_vm_for_upgrade_b.start(wait=True)
-            run_command_on_cirros_vm_and_check_output(
-                vm=cirros_vm_for_upgrade_b,
-                command=LS_COMMAND,
-                expected_result="1",
+
+            running_vm(vm=rhel_vm_for_upgrade_b)
+
+            # Verify first file exists (created before snapshot)
+            run_command_on_vm_and_check_output(
+                vm=rhel_vm_for_upgrade_b,
+                command=f"cat {UPGRADE_FIRST_FILE_NAME}",
+                expected_result=UPGRADE_FIRST_FILE_CONTENT,
+            )
+
+            # Verify second file does NOT exist (created after snapshot)
+            run_command_on_vm_and_check_output(
+                vm=rhel_vm_for_upgrade_b,
+                command=f"test ! -f {UPGRADE_SECOND_FILE_NAME} && echo 'file not found'",
+                expected_result="file not found",
             )
 
     @pytest.mark.polarion("CNV-5310")
