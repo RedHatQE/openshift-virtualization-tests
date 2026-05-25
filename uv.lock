@@ -798,7 +798,7 @@ requires-dist = [
     { name = "marshmallow", specifier = ">=4.0" },
     { name = "netaddr", specifier = ">=1.3.0" },
     { name = "openshift-python-utilities", specifier = ">=6.0.0" },
-    { name = "openshift-python-wrapper", specifier = "~=4.19.0" },
+    { name = "openshift-python-wrapper", specifier = "~=4.19.5" },
     { name = "openstacksdk", specifier = ">=4.1.0" },
     { name = "pexpect", specifier = ">=4.9.0" },
     { name = "podman", specifier = ">=5.2.0" },
