@@ -5,9 +5,10 @@ import logging
 import re
 import shlex
 import tarfile
+from collections.abc import Generator
 from contextlib import contextmanager
 from io import BytesIO
-from typing import Generator, Optional
+from typing import Optional
 
 import bitmath
 import requests
@@ -19,6 +20,8 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine import VirtualMachine
+from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
+from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
@@ -46,11 +49,14 @@ from utilities.constants import (
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import (
     ExecCommandOnPod,
+    cleanup_artifactory_secret_and_config_map,
     get_artifactory_config_map,
     get_artifactory_header,
     get_artifactory_secret,
     get_http_image_url,
+    get_test_artifact_server_url,
 )
+from utilities.os_utils import get_windows_container_disk_path
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
@@ -60,6 +66,7 @@ from utilities.virt import (
     wait_for_migration_finished,
     wait_for_ssh_connectivity,
     wait_for_updated_kv_value,
+    wait_for_windows_vm,
 )
 
 NUM_TEST_VMS = 3
@@ -664,8 +671,6 @@ def create_windows2022_dv_template_from_registry(
     Yields:
         dict: DataVolume template dictionary with metadata and spec
     """
-    from utilities.infra import cleanup_artifactory_secret_and_config_map, get_test_artifact_server_url
-    from utilities.os_utils import get_windows_container_disk_path
 
     artifactory_secret = get_artifactory_secret(namespace=namespace)
     artifactory_config_map = get_artifactory_config_map(namespace=namespace)
@@ -713,10 +718,6 @@ def create_windows2022_vm_with_vtpm(
     Yields:
         VirtualMachineForTests: Running Windows 2022 VM with vTPM
     """
-    from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
-    from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
-
-    from utilities.virt import wait_for_windows_vm
 
     with VirtualMachineForTests(
         name=vm_name,
