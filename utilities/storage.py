@@ -2,6 +2,7 @@ import logging
 import math
 import os
 import shlex
+from collections.abc import Collection
 from collections.abc import Generator
 from contextlib import contextmanager
 from typing import Any
@@ -1123,7 +1124,7 @@ def verify_boot_sources_reimported(
     admin_client: DynamicClient,
     namespace: str,
     consecutive_checks_count: int = 6,
-    data_source_names: list[str] | None = None,
+    data_source_names: Collection[str] | None = None,
 ) -> bool:
     """Verify DataImportCron-managed DataSources reach Ready=True.
 
@@ -1135,7 +1136,7 @@ def verify_boot_sources_reimported(
         namespace: Namespace containing the DataImportCron-managed DataSources.
         consecutive_checks_count: Consecutive Ready=True polls required for stability.
         data_source_names: Verify DataSources whose name is in this
-            set. DataSources outside the set (e.g. from custom DIC templates) are
+            collection. DataSources outside the collection (e.g. from custom DIC templates) are
             skipped. When None, all DIC-managed DataSources are verified.
 
     Returns:
