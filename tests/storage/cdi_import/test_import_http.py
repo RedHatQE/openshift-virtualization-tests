@@ -26,6 +26,7 @@ from tests.storage.utils import (
 from utilities.constants import (
     QUARANTINED,
     TIMEOUT_1MIN,
+    TIMEOUT_2MIN,
     TIMEOUT_5MIN,
     Images,
 )
@@ -216,7 +217,7 @@ def test_wrong_content_type(
 ):
     dv_from_http_import.wait_for_status(
         status=DataVolume.Status.IMPORT_IN_PROGRESS,
-        timeout=TIMEOUT_5MIN,
+        timeout=TIMEOUT_2MIN,
         stop_status=DataVolume.Status.SUCCEEDED,
     )
     wait_for_dv_condition_message(dv=dv_from_http_import, expected_message=ErrorMsg.EXIT_STATUS_2)
@@ -256,7 +257,7 @@ def test_certconfigmap_incorrect_cert(
 ):
     dv_from_http_import.wait_for_status(
         status=DataVolume.Status.IMPORT_IN_PROGRESS,
-        timeout=TIMEOUT_5MIN,
+        timeout=TIMEOUT_2MIN,
         stop_status=DataVolume.Status.SUCCEEDED,
     )
     wait_for_dv_condition_message(
