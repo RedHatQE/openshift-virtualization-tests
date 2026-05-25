@@ -385,6 +385,7 @@ def enable_common_boot_image_import_spec_wait_for_data_import_cron(hco_resource,
         admin_client=admin_client,
         namespace=namespace.name,
         consecutive_checks_count=1,
+        data_source_names={next(iter(dict_entry)) for dict_entry in py_config["data_import_cron_matrix"]},
     )
 
 
