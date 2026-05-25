@@ -10,7 +10,7 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.storage_profile import StorageProfile
 
-from tests.utils import create_windows2022_dv_from_registry, create_windows2022_vm_with_vtpm_from_registry
+from tests.utils import create_windows2022_dv_template_from_registry, create_windows2022_vm_with_vtpm
 from utilities.constants import HOTPLUG_DISK_SERIAL
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.storage import (
@@ -76,7 +76,7 @@ def windows_dv_from_registry_scope_class(
     storage_class_matrix__class__,
 ):
     """Creates a Windows 2022 DataVolume from registry container disk."""
-    with create_windows2022_dv_from_registry(
+    with create_windows2022_dv_template_from_registry(
         dv_name="dv-windows-2022-hotplug",
         namespace=namespace.name,
         client=unprivileged_client,
@@ -93,8 +93,8 @@ def vm_instance_from_template_multi_storage_scope_class(
     windows_dv_from_registry_scope_class,
 ):
     """Creates a Windows 2022 VM with vTPM from registry container disk."""
-    with create_windows2022_vm_with_vtpm_from_registry(
-        dv_dict=windows_dv_from_registry_scope_class,
+    with create_windows2022_vm_with_vtpm(
+        dv_template=windows_dv_from_registry_scope_class,
         namespace=namespace.name,
         client=unprivileged_client,
         vm_name="vm-win-2022-hotplug",
