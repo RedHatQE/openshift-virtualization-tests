@@ -27,7 +27,6 @@ from tests.observability.metrics.utils import (
     validate_metric_value_greater_than_initial_value,
     validate_vnic_info,
 )
-from tests.observability.utils import validate_metrics_value
 from utilities.constants import (
     CAPACITY,
     MIGRATION_POLICY_VM_LABEL,
@@ -38,7 +37,7 @@ from utilities.constants import (
     USED,
 )
 from utilities.infra import get_node_selector_dict
-from utilities.monitoring import get_metrics_value
+from utilities.monitoring import get_metrics_value, validate_metrics_value
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 LOGGER = logging.getLogger(__name__)
