@@ -96,6 +96,7 @@ from utilities.constants import (
     KUBECONFIG,
     KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
     KUBEMACPOOL_MAC_RANGE_CONFIG,
+    KUBERNETES_ARCH_LABEL,
     LINUX_BRIDGE,
     MIGRATION_POLICY_VM_LABEL,
     NODE_HUGE_PAGES_1GI_KEY,
@@ -172,7 +173,6 @@ from utilities.network import (
     wait_for_ovs_status,
 )
 from utilities.operator import (
-    cluster_with_icsp,
     disable_default_sources_in_operatorhub,
     get_hco_csv_name_by_version,
     get_machine_config_pool_by_name,
@@ -440,9 +440,13 @@ def nodes(admin_client):
 
 @pytest.fixture(scope="session")
 def schedulable_nodes(nodes):
-    """Get nodes marked as schedulable by kubevirt"""
+    """Get nodes marked as schedulable by kubevirt.
+
+    For multi-arch testing - filter nodes by the architecture being tested.
+    """
     schedulable_label = "kubevirt.io/schedulable"
-    yield [
+    cpu_arch = py_config.get("cpu_arch")
+    schedulable = [
         node
         for node in nodes
         if schedulable_label in node.labels.keys()
@@ -450,7 +454,11 @@ def schedulable_nodes(nodes):
         and not node.instance.spec.unschedulable
         and not kubernetes_taint_exists(node)
         and node.kubelet_ready
+        and (not cpu_arch or node.labels.get(KUBERNETES_ARCH_LABEL) == cpu_arch)
     ]
+
+    LOGGER.info(f"Schedulable nodes: {[node.name for node in schedulable]}, node architecture: {cpu_arch or 'all'}")
+    yield schedulable
 
 
 @pytest.fixture(scope="session")
@@ -530,11 +538,6 @@ def utility_daemonset(
         with DaemonSet(client=admin_client, yaml_file=modified_ds_yaml_file) as ds:
             ds.wait_until_deployed()
             yield ds
-
-
-@pytest.fixture(scope="session")
-def pull_secret_directory(tmpdir_factory):
-    yield tmpdir_factory.mktemp("pullsecret-folder")
 
 
 @pytest.fixture(scope="session")
@@ -2322,11 +2325,6 @@ def worker_machine1(worker_node1):
     if machine.exists:
         return machine
     raise ResourceNotFoundError(f"Machine object for {worker_node1.name} doesn't exists")
-
-
-@pytest.fixture(scope="session")
-def is_idms_cluster():
-    return not cluster_with_icsp()
 
 
 @pytest.fixture(scope="session")

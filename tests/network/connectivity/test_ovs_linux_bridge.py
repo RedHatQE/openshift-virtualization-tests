@@ -74,7 +74,6 @@ class TestConnectivityOVSBridge:
     @pytest.mark.post_upgrade
     @pytest.mark.gating
     @pytest.mark.polarion("CNV-12556")
-    @pytest.mark.jira("CNV-85477", run=False)
     def test_ovs_bridge(
         self,
         subtests,

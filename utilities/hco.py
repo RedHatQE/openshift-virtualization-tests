@@ -35,6 +35,7 @@ from utilities.ssp import (
     wait_for_deleted_data_import_crons,
     wait_for_ssp_conditions,
 )
+from utilities.storage import verify_boot_sources_reimported
 
 LOGGER = logging.getLogger(__name__)
 
@@ -381,6 +382,11 @@ def enable_common_boot_image_import_spec_wait_for_data_import_cron(hco_resource,
     wait_for_at_least_one_auto_update_data_import_cron(admin_client=admin_client, namespace=namespace)
     wait_for_ssp_conditions(admin_client=admin_client, hco_namespace=hco_namespace)
     wait_for_hco_conditions(admin_client=admin_client, hco_namespace=hco_namespace)
+    assert verify_boot_sources_reimported(
+        admin_client=admin_client,
+        namespace=namespace.name,
+        consecutive_checks_count=1,
+    )
 
 
 def update_common_boot_image_import_spec(hco_resource, enable):

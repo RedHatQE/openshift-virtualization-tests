@@ -5,7 +5,6 @@ import uuid
 from collections.abc import Generator
 from typing import Final
 
-from kubernetes.client import ApiException
 from kubernetes.dynamic import DynamicClient
 
 from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
@@ -57,20 +56,6 @@ def ip_addresses_from_pool(
     if ipv6_supported_cluster():
         addresses.append(next(ipv6_pool))
     return addresses
-
-
-def run_vms(vms: tuple[BaseVirtualMachine, ...]) -> tuple[BaseVirtualMachine, ...]:
-    for vm in vms:
-        try:
-            vm.start()  # type: ignore[no-untyped-call]
-        except ApiException as vm_exception:
-            if "VM is already running" in vm_exception.body:
-                LOGGER.warning(f"VM {vm.name} is already running")
-                continue
-    for vm in vms:
-        vm.wait_for_ready_status(status=True)  # type: ignore[no-untyped-call]
-        vm.wait_for_agent_connected()
-    return vms
 
 
 def localnet_vm(

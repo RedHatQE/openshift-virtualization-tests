@@ -450,6 +450,40 @@ class TestVmVnicInfo:
             metric_name=f"kubevirt_vmi_vnic_info{{name='{windows_vm_for_test.name}'}}",
         )
 
+    @pytest.mark.parametrize(
+        "query",
+        [
+            pytest.param(
+                "kubevirt_vm_vnic_info{{name='{vm_name}', vnic_name='secondary'}}",
+                marks=pytest.mark.polarion("CNV-16018"),
+            ),
+            pytest.param(
+                "kubevirt_vmi_vnic_info{{name='{vm_name}', vnic_name='secondary'}}",
+                marks=pytest.mark.polarion("CNV-16019"),
+            ),
+        ],
+    )
+    def test_metric_kubevirt_vm_vnic_info_after_nad_swap(self, query):
+        """
+        Test that vnic_info metric updates the network label after a NAD swap.
+
+        STP:
+        https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-network/hotpluggable-nad-ref.md
+
+        Preconditions:
+            - Two Network Attachment Definitions (NAD-A, NAD-B) with different VLANs on the same Linux bridge
+            - Running VM with a secondary bridge interface attached to NAD-A
+
+        Steps:
+            1. Swap the VM secondary network reference from NAD-A to NAD-B
+            2. Query vnic_info metric for the secondary interface
+
+        Expected:
+            - vnic_info labels match the VM spec after NAD swap
+        """
+
+    test_metric_kubevirt_vm_vnic_info_after_nad_swap.__test__ = False
+
 
 class TestVmiPhaseTransitionFromDeletion:
     @pytest.mark.polarion("CNV-12990")

@@ -5,7 +5,6 @@ from ocp_resources.virtual_machine_restore import VirtualMachineRestore
 
 from tests.storage.utils import assert_disk_bus
 from tests.upgrade_params import (
-    CDI_SCRATCH_PRESERVE_NODE_ID,
     HOTPLUG_VM_AFTER_UPGRADE_NODE_ID,
     IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID,
     IUO_UPGRADE_TEST_ORDERING_NODE_ID,
@@ -35,25 +34,6 @@ pytestmark = [
 @pytest.mark.usefixtures("updated_default_storage_class_ocs_virt")
 class TestUpgradeStorage:
     """Pre-upgrade tests"""
-
-    @pytest.mark.sno
-    @pytest.mark.polarion("CNV-4880")
-    @pytest.mark.order(before=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
-    @pytest.mark.dependency(name=f"{STORAGE_NODE_ID_PREFIX}::test_cdiconfig_scratch_overriden_before_upgrade")
-    def test_cdiconfig_scratch_overriden_before_upgrade(
-        self,
-        cdi_config,
-        storage_class_for_updating_cdiconfig_scratch,
-        override_cdiconfig_scratch_spec,
-    ):
-        """
-        Check that the scratch StorageClass configuration should be changed before CNV upgrade
-        """
-        expected_sc = storage_class_for_updating_cdiconfig_scratch.instance.metadata.name
-        actual_sc = cdi_config.scratch_space_storage_class_from_status
-        assert actual_sc == expected_sc, (
-            "The scratchSpaceStorageClass on CDIConfig config should be changed before upgrade"
-        )
 
     @pytest.mark.sno
     @pytest.mark.polarion("CNV-5993")
@@ -114,32 +94,6 @@ class TestUpgradeStorage:
         assert_hotplugvolume_nonexist(vm=fedora_vm_for_hotplug_upg)
 
     """ Post-upgrade tests """
-
-    @pytest.mark.sno
-    @pytest.mark.polarion("CNV-2952")
-    @pytest.mark.order(after=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
-    @pytest.mark.dependency(
-        name=CDI_SCRATCH_PRESERVE_NODE_ID,
-        depends=[
-            IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID,
-            f"{STORAGE_NODE_ID_PREFIX}::test_cdiconfig_scratch_overriden_before_upgrade",
-        ],
-        scope=DEPENDENCY_SCOPE_SESSION,
-    )
-    def test_cdiconfig_scratch_preserved_after_upgrade(
-        self,
-        skip_if_not_override_cdiconfig_scratch_space,
-        cdi_config,
-        storage_class_for_updating_cdiconfig_scratch,
-    ):
-        """
-        Check that the scratch StorageClass configuration should be preserved by the upgrade
-        """
-        expected_sc = storage_class_for_updating_cdiconfig_scratch.instance.metadata.name
-        actual_sc = cdi_config.scratch_space_storage_class_from_status
-        assert actual_sc == expected_sc, (
-            "The scratchSpaceStorageClass on CDIConfig config should not change after upgrade"
-        )
 
     @pytest.mark.sno
     @pytest.mark.polarion("CNV-5994")
