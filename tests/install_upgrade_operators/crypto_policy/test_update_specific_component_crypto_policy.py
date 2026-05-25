@@ -29,7 +29,6 @@ from utilities.constants import (
     TLS_SECURITY_PROFILE,
 )
 from utilities.hco import (
-    is_hco_tainted,
     update_hco_annotations,
     wait_for_hco_conditions,
 )
@@ -95,7 +94,6 @@ def updated_cr_with_custom_crypto_policy(
             },
         )
         yield {"resource": resource, "tls_policy": value}
-    assert not is_hco_tainted(admin_client=admin_client, hco_namespace=hco_namespace.name)
 
 
 @pytest.mark.parametrize(

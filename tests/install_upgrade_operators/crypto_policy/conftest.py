@@ -146,7 +146,7 @@ def services_to_check_connectivity(hco_namespace, admin_client):
     return services_list
 
 
-@pytest.fixture(scope="package")
+@pytest.fixture(scope="module")
 def enabled_template_feature_gate(admin_client, hco_namespace, hyperconverged_resource_scope_session):
     """Enables the Template feature gate via HCO annotation and waits for virt-template deployments."""
     with update_hco_annotations(
@@ -164,7 +164,7 @@ def enabled_template_feature_gate(admin_client, hco_namespace, hyperconverged_re
         yield
 
 
-@pytest.fixture(scope="package")
+@pytest.fixture(scope="module")
 def cnv_services_with_template(enabled_template_feature_gate, hco_namespace, admin_client):
     """Discovers all CNV services with a clusterIP, including virt-template services."""
     services_list = [
@@ -178,7 +178,7 @@ def cnv_services_with_template(enabled_template_feature_gate, hco_namespace, adm
     return services_list
 
 
-@pytest.fixture(scope="package")
+@pytest.fixture(scope="module")
 def services_tls_runtime(cnv_services_with_template, admin_client, hco_namespace, fips_enabled_cluster):
     """Detects TLS runtime (Go or OpenSSL) for each service's backing pod. Only runs on FIPS clusters."""
     if not fips_enabled_cluster:
