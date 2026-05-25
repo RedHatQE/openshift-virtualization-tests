@@ -766,7 +766,11 @@ class TestDisableCommonBootImageImportHcoSpec:
         except StopIteration:
             pass
 
-        mock_enable_spec.assert_called_once()
+        mock_enable_spec.assert_called_once_with(
+            hco_resource=mock_hco,
+            admin_client=mock_admin_client,
+            namespace=mock_namespace,
+        )
 
     @patch("utilities.hco.enable_common_boot_image_import_spec_wait_for_data_import_cron")
     @patch("utilities.hco.wait_for_deleted_data_import_crons")
@@ -797,6 +801,10 @@ class TestDisableCommonBootImageImportHcoSpec:
 class TestEnableCommonBootImageImportSpecWaitForDataImportCron:
     """Test cases for enable_common_boot_image_import_spec_wait_for_data_import_cron"""
 
+    @patch(
+        "utilities.hco.py_config",
+        {"data_import_cron_matrix": [{"rhel9": {}}, {"fedora": {}}]},
+    )
     @patch("utilities.hco.wait_for_hco_conditions")
     @patch("utilities.hco.wait_for_ssp_conditions")
     @patch("utilities.hco.wait_for_at_least_one_auto_update_data_import_cron")
@@ -828,6 +836,7 @@ class TestEnableCommonBootImageImportSpecWaitForDataImportCron:
             admin_client=mock_admin_client,
             namespace=mock_namespace.name,
             consecutive_checks_count=1,
+            data_source_names={"rhel9", "fedora"},
         )
 
 
