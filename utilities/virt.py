@@ -94,6 +94,7 @@ from utilities.constants import (
     Images,
 )
 from utilities.data_collector import collect_vnc_screenshot_for_vms
+from utilities.exceptions import MigrationStuckSchedulingError
 from utilities.hco import get_hco_namespace, wait_for_hco_conditions
 from utilities.network import (
     cloud_init_network_data,
@@ -1966,7 +1967,7 @@ def wait_for_migration_finished(migration: VirtualMachineInstanceMigration, time
         TimeoutExpiredError: If the migration does not finish within the timeout.
     """
 
-    def _abort_stuck_scheduling_migration(_migration: VirtualMachineInstanceMigration) -> None:
+    def _abort_stuck_scheduling_migration_wait(_migration: VirtualMachineInstanceMigration) -> None:
         for pod in utilities.infra.get_pod_by_name_prefix(
             client=_migration.client, pod_prefix=VIRT_LAUNCHER, namespace=_migration.namespace, get_all=True
         ):
@@ -1977,11 +1978,11 @@ def wait_for_migration_finished(migration: VirtualMachineInstanceMigration, time
                     for event in pod.events(timeout=TIMEOUT_5SEC, field_selector="type==Warning")
                 ]
                 LOGGER.error(
-                    f"POD Conditions:\n {pod.instance.status.conditions[0]}\nPOD Events:\n {', '.join(pod_events)}"
+                    f"POD Name: {pod.name}\n"
+                    f"POD Conditions:\n {pod.instance.status.conditions[0]}\n"
+                    f"POD Events:\n {', '.join(pod_events)}"
                 )
-                raise TimeoutExpiredError(
-                    f"VMIM {migration.name} stuck in Scheduling state and probably will be failed"
-                )
+                raise MigrationStuckSchedulingError(migration_name=migration.name)
 
     sleep = TIMEOUT_10SEC
     samples = TimeoutSampler(wait_timeout=timeout, sleep=sleep, func=lambda: migration.instance.status.phase)
@@ -1996,7 +1997,7 @@ def wait_for_migration_finished(migration: VirtualMachineInstanceMigration, time
                 # If migration stuck in Scheduling state for more than 4 minutes - most likely it will be failed
                 # Need to collect data before 5 min timeout reached and target POD is removed
                 if counter >= TIMEOUT_4MIN / sleep:
-                    _abort_stuck_scheduling_migration(_migration=migration)
+                    _abort_stuck_scheduling_migration_wait(_migration=migration)
     except TimeoutExpiredError:
         if sample:
             LOGGER.error(f"Status of VMIM {migration.name} is {sample}")
