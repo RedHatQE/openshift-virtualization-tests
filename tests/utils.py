@@ -77,7 +77,6 @@ def create_vms(
     client=None,
     ssh=True,
     node_selector_labels=None,
-    cpu_model=None,
 ):
     """
     Create n number of fedora vms.
@@ -89,7 +88,6 @@ def create_vms(
         node_selector_labels (str): Labels for node selector.
         client (DynamicClient): DynamicClient object
         ssh (bool): enable SSH on the VM
-        cpu_model (str): CPU model to be used for the VMs
 
     Returns:
         list: List of VirtualMachineForTests
@@ -106,7 +104,6 @@ def create_vms(
             run_strategy=VirtualMachine.RunStrategy.ALWAYS,
             ssh=ssh,
             client=client,
-            cpu_model=cpu_model,
         ) as vm:
             vms_list.append(vm)
     return vms_list
@@ -232,7 +229,7 @@ def update_vm_instancetype_name(vm, instance_type_name):
 
 
 def clean_up_migration_jobs(client, vm):
-    for migration_job in VirtualMachineInstanceMigration.get(client=client, namespace=vm.namespace):
+    for migration_job in VirtualMachineInstanceMigration.get(dyn_client=client, namespace=vm.namespace):
         migration_job.clean_up()
 
 
@@ -488,8 +485,8 @@ def download_and_extract_tar(tarfile_url, dest_path):
     """Download and Extract the tar file."""
     artifactory_header = get_artifactory_header()
     request = requests.get(tarfile_url, verify=False, headers=artifactory_header, timeout=10)
-    tar_file = tarfile.open(fileobj=BytesIO(request.content), mode="r|xz")
-    tar_file.extractall(path=dest_path)
+    thetarfile = tarfile.open(fileobj=BytesIO(request.content), mode="r|xz")
+    thetarfile.extractall(path=dest_path)
 
     return True
 
@@ -585,15 +582,15 @@ def create_cirros_vm(
         yield vm
 
 
-def start_stress_on_vm(vm: VirtualMachineForTests, stress_command: str) -> None:
+def start_stress_on_vm(vm, stress_command):
     LOGGER.info(f"Running memory load in VM {vm.name}")
     if "windows" in vm.name:
         verify_wsl2_guest_running(vm=vm)
         verify_wsl2_guest_works(vm=vm)
         command = f"wsl nohup bash -c '{stress_command}'"
     else:
-        command = f"sudo dnf install stress-ng -y; {stress_command}"
-
+        run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("sudo dnf install -y stress-ng"))
+        command = stress_command
     run_ssh_commands(
         host=vm.ssh_exec,
         commands=shlex.split(command),
@@ -601,7 +598,33 @@ def start_stress_on_vm(vm: VirtualMachineForTests, stress_command: str) -> None:
     )
 
 
-def verify_wsl2_guest_running(vm: VirtualMachineForTests, timeout: int = TIMEOUT_3MIN) -> bool:
+def verify_wsl2_guest_works(vm: VirtualMachineForTests) -> None:
+    """
+    Verifies that WSL2 is functioning on windows vm.
+    Args:
+        vm: An instance of `VirtualMachineForTests`
+    Raises:
+        TimeoutExpiredError: If WSL2 fails to return the expected output within
+            the specified timeout period.
+    """
+    echo_string = "TEST"
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_1MIN,
+        sleep=TIMEOUT_15SEC,
+        func=run_ssh_commands,
+        host=vm.ssh_exec,
+        commands=shlex.split(f"wsl echo {echo_string}"),
+    )
+    try:
+        for sample in samples:
+            if sample and echo_string in sample[0]:
+                return
+    except TimeoutExpiredError:
+        LOGGER.error(f"VM {vm.name} failed to start WSL2")
+        raise
+
+
+def verify_wsl2_guest_running(vm, timeout=TIMEOUT_3MIN):
     def _get_wsl2_running_status():
         guests_status = run_ssh_commands(
             host=vm.ssh_exec,
@@ -619,33 +642,6 @@ def verify_wsl2_guest_running(vm: VirtualMachineForTests, timeout: int = TIMEOUT
                 return True
     except TimeoutExpiredError:
         LOGGER.error("WSL2 guest is not running in the VM!")
-        raise
-    return False
-
-
-def verify_wsl2_guest_works(vm: VirtualMachineForTests) -> None:
-    """
-    Verifies that WSL2 is functioning on windows vm.
-    Args:
-        vm: An instance of `VirtualMachineForTests`
-    Raises:
-        TimeoutExpiredError: If WSL2 fails to return the expected output within
-            the specified timeout period.
-    """
-    test_str = "TEST"
-    samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_1MIN,
-        sleep=TIMEOUT_15SEC,
-        func=run_ssh_commands,
-        host=vm.ssh_exec,
-        commands=shlex.split(f"wsl echo {test_str}"),
-    )
-    try:
-        for sample in samples:
-            if sample and test_str in sample[0]:
-                return
-    except TimeoutExpiredError:
-        LOGGER.error(f"VM {vm.name} failed to start WSL2")
         raise
 
 
