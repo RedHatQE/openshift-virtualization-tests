@@ -8,10 +8,9 @@ from ocp_resources.mig_controller import MigController
 from ocp_resources.network_addons_config import NetworkAddonsConfig
 from ocp_resources.ssp import SSP
 
-from tests.install_upgrade_operators.constants import KEY_PATH_SEPARATOR
+from tests.install_upgrade_operators.constants import KEY_PATH_SEPARATOR, MANAGED_CRS_LIST
 from utilities.constants import TLS_CUSTOM_POLICY, TLS_OLD_POLICY
 
-MANAGED_CRS_LIST = [KubeVirt, CDI, NetworkAddonsConfig, SSP]
 MANAGED_CRS_LIST_WITH_AAQ = [*MANAGED_CRS_LIST, AAQ]
 
 TLS_MODERN_POLICY = "modern"
