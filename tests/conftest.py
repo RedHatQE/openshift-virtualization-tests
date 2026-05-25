@@ -13,7 +13,7 @@ import subprocess
 import tempfile
 from bisect import bisect_left
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from signal import SIGINT, SIGTERM, getsignal, signal
 
 import bcrypt
@@ -263,7 +263,7 @@ def session_start_time() -> datetime:
     Returns:
         datetime: UTC timestamp when test session began (timezone-naive)
     """
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 @pytest.fixture(scope="session")

@@ -49,7 +49,7 @@ class Localnet:
         SECONDARY = "Secondary"
 
     role: str
-    physicalNetworkName: str  # noqa: N815
+    physicalNetworkName: str
     ipam: Ipam
     vlan: Vlan | None = None
     mtu: int | None = None
@@ -58,20 +58,20 @@ class Localnet:
 @dataclass
 class MacVRF:
     vni: int
-    routeTarget: str | None = None  # noqa: N815
+    routeTarget: str | None = None
 
 
 @dataclass
 class IpVRF:
     vni: int
-    routeTarget: str | None = None  # noqa: N815
+    routeTarget: str | None = None
 
 
 @dataclass
 class EvpnConfiguration:
     vtep: str
-    macVRF: MacVRF | None = None  # noqa: N815
-    ipVRF: IpVRF | None = None  # noqa: N815
+    macVRF: MacVRF | None = None
+    ipVRF: IpVRF | None = None
 
 
 class Transport(Enum):

@@ -54,7 +54,7 @@ class TestKubevirtJsonPatch:
             admin_client=admin_client,
             hco_namespace=hco_namespace,
             expected_conditions={
-                **{"TaintedConfiguration": Resource.Condition.Status.TRUE},
+                "TaintedConfiguration": Resource.Condition.Status.TRUE,
             },
         )
         validate_kubevirt_json_patch(kubevirt_resource=kubevirt_resource)

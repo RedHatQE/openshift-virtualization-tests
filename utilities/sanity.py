@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any
 
 from _pytest.fixtures import FixtureRequest
 from kubernetes.client import ApiException
@@ -22,7 +22,7 @@ from utilities.infra import LOGGER, wait_for_pods_running
 from utilities.pytest_utils import exit_pytest_execution
 
 
-def storage_sanity_check(cluster_storage_classes_names: List[str]) -> bool:
+def storage_sanity_check(cluster_storage_classes_names: list[str]) -> bool:
     """
     Verify cluster has all expected storage classes from pytest configuration.
 
@@ -204,8 +204,8 @@ def check_vm_creation_capability(admin_client: DynamicClient, namespace: str) ->
 def cluster_sanity(
     request: FixtureRequest,
     admin_client: DynamicClient,
-    cluster_storage_classes_names: List[str],
-    nodes: List[Node],
+    cluster_storage_classes_names: list[str],
+    nodes: list[Node],
     hco_namespace: Namespace,
     junitxml_property: Any | None = None,
 ) -> None:

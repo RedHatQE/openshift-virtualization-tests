@@ -900,7 +900,7 @@ def is_skip_must_gather(node: Node) -> bool:
 
 def get_inspect_command_namespace_string(node: Node, test_name: str) -> str:
     namespace_str = ""
-    components = [key for key in NAMESPACE_COLLECTION.keys() if f"tests/{key}/" in test_name]
+    components = [key for key in NAMESPACE_COLLECTION if f"tests/{key}/" in test_name]
     if not components:
         LOGGER.warning(f"{test_name} does not require special data collection on failure")
     else:

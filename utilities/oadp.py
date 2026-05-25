@@ -122,7 +122,7 @@ class VeleroBackup(Backup):
         self.wait_complete = wait_complete
         self.timeout = timeout
 
-    def __enter__(self) -> "VeleroBackup":
+    def __enter__(self) -> VeleroBackup:
         super().__enter__()
         if self.wait_complete:
             self.wait_for_status(
@@ -148,7 +148,7 @@ def create_rhel_vm(
     client: DynamicClient,
     wait_running: bool = True,
     volume_mode: str | None = None,
-) -> Generator["VirtualMachineForTests", None, None]:
+) -> Generator[VirtualMachineForTests]:
     artifactory_secret = None
     artifactory_config_map = None
 

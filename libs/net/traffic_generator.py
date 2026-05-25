@@ -1,7 +1,8 @@
 import contextlib
 import logging
 from abc import ABC, abstractmethod
-from typing import Final, Generator
+from collections.abc import Generator
+from typing import Final
 
 from ocp_resources.pod import Pod
 from ocp_utilities.exceptions import CommandExecFailed
@@ -32,7 +33,7 @@ class BaseTcpClient(ABC):
         return self._server_ip
 
     @abstractmethod
-    def __enter__(self) -> "BaseTcpClient":
+    def __enter__(self) -> BaseTcpClient:
         pass
 
     @abstractmethod
@@ -66,7 +67,7 @@ class TcpServer:
         self._cmd = f"{_IPERF_BIN} --server --port {self._port} --one-off"
         self._cmd += f" --bind {bind_ip}" if bind_ip else ""
 
-    def __enter__(self) -> "TcpServer":
+    def __enter__(self) -> TcpServer:
         self._vm.console(
             commands=[f"{self._cmd} &"],
             timeout=_DEFAULT_CMD_TIMEOUT_SEC,
@@ -113,7 +114,7 @@ class VMTcpClient(BaseTcpClient):
         self._vm = vm
         self._cmd += f" --set-mss {maximum_segment_size}" if maximum_segment_size else ""
 
-    def __enter__(self) -> "VMTcpClient":
+    def __enter__(self) -> VMTcpClient:
         self._vm.console(
             commands=[f"{self._cmd} &"],
             timeout=_DEFAULT_CMD_TIMEOUT_SEC,
@@ -182,7 +183,7 @@ class PodTcpClient(BaseTcpClient):
         self._container = container or _IPERF_BIN
         self._cmd += f" --bind {bind_interface}" if bind_interface else ""
 
-    def __enter__(self) -> "PodTcpClient":
+    def __enter__(self) -> PodTcpClient:
         # run the command in the background using nohup to ensure it keeps running after the exec session ends
         self._pod.execute(
             command=["sh", "-c", f"nohup {self._cmd} >/tmp/{_IPERF_BIN}.log 2>&1 &"], container=self._container
@@ -212,7 +213,7 @@ def active_tcp_connections(
     client_vm: BaseVirtualMachine,
     server_vm: BaseVirtualMachine,
     iface_name: str,
-) -> Generator[list[tuple[VMTcpClient, TcpServer]], None, None]:
+) -> Generator[list[tuple[VMTcpClient, TcpServer]]]:
     """Start iperf3 client-server connections for all IPs on the server's interface.
        The helper assumed the ip addresses are up.
 
@@ -250,7 +251,7 @@ def client_server_active_connection(
     port: int = IPERF_SERVER_PORT,
     maximum_segment_size: int = 0,
     ip_family: int = 4,
-) -> Generator[tuple[VMTcpClient, TcpServer], None, None]:
+) -> Generator[tuple[VMTcpClient, TcpServer]]:
     """Start iperf3 client-server connection with continuous TCP traffic flow.
 
     Automatically starts an iperf3 server and client, with traffic flowing continuously
