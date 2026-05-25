@@ -13,13 +13,19 @@ Preconditions:
 
 import pytest
 
+from libs.net.ip import filter_link_local_addresses
 from libs.net.vmspec import lookup_iface_status
-from tests.network.l2_bridge.libl2bridge import LINUX_BRIDGE_IFACE_NAME_1
+from tests.network.l2_bridge.libl2bridge import LINUX_BRIDGE_IFACE_NAME_1, LINUX_BRIDGE_IFACE_NAME_2
 from tests.network.l2_bridge.nad_ref_change.lib_helpers import (
+    GUEST_IFACE_1,
+    GUEST_IFACE_2,
+    assert_connectivity,
+    assert_no_connectivity,
     update_nad_references,
 )
 
 
+@pytest.mark.usefixtures("baseline_connectivity")
 @pytest.mark.incremental
 class TestRunningVMLinuxBridgeVlanChange:
     """
@@ -80,7 +86,7 @@ class TestRunningVMLinuxBridgeVlanChange:
 
         Expected:
             - Under-test VM remains running after the NAD reference change
-            - Guest first secondary interface MAC address, name, and IP addresses are the same before and after the
+            - All guest first secondary interface status fields are identical before and after the
               NAD reference change
         """
         iface_before = lookup_iface_status(vm=under_test_vm_two_ifaces, iface_name=LINUX_BRIDGE_IFACE_NAME_1)
@@ -95,7 +101,14 @@ class TestRunningVMLinuxBridgeVlanChange:
         )
 
     @pytest.mark.polarion("CNV-15972")
-    def test_connectivity(self):
+    def test_connectivity(
+        self,
+        subtests,
+        under_test_vm_two_ifaces,
+        ref_vm,
+        bridge_nad_a,
+        bridge_nad_b,
+    ):
         """
         Test that the under-test VM has TCP connectivity to the reference VM on the new NAD-VLAN-B and no TCP
         connectivity on the old NAD-VLAN-A after the NAD reference change.
@@ -112,11 +125,38 @@ class TestRunningVMLinuxBridgeVlanChange:
             - Under-test VM eventually has TCP connectivity to the reference VM on NAD-VLAN-B
             - Under-test VM has no TCP connectivity to the reference VM on NAD-VLAN-A
         """
-
-    test_connectivity.__test__ = False
+        for server_ip in filter_link_local_addresses(
+            ip_addresses=lookup_iface_status(vm=ref_vm, iface_name=LINUX_BRIDGE_IFACE_NAME_2).ipAddresses
+        ):
+            with subtests.test(msg=f"IPv{server_ip.version} on {bridge_nad_b.name}"):
+                assert_connectivity(
+                    client_vm=under_test_vm_two_ifaces,
+                    server_vm=ref_vm,
+                    server_ip=str(server_ip),
+                    server_bind_dev=GUEST_IFACE_2,
+                    client_bind_dev=GUEST_IFACE_1,
+                )
+        for server_ip in filter_link_local_addresses(
+            ip_addresses=lookup_iface_status(vm=ref_vm, iface_name=LINUX_BRIDGE_IFACE_NAME_1).ipAddresses
+        ):
+            with subtests.test(msg=f"IPv{server_ip.version} on {bridge_nad_a.name}"):
+                assert_no_connectivity(
+                    client_vm=under_test_vm_two_ifaces,
+                    server_vm=ref_vm,
+                    server_ip=str(server_ip),
+                    server_bind_dev=GUEST_IFACE_1,
+                    client_bind_dev=GUEST_IFACE_1,
+                )
 
     @pytest.mark.polarion("CNV-15946")
-    def test_two_networks(self):
+    def test_two_networks(
+        self,
+        subtests,
+        under_test_vm_two_ifaces,
+        ref_vm,
+        bridge_nad_a,
+        bridge_nad_b,
+    ):
         """
         Test that both secondary Linux bridge networks on a running VM can have their VLANs
         changed in a single patch, with each network switching to a different VLAN.
@@ -140,8 +180,36 @@ class TestRunningVMLinuxBridgeVlanChange:
             - Under-test VM first secondary network eventually has TCP connectivity to the reference VM on NAD-VLAN-A
             - Under-test VM second secondary network eventually has TCP connectivity to the reference VM on NAD-VLAN-B
         """
+        update_nad_references(
+            vm=under_test_vm_two_ifaces,
+            nad_name_by_net={
+                LINUX_BRIDGE_IFACE_NAME_1: bridge_nad_a.name,
+                LINUX_BRIDGE_IFACE_NAME_2: bridge_nad_b.name,
+            },
+        )
 
-    test_two_networks.__test__ = False
+        for server_ip in filter_link_local_addresses(
+            ip_addresses=lookup_iface_status(vm=ref_vm, iface_name=LINUX_BRIDGE_IFACE_NAME_1).ipAddresses
+        ):
+            with subtests.test(msg=f"IPv{server_ip.version} on {bridge_nad_a.name}"):
+                assert_connectivity(
+                    client_vm=under_test_vm_two_ifaces,
+                    server_vm=ref_vm,
+                    server_ip=str(server_ip),
+                    server_bind_dev=GUEST_IFACE_1,
+                    client_bind_dev=GUEST_IFACE_1,
+                )
+        for server_ip in filter_link_local_addresses(
+            ip_addresses=lookup_iface_status(vm=ref_vm, iface_name=LINUX_BRIDGE_IFACE_NAME_2).ipAddresses
+        ):
+            with subtests.test(msg=f"IPv{server_ip.version} on {bridge_nad_b.name}"):
+                assert_connectivity(
+                    client_vm=under_test_vm_two_ifaces,
+                    server_vm=ref_vm,
+                    server_ip=str(server_ip),
+                    server_bind_dev=GUEST_IFACE_2,
+                    client_bind_dev=GUEST_IFACE_2,
+                )
 
 
 @pytest.mark.polarion("CNV-15947")

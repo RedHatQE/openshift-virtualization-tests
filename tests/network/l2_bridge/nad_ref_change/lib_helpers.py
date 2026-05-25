@@ -15,12 +15,64 @@ from libs.vm.spec import (
 from libs.vm.vm import BaseVirtualMachine, add_volume_disk, cloudinitdisk_storage
 from tests.network.libs import cloudinit
 from tests.network.libs.cloudinit import primary_iface_cloud_init
+from tests.network.libs.connectivity import poll_tcp_connectivity
 
 NET_SEED: Final[int] = 0
 
 
 GUEST_IFACE_1: Final[str] = "eth1"
 GUEST_IFACE_2: Final[str] = "eth2"
+
+
+def assert_connectivity(
+    client_vm: BaseVirtualMachine,
+    server_vm: BaseVirtualMachine,
+    server_ip: str,
+    server_bind_dev: str,
+    client_bind_dev: str,
+) -> None:
+    """Assert TCP connectivity from client to server for a single IP address.
+
+    Args:
+        client_vm: VM initiating the connection.
+        server_vm: VM accepting the connection.
+        server_ip: IP address to connect to.
+        server_bind_dev: Guest device to bind the iperf3 server to (bypasses ECMP).
+        client_bind_dev: Guest device to bind the iperf3 client to (bypasses ECMP).
+    """
+    poll_tcp_connectivity(
+        client_vm=client_vm,
+        server_vm=server_vm,
+        server_ip=server_ip,
+        client_bind_dev=client_bind_dev,
+        server_bind_dev=server_bind_dev,
+    )
+
+
+def assert_no_connectivity(
+    client_vm: BaseVirtualMachine,
+    server_vm: BaseVirtualMachine,
+    server_ip: str,
+    server_bind_dev: str,
+    client_bind_dev: str,
+) -> None:
+    """Assert no TCP connectivity from client to server for a single IP address.
+
+    Args:
+        client_vm: VM initiating the connection.
+        server_vm: VM accepting the connection.
+        server_ip: IP address to connect to.
+        server_bind_dev: Guest device to bind the iperf3 server to (bypasses ECMP).
+        client_bind_dev: Guest device to bind the iperf3 client to (bypasses ECMP).
+    """
+    poll_tcp_connectivity(
+        client_vm=client_vm,
+        server_vm=server_vm,
+        server_ip=server_ip,
+        client_bind_dev=client_bind_dev,
+        server_bind_dev=server_bind_dev,
+        expect_connectivity=False,
+    )
 
 
 def update_nad_references(vm: BaseVirtualMachine, nad_name_by_net: dict[str, str]) -> None:
