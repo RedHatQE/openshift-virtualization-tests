@@ -1,7 +1,7 @@
 """
 TLS profile propagation tests for CNV endpoints.
 
-Epic: https://redhat.atlassian.net/browse/CNV-74453
+Epic: https://redhat.atlassian.net/browse/CNV-74453 # <skip-jira-utils-check>
 """
 
 import logging
