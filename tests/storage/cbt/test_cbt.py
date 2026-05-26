@@ -2,6 +2,11 @@
 CBT (Changed Block Tracking) backup and restore validation
 
 STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
+
+Preconditions:
+    - incrementalBackup feature gate enabled
+    - CBT label selectors configured
+    - Test namespace opted in to CBT
 """
 
 import pytest
@@ -14,9 +19,6 @@ class TestFullBackupRestore:
     Full backup and restore validation for push and pull modes.
 
     Preconditions:
-        - incrementalBackup feature gate enabled
-        - CBT label selectors configured
-        - Test namespace and VMs opted in to CBT
         - Running VM with CBT enabled
         - Test data written to VM
     """
@@ -67,9 +69,6 @@ class TestIncrementalBackupRestore:
     Incremental backup and restore validation for push and pull modes.
 
     Preconditions:
-        - incrementalBackup feature gate enabled
-        - CBT label selectors configured
-        - Test namespace and VMs opted in to CBT
         - Running VM with CBT enabled
         - Full backup completed
         - Test data written to VM
@@ -121,9 +120,6 @@ class TestMultipleIncrementalBackups:
     Multiple incremental backups and restore validation.
 
     Preconditions:
-        - incrementalBackup feature gate enabled
-        - CBT label selectors configured
-        - Test namespace and VMs opted in to CBT
         - Running VM with CBT enabled
         - Full backup completed
         - Test data written to VM
@@ -179,9 +175,6 @@ class TestMultipleDiskBackup:
     Backup and restore validation for VMs with multiple disks.
 
     Preconditions:
-        - incrementalBackup feature gate enabled
-        - CBT label selectors configured
-        - Test namespace and VMs opted in to CBT
         - Running VM with CBT enabled
         - VM has boot disk and data disk
         - Test data written to both disks
@@ -228,31 +221,28 @@ class TestMultipleDiskBackup:
         """
 
 
-class TestBackupAfterMigration:
+class TestBackupAfterLiveMigration:
     """
-    Backup and restore after VM migration on different storage backends.
+    Backup and restore after VM live migration (requires RWX shared storage).
 
     Preconditions:
-        - incrementalBackup feature gate enabled
-        - CBT label selectors configured
-        - Test namespace and VMs opted in to CBT
         - Running VM with CBT enabled
+        - VM disks on RWX backend PVC
         - At least two worker nodes available
         - Test data written to VM
         - Full backup completed before migration
     """
 
     @pytest.mark.polarion("CNV-16005")
-    def test_migration_backup_rwx_push_mode_restore(self):
+    def test_incremental_backup_after_live_migration_push_mode(self):
         """
-        Test that a VM can be backed up (push mode) after migration (RWX backend) and restored with post-migration data.
+        Test that a VM can be backed up (push mode) after live migration and restored with post-migration data.
 
         Preconditions:
             - Backup PVC available
-            - VM disks on RWX backend PVC
 
         Steps:
-            1. Migrate the VM to another node
+            1. Live migrate the VM to another node
             2. Wait for migration to complete
             3. Write new test data to VM
             4. Perform an incremental backup in push mode
@@ -266,62 +256,15 @@ class TestBackupAfterMigration:
         """
 
     @pytest.mark.polarion("CNV-16006")
-    def test_migration_backup_rwx_pull_mode_restore(self):
+    def test_incremental_backup_after_live_migration_pull_mode(self):
         """
-        Test that a VM can be backed up (pull mode) after migration (RWX backend) and restored with post-migration data.
+        Test that a VM can be backed up (pull mode) after live migration and restored with post-migration data.
 
         Preconditions:
             - Scratch PVC available for pull mode
-            - VM disks on RWX backend PVC
 
         Steps:
-            1. Migrate the VM to another node
-            2. Wait for migration to complete
-            3. Write new test data to VM
-            4. Perform an incremental backup in pull mode
-            5. Wait for backup to complete
-            6. Delete the original VM
-            7. Restore VM from the incremental backup
-            8. Start the restored VM
-
-        Expected:
-            - Restored VM boots successfully and pre-migration and post-migration test data are present
-        """
-
-    @pytest.mark.polarion("CNV-16007")
-    def test_migration_backup_rwo_push_mode_restore(self):
-        """
-        Test that a VM can be backed up (push mode) after migration (RWO backend) and restored with post-migration data.
-
-        Preconditions:
-            - Backup PVC available
-            - VM disks on RWO backend PVC
-
-        Steps:
-            1. Migrate the VM to another node
-            2. Wait for migration to complete
-            3. Write new test data to VM
-            4. Perform an incremental backup in push mode
-            5. Wait for backup to complete
-            6. Delete the original VM
-            7. Restore VM from the incremental backup
-            8. Start the restored VM
-
-        Expected:
-            - Restored VM boots successfully and pre-migration and post-migration test data are present
-        """
-
-    @pytest.mark.polarion("CNV-16008")
-    def test_migration_backup_rwo_pull_mode_restore(self):
-        """
-        Test that a VM can be backed up (pull mode) after migration (RWO backend) and restored with post-migration data.
-
-        Preconditions:
-            - Scratch PVC available for pull mode
-            - VM disks on RWO backend PVC
-
-        Steps:
-            1. Migrate the VM to another node
+            1. Live migrate the VM to another node
             2. Wait for migration to complete
             3. Write new test data to VM
             4. Perform an incremental backup in pull mode
@@ -340,9 +283,6 @@ class TestHotplugBackup:
     Backup and restore validation for VMs with hotplugged disks.
 
     Preconditions:
-        - incrementalBackup feature gate enabled
-        - CBT label selectors configured
-        - Test namespace and VMs opted in to CBT
         - Running VM with CBT enabled
         - Full backup completed
         - Test data written to VM
@@ -363,8 +303,9 @@ class TestHotplugBackup:
             4. Perform a full backup in push mode
             5. Wait for backup to complete
             6. Delete the original VM
-            7. Restore VM from the backup with both disks
-            8. Start the restored VM
+            7. Delete the hotplugged disk PVC
+            8. Restore VM from the backup with both disks
+            9. Start the restored VM
 
         Expected:
             - Restored VM boots successfully and test data from both original and hotplugged disks is present
@@ -385,8 +326,9 @@ class TestHotplugBackup:
             4. Perform a full backup in pull mode
             5. Wait for backup to complete
             6. Delete the original VM
-            7. Restore VM from the backup with both disks
-            8. Start the restored VM
+            7. Delete the hotplugged disk PVC
+            8. Restore VM from the backup with both disks
+            9. Start the restored VM
 
         Expected:
             - Restored VM boots successfully and test data from both original and hotplugged disks is present
@@ -398,9 +340,6 @@ class TestForcedFullBackup:
     Forced full backup validation.
 
     Preconditions:
-        - incrementalBackup feature gate enabled
-        - CBT label selectors configured
-        - Test namespace and VMs opted in to CBT
         - Running VM with CBT enabled
         - Test data written to VM
         - Full backup completed
@@ -445,9 +384,6 @@ class TestBackupErrorHandling:
     Backup error handling and negative scenarios.
 
     Preconditions:
-        - incrementalBackup feature gate enabled
-        - CBT label selectors configured
-        - Test namespace and VMs opted in to CBT
         - Running VM with CBT enabled
         - Test data written to VM
     """
@@ -494,9 +430,6 @@ class TestConcurrentBackups:
     Concurrent backup operations on multiple VMs.
 
     Preconditions:
-        - incrementalBackup feature gate enabled
-        - CBT label selectors configured
-        - Test namespace and VMs opted in to CBT
         - 5 running VMs with CBT enabled
         - Test data written to each VM
     """
@@ -548,9 +481,6 @@ class TestWindowsVMFullBackup:
     Full backup and restore validation for Windows VMs.
 
     Preconditions:
-        - incrementalBackup feature gate enabled
-        - CBT label selectors configured
-        - Test namespace and VMs opted in to CBT
         - Running Windows VM with CBT enabled
         - Test data written to Windows VM
     """
@@ -602,9 +532,6 @@ class TestWindowsVMIncrementalBackup:
     Incremental backup and restore validation for Windows VMs.
 
     Preconditions:
-        - incrementalBackup feature gate enabled
-        - CBT label selectors configured
-        - Test namespace and VMs opted in to CBT
         - Running Windows VM with CBT enabled
         - Full backup completed
         - Test data written to Windows VM
