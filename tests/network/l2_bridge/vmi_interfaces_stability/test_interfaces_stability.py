@@ -30,7 +30,7 @@ class TestInterfacesStability:
         """
         Test that interface IPs remain stable after restarting the guest agent inside the VM.
 
-        Jira: https://redhat.atlassian.net/browse/CNV-85415
+        Jira: https://redhat.atlassian.net/browse/CNV-85415 # <skip-jira-utils-check>
 
         Preconditions:
             - Running Fedora VM with two secondary Linux bridge network interfaces
