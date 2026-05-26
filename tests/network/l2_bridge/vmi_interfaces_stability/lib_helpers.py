@@ -1,7 +1,6 @@
 import ipaddress
 import logging
 from collections.abc import Iterator
-from typing import Final
 
 from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.resource import ResourceField
@@ -13,14 +12,12 @@ from libs.net.vmspec import lookup_iface_status, lookup_primary_network
 from libs.vm.factory import base_vmspec, fedora_vm
 from libs.vm.spec import CloudInitNoCloud, Interface, Multus, Network
 from libs.vm.vm import BaseVirtualMachine, add_volume_disk, cloudinitdisk_storage
+from tests.network.l2_bridge.libl2bridge import LINUX_BRIDGE_IFACE_NAME_1, LINUX_BRIDGE_IFACE_NAME_2
 from tests.network.libs import cloudinit
 from tests.network.libs.cloudinit import primary_iface_cloud_init
 from tests.network.localnet.liblocalnet import GUEST_1ST_IFACE_NAME, GUEST_3RD_IFACE_NAME
 
 LOGGER = logging.getLogger(__name__)
-
-LINUX_BRIDGE_IFACE_NAME_1: Final[str] = "linux-bridge-1"
-LINUX_BRIDGE_IFACE_NAME_2: Final[str] = "linux-bridge-2"
 
 
 def secondary_network_vm(
