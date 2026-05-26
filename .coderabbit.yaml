@@ -9,6 +9,12 @@ tone_instructions: "Be direct and specific. Explain WHY rules exist. Provide cod
 early_access: true
 enable_free_tier: true
 
+inheritance: false
+
+code_generation: {}
+
+issue_enrichment: {}
+
 reviews:
   # Explicit instructions applied to every review, including PR description validation
   path_instructions:
