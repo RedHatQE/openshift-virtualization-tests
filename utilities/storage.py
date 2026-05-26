@@ -126,9 +126,13 @@ def create_dv(
     bind_immediate=None,
     preallocation=None,
     api_name="storage",
+    source_ref=None,
 ):
     artifactory_secret = None
     cert_created = None
+
+    if source_ref:
+        source = None
     if source in ("http", "https"):
         if not utilities.infra.url_excluded_from_validation(url):
             # Make sure URL exists
@@ -161,6 +165,7 @@ def create_dv(
         teardown=teardown,
         preallocation=preallocation,
         api_name=api_name,
+        source_ref=source_ref,
     ) as dv:
         if sc_volume_binding_mode_is_wffc(sc=storage_class) and consume_wffc:
             create_dummy_first_consumer_pod(dv=dv)
@@ -572,19 +577,6 @@ def data_volume_template_dict(
     return dv.res
 
 
-def data_volume_dict_modify_to_source_ref(dv, data_source):
-    dv.to_dict()
-    del dv.res["metadata"]["namespace"]
-    del dv.res["spec"]["source"]
-    del dv.res["spec"]["contentType"]
-    dv.res["spec"]["sourceRef"] = {
-        "kind": data_source.kind,
-        "name": data_source.name,
-        "namespace": data_source.namespace,
-    }
-    return dv.res
-
-
 def data_volume_template_with_source_ref_dict(data_source, storage_class=None):
     dv = DataVolume(
         name=utilities.infra.unique_name(name=data_source.name),
@@ -592,8 +584,16 @@ def data_volume_template_with_source_ref_dict(data_source, storage_class=None):
         size=get_dv_size_from_datasource(data_source=data_source),
         storage_class=storage_class,
         api_name="storage",
+        source_ref={
+            "kind": data_source.kind,
+            "name": data_source.name,
+            "namespace": data_source.namespace,
+        },
     )
-    return data_volume_dict_modify_to_source_ref(dv=dv, data_source=data_source)
+    dv.to_dict()
+    # dataVolumeTemplate is not required to have the namespace explicitly set
+    dv.res["metadata"].pop("namespace", None)
+    return dv.res
 
 
 def get_test_artifact_server_url(schema="https"):
