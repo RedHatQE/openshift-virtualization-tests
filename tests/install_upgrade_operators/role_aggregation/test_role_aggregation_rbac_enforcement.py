@@ -9,7 +9,7 @@ import pytest
 __test__ = False
 
 
-class TestRoleAggregationRBACEnforcement:
+class TestRoleAggregationDisabledRBACEnforcement:
     """
     Tests for RBAC enforcement when role aggregation is disabled.
 
@@ -22,53 +22,17 @@ class TestRoleAggregationRBACEnforcement:
     """
 
     @pytest.mark.polarion("CNV-63826")
-    def test_admin_role_forbidden_when_aggregation_disabled(self):
+    def test_vm_list_forbidden_when_aggregation_disabled(self):
         """
-        [NEGATIVE] Test that an unprivileged user with project admin role is forbidden from
-        performing virtualization admin actions when role aggregation is disabled.
+        [NEGATIVE] Test that an unprivileged user with a standard OpenShift role is forbidden
+        from listing virtualization resources when role aggregation is disabled.
+
+        Parametrize:
+            - role: [admin, edit, view]
 
         Preconditions:
             - Unprivileged user created via HTPasswd identity provider
-            - Namespace where the unprivileged user has admin role
-            - HyperConverged CR spec.roleAggregationStrategy set to "Manual"
-
-        Steps:
-            1. Attempt to create a VirtualMachine in the namespace using the unprivileged
-               user's credentials
-
-        Expected:
-            - Operation is rejected with a Forbidden error
-        """
-
-    @pytest.mark.polarion("CNV-63827")
-    def test_edit_role_forbidden_when_aggregation_disabled(self):
-        """
-        [NEGATIVE] Test that an unprivileged user with edit role is forbidden from performing
-        virtualization edit actions when role aggregation is disabled.
-
-        Preconditions:
-            - Unprivileged user created via HTPasswd identity provider
-            - Namespace with a RoleBinding granting the unprivileged user the edit ClusterRole
-            - HyperConverged CR spec.roleAggregationStrategy set to "Manual"
-
-        Steps:
-            1. Attempt to create a VirtualMachine in the namespace using the unprivileged
-               user's credentials
-
-        Expected:
-            - Operation is rejected with a Forbidden error
-        """
-
-    @pytest.mark.polarion("CNV-63828")
-    def test_view_role_forbidden_when_aggregation_disabled(self):
-        """
-        [NEGATIVE] Test that an unprivileged user with view role is forbidden from performing
-        virtualization view actions when role aggregation is disabled.
-
-        Preconditions:
-            - Unprivileged user created via HTPasswd identity provider
-            - Namespace with a RoleBinding granting the unprivileged user the view ClusterRole
-            - HyperConverged CR spec.roleAggregationStrategy set to "Manual"
+            - Namespace with a RoleBinding granting the unprivileged user the parametrized ClusterRole
 
         Steps:
             1. Attempt to list VirtualMachine resources in the namespace using the unprivileged
@@ -78,24 +42,37 @@ class TestRoleAggregationRBACEnforcement:
             - Operation is rejected with a Forbidden error
         """
 
+
+class TestRoleAggregationReenabledAccess:
+    """
+    Tests for access restoration when role aggregation is re-enabled.
+
+    STP: https://issues.redhat.com/browse/CNV-63822
+
+    Preconditions:
+        - OpenShift Virtualization installed
+        - HyperConverged CR spec.roleAggregationStrategy changed from "Manual" to
+          "AggregateToDefault" (role aggregation re-enabled)
+        - Unprivileged user created via HTPasswd identity provider
+    """
+
     @pytest.mark.polarion("CNV-63829")
     def test_access_restored_when_aggregation_reenabled(self):
         """
-        Test that virtualization access is restored for unprivileged users when role aggregation
-        is re-enabled after being disabled.
+        Test that an unprivileged user with a standard OpenShift role can list virtualization
+        resources when role aggregation is re-enabled.
+
+        Parametrize:
+            - role: [admin, edit, view]
 
         Preconditions:
             - Unprivileged user created via HTPasswd identity provider
-            - Namespace where the unprivileged user has admin role
-            - HyperConverged CR spec.roleAggregationStrategy was set to "Manual"
-              (role aggregation disabled)
-            - HyperConverged CR spec.roleAggregationStrategy changed to "AggregateToDefault"
-              (role aggregation re-enabled)
+            - Namespace with a RoleBinding granting the unprivileged user the parametrized ClusterRole
 
         Steps:
-            1. Attempt to create a VirtualMachine in the namespace using the unprivileged
+            1. Attempt to list VirtualMachine resources in the namespace using the unprivileged
                user's credentials
 
         Expected:
-            - VirtualMachine is created successfully
+            - VirtualMachine resources are listed successfully
         """
