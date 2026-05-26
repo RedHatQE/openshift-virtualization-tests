@@ -2,6 +2,7 @@ from typing import Final
 
 import pytest
 
+from libs.net.vmspec import lookup_iface_status, lookup_primary_network
 from tests.network.l2_bridge.vmi_interfaces_stability.lib_helpers import (
     assert_interfaces_stable,
     monitor_vmi_events,
@@ -22,6 +23,13 @@ class TestInterfacesStability:
     @pytest.mark.polarion("CNV-14340")
     def test_interfaces_stability_after_migration(self, running_linux_bridge_vm, stable_ips):
         migrate_vm_and_verify(vm=running_linux_bridge_vm)
+        primary_network = lookup_primary_network(vm=running_linux_bridge_vm)
+        primary_iface = lookup_iface_status(
+            vm=running_linux_bridge_vm,
+            iface_name=primary_network.name,
+            predicate=lambda iface: bool(iface["ipAddress"]),
+        )
+        stable_ips[primary_network.name] = primary_iface.ipAddress
         for vmi_obj in monitor_vmi_events(vm=running_linux_bridge_vm, timeout=STABILITY_PERIOD_IN_SECONDS):
             assert_interfaces_stable(stable_ips=stable_ips, vmi=vmi_obj, expected_num_ifaces=len(stable_ips))
 
