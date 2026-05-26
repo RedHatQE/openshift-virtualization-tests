@@ -354,6 +354,7 @@ def disable_common_boot_image_import_hco_spec(
     hco_resource,
     golden_images_namespace,
     golden_images_data_import_crons,
+    exclude_data_source_names=None,
 ):
     if hco_resource.instance.spec[ENABLE_COMMON_BOOT_IMAGE_IMPORT]:
         update_common_boot_image_import_spec(
@@ -367,12 +368,15 @@ def disable_common_boot_image_import_hco_spec(
             hco_resource=hco_resource,
             admin_client=admin_client,
             namespace=golden_images_namespace,
+            exclude_data_source_names=exclude_data_source_names,
         )
     else:
         yield
 
 
-def enable_common_boot_image_import_spec_wait_for_data_import_cron(hco_resource, admin_client, namespace):
+def enable_common_boot_image_import_spec_wait_for_data_import_cron(
+    hco_resource, admin_client, namespace, exclude_data_source_names=None
+):
     hco_namespace = Namespace(name=hco_resource.namespace)
     update_common_boot_image_import_spec(
         hco_resource=hco_resource,
@@ -385,7 +389,7 @@ def enable_common_boot_image_import_spec_wait_for_data_import_cron(hco_resource,
         admin_client=admin_client,
         namespace=namespace.name,
         consecutive_checks_count=1,
-        data_source_names={next(iter(dict_entry)) for dict_entry in py_config["data_import_cron_matrix"]},
+        exclude_data_source_names=exclude_data_source_names,
     )
 
 

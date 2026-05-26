@@ -99,7 +99,7 @@ class TestCustomTemplates:
         self,
         admin_client,
         hco_namespace,
-        disabled_common_boot_image_import_hco_spec_scope_function,
+        disabled_boot_image_import_excluding_custom_datasource,
         hyperconverged_status_templates_scope_function,
         ssp_spec_templates_scope_function,
         image_stream_names,
