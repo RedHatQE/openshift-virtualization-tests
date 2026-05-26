@@ -3,6 +3,7 @@ from collections.abc import Callable
 from typing import Any, Final
 
 from kubernetes.dynamic.client import ResourceField
+from ocp_resources.utils.resource_constants import ResourceConstants
 from ocp_resources.virtual_machine import VirtualMachine
 from timeout_sampler import retry
 
@@ -28,6 +29,14 @@ class VMInterfaceStatusStillExistsError(Exception):
 
 
 class IpNotFound(Exception):
+    pass
+
+
+class VMIConditionNotReachedError(Exception):
+    pass
+
+
+class VMIConditionStillPresentError(Exception):
     pass
 
 
@@ -194,3 +203,99 @@ def wait_for_ifaces_status(
                     )
                 ),
             )
+
+
+def wait_for_vmi_condition_status(
+    vm: BaseVirtualMachine,
+    condition: str,
+    status: str = ResourceConstants.Condition.Status.TRUE,
+    timeout: int = 300,
+    resource_version: str | None = None,
+) -> None:
+    """Wait for a VMI status condition using the Kubernetes Watch API.
+
+    Args:
+        vm: The virtual machine to watch.
+        condition: Condition type to wait for (e.g. "MigrationRequired").
+        status: Expected condition status ("True" or "False"). Defaults to "True".
+        timeout: Maximum seconds to wait.
+        resource_version: VMI resource version captured before the triggering action.
+            Ensures no condition transitions are missed between the action and this call.
+
+    Raises:
+        VMIConditionNotReachedError: If the condition is not reached within timeout.
+    """
+    vmi = vm.vmi
+    vmi_instance = vmi.instance
+    existing_conditions = vmi_instance.status.conditions
+    if existing_conditions and _vmi_condition_set(
+        existing_conditions=existing_conditions, required_condition=condition, status=status
+    ):
+        return
+
+    watch_from_resource_version = resource_version or vmi_instance.metadata.resourceVersion
+    for event in vmi.watcher(timeout=timeout, resource_version=watch_from_resource_version):
+        if event["type"] != "MODIFIED":
+            continue
+        existing_conditions = event["object"].status.conditions
+        if existing_conditions and _vmi_condition_set(
+            existing_conditions=existing_conditions, required_condition=condition, status=status
+        ):
+            return
+
+    raise VMIConditionNotReachedError(
+        f"VMI {vm.name}: condition {condition}={status} was not reached within {timeout}s."
+    )
+
+
+def wait_for_no_vmi_condition(
+    vm: BaseVirtualMachine,
+    condition: str,
+    timeout: int = 300,
+    resource_version: str | None = None,
+) -> None:
+    """Wait until a VMI status condition is absent or False.
+
+    Succeeds when the condition is either removed from the array or set to False.
+
+    Args:
+        vm: The virtual machine to watch.
+        condition: Condition type to wait on (e.g. "MigrationRequired").
+        timeout: Maximum seconds to wait.
+        resource_version: VMI resource version captured before the triggering action.
+            Ensures no condition transitions are missed between the action and this call.
+
+    Raises:
+        VMIConditionStillPresentError: If the condition is still True or present after timeout.
+    """
+    vmi = vm.vmi
+    vmi_instance = vmi.instance
+    existing_conditions = vmi_instance.status.conditions
+    if existing_conditions and _vmi_condition_not_set(
+        existing_conditions=existing_conditions, required_condition=condition
+    ):
+        return
+
+    watch_from_resource_version = resource_version or vmi_instance.metadata.resourceVersion
+    for event in vmi.watcher(timeout=timeout, resource_version=watch_from_resource_version):
+        if event["type"] != "MODIFIED":
+            continue
+        existing_conditions = event["object"].status.conditions
+        if existing_conditions and _vmi_condition_not_set(
+            existing_conditions=existing_conditions, required_condition=condition
+        ):
+            return
+
+    raise VMIConditionStillPresentError(f"VMI {vm.name}: condition {condition} is still present after {timeout}s.")
+
+
+def _vmi_condition_set(existing_conditions: list[ResourceField], required_condition: str, status: str) -> bool:
+    return any(cond.type == required_condition and cond.status == status for cond in existing_conditions)
+
+
+def _vmi_condition_not_set(existing_conditions: list[ResourceField], required_condition: str) -> bool:
+    return all(
+        cond.status == ResourceConstants.Condition.Status.FALSE
+        for cond in existing_conditions
+        if cond.type == required_condition
+    )
