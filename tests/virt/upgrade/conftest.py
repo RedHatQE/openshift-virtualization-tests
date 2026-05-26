@@ -171,7 +171,7 @@ def unupdated_vmi_pods_names(
     csv_after_upgrade,
 ):
     virt_launcher_images_after_upgrade = get_virt_launcher_images_from_csv(csv=csv_after_upgrade)
-    if virt_launcher_images_from_csv_before_upgrade & virt_launcher_images_after_upgrade:
+    if virt_launcher_images_from_csv_before_upgrade == virt_launcher_images_after_upgrade:
         LOGGER.warning(
             f"virt-launcher unchanged, skipping migration check: {virt_launcher_images_from_csv_before_upgrade}"
         )
