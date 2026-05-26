@@ -1,21 +1,23 @@
 import logging
 import os
-import re
+from datetime import datetime, timezone
 
 import pytest
 from ocp_resources.cluster_version import ClusterVersion
-from ocp_resources.image_digest_mirror_set import ImageDigestMirrorSet
 from ocp_resources.resource import ResourceEditor
 from ocp_utilities.monitoring import Prometheus
 from packaging.version import Version
 from pytest_testconfig import py_config
 
-from tests.install_upgrade_operators.constants import WORKLOAD_UPDATE_STRATEGY_KEY_NAME, WORKLOADUPDATEMETHODS
+from tests.install_upgrade_operators.constants import (
+    WORKLOAD_UPDATE_STRATEGY_KEY_NAME,
+    WORKLOADUPDATEMETHODS,
+)
 from tests.install_upgrade_operators.product_upgrade.utils import (
     approve_cnv_upgrade_install_plan,
     extract_ocp_version_from_ocp_image,
     get_alerts_fired_during_upgrade,
-    get_all_cnv_alerts,
+    get_all_firing_cnv_alerts,
     get_iib_images_of_cnv_versions,
     get_nodes_labels,
     get_nodes_taints,
@@ -31,16 +33,14 @@ from tests.install_upgrade_operators.product_upgrade.utils import (
     wait_for_pods_replacement_by_type,
 )
 from tests.install_upgrade_operators.utils import (
-    KONFLUX_IDMS_NAME,
-    KONFLUX_MIRROR_BASE_URL,
     apply_konflux_idms,
-    idms_has_all_mirrors,
+    is_konflux_pipeline,
+    konflux_mirror_url,
     wait_for_operator_condition,
 )
 from tests.upgrade_params import EUS
 from utilities.constants import (
     HCO_CATALOG_SOURCE,
-    HOTFIX_STR,
     TIMEOUT_10MIN,
     NamespacesNames,
 )
@@ -70,17 +70,6 @@ EUS_ERROR_CODE = 98
 
 
 @pytest.fixture(scope="session")
-def cnv_image_name(cnv_image_url):
-    # Image name format example osbs: registry-proxy.engineering.redhat.com/rh-osbs/iib:45131
-    match = re.match(".*/(.*):", cnv_image_url)
-    assert match, (
-        f"Can not find CNV image name from: {cnv_image_url} "
-        f"(example: registry-proxy.engineering.redhat.com/rh-osbs/iib:45131 should find 'iib')"
-    )
-    return match.group(1)
-
-
-@pytest.fixture(scope="session")
 def nodes_taints_before_upgrade(nodes):
     return get_nodes_taints(nodes=nodes)
 
@@ -100,37 +89,30 @@ def required_konflux_mirrors(cnv_target_version, cnv_current_version):
     target = Version(version=cnv_target_version)
     current = Version(version=cnv_current_version)
     return [
-        f"{KONFLUX_MIRROR_BASE_URL}/v{target.major}-{minor}" for minor in range(target.minor, current.minor - 1, -1)
+        konflux_mirror_url(version=Version(version=f"{target.major}.{minor}"))
+        for minor in range(target.minor, current.minor - 1, -1)
     ]
 
 
 @pytest.fixture()
 def updated_konflux_idms(
     admin_client,
-    cnv_image_name,
     nodes,
-    cnv_source,
     required_konflux_mirrors,
     is_disconnected_cluster,
     active_machine_config_pools,
     machine_config_pools_conditions,
+    iib_build_info,
 ):
-    """Ensures the Konflux IDMS contains the required mirror entries for the CNV upgrade target version."""
+    """Ensures Konflux IDMS mirrors are set up if the IIB was built by Konflux pipeline."""
     if is_disconnected_cluster:
         LOGGER.warning("Skip applying IDMS in a disconnected setup.")
         return
-
-    if cnv_source == HOTFIX_STR:
-        LOGGER.info("IDMS updates skipped as upgrading using production source/upgrade to hotfix")
-        return
-
-    idms = ImageDigestMirrorSet(name=KONFLUX_IDMS_NAME, client=admin_client)
-    if idms.exists and idms_has_all_mirrors(idms=idms, required_mirrors=required_konflux_mirrors):
-        LOGGER.info(f"IDMS {KONFLUX_IDMS_NAME} already contains all required mirrors.")
+    if not is_konflux_pipeline(build_info=iib_build_info):
         return
 
     apply_konflux_idms(
-        idms=idms,
+        admin_client=admin_client,
         required_mirrors=required_konflux_mirrors,
         machine_config_pools=active_machine_config_pools,
         mcp_conditions=machine_config_pools_conditions,
@@ -169,7 +151,9 @@ def updated_cnv_subscription_source(cnv_subscription_scope_session, cnv_registry
 
 
 @pytest.fixture()
-def approved_cnv_upgrade_install_plan(admin_client, hco_namespace, hco_target_csv_name, is_production_source):
+def approved_cnv_upgrade_install_plan(
+    admin_client, hco_namespace, hco_target_csv_name, is_production_source, upgrade_start_timestamp
+):
     approve_cnv_upgrade_install_plan(
         client=admin_client,
         hco_namespace=hco_namespace.name,
@@ -284,7 +268,7 @@ def updated_ocp_upgrade_channel(extracted_ocp_version_from_image_url, cluster_ve
 
 
 @pytest.fixture()
-def triggered_ocp_upgrade(ocp_image_url, is_disconnected_cluster):
+def triggered_ocp_upgrade(ocp_image_url, is_disconnected_cluster, upgrade_start_timestamp):
     image_url = ocp_image_url
     if is_disconnected_cluster:
         image_info = get_oc_image_info(image=ocp_image_url, pull_secret=generate_openshift_pull_secret_file())
@@ -310,19 +294,31 @@ def prometheus_scope_function():
 
 
 @pytest.fixture(scope="session")
+def upgrade_start_timestamp():
+    return datetime.now(tz=timezone.utc)
+
+
+@pytest.fixture(scope="session")
 def fired_alerts_before_upgrade(pytestconfig, prometheus, alert_dir):
-    return get_all_cnv_alerts(
+    cnv_alerts = get_all_firing_cnv_alerts(
         prometheus=prometheus,
-        file_name=f"before_{pytestconfig.option.upgrade}_upgrade_alerts.json",
+        file_name=f"before_{pytestconfig.option.upgrade}_upgrade_firing_cnv_alerts.json",
         base_directory=alert_dir,
     )
+    return {alert["labels"]["alertname"] for alert in cnv_alerts}
 
 
 @pytest.fixture()
-def fired_alerts_during_upgrade(fired_alerts_before_upgrade, alert_dir, prometheus_scope_function):
+def fired_alerts_during_upgrade(
+    fired_alerts_before_upgrade,
+    upgrade_start_timestamp,
+    alert_dir,
+    prometheus_scope_function,
+):
     return get_alerts_fired_during_upgrade(
         prometheus=prometheus_scope_function,
-        before_upgrade_alerts=fired_alerts_before_upgrade,
+        before_upgrade_alert_names=fired_alerts_before_upgrade,
+        upgrade_start_time=upgrade_start_timestamp,
         base_directory=alert_dir,
     )
 
@@ -412,24 +408,27 @@ def eus_updated_konflux_idms(
     admin_client,
     eus_cnv_upgrade_path,
     nodes,
+    is_disconnected_cluster,
     machine_config_pools,
     machine_config_pools_conditions_scope_module,
+    iib_build_info,
 ):
+    """Ensures Konflux IDMS mirrors are set up for all EUS upgrade path versions."""
+    if is_disconnected_cluster:
+        LOGGER.warning("Skip applying IDMS in a disconnected setup.")
+        return
+    if not is_konflux_pipeline(build_info=iib_build_info):
+        return
+
     required_mirrors = []
     for phase in eus_cnv_upgrade_path:
         for version in eus_cnv_upgrade_path[phase]:
-            ver = Version(version=version)
-            mirror = f"{KONFLUX_MIRROR_BASE_URL}/v{ver.major}-{ver.minor}"
+            mirror = konflux_mirror_url(version=Version(version=version))
             if mirror not in required_mirrors:
                 required_mirrors.append(mirror)
 
-    idms = ImageDigestMirrorSet(name=KONFLUX_IDMS_NAME, client=admin_client)
-    if idms.exists and idms_has_all_mirrors(idms=idms, required_mirrors=required_mirrors):
-        LOGGER.info(f"IDMS {KONFLUX_IDMS_NAME} already has all EUS mirrors.")
-        return
-
     apply_konflux_idms(
-        idms=idms,
+        admin_client=admin_client,
         required_mirrors=required_mirrors,
         machine_config_pools=machine_config_pools,
         mcp_conditions=machine_config_pools_conditions_scope_module,
@@ -482,7 +481,7 @@ def ocp_version_non_eus_to_eus_from_image_url(eus_ocp_image_urls):
 
 
 @pytest.fixture()
-def triggered_source_eus_to_non_eus_ocp_upgrade(eus_ocp_image_urls):
+def triggered_source_eus_to_non_eus_ocp_upgrade(eus_ocp_image_urls, upgrade_start_timestamp):
     run_ocp_upgrade_command(ocp_image_url=eus_ocp_image_urls[0])
 
 

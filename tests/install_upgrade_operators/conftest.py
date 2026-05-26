@@ -1,6 +1,7 @@
 import importlib
 import logging
 import pkgutil
+import re
 
 import pytest
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
@@ -12,7 +13,11 @@ from ocp_resources.storage_class import StorageClass
 from pytest_testconfig import py_config
 
 from tests.install_upgrade_operators.constants import (
+    DISABLE_MDEV_CONFIGURATION,
+    ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT,
     EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES,
+    FG_ENABLED,
+    HCO_DEFAULT_FEATUREGATES,
     RESOURCE_NAME_STR,
     RESOURCE_NAMESPACE_STR,
     RESOURCE_TYPE_STR,
@@ -23,22 +28,48 @@ from tests.install_upgrade_operators.utils import (
     get_resource_by_name,
     get_resource_from_module_name,
 )
-from utilities.constants import HOSTPATH_PROVISIONER_CSI, HPP_POOL
+from utilities.constants import HOSTPATH_PROVISIONER_CSI, HPP_POOL, MULTIARCH
 from utilities.hco import ResourceEditorValidateHCOReconcile, get_hco_version
 from utilities.infra import (
     get_daemonset_by_name,
     get_deployment_by_name,
     get_pod_by_name_prefix,
+    wait_for_version_explorer_response,
 )
 from utilities.jira import is_jira_open
 from utilities.operator import (
     disable_default_sources_in_operatorhub,
     get_machine_config_pools_conditions,
 )
+from utilities.pytest_utils import exit_pytest_execution
 from utilities.storage import get_hyperconverged_cdi
 from utilities.virt import get_hyperconverged_kubevirt
 
 LOGGER = logging.getLogger(__name__)
+
+
+@pytest.fixture(scope="session")
+def iib_build_info(cnv_source, cnv_image_url, admin_client):
+    """Queries Version Explorer for IIB build info.
+
+    Returns:
+        Build info dict for osbs/fbc sources, empty dict for other sources.
+    """
+    if cnv_source in ("osbs", "fbc"):
+        iib_format_match = re.search(r"/iib:(\d+)$", cnv_image_url)
+        assert iib_format_match, f"Cannot extract IIB number from: {cnv_image_url} (expected format: .../iib:<number>)"
+        iib_number = iib_format_match.group(1)
+
+        if build_info := wait_for_version_explorer_response(
+            api_end_point="GetBuildByIIB",
+            query_string=f"iib_number={iib_number}",
+        ):
+            return build_info
+        exit_pytest_execution(
+            admin_client=admin_client,
+            log_message=f"Version Explorer returned empty response for IIB {iib_number}.",
+        )
+    return {}
 
 
 @pytest.fixture()
@@ -122,6 +153,11 @@ def kubevirt_resource(admin_client, hco_namespace):
 @pytest.fixture()
 def cdi_resource_scope_function(admin_client):
     return get_hyperconverged_cdi(admin_client=admin_client)
+
+
+@pytest.fixture()
+def cdi_feature_gates(cdi_resource_scope_function):
+    return cdi_resource_scope_function.instance.spec.config.get("featureGates")
 
 
 @pytest.fixture()
@@ -248,8 +284,24 @@ def jira_76659_open():
     return is_jira_open(jira_id="CNV-76659")
 
 
+@pytest.fixture(scope="session")
+def jira_86102_open():
+    return is_jira_open(jira_id="CNV-86102")
+
+
+@pytest.fixture(scope="session")
+def jira_86639_open():
+    return is_jira_open(jira_id="CNV-86639")
+
+
 @pytest.fixture()
-def expected_value(request, is_s390x_cluster):
-    if request.param == EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES and is_s390x_cluster:
-        return request.param | S390X_SPECIFIC_KUBEVIRT_FEATUREGATES
-    return request.param
+def expected_value(request, is_s390x_cluster, jira_86639_open):
+    expected = request.param.copy()
+    if expected == EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES and is_s390x_cluster:
+        expected |= S390X_SPECIFIC_KUBEVIRT_FEATUREGATES
+    if expected == HCO_DEFAULT_FEATUREGATES:
+        if py_config["cluster_type"] == MULTIARCH:
+            expected[ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT] = FG_ENABLED
+        if jira_86639_open:
+            expected[DISABLE_MDEV_CONFIGURATION] = FG_ENABLED
+    return expected

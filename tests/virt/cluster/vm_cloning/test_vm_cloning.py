@@ -39,6 +39,8 @@ RHEL_VM_WITH_TWO_PVC = "rhel-vm-with-two-pvc"
 WINDOWS_VM_FOR_CLONING = "win-vm-for-cloning"
 FEDORA_VM_FOR_CLONING = "fedora-vm-with-labels-annotations-mac-smbios"
 
+TARGET_NAME_PREFIX = "unique-target-name"
+
 
 def dummy_dv_dict_for_vm_cloning(client, namespace):
     dv = DataVolume(
@@ -136,7 +138,11 @@ def fedora_target_vm_instance(fedora_target_vm):
                 "memory_guest": Images.Rhel.DEFAULT_MEMORY_SIZE,
                 "extra_dv": True,
             },
-            {"source_name": RHEL_VM_WITH_TWO_PVC},
+            {
+                "source_name": RHEL_VM_WITH_TWO_PVC,
+                "volume_name_policy": "PrefixTargetName",
+                "target_name": TARGET_NAME_PREFIX,
+            },
             marks=(pytest.mark.polarion("CNV-10295"), pytest.mark.gating()),
         )
     ],
@@ -148,7 +154,9 @@ def test_clone_vm_two_pvc_disks(
     cloning_job_scope_function,
     target_vm_scope_function,
 ):
-    assert_target_vm_has_new_pvc_disks(source_vm=vm_with_dv_for_cloning, target_vm=target_vm_scope_function)
+    assert_target_vm_has_new_pvc_disks(
+        source_vm=vm_with_dv_for_cloning, target_vm=target_vm_scope_function, prefix=TARGET_NAME_PREFIX
+    )
     check_disk_count_in_vm(vm=target_vm_scope_function)
     check_if_files_present_after_cloning(vm=target_vm_scope_function)
 
@@ -188,7 +196,11 @@ def test_clone_vm_with_instance_type_and_preference(
                 "memory_guest": Images.Windows.DEFAULT_MEMORY_SIZE,
                 "cpu_cores": Images.Windows.DEFAULT_CPU_CORES,
             },
-            {"source_name": WINDOWS_VM_FOR_CLONING},
+            {
+                "source_name": WINDOWS_VM_FOR_CLONING,
+                "volume_name_policy": "PrefixTargetName",
+                "target_name": TARGET_NAME_PREFIX,
+            },
             marks=pytest.mark.polarion("CNV-10296"),
         )
     ],
@@ -202,7 +214,9 @@ def test_clone_windows_vm(
     cloning_job_scope_function,
     target_vm_scope_function,
 ):
-    assert_target_vm_has_new_pvc_disks(source_vm=vm_with_dv_for_cloning, target_vm=target_vm_scope_function)
+    assert_target_vm_has_new_pvc_disks(
+        source_vm=vm_with_dv_for_cloning, target_vm=target_vm_scope_function, prefix=TARGET_NAME_PREFIX
+    )
 
 
 @pytest.mark.parametrize(

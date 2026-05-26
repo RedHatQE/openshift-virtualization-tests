@@ -1,4 +1,5 @@
 import os
+import sys
 from functools import cache
 
 from ocp_resources.node import Node
@@ -22,11 +23,16 @@ def get_cluster_architecture() -> set[str]:
     """
     # Lazy import to avoid circular dependency
     # TODO: remove when/if utilities modules are refactored
-    from utilities.constants import KUBERNETES_ARCH_LABEL
+    from utilities.constants import KUBERNETES_ARCH_LABEL  # noqa: PLC0415
 
     # Needed for CI
     if arch := os.environ.get("OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH"):
         return {arch}
+
+    # Skip cluster connection for pytest flags that exit immediately without collecting tests
+    _pytest_exit_flags = {"--help", "-h", "--version"}
+    if not _pytest_exit_flags.isdisjoint(sys.argv):
+        return {"amd64"}
 
     # cache_admin_client is used here as this function is used to get the architecture when initialing pytest config
     nodes: list[Node] = list(Node.get(client=cache_admin_client()))

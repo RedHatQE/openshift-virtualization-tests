@@ -2,6 +2,7 @@
 
 """Pytest configuration for utilities tests - independent of main project"""
 
+import logging
 import os
 import sys
 from pathlib import Path
@@ -10,6 +11,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from ocp_resources import resource
+from pytest_testconfig import config as py_config
 
 import utilities
 
@@ -55,8 +57,6 @@ utilities.data_collector = mock_data_collector  # type: ignore[attr-defined]
 @pytest.fixture(autouse=True)
 def setup_py_config():
     """Setup py_config for tests that need data_collector configuration"""
-    from pytest_testconfig import config as py_config
-
     # Ensure data_collector config is set up
     if "data_collector" not in py_config:
         py_config["data_collector"] = {"data_collector_base_directory": "/tmp/data"}
@@ -127,8 +127,6 @@ def mock_vm_no_namespace():
 @pytest.fixture(autouse=True)
 def mock_logger():
     """Auto-mock logger for all tests to prevent logging issues"""
-    import logging
-
     # Save original getLogger to avoid recursion
     original_get_logger = logging.getLogger
 

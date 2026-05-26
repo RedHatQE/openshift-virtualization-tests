@@ -9,7 +9,7 @@ from ocp_resources.service import Service
 from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 
-from tests.os_params import WINDOWS_LATEST, WINDOWS_LATEST_OS
+from tests.os_params import WINDOWS_2019, WINDOWS_2019_OS
 from utilities.constants import (
     OS_FLAVOR_WINDOWS,
     TIMEOUT_5MIN,
@@ -91,15 +91,15 @@ def configure_rdp_on_server_windows_vm(vm: VirtualMachineForTests) -> None:
     [
         pytest.param(
             {
-                "dv_name": WINDOWS_LATEST_OS,
-                "image": WINDOWS_LATEST.get("image_path"),
+                "dv_name": WINDOWS_2019_OS,
+                "image": WINDOWS_2019.get("image_path"),
                 "storage_class": py_config["default_storage_class"],
-                "dv_size": WINDOWS_LATEST.get("dv_size"),
+                "dv_size": WINDOWS_2019.get("dv_size"),
             },
             {
-                "vm_name": f"win{WINDOWS_LATEST.get('os_version')}-vm-test",
-                "os_version": WINDOWS_LATEST.get("os_version"),
-                "template_labels": WINDOWS_LATEST.get("template_labels"),
+                "vm_name": f"win{WINDOWS_2019.get('os_version')}-vm-test",
+                "os_version": WINDOWS_2019.get("os_version"),
+                "template_labels": WINDOWS_2019.get("template_labels"),
                 "network_model": "virtio",
             },
             marks=(pytest.mark.polarion("CNV-235")),

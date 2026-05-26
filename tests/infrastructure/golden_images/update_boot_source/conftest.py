@@ -14,7 +14,6 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.infrastructure.golden_images.update_boot_source.utils import (
     generate_data_import_cron_dict,
-    get_all_dic_volume_names,
     get_all_release_versions_from_docs,
 )
 from utilities.constants import (
@@ -213,7 +212,7 @@ def data_import_cron_namespace(admin_client, unprivileged_client):
 
 
 @pytest.fixture()
-def created_persistent_volume_claim(unprivileged_client, data_import_cron_namespace):
+def data_import_cron_pvc(unprivileged_client, data_import_cron_namespace):
     def _get_first_pvc():
         return next(
             PersistentVolumeClaim.get(
@@ -230,14 +229,12 @@ def created_persistent_volume_claim(unprivileged_client, data_import_cron_namesp
             func=_get_first_pvc,
         ):
             if sample:
-                created_dv = DataVolume(
+                DataVolume(
                     name=sample.name,
                     namespace=sample.namespace,
                     client=unprivileged_client,
-                )
-                created_dv.wait_for_dv_success()
+                ).wait_for_dv_success()
                 yield sample
-                created_dv.clean_up()
                 return
     except TimeoutExpiredError:
         LOGGER.error(f"No PVCs were created in {data_import_cron_namespace.name}")
@@ -284,8 +281,3 @@ def created_data_import_cron(
         },
     ) as data_import_cron:
         yield data_import_cron
-
-
-@pytest.fixture
-def existing_dic_volumes_before_disable(admin_client, golden_images_namespace):
-    return get_all_dic_volume_names(client=admin_client, namespace=golden_images_namespace.name)

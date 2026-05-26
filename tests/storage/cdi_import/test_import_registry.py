@@ -1,15 +1,17 @@
+import json
 import logging
 
 import pytest
 from kubernetes.client.rest import ApiException
 from ocp_resources.datavolume import DataVolume
+from ocp_resources.resource import Resource
 
 from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE
 from tests.storage.utils import (
     get_importer_pod,
     wait_for_importer_container_message,
 )
-from utilities.constants import OS_FLAVOR_FEDORA, REGISTRY_STR, TIMEOUT_5MIN, Images
+from utilities.constants import OS_FLAVOR_FEDORA, QUARANTINED, REGISTRY_STR, TIMEOUT_5MIN, Images
 from utilities.ssp import wait_for_condition_message_value
 from utilities.storage import ErrorMsg, check_disk_count_in_vm, create_dv, create_vm_from_dv
 from utilities.virt import running_vm
@@ -35,6 +37,10 @@ LOGGER = logging.getLogger(__name__)
             id="import-registry-fedora29-qcow-rootdir",
         ),
     ],
+)
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: need to check the DV message instead of importer pod; tracked in CNV-86085",
+    run=False,
 )
 def test_disk_image_not_conform_to_registy_disk(
     admin_client, dv_name, url, namespace, storage_class_matrix__function__
@@ -182,3 +188,20 @@ def test_public_registry_data_volume_archive(unprivileged_client, namespace, sto
             storage_class=[*storage_class_name_scope_function][0],
         ):
             return
+
+
+@pytest.mark.polarion("CNV-5509")
+@pytest.mark.s390x
+def test_importer_pod_annotation(importer_pod_annotations, linux_nad):
+    """Verify "k8s.v1.cni.cncf.io/networks" can be passed to the importer pod"""
+    networks_annotation = f"{Resource.ApiGroup.K8S_V1_CNI_CNCF_IO}/networks"
+    network_status_annotation = f"{Resource.ApiGroup.K8S_V1_CNI_CNCF_IO}/network-status"
+
+    networks_value = importer_pod_annotations.get(networks_annotation)
+    assert networks_value == linux_nad.name, (
+        f"DV annotation is not passed to the importer pod. Expected: {linux_nad.name}, Found: {networks_value}"
+    )
+
+    network_status_value = importer_pod_annotations.get(network_status_annotation)
+    interfaces = [entry["interface"] for entry in json.loads(network_status_value) if "interface" in entry]
+    assert "net1" in interfaces, f"Expected interface: net1, Found: {interfaces}"

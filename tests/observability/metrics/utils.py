@@ -39,8 +39,10 @@ from utilities.constants import (
     REGISTRY_STR,
     TIMEOUT_1MIN,
     TIMEOUT_2MIN,
+    TIMEOUT_3MIN,
     TIMEOUT_4MIN,
     TIMEOUT_5MIN,
+    TIMEOUT_5SEC,
     TIMEOUT_10SEC,
     TIMEOUT_15SEC,
     TIMEOUT_20SEC,
@@ -467,8 +469,8 @@ def timestamp_to_seconds(timestamp: str) -> int:
 
 def wait_for_non_empty_metrics_value(prometheus: Prometheus, metric_name: str) -> None:
     samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_5MIN,
-        sleep=TIMEOUT_30SEC,
+        wait_timeout=TIMEOUT_3MIN,
+        sleep=TIMEOUT_5SEC,
         func=get_metrics_value,
         prometheus=prometheus,
         metrics_name=metric_name,
@@ -656,7 +658,7 @@ def create_windows11_wsl2_vm(
         source=REGISTRY_STR,
         size=Images.Windows.CONTAINER_DISK_DV_SIZE,
         storage_class=storage_class,
-        url=f"{get_test_artifact_server_url(schema=REGISTRY_STR)}/docker/windows-qe/win_11:virtio",
+        url=f"{get_test_artifact_server_url(schema=REGISTRY_STR)}/docker-local/windows-qe/win_11:virtio",
         secret=artifactory_secret,
         cert_configmap=artifactory_config_map.name,
     )
