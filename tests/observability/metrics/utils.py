@@ -14,6 +14,7 @@ from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.resource import Resource
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
+from ocp_resources.virtual_machine_preference import VirtualMachinePreference
 from ocp_utilities.monitoring import Prometheus
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
@@ -648,6 +649,7 @@ def create_windows11_wsl2_vm(
         vm_name (str): The name of the VM
         storage_class (str): The storage class to use for the DataVolume
     """
+    windows_preference_name = "windows.11"
     artifactory_secret = get_artifactory_secret(namespace=namespace)
     artifactory_config_map = get_artifactory_config_map(namespace=namespace)
     dv = DataVolume(
@@ -663,22 +665,36 @@ def create_windows11_wsl2_vm(
         cert_configmap=artifactory_config_map.name,
     )
     dv.to_dict()
-    with VirtualMachineForTests(
-        os_flavor=OS_FLAVOR_WINDOWS,
-        name=vm_name,
-        namespace=namespace,
+    base_preference = VirtualMachineClusterPreference(client=client, name=windows_preference_name)
+    base_spec = base_preference.instance.to_dict()["spec"]
+
+    with VirtualMachinePreference(
         client=client,
-        vm_instance_type=VirtualMachineClusterInstancetype(client=client, name="u1.large"),
-        vm_preference=VirtualMachineClusterPreference(client=client, name="windows.11"),
-        data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
-    ) as vm:
-        try:
-            running_vm(vm=vm, dv_wait_timeout=TIMEOUT_40MIN)
-            yield vm
-        finally:
-            cleanup_artifactory_secret_and_config_map(
-                artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
-            )
+        namespace=namespace,
+        name=f"{vm_name}-{windows_preference_name}-preference",
+        cpu={"preferredCPUTopology": "cores"},
+        clock=base_spec.get("clock"),
+        devices=base_spec.get("devices"),
+        features=base_spec.get("features"),
+        firmware=base_spec.get("firmware"),
+        requirements=base_spec.get("requirements"),
+    ) as preference:
+        with VirtualMachineForTests(
+            os_flavor=OS_FLAVOR_WINDOWS,
+            name=vm_name,
+            namespace=namespace,
+            client=client,
+            vm_instance_type=VirtualMachineClusterInstancetype(client=client, name="u1.large"),
+            vm_preference=preference,
+            data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
+        ) as vm:
+            try:
+                running_vm(vm=vm, dv_wait_timeout=TIMEOUT_40MIN)
+                yield vm
+            finally:
+                cleanup_artifactory_secret_and_config_map(
+                    artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
+                )
 
 
 def get_vm_comparison_info_dict(vm: VirtualMachineForTests) -> dict[str, str]:
