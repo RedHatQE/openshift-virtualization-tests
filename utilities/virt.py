@@ -16,7 +16,6 @@ from json import JSONDecodeError
 from subprocess import run
 from typing import TYPE_CHECKING, Any
 
-import bitmath
 import jinja2
 import pexpect
 import yaml
@@ -24,6 +23,7 @@ from benedict import benedict
 from kubernetes.client import ApiException
 from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import NotFoundError
+from kubernetes.utils.quantity import parse_quantity
 from ocp_resources.daemonset import DaemonSet
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
@@ -728,7 +728,7 @@ class VirtualMachineForTests(VirtualMachine):
             LOGGER.warning(
                 "Setting both memory.guest and requests.memory values! (Users should set VM memory via memory.guest!)"
             )
-            if bitmath.parse_string_unsafe(self.memory_guest) > bitmath.parse_string_unsafe(self.memory_requests):
+            if parse_quantity(self.memory_guest) > parse_quantity(self.memory_requests):
                 LOGGER.warning(
                     "Setting memory.guest bigger then requests.memory! (This might cause unpredictable issues!)"
                 )
