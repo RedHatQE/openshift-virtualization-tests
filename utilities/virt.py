@@ -94,7 +94,7 @@ from utilities.constants import (
     Images,
 )
 from utilities.data_collector import collect_vnc_screenshot_for_vms
-from utilities.exceptions import MigrationStuckSchedulingError
+from utilities.exceptions import MigrationStuckSchedulingError, ResourceValueError
 from utilities.hco import get_hco_namespace, wait_for_hco_conditions
 from utilities.network import (
     cloud_init_network_data,
@@ -1611,7 +1611,7 @@ class ServiceForVirtualMachineForTests(Service):
             str: IP address of the service.
 
         Raises:
-            ValueError: If the service IP cannot be retrieved.
+            ResourceValueError: If the service IP cannot be retrieved.
         """
         if self.service_type == Service.Type.CLUSTER_IP:
             if ip_family:
@@ -1638,7 +1638,7 @@ class ServiceForVirtualMachineForTests(Service):
 
             return self.target_ip or vm_node.internal_ip
 
-        raise ValueError(
+        raise ResourceValueError(
             f"Could not get service IP for service {self.vm.custom_service.name} with type {self.service_type}"
         )
 
@@ -1957,32 +1957,16 @@ def migrate_vm_and_verify(
 def wait_for_migration_finished(migration: VirtualMachineInstanceMigration, timeout: int = TIMEOUT_12MIN) -> None:
     """
     Wait for migration to finish.
-    If migration is stuck in Scheduling state for more than 4 minutes, abort the migration and collect data.
+    If migration is stuck in Scheduling state, abort the migration and collect data.
 
     Args:
         migration (VirtualMachineInstanceMigration): Migration object.
         timeout (int): Maximum time to wait for the migration to finish.
 
     Raises:
+        MigrationStuckSchedulingError: If the migration is stuck in Scheduling state.
         TimeoutExpiredError: If the migration does not finish within the timeout.
     """
-
-    def _abort_stuck_scheduling_migration_wait(_migration: VirtualMachineInstanceMigration) -> None:
-        for pod in utilities.infra.get_pod_by_name_prefix(
-            client=_migration.client, pod_prefix=VIRT_LAUNCHER, namespace=_migration.namespace, get_all=True
-        ):
-            # Get status/events for PODs in non-running or failed state
-            if pod.status not in {Pod.Status.RUNNING, Pod.Status.COMPLETED, Pod.Status.SUCCEEDED}:
-                pod_events = [
-                    event["raw_object"]["message"]
-                    for event in pod.events(timeout=TIMEOUT_5SEC, field_selector="type==Warning")
-                ]
-                LOGGER.error(
-                    f"POD Name: {pod.name}\n"
-                    f"POD Conditions:\n {pod.instance.status.conditions[0]}\n"
-                    f"POD Events:\n {', '.join(pod_events)}"
-                )
-                raise MigrationStuckSchedulingError(migration_name=migration.name)
 
     sleep = TIMEOUT_10SEC
     samples = TimeoutSampler(wait_timeout=timeout, sleep=sleep, func=lambda: migration.instance.status.phase)
@@ -1997,11 +1981,36 @@ def wait_for_migration_finished(migration: VirtualMachineInstanceMigration, time
                 # If migration stuck in Scheduling state for more than 4 minutes - most likely it will be failed
                 # Need to collect data before 5 min timeout reached and target POD is removed
                 if counter >= TIMEOUT_4MIN / sleep:
-                    _abort_stuck_scheduling_migration_wait(_migration=migration)
+                    log_failed_pod_events(migration=migration)
+                    raise MigrationStuckSchedulingError(migration_name=migration.name)
     except TimeoutExpiredError:
         if sample:
             LOGGER.error(f"Status of VMIM {migration.name} is {sample}")
         raise
+
+
+def log_failed_pod_events(migration: VirtualMachineInstanceMigration) -> None:
+    """
+    Log failed pod events for a migration.
+
+    Args:
+        migration (VirtualMachineInstanceMigration): Migration object.
+    """
+
+    for pod in utilities.infra.get_pod_by_name_prefix(
+        client=migration.client, pod_prefix=VIRT_LAUNCHER, namespace=migration.namespace, get_all=True
+    ):
+        # Get status/events for PODs in non-running or failed state
+        if pod.status not in {Pod.Status.RUNNING, Pod.Status.COMPLETED, Pod.Status.SUCCEEDED}:
+            pod_events = [
+                event["raw_object"]["message"]
+                for event in pod.events(timeout=TIMEOUT_5SEC, field_selector="type==Warning")
+            ]
+            LOGGER.error(
+                f"POD Name: {pod.name}\n"
+                f"POD Conditions:\n {pod.instance.status.conditions[0]}\n"
+                f"POD Events:\n {', '.join(pod_events)}"
+            )
 
 
 def verify_vm_migrated(

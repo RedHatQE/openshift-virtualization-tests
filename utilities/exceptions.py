@@ -129,7 +129,7 @@ class UnsupportedCPUArchitectureError(Exception):
 
 
 class MigrationStuckSchedulingError(Exception):
-    """Exception raised when a migration is stuck in Scheduling state for more than 4 minutes."""
+    """Exception raised when a migration is stuck in Scheduling state."""
 
     def __init__(self, migration_name: str) -> None:
         self.migration_name = migration_name
