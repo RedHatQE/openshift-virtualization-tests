@@ -20,6 +20,7 @@ from tests.upgrade_params import (
 from utilities.constants import DEPENDENCY_SCOPE_SESSION
 from utilities.storage import (
     assert_disk_serial,
+    assert_hotplugvolume_nonexist,
     run_command_on_vm_and_check_output,
     wait_for_vm_volume_ready,
 )
@@ -66,7 +67,6 @@ class TestUpgradeStorage:
         self,
         admin_client,
         skip_if_no_storage_class_for_snapshot,
-        admin_client,
         rhel_vm_for_upgrade_a,
         snapshots_for_upgrade_a,
     ):
@@ -76,7 +76,6 @@ class TestUpgradeStorage:
             namespace=snapshots_for_upgrade_a.namespace,
             vm_name=rhel_vm_for_upgrade_a.name,
             snapshot_name=snapshots_for_upgrade_a.name,
-            client=admin_client,
         ) as vm_restore:
             if rhel_vm_for_upgrade_a.ready:
                 rhel_vm_for_upgrade_a.stop(wait=True)
@@ -200,7 +199,6 @@ class TestUpgradeStorage:
             namespace=snapshots_for_upgrade_b.namespace,
             vm_name=rhel_vm_for_upgrade_b.name,
             snapshot_name=snapshots_for_upgrade_b.name,
-            client=admin_client,
         ) as vm_restore:
             if rhel_vm_for_upgrade_b.ready:
                 rhel_vm_for_upgrade_b.stop(wait=True)
