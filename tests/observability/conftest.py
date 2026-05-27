@@ -46,11 +46,5 @@ def cluster_has_rhcos10_or_above(workers_rhcos_version):
 
 
 @pytest.fixture(scope="session")
-def skip_when_hco_metrics_scraping_bug_open(cluster_has_rhcos10_or_above):
-    if cluster_has_rhcos10_or_above and is_jira_open(jira_id="CNV-87184"):
-        pytest.xfail(reason="CNV-87184: HCO metrics scraping fails with 401 Unauthorized on RHCOS 10+")
-
-
-@pytest.fixture(scope="session")
 def is_postcopy_migration_bug_open(cluster_has_rhcos10_or_above):
     return cluster_has_rhcos10_or_above and is_jira_open(jira_id="CNV-84023")
