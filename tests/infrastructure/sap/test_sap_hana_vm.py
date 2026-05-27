@@ -6,6 +6,7 @@ from copy import deepcopy
 import bitmath
 import pytest
 import xmltodict
+from kubernetes.utils.quantity import parse_quantity
 from ocp_resources.node import Node
 from ocp_resources.sriov_network_node_policy import SriovNetworkNodePolicy
 from ocp_resources.template import Template
@@ -183,7 +184,7 @@ def verify_libvirt_huge_pages_configuration(template, vmi_xml_dict):
     libvirt_hugepages_size = bitmath.parse_string(
         f"{libvirt_huge_pages['@size']}{libvirt_huge_pages['@unit']}"
     ).to_GiB()
-    assert libvirt_hugepages_size == bitmath.parse_string_unsafe(expected_huge_pages), (
+    assert int(libvirt_hugepages_size.to_Byte().value) == int(parse_quantity(expected_huge_pages)), (
         f"Wrong huge pages configuration. Expected: {expected_huge_pages}, actual: {libvirt_hugepages_size}"
     )
 
@@ -193,7 +194,7 @@ def verify_libvirt_memory_configuration(expected_memory, vmi_xml_dict):
     calculated_libvirt_memory = bitmath.parse_string(
         f"{libvirt_expected_memory['#text']}{libvirt_expected_memory['@unit']}"
     ).to_GiB()
-    assert calculated_libvirt_memory == bitmath.parse_string_unsafe(expected_memory), (
+    assert int(calculated_libvirt_memory.to_Byte().value) == int(parse_quantity(expected_memory)), (
         f"Wrong memory configuration. Expected: {expected_memory}, actual: {libvirt_expected_memory}"
     )
 
