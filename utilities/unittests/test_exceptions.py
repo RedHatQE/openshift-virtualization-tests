@@ -8,6 +8,7 @@ import pytest
 
 from utilities.exceptions import (
     ClusterSanityError,
+    DataVolumeConditionMessageNotFoundError,
     MissingEnvironmentVariableError,
     MissingResourceException,
     OsDictNotFoundError,
@@ -158,6 +159,69 @@ class TestOsDictNotFoundError:
         """Test OsDictNotFoundError can be raised"""
         with pytest.raises(OsDictNotFoundError):
             raise OsDictNotFoundError("Test error")
+
+
+class TestDataVolumeConditionMessageNotFoundError:
+    """Test cases for DataVolumeConditionMessageNotFoundError exception"""
+
+    def test_data_volume_condition_message_not_found_error_init(self):
+        """Test DataVolumeConditionMessageNotFoundError initialization"""
+        dv_name = "test-dv"
+        expected_message = "Test message"
+        error = DataVolumeConditionMessageNotFoundError(dv_name=dv_name, expected_message=expected_message)
+        assert error.dv_name == dv_name
+        assert error.expected_message == expected_message
+        assert error.last_conditions is None
+
+    def test_data_volume_condition_message_not_found_error_init_with_conditions(self):
+        """Test DataVolumeConditionMessageNotFoundError initialization with last conditions"""
+        dv_name = "test-dv"
+        expected_message = "Test message"
+        last_conditions = [{"type": "Ready", "message": "some other message"}]
+        error = DataVolumeConditionMessageNotFoundError(
+            dv_name=dv_name, expected_message=expected_message, last_conditions=last_conditions
+        )
+        assert error.last_conditions == last_conditions
+
+    def test_data_volume_condition_message_not_found_error_str(self):
+        """Test DataVolumeConditionMessageNotFoundError string representation"""
+        dv_name = "test-dv"
+        expected_message = "Test message"
+        error = DataVolumeConditionMessageNotFoundError(dv_name=dv_name, expected_message=expected_message)
+        expected = f"Expected message '{expected_message}' not found in DataVolume '{dv_name}' conditions."
+        assert str(error) == expected
+
+    def test_data_volume_condition_message_not_found_error_str_with_conditions(self):
+        """Test DataVolumeConditionMessageNotFoundError string includes last conditions when provided"""
+        dv_name = "test-dv"
+        expected_message = "Test message"
+        last_conditions = [{"type": "Ready", "message": "Import complete"}]
+        error = DataVolumeConditionMessageNotFoundError(
+            dv_name=dv_name, expected_message=expected_message, last_conditions=last_conditions
+        )
+        error_str = str(error)
+        assert expected_message in error_str
+        assert dv_name in error_str
+        assert "Import complete" in error_str
+
+    def test_data_volume_condition_message_not_found_error_args(self):
+        """Test DataVolumeConditionMessageNotFoundError populates args via super().__init__()"""
+        dv_name = "test-dv"
+        expected_message = "Test message"
+        error = DataVolumeConditionMessageNotFoundError(dv_name=dv_name, expected_message=expected_message)
+        # Verify args is populated (not empty tuple)
+        assert len(error.args) == 1
+        assert error.args[0] == str(error)
+
+    def test_data_volume_condition_message_not_found_error_raise_and_catch(self):
+        """Test DataVolumeConditionMessageNotFoundError can be raised and caught"""
+        dv_name = "test-dv"
+        expected_message = "Test message"
+        with pytest.raises(DataVolumeConditionMessageNotFoundError) as exc_info:
+            raise DataVolumeConditionMessageNotFoundError(dv_name=dv_name, expected_message=expected_message)
+        assert exc_info.value.dv_name == dv_name
+        assert exc_info.value.expected_message == expected_message
+        assert isinstance(exc_info.value, Exception)
 
 
 class TestStorageSanityError:
