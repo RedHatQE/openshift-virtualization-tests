@@ -297,13 +297,13 @@ class TestHotplugBackup:
             - Backup PVC available
 
         Steps:
-            1. Hotplug a new disk to the running VM
+            1. Hotplug a new DataVolume to the running VM
             2. Mount the hotplugged disk in the VM
             3. Write test data to hotplugged disk
             4. Perform a full backup in push mode
             5. Wait for backup to complete
             6. Delete the original VM
-            7. Delete the hotplugged disk PVC
+            7. Delete the hotplugged DataVolume
             8. Restore VM from the backup with both disks
             9. Start the restored VM
 
@@ -320,13 +320,13 @@ class TestHotplugBackup:
             - Scratch PVC available for pull mode
 
         Steps:
-            1. Hotplug a new disk to the running VM
+            1. Hotplug a new DataVolume to the running VM
             2. Mount the hotplugged disk in the VM
             3. Write test data to hotplugged disk
             4. Perform a full backup in pull mode
             5. Wait for backup to complete
             6. Delete the original VM
-            7. Delete the hotplugged disk PVC
+            7. Delete the hotplugged DataVolume
             8. Restore VM from the backup with both disks
             9. Start the restored VM
 
