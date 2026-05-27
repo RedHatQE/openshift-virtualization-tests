@@ -9,20 +9,18 @@ import ocp_resources.network_config_openshift_io as openshift_nc
 from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.bgp_session_state import BGPSessionState
-from ocp_resources.deployment import Deployment
+from ocp_resources.cluster_operator import ClusterOperator
 from ocp_resources.frr_configuration import FRRConfiguration
-from ocp_resources.namespace import Namespace
 from ocp_resources.pod import Pod
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.route_advertisements import RouteAdvertisements
 from timeout_sampler import retry
 
 from libs.net.vmspec import IpNotFound
-from utilities.constants import NET_UTIL_CONTAINER_IMAGE, NamespacesNames
-from utilities.infra import get_resources_by_name_prefix
+from utilities.constants import DEFAULT_RESOURCE_CONDITIONS, NET_UTIL_CONTAINER_IMAGE, NamespacesNames
+from utilities.infra import get_resources_by_name_prefix, wait_for_consistent_resource_conditions
 
 _EXTERNAL_FRR_IMAGE: Final[str] = "quay.io/frrouting/frr:10.6.0"
-_FRR_DEPLOYMENT_NAME: Final[str] = "frr-k8s-statuscleaner"
 CLUSTER_FRR_ASN: Final[int] = 64512
 EXTERNAL_FRR_ASN: Final[int] = 64000
 POD_SECONDARY_IFACE_NAME: Final[str] = "net1"
@@ -40,16 +38,13 @@ class ExternalFrrPodInfo:
 def enable_route_advertisements_in_cluster(
     network_resource: openshift_nc.Network, client: DynamicClient
 ) -> Generator[None]:
-    """Enables route advertisements in the cluster network resource and deploys the FRR deployment.
+    """Enables route advertisements in the cluster network resource and deploys FRR.
 
     Within the context, the cluster network resource is patched to enable
     additional routing capabilities with FRR and to enable route advertisements for OVN-Kubernetes.
-    The FRR deployment is then created in the designated namespace and waits for its replicas to be ready.
+    Waits for the network ClusterOperator to stabilize before proceeding.
 
-    After the context is exited, the changes are reverted and the FRR namespace is cleaned up.
-    The cleanup is expected by the un-patching of the changes (ResourceEditor cleanup).
-    However, it has been observed that the NS is not removed
-    and therefore an explicit delete on the NS is performed.
+    After the context is exited, the changes are reverted.
 
     Args:
         network_resource (openshift_nc.Network): The cluster network resource to be patched.
@@ -68,12 +63,13 @@ def enable_route_advertisements_in_cluster(
     }
 
     with ResourceEditor(patches=patch):
-        deployment = Deployment(name=_FRR_DEPLOYMENT_NAME, namespace=NamespacesNames.OPENSHIFT_FRR_K8S, client=client)
-        deployment.wait_for_replicas()
-
+        wait_for_consistent_resource_conditions(
+            dynamic_client=client,
+            resource_kind=ClusterOperator,
+            resource_name=network_resource.kind.lower(),
+            expected_conditions=DEFAULT_RESOURCE_CONDITIONS,
+        )
         yield
-
-    Namespace(name=NamespacesNames.OPENSHIFT_FRR_K8S, client=client).clean_up()
 
 
 def create_cudn_route_advertisements(

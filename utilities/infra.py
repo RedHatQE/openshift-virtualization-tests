@@ -288,19 +288,19 @@ def get_daemonset_by_name(admin_client, daemonset_name, namespace_name):
 
 
 def wait_for_consistent_resource_conditions(
-    dynamic_client,
-    expected_conditions,
-    resource_kind,
-    stop_conditions=None,
-    condition_key1="type",
-    condition_key2="status",
-    namespace=None,
-    total_timeout=TIMEOUT_10MIN,
-    polling_interval=5,
-    consecutive_checks_count=10,
-    exceptions_dict=None,
-    resource_name=None,
-):
+    dynamic_client: DynamicClient,
+    expected_conditions: dict[str, str],
+    resource_kind: type[Resource],
+    stop_conditions: dict[str, str] | None = None,
+    condition_key1: str = "type",
+    condition_key2: str = "status",
+    namespace: str | None = None,
+    total_timeout: int = TIMEOUT_10MIN,
+    polling_interval: int = 5,
+    consecutive_checks_count: int = 10,
+    exceptions_dict: dict[type[Exception], list[str]] | None = None,
+    resource_name: str | None = None,
+) -> None:
     """This function awaits certain conditions of a given resource_kind (HCO, CSV, etc.).
 
     Using TimeoutSampler loop and poll the CR (of the resource_kind type) and attempt to match the expected conditions
