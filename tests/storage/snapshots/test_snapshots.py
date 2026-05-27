@@ -280,7 +280,7 @@ class TestRestoreSnapshots:
         vm_restore_with_predictable_names,
     ):
         """
-        Test restore snapshot where the DV/PVC restored has a predictable name derived from the soruce vm name and
+        Test restore snapshot where the DV/PVC restored has a predictable name derived from the source vm name and
         source volume name when `volumeRestorePolicy` is set to `PrefixTargetName`.
         """
         source_volume_name = vm_restore_with_predictable_names["source_volume_name"]
