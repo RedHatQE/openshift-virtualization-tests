@@ -17,10 +17,34 @@ class TestInterfacesStability:
     @pytest.mark.polarion("CNV-14339")
     def test_interfaces_stability(self, running_linux_bridge_vm, stable_ips):
         for vmi_obj in monitor_vmi_events(vm=running_linux_bridge_vm, timeout=STABILITY_PERIOD_IN_SECONDS):
-            assert_interfaces_stable(stable_ips=stable_ips, vmi=vmi_obj, expected_num_ifaces=2)
+            assert_interfaces_stable(stable_ips=stable_ips, vmi=vmi_obj, expected_num_ifaces=len(stable_ips))
 
     @pytest.mark.polarion("CNV-14340")
     def test_interfaces_stability_after_migration(self, running_linux_bridge_vm, stable_ips):
         migrate_vm_and_verify(vm=running_linux_bridge_vm)
         for vmi_obj in monitor_vmi_events(vm=running_linux_bridge_vm, timeout=STABILITY_PERIOD_IN_SECONDS):
-            assert_interfaces_stable(stable_ips=stable_ips, vmi=vmi_obj, expected_num_ifaces=2)
+            assert_interfaces_stable(stable_ips=stable_ips, vmi=vmi_obj, expected_num_ifaces=len(stable_ips))
+
+    @pytest.mark.polarion("CNV-16025")
+    def test_interfaces_stability_after_guest_agent_restart(self, running_linux_bridge_vm, stable_ips):
+        """
+        Test that interface IPs remain stable after restarting the guest agent inside the VM.
+
+        Jira: https://redhat.atlassian.net/browse/CNV-85415 # <skip-jira-utils-check>
+
+        Preconditions:
+            - Running Fedora VM with two secondary Linux bridge network interfaces
+            - Secondary interface IPs are stable and reported by the guest agent
+
+        Steps:
+            1. Restart the qemu-guest-agent service using systemctl inside the VM
+
+        Expected:
+            - Interface IPs reported in VMI status remain unchanged throughout the monitoring period
+        """
+        running_linux_bridge_vm.console(
+            commands=["sudo systemctl restart qemu-guest-agent.service"],
+            timeout=30,
+        )
+        for vmi_obj in monitor_vmi_events(vm=running_linux_bridge_vm, timeout=STABILITY_PERIOD_IN_SECONDS):
+            assert_interfaces_stable(stable_ips=stable_ips, vmi=vmi_obj, expected_num_ifaces=len(stable_ips))
