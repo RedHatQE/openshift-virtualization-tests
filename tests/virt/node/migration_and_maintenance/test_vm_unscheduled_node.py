@@ -4,7 +4,7 @@ from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS
 from tests.virt.utils import build_node_affinity_dict
 from utilities.virt import (
-    node_mgmt_console,
+    cordon_node,
     vm_instance_from_template,
     wait_for_node_schedulable_status,
 )
@@ -57,7 +57,7 @@ def test_schedule_vm_on_cordoned_node(admin_client, worker_node1, unscheduled_no
     7. Verify that the VMI is running on the expected node (worker_node1).
     """
 
-    with node_mgmt_console(admin_client=admin_client, node=worker_node1, node_mgmt="cordon"):
+    with cordon_node(admin_client=admin_client, node=worker_node1):
         wait_for_node_schedulable_status(node=worker_node1, status=False)
         unscheduled_node_vm.start()
     unscheduled_node_vm.vmi.wait_for_status(status=VirtualMachineInstance.Status.RUNNING)
