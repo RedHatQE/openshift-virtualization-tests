@@ -9,13 +9,14 @@ from kubernetes.dynamic import DynamicClient
 from ocp_resources.resource import ResourceEditor
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
 from libs.net.ip import random_ipv4_address
 from libs.net.vmspec import lookup_iface_status, lookup_iface_status_ip, wait_for_missing_iface_status
 from libs.vm.factory import base_vmspec, fedora_vm
-from libs.vm.spec import Affinity, CloudInitNoCloud, Interface, Multus, Network
+from libs.vm.spec import Affinity, CloudInitNoCloud, Interface, Metadata, Multus, Network
 from libs.vm.vm import BaseVirtualMachine, add_volume_disk, cloudinitdisk_storage
 from tests.network.libs import cloudinit
+from tests.network.libs.cloudinit import primary_iface_cloud_init
+from tests.network.libs.connectivity import ARP_ISOLATION_SYSCTL_CMD
 from tests.network.utils import update_cloud_init_extra_user_data
 from utilities import console
 from utilities.constants import (
@@ -41,6 +42,10 @@ from utilities.virt import VirtualMachineForTests, fedora_vm_body, prepare_cloud
 LOGGER = logging.getLogger(__name__)
 
 RHCOS9_WORKER_LABEL: Final[str] = f"{NODE_ROLE_KUBERNETES_IO}/worker-rhcos9"
+
+LINUX_BRIDGE_IFACE_NAME_1: Final[str] = "linux-bridge-1"
+LINUX_BRIDGE_IFACE_NAME_2: Final[str] = "linux-bridge-2"
+
 
 NETWORK_MANAGER_UNMANAGE_RUNCMD = [
     'sudo echo -e "[main]\nno-auto-default=*\nignore-carrier=*" > /etc/NetworkManager/conf.d/no-nm-ownership.conf',
@@ -378,6 +383,7 @@ def secondary_network_vm(
     secondary_iface_name: str,
     secondary_iface_addresses: list[str],
     affinity: Affinity | None = None,
+    labels: dict[str, str] | None = None,
 ) -> BaseVirtualMachine:
     """Create a Fedora VM with a masquerade primary interface and a secondary Linux bridge interface.
 
@@ -389,6 +395,7 @@ def secondary_network_vm(
         secondary_iface_name: Name of the secondary network interface in the VM spec.
         secondary_iface_addresses: CIDR addresses to assign to the secondary interface via cloud-init.
         affinity: Optional node or pod affinity rules for scheduling.
+        labels: Optional labels to apply to the VM template metadata for pod scheduling.
     """
     spec = base_vmspec()
     spec.template.spec.domain.devices.interfaces = [  # type: ignore
@@ -402,8 +409,13 @@ def secondary_network_vm(
     if affinity:
         spec.template.spec.affinity = affinity
 
+    if labels:
+        spec.template.metadata = spec.template.metadata or Metadata()
+        spec.template.metadata.labels = spec.template.metadata.labels or {}
+        spec.template.metadata.labels.update(labels)
+
     ethernets = {}
-    primary = _masquerade_iface_cloud_init()
+    primary = primary_iface_cloud_init()
     if primary:
         ethernets["eth0"] = primary
     ethernets["eth1"] = cloudinit.EthernetDevice(addresses=secondary_iface_addresses)
@@ -416,22 +428,6 @@ def secondary_network_vm(
     )
     spec.template.spec = add_volume_disk(vmi_spec=spec.template.spec, volume=volume, disk=disk)
     return fedora_vm(namespace=namespace, name=name, client=client, spec=spec)
-
-
-def _masquerade_iface_cloud_init() -> cloudinit.EthernetDevice | None:
-    """Return cloud-init ethernet config for a masquerade (primary) interface.
-
-    Returns:
-        EthernetDevice with static IPv6 and optional DHCP4, or None if IPv6 is not supported.
-    """
-    if not ipv6_supported_cluster():
-        return None
-    return cloudinit.EthernetDevice(
-        addresses=["fd10:0:2::2/120"],
-        gateway6="fd10:0:2::1",
-        dhcp4=ipv4_supported_cluster(),
-        dhcp6=False,
-    )
 
 
 @contextlib.contextmanager
@@ -500,8 +496,7 @@ def _cloud_init_data(
         "modprobe mpls_router",  # In order to test mpls we need to load driver
         "sysctl -w net.mpls.platform_labels=1000",  # Activate mpls labeling feature
         "sysctl -w net.mpls.conf.eth4.input=1",  # Allow incoming mpls traffic
-        "sysctl -w net.ipv4.conf.all.arp_ignore=1",  # 2 kernel flags are used to disable wrong arp behavior
-        "sysctl -w net.ipv4.conf.all.arp_announce=2",  # Send arp reply only if ip belongs to the interface
+        *ARP_ISOLATION_SYSCTL_CMD,
         f"ip addr add {mpls_local_ip} dev lo",
         f"ip -f mpls route add {mpls_local_tag} dev lo",
         "nmcli connection up eth4",  # In order to add mpls route we need to make sure that connection is UP

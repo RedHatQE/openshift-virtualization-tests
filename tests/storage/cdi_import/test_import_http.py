@@ -11,9 +11,6 @@ from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClu
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.storage.cdi_import.utils import (
-    wait_dv_and_get_importer,
-)
 from tests.storage.constants import (
     ALPINE_QCOW2_IMG,
     HTTP,
@@ -25,12 +22,13 @@ from tests.storage.utils import (
     assert_num_files_in_pod,
     assert_use_populator,
     get_file_url,
-    wait_for_importer_container_message,
+    wait_for_dv_condition_message,
 )
 from utilities.constants import (
     OS_FLAVOR_WINDOWS,
     QUARANTINED,
     TIMEOUT_1MIN,
+    TIMEOUT_2MIN,
     TIMEOUT_5MIN,
     TIMEOUT_60MIN,
     U1_LARGE,
@@ -220,16 +218,14 @@ def test_successful_import_basic_auth(
     indirect=True,
 )
 def test_wrong_content_type(
-    admin_client,
     dv_from_http_import,
 ):
-    wait_for_importer_container_message(
-        importer_pod=wait_dv_and_get_importer(
-            dv=dv_from_http_import,
-            admin_client=admin_client,
-        ),
-        msg=ErrorMsg.EXIT_STATUS_2,
+    dv_from_http_import.wait_for_status(
+        status=DataVolume.Status.IMPORT_IN_PROGRESS,
+        timeout=TIMEOUT_2MIN,
+        stop_status=DataVolume.Status.SUCCEEDED,
     )
+    wait_for_dv_condition_message(dv=dv_from_http_import, expected_message=ErrorMsg.EXIT_STATUS_2)
 
 
 @pytest.mark.sno
@@ -261,13 +257,16 @@ def test_wrong_content_type(
 )
 @pytest.mark.s390x
 def test_certconfigmap_incorrect_cert(
-    admin_client,
     https_config_map,
     dv_from_http_import,
 ):
-    wait_for_importer_container_message(
-        importer_pod=wait_dv_and_get_importer(dv=dv_from_http_import, admin_client=admin_client),
-        msg=ErrorMsg.CERTIFICATE_SIGNED_UNKNOWN_AUTHORITY,
+    dv_from_http_import.wait_for_status(
+        status=DataVolume.Status.IMPORT_IN_PROGRESS,
+        timeout=TIMEOUT_2MIN,
+        stop_status=DataVolume.Status.SUCCEEDED,
+    )
+    wait_for_dv_condition_message(
+        dv=dv_from_http_import, expected_message=ErrorMsg.CERTIFICATE_SIGNED_UNKNOWN_AUTHORITY
     )
 
 
