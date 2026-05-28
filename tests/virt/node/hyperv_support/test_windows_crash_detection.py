@@ -2,7 +2,7 @@
 Windows crash detection with hyperv panic device
 
 Reference:
-https://redhat.atlassian.net/browse/VIRTSTRAT-557
+https://redhat.atlassian.net/browse/VIRTSTRAT-557 <skip-jira-utils-check>>
 """
 
 import logging
