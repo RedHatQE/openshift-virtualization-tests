@@ -286,7 +286,7 @@ def jira_88737_open():
 
 @pytest.fixture(scope="session")
 def jira_86102_open():
-    return is_jira_open(jira_id="CNV-86102")
+    return is_jira_open(jira_id="CNV-88764")
 
 
 @pytest.fixture(scope="session")

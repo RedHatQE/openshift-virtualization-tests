@@ -22,8 +22,8 @@ def cnv_alerts_runbook_urls_from_prometheus_rule(cnv_prometheus_rules_matrix__fu
     rule_name = cnv_prometheus_rules_matrix__function__
     if rule_name == "prometheus-hpp-rules" and not hpp_cr_installed:
         pytest.xfail(f"Rule {rule_name} should not be present if HPP CR is not installed")
-    if rule_name == KUBEMACPOOL_PROMETHEUS_RULE and is_jira_open(jira_id="CNV-81829"):
-        pytest.xfail(f"{KUBEMACPOOL_PROMETHEUS_RULE} missing runbook URLs: CNV-81829")
+    if rule_name == KUBEMACPOOL_PROMETHEUS_RULE and is_jira_open(jira_id="CNV-88765"):
+        pytest.xfail(f"{KUBEMACPOOL_PROMETHEUS_RULE} missing runbook URLs: CNV-88765")
 
     cnv_prometheus_rule_by_name = PrometheusRule(
         namespace=py_config["hco_namespace"],
