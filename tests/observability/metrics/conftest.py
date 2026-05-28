@@ -481,7 +481,7 @@ def windows_vm_for_test(windows_vm_namespace, unprivileged_client):
 @pytest.fixture(scope="class")
 def vm_for_migration_metrics_test(namespace, cpu_for_migration, is_postcopy_migration_bug_open):
     if is_postcopy_migration_bug_open:
-        pytest.xfail(reason="CNV-84023: post-copy migration fails on RHCOS 10+ nodes")
+        pytest.xfail(reason="CNV-88738: post-copy migration fails on RHCOS 10+ nodes")
 
     name = "vm-for-migration-metrics-test"
     with VirtualMachineForTests(

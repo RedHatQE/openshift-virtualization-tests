@@ -280,8 +280,8 @@ def updated_resource(
 
 
 @pytest.fixture(scope="session")
-def jira_76659_open():
-    return is_jira_open(jira_id="CNV-76659")
+def jira_88737_open():
+    return is_jira_open(jira_id="CNV-88737")
 
 
 @pytest.fixture(scope="session")
