@@ -2,7 +2,7 @@
 Bandwidth throttling tests for Multus secondary network interface via bridge CNI.
 
 RFE Reference:
-https://redhat.atlassian.net/browse/RFE-7066
+https://redhat.atlassian.net/browse/RFE-7066 # <skip-jira-utils-check>
 """
 
 from typing import Final
