@@ -8,7 +8,7 @@ from pytest_testconfig import config as py_config
 
 from tests.os_params import FEDORA_LATEST_LABELS
 from utilities.constants import PVC, TIMEOUT_20MIN
-from utilities.storage import ErrorMsg, create_dv, create_dv_with_source_ref, get_dv_size_from_datasource
+from utilities.storage import ErrorMsg, create_dv, get_dv_size_from_datasource
 from utilities.virt import vm_instance_from_template, wait_for_ssh_connectivity
 
 pytestmark = pytest.mark.post_upgrade
@@ -19,18 +19,24 @@ LOGGER = logging.getLogger(__name__)
 
 @pytest.fixture(scope="module")
 def golden_image_dv_from_fedora_datasource_scope_module(
+    request,
     admin_client,
     golden_images_namespace,
+    storage_class_name_scope_module,
     fedora_data_source_scope_module,
 ):
     size = get_dv_size_from_datasource(data_source=fedora_data_source_scope_module)
-    with create_dv_with_source_ref(
+    with create_dv(
         client=admin_client,
-        dv_name=f"golden-image-fedora-{py_config['default_storage_class']}",
+        dv_name=f"golden-image-fedora-{storage_class_name_scope_module}",
         namespace=golden_images_namespace.name,
         size=size,
-        storage_class=py_config["default_storage_class"],
-        data_source=fedora_data_source_scope_module,
+        storage_class=storage_class_name_scope_module,
+        source_ref={
+            "kind": fedora_data_source_scope_module.kind,
+            "name": fedora_data_source_scope_module.name,
+            "namespace": fedora_data_source_scope_module.namespace,
+        },
     ) as dv:
         dv.wait_for_dv_success()
         yield dv
@@ -46,13 +52,17 @@ def dv_created_by_unprivileged_user_with_rolebinding(
     fedora_data_source_scope_module,
 ):
     size = get_dv_size_from_datasource(data_source=fedora_data_source_scope_module)
-    with create_dv_with_source_ref(
+    with create_dv(
         client=unprivileged_client,
         dv_name=f"{request.param['dv_name']}-{storage_class_name_scope_function}",
         namespace=golden_images_namespace.name,
         size=size,
         storage_class=storage_class_name_scope_function,
-        data_source=fedora_data_source_scope_module,
+        source_ref={
+            "kind": fedora_data_source_scope_module.kind,
+            "name": fedora_data_source_scope_module.name,
+            "namespace": fedora_data_source_scope_module.namespace,
+        },
     ) as dv:
         yield dv
 
@@ -86,13 +96,17 @@ def test_regular_user_cant_create_dv_in_ns(
         ApiException,
         match=ErrorMsg.CANNOT_CREATE_RESOURCE,
     ):
-        with create_dv_with_source_ref(
+        with create_dv(
             dv_name="cnv-4755",
             namespace=golden_images_namespace.name,
             size=size,
             storage_class=py_config["default_storage_class"],
             client=unprivileged_client,
-            data_source=fedora_data_source_scope_module,
+            source_ref={
+                "kind": fedora_data_source_scope_module.kind,
+                "name": fedora_data_source_scope_module.name,
+                "namespace": fedora_data_source_scope_module.namespace,
+            },
         ):
             return
 
