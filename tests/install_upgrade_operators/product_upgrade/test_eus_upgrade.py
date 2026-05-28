@@ -8,6 +8,11 @@ from utilities.infra import get_related_images_name_and_version
 
 LOGGER = logging.getLogger(__name__)
 
+pytestmark = pytest.mark.usefixtures(
+    "nodes_taints_before_upgrade",
+    "nodes_labels_before_upgrade",
+)
+
 
 @pytest.mark.product_upgrade_test
 @pytest.mark.upgrade
