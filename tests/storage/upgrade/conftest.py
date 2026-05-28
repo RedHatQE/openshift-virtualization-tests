@@ -24,51 +24,6 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="session")
-def skip_if_less_than_two_storage_classes(cluster_storage_classes):
-    if len(cluster_storage_classes) < 2:
-        pytest.skip("Need two Storage Classes at least.")
-
-
-@pytest.fixture(scope="session")
-def storage_class_for_updating_cdiconfig_scratch(
-    skip_if_less_than_two_storage_classes, cdi_config, cluster_storage_classes
-):
-    """
-    Choose one StorageClass which is not the current one for scratch space.
-    """
-    current_sc_for_scratch = cdi_config.scratch_space_storage_class_from_status
-    LOGGER.info(f"The current StorageClass for scratch space on CDIConfig is: {current_sc_for_scratch}")
-    for sc in cluster_storage_classes:
-        if sc.instance.metadata.get("name") != current_sc_for_scratch:
-            LOGGER.info(f"Candidate StorageClass: {sc.instance.metadata.name}")
-            return sc
-
-
-@pytest.fixture(scope="session")
-def override_cdiconfig_scratch_spec(
-    hyperconverged_resource_scope_session,
-    cdi_config,
-    storage_class_for_updating_cdiconfig_scratch,
-):
-    """
-    Change spec.scratchSpaceStorageClass to the selected StorageClass on CDIConfig.
-    """
-    if storage_class_for_updating_cdiconfig_scratch:
-        new_sc = storage_class_for_updating_cdiconfig_scratch.name
-
-    with update_scratch_space_sc(
-        cdi_config=cdi_config, new_sc=new_sc, hco=hyperconverged_resource_scope_session
-    ) as edited_cdi_config:
-        yield edited_cdi_config
-
-
-@pytest.fixture(scope="session")
-def skip_if_not_override_cdiconfig_scratch_space(override_cdiconfig_scratch_spec):
-    if not override_cdiconfig_scratch_spec:
-        pytest.skip("Skip test because the scratch space was not changed.")
-
-
-@pytest.fixture(scope="session")
 def rhel_vm_for_upgrade_a(
     upgrade_namespace_scope_session,
     admin_client,

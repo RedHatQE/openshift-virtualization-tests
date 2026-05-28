@@ -6,12 +6,12 @@ from typing import TYPE_CHECKING
 import pytest
 from ocp_resources.virtual_machine_restore import VirtualMachineRestore
 
-from tests.storage.utils import assert_disk_bus
 from tests.storage.upgrade.constants import (
     UPGRADE_FIRST_FILE_CONTENT,
     UPGRADE_FIRST_FILE_NAME,
     UPGRADE_SECOND_FILE_NAME,
 )
+from tests.storage.utils import assert_disk_bus
 from tests.upgrade_params import (
     HOTPLUG_VM_AFTER_UPGRADE_NODE_ID,
     IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID,
@@ -66,7 +66,6 @@ class TestUpgradeStorage:
             namespace=snapshots_for_upgrade_a.namespace,
             vm_name=rhel_vm_for_upgrade_a.name,
             snapshot_name=snapshots_for_upgrade_a.name,
-            client=admin_client,
         ) as vm_restore:
             if rhel_vm_for_upgrade_a.ready:
                 rhel_vm_for_upgrade_a.stop(wait=True)
@@ -170,7 +169,6 @@ class TestUpgradeStorage:
             namespace=snapshots_for_upgrade_b.namespace,
             vm_name=rhel_vm_for_upgrade_b.name,
             snapshot_name=snapshots_for_upgrade_b.name,
-            client=admin_client,
         ) as vm_restore:
             if rhel_vm_for_upgrade_b.ready:
                 rhel_vm_for_upgrade_b.stop(wait=True)
