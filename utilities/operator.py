@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from pprint import pformat
 
+from kubernetes.client.exceptions import ApiException
 from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.catalog_source import CatalogSource
@@ -599,6 +600,7 @@ def wait_for_cluster_operator_stabilize(admin_client, wait_timeout=TIMEOUT_20MIN
         wait_timeout=wait_timeout,
         sleep=10,
         func=get_failed_cluster_operator,
+        exceptions_dict={ApiException: []},
         admin_client=admin_client,
     )
     consecutive_check = 0

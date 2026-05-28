@@ -289,6 +289,33 @@ def update_apiserver_crypto_policy(
         hco_namespace=hco_namespace,
         list_dependent_crs_to_check=MANAGED_CRS_LIST,
     )
+    _wait_for_hco_webhook_ready(admin_client=admin_client, hco_namespace=hco_namespace)
+
+
+def _get_hco_resources(admin_client: DynamicClient, namespace_name: str) -> list:
+    return list(HyperConverged.get(client=admin_client, namespace=namespace_name))
+
+
+def _wait_for_hco_webhook_ready(admin_client: DynamicClient, hco_namespace: Resource) -> None:
+    """Waits for the HCO webhook service to become reachable.
+
+    After APIServer TLS changes, the conversion webhook may briefly lose endpoints
+    even after cluster operators report stable. Reading the HyperConverged resource
+    exercises the conversion webhook, confirming it is functional before subsequent
+    HCO modifications.
+    """
+    sampler = TimeoutSampler(
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=10,
+        func=_get_hco_resources,
+        exceptions_dict={ApiException: []},
+        admin_client=admin_client,
+        namespace_name=hco_namespace.name,
+    )
+    for sample in sampler:
+        if sample:
+            LOGGER.info("HCO webhook service is ready.")
+            return
 
 
 def check_service_accepts_tls_version(utility_pods: list, node: Node, service: Resource, tls_version: str) -> bool:
