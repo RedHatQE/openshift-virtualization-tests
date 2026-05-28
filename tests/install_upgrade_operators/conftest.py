@@ -13,7 +13,6 @@ from ocp_resources.storage_class import StorageClass
 from pytest_testconfig import py_config
 
 from tests.install_upgrade_operators.constants import (
-    DISABLE_MDEV_CONFIGURATION,
     ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT,
     EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES,
     FG_ENABLED,
@@ -289,19 +288,12 @@ def jira_86102_open():
     return is_jira_open(jira_id="CNV-88764")
 
 
-@pytest.fixture(scope="session")
-def jira_86639_open():
-    return is_jira_open(jira_id="CNV-86639")
-
-
 @pytest.fixture()
-def expected_value(request, is_s390x_cluster, jira_86639_open):
+def expected_value(request, is_s390x_cluster):
     expected = request.param.copy()
     if expected == EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES and is_s390x_cluster:
         expected |= S390X_SPECIFIC_KUBEVIRT_FEATUREGATES
     if expected == HCO_DEFAULT_FEATUREGATES:
         if py_config["cluster_type"] == MULTIARCH:
             expected[ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT] = FG_ENABLED
-        if jira_86639_open:
-            expected[DISABLE_MDEV_CONFIGURATION] = FG_ENABLED
     return expected
