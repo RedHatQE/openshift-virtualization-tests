@@ -32,7 +32,7 @@ from tests.storage.utils import (
 )
 from utilities.constants import OS_FLAVOR_FEDORA, PVC, UNPRIVILEGED_USER, Images
 from utilities.infra import create_ns
-from utilities.storage import create_dv, create_dv_with_source_ref, get_dv_size_from_datasource
+from utilities.storage import create_dv, get_dv_size_from_datasource
 from utilities.virt import VirtualMachineForTests, running_vm
 
 
@@ -73,13 +73,17 @@ def dv_cloned_from_datasource(
 
     dv_size = get_dv_size_from_datasource(data_source=fedora_data_source_scope_module)
 
-    with create_dv_with_source_ref(
+    with create_dv(
         dv_name=f"{dv_name}-{storage_class_name_scope_module}",
         namespace=namespace.name,
-        data_source=fedora_data_source_scope_module,
         size=dv_size,
         storage_class=storage_class_name_scope_module,
         client=namespace.client,
+        source_ref={
+            "kind": fedora_data_source_scope_module.kind,
+            "name": fedora_data_source_scope_module.name,
+            "namespace": fedora_data_source_scope_module.namespace,
+        },
     ) as dv:
         dv.wait_for_dv_success()
         yield dv
