@@ -10,7 +10,9 @@ from tests.network.libs.connectivity import build_ping_command
 
 LOGGER = logging.getLogger(__name__)
 
-SERVER_VM_LABEL: Final[tuple[str, str]] = ("stuntime.test", "server")
+STUNTIME_LABEL_KEY: Final[str] = "stuntime.test"
+SERVER_VM_LABEL: Final[tuple[str, str]] = (STUNTIME_LABEL_KEY, "server")
+CLIENT_VM_LABEL: Final[tuple[str, str]] = (STUNTIME_LABEL_KEY, "client")
 STUNTIME_THRESHOLD_SECONDS: Final[float] = 5.0
 STUNTIME_PING_LOG_PATH: Final[str] = "/tmp/stuntime-ping.log"
 PING_INTERVAL_SECONDS: Final[float] = 0.1
@@ -19,6 +21,20 @@ DEFAULT_COMMAND_TIMEOUT_SECONDS: Final[int] = 10
 
 class InsufficientStuntimeDataError(ValueError):
     """Raised when ping log has too few successful replies to compute stuntime."""
+
+
+def measure_stuntime(active_ping: "ContinuousPing") -> float:
+    """Stop the continuous ping session and compute the measured stuntime.
+
+    Args:
+        active_ping: Active continuous ping session to stop and evaluate.
+
+    Returns:
+        Measured stuntime in seconds.
+    """
+    active_ping.stop()
+    _, _, lost = active_ping.report()
+    return compute_stuntime(lost_packets=lost)
 
 
 def compute_stuntime(lost_packets: int) -> float:

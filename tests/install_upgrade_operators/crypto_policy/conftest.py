@@ -8,6 +8,7 @@ from ocp_resources.cdi import CDI
 from ocp_resources.deployment import Deployment
 from ocp_resources.exceptions import ExecOnPodError
 from ocp_resources.kubevirt import KubeVirt
+from ocp_resources.mig_controller import MigController
 from ocp_resources.network_addons_config import NetworkAddonsConfig
 from ocp_resources.network_policy import NetworkPolicy
 from ocp_resources.pod import Pod
@@ -43,6 +44,7 @@ from utilities.constants import (
     CDI_KUBEVIRT_HYPERCONVERGED,
     CLUSTER,
     KUBEVIRT_HCO_NAME,
+    MIGCONTROLLER_KUBEVIRT_HYPERCONVERGED,
     SSP_KUBEVIRT_HYPERCONVERGED,
     TIMEOUT_60MIN,
     TLS_SECURITY_PROFILE,
@@ -74,6 +76,11 @@ def resources_dict(hco_namespace):
         },
         NetworkAddonsConfig: {
             RESOURCE_NAME_STR: CLUSTER,
+            KEY_NAME_STR: TLS_SECURITY_PROFILE,
+        },
+        MigController: {
+            RESOURCE_NAME_STR: MIGCONTROLLER_KUBEVIRT_HYPERCONVERGED,
+            RESOURCE_NAMESPACE_STR: hco_namespace.name,
             KEY_NAME_STR: TLS_SECURITY_PROFILE,
         },
     }
@@ -139,7 +146,7 @@ def services_to_check_connectivity(hco_namespace, admin_client):
     return services_list
 
 
-@pytest.fixture(scope="package")
+@pytest.fixture(scope="module")
 def enabled_template_feature_gate(admin_client, hco_namespace, hyperconverged_resource_scope_session):
     """Enables the Template feature gate via HCO annotation and waits for virt-template deployments."""
     with update_hco_annotations(
@@ -157,7 +164,7 @@ def enabled_template_feature_gate(admin_client, hco_namespace, hyperconverged_re
         yield
 
 
-@pytest.fixture(scope="package")
+@pytest.fixture(scope="module")
 def cnv_services_with_template(enabled_template_feature_gate, hco_namespace, admin_client):
     """Discovers all CNV services with a clusterIP, including virt-template services."""
     services_list = [
@@ -171,7 +178,7 @@ def cnv_services_with_template(enabled_template_feature_gate, hco_namespace, adm
     return services_list
 
 
-@pytest.fixture(scope="package")
+@pytest.fixture(scope="module")
 def services_tls_runtime(cnv_services_with_template, admin_client, hco_namespace, fips_enabled_cluster):
     """Detects TLS runtime (Go or OpenSSL) for each service's backing pod. Only runs on FIPS clusters."""
     if not fips_enabled_cluster:
