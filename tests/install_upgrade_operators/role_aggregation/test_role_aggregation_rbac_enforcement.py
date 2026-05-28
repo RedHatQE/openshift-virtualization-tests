@@ -1,7 +1,9 @@
 """
-Tests for RBAC enforcement when role aggregation is disabled.
+Role-based access control (RBAC) tests
 
-STP: https://issues.redhat.com/browse/CNV-63822
+STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-iuo/CNV-63822-role-aggregation-opt-out.md
+
+
 """
 
 import pytest
@@ -13,10 +15,7 @@ class TestRoleAggregationDisabledRBACEnforcement:
     """
     Tests for RBAC enforcement when role aggregation is disabled.
 
-    STP: https://issues.redhat.com/browse/CNV-63822
-
     Preconditions:
-        - OpenShift Virtualization installed
         - HyperConverged CR spec.roleAggregationStrategy set to "Manual" (role aggregation disabled)
         - Unprivileged user created via HTPasswd identity provider
     """
@@ -31,7 +30,6 @@ class TestRoleAggregationDisabledRBACEnforcement:
             - role: [admin, edit, view]
 
         Preconditions:
-            - Unprivileged user created via HTPasswd identity provider
             - Namespace with a RoleBinding granting the unprivileged user the parametrized ClusterRole
 
         Steps:
@@ -45,14 +43,10 @@ class TestRoleAggregationDisabledRBACEnforcement:
 
 class TestRoleAggregationReenabledAccess:
     """
-    Tests for access restoration when role aggregation is re-enabled.
-
-    STP: https://issues.redhat.com/browse/CNV-63822
+    Tests for access restoration when role aggregation is enabled.
 
     Preconditions:
-        - OpenShift Virtualization installed
-        - HyperConverged CR spec.roleAggregationStrategy changed from "Manual" to
-          "AggregateToDefault" (role aggregation re-enabled)
+        - HyperConverged CR spec.roleAggregationStrategy set to "AggregateToDefault" (role aggregation enabled)
         - Unprivileged user created via HTPasswd identity provider
     """
 
@@ -60,13 +54,12 @@ class TestRoleAggregationReenabledAccess:
     def test_access_restored_when_aggregation_reenabled(self):
         """
         Test that an unprivileged user with a standard OpenShift role can list virtualization
-        resources when role aggregation is re-enabled.
+        resources when role aggregation is enabled.
 
         Parametrize:
             - role: [admin, edit, view]
 
         Preconditions:
-            - Unprivileged user created via HTPasswd identity provider
             - Namespace with a RoleBinding granting the unprivileged user the parametrized ClusterRole
 
         Steps:
