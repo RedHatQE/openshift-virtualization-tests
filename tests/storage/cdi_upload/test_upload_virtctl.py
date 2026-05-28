@@ -469,7 +469,7 @@ def test_successful_vm_from_uploaded_dv_windows(
     indirect=True,
 )
 @pytest.mark.s390x
-@pytest.mark.jira("CNV-76657", run=False)
+@pytest.mark.jira("CNV-88741", run=False)
 def test_print_response_body_on_error_upload_virtctl(
     namespace, download_specified_image, storage_class_name_scope_module
 ):
