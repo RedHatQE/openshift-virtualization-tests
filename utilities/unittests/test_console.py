@@ -313,10 +313,9 @@ class TestConsole:
         exit_calls = [call for call in console.child.send.call_args_list if "exit" in str(call)]
         assert len(exit_calls) == 0
 
-    @patch("console.pexpect")
     @patch("console.get_data_collector_base_directory")
-    def test_console_disconnect_terminated_child(self, mock_get_dir, mock_pexpect):
-        """Test disconnect method when child is terminated"""
+    def test_console_disconnect_terminated_child(self, mock_get_dir):
+        """Test disconnect method when the console subprocess has exited"""
         mock_get_dir.return_value = "/tmp/data"
         mock_vm = MagicMock()
         mock_vm.name = "test-vm"
@@ -327,19 +326,14 @@ class TestConsole:
 
         console = Console(vm=mock_vm)
         console.child = MagicMock()
-        console.child.terminated = True
+        mock_proc = MagicMock()
+        mock_proc.poll.return_value = 0
+        console._proc = mock_proc
 
-        # Mock the console_eof_sampler
-        console.console_eof_sampler = MagicMock()
+        with patch.object(console, "console_eof_sampler") as mock_eof_sampler:
+            console.disconnect()
 
-        console.disconnect()
-
-        # Should call console_eof_sampler when child is terminated
-        console.console_eof_sampler.assert_called_once_with(
-            func=mock_pexpect.spawn,
-            command=console.cmd,
-            timeout=console.timeout,
-        )
+        mock_eof_sampler.assert_called_once_with()
 
     @patch("console.TimeoutSampler")
     @patch("builtins.open", new_callable=mock_open)
@@ -363,18 +357,12 @@ class TestConsole:
         mock_sampler_instance.__iter__.return_value = [mock_sample]
         mock_timeout_sampler.return_value = mock_sampler_instance
 
-        mock_func = MagicMock()
-        command = "test-command"
-        timeout = 30
+        console.console_eof_sampler()
 
-        console.console_eof_sampler(func=mock_func, command=command, timeout=timeout)
-
-        # Should create TimeoutSampler with correct parameters
+        # Should create TimeoutSampler with _spawn_console as the retry function
         mock_timeout_sampler.assert_called_once()
         call_args = mock_timeout_sampler.call_args
-        assert call_args[1]["func"] == mock_func
-        assert call_args[1]["command"] == command
-        assert call_args[1]["timeout"] == timeout
+        assert call_args[1]["func"] == console._spawn_console
 
         # Should set child and logfile
         assert console.child == mock_sample
@@ -400,11 +388,7 @@ class TestConsole:
         mock_sampler_instance.__iter__.return_value = [None]
         mock_timeout_sampler.return_value = mock_sampler_instance
 
-        mock_func = MagicMock()
-        command = "test-command"
-        timeout = 30
-
-        console.console_eof_sampler(func=mock_func, command=command, timeout=timeout)
+        console.console_eof_sampler()
 
         # Should not change child when no valid sample is found
         assert console.child == original_child
