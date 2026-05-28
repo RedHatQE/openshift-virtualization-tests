@@ -47,4 +47,4 @@ def cluster_has_rhcos10_or_above(workers_rhcos_version):
 
 @pytest.fixture(scope="session")
 def is_postcopy_migration_bug_open(cluster_has_rhcos10_or_above):
-    return cluster_has_rhcos10_or_above and is_jira_open(jira_id="CNV-84023")
+    return cluster_has_rhcos10_or_above and is_jira_open(jira_id="CNV-88738")

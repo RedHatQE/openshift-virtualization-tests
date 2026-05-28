@@ -70,7 +70,7 @@ def test_request_param(deployment_by_name, cpu_min_value):
 @pytest.mark.polarion("CNV-7675")
 def test_cnv_deployment_priority_class_name(
     cnv_deployment_by_name,
-    xfail_if_jira_76659_open_and_migration_controller_deployment,
+    xfail_if_jira_88737_open_and_migration_controller_deployment,
     jira_86102_open,
 ):
     if cnv_deployment_by_name.name.startswith(HPP_POOL):
