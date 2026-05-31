@@ -97,11 +97,11 @@ def dhcp_nad(
     namespace,
     l2_bridge_device_worker_1,
     l2_bridge_device_worker_2,
-    vlan_index_number,
+    cluster_vlan_ids,
     bridge_device_type,
     l2_bridge_device_name,
 ):
-    vlan_tag = next(vlan_index_number)
+    vlan_tag = next(cluster_vlan_ids)
     with network_nad(
         namespace=namespace,
         nad_type=bridge_device_type,

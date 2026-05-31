@@ -11,11 +11,9 @@ from ocp_resources.namespace import Namespace
 from ocp_resources.network_config_openshift_io import Network
 from ocp_resources.performance_profile import PerformanceProfile
 from ocp_resources.pod import Pod
-from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError
 
 from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
-from tests.network.utils import get_vlan_index_number
 from utilities.constants import (
     CLUSTER,
     CLUSTER_NETWORK_ADDONS_OPERATOR,
@@ -93,19 +91,6 @@ def sriov_workers_node2(sriov_workers):
     Get second worker nodes with SR-IOV capabilities
     """
     return sriov_workers[1]
-
-
-@pytest.fixture(scope="session")
-def vlans_list():
-    vlans = py_config["vlans"]
-    if not isinstance(vlans, list):
-        vlans = vlans.split(",")
-    return [int(_id) for _id in vlans]
-
-
-@pytest.fixture(scope="module")
-def vlan_index_number(vlans_list):
-    return get_vlan_index_number(vlans_list=vlans_list)
 
 
 @pytest.fixture(scope="session")

@@ -1,4 +1,4 @@
-from collections.abc import Generator
+from collections.abc import Generator, Iterator
 
 import pytest
 from kubernetes.dynamic import DynamicClient
@@ -83,8 +83,8 @@ def namespace_localnet_2(admin_client: DynamicClient, unprivileged_client: Dynam
 
 
 @pytest.fixture(scope="module")
-def vlan_id(vlan_index_number: Generator[int]) -> int:
-    return next(vlan_index_number)
+def vlan_id(cluster_vlan_ids: Iterator[int]) -> int:
+    return next(cluster_vlan_ids)
 
 
 @pytest.fixture(scope="module")
