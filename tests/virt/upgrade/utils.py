@@ -1,10 +1,15 @@
 import logging
 from contextlib import contextmanager
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 import pytest
 from ocp_resources.template import Template
 from ocp_resources.virtual_machine import VirtualMachine
+
+if TYPE_CHECKING:
+    from ocp_resources.cluster_service_version import ClusterServiceVersion
+
 from ocp_resources.virtual_machine_instance_migration import (
     VirtualMachineInstanceMigration,
 )
@@ -28,10 +33,9 @@ LOGGER = logging.getLogger(__name__)
 TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 
-def get_virt_launcher_image_from_csv(csv):
-    for item in csv.instance.spec.relatedImages:
-        if VIRT_LAUNCHER in item["name"]:
-            return item["image"]
+def get_virt_launcher_images_from_csv(csv: "ClusterServiceVersion") -> set[str]:
+    if images := {item["image"] for item in csv.instance.spec.relatedImages if VIRT_LAUNCHER in item["name"]}:
+        return images
     raise ValueError(f"Image digest for {VIRT_LAUNCHER} not found")
 
 
@@ -135,11 +139,13 @@ def wait_for_automatic_vm_migrations(vm_list):
         raise
 
 
-def validate_vms_pod_updated(admin_client, expected_virt_launcher_image, vm_list):
+def validate_vms_pod_updated(
+    expected_virt_launcher_images: set[str], vm_list: list[VirtualMachine]
+) -> list[dict[str, str]]:
     return [
         {pod.name: pod.instance.spec.containers[0].image}
         for pod in [vm.vmi.virt_launcher_pod for vm in vm_list]
-        if pod.instance.spec.containers[0].image != expected_virt_launcher_image
+        if pod.instance.spec.containers[0].image not in expected_virt_launcher_images
     ]
 
 
