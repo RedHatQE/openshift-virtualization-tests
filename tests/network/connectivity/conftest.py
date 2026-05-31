@@ -13,18 +13,18 @@ def bridge_device_name(index_number):
 
 
 @pytest.fixture(scope="module")
-def vlan_id_1(vlan_index_number):
-    return next(vlan_index_number)
+def vlan_id_1(cluster_vlan_ids):
+    return next(cluster_vlan_ids)
 
 
 @pytest.fixture(scope="module")
-def vlan_id_2(vlan_index_number):
-    return next(vlan_index_number)
+def vlan_id_2(cluster_vlan_ids):
+    return next(cluster_vlan_ids)
 
 
 @pytest.fixture(scope="module")
-def vlan_id_3(vlan_index_number):
-    return next(vlan_index_number)
+def vlan_id_3(cluster_vlan_ids):
+    return next(cluster_vlan_ids)
 
 
 @pytest.fixture(scope="class")

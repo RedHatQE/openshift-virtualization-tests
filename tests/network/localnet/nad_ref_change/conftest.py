@@ -1,4 +1,4 @@
-from collections.abc import Generator
+from collections.abc import Generator, Iterator
 from typing import Final
 
 import pytest
@@ -31,12 +31,12 @@ NET_SEED: Final[int] = 0
 def cudn_nad_ref_vlan_b(
     admin_client: DynamicClient,
     cudn_localnet: libcudn.ClusterUserDefinedNetwork,
-    vlan_index_number: Generator[int],
+    cluster_vlan_ids: Iterator[int],
 ) -> Generator[libcudn.ClusterUserDefinedNetwork]:
     with localnet_cudn(
         name=CUDN_B_NAME,
         match_labels=LOCALNET_TEST_LABEL,
-        vlan_id=next(vlan_index_number),
+        vlan_id=next(cluster_vlan_ids),
         physical_network_name=LOCALNET_BR_EX_NETWORK,
         client=admin_client,
     ) as cudn:

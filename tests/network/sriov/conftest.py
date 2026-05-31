@@ -47,7 +47,7 @@ def sriov_network(admin_client, sriov_node_policy, namespace, sriov_namespace):
 
 
 @pytest.fixture(scope="class")
-def sriov_network_vlan(admin_client, sriov_node_policy, namespace, sriov_namespace, vlan_index_number):
+def sriov_network_vlan(admin_client, sriov_node_policy, namespace, sriov_namespace, cluster_vlan_ids):
     """
     Create a SR-IOV VLAN network linked to SR-IOV policy.
     """
@@ -57,7 +57,7 @@ def sriov_network_vlan(admin_client, sriov_node_policy, namespace, sriov_namespa
         sriov_resource_name=sriov_node_policy.instance.spec.resourceName,
         namespace=sriov_namespace,
         sriov_network_namespace=namespace.name,
-        vlan=next(vlan_index_number),
+        vlan=next(cluster_vlan_ids),
         client=admin_client,
     ) as sriov_network:
         yield sriov_network

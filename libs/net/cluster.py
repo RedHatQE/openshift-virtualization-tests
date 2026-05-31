@@ -29,3 +29,15 @@ def ipv6_supported_cluster() -> bool:
 
 def _cluster_ip_family_supported(ip_family: int) -> bool:
     return any(ipaddress.ip_network(ip).version == ip_family for ip in py_config.get("cluster_service_network"))
+
+
+@cache
+def cluster_vlans() -> list[int]:
+    """Return VLAN IDs from test config as normalized integers.
+
+    Supports both list input and comma-separated string input from py_config["vlans"].
+    """
+    vlans = py_config["vlans"]
+    if not isinstance(vlans, list):
+        vlans = vlans.split(",")
+    return [int(vlan_id) for vlan_id in vlans]
