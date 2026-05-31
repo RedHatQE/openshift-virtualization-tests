@@ -69,7 +69,7 @@ from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutSampler
 
 import utilities.hco
-from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
+from libs.net.cluster import cluster_vlan_iterator, ipv4_supported_cluster, ipv6_supported_cluster
 from libs.net.ip import filter_link_local_addresses, random_ipv4_address, random_ipv6_address
 from libs.net.vmspec import lookup_iface_status
 from tests.utils import download_and_extract_tar
@@ -2734,3 +2734,8 @@ def hugepages_gib_values(workers):
         for worker in workers
         if (value := worker.instance.status.allocatable.get(NODE_HUGE_PAGES_1GI_KEY))
     ]
+
+
+@pytest.fixture(scope="module")
+def next_vlan_index_number():  # skip-unused-code
+    return cluster_vlan_iterator()
