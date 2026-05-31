@@ -595,8 +595,11 @@ def get_stable_released_builds(minor_version: str) -> list[dict[str, Any]]:
 def get_stable_channel_iib(build: dict[str, Any]) -> str:
     """Extract the IIB URL from a build's stable channel entry."""
     stable_entry = next(
-        item for item in build["channels"] if item.get("channel") == "stable" and item.get("released_to_prod")
+        (item for item in build["channels"] if item.get("channel") == "stable" and item.get("released_to_prod")),
+        None,
     )
+    if not stable_entry:
+        raise ValueError(f"No stable released channel entry in build: {build}")
     return stable_entry["iib"]
 
 
