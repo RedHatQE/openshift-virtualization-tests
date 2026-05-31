@@ -562,7 +562,7 @@ def get_upgrade_path(target_version: str, channel: str = "stable") -> dict[str, 
     )
 
 
-def _find_path_with_start_version(paths: list[dict[str, Any]], start_version: str) -> dict[str, Any] | None:
+def find_path_with_start_version(paths: list[dict[str, Any]], start_version: str) -> dict[str, Any] | None:
     """Find an upgrade path entry matching start_version."""
     for path in paths:
         if str(path["startVersion"]).lstrip("v") == start_version:
@@ -570,62 +570,99 @@ def _find_path_with_start_version(paths: list[dict[str, Any]], start_version: st
     return None
 
 
-def _get_iib_for_version(version: str, channel: str) -> str:
-    """Return the IIB URL of the first successful build for a version on a given channel."""
+def get_cnv_image_url_for_version(version: str, channel: str) -> str:
+    """Return the CNV image URL of the first successful build for a version on a given channel."""
     builds = get_build_info_by_version(version=version, channel=channel)["successful_builds"]
     assert builds, f"No successful builds for {version} on {channel} channel"
     return builds[0]["iib"]
 
 
-def _find_intermediate_cnv_version(
-    current_version: str,
-    target_version: str,
-    target_channel: str = "stable",
-) -> tuple[dict[str, dict[str, str]], dict[str, Any]]:
-    """Find the intermediate CNV version for an EUS-to-EUS upgrade.
-
-    Iterates stable released z-streams for the intermediate minor (current+1) from latest
-    to oldest, returning the first that is a valid startVersion in the target's upgrade path.
-
-    Args:
-        current_version: Currently installed CNV version (e.g., "4.20.15").
-        target_version: EUS target semver (e.g., "4.22.0").
-        target_channel: Channel for the target GetUpgradePath query (default "stable").
-
-    Returns:
-        Tuple of (non_eus_images, target_step) where:
-        - non_eus_images: {version: {"iib_url": str, "channel": "stable"}} for the intermediate hop
-        - target_step: matching GetUpgradePath path entry for the EUS hop
-
-    Raises:
-        AssertionError: if no stable released intermediate or valid path to target is found.
-    """
-    target_paths = get_upgrade_path(target_version=target_version, channel=target_channel)["path"]
-    assert target_paths, f"No upgrade paths for {target_version} on {target_channel} channel"
-
-    current = Version(version=current_version)
-    intermediate_minor = f"{current.major}.{current.minor + 1}"
-
+def get_stable_released_builds(minor_version: str) -> list[dict[str, Any]]:
+    """Return stable released builds for a minor version, sorted newest-first."""
     builds = wait_for_version_explorer_response(
         api_end_point="GetReleasedBuilds",
-        query_string=f"minor_version={intermediate_minor}&stage=false",
+        query_string=f"minor_version={minor_version}&stage=false",
     )["builds"]
     stable_builds = sorted(
         [build for build in builds if stable_channel_released_to_prod(channels=build["channels"])],
         key=lambda build: Version(version=build["csv_version"]),
         reverse=True,
     )
-    assert stable_builds, f"No stable released builds for {intermediate_minor}"
+    assert stable_builds, f"No stable released builds for {minor_version}"
+    return stable_builds
+
+
+def get_stable_channel_iib(build: dict[str, Any]) -> str:
+    """Extract the IIB URL from a build's stable channel entry."""
+    stable_entry = next(
+        item for item in build["channels"] if item.get("channel") == "stable" and item.get("released_to_prod")
+    )
+    return stable_entry["iib"]
+
+
+def build_version_images(
+    versions: list[str],
+    target_version: str,
+    target_cnv_image_url: str,
+    channel: str = "stable",
+) -> dict[str, dict[str, str]]:
+    """Build a {version: {"cnv_image_url": ..., "channel": ...}} dict from a versions list."""
+    images: dict[str, dict[str, str]] = {}
+    for raw_version in versions:
+        version = raw_version.lstrip("v")
+        if version == target_version:
+            images[version] = {"cnv_image_url": target_cnv_image_url, "channel": channel}
+        else:
+            images[version] = {
+                "cnv_image_url": get_cnv_image_url_for_version(version=version, channel=channel),
+                "channel": channel,
+            }
+    return images
+
+
+def find_intermediate_cnv_versions(
+    current_version: str,
+    target_version: str,
+    target_channel: str = "stable",
+) -> tuple[dict[str, dict[str, str]], dict[str, Any]]:
+    """Find the intermediate CNV versions for an EUS-to-EUS upgrade.
+
+    Walks stable z-streams for the intermediate minor (current+1) from latest to oldest,
+    picks the first valid startVersion in the target's upgrade path, then resolves the
+    full hop path from current to intermediate.
+
+    Returns:
+        Tuple of (non_eus_images, target_step).
+    """
+    target_paths = get_upgrade_path(target_version=target_version, channel=target_channel)["path"]
+    assert target_paths, f"No upgrade paths for {target_version} on {target_channel} channel"
+
+    current = Version(version=current_version)
+    intermediate_minor = f"{current.major}.{current.minor + 1}"
+    stable_builds = get_stable_released_builds(minor_version=intermediate_minor)
 
     for build in stable_builds:
-        version = build["csv_version"].lstrip("v")
-        target_step = _find_path_with_start_version(paths=target_paths, start_version=version)
-        if target_step:
-            stable_channel = next(
-                item for item in build["channels"] if item.get("channel") == "stable" and item.get("released_to_prod")
+        intermediate_version = build["csv_version"].lstrip("v")
+        target_step = find_path_with_start_version(paths=target_paths, start_version=intermediate_version)
+        if not target_step:
+            continue
+
+        LOGGER.info(f"Using {intermediate_version} as intermediate version for EUS upgrade to {target_version}")
+        intermediate_iib = get_stable_channel_iib(build=build)
+
+        intermediate_paths = get_upgrade_path(target_version=intermediate_version, channel="stable")["path"]
+        intermediate_step = find_path_with_start_version(paths=intermediate_paths, start_version=current_version)
+
+        if intermediate_step:
+            non_eus_images = build_version_images(
+                versions=intermediate_step["versions"],
+                target_version=intermediate_version,
+                target_cnv_image_url=intermediate_iib,
             )
-            LOGGER.info(f"Using {version} as intermediate version for EUS upgrade to {target_version}")
-            return {version: {"iib_url": stable_channel["iib"], "channel": "stable"}}, target_step
+        else:
+            non_eus_images = {intermediate_version: {"cnv_image_url": intermediate_iib, "channel": "stable"}}
+
+        return non_eus_images, target_step
 
     raise AssertionError(f"No valid intermediate in {intermediate_minor} for upgrade to {target_version}")
 
@@ -634,7 +671,7 @@ def build_eus_upgrade_path_dict(
     current_cnv_version: str,
     target_cnv_version: str,
     target_channel: str = "stable",
-    target_iib_url: str | None = None,
+    target_cnv_image_url: str | None = None,
 ) -> dict[str, dict[str, dict[str, str]]]:
     """Build the EUS-to-EUS upgrade path with IIB images for each phase.
 
@@ -642,29 +679,24 @@ def build_eus_upgrade_path_dict(
         current_cnv_version: Currently installed CNV version (e.g., "4.20.15").
         target_cnv_version: EUS target CNV version (e.g., "4.22.0").
         target_channel: Channel for the target GetUpgradePath query (default "stable").
-        target_iib_url: IIB image URL for the EUS target (from --cnv-image CLI arg).
+        target_cnv_image_url: CNV image URL for the EUS target (from --cnv-image CLI arg).
 
     Returns:
         Dict with "non-eus" and "eus" keys, each mapping version string
-        to a dict with "iib_url" and "channel" keys.
+        to a dict with "cnv_image_url" and "channel" keys.
     """
-    assert target_iib_url, "target_iib_url is required for EUS upgrade path"
-    non_eus_images, target_step = _find_intermediate_cnv_version(
+    assert target_cnv_image_url, "target_cnv_image_url is required for EUS upgrade path"
+    non_eus_images, target_step = find_intermediate_cnv_versions(
         current_version=current_cnv_version,
         target_version=target_cnv_version,
         target_channel=target_channel,
     )
-    eus_images: dict[str, dict[str, str]] = {}
-
-    for raw_version in target_step["versions"]:
-        version = raw_version.lstrip("v")
-        if version == target_cnv_version:
-            eus_images[version] = {"iib_url": target_iib_url, "channel": target_channel}
-        else:
-            eus_images[version] = {
-                "iib_url": _get_iib_for_version(version=version, channel=target_channel),
-                "channel": target_channel,
-            }
+    eus_images = build_version_images(
+        versions=target_step["versions"],
+        target_version=target_cnv_version,
+        target_cnv_image_url=target_cnv_image_url,
+        channel=target_channel,
+    )
     upgrade_path = {"non-eus": non_eus_images, EUS: eus_images}
     LOGGER.info(f"Upgrade path for EUS-to-EUS upgrade: {upgrade_path}")
     return upgrade_path

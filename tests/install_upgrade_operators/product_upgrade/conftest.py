@@ -50,7 +50,6 @@ from utilities.data_collector import (
 from utilities.infra import (
     exit_pytest_execution,
     generate_openshift_pull_secret_file,
-    get_csv_by_name,
     get_prometheus_k8s_token,
     get_related_images_name_and_version,
     get_subscription,
@@ -340,7 +339,7 @@ def eus_cnv_upgrade_path(
         current_cnv_version=cnv_current_version,
         target_cnv_version=cnv_target_version,
         target_channel=cnv_channel,
-        target_iib_url=cnv_image_url,
+        target_cnv_image_url=cnv_image_url,
     )
 
 
@@ -535,7 +534,7 @@ def source_eus_to_non_eus_cnv_upgraded(
         eus_cnv_upgrade_path["non-eus"].items(),
         key=lambda item: Version(version=item[0]),
     ):
-        cnv_image = build_info["iib_url"]
+        cnv_image = build_info["cnv_image_url"]
         LOGGER.info(f"Cnv upgrade to version {version} using image: {cnv_image}")
         perform_cnv_upgrade(
             admin_client=admin_client,
@@ -563,7 +562,7 @@ def non_eus_to_target_eus_cnv_upgraded(
         eus_cnv_upgrade_path[EUS].items(),
         key=lambda item: Version(version=item[0]),
     ):
-        cnv_image = build_info["iib_url"]
+        cnv_image = build_info["cnv_image_url"]
         LOGGER.info(f"Cnv upgrade to version {version} using image: {cnv_image}")
         perform_cnv_upgrade(
             admin_client=admin_client,
@@ -576,15 +575,6 @@ def non_eus_to_target_eus_cnv_upgraded(
             subscription_channel=build_info["channel"],
         )
     LOGGER.info("Successfully performed cnv upgrades from non-EUS to target EUS version.")
-
-
-@pytest.fixture()
-def eus_created_target_hco_csv(admin_client, hco_namespace, hco_target_csv_name):
-    return get_csv_by_name(
-        csv_name=hco_target_csv_name,
-        admin_client=admin_client,
-        namespace=hco_namespace.name,
-    )
 
 
 @pytest.fixture()

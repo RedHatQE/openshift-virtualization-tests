@@ -33,7 +33,7 @@ class TestEUSToEUSUpgrade:
         upgraded_odf,
         non_eus_to_target_eus_ocp_upgraded,
         non_eus_to_target_eus_cnv_upgraded,
-        eus_created_target_hco_csv,
+        created_target_hco_csv,
         eus_unpaused_workload_update,
         eus_unpaused_worker_mcp,
     ):
@@ -41,6 +41,6 @@ class TestEUSToEUSUpgrade:
         verify_upgrade_cnv(
             dyn_client=admin_client,
             hco_namespace=hco_namespace,
-            expected_images=get_related_images_name_and_version(csv=eus_created_target_hco_csv).values(),
+            expected_images=get_related_images_name_and_version(csv=created_target_hco_csv).values(),
         )
         LOGGER.info("EUS post upgrade validation completed.")
