@@ -12,6 +12,7 @@ from ocp_resources.network_attachment_definition import OVNOverlayNetworkAttachm
 from ocp_resources.node import Node
 
 from libs.net import netattachdef as libnad
+from libs.net import nodenetworkconfigurationpolicy as libnncp
 from libs.net.ip import random_ipv4_address
 from libs.net.traffic_generator import PodTcpClient as TcpClient
 from libs.net.traffic_generator import TcpServer
@@ -19,7 +20,6 @@ from libs.net.udn import UDN_BINDING_DEFAULT_PLUGIN_NAME, create_udn_namespace
 from libs.net.vmspec import lookup_iface_status_ip, lookup_primary_network
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs import cluster_user_defined_network as libcudn
-from tests.network.libs import nodenetworkconfigurationpolicy as libnncp
 from tests.network.libs.bgp import (
     EXTERNAL_FRR_POD_LABEL,
     NET_TOOLS_CONTAINER_NAME,

@@ -5,7 +5,7 @@ import pytest
 from kubernetes.dynamic import DynamicClient
 from pyhelper_utils.shell import run_ssh_commands
 
-import tests.network.libs.nodenetworkconfigurationpolicy as libnncp
+from libs.net import nodenetworkconfigurationpolicy as libnncp
 from libs.net.ip import random_ipv4_address
 from libs.net.netattachdef import CNIPluginBridgeConfig, NetConfig, NetworkAttachmentDefinition
 from tests.network.l2_bridge.libl2bridge import DHCP_INTERFACE_NAME, bridge_attached_vm

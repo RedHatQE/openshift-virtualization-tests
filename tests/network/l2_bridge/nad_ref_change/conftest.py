@@ -4,6 +4,7 @@ import pytest
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.namespace import Namespace
 
+from libs.net import nodenetworkconfigurationpolicy as libnncp
 from libs.net.ip import filter_link_local_addresses, random_cidr_addresses_by_family
 from libs.net.netattachdef import CNIPluginBridgeConfig, NetConfig, NetworkAttachmentDefinition
 from libs.net.vmspec import lookup_iface_status, wait_for_ifaces_status
@@ -15,7 +16,6 @@ from tests.network.l2_bridge.nad_ref_change.lib_helpers import (
     NET_SEED,
     two_secondary_bridge_vm,
 )
-from tests.network.libs import nodenetworkconfigurationpolicy as libnncp
 from tests.network.libs.connectivity import ARP_ISOLATION_SYSCTL_CMD, poll_tcp_connectivity
 
 
