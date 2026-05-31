@@ -335,50 +335,6 @@ class TestHotplugBackup:
         """
 
 
-class TestForcedFullBackup:
-    """
-    Forced full backup validation.
-
-    Preconditions:
-        - Running VM with CBT enabled
-        - Test data written to VM
-        - Full backup completed
-        - Incremental backup completed
-    """
-
-    @pytest.mark.polarion("CNV-16021")
-    def test_forced_full_backup_push_mode(self):
-        """
-        Test that a forced full backup can be triggered even with existing checkpoints.
-
-        Preconditions:
-            - Backup PVC available
-
-        Steps:
-            1. Trigger a forced full backup in push mode
-            2. Wait for backup to complete
-
-        Expected:
-            - Forced full backup completes as a new independent backup while preserving existing checkpoint chain unchanged
-        """
-
-    @pytest.mark.polarion("CNV-16022")
-    def test_forced_full_backup_pull_mode(self):
-        """
-        Test that a forced full backup can be triggered in pull mode even with existing checkpoints.
-
-        Preconditions:
-            - Scratch PVC available for pull mode
-
-        Steps:
-            1. Trigger a forced full backup in pull mode
-            2. Wait for backup to complete
-
-        Expected:
-            - Forced full backup completes as a new independent backup while preserving existing checkpoint chain unchanged
-        """
-
-
 class TestBackupErrorHandling:
     """
     Backup error handling and negative scenarios.
