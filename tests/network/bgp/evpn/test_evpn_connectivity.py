@@ -29,7 +29,6 @@ pytestmark = [
     pytest.mark.bgp,
     pytest.mark.ipv4,
     pytest.mark.usefixtures("evpn_setup_ready"),
-    pytest.mark.jira("CNV-86961", run=False),
 ]
 
 

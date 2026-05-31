@@ -11,6 +11,7 @@ from libs.vm.spec import Interface, Multus, Network
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs import cloudinit
 from tests.network.libs import cluster_user_defined_network as libcudn
+from tests.network.libs.stuntime import CLIENT_VM_LABEL, SERVER_VM_LABEL, ContinuousPing
 from tests.network.localnet.liblocalnet import (
     GUEST_1ST_IFACE_NAME,
     LOCALNET_OVS_BRIDGE_INTERFACE,
@@ -18,14 +19,20 @@ from tests.network.localnet.liblocalnet import (
     libnncp,
     localnet_vm,
 )
-from tests.network.localnet.migration_stuntime.libstuntime import SERVER_VM_LABEL, ContinuousPing
 
 LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="class")
+def ip_family(request: pytest.FixtureRequest) -> int:
+    """IP family for stuntime measurement, activated by per-test parametrize."""
+    return request.param
+
+
+@pytest.fixture(scope="class")
 def localnet_stuntime_server_vm(
     unprivileged_client: DynamicClient,
+    ip_family: int,
     nncp_localnet_on_secondary_node_nic: libnncp.NodeNetworkConfigurationPolicy,
     cudn_localnet_ovs_bridge: libcudn.ClusterUserDefinedNetwork,
     namespace_localnet_1: Namespace,
@@ -85,6 +92,7 @@ def localnet_stuntime_client_vm(
             }
         ),
         affinity=new_pod_affinity(label=SERVER_VM_LABEL),
+        vm_labels=dict([CLIENT_VM_LABEL]),
     ) as client_vm:
         client_vm.start(wait=True)
         client_vm.wait_for_agent_connected()
@@ -93,16 +101,11 @@ def localnet_stuntime_client_vm(
 
 @pytest.fixture()
 def active_ping(
-    request: pytest.FixtureRequest,
+    ip_family: int,
     localnet_stuntime_server_vm: BaseVirtualMachine,
     localnet_stuntime_client_vm: BaseVirtualMachine,
 ) -> Generator[ContinuousPing]:
-    """Continuous ping session from client to server for stuntime measurement.
-
-    Args (indirect via request.param):
-        ip_family: IP family version - 4 for IPv4, 6 for IPv6.
-    """
-    ip_family = request.param
+    """Continuous ping session from client to server for stuntime measurement."""
     server_ip = str(
         lookup_iface_status_ip(
             vm=localnet_stuntime_server_vm,
