@@ -12,7 +12,6 @@ import shutil
 import subprocess
 import tempfile
 from collections import defaultdict
-from datetime import datetime, timezone
 from signal import SIGINT, SIGTERM, getsignal, signal
 from subprocess import check_output
 
@@ -258,19 +257,6 @@ def junitxml_polarion(record_testsuite_property):
 @pytest.fixture(scope="session")
 def kubeconfig_export_path():
     return os.environ.get(KUBECONFIG)
-
-
-@pytest.fixture(scope="session")
-def session_start_time() -> datetime:
-    """
-    Capture when test session started in UTC.
-
-    Uses UTC to match the timezone used in audit log file names.
-
-    Returns:
-        datetime: UTC timestamp when test session began (timezone-naive)
-    """
-    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 @pytest.fixture(scope="session")
@@ -1902,7 +1888,7 @@ def cnv_target_version(pytestconfig):
 
 
 @pytest.fixture(scope="session")
-def cnv_channel(pytestconfig) -> str:
+def cnv_channel(pytestconfig):
     return pytestconfig.option.cnv_channel
 
 

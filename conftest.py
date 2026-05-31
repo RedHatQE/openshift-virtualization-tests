@@ -360,7 +360,7 @@ def pytest_cmdline_main(config):
             if upgrade_option == "eus" or config.getoption("cnv_source") != "production":
                 raise ValueError("Missing --cnv-image")
 
-    if upgrade_option == "eus":
+    if upgrade_option == "eus" and not config.option.collectonly:
         cnv_version = config.getoption("cnv_version")
         if Version(version=cnv_version).minor % 2:
             raise ValueError(f"EUS target version {cnv_version} must have an even minor version")
