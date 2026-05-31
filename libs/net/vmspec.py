@@ -206,7 +206,7 @@ def wait_for_ifaces_status(
 
 
 def wait_for_vmi_condition_status(
-    vm: BaseVirtualMachine,
+    vm: VirtualMachine,
     condition: str,
     status: str = ResourceConstants.Condition.Status.TRUE,
     timeout: int = 300,
@@ -249,7 +249,7 @@ def wait_for_vmi_condition_status(
 
 
 def wait_for_no_vmi_condition(
-    vm: BaseVirtualMachine,
+    vm: VirtualMachine,
     condition: str,
     timeout: int = 300,
     resource_version: str | None = None,
