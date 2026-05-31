@@ -5,8 +5,8 @@ import pytest
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.namespace import Namespace
 
-import tests.network.libs.nodenetworkconfigurationpolicy as libnncp
 from libs.net import netattachdef as libnad
+from libs.net import nodenetworkconfigurationpolicy as libnncp
 from libs.net.ip import random_ipv4_address, random_ipv6_address
 from libs.net.vmspec import lookup_iface_status_ip
 from libs.vm.affinity import new_pod_affinity
