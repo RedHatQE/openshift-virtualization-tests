@@ -363,16 +363,6 @@ def rhel_vm_name(request):
     return request.param["vm_name"]
 
 
-@pytest.fixture(scope="session")
-def available_hpp_storage_class(skip_test_if_no_hpp_sc, cluster_storage_classes):
-    """
-    Get an HPP storage class if there is any in the cluster
-    """
-    for storage_class in cluster_storage_classes:
-        if storage_class.name in HPP_STORAGE_CLASSES:
-            return storage_class
-
-
 @pytest.fixture()
 def rhel_vm_for_snapshot(
     admin_client,
