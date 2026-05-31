@@ -4,7 +4,7 @@ from enum import Enum
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.cluster_user_defined_network import ClusterUserDefinedNetwork as Cudn
 
-from tests.network.libs.apimachinery import dict_normalization_for_dataclass
+from libs.net.apimachinery import dict_normalization_for_dataclass
 from tests.network.libs.label_selector import LabelSelector
 
 
