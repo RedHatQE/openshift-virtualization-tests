@@ -41,6 +41,7 @@ from tests.upgrade_params import EUS
 from utilities.constants import (
     HCO_CATALOG_SOURCE,
     TIMEOUT_10MIN,
+    TIMEOUT_180MIN,
     NamespacesNames,
 )
 from utilities.data_collector import (
@@ -326,7 +327,6 @@ def fired_alerts_during_upgrade(
 def eus_cnv_upgrade_path(
     cnv_target_version,
     cnv_current_version,
-    iib_build_info,
     cnv_channel,
     cnv_image_url,
 ):
@@ -336,12 +336,10 @@ def eus_cnv_upgrade_path(
             return_code=EUS_ERROR_CODE,
             filename="eus_upgrade_failure.txt",
         )
-    assert iib_build_info, "EUS upgrade requires osbs/fbc cnv source (--cnv-source); production source is not supported"
     return build_eus_upgrade_path_dict(
         current_cnv_version=cnv_current_version,
         target_cnv_version=cnv_target_version,
         target_channel=cnv_channel,
-        target_bundle=iib_build_info["cnv_version"],
         target_iib_url=cnv_image_url,
     )
 
@@ -375,6 +373,7 @@ def eus_unpaused_worker_mcp(
         machine_config_pools_list=worker_machine_config_pools,
         initial_mcp_conditions=worker_machine_config_pools_conditions,
         nodes=workers,
+        timeout=TIMEOUT_180MIN,
     )
 
 
