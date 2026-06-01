@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pprint import pformat
 from threading import Thread
 from typing import TYPE_CHECKING, Any
@@ -504,7 +504,7 @@ def query_alerts_fired_in_range(
     Returns:
         List of result dicts, each containing 'metric' labels and 'values' timestamps.
     """
-    duration_seconds = int((datetime.now(tz=timezone.utc) - start_time).total_seconds())
+    duration_seconds = int((datetime.now(tz=UTC) - start_time).total_seconds())
     query = f'ALERTS{{alertstate="{FIRING_STATE}",kubernetes_operator_part_of="kubevirt"}}[{duration_seconds}s]'
     return prometheus.query_sampler(query=query)
 

@@ -16,7 +16,7 @@ from utilities.data_collector import get_data_collector_base_directory
 LOGGER = logging.getLogger(__name__)
 
 
-class Console(object):
+class Console:
     def __init__(
         self,
         vm: VirtualMachine,

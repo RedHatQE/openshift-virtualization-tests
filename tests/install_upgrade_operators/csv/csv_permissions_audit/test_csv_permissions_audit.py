@@ -66,7 +66,7 @@ def csv_permissions(admin_client):
 
 @pytest.mark.polarion("CNV-9805")
 def test_new_operator_in_csv(operators_from_csv):
-    assert sorted(list(operators_from_csv)) == sorted(CNV_OPERATORS), (
+    assert sorted(operators_from_csv) == sorted(CNV_OPERATORS), (
         f"Expected cnv operators:{CNV_OPERATORS} does not match operators {operators_from_csv} "
     )
 

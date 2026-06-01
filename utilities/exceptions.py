@@ -42,7 +42,7 @@ class ProcessWithException(_FORK_CONTEXT.Process):  # type: ignore[name-defined]
             self._cconn.send(None)
         except Exception as e:
             self._cconn.send(e)
-            raise e
+            raise
 
     @property
     def exception(self):

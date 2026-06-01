@@ -195,7 +195,7 @@ def create_nncp_localnet_on_secondary_node_nic(
     node_nic_name: str,
     client: DynamicClient,
     mtu: int | None = None,
-) -> Generator[libnncp.NodeNetworkConfigurationPolicy, None, None]:
+) -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
     """Create NNCP to configure an OVS bridge on a secondary NIC across all worker nodes.
 
     Note:

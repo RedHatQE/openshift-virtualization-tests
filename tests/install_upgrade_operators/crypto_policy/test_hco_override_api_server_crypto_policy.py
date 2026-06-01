@@ -72,7 +72,7 @@ def test_hco_overriding_apiserver_crypto_policy(
                 conflicting_resources = {
                     resource.kind: crypto_policy
                     for resource, crypto_policy in sample.items()
-                    if expected_all_managed_crs_crypto_policies[resource] != sample[resource]
+                    if expected_all_managed_crs_crypto_policies[resource] != crypto_policy
                 }
                 assert not conflicting_resources, (
                     "API server crypto policy overrides HCO crypto policy\n"

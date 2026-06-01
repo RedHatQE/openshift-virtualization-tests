@@ -246,10 +246,10 @@ def data_sources_managed_by_data_import_crons_scope_function(
 
 @pytest.fixture()
 def data_sources_names_from_templates_scope_function(base_templates):
-    return set([
+    return {
         get_parameters_from_template(template=template, parameter_subset=DATA_SOURCE_NAME)[DATA_SOURCE_NAME]
         for template in base_templates
-    ])
+    }
 
 
 @pytest.fixture()

@@ -61,11 +61,13 @@ def restore_and_log_error(
     updated_resource,
     expected_value,
     actual_value,
+    original_error,
 ):
     updated_resource.restore()  # Only restore explicitly, if virt-operator fails to revert automatically.
-    LOGGER.error(f"Timeout waiting for {resource.kind}: {resource.name} resource being reconciled.")
-    LOGGER.error(f"Expected: {expected_value}\n Actual: {actual_value}")
-    raise
+    raise TimeoutExpiredError(
+        f"Timeout waiting for {resource.kind}: {resource.name} resource being reconciled."
+        f" Expected: {expected_value}, Actual: {actual_value}"
+    ) from original_error
 
 
 def verify_resource_reconciled(admin_client, hco_namespace, resource):
@@ -102,12 +104,13 @@ def verify_reconciled_role_or_clusterrole_resource(resource, resource_dict):
             entity.append(sample_rules)
             if original_resource_dict["rules"][0]["verbs"] == sample_rules[0]["verbs"]:
                 break
-    except TimeoutExpiredError:
+    except TimeoutExpiredError as timeout_error:
         restore_and_log_error(
             resource=resource,
             updated_resource=updated_and_reconciled_resource["updated_resource"],
             expected_value=original_resource_dict["rules"][0]["verbs"],
             actual_value=entity[-1][0]["verbs"],
+            original_error=timeout_error,
         )
 
 
@@ -126,12 +129,13 @@ def verify_reconciled_rolebinding_or_clusterrolebinding_resource(resource, resou
                 and original_resource_dict["subjects"][0]["name"] == sample_subjects[0]["name"]
             ):
                 break
-    except TimeoutExpiredError:
+    except TimeoutExpiredError as timeout_error:
         restore_and_log_error(
             resource=resource,
             updated_resource=updated_and_reconciled_resource["updated_resource"],
             expected_value=original_resource_dict["subjects"][0]["name"],
             actual_value=entity[-1][0]["name"],
+            original_error=timeout_error,
         )
 
 
@@ -146,12 +150,13 @@ def verify_reconciled_configmap_resource(resource, resource_dict):
             entity.append(sample_data)
             if CM_DATA["ca-bundle"] != sample_data["ca-bundle"]:
                 break
-    except TimeoutExpiredError:
+    except TimeoutExpiredError as timeout_error:
         restore_and_log_error(
             resource=resource,
             updated_resource=updated_and_reconciled_resource["updated_resource"],
             expected_value="Expecting ca-bundle, after reconcile",
             actual_value=entity[-1]["ca-bundle"],
+            original_error=timeout_error,
         )
 
 
@@ -166,12 +171,13 @@ def verify_reconciled_secret_resource(resource, resource_dict):
             entity.append(sample_data)
             if SECRET_DATA["tls.crt"] != sample_data["tls.crt"]:
                 break
-    except TimeoutExpiredError:
+    except TimeoutExpiredError as timeout_error:
         restore_and_log_error(
             resource=resource,
             updated_resource=updated_and_reconciled_resource["updated_resource"],
             expected_value="Expecting tls.crt in base64 format, after reconcile",
             actual_value=entity[-1]["tls.crt"],
+            original_error=timeout_error,
         )
 
 
