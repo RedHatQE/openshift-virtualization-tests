@@ -3,7 +3,8 @@ Role-based access control (RBAC) tests
 
 STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-iuo/CNV-63822-role-aggregation-opt-out.md
 
-
+Markers:
+    - post_upgrade
 """
 
 import pytest
