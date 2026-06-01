@@ -104,6 +104,7 @@ reviews:
       - "WIP"
     base_branches:
       - main
+      - cnv-4.22
       - cnv-4.21
       - cnv-4.20
       - cnv-4.19
