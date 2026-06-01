@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 # Add utilities to Python path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from database import CNV_TEST_DB, Base, CnvTestTable, Database  # noqa: E402
+from database import CNV_TEST_DB, Base, CnvTestTable, Database
 
 
 class TestCnvTestTable:

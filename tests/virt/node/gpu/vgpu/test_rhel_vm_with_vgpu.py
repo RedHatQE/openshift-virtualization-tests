@@ -98,7 +98,7 @@ def node_mdevtype_gpu_vm(
 
 @pytest.fixture(scope="class")
 def vm_with_no_gpu(gpu_vma, node_mdevtype_gpu_vm):
-    return [vm.name for vm in [gpu_vma, node_mdevtype_gpu_vm] if not get_num_gpu_devices_in_rhel_vm(vm=vm) == 1]
+    return [vm.name for vm in [gpu_vma, node_mdevtype_gpu_vm] if get_num_gpu_devices_in_rhel_vm(vm=vm) != 1]
 
 
 @pytest.mark.parametrize(
@@ -168,7 +168,7 @@ class TestVGPURHELGPUSSpec:
         """
         Test vGPU is accessible in both the RHEL VMs, using same GPU, using GPUs spec.
         """
-        vm_with_no_gpu = [vm.name for vm in [gpu_vma, gpu_vmb] if not get_num_gpu_devices_in_rhel_vm(vm=vm) == 1]
+        vm_with_no_gpu = [vm.name for vm in [gpu_vma, gpu_vmb] if get_num_gpu_devices_in_rhel_vm(vm=vm) != 1]
         assert not vm_with_no_gpu, f"GPU does not exist in following vms: {vm_with_no_gpu}"
 
 

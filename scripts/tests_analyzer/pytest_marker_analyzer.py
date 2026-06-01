@@ -815,14 +815,12 @@ class ImportVisitor(ast.NodeVisitor):
         if isinstance(test, ast.Name) and test.id == "TYPE_CHECKING":
             return True
         # ``if typing.TYPE_CHECKING:``
-        if (
+        return (
             isinstance(test, ast.Attribute)
             and isinstance(test.value, ast.Name)
             and test.value.id == "typing"
             and test.attr == "TYPE_CHECKING"
-        ):
-            return True
-        return False
+        )
 
 
 class FixtureVisitor(ast.NodeVisitor):
@@ -1779,12 +1777,7 @@ def _extract_modified_symbols(
             # or potentially impactful executable code.
             if line_number <= len(source_lines):
                 line_content = source_lines[line_number - 1].strip()
-                if (
-                    not line_content
-                    or line_content.startswith("#")
-                    or line_content.startswith(("import ", "from "))
-                    or line_content.startswith(('"""', "'''", '"', "'"))
-                ):
+                if not line_content or line_content.startswith(("#", "import ", "from ", '"""', "'''", '"', "'")):
                     has_unattributed = True
                 else:
                     # Executable module-level code — conservative fallback
@@ -2010,7 +2003,7 @@ def _analyze_single_test_dependencies(
             to_visit = []
 
             for dep_file in current_level:
-                if dep_file in visited or not dep_file.suffix == ".py":
+                if dep_file in visited or dep_file.suffix != ".py":
                     continue
 
                 visited.add(dep_file)

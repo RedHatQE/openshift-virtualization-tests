@@ -28,7 +28,7 @@ if "utilities.ssp" in sys.modules:
     del sys.modules["utilities.ssp"]
 
 # Import after setting up mocks to avoid circular dependency
-from utilities.ssp import (  # noqa: E402
+from utilities.ssp import (
     cluster_instance_type_for_hot_plug,
     create_custom_template_from_url,
     get_cim_instance_json,

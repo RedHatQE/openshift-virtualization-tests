@@ -74,7 +74,7 @@ class EndpointTcpClient(PodTcpClient):
         super().__init__(pod=pod, server_ip=server_ip, server_port=server_port, container=container)
         self._netns = netns
 
-    def __enter__(self) -> "EndpointTcpClient":
+    def __enter__(self) -> EndpointTcpClient:
         run_cmd = f"ip netns exec {self._netns} {self._cmd}"
         self._pod.execute(
             command=["sh", "-c", f"nohup {run_cmd} >/tmp/iperf3.log 2>&1 &"],

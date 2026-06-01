@@ -8,7 +8,11 @@ output-format = "grouped"
 exclude = [".git", ".venv", ".mypy_cache", ".tox", "__pycache__"]
 
 [tool.ruff.lint]
-extend-select = ["PLC0415"]
+extend-select = [
+  "PLC0415", # import-outside-top-level
+  "N802",    # function name should be lowercase — method overrides from stdlib
+  "N815",    # mixedCase variable in class scope — k8s API field names use camelCase
+]
 # TODO: Each ignored rule below should be addressed in a dedicated PR.
 ignore = [
   "SIM102",  # collapsible-if — nested ifs are often more readable
@@ -32,11 +36,18 @@ ignore = [
   "B023",    # loop variable not bound in function — needs careful refactor
   "G201",    # .error(exc_info=True) vs .exception()
   "SIM115",  # context manager for file opening — may need structural changes
+  "SIM118",  # in-dict-keys — k8s resource fields require explicit .keys() (not plain dicts)
+  "PERF102", # incorrect-dict-iterator — k8s resource fields require explicit .keys()/.items()
+  "B026",    # star-arg unpacking after keyword arg — required when wrapping TimeoutSampler
 ]
 
 [tool.ruff.lint.per-file-ignores]
 # F821: undefined name — global_config files use dynamic exec() loading via pytest_testconfig
 "tests/global_config*.py" = ["F821"]
+# N802: ast.NodeVisitor method overrides use camelCase (visit_ImportFrom, etc.)
+"scripts/tests_analyzer/pytest_marker_analyzer.py" = ["N802"]
+# N802: logging.Formatter.formatTime override
+"utilities/logger.py" = ["N802"]
 
 [tool.ruff.lint.isort]
 order-by-type = true

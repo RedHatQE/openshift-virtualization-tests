@@ -6,7 +6,7 @@ import random
 import threading
 import time
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import UTC, datetime
 
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.daemonset import DaemonSet
@@ -139,7 +139,7 @@ def create_nginx_monitoring_process(
         timeout_watch = TimeoutWatch(timeout=_sampling_duration)
         while timeout_watch.remaining_time() > 0:
             if not is_http_ok(utility_pods=_utility_pods, node=_control_plane_host_node, url=_url):
-                raise Exception("Wrong status code from server.")
+                raise RuntimeError(f"HTTP health check failed for URL {_url}: expected status 200 (OK).")
             time.sleep(_sampling_interval)
         LOGGER.info("HTTP querying finished successfully.")
 
@@ -238,7 +238,7 @@ def collect_cluster_health_info(client, hco_namespace, additional_namespaces):
 
     log_content = json.dumps(
         {
-            f"{datetime.utcnow().strftime('%Y/%m/%d %H:%M:%S')}": [
+            f"{datetime.now(tz=UTC).strftime('%Y/%m/%d %H:%M:%S')}": [
                 pods_status,
                 deployments_replicas,
                 daemonset_replicas,

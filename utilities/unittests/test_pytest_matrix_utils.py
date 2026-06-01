@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from utilities.pytest_matrix_utils import (  # noqa: E402
+from utilities.pytest_matrix_utils import (
     hpp_matrix,
     immediate_matrix,
     online_resize_matrix,
