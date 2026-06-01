@@ -121,7 +121,6 @@ def vm_restore_with_predictable_names(
     admin_client,
     rhel_vm_for_snapshot,
     snapshot_with_content,
-    source_volume_name_for_predictable_name_restore,
 ):
     if rhel_vm_for_snapshot.ready:
         rhel_vm_for_snapshot.stop(wait=True)
@@ -135,7 +134,4 @@ def vm_restore_with_predictable_names(
         volume_restore_policy="PrefixTargetName",
     ) as vm_restore:
         vm_restore.wait_restore_done(timeout=TIMEOUT_10MIN)
-        yield {
-            "source_volume_name": source_volume_name_for_predictable_name_restore,
-            "vm_restore": vm_restore,
-        }
+        yield vm_restore

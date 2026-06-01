@@ -278,6 +278,7 @@ class TestRestoreSnapshots:
     def test_restore_snapshot_with_predictable_names(
         self,
         vm_restore_with_predictable_names,
+        source_volume_name_for_predictable_name_restore,
     ):
         """
         Test restore snapshot where the DV/PVC restored has a predictable name derived from the source vm name and
@@ -293,11 +294,11 @@ class TestRestoreSnapshots:
         Expected Results:
             - The restored DV/PVC name matches the expected predictable name derived from the source vm name and source volume name.
         """
-        source_volume_name = vm_restore_with_predictable_names["source_volume_name"]
-        vm_restore = vm_restore_with_predictable_names["vm_restore"]
 
-        restore_status = vm_restore.instance.status
-        expected_name = f"{vm_restore.vm_name}-{source_volume_name}"[:63]
+        restore_status = vm_restore_with_predictable_names.instance.status
+        expected_name = (
+            f"{vm_restore_with_predictable_names.vm_name}-{source_volume_name_for_predictable_name_restore}"[:63]
+        )
 
         assert restore_status.restores[0].dataVolumeName == expected_name, (
             f"Restored DV name is '{restore_status.restores[0].dataVolumeName}', expected '{expected_name}'"
