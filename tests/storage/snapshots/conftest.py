@@ -108,19 +108,23 @@ def file_created_during_snapshot(windows_vm_for_snapshot, windows_snapshot):
 
 
 @pytest.fixture()
-def vm_restore_with_predictable_names(
-    admin_client,
-    rhel_vm_for_snapshot,
-    snapshot_with_content,
-):
-    if rhel_vm_for_snapshot.ready:
-        rhel_vm_for_snapshot.stop(wait=True)
-
-    source_volume_name = next(
+def source_volume_name_for_predictable_name_restore(rhel_vm_for_snapshot):
+    yield next(
         volume.name
         for volume in rhel_vm_for_snapshot.instance.spec.template.spec.volumes
         if getattr(volume, "dataVolume", None) or getattr(volume, "persistentVolumeClaim", None)
     )
+
+
+@pytest.fixture()
+def vm_restore_with_predictable_names(
+    admin_client,
+    rhel_vm_for_snapshot,
+    snapshot_with_content,
+    source_volume_name_for_predictable_name_restore,
+):
+    if rhel_vm_for_snapshot.ready:
+        rhel_vm_for_snapshot.stop(wait=True)
 
     vm_restore = VirtualMachineRestore(
         name=f"{rhel_vm_for_snapshot.name}-restored",
@@ -130,14 +134,12 @@ def vm_restore_with_predictable_names(
         client=admin_client,
         volume_restore_policy="PrefixTargetName",
     )
-    # Manually set volumeRestorePolicy since ocp-resources incorrectly maps to volumeNamePolicy
     vm_restore.to_dict()
-
     vm_restore.deploy()
     try:
         vm_restore.wait_restore_done(timeout=TIMEOUT_10MIN)
         yield {
-            "source_volume_name": source_volume_name,
+            "source_volume_name": source_volume_name_for_predictable_name_restore,
             "vm_restore": vm_restore,
         }
     finally:
