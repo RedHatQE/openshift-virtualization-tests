@@ -1261,6 +1261,8 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
         tpm_params=None,
         additional_labels=None,
         vm_affinity=None,
+        vm_instance_type=None,
+        vm_preference=None,
     ):
         """
         VM creation using common templates.
@@ -1335,6 +1337,8 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
             additional_labels=additional_labels,
             vm_affinity=vm_affinity,
             os_flavor=self.os_flavor,
+            vm_instance_type=vm_instance_type,
+            vm_preference=vm_preference,
         )
         self.data_source = data_source
         self.data_volume_template = data_volume_template
@@ -2050,6 +2054,8 @@ def vm_instance_from_template(
     host_device_name=None,
     gpu_name=None,
     vm_affinity=None,
+    vm_instance_type=None,
+    vm_preference=None,
 ):
     """Create a VM from template and start it (start step could be skipped by setting
     request.param['start_vm'] to False.
@@ -2100,6 +2106,8 @@ def vm_instance_from_template(
         machine_type=params.get("machine_type"),
         eviction_strategy=params.get("eviction_strategy"),
         vm_affinity=vm_affinity,
+        vm_instance_type=vm_instance_type,
+        vm_preference=vm_preference,
     ) as vm:
         if params.get("start_vm", True):
             running_vm(
