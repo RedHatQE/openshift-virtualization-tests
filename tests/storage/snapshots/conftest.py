@@ -126,21 +126,16 @@ def vm_restore_with_predictable_names(
     if rhel_vm_for_snapshot.ready:
         rhel_vm_for_snapshot.stop(wait=True)
 
-    vm_restore = VirtualMachineRestore(
+    with VirtualMachineRestore(
         name=f"{rhel_vm_for_snapshot.name}-restored",
         namespace=rhel_vm_for_snapshot.namespace,
         vm_name=rhel_vm_for_snapshot.name,
         snapshot_name=snapshot_with_content[0].name,
         client=admin_client,
         volume_restore_policy="PrefixTargetName",
-    )
-    vm_restore.to_dict()
-    vm_restore.deploy()
-    try:
+    ) as vm_restore:
         vm_restore.wait_restore_done(timeout=TIMEOUT_10MIN)
         yield {
             "source_volume_name": source_volume_name_for_predictable_name_restore,
             "vm_restore": vm_restore,
         }
-    finally:
-        vm_restore.clean_up()
