@@ -21,6 +21,7 @@ class TestRoleAggregationDisabledRBACEnforcement:
         - Unprivileged user created via HTPasswd identity provider
     """
 
+    @pytest.mark.post_upgrade
     @pytest.mark.polarion("CNV-16028")
     def test_vm_list_forbidden_when_aggregation_disabled(self):
         """
@@ -51,6 +52,7 @@ class TestRoleAggregationReenabledAccess:
         - Unprivileged user created via HTPasswd identity provider
     """
 
+    @pytest.mark.post_upgrade
     @pytest.mark.polarion("CNV-16029")
     def test_access_restored_when_aggregation_reenabled(self):
         """
