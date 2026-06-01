@@ -7,6 +7,7 @@ import logging
 import pytest
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 from ocp_resources.datavolume import DataVolume
+from ocp_resources.template import Template
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
@@ -26,15 +27,22 @@ from tests.storage.utils import (
 )
 from utilities.constants import (
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     OS_FLAVOR_WINDOWS,
+=======
+>>>>>>> 401353c8 (use template)
     QUARANTINED,
     TIMEOUT_1MIN,
     TIMEOUT_5MIN,
     TIMEOUT_60MIN,
     U1_LARGE,
+<<<<<<< HEAD
     WINDOWS_2K22_PREFERENCE,
 >>>>>>> 21c67484 (increase timeout and remove unused code)
+=======
+    WINDOWS_2K19_PREFERENCE,
+>>>>>>> 401353c8 (use template)
     Images,
 )
 from utilities.constants.images import OS_FLAVOR_WINDOWS
@@ -46,7 +54,7 @@ from utilities.storage import (
     ErrorMsg,
     create_dv,
 )
-from utilities.virt import VirtualMachineForTests, running_vm, wait_for_windows_vm
+from utilities.virt import VirtualMachineForTestsFromTemplate, get_windows_os_dict, running_vm, wait_for_windows_vm
 
 pytestmark = [
     pytest.mark.post_upgrade,
@@ -343,9 +351,9 @@ def test_blank_disk_import_validate_status(data_volume_multi_storage_scope_funct
     [
         pytest.param(
             {
-                "dv_name": "dv-win-2022",
+                "dv_name": "dv-win-19",
                 "source": HTTP,
-                "image": f"{Images.Windows.DIR}/{Images.Windows.WIN2022_IMG}",
+                "image": f"{Images.Windows.UEFI_WIN_DIR}/{Images.Windows.WIN2k19_IMG}",
                 "dv_size": Images.Windows.DEFAULT_DV_SIZE,
             },
             marks=pytest.mark.polarion("CNV-3637"),
@@ -354,17 +362,19 @@ def test_blank_disk_import_validate_status(data_volume_multi_storage_scope_funct
     indirect=True,
 )
 def test_successful_vm_from_imported_dv_windows_with_vtpm(
+    admin_client,
     unprivileged_client,
     namespace,
     data_volume_multi_storage_scope_function,
-    cpu_for_migration,
+    modern_cpu_for_migration,
 ):
-
-    with VirtualMachineForTests(
-        name="win2022-vm",
+    win2019_os_dict = get_windows_os_dict(windows_version="win-2019")
+    with VirtualMachineForTestsFromTemplate(
+        name="win2019-vm",
         namespace=namespace.name,
         client=unprivileged_client,
-        os_flavor=OS_FLAVOR_WINDOWS,
+        labels=Template.generate_template_labels(**win2019_os_dict["template_labels"]),
+        existing_data_volume=data_volume_multi_storage_scope_function,
         vm_instance_type=VirtualMachineClusterInstancetype(name=U1_LARGE, client=unprivileged_client),
         vm_preference=VirtualMachineClusterPreference(name=WINDOWS_2K22_PREFERENCE, client=unprivileged_client),
         data_volume_template={
@@ -373,6 +383,8 @@ def test_successful_vm_from_imported_dv_windows_with_vtpm(
         },
         cpu_model=cpu_for_migration,
     ) as vm:
-        vm.start()
-        wait_for_windows_vm(vm=vm, version="2022", timeout=WINDOWS_VM_TIMEOUT)
+        running_vm(vm=vm)
+        wait_for_windows_vm(vm=vm, version="2019", timeout=WINDOWS_VM_TIMEOUT)
+        xml_dict_tpm = vm.vmi.get_xml_dict(privileged_client=admin_client)["domain"]["devices"]["tpm"]
+        assert xml_dict_tpm["@model"] == "tpm-crb", f"Expected TPM model tpm-crb, got {xml_dict_tpm['@model']}"
         validate_os_info_vmi_vs_windows_os(vm=vm)
