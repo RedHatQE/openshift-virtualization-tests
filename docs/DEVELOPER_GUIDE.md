@@ -112,6 +112,16 @@ It is essential to have a good commit message if you want your change to be revi
   - `jira-ticket: https://issues.redhat.com/browse/<jira_id>`
   - The card will be automatically closed once PR is merged
 
+### Request a test execution plan
+
+Comment on your GitHub PR:
+
+```bash
+/test-plan
+```
+
+This triggers CodeRabbit to analyze the PR's changed files and post an inline review comment with a test execution plan (smoke/gating impact, affected tests to run).
+
 ### Run the tests via a Jenkins job
 
 #### Build and push a container with your changes
