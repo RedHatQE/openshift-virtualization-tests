@@ -55,6 +55,7 @@ class Devices:
     disks: list[SpecDisk] | None = None
     interfaces: list[Interface] | None = None
     rng: dict[Any, Any] | None = None
+    autoattachPodInterface: bool | None = None  # noqa: N815
 
 
 @dataclass
