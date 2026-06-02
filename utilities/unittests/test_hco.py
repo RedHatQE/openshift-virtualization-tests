@@ -39,7 +39,7 @@ if "utilities.hco" in sys.modules:
     del sys.modules["utilities.hco"]
 
 # Import after setting up mocks to avoid circular dependency
-from utilities.hco import (  # noqa: E402
+from utilities.hco import (
     CDI,
     DEFAULT_HCO_PROGRESSING_CONDITIONS,
     HCO_JSONPATCH_ANNOTATION_COMPONENT_DICT,
