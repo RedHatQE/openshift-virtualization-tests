@@ -270,7 +270,7 @@ class TestRestoreSnapshots:
             pytest.param(
                 {"vm_name": "vm-cnv-80304"},
                 {"number_of_snapshots": 1, "online_vm": False},
-                marks=pytest.mark.polarion("CNV-80304"),
+                marks=pytest.mark.polarion("CNV-16212"),
             ),
         ],
         indirect=True,
