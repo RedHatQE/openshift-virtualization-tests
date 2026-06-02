@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from utilities.constants import ARM_64, CENTOS_STREAM10_PREFERENCE, RHEL10_PREFERENCE
+from utilities.constants import AMD_64, ARM_64, CENTOS_STREAM10_PREFERENCE, RHEL10_PREFERENCE
 from utilities.exceptions import OsDictNotFoundError
 from utilities.os_utils import (
     CENTOS_OS_MAPPING,
@@ -333,8 +333,8 @@ class TestGenerateInstanceTypeRhelOsMatrix:
         rhel9_item = next(item for item in result if "rhel-9" in item)
         assert rhel9_item["rhel-9"]["latest_released"] is True
 
-    def test_arch_suffix_applied_to_preference_and_data_source(self):
-        """arch_suffix is appended to both the preference name and the DataSource."""
+    def test_arch_suffix_applied_to_preference_not_data_source(self):
+        """On homogeneous clusters arch_suffix is appended to preference but not DataSource."""
         result = generate_linux_instance_type_os_matrix(
             os_name="rhel",
             preferences=[RHEL10_PREFERENCE],
@@ -343,28 +343,57 @@ class TestGenerateInstanceTypeRhelOsMatrix:
 
         config = result[0][f"{RHEL10_PREFERENCE}.{ARM_64}"]
         assert config["preference"] == f"{RHEL10_PREFERENCE}.{ARM_64}"
+        assert config["DATA_SOURCE_NAME"] == "rhel10"
+
+    def test_multiarch_data_source_gets_arch_suffix(self):
+        """On multiarch clusters add_data_source_arch_suffix appends arch to DataSource."""
+        result = generate_linux_instance_type_os_matrix(
+            os_name="rhel",
+            preferences=[RHEL10_PREFERENCE],
+            arch_suffix=ARM_64,
+            add_data_source_arch_suffix=True,
+        )
+
+        config = result[0][f"{RHEL10_PREFERENCE}.{ARM_64}"]
+        assert config["preference"] == f"{RHEL10_PREFERENCE}.{ARM_64}"
         assert config["DATA_SOURCE_NAME"] == f"rhel10-{ARM_64}"
 
-    def test_arch_suffix_omitted_from_preference_when_add_arch_suffix_false(self):
-        """add_arch_suffix=False keeps the preference plain while the DataSource still gets the arch suffix."""
+    def test_arch_suffix_omitted_from_preference_when_add_preference_arch_suffix_false(self):
+        """add_preference_arch_suffix=False keeps the preference plain. DataSource stays bare without add_data_source_arch_suffix."""
         result = generate_linux_instance_type_os_matrix(
             os_name="centos.stream",
             preferences=[CENTOS_STREAM10_PREFERENCE],
             arch_suffix=ARM_64,
-            add_arch_suffix=False,
+            add_preference_arch_suffix=False,
         )
 
         config = result[0][CENTOS_STREAM10_PREFERENCE]
         assert config["preference"] == CENTOS_STREAM10_PREFERENCE, "preference must not include arch suffix"
-        assert config["DATA_SOURCE_NAME"] == f"centos-stream10-{ARM_64}", "DataSource must include arch suffix"
+        assert config["DATA_SOURCE_NAME"] == "centos-stream10", (
+            "DataSource must be bare without add_data_source_arch_suffix"
+        )
 
-    def test_add_arch_suffix_false_no_arch_suffix(self):
-        """add_arch_suffix=False with no arch_suffix is a no-op."""
+    def test_multiarch_amd64_bare_preference_suffixed_data_source(self):
+        """Multiarch + amd64: preference stays bare, DataSource gets the arch suffix (the fixed regression)."""
+        result = generate_linux_instance_type_os_matrix(
+            os_name="rhel",
+            preferences=[RHEL10_PREFERENCE],
+            arch_suffix=AMD_64,
+            add_preference_arch_suffix=False,
+            add_data_source_arch_suffix=True,
+        )
+
+        config = result[0][RHEL10_PREFERENCE]
+        assert config["preference"] == RHEL10_PREFERENCE, "preference must stay bare on amd64"
+        assert config["DATA_SOURCE_NAME"] == f"rhel10-{AMD_64}", "DataSource must carry arch suffix on multiarch"
+
+    def test_add_preference_arch_suffix_false_no_arch_suffix(self):
+        """add_preference_arch_suffix=False with no arch_suffix is a no-op."""
         result_default = generate_linux_instance_type_os_matrix(
             os_name="centos.stream", preferences=[CENTOS_STREAM10_PREFERENCE]
         )
         result_no_arch = generate_linux_instance_type_os_matrix(
-            os_name="centos.stream", preferences=[CENTOS_STREAM10_PREFERENCE], add_arch_suffix=False
+            os_name="centos.stream", preferences=[CENTOS_STREAM10_PREFERENCE], add_preference_arch_suffix=False
         )
 
         assert result_default == result_no_arch
