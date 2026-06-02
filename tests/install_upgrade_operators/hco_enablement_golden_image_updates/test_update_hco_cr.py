@@ -89,11 +89,11 @@ class TestCustomTemplates:
 
     @pytest.mark.dependency(name="test_add_custom_data_import_cron_template_disable_spec")
     @pytest.mark.polarion("CNV-7914")
+    @pytest.mark.usefixtures("disabled_boot_image_import_excluding_custom_datasource")
     def test_add_custom_data_import_cron_template_disable_spec(
         self,
         admin_client,
         hco_namespace,
-        disabled_boot_image_import_excluding_custom_datasource,
         hyperconverged_status_templates_scope_function,
         ssp_spec_templates_scope_function,
         image_stream_names,
