@@ -102,15 +102,13 @@ def dv_from_http_import(
 
 @pytest.fixture()
 def running_pod_with_dv_pvc(
-    storage_class_matrix__module__,
-    storage_class_name_scope_module,
     dv_from_http_import,
 ):
     """Create a running pod with DV's PVC."""
     dv_from_http_import.wait_for_dv_success()
     with create_pod_for_pvc(
         pvc=dv_from_http_import.pvc,
-        volume_mode=storage_class_matrix__module__[storage_class_name_scope_module]["volume_mode"],
+        volume_mode=dv_from_http_import.pvc.instance.spec.volumeMode,
     ) as pod:
         yield pod
 
