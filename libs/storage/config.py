@@ -26,7 +26,7 @@ class StorageClassConfig:
         self.name = name
         self.storage_config = self.get_storage_config()
 
-    def supported_storage_classes(self) -> list["StorageClass"]:
+    def supported_storage_classes(self) -> list[StorageClass]:
         return [
             StorageClass(
                 name=StorageClassNames.CEPH_RBD_VIRTUALIZATION,
