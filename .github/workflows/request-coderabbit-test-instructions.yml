@@ -79,7 +79,15 @@ jobs:
                  Do NOT limit impact to tests that import the modified symbol only.
               7. **Smoke test impact:** Intersect the affected set from step 6 with smoke-marked tests.
                  Run: `rg -l '@pytest.mark.smoke' tests/`
-                 Set True ONLY if a smoke-marked file also appears in the affected set from 6b-6e.
+                 VERIFY the above command returned actual file paths before concluding False.
+                 Set True if either condition is met:
+                 - a smoke-marked file appears in the affected set from 6b-6e, OR
+                 - any conftest.py in the smoke test's parent-directory hierarchy (up to repo root)
+                   imports or calls a modified utilities/libs symbol — including autouse fixtures
+                   that depend on modified functions. ALL tests in that directory and below are affected.
+                 Example check: for each smoke_file, scan dirname(smoke_file)/conftest.py,
+                 dirname(dirname(smoke_file))/conftest.py, etc. for modified symbol imports
+                 and autouse fixtures that depend on modified symbols.
               8. **Gating test impact:** Intersect the affected set from step 6 with gating-marked tests.
                  Run: `rg -l '@pytest.mark.gating' tests/`
                  Set True if a gating-marked file also appears in the affected set from 6b-6e.
