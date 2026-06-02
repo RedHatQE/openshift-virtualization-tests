@@ -776,6 +776,35 @@ class TestDisableCommonBootImageImportHcoSpec:
     @patch("utilities.hco.enable_common_boot_image_import_spec_wait_for_data_import_cron")
     @patch("utilities.hco.wait_for_deleted_data_import_crons")
     @patch("utilities.hco.update_common_boot_image_import_spec")
+    def test_disable_propagates_exclude_data_source_names(self, mock_update_spec, mock_wait_deleted, mock_enable_spec):
+        """Test that exclude_data_source_names is forwarded to the teardown call"""
+        mock_admin_client = MagicMock()
+        mock_hco = MagicMock()
+        mock_hco.instance.spec = {"enableCommonBootImageImport": True}
+        mock_namespace = MagicMock()
+        mock_dics = [MagicMock()]
+        exclude_names = {"custom-datasource"}
+
+        gen = disable_common_boot_image_import_hco_spec(
+            mock_admin_client, mock_hco, mock_namespace, mock_dics, exclude_data_source_names=exclude_names
+        )
+        next(gen)
+
+        try:
+            next(gen)
+        except StopIteration:
+            pass
+
+        mock_enable_spec.assert_called_once_with(
+            hco_resource=mock_hco,
+            admin_client=mock_admin_client,
+            namespace=mock_namespace,
+            exclude_data_source_names=exclude_names,
+        )
+
+    @patch("utilities.hco.enable_common_boot_image_import_spec_wait_for_data_import_cron")
+    @patch("utilities.hco.wait_for_deleted_data_import_crons")
+    @patch("utilities.hco.update_common_boot_image_import_spec")
     def test_disable_when_already_disabled(self, mock_update_spec, mock_wait_deleted, mock_enable_spec):
         """Test context manager when common boot image import is already disabled"""
         mock_admin_client = MagicMock()
@@ -834,6 +863,39 @@ class TestEnableCommonBootImageImportSpecWaitForDataImportCron:
             namespace=mock_namespace.name,
             consecutive_checks_count=1,
             exclude_data_source_names=None,
+        )
+
+    @patch("utilities.hco.wait_for_hco_conditions")
+    @patch("utilities.hco.wait_for_ssp_conditions")
+    @patch("utilities.hco.wait_for_at_least_one_auto_update_data_import_cron")
+    @patch("utilities.hco.update_common_boot_image_import_spec")
+    @patch("utilities.hco.Namespace")
+    @patch("utilities.hco.verify_boot_sources_reimported", return_value=True)
+    def test_enable_spec_propagates_exclude_data_source_names(
+        self,
+        mock_verify_boot,
+        mock_namespace_class,
+        mock_update_spec,
+        mock_wait_dic,
+        mock_wait_ssp,
+        mock_wait_hco,
+    ):
+        """Test that exclude_data_source_names is forwarded to verify_boot_sources_reimported"""
+        mock_hco = MagicMock()
+        mock_hco.namespace = "openshift-cnv"
+        mock_admin_client = MagicMock()
+        mock_namespace = MagicMock()
+        exclude_names = {"custom-datasource"}
+
+        enable_common_boot_image_import_spec_wait_for_data_import_cron(
+            mock_hco, mock_admin_client, mock_namespace, exclude_data_source_names=exclude_names
+        )
+
+        mock_verify_boot.assert_called_once_with(
+            admin_client=mock_admin_client,
+            namespace=mock_namespace.name,
+            consecutive_checks_count=1,
+            exclude_data_source_names=exclude_names,
         )
 
 
