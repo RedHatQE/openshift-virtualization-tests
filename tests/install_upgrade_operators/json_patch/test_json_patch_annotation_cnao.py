@@ -61,7 +61,7 @@ class TestCNAOJsonPatch:
             admin_client=admin_client,
             hco_namespace=hco_namespace,
             expected_conditions={
-                **{"TaintedConfiguration": Resource.Condition.Status.TRUE},
+                "TaintedConfiguration": Resource.Condition.Status.TRUE,
             },
         )
         cnao_spec = cnao_resource.instance.spec

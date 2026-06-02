@@ -1,4 +1,4 @@
-"""Helpers for OVN localnet migration stuntime tests."""
+"""Helpers for migration stuntime tests."""
 
 import ipaddress
 import logging
@@ -21,35 +21,6 @@ DEFAULT_COMMAND_TIMEOUT_SECONDS: Final[int] = 10
 
 class InsufficientStuntimeDataError(ValueError):
     """Raised when ping log has too few successful replies to compute stuntime."""
-
-
-def measure_stuntime(active_ping: "ContinuousPing") -> float:
-    """Stop the continuous ping session and compute the measured stuntime.
-
-    Args:
-        active_ping: Active continuous ping session to stop and evaluate.
-
-    Returns:
-        Measured stuntime in seconds.
-    """
-    active_ping.stop()
-    _, _, lost = active_ping.report()
-    return compute_stuntime(lost_packets=lost)
-
-
-def compute_stuntime(lost_packets: int) -> float:
-    """Compute stuntime from lost packet count.
-
-    Args:
-        lost_packets: Number of packets lost during migration.
-
-    Returns:
-        Stuntime in seconds (connectivity gap).
-    """
-    # Add +1 to account for the gap from last successful reply before loss to first successful reply after recovery
-    stuntime = 0.0 if lost_packets == 0 else (lost_packets + 1) * PING_INTERVAL_SECONDS
-    LOGGER.info(f"Stuntime: {stuntime:.1f}s (from {lost_packets} lost packets)")
-    return stuntime
 
 
 class ContinuousPing:
@@ -141,3 +112,32 @@ class ContinuousPing:
             ],
             timeout=DEFAULT_COMMAND_TIMEOUT_SECONDS + 5,
         )
+
+
+def measure_stuntime(active_ping: ContinuousPing) -> float:
+    """Stop a continuous ping session and compute the stuntime.
+
+    Args:
+        active_ping: Active ContinuousPing session to stop and evaluate.
+
+    Returns:
+        Measured stuntime in seconds.
+    """
+    active_ping.stop()
+    _, _, lost = active_ping.report()
+    return _compute_stuntime(lost_packets=lost)
+
+
+def _compute_stuntime(lost_packets: int) -> float:
+    """Compute stuntime from lost packet count.
+
+    Args:
+        lost_packets: Number of packets lost during migration.
+
+    Returns:
+        Stuntime in seconds (connectivity gap).
+    """
+    # Add +1 to account for the gap from last successful reply before loss to first successful reply after recovery
+    stuntime = 0.0 if lost_packets == 0 else (lost_packets + 1) * PING_INTERVAL_SECONDS
+    LOGGER.info(f"Stuntime: {stuntime:.1f}s (from {lost_packets} lost packets)")
+    return stuntime
