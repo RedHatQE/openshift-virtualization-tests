@@ -2,8 +2,7 @@ import logging
 import math
 import os
 import shlex
-from collections.abc import Collection
-from collections.abc import Generator
+from collections.abc import Collection, Generator
 from contextlib import contextmanager
 from typing import Any
 
