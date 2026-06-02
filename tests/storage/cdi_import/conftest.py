@@ -92,6 +92,7 @@ def dv_from_http_import(
         content_type=request.param.get("content_type", DataVolume.ContentType.KUBEVIRT),
         cert_configmap=request.param.get("configmap_name"),
         size=request.param.get("size", DEFAULT_DV_SIZE),
+        volume_mode=request.param.get("volume_mode"),
         storage_class=storage_class_name_scope_module,
         client=namespace.client,
     ) as dv:
