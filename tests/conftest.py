@@ -2737,5 +2737,5 @@ def hugepages_gib_values(workers):
 
 
 @pytest.fixture(scope="module")
-def next_vlan_index_number():  # skip-unused-code
+def next_vlan_index_number():
     return cluster_vlan_iterator()
