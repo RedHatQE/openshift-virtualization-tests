@@ -48,9 +48,7 @@ def enable_bitlocker(vm):
         try:
             for sample in sampler:
                 if sample:
-                    if all([
-                        True if msg in sample[0] else False for msg in ["100.0%", "Fully Encrypted", "Protection On"]
-                    ]):
+                    if all(msg in sample[0] for msg in ["100.0%", "Fully Encrypted", "Protection On"]):
                         return
         except TimeoutExpiredError:
             LOGGER.error("Failed to encrypt disk")
