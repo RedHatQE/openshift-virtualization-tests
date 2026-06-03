@@ -649,17 +649,6 @@ def update_cpu_arch_related_config(cpu_arch_option: str) -> None:
                 generate_instance_type_matrix_dicts(os_dict=py_config)
 
 
-def remove_tests_from_list(items: list[pytest.Item], filter_str: str) -> tuple[list[pytest.Item], list[pytest.Item]]:
-    discard_tests: list[pytest.Item] = []
-    items_to_return: list[pytest.Item] = []
-    for item in items:
-        if filter_str in item.keywords:
-            discard_tests.append(item)
-        else:
-            items_to_return.append(item)
-    return discard_tests, items_to_return
-
-
 def filter_multiarch_tests(items: list[pytest.Item], config: pytest.Config) -> list[pytest.Item]:
     if py_config.get("cluster_type") == MULTIARCH:
         return items
