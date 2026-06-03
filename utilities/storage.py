@@ -793,7 +793,7 @@ def run_command_on_vm_and_check_output(
     )
 
 
-def assert_disk_serial(vm, command=shlex.split("sudo ls /dev/disk/by-id")):
+def assert_disk_serial(vm, command=_DEFAULT_DISK_SERIAL_COMMAND):
     assert (
         HOTPLUG_DISK_SERIAL
         in run_ssh_commands(host=vm.ssh_exec, commands=command, wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC)[0]
