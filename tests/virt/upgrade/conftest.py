@@ -14,7 +14,7 @@ from pytest_testconfig import py_config
 
 from tests.virt.constants import VM_LABEL
 from tests.virt.upgrade.utils import (
-    get_virt_launcher_image_from_csv,
+    get_virt_launcher_images_from_csv,
     validate_vms_pod_updated,
     vm_from_template,
     wait_for_automatic_vm_migrations,
@@ -167,20 +167,19 @@ def vms_for_upgrade_dict_before(vms_for_upgrade):
 def unupdated_vmi_pods_names(
     admin_client,
     virt_migratable_vms,
-    virt_launcher_from_csv_before_upgrade,
+    virt_launcher_images_from_csv_before_upgrade,
     csv_after_upgrade,
 ):
-    virt_launcher_image_after_upgrade = get_virt_launcher_image_from_csv(csv=csv_after_upgrade)
-
-    if virt_launcher_from_csv_before_upgrade == virt_launcher_image_after_upgrade:
-        LOGGER.warning(f"virt-launcher unchanged, skipping migration check: {virt_launcher_from_csv_before_upgrade}")
+    virt_launcher_images_after_upgrade = get_virt_launcher_images_from_csv(csv=csv_after_upgrade)
+    if virt_launcher_images_from_csv_before_upgrade == virt_launcher_images_after_upgrade:
+        LOGGER.warning(
+            f"virt-launcher unchanged, skipping migration check: {virt_launcher_images_from_csv_before_upgrade}"
+        )
         return []
 
     wait_for_automatic_vm_migrations(vm_list=virt_migratable_vms, admin_client=admin_client)
-
     return validate_vms_pod_updated(
-        admin_client=admin_client,
-        expected_virt_launcher_image=virt_launcher_image_after_upgrade,
+        expected_virt_launcher_images=virt_launcher_images_after_upgrade,
         vm_list=virt_migratable_vms,
     )
 
@@ -375,8 +374,8 @@ def parallel_live_migrations_increased(hyperconverged_resource_scope_session):
 
 
 @pytest.fixture(scope="session")
-def virt_launcher_from_csv_before_upgrade(csv_scope_session):
-    return get_virt_launcher_image_from_csv(csv=csv_scope_session)
+def virt_launcher_images_from_csv_before_upgrade(csv_scope_session):
+    return get_virt_launcher_images_from_csv(csv=csv_scope_session)
 
 
 @pytest.fixture()

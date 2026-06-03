@@ -646,7 +646,7 @@ def create_windows11_wsl2_vm(
         source=REGISTRY_STR,
         size=Images.Windows.CONTAINER_DISK_DV_SIZE,
         storage_class=storage_class,
-        url=f"{get_test_artifact_server_url(schema=REGISTRY_STR)}/docker/windows-qe/win_11:virtio",
+        url=f"{get_test_artifact_server_url(schema=REGISTRY_STR)}/docker-local/windows-qe/win_11:virtio",
         secret=artifactory_secret,
         cert_configmap=artifactory_config_map.name,
     )
