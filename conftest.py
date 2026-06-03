@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Pytest conftest file for CNV tests
 """
@@ -51,6 +50,7 @@ from utilities.exceptions import MissingEnvironmentVariableError, StorageSanityE
 from utilities.junit_ai_utils import enrich_junit_xml, setup_ai_analysis
 from utilities.logger import setup_logging
 from utilities.pytest_utils import (
+    assert_incremental_classes_fully_collected,
     config_default_storage_class,
     deploy_run_in_progress_config_map,
     deploy_run_in_progress_namespace,
@@ -126,12 +126,9 @@ def pytest_addoption(parser):
     leftovers_collector = parser.getgroup(name="LeftoversCollector")
     scale_group = parser.getgroup(name="Scale")
     session_group = parser.getgroup(name="Session")
-    csv_group = parser.getgroup(name="CSV")
     ci_group = parser.getgroup(name="CI")
     component_sanity_group = parser.getgroup(name="ComponentSanity")
     ai_insights_group = parser.getgroup(name="ai-job-insight")
-
-    csv_group.addoption("--update-csv", action="store_true")
 
     # Upgrade addoption
     install_upgrade_group.addoption(
@@ -737,7 +734,7 @@ def pytest_runtest_setup(item):
     if "incremental" in item.keywords:
         previousfailed = getattr(item.parent, "_previousfailed", None)
         if previousfailed is not None:
-            pytest.xfail("previous test failed (%s)" % previousfailed.name)
+            pytest.xfail(f"previous test failed ({previousfailed.name})")
 
 
 def pytest_runtest_call(item):
@@ -848,6 +845,7 @@ def pytest_sessionstart(session):
 
 
 def pytest_collection_finish(session):
+    assert_incremental_classes_fully_collected(items=session.items)
     validate_collected_tests_arch_params(session=session)
     if session.config.getoption("--collect-tests-markers"):
         get_tests_cluster_markers(items=session.items, filepath=session.config.getoption("--tests-markers-file"))

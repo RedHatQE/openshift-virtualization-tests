@@ -12,11 +12,13 @@ from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from pytest_testconfig import config as py_config
 
 from libs.vm.spec import (
+    Affinity,
     CloudInitNoCloud,
     ContainerDisk,
     Devices,
     Disk,
     Metadata,
+    Network,
     SpecDisk,
     VMISpec,
     VMSpec,
@@ -76,7 +78,7 @@ class BaseVirtualMachine(VirtualMachine):
         self,
         commands: list[str],
         timeout: int,
-    ) -> dict[str, list[str]] | None:
+    ) -> dict[str, list[str]]:
         return vm_console_run_commands(vm=self, commands=commands, timeout=timeout)
 
     def wait_for_agent_connected(self) -> None:
@@ -112,6 +114,33 @@ class BaseVirtualMachine(VirtualMachine):
         patches = {
             self: {"spec": {"template": {"metadata": {"annotations": self._spec.template.metadata.annotations}}}}
         }
+        ResourceEditor(patches=patches).update()
+
+    def set_networks(self, networks: list[Network]) -> None:
+        """Replace all secondary networks in the VM spec with a single atomic patch.
+
+        Updates the in-memory spec first so the object stays consistent with the cluster
+        without requiring a re-fetch after the patch.
+
+        Args:
+            networks: Full list of Network entries to apply (including the pod network).
+        """
+        self._spec.template.spec.networks = networks
+        serialized = [asdict(obj=net, dict_factory=self._filter_out_none_values) for net in networks]
+        ResourceEditor(patches={self: {"spec": {"template": {"spec": {"networks": serialized}}}}}).update()
+
+    def set_template_affinity(self, affinity: Affinity | None) -> None:
+        """Replace the VM template affinity.
+
+        Serializes without dict_factory so that None-valued fields (e.g. podAffinity: None)
+        are preserved as null in the merge patch, ensuring the old affinity type is removed.
+
+        Args:
+            affinity: Affinity object to set, or None to clear.
+        """
+        self._spec.template.spec.affinity = affinity
+        template_affinity = asdict(obj=affinity) if affinity else None
+        patches = {self: {"spec": {"template": {"spec": {"affinity": template_affinity}}}}}
         ResourceEditor(patches=patches).update()
 
     @property

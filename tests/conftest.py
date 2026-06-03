@@ -13,7 +13,7 @@ import subprocess
 import tempfile
 from bisect import bisect_left
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from signal import SIGINT, SIGTERM, getsignal, signal
 
 import bcrypt
@@ -45,7 +45,6 @@ from ocp_resources.network_addons_config import NetworkAddonsConfig
 from ocp_resources.node import Node
 from ocp_resources.node_network_state import NodeNetworkState
 from ocp_resources.oauth import OAuth
-from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.pod import Pod
 from ocp_resources.resource import ResourceEditor, get_client
 from ocp_resources.role_binding import RoleBinding
@@ -97,6 +96,7 @@ from utilities.constants import (
     KUBECONFIG,
     KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
     KUBEMACPOOL_MAC_RANGE_CONFIG,
+    KUBERNETES_ARCH_LABEL,
     LINUX_BRIDGE,
     MIGRATION_POLICY_VM_LABEL,
     NODE_HUGE_PAGES_1GI_KEY,
@@ -173,7 +173,6 @@ from utilities.network import (
     wait_for_ovs_status,
 )
 from utilities.operator import (
-    cluster_with_icsp,
     disable_default_sources_in_operatorhub,
     get_hco_csv_name_by_version,
     get_machine_config_pool_by_name,
@@ -264,7 +263,7 @@ def session_start_time() -> datetime:
     Returns:
         datetime: UTC timestamp when test session began (timezone-naive)
     """
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 @pytest.fixture(scope="session")
@@ -441,9 +440,13 @@ def nodes(admin_client):
 
 @pytest.fixture(scope="session")
 def schedulable_nodes(nodes):
-    """Get nodes marked as schedulable by kubevirt"""
+    """Get nodes marked as schedulable by kubevirt.
+
+    For multi-arch testing - filter nodes by the architecture being tested.
+    """
     schedulable_label = "kubevirt.io/schedulable"
-    yield [
+    cpu_arch = py_config.get("cpu_arch")
+    schedulable = [
         node
         for node in nodes
         if schedulable_label in node.labels.keys()
@@ -451,7 +454,11 @@ def schedulable_nodes(nodes):
         and not node.instance.spec.unschedulable
         and not kubernetes_taint_exists(node)
         and node.kubelet_ready
+        and (not cpu_arch or node.labels.get(KUBERNETES_ARCH_LABEL) == cpu_arch)
     ]
+
+    LOGGER.info(f"Schedulable nodes: {[node.name for node in schedulable]}, node architecture: {cpu_arch or 'all'}")
+    yield schedulable
 
 
 @pytest.fixture(scope="session")
@@ -531,11 +538,6 @@ def utility_daemonset(
         with DaemonSet(client=admin_client, yaml_file=modified_ds_yaml_file) as ds:
             ds.wait_until_deployed()
             yield ds
-
-
-@pytest.fixture(scope="session")
-def pull_secret_directory(tmpdir_factory):
-    yield tmpdir_factory.mktemp("pullsecret-folder")
 
 
 @pytest.fixture(scope="session")
@@ -1020,16 +1022,6 @@ def mac_pool(admin_client, hco_namespace):
             namespace=hco_namespace.name, name=KUBEMACPOOL_MAC_RANGE_CONFIG, client=admin_client
         ).instance["data"]
     )
-
-
-def _skip_access_mode_rwo(storage_class_matrix):
-    if storage_class_matrix[[*storage_class_matrix][0]]["access_mode"] == PersistentVolumeClaim.AccessMode.RWO:
-        pytest.skip(reason="Skipping when access_mode is RWO; possible reason: cannot migrate VMI with non-shared PVCs")
-
-
-@pytest.fixture()
-def skip_access_mode_rwo_scope_function(storage_class_matrix__function__):
-    _skip_access_mode_rwo(storage_class_matrix=storage_class_matrix__function__)
 
 
 @pytest.fixture(scope="session")
@@ -2336,11 +2328,6 @@ def worker_machine1(worker_node1):
 
 
 @pytest.fixture(scope="session")
-def is_idms_cluster():
-    return not cluster_with_icsp()
-
-
-@pytest.fixture(scope="session")
 def available_storage_classes_names():
     return [[*sc][0] for sc in py_config["storage_class_matrix"]]
 
@@ -2743,7 +2730,7 @@ def is_s390x_cluster(nodes_cpu_architecture):
 def hugepages_gib_values(workers):
     """Return the list of hugepage sizes (in GiB) across all worker nodes."""
     return [
-        int(bitmath.parse_string_unsafe(value).GiB)
+        int(bitmath.parse_string(value, strict=False).GiB)
         for worker in workers
         if (value := worker.instance.status.allocatable.get(NODE_HUGE_PAGES_1GI_KEY))
     ]

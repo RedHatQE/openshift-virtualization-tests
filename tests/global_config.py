@@ -249,7 +249,7 @@ os_login_param: dict[str, Any] = {}
 vlans = [f"{_id}" for _id in range(1000, 1020)]
 
 for _dir in dir():
-    if not config:  # noqa: F821
+    if not config:
         config: dict[str, Any] = {}
     val = locals()[_dir]
     if type(val) not in [bool, list, dict, str, int, set]:

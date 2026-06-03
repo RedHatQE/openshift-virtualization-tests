@@ -457,11 +457,20 @@ def windows_vm_info_to_compare(windows_vm_for_test):
     return get_vm_comparison_info_dict(vm=windows_vm_for_test)
 
 
-@pytest.fixture(scope="module")
-def windows_vm_for_test(namespace, unprivileged_client):
+@pytest.fixture(scope="package")
+def windows_vm_namespace(admin_client, unprivileged_client):
+    yield from create_ns(
+        admin_client=admin_client,
+        unprivileged_client=unprivileged_client,
+        name=unique_name(name="observability-win-vm"),
+    )
+
+
+@pytest.fixture(scope="package")
+def windows_vm_for_test(windows_vm_namespace, unprivileged_client):
     with create_windows11_wsl2_vm(
         dv_name="dv-for-windows",
-        namespace=namespace.name,
+        namespace=windows_vm_namespace.name,
         client=unprivileged_client,
         vm_name="win-vm-for-test",
         storage_class=py_config["default_storage_class"],
@@ -470,7 +479,10 @@ def windows_vm_for_test(namespace, unprivileged_client):
 
 
 @pytest.fixture(scope="class")
-def vm_for_migration_metrics_test(namespace, cpu_for_migration):
+def vm_for_migration_metrics_test(namespace, cpu_for_migration, is_postcopy_migration_bug_open):
+    if is_postcopy_migration_bug_open:
+        pytest.xfail(reason="CNV-84023: post-copy migration fails on RHCOS 10+ nodes")
+
     name = "vm-for-migration-metrics-test"
     with VirtualMachineForTests(
         name=name,
@@ -485,6 +497,18 @@ def vm_for_migration_metrics_test(namespace, cpu_for_migration):
 
 @pytest.fixture(scope="class")
 def vm_migration_metrics_vmim_scope_class(admin_client, vm_for_migration_metrics_test):
+    with VirtualMachineInstanceMigration(
+        name="vm-migration-metrics-vmim",
+        namespace=vm_for_migration_metrics_test.namespace,
+        vmi_name=vm_for_migration_metrics_test.vmi.name,
+        client=admin_client,
+    ) as vmim:
+        vmim.wait_for_status(status=vmim.Status.RUNNING, timeout=TIMEOUT_3MIN)
+        yield vmim
+
+
+@pytest.fixture()
+def vm_migration_metrics_vmim_scope_function(admin_client, vm_for_migration_metrics_test):
     with VirtualMachineInstanceMigration(
         name="vm-migration-metrics-vmim",
         namespace=vm_for_migration_metrics_test.namespace,

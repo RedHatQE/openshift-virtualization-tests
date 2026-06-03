@@ -6,7 +6,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
@@ -204,7 +204,6 @@ class TestGetCnvTestsSecretByName:
     @patch("bitwarden.get_all_cnv_tests_secrets")
     def test_get_cnv_tests_secret_by_name_disabled_bitwarden(self, mock_get_all):
         """Test that --disabled-bitwarden flag returns empty dict without calling Bitwarden"""
-        from unittest.mock import MagicMock
 
         # Clear cache before test
         get_cnv_tests_secret_by_name.cache_clear()

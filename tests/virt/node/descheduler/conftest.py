@@ -20,7 +20,6 @@ from tests.virt.node.descheduler.utils import (
     deploy_vms,
     vm_nodes,
     vms_per_nodes,
-    wait_vmi_failover,
 )
 from tests.virt.utils import (
     build_node_affinity_dict,
@@ -29,11 +28,7 @@ from tests.virt.utils import (
 )
 from utilities.constants import TIMEOUT_5MIN, TIMEOUT_5SEC
 from utilities.infra import wait_for_pods_deletion
-from utilities.virt import (
-    node_mgmt_console,
-    wait_for_migration_finished,
-    wait_for_node_schedulable_status,
-)
+from utilities.virt import wait_for_migration_finished
 
 LOGGER = logging.getLogger(__name__)
 
@@ -121,46 +116,6 @@ def deployed_vms_for_descheduler_test(
         deployment_size=vm_deployment_size,
         descheduler_eviction=True,
     )
-
-
-@pytest.fixture(scope="class")
-def vms_orig_nodes_before_node_drain(deployed_vms_for_descheduler_test):
-    return vm_nodes(vms=deployed_vms_for_descheduler_test)
-
-
-@pytest.fixture(scope="class")
-def vms_boot_time_before_node_drain(
-    deployed_vms_for_descheduler_test,
-):
-    yield get_boot_time_for_multiple_vms(vm_list=deployed_vms_for_descheduler_test)
-
-
-@pytest.fixture(scope="class")
-def node_to_drain(
-    schedulable_nodes,
-    vms_orig_nodes_before_node_drain,
-):
-    vm_per_node_counters = vms_per_nodes(vms=vms_orig_nodes_before_node_drain)
-    for node in schedulable_nodes:
-        if vm_per_node_counters[node.name] > 0:
-            return node
-
-    raise ValueError("No suitable node to drain")
-
-
-@pytest.fixture()
-def drain_uncordon_node(
-    admin_client,
-    deployed_vms_for_descheduler_test,
-    vms_orig_nodes_before_node_drain,
-    node_to_drain,
-):
-    """Return when node is schedulable again after uncordon"""
-    with node_mgmt_console(admin_client=admin_client, node=node_to_drain, node_mgmt="drain"):
-        wait_for_node_schedulable_status(node=node_to_drain, status=False)
-        for vm in deployed_vms_for_descheduler_test:
-            if vms_orig_nodes_before_node_drain[vm.name].name == node_to_drain.name:
-                wait_vmi_failover(vm=vm, orig_node=vms_orig_nodes_before_node_drain[vm.name])
 
 
 @pytest.fixture()
@@ -258,7 +213,14 @@ def unallocated_pod_count(
     node_with_least_available_memory,
 ):
     non_terminated_pod_count = len(get_non_terminated_pods(client=admin_client, node=node_with_least_available_memory))
-    return int(node_with_least_available_memory.instance.status.capacity.pods) - non_terminated_pod_count
+    capacity = int(node_with_least_available_memory.instance.status.capacity.pods)
+    # Target 85% utilization: high enough to trigger descheduler (>70%) but below scheduler preemption threshold
+    target_pod_count = int(capacity * 0.85)
+    pods_to_add = max(0, target_pod_count - non_terminated_pod_count)
+    LOGGER.info(
+        f"Node {node_with_least_available_memory.name}: current pods {non_terminated_pod_count}, will add {pods_to_add}"
+    )
+    return pods_to_add
 
 
 @pytest.fixture(scope="class")
@@ -320,10 +282,12 @@ def utilization_imbalance(
 @pytest.fixture(scope="class")
 def node_to_run_stress(schedulable_nodes, deployed_vms_for_descheduler_test):
     vm_per_node_counters = vms_per_nodes(vms=vm_nodes(vms=deployed_vms_for_descheduler_test))
-    for node in schedulable_nodes:
-        if vm_per_node_counters[node.name] > 0:
-            LOGGER.info(f"Node to run stress: {node.name}")
-            return node
+    node_with_most_vms = max(schedulable_nodes, key=lambda node: vm_per_node_counters.get(node.name, 0))
+    if vm_per_node_counters[node_with_most_vms.name] > 0:
+        LOGGER.info(
+            f"Node to run stress: {node_with_most_vms.name} with {vm_per_node_counters[node_with_most_vms.name]} VMs"
+        )
+        return node_with_most_vms
 
     raise ValueError("No suitable node to run stress")
 
@@ -348,9 +312,9 @@ def nodes_taints_before_descheduler_test_run(nodes):
 
     # clean up taints leftovers
     nodes_taints_after = {node: node.instance.spec.taints for node in nodes}
-    for node in nodes_taints_before:
-        if nodes_taints_after[node] != nodes_taints_before[node]:
-            ResourceEditor(patches={node: {"spec": {"taints": nodes_taints_before[node]}}}).update()
+    for node, taints_before in nodes_taints_before.items():
+        if nodes_taints_after[node] != taints_before:
+            ResourceEditor(patches={node: {"spec": {"taints": taints_before}}}).update()
 
 
 @pytest.fixture()

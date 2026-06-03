@@ -54,11 +54,6 @@ def assert_secure_boot_dmesg(vm: VirtualMachineForTests) -> None:
     assert "enabled" in output.lower(), f"Secure Boot was not enabled at boot time. Found: {output}"
 
 
-def assert_secure_boot_mokutil_status(vm: VirtualMachineForTests) -> None:
-    output = run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("mokutil --sb-state"))[0].lower()
-    assert "enabled" in output, f"Secure Boot is not enabled. Found: {output}"
-
-
 def assert_kernel_lockdown_mode(vm: VirtualMachineForTests) -> None:
     output = run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("cat /sys/kernel/security/lockdown"))[0]
     assert "[none]" not in output, f"Kernel lockdown mode is not '[none]'. Found: {output}"

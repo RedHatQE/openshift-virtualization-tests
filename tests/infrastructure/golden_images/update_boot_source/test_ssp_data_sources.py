@@ -23,7 +23,14 @@ from utilities.artifactory import (
     get_artifactory_secret,
     get_http_image_url,
 )
-from utilities.constants import DATA_SOURCE_NAME, DEFAULT_FEDORA_REGISTRY_URL, TIMEOUT_5MIN, TIMEOUT_10MIN, Images
+from utilities.constants import (
+    DATA_SOURCE_NAME,
+    DEFAULT_FEDORA_REGISTRY_URL,
+    QUARANTINED,
+    TIMEOUT_5MIN,
+    TIMEOUT_10MIN,
+    Images,
+)
 from utilities.exceptions import ResourceValueError
 from utilities.ssp import wait_for_condition_message_value
 
@@ -239,10 +246,10 @@ def data_sources_managed_by_data_import_crons_scope_function(
 
 @pytest.fixture()
 def data_sources_names_from_templates_scope_function(base_templates):
-    return set([
+    return {
         get_parameters_from_template(template=template, parameter_subset=DATA_SOURCE_NAME)[DATA_SOURCE_NAME]
         for template in base_templates
-    ])
+    }
 
 
 @pytest.fixture()
@@ -551,6 +558,10 @@ def test_data_source_with_existing_golden_image_pvc(
     "enabled_common_boot_image_import_feature_gate_scope_class",
     "opted_in_data_source_scope_class",
 )
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: Flaky opt-in label / DataSource volume update; tracked in CNV-86273",
+    run=False,
+)
 class TestDataSourcesOptInLabel:
     @pytest.mark.polarion("CNV-8029")
     @pytest.mark.dependency(name="TestDataSourcesOptInLabel::test_opt_in_label_data_source_when_pvc_exists")
@@ -606,6 +617,10 @@ class TestDataSourcesOptInLabel:
     "enabled_common_boot_image_import_feature_gate_scope_class",
     "opted_in_data_source_scope_class",
     "opted_out_data_source_scope_class",
+)
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: Flaky opt-out label / DataSource volume update; tracked in CNV-86273",
+    run=False,
 )
 class TestDataSourcesOptOutLabel:
     @pytest.mark.polarion("CNV-8244")

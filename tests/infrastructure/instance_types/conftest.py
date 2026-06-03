@@ -19,7 +19,13 @@ from utilities.artifactory import (
     get_artifactory_secret,
     get_test_artifact_server_url,
 )
-from utilities.constants import CONTAINER_DISK_IMAGE_PATH_STR, DATA_SOURCE_STR, OS_FLAVOR_WIN_CONTAINER_DISK, Images
+from utilities.constants import (
+    CONTAINER_DISK_IMAGE_PATH_STR,
+    OS_FLAVOR_RHEL,
+    OS_FLAVOR_WIN_CONTAINER_DISK,
+    TIMEOUT_20MIN,
+    Images,
+)
 from utilities.storage import (
     create_dummy_first_consumer_pod,
     data_volume_template_with_source_ref_dict,
@@ -128,6 +134,7 @@ def latest_windows_data_volume(
     ) as win_dv:
         if sc_volume_binding_mode_is_wffc(sc=default_sc.name, client=win_dv.client):
             create_dummy_first_consumer_pod(pvc=win_dv.pvc)
+        win_dv.wait_for_dv_success(timeout=TIMEOUT_20MIN)
         yield win_dv
     cleanup_artifactory_secret_and_config_map(artifactory_secret=secret, artifactory_config_map=cert)
 
@@ -155,15 +162,29 @@ def windows_vm_for_dedicated_cpu(request, unprivileged_client, namespace, latest
         vm_instance_type=VirtualMachineClusterInstancetype(
             client=unprivileged_client, name=request.param["instance_type_name"]
         ),
-        vm_preference=VirtualMachineClusterPreference(
-            client=unprivileged_client,
-            name=py_config["latest_windows_os_dict"][DATA_SOURCE_STR].replace("win", "windows."),
-        ),
+        vm_preference_infer=True,
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=latest_windows_data_source,
         ),
         os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK,
         disk_type=None,
+    ) as vm:
+        vm.start()
+        yield vm
+
+
+@pytest.fixture()
+def rhel_vm_for_dedicated_cpu(unprivileged_client, namespace, latest_rhel_data_source):
+    with VirtualMachineForTests(
+        client=unprivileged_client,
+        name="rhel-d1-vm",
+        namespace=namespace.name,
+        vm_instance_type=VirtualMachineClusterInstancetype(client=unprivileged_client, name="d1.large"),
+        vm_preference_infer=True,
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=latest_rhel_data_source,
+        ),
+        os_flavor=OS_FLAVOR_RHEL,
     ) as vm:
         vm.start()
         yield vm

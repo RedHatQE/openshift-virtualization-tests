@@ -55,6 +55,7 @@ class Devices:
     disks: list[SpecDisk] | None = None
     interfaces: list[Interface] | None = None
     rng: dict[Any, Any] | None = None
+    autoattachPodInterface: bool | None = None  # noqa: N815
 
 
 @dataclass
@@ -98,11 +99,33 @@ class Multus:
 
 @dataclass
 class Affinity:
-    podAntiAffinity: PodAntiAffinity  # noqa: N815
+    podAntiAffinity: PodAntiAffinity | None = None  # noqa: N815
+    podAffinity: PodAffinity | None = None  # noqa: N815
+    nodeAffinity: NodeAffinity | None = None  # noqa: N815
+
+
+@dataclass
+class NodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution: NodeSelectorTerms  # noqa: N815
+
+
+@dataclass
+class NodeSelectorTerms:
+    nodeSelectorTerms: list[NodeSelectorTerm]  # noqa: N815
+
+
+@dataclass
+class NodeSelectorTerm:
+    matchExpressions: list[LabelSelectorRequirement]  # noqa: N815
 
 
 @dataclass
 class PodAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution: list[PodAffinityTerm]  # noqa: N815
+
+
+@dataclass
+class PodAffinity:
     requiredDuringSchedulingIgnoredDuringExecution: list[PodAffinityTerm]  # noqa: N815
 
 
@@ -123,7 +146,7 @@ class LabelSelector:
 class LabelSelectorRequirement:
     operator: str
     key: str
-    values: list[str]
+    values: list[str] | None = None
 
 
 @dataclass

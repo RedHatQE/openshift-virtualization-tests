@@ -10,12 +10,12 @@ import secrets
 import shlex
 from collections import defaultdict
 from contextlib import contextmanager
+from copy import deepcopy
 from functools import cache
 from json import JSONDecodeError
 from subprocess import run
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any
 
-import bitmath
 import jinja2
 import pexpect
 import yaml
@@ -23,6 +23,7 @@ from benedict import benedict
 from kubernetes.client import ApiException
 from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import NotFoundError
+from kubernetes.utils.quantity import parse_quantity
 from ocp_resources.daemonset import DaemonSet
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
@@ -727,7 +728,7 @@ class VirtualMachineForTests(VirtualMachine):
             LOGGER.warning(
                 "Setting both memory.guest and requests.memory values! (Users should set VM memory via memory.guest!)"
             )
-            if bitmath.parse_string_unsafe(self.memory_guest) > bitmath.parse_string_unsafe(self.memory_requests):
+            if parse_quantity(self.memory_guest) > parse_quantity(self.memory_requests):
                 LOGGER.warning(
                     "Setting memory.guest bigger then requests.memory! (This might cause unpredictable issues!)"
                 )
@@ -954,7 +955,7 @@ class VirtualMachineForTests(VirtualMachine):
     def update_vm_cpu_configuration(self, template_spec):
         # cpu settings
         if self.cpu_flags:
-            template_spec.setdefault("domain", {})["cpu"] = self.cpu_flags
+            template_spec.setdefault("domain", {})["cpu"] = deepcopy(self.cpu_flags)
 
         if self.cpu_limits:
             template_spec.setdefault("domain", {}).setdefault("resources", {}).setdefault("limits", {})
@@ -1674,7 +1675,7 @@ def generate_dict_from_yaml_template(stream, **kwargs):
     # Find all template variables
     template_vars = [i.split()[1] for i in re.findall(r"{{ .* }}", data)]
     for var in template_vars:
-        if var not in kwargs.keys():
+        if var not in kwargs:
             raise MissingTemplateVariables(var=var, template=data)
     template = jinja2.Template(data)
     out = template.render(**kwargs)
@@ -2144,6 +2145,7 @@ def create_vm_cloning_job(
     annotation_filters=None,
     new_mac_addresses=None,
     new_smbios_serial=None,
+    volume_name_policy=None,
 ):
     """
     Create VirtualMachineClone object.
@@ -2169,6 +2171,7 @@ def create_vm_cloning_job(
         annotation_filters=annotation_filters,
         new_mac_addresses=new_mac_addresses,
         new_smbios_serial=new_smbios_serial,
+        volume_name_policy=volume_name_policy,
     ) as vmc:
         vmc.wait_for_status(status=VirtualMachineClone.Status.SUCCEEDED)
         yield vmc
@@ -2559,8 +2562,8 @@ def wait_for_vmi_relocation_and_running(initial_node, vm, timeout=TIMEOUT_5MIN):
 
 
 def check_qemu_guest_agent_installed(ssh_exec: Host) -> bool:
-    ssh_exec.sudo = True
-    return ssh_exec.package_manager.exist(package="qemu-guest-agent")
+    rc, _, _ = ssh_exec.executor().run_cmd(cmd=shlex.split("rpm -q qemu-guest-agent"))
+    return rc == 0
 
 
 def validate_libvirt_persistent_domain(vm, admin_client):
@@ -2601,7 +2604,7 @@ def validate_pause_unpause_linux_vm(vm: VirtualMachineForTests, pre_pause_pid: i
     )
 
 
-def check_vm_xml_smbios(vm: VirtualMachineForTests, cm_values: Dict[str, str], admin_client: DynamicClient) -> None:
+def check_vm_xml_smbios(vm: VirtualMachineForTests, cm_values: dict[str, str], admin_client: DynamicClient) -> None:
     """
     Verify SMBIOS on VM XML [sysinfo type=smbios][system] match kubevirt-config
     config map.
@@ -2623,29 +2626,6 @@ def check_vm_xml_smbios(vm: VirtualMachineForTests, cm_values: Dict[str, str], a
     assert all(results.values())
 
 
-def assert_vm_xml_efi(
-    vm: VirtualMachineForTests, admin_client: DynamicClient, *, secure_boot_enabled: bool = True
-) -> None:
-    LOGGER.info("Verify VM XML - EFI secureBoot values.")
-    xml_dict_os = vm.vmi.get_xml_dict(privileged_client=admin_client)["domain"]["os"]
-    ovmf_path = "/usr/share/OVMF"
-    efi_path = f"{ovmf_path}/OVMF_CODE.secboot.fd"
-    # efi vars path when secure boot is enabled: /usr/share/OVMF/OVMF_VARS.secboot.fd
-    # efi vars path when secure boot is disabled: /usr/share/OVMF/OVMF_VARS.fd
-    efi_vars_path = f"{ovmf_path}/OVMF_VARS.{'secboot.' if secure_boot_enabled else ''}fd"
-    vmi_xml_efi_path = xml_dict_os["loader"]["#text"]
-    vmi_xml_efi_vars_path = xml_dict_os["nvram"]["@template"]
-    vmi_xml_os_secure = xml_dict_os["loader"]["@secure"]
-    os_secure = "yes" if secure_boot_enabled else "no"
-    assert vmi_xml_efi_path == efi_path, f"EFIPath value {vmi_xml_efi_path} does not match expected {efi_path} value"
-    assert vmi_xml_os_secure == os_secure, (
-        f"EFI secure value {vmi_xml_os_secure} does not seem to be set as {os_secure}"
-    )
-    assert vmi_xml_efi_vars_path == efi_vars_path, (
-        f"EFIVarsPath value {vmi_xml_efi_vars_path} does not match expected {efi_vars_path} value"
-    )
-
-
 def update_vm_efi_spec_and_restart(
     vm: VirtualMachineForTests, spec: dict[str, Any] | None = None, wait_for_interfaces: bool = True
 ) -> None:
@@ -2655,13 +2635,14 @@ def update_vm_efi_spec_and_restart(
     restart_vm_wait_for_running_vm(vm=vm, wait_for_interfaces=wait_for_interfaces)
 
 
-def delete_guestosinfo_keys(data: Dict[str, Any]) -> Dict[str, Any]:
+def delete_guestosinfo_keys(data: dict[str, Any]) -> dict[str, Any]:
     """
     supportedCommands - removed as the data is used for internal guest agent validations
     fsInfo, userList - checked in validate_fs_info_virtctl_vs_linux_os / validate_user_info_virtctl_vs_linux_os
     fsFreezeStatus - removed as it is not related to GA validations
+    load - present in virtctl/cnv guest-agent output but not in libvirt/linux
     """
-    removed_keys = ["supportedCommands", "fsInfo", "userList", "fsFreezeStatus"]
+    removed_keys = ["supportedCommands", "fsInfo", "userList", "fsFreezeStatus", "load"]
     [data.pop(key, None) for key in removed_keys]
 
     return data
@@ -2776,7 +2757,7 @@ def guest_reboot(vm: VirtualMachineForTests, os_type: str) -> None:
     run_os_command(vm=vm, command=commands["reboot"][os_type])
 
 
-def run_os_command(vm: VirtualMachineForTests, command: str) -> Optional[str]:
+def run_os_command(vm: VirtualMachineForTests, command: str) -> str | None:
     try:
         return run_ssh_commands(
             host=vm.ssh_exec,
@@ -2805,7 +2786,7 @@ def wait_for_user_agent_down(vm: VirtualMachineForTests, timeout: int) -> None:
             break
 
 
-def get_virt_handler_pods(client: DynamicClient, namespace: Namespace) -> List[Pod]:
+def get_virt_handler_pods(client: DynamicClient, namespace: Namespace) -> list[Pod]:
     return utilities.infra.get_pods(
         client=client,
         namespace=namespace,
@@ -2815,7 +2796,7 @@ def get_virt_handler_pods(client: DynamicClient, namespace: Namespace) -> List[P
 
 def check_virt_handler_pods_for_migration_network(
     client: DynamicClient, namespace: Namespace, network_name: str, migration_network: bool = True
-) -> List[Pod]:
+) -> list[Pod]:
     """
     Checks whether virt-handler pods have migration network.
 
