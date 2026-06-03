@@ -11,6 +11,8 @@ import pytest
 
 __test__ = False
 
+pytestmark = pytest.mark.post_upgrade
+
 
 class TestRoleAggregationDisabledRBACEnforcement:
     """
@@ -21,7 +23,6 @@ class TestRoleAggregationDisabledRBACEnforcement:
         - Unprivileged user created via HTPasswd identity provider
     """
 
-    @pytest.mark.post_upgrade
     @pytest.mark.polarion("CNV-16028")
     def test_vm_list_forbidden_when_aggregation_disabled(self):
         """
@@ -45,29 +46,59 @@ class TestRoleAggregationDisabledRBACEnforcement:
 
 class TestRoleAggregationReenabledAccess:
     """
-    Tests for access restoration when role aggregation is enabled.
+    Tests for role-specific access when role aggregation is enabled.
 
     Preconditions:
         - HyperConverged CR spec.roleAggregationStrategy set to "AggregateToDefault" (role aggregation enabled)
         - Unprivileged user created via HTPasswd identity provider
+        - VirtualMachine resource created in the test namespace
     """
 
-    @pytest.mark.post_upgrade
     @pytest.mark.polarion("CNV-16029")
-    def test_access_restored_when_aggregation_reenabled(self):
+    def test_admin_can_delete_vm_when_aggregation_reenabled(self):
         """
-        Test that an unprivileged user with a standard OpenShift role can list virtualization
-        resources when role aggregation is enabled.
-
-        Parametrize:
-            - role: [admin, edit, view]
+        Test that an unprivileged user with the admin role can delete a VirtualMachine
+        resource when role aggregation is enabled.
 
         Preconditions:
-            - Namespace with a RoleBinding granting the unprivileged user the parametrized ClusterRole
+            - Namespace with a RoleBinding granting the unprivileged user the admin ClusterRole
+            - Separate VirtualMachine resource created for deletion
 
         Steps:
-            1. Attempt to list VirtualMachine resources in the namespace using the unprivileged
-               user's credentials
+            1. Delete the VirtualMachine resource using the unprivileged user's credentials
+
+        Expected:
+            - VirtualMachine is deleted successfully
+        """
+
+    @pytest.mark.polarion("CNV-16030")
+    def test_edit_can_start_vm_when_aggregation_reenabled(self):
+        """
+        Test that an unprivileged user with the edit role can start a VirtualMachine
+        when role aggregation is enabled.
+
+        Preconditions:
+            - Namespace with a RoleBinding granting the unprivileged user the edit ClusterRole
+            - VirtualMachine resource in halted state
+
+        Steps:
+            1. Start the VirtualMachine using the unprivileged user's credentials
+
+        Expected:
+            - VirtualMachine start operation succeeds
+        """
+
+    @pytest.mark.polarion("CNV-16031")
+    def test_view_can_list_vms_when_aggregation_reenabled(self):
+        """
+        Test that an unprivileged user with the view role can list VirtualMachine
+        resources when role aggregation is enabled.
+
+        Preconditions:
+            - Namespace with a RoleBinding granting the unprivileged user the view ClusterRole
+
+        Steps:
+            1. List VirtualMachine resources in the namespace using the unprivileged user's credentials
 
         Expected:
             - VirtualMachine resources are listed successfully
