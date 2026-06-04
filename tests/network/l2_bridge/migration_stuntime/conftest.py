@@ -12,7 +12,7 @@ from libs.net.vmspec import lookup_iface_status_ip
 from libs.vm.affinity import new_pod_affinity
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.l2_bridge.libl2bridge import secondary_network_vm
-from tests.network.libs.stuntime import SERVER_VM_LABEL, ContinuousPing
+from tests.network.libs.stuntime import CLIENT_VM_LABEL, SERVER_VM_LABEL, ContinuousPing
 
 STUNTIME_BRIDGE_IFACE_NAME: Final[str] = "stuntime-bridge"
 
@@ -24,9 +24,15 @@ def l2_bridge_stuntime_nad(
     bridge_nncp: libnncp.NodeNetworkConfigurationPolicy,
 ) -> Generator[libnad.NetworkAttachmentDefinition]:
     nad_name = "l2-bridge-nad"
+    bridge_name = bridge_nncp.desired_state_spec.interfaces[0].name  # type: ignore[index]
     config = libnad.NetConfig(
         name=nad_name,
-        plugins=[libnad.CNIPluginBridgeConfig(bridge=bridge_nncp.desired_state_spec.interfaces[0].name)],  # type: ignore[index]
+        plugins=[
+            libnad.CNIPluginBridgeConfig(
+                bridge=bridge_name,
+                disableContainerInterface=True,
+            )
+        ],
     )
     with libnad.NetworkAttachmentDefinition(
         name=nad_name,
@@ -79,6 +85,7 @@ def stuntime_client_vm(
             f"{random_ipv6_address(net_seed=0, host_address=2)}/64",
         ],
         affinity=new_pod_affinity(label=SERVER_VM_LABEL),
+        labels=dict([CLIENT_VM_LABEL]),
     ) as client_vm:
         client_vm.start(wait=True)
         client_vm.wait_for_agent_connected()
