@@ -37,13 +37,16 @@ LOCALHOST = "localhost"
 
 
 @pytest.fixture(scope="module")
-def descheduler_long_lifecycle_profile(admin_client):
+def descheduler_long_lifecycle_profile(admin_client, namespace):
     with create_kube_descheduler(
         admin_client=admin_client,
         profiles=["LongLifecycle"],
         profile_customizations={
             "devLowNodeUtilizationThresholds": "High",  # underutilized <40%, overutilized >70%
             "devEnableEvictionsInBackground": True,
+            "namespaces": {
+                "included": [namespace.name],
+            },
         },
     ) as kd:
         yield kd
@@ -52,6 +55,7 @@ def descheduler_long_lifecycle_profile(admin_client):
 @pytest.fixture(scope="module")
 def descheduler_kubevirt_relieve_and_migrate_profile(
     admin_client,
+    namespace,
     schedulable_nodes,
     nodes_taints_before_descheduler_test_run,
 ):
@@ -60,6 +64,9 @@ def descheduler_kubevirt_relieve_and_migrate_profile(
         profiles=["KubeVirtRelieveAndMigrate"],
         profile_customizations={
             "devActualUtilizationProfile": "PrometheusCPUCombined",
+            "namespaces": {
+                "included": [namespace.name],
+            },
         },
     ) as kd:
         yield kd
