@@ -440,9 +440,12 @@ def get_file_url(url, file_name):
 
 
 def assert_num_files_in_pod(pod, expected_num_of_files):
-    num_of_file_in_pod = pod.execute(command=shlex.split("ls -1 /pvc")).count("\n")
-    assert num_of_file_in_pod == expected_num_of_files, (
-        f"Number of file in pod is {num_of_file_in_pod}, while the expected is {expected_num_of_files}"
+    files = [
+        line for line in pod.execute(command=shlex.split("ls -1 /pvc")).splitlines() if line and line != "lost+found"
+    ]
+    num_of_files_in_pod = len(files)
+    assert num_of_files_in_pod == expected_num_of_files, (
+        f"Number of files in pod is {num_of_files_in_pod}, while the expected is {expected_num_of_files}"
     )
 
 
