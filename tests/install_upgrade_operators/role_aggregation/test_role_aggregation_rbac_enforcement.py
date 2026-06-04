@@ -4,6 +4,7 @@ Role-based access control (RBAC) tests
 STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-iuo/CNV-63822-role-aggregation-opt-out.md
 
 Markers:
+    - arm64
     - post_upgrade
 """
 
@@ -11,7 +12,7 @@ import pytest
 
 __test__ = False
 
-pytestmark = pytest.mark.post_upgrade
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.arm64]
 
 
 class TestRoleAggregationDisabledRBACEnforcement:
@@ -70,7 +71,7 @@ class TestRoleAggregationReenabledAccess:
             - Delete-collection operation succeeds
         """
 
-    @pytest.mark.polarion("CNV-16030")
+    @pytest.mark.polarion("CNV-16260")
     def test_edit_can_create_vm_dry_run_when_aggregation_reenabled(self):
         """
         Test that an unprivileged user with the edit role can create a VirtualMachine
@@ -87,7 +88,7 @@ class TestRoleAggregationReenabledAccess:
             - Dry-run create operation succeeds
         """
 
-    @pytest.mark.polarion("CNV-16031")
+    @pytest.mark.polarion("CNV-16261")
     def test_view_can_list_vms_when_aggregation_reenabled(self):
         """
         Test that an unprivileged user with the view role can list VirtualMachine
