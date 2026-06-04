@@ -92,6 +92,7 @@ def dv_from_http_import(
         content_type=request.param.get("content_type", DataVolume.ContentType.KUBEVIRT),
         cert_configmap=request.param.get("configmap_name"),
         size=request.param.get("size", DEFAULT_DV_SIZE),
+        volume_mode=request.param.get("volume_mode"),
         storage_class=storage_class_name_scope_module,
         client=namespace.client,
     ) as dv:
@@ -101,15 +102,13 @@ def dv_from_http_import(
 
 @pytest.fixture()
 def running_pod_with_dv_pvc(
-    storage_class_matrix__module__,
-    storage_class_name_scope_module,
     dv_from_http_import,
 ):
     """Create a running pod with DV's PVC."""
     dv_from_http_import.wait_for_dv_success()
     with create_pod_for_pvc(
         pvc=dv_from_http_import.pvc,
-        volume_mode=storage_class_matrix__module__[storage_class_name_scope_module]["volume_mode"],
+        volume_mode=dv_from_http_import.pvc.instance.spec.volumeMode,
     ) as pod:
         yield pod
 
