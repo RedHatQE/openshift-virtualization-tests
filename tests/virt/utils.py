@@ -140,7 +140,7 @@ def migrate_and_verify_multi_vms(vm_list):
 
     for vm in vm_list:
         migration = vms_dict[vm.name]["vm_mig"]
-        wait_for_migration_finished(namespace=vm.namespace, migration=migration)
+        wait_for_migration_finished(migration=migration)
         migration.clean_up()
 
     for vm in vm_list:
