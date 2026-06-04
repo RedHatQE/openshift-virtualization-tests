@@ -11,7 +11,6 @@ from tests.network.localnet.liblocalnet import (
     LOCALNET_BR_EX_INTERFACE,
     LOCALNET_BR_EX_INTERFACE_NO_VLAN,
 )
-from utilities.constants import QUARANTINED
 from utilities.virt import migrate_vm_and_verify
 
 
@@ -61,10 +60,6 @@ def test_connectivity_post_migration_between_localnet_vms(
 @pytest.mark.s390x
 @pytest.mark.usefixtures("nncp_localnet")
 @pytest.mark.polarion("CNV-12363")
-@pytest.mark.xfail(
-    reason=f"{QUARANTINED}: The requested IPv6 address is assigned but not visible in VMI: CNV-80582",
-    run=False,
-)
 def test_vmi_reports_ip_on_secondary_interface_without_vlan(
     localnet_running_vms,
 ):
