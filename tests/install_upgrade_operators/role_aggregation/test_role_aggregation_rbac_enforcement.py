@@ -51,41 +51,40 @@ class TestRoleAggregationReenabledAccess:
     Preconditions:
         - HyperConverged CR spec.roleAggregationStrategy set to "AggregateToDefault" (role aggregation enabled)
         - Unprivileged user created via HTPasswd identity provider
-        - VirtualMachine resource created in the test namespace
     """
 
     @pytest.mark.polarion("CNV-16029")
-    def test_admin_can_delete_vm_when_aggregation_reenabled(self):
+    def test_admin_can_delete_vm_collection_when_aggregation_reenabled(self):
         """
-        Test that an unprivileged user with the admin role can delete a VirtualMachine
-        resource when role aggregation is enabled.
+        Test that an unprivileged user with the admin role can perform a delete-collection
+        call on VirtualMachine resources when role aggregation is enabled.
 
         Preconditions:
             - Namespace with a RoleBinding granting the unprivileged user the admin ClusterRole
-            - Separate VirtualMachine resource created for deletion
 
         Steps:
-            1. Delete the VirtualMachine resource using the unprivileged user's credentials
+            1. Issue a raw DELETE request to the VirtualMachine collection API endpoint
+               using the unprivileged user's credentials
 
         Expected:
-            - VirtualMachine is deleted successfully
+            - Delete-collection operation succeeds
         """
 
     @pytest.mark.polarion("CNV-16030")
-    def test_edit_can_start_vm_when_aggregation_reenabled(self):
+    def test_edit_can_create_vm_dry_run_when_aggregation_reenabled(self):
         """
-        Test that an unprivileged user with the edit role can start a VirtualMachine
-        when role aggregation is enabled.
+        Test that an unprivileged user with the edit role can create a VirtualMachine
+        using a server-side dry-run when role aggregation is enabled.
 
         Preconditions:
             - Namespace with a RoleBinding granting the unprivileged user the edit ClusterRole
-            - VirtualMachine resource in halted state
 
         Steps:
-            1. Start the VirtualMachine using the unprivileged user's credentials
+            1. Create a VirtualMachine using server-side dry-run with the unprivileged
+               user's credentials
 
         Expected:
-            - VirtualMachine start operation succeeds
+            - Dry-run create operation succeeds
         """
 
     @pytest.mark.polarion("CNV-16031")
