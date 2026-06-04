@@ -676,7 +676,10 @@ def pytest_runtest_makereport(item, call):
     """
     if call.excinfo is not None and "incremental" in item.keywords:
         parent = item.parent
-        parent._previousfailed = item
+        param_key = item.callspec.id if hasattr(item, "callspec") else ""
+        if not hasattr(parent, "_previousfailed"):
+            parent._previousfailed = {}
+        parent._previousfailed[param_key] = item
 
     outcome = yield
     report = outcome.get_result()
@@ -732,7 +735,8 @@ def pytest_runtest_setup(item):
     BASIC_LOGGER.info(f"\n{separator(symbol_='-', val=item.name)}")
     BASIC_LOGGER.info(f"{separator(symbol_='-', val='SETUP')}")
     if "incremental" in item.keywords:
-        previousfailed = getattr(item.parent, "_previousfailed", None)
+        param_key = item.callspec.id if hasattr(item, "callspec") else ""
+        previousfailed = getattr(item.parent, "_previousfailed", {}).get(param_key)
         if previousfailed is not None:
             pytest.xfail(f"previous test failed ({previousfailed.name})")
 
