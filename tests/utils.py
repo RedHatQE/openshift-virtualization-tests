@@ -4,9 +4,9 @@ import logging
 import re
 import shlex
 import tarfile
+from collections.abc import Generator
 from contextlib import contextmanager
 from io import BytesIO
-from typing import Generator, Optional
 
 import bitmath
 import requests
@@ -177,9 +177,7 @@ def hotplug_instance_type_vm_and_verify(vm, client, instance_type):
 
 def verify_hotplug(vm, client, sockets=None, memory_guest=None):
     vmim = get_created_migration_job(vm=vm, client=client)
-    wait_for_migration_finished(
-        namespace=vm.namespace, migration=vmim, timeout=TIMEOUT_30MIN if "windows" in vm.name else TIMEOUT_10MIN
-    )
+    wait_for_migration_finished(migration=vmim, timeout=TIMEOUT_30MIN if "windows" in vm.name else TIMEOUT_10MIN)
     wait_for_ssh_connectivity(vm=vm)
     vmi_spec_domain = vm.vmi.instance.spec.domain
     if sockets:
@@ -548,12 +546,12 @@ def create_cirros_vm(
     client: DynamicClient,
     dv_name: str,
     vm_name: str,
-    node: Optional[str] = None,
-    wait_running: Optional[bool] = True,
-    volume_mode: Optional[str] = None,
-    cpu_model: Optional[str] = None,
-    annotations: Optional[str] = None,
-) -> Generator[VirtualMachineForTests, None, None]:
+    node: str | None = None,
+    wait_running: bool | None = True,
+    volume_mode: str | None = None,
+    cpu_model: str | None = None,
+    annotations: dict[str, str] | None = None,
+) -> Generator[VirtualMachineForTests]:
     artifactory_secret = get_artifactory_secret(namespace=namespace)
     artifactory_config_map = get_artifactory_config_map(namespace=namespace)
 
