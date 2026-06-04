@@ -39,9 +39,12 @@ if "utilities.hco" in sys.modules:
     del sys.modules["utilities.hco"]
 
 # Import after setting up mocks to avoid circular dependency
-from utilities.hco import (  # noqa: E402
+from utilities.hco import (
+    CDI,
     DEFAULT_HCO_PROGRESSING_CONDITIONS,
     HCO_JSONPATCH_ANNOTATION_COMPONENT_DICT,
+    KubeVirt,
+    Resource,
     ResourceEditorValidateHCOReconcile,
     add_labels_to_nodes,
     apply_np_changes,
@@ -498,7 +501,6 @@ class TestWaitForHcoConditions:
     @patch("utilities.hco.Namespace")
     def test_wait_for_hco_conditions_with_dependent_crs(self, mock_namespace_class, mock_wait_conditions):
         """Test wait_for_hco_conditions with dependent CRs"""
-        from utilities.hco import CDI, KubeVirt
 
         mock_admin_client = MagicMock()
         mock_namespace = MagicMock()
@@ -639,7 +641,6 @@ class TestModuleConstants:
 
     def test_default_hco_progressing_conditions(self):
         """Test DEFAULT_HCO_PROGRESSING_CONDITIONS constant"""
-        from utilities.hco import Resource
 
         assert "Progressing" in DEFAULT_HCO_PROGRESSING_CONDITIONS
         assert DEFAULT_HCO_PROGRESSING_CONDITIONS[Resource.Condition.PROGRESSING] == Resource.Condition.Status.TRUE
@@ -801,8 +802,10 @@ class TestEnableCommonBootImageImportSpecWaitForDataImportCron:
     @patch("utilities.hco.wait_for_at_least_one_auto_update_data_import_cron")
     @patch("utilities.hco.update_common_boot_image_import_spec")
     @patch("utilities.hco.Namespace")
+    @patch("utilities.hco.verify_boot_sources_reimported", return_value=True)
     def test_enable_spec(
         self,
+        mock_verify_boot,
         mock_namespace_class,
         mock_update_spec,
         mock_wait_dic,
@@ -821,6 +824,11 @@ class TestEnableCommonBootImageImportSpecWaitForDataImportCron:
         mock_wait_dic.assert_called_once()
         mock_wait_ssp.assert_called_once()
         mock_wait_hco.assert_called_once()
+        mock_verify_boot.assert_called_once_with(
+            admin_client=mock_admin_client,
+            namespace=mock_namespace.name,
+            consecutive_checks_count=1,
+        )
 
 
 class TestUpdateCommonBootImageImportSpec:

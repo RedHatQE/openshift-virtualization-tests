@@ -473,6 +473,8 @@ AAQ_OPERATOR = "aaq-operator"
 WINDOWS_BOOTSOURCE_PIPELINE = "windows-bootsource-pipeline"
 KUBEVIRT_MIGRATION_OPERATOR = "kubevirt-migration-operator"
 KUBEVIRT_MIGRATION_CONTROLLER = "kubevirt-migration-controller"
+VIRT_PLATFORM_AUTOPILOT = "virt-platform-autopilot"
+VIRT_SYNCHRONIZATION_CONTROLLER = "virt-synchronization-controller"
 KUBEVIRT_OPERATOR = "kubevirt-operator"
 # All hco relate objects with kind
 ALL_HCO_RELATED_OBJECTS = [
@@ -544,6 +546,8 @@ CNV_PODS_NO_HPP_CSI_HPP_POOL = [
     VIRT_EXPORTPROXY,
     KUBEVIRT_APISERVER_PROXY,
     KUBEVIRT_IPAM_CONTROLLER_MANAGER,
+    VIRT_PLATFORM_AUTOPILOT,
+    VIRT_SYNCHRONIZATION_CONTROLLER,
 ]
 ALL_CNV_PODS = CNV_PODS_NO_HPP_CSI_HPP_POOL + [HOSTPATH_PROVISIONER_CSI, HPP_POOL]
 ALL_CNV_DEPLOYMENTS = [
@@ -571,6 +575,8 @@ ALL_CNV_DEPLOYMENTS = [
     HPP_POOL,
     KUBEVIRT_MIGRATION_OPERATOR,
     KUBEVIRT_MIGRATION_CONTROLLER,
+    VIRT_PLATFORM_AUTOPILOT,
+    VIRT_SYNCHRONIZATION_CONTROLLER,
 ]
 ALL_CNV_DAEMONSETS = [
     BRIDGE_MARKER,
@@ -590,6 +596,7 @@ CNV_OPERATORS = [
     KUBEVIRT_OPERATOR,
     SSP_OPERATOR,
     HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD,
+    VIRT_PLATFORM_AUTOPILOT,
 ]
 # Node labels
 NODE_TYPE_WORKER_LABEL = {"node-type": "worker"}
@@ -872,7 +879,7 @@ POD_CONTAINER_SPEC = {
 
 EXCLUDED_CPU_MODELS_S390X = [
     # Below are deprecated & usable models, but violate RHEL 9 ALS (min z14) causing guest to crash (disable-wait)
-    # Ref: https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/automatically_installing_rhel/preparing-a-rhel-installation-on-64-bit-ibm-z_rhel-installer#planning-for-installation-on-ibm-z_preparing-a-rhel-installation-on-64-bit-ibm-z # noqa: E501
+    # Ref: https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/automatically_installing_rhel/preparing-a-rhel-installation-on-64-bit-ibm-z_rhel-installer#planning-for-installation-on-ibm-z_preparing-a-rhel-installation-on-64-bit-ibm-z
     "z114",
     "z114-base",
     "z13",
@@ -950,6 +957,10 @@ WIN_11 = "win11"
 WIN_2K25 = "win2k25"
 WIN_2K22 = "win2k22"
 WIN_2K19 = "win2k19"
+
+# Windows VirtualMachine preferences
+WINDOWS_11_PREFERENCE = "windows.11"
+WINDOWS_2K22_PREFERENCE = "windows.2k22"
 
 HYPERV_FEATURES_LABELS_DOM_XML = [
     "relaxed",

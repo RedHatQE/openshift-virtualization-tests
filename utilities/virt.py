@@ -10,12 +10,12 @@ import secrets
 import shlex
 from collections import defaultdict
 from contextlib import contextmanager
+from copy import deepcopy
 from functools import cache
 from json import JSONDecodeError
 from subprocess import run
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any
 
-import bitmath
 import jinja2
 import pexpect
 import yaml
@@ -23,6 +23,7 @@ from benedict import benedict
 from kubernetes.client import ApiException
 from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import NotFoundError
+from kubernetes.utils.quantity import parse_quantity
 from ocp_resources.daemonset import DaemonSet
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
@@ -93,6 +94,7 @@ from utilities.constants import (
     Images,
 )
 from utilities.data_collector import collect_vnc_screenshot_for_vms
+from utilities.exceptions import MigrationStuckSchedulingError, ResourceValueError
 from utilities.hco import get_hco_namespace, wait_for_hco_conditions
 from utilities.network import (
     cloud_init_network_data,
@@ -727,7 +729,7 @@ class VirtualMachineForTests(VirtualMachine):
             LOGGER.warning(
                 "Setting both memory.guest and requests.memory values! (Users should set VM memory via memory.guest!)"
             )
-            if bitmath.parse_string_unsafe(self.memory_guest) > bitmath.parse_string_unsafe(self.memory_requests):
+            if parse_quantity(self.memory_guest) > parse_quantity(self.memory_requests):
                 LOGGER.warning(
                     "Setting memory.guest bigger then requests.memory! (This might cause unpredictable issues!)"
                 )
@@ -954,7 +956,7 @@ class VirtualMachineForTests(VirtualMachine):
     def update_vm_cpu_configuration(self, template_spec):
         # cpu settings
         if self.cpu_flags:
-            template_spec.setdefault("domain", {})["cpu"] = self.cpu_flags
+            template_spec.setdefault("domain", {})["cpu"] = deepcopy(self.cpu_flags)
 
         if self.cpu_limits:
             template_spec.setdefault("domain", {}).setdefault("resources", {}).setdefault("limits", {})
@@ -1597,7 +1599,20 @@ class ServiceForVirtualMachineForTests(Service):
         if self.ip_families:
             self.res["spec"]["ipFamilies"] = self.ip_families
 
-    def service_ip(self, ip_family=None):
+    def service_ip(self, admin_client: DynamicClient, ip_family: str | None = None) -> str:
+        """
+        Get the IP address of the service.
+
+        Args:
+            admin_client (DynamicClient): admin client to be used for the service.
+            ip_family (str | None): IP family to be used for the service.
+
+        Returns:
+            str: IP address of the service.
+
+        Raises:
+            ResourceValueError: If the service IP cannot be retrieved.
+        """
         if self.service_type == Service.Type.CLUSTER_IP:
             if ip_family:
                 cluster_ips = [
@@ -1610,11 +1625,8 @@ class ServiceForVirtualMachineForTests(Service):
 
             return self.instance.spec.clusterIP
 
-        vm_node = Node(
-            client=get_client(),
-            name=self.vmi.instance.status.nodeName,
-        )
         if self.service_type == Service.Type.NODE_PORT:
+            vm_node = self.vm.vmi.get_node(privileged_client=admin_client)
             if ip_family:
                 internal_ips = [
                     internal_ip
@@ -1625,6 +1637,10 @@ class ServiceForVirtualMachineForTests(Service):
                 return internal_ips[0]
 
             return self.target_ip or vm_node.internal_ip
+
+        raise ResourceValueError(
+            f"Could not get service IP for service {self.vm.custom_service.name} with type {self.service_type}"
+        )
 
     @property
     def service_port(self):
@@ -1674,7 +1690,7 @@ def generate_dict_from_yaml_template(stream, **kwargs):
     # Find all template variables
     template_vars = [i.split()[1] for i in re.findall(r"{{ .* }}", data)]
     for var in template_vars:
-        if var not in kwargs.keys():
+        if var not in kwargs:
             raise MissingTemplateVariables(var=var, template=data)
     template = jinja2.Template(data)
     out = template.render(**kwargs)
@@ -1927,7 +1943,7 @@ def migrate_vm_and_verify(
     ) as migration:
         if not wait_for_migration_success:
             return migration
-        wait_for_migration_finished(namespace=vm.namespace, migration=migration, timeout=timeout)
+        wait_for_migration_finished(migration=migration, timeout=timeout)
 
     verify_vm_migrated(
         vm=vm,
@@ -1938,7 +1954,20 @@ def migrate_vm_and_verify(
     return None
 
 
-def wait_for_migration_finished(namespace, migration, timeout=TIMEOUT_12MIN):
+def wait_for_migration_finished(migration: VirtualMachineInstanceMigration, timeout: int = TIMEOUT_12MIN) -> None:
+    """
+    Wait for migration to finish.
+    If migration is stuck in Scheduling state, abort the migration and collect data.
+
+    Args:
+        migration (VirtualMachineInstanceMigration): Migration object.
+        timeout (int): Maximum time to wait for the migration to finish.
+
+    Raises:
+        MigrationStuckSchedulingError: If the migration is stuck in Scheduling state.
+        TimeoutExpiredError: If the migration does not finish within the timeout.
+    """
+
     sleep = TIMEOUT_10SEC
     samples = TimeoutSampler(wait_timeout=timeout, sleep=sleep, func=lambda: migration.instance.status.phase)
     counter = 0
@@ -1947,34 +1976,41 @@ def wait_for_migration_finished(namespace, migration, timeout=TIMEOUT_12MIN):
         for sample in samples:
             if sample == migration.Status.SUCCEEDED:
                 break
-            elif sample == "Scheduling":
+            if sample == VirtualMachineInstanceMigration.Status.SCHEDULING:
                 counter += 1
                 # If migration stuck in Scheduling state for more than 4 minutes - most likely it will be failed
                 # Need to collect data before 5 min timeout reached and target POD is removed
                 if counter >= TIMEOUT_4MIN / sleep:
-                    # Get status/events for PODs in non-running or failed state
-                    for pod in utilities.infra.get_pod_by_name_prefix(
-                        client=get_client(),
-                        pod_prefix=VIRT_LAUNCHER,
-                        namespace=namespace,
-                        get_all=True,
-                    ):
-                        if pod.status not in (Pod.Status.RUNNING, Pod.Status.COMPLETED, Pod.Status.SUCCEEDED):
-                            pod_events = [
-                                event["raw_object"]["message"]
-                                for event in pod.events(timeout=TIMEOUT_5SEC, field_selector="type==Warning")
-                            ]
-                            LOGGER.error(
-                                f"POD Conditions:\n {pod.instance.status.conditions[0]}\n"
-                                f"POD Events:\n {', '.join(pod_events)}"
-                            )
-                    raise TimeoutExpiredError(
-                        f"VMIM {migration.name} stuck in Scheduling state and probably will be failed"
-                    )
+                    log_failed_pod_events(migration=migration)
+                    raise MigrationStuckSchedulingError(migration_name=migration.name)
     except TimeoutExpiredError:
         if sample:
             LOGGER.error(f"Status of VMIM {migration.name} is {sample}")
         raise
+
+
+def log_failed_pod_events(migration: VirtualMachineInstanceMigration) -> None:
+    """
+    Log failed pod events for a migration.
+
+    Args:
+        migration (VirtualMachineInstanceMigration): Migration object.
+    """
+
+    for pod in utilities.infra.get_pod_by_name_prefix(
+        client=migration.client, pod_prefix=VIRT_LAUNCHER, namespace=migration.namespace, get_all=True
+    ):
+        # Get status/events for PODs in non-running or failed state
+        if pod.status not in {Pod.Status.RUNNING, Pod.Status.COMPLETED, Pod.Status.SUCCEEDED}:
+            pod_events = [
+                event["raw_object"]["message"]
+                for event in pod.events(timeout=TIMEOUT_5SEC, field_selector="type==Warning")
+            ]
+            LOGGER.error(
+                f"POD Name: {pod.name}\n"
+                f"POD Conditions:\n {pod.instance.status.conditions[0]}\n"
+                f"POD Events:\n {', '.join(pod_events)}"
+            )
 
 
 def verify_vm_migrated(
@@ -2144,6 +2180,7 @@ def create_vm_cloning_job(
     annotation_filters=None,
     new_mac_addresses=None,
     new_smbios_serial=None,
+    volume_name_policy=None,
 ):
     """
     Create VirtualMachineClone object.
@@ -2169,6 +2206,7 @@ def create_vm_cloning_job(
         annotation_filters=annotation_filters,
         new_mac_addresses=new_mac_addresses,
         new_smbios_serial=new_smbios_serial,
+        volume_name_policy=volume_name_policy,
     ) as vmc:
         vmc.wait_for_status(status=VirtualMachineClone.Status.SUCCEEDED)
         yield vmc
@@ -2328,9 +2366,7 @@ def check_migration_process_after_node_drain(client, vm, admin_client):
     LOGGER.info(f"The VMI was running on {source_node.name}")
     wait_for_node_schedulable_status(node=source_node, status=False)
     vmim = get_created_migration_job(vm=vm, client=client, timeout=TIMEOUT_5MIN)
-    wait_for_migration_finished(
-        namespace=vm.namespace, migration=vmim, timeout=TIMEOUT_30MIN if "windows" in vm.name else TIMEOUT_10MIN
-    )
+    wait_for_migration_finished(migration=vmim, timeout=TIMEOUT_30MIN if "windows" in vm.name else TIMEOUT_10MIN)
 
     target_pod = vm.vmi.get_virt_launcher_pod(privileged_client=admin_client)
     target_pod.wait_for_status(status=Pod.Status.RUNNING, timeout=TIMEOUT_3MIN)
@@ -2559,8 +2595,8 @@ def wait_for_vmi_relocation_and_running(initial_node, vm, timeout=TIMEOUT_5MIN):
 
 
 def check_qemu_guest_agent_installed(ssh_exec: Host) -> bool:
-    ssh_exec.sudo = True
-    return ssh_exec.package_manager.exist(package="qemu-guest-agent")
+    rc, _, _ = ssh_exec.executor().run_cmd(cmd=shlex.split("rpm -q qemu-guest-agent"))
+    return rc == 0
 
 
 def validate_libvirt_persistent_domain(vm, admin_client):
@@ -2601,7 +2637,7 @@ def validate_pause_unpause_linux_vm(vm: VirtualMachineForTests, pre_pause_pid: i
     )
 
 
-def check_vm_xml_smbios(vm: VirtualMachineForTests, cm_values: Dict[str, str], admin_client: DynamicClient) -> None:
+def check_vm_xml_smbios(vm: VirtualMachineForTests, cm_values: dict[str, str], admin_client: DynamicClient) -> None:
     """
     Verify SMBIOS on VM XML [sysinfo type=smbios][system] match kubevirt-config
     config map.
@@ -2632,13 +2668,14 @@ def update_vm_efi_spec_and_restart(
     restart_vm_wait_for_running_vm(vm=vm, wait_for_interfaces=wait_for_interfaces)
 
 
-def delete_guestosinfo_keys(data: Dict[str, Any]) -> Dict[str, Any]:
+def delete_guestosinfo_keys(data: dict[str, Any]) -> dict[str, Any]:
     """
     supportedCommands - removed as the data is used for internal guest agent validations
     fsInfo, userList - checked in validate_fs_info_virtctl_vs_linux_os / validate_user_info_virtctl_vs_linux_os
     fsFreezeStatus - removed as it is not related to GA validations
+    load - present in virtctl/cnv guest-agent output but not in libvirt/linux
     """
-    removed_keys = ["supportedCommands", "fsInfo", "userList", "fsFreezeStatus"]
+    removed_keys = ["supportedCommands", "fsInfo", "userList", "fsFreezeStatus", "load"]
     [data.pop(key, None) for key in removed_keys]
 
     return data
@@ -2753,7 +2790,7 @@ def guest_reboot(vm: VirtualMachineForTests, os_type: str) -> None:
     run_os_command(vm=vm, command=commands["reboot"][os_type])
 
 
-def run_os_command(vm: VirtualMachineForTests, command: str) -> Optional[str]:
+def run_os_command(vm: VirtualMachineForTests, command: str) -> str | None:
     try:
         return run_ssh_commands(
             host=vm.ssh_exec,
@@ -2782,7 +2819,7 @@ def wait_for_user_agent_down(vm: VirtualMachineForTests, timeout: int) -> None:
             break
 
 
-def get_virt_handler_pods(client: DynamicClient, namespace: Namespace) -> List[Pod]:
+def get_virt_handler_pods(client: DynamicClient, namespace: Namespace) -> list[Pod]:
     return utilities.infra.get_pods(
         client=client,
         namespace=namespace,
@@ -2792,7 +2829,7 @@ def get_virt_handler_pods(client: DynamicClient, namespace: Namespace) -> List[P
 
 def check_virt_handler_pods_for_migration_network(
     client: DynamicClient, namespace: Namespace, network_name: str, migration_network: bool = True
-) -> List[Pod]:
+) -> list[Pod]:
     """
     Checks whether virt-handler pods have migration network.
 

@@ -9,6 +9,12 @@ tone_instructions: "Be direct and specific. Explain WHY rules exist. Provide cod
 early_access: true
 enable_free_tier: true
 
+inheritance: false
+
+code_generation: {}
+
+issue_enrichment: {}
+
 reviews:
   # Explicit instructions applied to every review, including PR description validation
   path_instructions:
@@ -23,9 +29,6 @@ reviews:
         - `##### Which issue(s) this PR fixes:` — must be present (may be empty)
         - `##### Special notes for reviewer:` — must be present (may be empty)
         - `##### jira-ticket:` — must be present (may be empty)
-        Optional sections (may be omitted without issue):
-        - `##### Short description:`
-        - `##### More details:`
         If any required section is absent, or `What this PR does / why we need it:` has no content,
         flag it as HIGH severity and ask the author to restore the missing template section(s).
 
@@ -41,30 +44,72 @@ reviews:
   auto_title_placeholder: "@coderabbitai"
   review_status: true
   commit_status: true
+  review_details: true
   poem: false
   collapse_walkthrough: true
+
+  # Auto-suggest labels
+  labeling_instructions:
+    - label: "new-tests"
+      instructions: "Apply when the PR adds new test files (test_*.py) or new test functions (def test_*)."
+    - label: "docs-only"
+      instructions: "Apply when the PR only changes .md files."
   sequence_diagrams: false
   changed_files_summary: true
 
   # Targeted pre-merge checks - only run on changed files
-  path_filters:
-    - "!**/*.md"  # Skip markdown-only changes for full review
+  # path_filters: markdown files are reviewed (AGENTS.md, docs/*.md contain coding standards)
+  path_filters: []
 
   # Abort review if PR is closed
   abort_on_close: true
+
+  # Pre-merge checks for PR quality
+  pre_merge_checks:
+    title:
+      mode: error
+      requirements: "Must be under 120 chars and clearly describe the change."
+    description:
+      mode: error
+    docstrings:
+      mode: "off"
+    custom_checks:
+      - name: "STP link required"
+        mode: error
+        instructions: |
+          Check ONLY code that is newly added (not modified) in this PR's diff.
+          This applies to two cases:
+          A) A newly added test file (test_*.py)
+          B) A newly added test function (def test_*) in an existing test file
+
+          For each case, at least one of the following MUST appear in the
+          module, class, or test function docstring:
+          - A line with "STP:" followed by a URL
+          - A line with "RFE:" followed by an issue tracker URL
+          - A line with "Jira:" followed by an issue tracker URL
+
+          If a module-level or class-level STP link already exists in the file,
+          newly added test functions in that same file are considered covered.
+          The @pytest.mark.polarion decorator alone does NOT satisfy this requirement.
+
+          Pass if no new test files and no new test functions are added in this PR.
 
   # Auto-review configuration
   auto_review:
     enabled: true
     auto_incremental_review: true
     drafts: false
+    auto_pause_after_reviewed_commits: 0
     ignore_title_keywords:
       - "WIP"
     base_branches:
       - main
+      - cnv-4.22
+      - cnv-4.21
       - cnv-4.20
       - cnv-4.19
       - cnv-4.18
+
 
   # Enabled linting and security tools
   tools:
@@ -99,6 +144,23 @@ reviews:
     github-checks:
       enabled: true
       timeout_ms: 90000
+    # Disabled tools (no JS/TS, PHP, Ruby, Kotlin, Rust, or Terraform in this repo)
+    biome:
+      enabled: false
+    eslint:
+      enabled: false
+    phpstan:
+      enabled: false
+    rubocop:
+      enabled: false
+    detekt:
+      enabled: false
+    clippy:
+      enabled: false
+    checkov:
+      enabled: false
+    tflint:
+      enabled: false
 
 chat:
   auto_reply: true
@@ -106,11 +168,38 @@ chat:
 knowledge_base:
   opt_out: false
 
+  linked_repositories:
+    # Link to design-docs repo for STP ↔ test traceability
+    - repository: "RedHatQE/openshift-virtualization-tests-design-docs"
+      instructions: |
+        Contains Software Test Plans (STPs) under stps/<sig>/ that define
+        test requirements, scenarios, and acceptance criteria.
+
+        STRICT ENFORCEMENT (applied to STD (Software Test Description)
+        and test implementation PRs):
+        - CRITICAL: Every STD PR MUST cover ALL test scenarios from the
+          referenced STP, except scenarios explicitly excluded with
+          justification and a follow-up Jira link. Any other missing
+          scenario blocks merge.
+        - CRITICAL: Every test MUST link to its STP. The link can be at
+          module, class, or test level docstring — place it at the level
+          that applies. Missing or invalid STP links block merge.
+        - HIGH: STD docstring preconditions, steps, and expected results
+          MUST align with the STP scenario description.
+        - HIGH: If an STP scenario is intentionally excluded, the PR
+          description MUST explain why and include a follow-up Jira link.
+        - HIGH: Every test scenario defined in the STP must have a
+          corresponding STD test implementation.
+        - HIGH: Negative and edge-case scenarios defined in the STP
+          MUST have corresponding tests — do not skip error paths.
+        - Partial coverage without justification blocks merge.
+
   # Enable code guidelines enforcement from AGENTS.md (single source of truth)
   code_guidelines:
     enabled: true
     filePatterns:
       - "AGENTS.md"
+      - "docs/AI_CONTRIBUTION_POLICY.md"
 
   # Enable learning from repository patterns
   learnings:
