@@ -1,5 +1,6 @@
 import logging
 import shlex
+from typing import TYPE_CHECKING
 
 import pytest
 from ocp_resources.daemonset import DaemonSet
@@ -12,6 +13,9 @@ from tests.virt.utils import build_node_affinity_dict
 from utilities.constants import TIMEOUT_5MIN, TIMEOUT_5SEC, TIMEOUT_20MIN, Images
 from utilities.infra import ExecCommandOnPod
 from utilities.virt import VirtualMachineForTests, migrate_vm_and_verify, running_vm
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
 
 LOGGER = logging.getLogger(__name__)
 
@@ -190,7 +194,7 @@ class TestVMCanUseSwap:
         "node_with_max_memory_labeled_for_swap_test",
         "migration_policy_with_allow_auto_converge",
     )
-    def test_migrate_vm_using_swap(self, admin_client, vm_for_swap_usage_test):
+    def test_migrate_vm_using_swap(self, admin_client: DynamicClient, vm_for_swap_usage_test: VirtualMachineForTests):
         migrate_vm_and_verify(
             vm=vm_for_swap_usage_test, client=admin_client, check_ssh_connectivity=True, timeout=TIMEOUT_20MIN
         )

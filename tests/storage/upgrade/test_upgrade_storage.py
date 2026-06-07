@@ -1,4 +1,5 @@
 import logging
+from typing import TYPE_CHECKING
 
 import pytest
 from ocp_resources.virtual_machine_restore import VirtualMachineRestore
@@ -20,6 +21,12 @@ from utilities.storage import (
     wait_for_vm_volume_ready,
 )
 from utilities.virt import migrate_vm_and_verify
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+    from ocp_resources.datavolume import DataVolume
+
+    from utilities.virt import VirtualMachineForTests
 
 LOGGER = logging.getLogger(__name__)
 
@@ -158,10 +165,9 @@ class TestUpgradeStorage:
     @pytest.mark.usefixtures("hotplug_volume_upg", "fedora_vm_for_hotplug_upg_ssh_connectivity")
     def test_vm_with_hotplug_after_upgrade(
         self,
-        admin_client,
-        upgrade_namespace_scope_session,
-        blank_disk_dv_with_default_sc,
-        fedora_vm_for_hotplug_upg,
+        admin_client: DynamicClient,
+        blank_disk_dv_with_default_sc: DataVolume,
+        fedora_vm_for_hotplug_upg: VirtualMachineForTests,
     ):
         wait_for_vm_volume_ready(vm=fedora_vm_for_hotplug_upg, volume_name=blank_disk_dv_with_default_sc.name)
         assert_disk_serial(vm=fedora_vm_for_hotplug_upg)

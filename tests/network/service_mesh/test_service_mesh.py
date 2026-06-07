@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING
+
 import pytest
 
 from tests.network.service_mesh.constants import AUTH_COMMAND, EXPECTED_MESH_SUCCESS_OUTPUT
@@ -7,6 +9,11 @@ from tests.network.service_mesh.utils import (
     run_console_command,
 )
 from utilities.virt import migrate_vm_and_verify
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from tests.network.utils import FedoraVirtualMachineForServiceMesh, ServiceMeshDeploymentService
 
 pytestmark = pytest.mark.service_mesh
 
@@ -74,9 +81,9 @@ class TestSMPeerAuthentication:
     )
     def test_authentication_policy_from_mesh_over_migration(
         self,
-        admin_client,
-        vm_fedora_with_service_mesh_annotation,
-        httpbin_service_service_mesh,
+        admin_client: DynamicClient,
+        vm_fedora_with_service_mesh_annotation: FedoraVirtualMachineForServiceMesh,
+        httpbin_service_service_mesh: ServiceMeshDeploymentService,
     ):
         migrate_vm_and_verify(vm=vm_fedora_with_service_mesh_annotation, client=admin_client)
         result = run_console_command(

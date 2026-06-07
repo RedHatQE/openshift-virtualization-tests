@@ -3,6 +3,7 @@ Common templates test RHEL OS support
 """
 
 import logging
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -29,6 +30,11 @@ from utilities.virt import (
     validate_virtctl_guest_agent_data_over_time,
     wait_for_console,
 )
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from utilities.virt import VirtualMachineForTests
 
 pytestmark = [
     pytest.mark.post_upgrade,
@@ -186,7 +192,7 @@ class TestCommonTemplatesRhel:
     @pytest.mark.dependency(
         name=f"{TESTS_CLASS_NAME}::migrate_vm_and_verify", depends=[f"{TESTS_CLASS_NAME}::vm_expose_ssh"]
     )
-    def test_migrate_vm(self, admin_client, matrix_rhel_os_vm_from_template):
+    def test_migrate_vm(self, admin_client: DynamicClient, matrix_rhel_os_vm_from_template: VirtualMachineForTests):
         """Test SSH connectivity after migration"""
         vm = matrix_rhel_os_vm_from_template
         migrate_vm_and_verify(vm=vm, client=admin_client, check_ssh_connectivity=True)

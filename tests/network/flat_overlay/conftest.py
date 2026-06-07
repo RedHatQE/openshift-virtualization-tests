@@ -1,5 +1,6 @@
 import logging
 import random
+from typing import TYPE_CHECKING
 
 import pytest
 from ocp_resources.cluster_operator import ClusterOperator
@@ -26,6 +27,11 @@ from utilities.constants import DEFAULT_RESOURCE_CONDITIONS, FLAT_OVERLAY_STR
 from utilities.infra import create_ns, wait_for_consistent_resource_conditions
 from utilities.network import assert_ping_successful, network_nad
 from utilities.virt import migrate_vm_and_verify
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from utilities.virt import VirtualMachineForTests
 
 LOGGER = logging.getLogger(__name__)
 
@@ -286,7 +292,9 @@ def ping_before_migration(vmd_flat_overlay, vmc_flat_overlay_ip_address):
 
 
 @pytest.fixture()
-def migrated_vmc_flat_overlay(admin_client, vmc_flat_overlay):
+def migrated_vmc_flat_overlay(
+    admin_client: DynamicClient, vmc_flat_overlay: VirtualMachineForTests
+) -> VirtualMachineForTests:
     migrate_vm_and_verify(vm=vmc_flat_overlay, client=admin_client, check_ssh_connectivity=True)
     return vmc_flat_overlay
 

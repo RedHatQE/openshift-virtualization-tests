@@ -6,6 +6,7 @@ Note: The windows image runs the WSL guest (Fedora-33) at boot.
 import logging
 import re
 import shlex
+from typing import TYPE_CHECKING
 
 import pytest
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
@@ -21,6 +22,9 @@ from utilities.virt import (
     migrate_vm_and_verify,
     running_vm,
 )
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
 
 pytestmark = [pytest.mark.special_infra, pytest.mark.high_resource_vm]
 
@@ -113,7 +117,7 @@ def windows_wsl2_vm(
 
 
 @pytest.fixture()
-def migrated_wsl2_vm(admin_client, windows_wsl2_vm):
+def migrated_wsl2_vm(admin_client: DynamicClient, windows_wsl2_vm: VirtualMachineForTests) -> VirtualMachineForTests:
     migrate_vm_and_verify(vm=windows_wsl2_vm, client=admin_client, check_ssh_connectivity=True)
     return windows_wsl2_vm
 

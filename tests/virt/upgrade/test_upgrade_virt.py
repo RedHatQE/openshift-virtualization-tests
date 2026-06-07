@@ -1,4 +1,5 @@
 import logging
+from typing import TYPE_CHECKING
 
 import pytest
 from ocp_resources.virtual_machine_instance import VirtualMachineInstance
@@ -22,6 +23,11 @@ from tests.virt.utils import assert_migration_post_copy_mode, verify_guest_boot_
 from utilities.constants import DATA_SOURCE_NAME, DEPENDENCY_SCOPE_SESSION
 from utilities.exceptions import ResourceValueError
 from utilities.virt import migrate_vm_and_verify, vm_console_run_commands
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from utilities.virt import VirtualMachineForTests
 
 LOGGER = logging.getLogger(__name__)
 
@@ -132,7 +138,11 @@ class TestUpgradeVirt:
     @pytest.mark.order(before=MIGRATION_BEFORE_UPGRADE_TEST_ORDERING)
     @pytest.mark.dependency(name=f"{VIRT_NODE_ID_PREFIX}::test_vm_post_copy_migration_before_upgrade")
     @pytest.mark.usefixtures("post_copy_migration_policy_for_upgrade")
-    def test_vm_post_copy_migration_before_upgrade(self, admin_client, vm_for_post_copy_upgrade):
+    def test_vm_post_copy_migration_before_upgrade(
+        self,
+        admin_client: DynamicClient,
+        vm_for_post_copy_upgrade: VirtualMachineForTests,
+    ):
         migrate_vm_and_verify(vm=vm_for_post_copy_upgrade, client=admin_client, check_ssh_connectivity=True)
         assert_migration_post_copy_mode(vm=vm_for_post_copy_upgrade)
 
@@ -143,7 +153,9 @@ class TestUpgradeVirt:
         name=MIGRATION_BEFORE_UPGRADE_TEST_NODE_ID,
         scope=DEPENDENCY_SCOPE_SESSION,
     )
-    def test_migration_before_upgrade(self, admin_client, virt_migratable_vms):
+    def test_migration_before_upgrade(
+        self, admin_client: DynamicClient, virt_migratable_vms: list[VirtualMachineForTests]
+    ):
         for vm in virt_migratable_vms:
             migrate_vm_and_verify(vm=vm, client=admin_client, wait_for_interfaces=False, check_ssh_connectivity=False)
 
@@ -261,7 +273,9 @@ class TestUpgradeVirt:
         depends=[IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID, MIGRATION_BEFORE_UPGRADE_TEST_NODE_ID],
         scope=DEPENDENCY_SCOPE_SESSION,
     )
-    def test_migration_after_upgrade(self, admin_client, virt_migratable_vms):
+    def test_migration_after_upgrade(
+        self, admin_client: DynamicClient, virt_migratable_vms: list[VirtualMachineForTests]
+    ):
         for vm in virt_migratable_vms:
             migrate_vm_and_verify(vm=vm, client=admin_client, wait_for_interfaces=False, check_ssh_connectivity=False)
 
@@ -339,8 +353,8 @@ class TestUpgradeVirt:
     )
     def test_vm_post_copy_migration_after_upgrade(
         self,
-        admin_client,
-        vm_for_post_copy_upgrade,
+        admin_client: DynamicClient,
+        vm_for_post_copy_upgrade: VirtualMachineForTests,
     ):
         migrate_vm_and_verify(vm=vm_for_post_copy_upgrade, client=admin_client, check_ssh_connectivity=True)
         assert_migration_post_copy_mode(vm=vm_for_post_copy_upgrade)

@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING
+
 import pytest
 from ocp_resources.data_source import DataSource
 from ocp_resources.resource import Resource
@@ -8,6 +10,9 @@ from ocp_resources.virtual_machine_cluster_instancetype import (
 from utilities.constants import DATA_SOURCE_NAME
 from utilities.storage import data_volume_template_with_source_ref_dict
 from utilities.virt import VirtualMachineForTests, migrate_vm_and_verify, running_vm
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
 
 CX1_CLUSTER_INSTANCETYPE_MEMORY_SIZES = [2, 4, 8, 16, 32, 64]  # provided cluster cx1 instancetype sizes (Gi)
 
@@ -67,8 +72,7 @@ def created_vm_cx1_instancetype(
 
 @pytest.fixture()
 def migrated_numa_cx1_vm(
-    admin_client,
-    created_vm_cx1_instancetype,
-):
+    admin_client: DynamicClient, created_vm_cx1_instancetype: VirtualMachineForTests
+) -> VirtualMachineForTests:
     migrate_vm_and_verify(vm=created_vm_cx1_instancetype, client=admin_client, check_ssh_connectivity=True)
     return created_vm_cx1_instancetype

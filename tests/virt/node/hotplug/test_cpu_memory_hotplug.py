@@ -1,4 +1,5 @@
 import logging
+from typing import TYPE_CHECKING
 
 import pytest
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
@@ -24,6 +25,11 @@ from utilities.virt import (
     migrate_vm_and_verify,
     restart_vm_wait_for_running_vm,
 )
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from utilities.virt import VirtualMachineForTests
 
 pytestmark = [pytest.mark.rwx_default_storage, pytest.mark.data_collector_scope(scope="module")]
 
@@ -79,7 +85,7 @@ class TestCPUHotPlug:
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu"])
     @pytest.mark.polarion("CNV-10696")
     @pytest.mark.usefixtures("hotplug_vm_snapshot")
-    def test_migrate_snapshot_hotplugged_vm(self, admin_client, hotplugged_vm):
+    def test_migrate_snapshot_hotplugged_vm(self, admin_client: DynamicClient, hotplugged_vm: VirtualMachineForTests):
         migrate_vm_and_verify(vm=hotplugged_vm, client=admin_client, check_ssh_connectivity=True)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu"])
@@ -136,7 +142,7 @@ class TestMemoryHotPlug:
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_memory"])
     @pytest.mark.polarion("CNV-10677")
     @pytest.mark.usefixtures("hotplug_vm_snapshot")
-    def test_migrate_snapshot_hotplugged_vm(self, admin_client, hotplugged_vm):
+    def test_migrate_snapshot_hotplugged_vm(self, admin_client: DynamicClient, hotplugged_vm: VirtualMachineForTests):
         migrate_vm_and_verify(vm=hotplugged_vm, client=admin_client, check_ssh_connectivity=True)
 
     @pytest.mark.parametrize(

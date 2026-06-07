@@ -1,4 +1,5 @@
 import logging
+from typing import TYPE_CHECKING
 
 import pytest
 from ocp_resources.config_map import ConfigMap
@@ -12,6 +13,9 @@ from ocp_resources.virtual_machine_cluster_preference import (
 from tests.os_params import WINDOWS_10
 from utilities.constants import OS_FLAVOR_WINDOWS, TIMEOUT_3MIN, VIRTIO_WIN
 from utilities.virt import VirtualMachineForTests, migrate_vm_and_verify, running_vm
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
 
 pytestmark = [pytest.mark.special_infra, pytest.mark.high_resource_vm]
 
@@ -101,9 +105,9 @@ def vm_with_guest_tools(
 
 @pytest.fixture(scope="class")
 def migrated_vm_with_guest_tools(
-    admin_client,
-    vm_with_guest_tools,
-):
+    admin_client: DynamicClient,
+    vm_with_guest_tools: VirtualMachineForTests,
+) -> VirtualMachineForTests:
     migrate_vm_and_verify(vm=vm_with_guest_tools, client=admin_client)
     return vm_with_guest_tools
 

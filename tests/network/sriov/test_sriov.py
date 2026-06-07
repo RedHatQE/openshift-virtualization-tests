@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING
+
 import pytest
 
 from libs.net.ip import filter_link_local_addresses
@@ -7,6 +9,12 @@ from tests.network.utils import assert_no_ping
 from utilities.constants import QUARANTINED
 from utilities.network import assert_ping_successful
 from utilities.virt import migrate_vm_and_verify
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+    from ocp_resources.network_attachment_definition import NetworkAttachmentDefinition
+
+    from libs.vm.vm import BaseVirtualMachine
 
 pytestmark = [pytest.mark.special_infra, pytest.mark.sriov]
 
@@ -99,11 +107,11 @@ class TestSriovLiveMigration:
     @pytest.mark.polarion("CNV-6455")
     def test_sriov_migration(
         self,
-        admin_client,
-        subtests,
-        sriov_network,
-        sriov_vm_migrate,
-        sriov_vm2,
+        admin_client: DynamicClient,
+        subtests: pytest.Subtests,
+        sriov_network: NetworkAttachmentDefinition,
+        sriov_vm_migrate: BaseVirtualMachine,
+        sriov_vm2: BaseVirtualMachine,
     ):
         migrate_vm_and_verify(vm=sriov_vm_migrate, client=admin_client, check_ssh_connectivity=True)
         dst_ips = filter_link_local_addresses(

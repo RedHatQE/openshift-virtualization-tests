@@ -74,12 +74,12 @@ def configure_hco_live_migration_network(
     )
 
 
-def verify_compute_live_migration_after_cclm(client, local_vms):
+def verify_compute_live_migration_after_cclm(client: DynamicClient, local_vms: list[VirtualMachineForTests]) -> None:
     """
     Verify compute live migration for VMs after Cross-Cluster Live Migration (CCLM).
 
     Args:
-        client: Client to use for migration.
+        client: DynamicClient used to create migration resources.
         local_vms: List of VirtualMachineForTests objects in the local cluster
 
     Raises:

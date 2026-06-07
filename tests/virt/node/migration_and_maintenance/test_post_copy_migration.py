@@ -1,4 +1,5 @@
 import logging
+from typing import TYPE_CHECKING
 
 import pytest
 from ocp_resources.migration_policy import MigrationPolicy
@@ -27,6 +28,11 @@ from utilities.virt import (
     start_and_fetch_processid_on_linux_vm,
     start_and_fetch_processid_on_windows_vm,
 )
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from utilities.virt import VirtualMachineForTests
 
 pytestmark = [
     pytest.mark.rwx_default_storage,
@@ -69,7 +75,9 @@ def vm_background_process_id(hotplugged_vm):
 
 
 @pytest.fixture()
-def migrated_hotplugged_vm(admin_client, hotplugged_vm):
+def migrated_hotplugged_vm(
+    admin_client: DynamicClient, hotplugged_vm: VirtualMachineForTests
+) -> VirtualMachineForTests:
     migrate_vm_and_verify(
         vm=hotplugged_vm,
         client=admin_client,

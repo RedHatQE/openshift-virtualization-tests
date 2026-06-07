@@ -1,4 +1,5 @@
 import logging
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -12,6 +13,11 @@ from tests.virt.constants import WINDOWS_10_WSL
 from tests.virt.utils import get_stress_ng_pid, verify_stress_ng_pid_not_changed
 from utilities.constants import STRESS_CPU_MEM_IO_COMMAND, TIMEOUT_20MIN, Images
 from utilities.virt import migrate_vm_and_verify
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from utilities.virt import VirtualMachineForTests
 
 LOGGER = logging.getLogger(__name__)
 
@@ -37,7 +43,9 @@ def stress_pid_before_migration(vm_with_memory_load, cpu_mem_io_stress_started):
 
 
 @pytest.fixture()
-def migrate_vm_with_memory_load(admin_client, vm_with_memory_load):
+def migrate_vm_with_memory_load(
+    admin_client: DynamicClient, vm_with_memory_load: VirtualMachineForTests
+) -> VirtualMachineForTests:
     migrate_vm_and_verify(
         vm=vm_with_memory_load, client=admin_client, check_ssh_connectivity=True, timeout=TIMEOUT_20MIN
     )

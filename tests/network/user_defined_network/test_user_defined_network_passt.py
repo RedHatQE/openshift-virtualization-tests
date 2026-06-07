@@ -1,7 +1,7 @@
 from collections.abc import Generator
+from typing import TYPE_CHECKING
 
 import pytest
-from kubernetes.dynamic import DynamicClient
 from ocp_resources.hyperconverged import HyperConverged
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.namespace import Namespace
@@ -11,10 +11,14 @@ from timeout_sampler import TimeoutExpiredError, retry
 from libs.net.traffic_generator import client_server_active_connection, is_tcp_connection
 from libs.net.udn import UDN_PASST_CORE_BINDING_NAME
 from libs.net.vmspec import lookup_primary_network
-from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs.vm_factory import udn_vm
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.virt import LOGGER, migrate_vm_and_verify
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from libs.vm.vm import BaseVirtualMachine
 
 
 @retry(wait_timeout=400, sleep=10, exceptions_dict={})
@@ -83,7 +87,7 @@ def passt_running_vm_pair(
 @pytest.mark.single_nic
 @pytest.mark.polarion("CNV-12427")
 def test_passt_connectivity_is_preserved_during_client_live_migration(
-    admin_client, passt_enabled_in_hco, passt_running_vm_pair
+    admin_client: DynamicClient, passt_running_vm_pair: tuple[BaseVirtualMachine, BaseVirtualMachine]
 ):
     with client_server_active_connection(
         client_vm=passt_running_vm_pair[0],
@@ -98,7 +102,7 @@ def test_passt_connectivity_is_preserved_during_client_live_migration(
 @pytest.mark.single_nic
 @pytest.mark.polarion("CNV-12428")
 def test_passt_connectivity_is_preserved_during_server_live_migration(
-    admin_client, passt_enabled_in_hco, passt_running_vm_pair
+    admin_client: DynamicClient, passt_running_vm_pair: tuple[BaseVirtualMachine, BaseVirtualMachine]
 ):
     with client_server_active_connection(
         client_vm=passt_running_vm_pair[0],

@@ -1,4 +1,5 @@
 import logging
+from typing import TYPE_CHECKING
 
 import pytest
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
@@ -22,6 +23,9 @@ from utilities.virt import (
     running_vm,
     wait_for_updated_kv_value,
 )
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.data_collector_scope(scope="module")]
 LOGGER = logging.getLogger(__name__)
@@ -120,7 +124,11 @@ def restarted_vm(admin_client, vm_for_machine_type_test, machine_type_from_kubev
 
 
 @pytest.fixture()
-def migrated_vm(admin_client, vm_for_machine_type_test, machine_type_from_kubevirt_config):
+def migrated_vm(
+    admin_client: DynamicClient,
+    vm_for_machine_type_test: VirtualMachineForTests,
+    machine_type_from_kubevirt_config: str,
+) -> VirtualMachineForTests:
     validate_machine_type(
         vm=vm_for_machine_type_test, expected_machine_type=machine_type_from_kubevirt_config, admin_client=admin_client
     )

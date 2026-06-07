@@ -1,4 +1,5 @@
 import logging
+from typing import TYPE_CHECKING
 
 import pytest
 from ocp_resources.pod import Pod
@@ -26,6 +27,11 @@ from utilities.constants import (
     REQUESTS_MEMORY_VMI_STR,
 )
 from utilities.virt import migrate_vm_and_verify, wait_for_running_vm
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from utilities.virt import VirtualMachineForTests
 
 LOGGER = logging.getLogger(__name__)
 
@@ -113,7 +119,9 @@ class TestARQCanManageVMs:
 
     @pytest.mark.dependency(depends=[f"{TESTS_VM_CLASS_NAME}::vm_gated"])
     @pytest.mark.polarion("CNV-11282")
-    def test_arq_vm_migration_allowed_when_quota_reached(self, admin_client, vm_for_aaq_test):
+    def test_arq_vm_migration_allowed_when_quota_reached(
+        self, admin_client: DynamicClient, vm_for_aaq_test: VirtualMachineForTests
+    ):
         migrate_vm_and_verify(vm=vm_for_aaq_test, client=admin_client)
 
     @pytest.mark.parametrize(

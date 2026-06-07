@@ -129,7 +129,7 @@ def verify_stress_ng_pid_not_changed(vm, initial_pid, windows=False):
     )
 
 
-def migrate_and_verify_multi_vms(client, vm_list):
+def migrate_and_verify_multi_vms(client: DynamicClient, vm_list: list[VirtualMachineForTests]) -> None:
     vms_dict = {}
     failed_migrations_list = []
 

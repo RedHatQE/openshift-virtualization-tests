@@ -5,6 +5,8 @@ Network Migration test
 import logging
 import re
 import shlex
+from collections.abc import Generator
+from typing import TYPE_CHECKING
 
 import pytest
 from ocp_resources.service import Service
@@ -37,6 +39,9 @@ from utilities.virt import (
     fedora_vm_body,
     migrate_vm_and_verify,
 )
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
 
 PING_LOG = "ping.log"
 LOGGER = logging.getLogger(__name__)
@@ -258,7 +263,9 @@ def ssh_in_background(br1test_nad, running_vma, running_vmb):
 
 
 @pytest.fixture(scope="module")
-def migrated_vmb_and_wait_for_success(admin_client, running_vmb, http_service):
+def migrated_vmb_and_wait_for_success(
+    admin_client: DynamicClient, running_vmb: VirtualMachineForTests, http_service
+) -> VirtualMachineForTests:
     migrate_vm_and_verify(vm=running_vmb, client=admin_client)
     return running_vmb
 
@@ -269,7 +276,11 @@ def vma_ip_address(br1test_nad, running_vma):
 
 
 @pytest.fixture(scope="module")
-def migrated_vmb_without_waiting_for_success(admin_client, vma_ip_address, running_vmb, br1test_nad):
+def migrated_vmb_without_waiting_for_success(
+    admin_client: DynamicClient,
+    vma_ip_address: str,
+    running_vmb: VirtualMachineForTests,
+) -> Generator[None]:
     """
     1. Assert ping is successful before migrating vmb.
     2. Migrate vmb without waiting for success. As soon as the VMI acquire a new IP address, return.

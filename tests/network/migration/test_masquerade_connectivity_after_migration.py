@@ -1,4 +1,6 @@
 import logging
+from collections.abc import Generator
+from typing import TYPE_CHECKING
 
 import pytest
 from timeout_sampler import TimeoutSampler
@@ -12,6 +14,9 @@ from utilities.virt import (
     vm_console_run_commands,
     wait_for_console,
 )
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
 
 LOGGER = logging.getLogger(__name__)
 
@@ -53,7 +58,7 @@ def running_vm_for_migration(
 
 
 @pytest.fixture()
-def migrated_vmi(admin_client, running_vm_for_migration):
+def migrated_vmi(admin_client: DynamicClient, running_vm_for_migration: VirtualMachineForTests) -> Generator[None]:
     LOGGER.info(f"Migrating {running_vm_for_migration.name}. Current node: {running_vm_for_migration.vmi.node.name}")
 
     iface_name = running_vm_for_migration.vmi.interfaces[0].name

@@ -1,5 +1,6 @@
 import ipaddress
 from ipaddress import ip_interface
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -13,6 +14,11 @@ from tests.network.localnet.liblocalnet import (
 )
 from utilities.virt import migrate_vm_and_verify
 
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from libs.net.traffic_generator import TcpServer, VMTcpClient
+
 
 @pytest.mark.gating
 @pytest.mark.single_nic
@@ -20,9 +26,9 @@ from utilities.virt import migrate_vm_and_verify
 @pytest.mark.usefixtures("nncp_localnet")
 @pytest.mark.polarion("CNV-11775")
 def test_connectivity_over_migration_between_localnet_vms(
-    admin_client,
-    subtests,
-    localnet_active_connections,
+    admin_client: DynamicClient,
+    subtests: pytest.Subtests,
+    localnet_active_connections: list[tuple[VMTcpClient, TcpServer]],
 ):
     client, _ = localnet_active_connections[0]
     migrate_vm_and_verify(vm=client.vm, client=admin_client)

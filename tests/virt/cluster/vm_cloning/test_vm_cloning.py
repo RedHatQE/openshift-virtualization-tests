@@ -1,4 +1,5 @@
 import shlex
+from typing import TYPE_CHECKING
 
 import pytest
 from ocp_resources.datavolume import DataVolume
@@ -27,6 +28,9 @@ from utilities.virt import (
     running_vm,
     target_vm_from_cloning_job,
 )
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
 
 LABEL_TO_COPY_STR = "label-to-copy"
 LABEL_TO_EXCLUDE_STR = "label-to-exclude"
@@ -295,7 +299,7 @@ class TestVMCloneAndMigrate:
         )
 
     @pytest.mark.polarion("CNV-10320")
-    def test_migrate_the_vm_clone(self, admin_client, fedora_target_vm):
+    def test_migrate_the_vm_clone(self, admin_client: DynamicClient, fedora_target_vm: VirtualMachineForCloning):
         migrate_vm_and_verify(vm=fedora_target_vm, client=admin_client)
 
     @pytest.mark.parametrize(

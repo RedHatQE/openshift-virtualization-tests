@@ -1,4 +1,5 @@
 import logging
+from typing import TYPE_CHECKING
 
 import pytest
 from ocp_resources.kubevirt import KubeVirt
@@ -10,6 +11,11 @@ from utilities.constants import TIMEOUT_5MIN, TIMEOUT_30SEC
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import ExecCommandOnPod, label_nodes
 from utilities.virt import migrate_vm_and_verify, running_vm
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from utilities.virt import VirtualMachineForTests
 
 LOGGER = logging.getLogger(__name__)
 
@@ -195,7 +201,9 @@ class TestKernelSamepageMerging:
     @pytest.mark.polarion("CNV-10523")
     @pytest.mark.dependency(depends=["test_ksm_activated_when_node_under_pressure"])
     @pytest.mark.usefixtures("ksm_label_added_to_worker2")
-    def test_migrate_vm_when_ksm_active(self, admin_client, vms_for_ksm_test):
+    def test_migrate_vm_when_ksm_active(
+        self, admin_client: DynamicClient, vms_for_ksm_test: list[VirtualMachineForTests]
+    ):
         migrate_vm_and_verify(vm=vms_for_ksm_test[0], client=admin_client)
 
     @pytest.mark.polarion("CNV-10524")

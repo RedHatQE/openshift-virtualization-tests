@@ -4,6 +4,7 @@ Automation for Hot Plug
 
 import logging
 import shlex
+from typing import TYPE_CHECKING
 
 import pytest
 from ocp_resources.datavolume import DataVolume
@@ -28,6 +29,9 @@ from utilities.virt import (
     migrate_vm_and_verify,
     running_vm,
 )
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
 
 LOGGER = logging.getLogger(__name__)
 
@@ -206,9 +210,9 @@ class TestHotPlugWithPersist:
     @pytest.mark.s390x
     def test_hotplug_volume_with_bus_and_persist_migrate(
         self,
-        admin_client,
-        blank_disk_dv_multi_storage_scope_class,
-        fedora_vm_for_hotplug_scope_class,
+        admin_client: DynamicClient,
+        blank_disk_dv_multi_storage_scope_class: DataVolume,
+        fedora_vm_for_hotplug_scope_class: VirtualMachineForTests,
     ):
         if is_dv_migratable(dv=blank_disk_dv_multi_storage_scope_class):
             migrate_vm_and_verify(
@@ -247,9 +251,9 @@ class TestHotPlugWithSerialPersist:
     @pytest.mark.s390x
     def test_hotplug_volume_with_serial_and_persist_migrate(
         self,
-        admin_client,
-        blank_disk_dv_multi_storage_scope_class,
-        fedora_vm_for_hotplug_scope_class,
+        admin_client: DynamicClient,
+        blank_disk_dv_multi_storage_scope_class: DataVolume,
+        fedora_vm_for_hotplug_scope_class: VirtualMachineForTests,
     ):
         if is_dv_migratable(dv=blank_disk_dv_multi_storage_scope_class):
             migrate_vm_and_verify(
@@ -290,9 +294,9 @@ class TestHotPlugWindows:
     @pytest.mark.dependency(depends=["test_windows_hotplug"])
     def test_windows_hotplug_migrate(
         self,
-        admin_client,
-        blank_disk_dv_multi_storage_scope_class,
-        vm_instance_from_template_multi_storage_scope_class,
+        admin_client: DynamicClient,
+        blank_disk_dv_multi_storage_scope_class: DataVolume,
+        vm_instance_from_template_multi_storage_scope_class: VirtualMachineForTests,
     ):
         if is_dv_migratable(dv=blank_disk_dv_multi_storage_scope_class):
             migrate_vm_and_verify(
