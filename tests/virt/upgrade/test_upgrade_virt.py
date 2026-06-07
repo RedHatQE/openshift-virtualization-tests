@@ -131,12 +131,8 @@ class TestUpgradeVirt:
     @pytest.mark.polarion("CNV-12018")
     @pytest.mark.order(before=MIGRATION_BEFORE_UPGRADE_TEST_ORDERING)
     @pytest.mark.dependency(name=f"{VIRT_NODE_ID_PREFIX}::test_vm_post_copy_migration_before_upgrade")
-    def test_vm_post_copy_migration_before_upgrade(
-        self,
-        admin_client,
-        post_copy_migration_policy_for_upgrade,
-        vm_for_post_copy_upgrade,
-    ):
+    @pytest.mark.usefixtures("post_copy_migration_policy_for_upgrade")
+    def test_vm_post_copy_migration_before_upgrade(self, admin_client, vm_for_post_copy_upgrade):
         migrate_vm_and_verify(vm=vm_for_post_copy_upgrade, client=admin_client, check_ssh_connectivity=True)
         assert_migration_post_copy_mode(vm=vm_for_post_copy_upgrade)
 

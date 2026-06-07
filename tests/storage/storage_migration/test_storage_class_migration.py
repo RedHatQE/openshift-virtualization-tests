@@ -202,9 +202,10 @@ class TestStorageClassMigrationWithVolumeHotplug:
     @pytest.mark.dependency(
         depends=[f"{TESTS_CLASS_NAME_VOLUME_HOTPLUG}::test_vm_storage_class_migration_with_hotplugged_volume"]
     )
+    @pytest.mark.usefixtures("source_storage_class")
     @pytest.mark.polarion("CNV-11966")
     def test_migrate_vm_with_hotplugged_volume_after_storage_migration(
-        self, admin_client, source_storage_class, booted_vms_for_storage_class_migration
+        self, admin_client, booted_vms_for_storage_class_migration
     ):
         vms_failed_migration = {}
         for vm in booted_vms_for_storage_class_migration:
@@ -310,15 +311,17 @@ class TestStorageClassMigrationWindowsWithVTPM:
     @pytest.mark.dependency(
         depends=[f"{TESTS_CLASS_NAME_WINDOWS}::test_vm_storage_class_migration_windows_vm_with_vtpm"]
     )
+    @pytest.mark.usefixtures(
+        "source_storage_class",
+        "target_storage_class",
+        "online_vms_for_storage_class_migration",
+        "dv_wait_timeout",
+    )
     @pytest.mark.polarion("CNV-11515")
     def test_migrate_windows_vm_with_vtpm_after_storage_migration(
         self,
         admin_client,
-        source_storage_class,
-        target_storage_class,
         vms_for_storage_class_migration,
-        online_vms_for_storage_class_migration,
-        dv_wait_timeout,
     ):
         vms_failed_migration = {}
         for vm in vms_for_storage_class_migration:

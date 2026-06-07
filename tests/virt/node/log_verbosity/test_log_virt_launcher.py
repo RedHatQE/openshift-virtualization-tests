@@ -112,11 +112,10 @@ class TestProgressOfMigrationInVirtLauncher:
 
     @pytest.mark.rwx_default_storage
     @pytest.mark.polarion("CNV-9058")
-    def test_progress_of_vm_migration_in_virt_launcher_pod(
-        self,
-        updated_log_verbosity_config,
-        vm_for_migration_progress_test,
-        source_pod_log_verbosity_test,
-        migrated_vm_with_policy,
-    ):
+    @pytest.mark.usefixtures(
+        "migrated_vm_with_policy",
+        "updated_log_verbosity_config",
+        "vm_for_migration_progress_test",
+    )
+    def test_progress_of_vm_migration_in_virt_launcher_pod(self, source_pod_log_verbosity_test):
         wait_for_all_progress_keys_in_pod_log(pod=source_pod_log_verbosity_test)

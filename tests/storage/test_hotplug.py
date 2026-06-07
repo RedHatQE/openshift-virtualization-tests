@@ -202,13 +202,13 @@ class TestHotPlugWithPersist:
 
     @pytest.mark.polarion("CNV-11390")
     @pytest.mark.dependency(depends=["test_hotplug_volume_with_bus_and_persist"])
+    @pytest.mark.usefixtures("expected_bus")
     @pytest.mark.s390x
     def test_hotplug_volume_with_bus_and_persist_migrate(
         self,
         admin_client,
         blank_disk_dv_multi_storage_scope_class,
         fedora_vm_for_hotplug_scope_class,
-        expected_bus,
     ):
         if is_dv_migratable(dv=blank_disk_dv_multi_storage_scope_class):
             migrate_vm_and_verify(

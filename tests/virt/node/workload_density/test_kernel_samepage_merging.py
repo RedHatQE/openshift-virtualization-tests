@@ -194,7 +194,8 @@ class TestKernelSamepageMerging:
     @pytest.mark.rwx_default_storage
     @pytest.mark.polarion("CNV-10523")
     @pytest.mark.dependency(depends=["test_ksm_activated_when_node_under_pressure"])
-    def test_migrate_vm_when_ksm_active(self, admin_client, ksm_label_added_to_worker2, vms_for_ksm_test):
+    @pytest.mark.usefixtures("ksm_label_added_to_worker2")
+    def test_migrate_vm_when_ksm_active(self, admin_client, vms_for_ksm_test):
         migrate_vm_and_verify(vm=vms_for_ksm_test[0], client=admin_client)
 
     @pytest.mark.polarion("CNV-10524")

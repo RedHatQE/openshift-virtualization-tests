@@ -78,7 +78,8 @@ class TestCPUHotPlug:
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu"])
     @pytest.mark.polarion("CNV-10696")
-    def test_migrate_snapshot_hotplugged_vm(self, admin_client, hotplug_vm_snapshot, hotplugged_vm):
+    @pytest.mark.usefixtures("hotplug_vm_snapshot")
+    def test_migrate_snapshot_hotplugged_vm(self, admin_client, hotplugged_vm):
         migrate_vm_and_verify(vm=hotplugged_vm, client=admin_client, check_ssh_connectivity=True)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu"])
@@ -134,7 +135,8 @@ class TestMemoryHotPlug:
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_memory"])
     @pytest.mark.polarion("CNV-10677")
-    def test_migrate_snapshot_hotplugged_vm(self, admin_client, hotplug_vm_snapshot, hotplugged_vm):
+    @pytest.mark.usefixtures("hotplug_vm_snapshot")
+    def test_migrate_snapshot_hotplugged_vm(self, admin_client, hotplugged_vm):
         migrate_vm_and_verify(vm=hotplugged_vm, client=admin_client, check_ssh_connectivity=True)
 
     @pytest.mark.parametrize(
