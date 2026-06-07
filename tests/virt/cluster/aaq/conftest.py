@@ -153,8 +153,8 @@ def updated_arq_quota(request, namespace, application_aware_resource_quota):
 
 
 @pytest.fixture()
-def migrated_arq_vm(vm_for_aaq_test):
-    migrate_vm_and_verify(vm=vm_for_aaq_test)
+def migrated_arq_vm(admin_client, vm_for_aaq_test):
+    migrate_vm_and_verify(vm=vm_for_aaq_test, client=admin_client)
 
 
 # ACRQ - ApplicationAwareClusterResourceQuota, cluster level object containing quotas for multiple resources

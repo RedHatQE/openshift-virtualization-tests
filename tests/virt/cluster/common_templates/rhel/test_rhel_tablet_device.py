@@ -114,8 +114,8 @@ class TestRHELTabletDevice:
         ],
         indirect=True,
     )
-    def test_tablet_device_migrate_vm(self, tablet_device_vm):
-        migrate_vm_and_verify(vm=tablet_device_vm, check_ssh_connectivity=True)
+    def test_tablet_device_migrate_vm(self, admin_client, tablet_device_vm):
+        migrate_vm_and_verify(vm=tablet_device_vm, client=admin_client, check_ssh_connectivity=True)
 
 
 @pytest.mark.parametrize(

@@ -133,10 +133,11 @@ class TestUpgradeVirt:
     @pytest.mark.dependency(name=f"{VIRT_NODE_ID_PREFIX}::test_vm_post_copy_migration_before_upgrade")
     def test_vm_post_copy_migration_before_upgrade(
         self,
+        admin_client,
         post_copy_migration_policy_for_upgrade,
         vm_for_post_copy_upgrade,
     ):
-        migrate_vm_and_verify(vm=vm_for_post_copy_upgrade, check_ssh_connectivity=True)
+        migrate_vm_and_verify(vm=vm_for_post_copy_upgrade, client=admin_client, check_ssh_connectivity=True)
         assert_migration_post_copy_mode(vm=vm_for_post_copy_upgrade)
 
     @pytest.mark.ocp_upgrade
@@ -146,9 +147,9 @@ class TestUpgradeVirt:
         name=MIGRATION_BEFORE_UPGRADE_TEST_NODE_ID,
         scope=DEPENDENCY_SCOPE_SESSION,
     )
-    def test_migration_before_upgrade(self, virt_migratable_vms):
+    def test_migration_before_upgrade(self, admin_client, virt_migratable_vms):
         for vm in virt_migratable_vms:
-            migrate_vm_and_verify(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
+            migrate_vm_and_verify(vm=vm, client=admin_client, wait_for_interfaces=False, check_ssh_connectivity=False)
 
     """ Post-upgrade tests """
 
@@ -264,9 +265,9 @@ class TestUpgradeVirt:
         depends=[IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID, MIGRATION_BEFORE_UPGRADE_TEST_NODE_ID],
         scope=DEPENDENCY_SCOPE_SESSION,
     )
-    def test_migration_after_upgrade(self, virt_migratable_vms):
+    def test_migration_after_upgrade(self, admin_client, virt_migratable_vms):
         for vm in virt_migratable_vms:
-            migrate_vm_and_verify(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
+            migrate_vm_and_verify(vm=vm, client=admin_client, wait_for_interfaces=False, check_ssh_connectivity=False)
 
     @pytest.mark.ocp_upgrade
     @pytest.mark.polarion("CNV-12571")
@@ -342,7 +343,8 @@ class TestUpgradeVirt:
     )
     def test_vm_post_copy_migration_after_upgrade(
         self,
+        admin_client,
         vm_for_post_copy_upgrade,
     ):
-        migrate_vm_and_verify(vm=vm_for_post_copy_upgrade, check_ssh_connectivity=True)
+        migrate_vm_and_verify(vm=vm_for_post_copy_upgrade, client=admin_client, check_ssh_connectivity=True)
         assert_migration_post_copy_mode(vm=vm_for_post_copy_upgrade)

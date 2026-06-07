@@ -113,8 +113,8 @@ def windows_wsl2_vm(
 
 
 @pytest.fixture()
-def migrated_wsl2_vm(windows_wsl2_vm):
-    migrate_vm_and_verify(vm=windows_wsl2_vm, check_ssh_connectivity=True)
+def migrated_wsl2_vm(admin_client, windows_wsl2_vm):
+    migrate_vm_and_verify(vm=windows_wsl2_vm, client=admin_client, check_ssh_connectivity=True)
     return windows_wsl2_vm
 
 

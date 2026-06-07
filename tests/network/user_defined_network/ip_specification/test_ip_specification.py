@@ -109,6 +109,7 @@ class TestVMWithExplicitIPAddressSpecification:
     @pytest.mark.polarion("CNV-12586")
     def test_seamless_cluster_connectivity_is_preserved_over_live_migration(
         self,
+        admin_client,
         client_server_tcp_connectivity_between_vms: tuple[TcpClient, TcpServer],
     ) -> None:
         """
@@ -128,7 +129,7 @@ class TestVMWithExplicitIPAddressSpecification:
         """
         client, server = client_server_tcp_connectivity_between_vms
 
-        migrate_vm_and_verify(vm=server.vm)
+        migrate_vm_and_verify(vm=server.vm, client=admin_client)
 
         assert is_tcp_connection(server=server, client=client)
 

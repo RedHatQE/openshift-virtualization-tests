@@ -67,6 +67,7 @@ def created_vm_cx1_instancetype(
 
 @pytest.fixture()
 def migrated_numa_cx1_vm(
+    admin_client,
     created_vm_cx1_instancetype,
 ):
-    migrate_vm_and_verify(vm=created_vm_cx1_instancetype, check_ssh_connectivity=True)
+    migrate_vm_and_verify(vm=created_vm_cx1_instancetype, client=admin_client, check_ssh_connectivity=True)

@@ -258,10 +258,8 @@ def ssh_in_background(br1test_nad, running_vma, running_vmb):
 
 
 @pytest.fixture(scope="module")
-def migrated_vmb_and_wait_for_success(running_vmb, http_service):
-    migrate_vm_and_verify(
-        vm=running_vmb,
-    )
+def migrated_vmb_and_wait_for_success(admin_client, running_vmb, http_service):
+    migrate_vm_and_verify(vm=running_vmb, client=admin_client)
 
 
 @pytest.fixture(scope="module")
@@ -270,7 +268,7 @@ def vma_ip_address(br1test_nad, running_vma):
 
 
 @pytest.fixture(scope="module")
-def migrated_vmb_without_waiting_for_success(vma_ip_address, running_vmb, br1test_nad):
+def migrated_vmb_without_waiting_for_success(admin_client, vma_ip_address, running_vmb, br1test_nad):
     """
     1. Assert ping is successful before migrating vmb.
     2. Migrate vmb without waiting for success. As soon as the VMI acquire a new IP address, return.
@@ -279,7 +277,7 @@ def migrated_vmb_without_waiting_for_success(vma_ip_address, running_vmb, br1tes
     """
     assert_ping_successful(src_vm=running_vmb, dst_ip=vma_ip_address, count=10)
     vmb_ip_before_migration = running_vmb.vmi.interfaces[0]["ipAddress"]
-    migrated_vmi = migrate_vm_and_verify(vm=running_vmb, wait_for_migration_success=False)
+    migrated_vmi = migrate_vm_and_verify(vm=running_vmb, client=admin_client, wait_for_migration_success=False)
     for sample in TimeoutSampler(
         wait_timeout=TIMEOUT_1MIN,
         sleep=1,

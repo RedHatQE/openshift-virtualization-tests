@@ -295,8 +295,8 @@ class TestVMCloneAndMigrate:
         )
 
     @pytest.mark.polarion("CNV-10320")
-    def test_migrate_the_vm_clone(self, fedora_target_vm):
-        migrate_vm_and_verify(vm=fedora_target_vm)
+    def test_migrate_the_vm_clone(self, admin_client, fedora_target_vm):
+        migrate_vm_and_verify(vm=fedora_target_vm, client=admin_client)
 
     @pytest.mark.parametrize(
         "cloning_job_scope_function",

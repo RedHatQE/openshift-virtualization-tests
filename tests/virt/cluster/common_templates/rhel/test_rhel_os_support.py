@@ -189,7 +189,7 @@ class TestCommonTemplatesRhel:
     def test_migrate_vm(self, admin_client, matrix_rhel_os_vm_from_template):
         """Test SSH connectivity after migration"""
         vm = matrix_rhel_os_vm_from_template
-        migrate_vm_and_verify(vm=vm, check_ssh_connectivity=True)
+        migrate_vm_and_verify(vm=vm, client=admin_client, check_ssh_connectivity=True)
         validate_libvirt_persistent_domain(vm=vm, admin_client=admin_client)
 
     @pytest.mark.arm64

@@ -121,8 +121,8 @@ def bitlocker_encrypted_vm(windows_vtpm_vm):
 
 
 @pytest.fixture(scope="class")
-def migrated_encrypted_vm(bitlocker_encrypted_vm):
-    migrate_vm_and_verify(vm=bitlocker_encrypted_vm, check_ssh_connectivity=True)
+def migrated_encrypted_vm(admin_client, bitlocker_encrypted_vm):
+    migrate_vm_and_verify(vm=bitlocker_encrypted_vm, client=admin_client, check_ssh_connectivity=True)
     return bitlocker_encrypted_vm
 
 

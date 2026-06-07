@@ -134,7 +134,9 @@ class TestVMMigrationAndState:
         depends=[f"{TESTS_MODULE_IDENTIFIER}::{TEST_START_VM_TEST_NAME}"],
     )
     def test_migrate_vm(self, admin_client, golden_image_rhel_vm_with_instance_type):
-        migrate_vm_and_verify(vm=golden_image_rhel_vm_with_instance_type, check_ssh_connectivity=True)
+        migrate_vm_and_verify(
+            vm=golden_image_rhel_vm_with_instance_type, client=admin_client, check_ssh_connectivity=True
+        )
         validate_libvirt_persistent_domain(vm=golden_image_rhel_vm_with_instance_type, admin_client=admin_client)
 
     @pytest.mark.polarion("CNV-11836")

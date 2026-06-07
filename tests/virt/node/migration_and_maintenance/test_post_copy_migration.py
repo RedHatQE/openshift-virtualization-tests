@@ -69,9 +69,10 @@ def vm_background_process_id(hotplugged_vm):
 
 
 @pytest.fixture()
-def migrated_hotplugged_vm(hotplugged_vm):
+def migrated_hotplugged_vm(admin_client, hotplugged_vm):
     migrate_vm_and_verify(
         vm=hotplugged_vm,
+        client=admin_client,
         timeout=TIMEOUT_30MIN if "windows" in hotplugged_vm.name else TIMEOUT_15MIN,
         check_ssh_connectivity=True,
     )

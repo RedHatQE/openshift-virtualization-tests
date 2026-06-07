@@ -91,8 +91,8 @@ class TestCCLMSeveralVMs:
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME_SEVERAL_VMS}::test_migrate_vm_from_remote_to_local_cluster"])
     @pytest.mark.polarion("CNV-12038")
-    def test_compute_live_migrate_vms_after_cclm(self, local_vms_after_cclm_migration):
-        verify_compute_live_migration_after_cclm(local_vms=local_vms_after_cclm_migration)
+    def test_compute_live_migrate_vms_after_cclm(self, admin_client, local_vms_after_cclm_migration):
+        verify_compute_live_migration_after_cclm(client=admin_client, local_vms=local_vms_after_cclm_migration)
 
     @pytest.mark.polarion("CNV-14334")
     def test_source_vms_can_be_deleted(self, vms_for_cclm):
@@ -142,8 +142,8 @@ class TestCCLMWindowsWithVTPM:
         depends=[f"{TESTS_CLASS_NAME_WINDOWS_VM}::test_migrate_windows_vm_from_remote_to_local_cluster"]
     )
     @pytest.mark.polarion("CNV-12474")
-    def test_compute_live_migrate_windows_vms_after_cclm(self, local_vms_after_cclm_migration):
-        verify_compute_live_migration_after_cclm(local_vms=local_vms_after_cclm_migration)
+    def test_compute_live_migrate_windows_vms_after_cclm(self, admin_client, local_vms_after_cclm_migration):
+        verify_compute_live_migration_after_cclm(client=admin_client, local_vms=local_vms_after_cclm_migration)
 
     @pytest.mark.polarion("CNV-14336")
     def test_source_vms_can_be_deleted(self, vms_for_cclm):

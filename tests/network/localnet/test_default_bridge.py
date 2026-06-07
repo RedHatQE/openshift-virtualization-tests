@@ -20,11 +20,12 @@ from utilities.virt import migrate_vm_and_verify
 @pytest.mark.usefixtures("nncp_localnet")
 @pytest.mark.polarion("CNV-11775")
 def test_connectivity_over_migration_between_localnet_vms(
+    admin_client,
     subtests,
     localnet_active_connections,
 ):
     client, _ = localnet_active_connections[0]
-    migrate_vm_and_verify(vm=client.vm)
+    migrate_vm_and_verify(vm=client.vm, client=admin_client)
     for client, server in localnet_active_connections:
         with subtests.test(f"IPv{ipaddress.ip_address(client.server_ip).version}"):
             assert is_tcp_connection(server=server, client=client)

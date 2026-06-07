@@ -18,11 +18,12 @@ from utilities.virt import migrate_vm_and_verify
 @pytest.mark.usefixtures("nncp_localnet_on_secondary_node_nic")
 @pytest.mark.polarion("CNV-11905")
 def test_connectivity_over_migration_between_ovs_bridge_localnet_vms(
+    admin_client,
     subtests,
     ovs_bridge_localnet_active_connections,
 ):
     client, _ = ovs_bridge_localnet_active_connections[0]
-    migrate_vm_and_verify(vm=client.vm)
+    migrate_vm_and_verify(vm=client.vm, client=admin_client)
     for client, server in ovs_bridge_localnet_active_connections:
         with subtests.test(msg=f"IPv{ipaddress.ip_address(client.server_ip).version}"):
             assert is_tcp_connection(server=server, client=client)

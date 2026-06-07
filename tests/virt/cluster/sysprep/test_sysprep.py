@@ -200,8 +200,8 @@ def attached_sysprep_volume_to_vm(sysprep_vm_credentials_from_bitwarden, sysprep
 
 
 @pytest.fixture()
-def migrated_sysprep_vm(sysprep_vm):
-    migrate_vm_and_verify(vm=sysprep_vm, check_ssh_connectivity=True)
+def migrated_sysprep_vm(admin_client, sysprep_vm):
+    migrate_vm_and_verify(vm=sysprep_vm, client=admin_client, check_ssh_connectivity=True)
 
 
 @pytest.fixture()

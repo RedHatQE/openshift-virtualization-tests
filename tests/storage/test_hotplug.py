@@ -205,12 +205,15 @@ class TestHotPlugWithPersist:
     @pytest.mark.s390x
     def test_hotplug_volume_with_bus_and_persist_migrate(
         self,
+        admin_client,
         blank_disk_dv_multi_storage_scope_class,
         fedora_vm_for_hotplug_scope_class,
         expected_bus,
     ):
         if is_dv_migratable(dv=blank_disk_dv_multi_storage_scope_class):
-            migrate_vm_and_verify(vm=fedora_vm_for_hotplug_scope_class, check_ssh_connectivity=True)
+            migrate_vm_and_verify(
+                vm=fedora_vm_for_hotplug_scope_class, client=admin_client, check_ssh_connectivity=True
+            )
 
 
 @pytest.mark.parametrize(
@@ -244,11 +247,14 @@ class TestHotPlugWithSerialPersist:
     @pytest.mark.s390x
     def test_hotplug_volume_with_serial_and_persist_migrate(
         self,
+        admin_client,
         blank_disk_dv_multi_storage_scope_class,
         fedora_vm_for_hotplug_scope_class,
     ):
         if is_dv_migratable(dv=blank_disk_dv_multi_storage_scope_class):
-            migrate_vm_and_verify(vm=fedora_vm_for_hotplug_scope_class, check_ssh_connectivity=True)
+            migrate_vm_and_verify(
+                vm=fedora_vm_for_hotplug_scope_class, client=admin_client, check_ssh_connectivity=True
+            )
 
 
 @pytest.mark.parametrize(
@@ -284,12 +290,13 @@ class TestHotPlugWindows:
     @pytest.mark.dependency(depends=["test_windows_hotplug"])
     def test_windows_hotplug_migrate(
         self,
-        unprivileged_client,
+        admin_client,
         blank_disk_dv_multi_storage_scope_class,
         vm_instance_from_template_multi_storage_scope_class,
     ):
         if is_dv_migratable(dv=blank_disk_dv_multi_storage_scope_class):
             migrate_vm_and_verify(
                 vm=vm_instance_from_template_multi_storage_scope_class,
+                client=admin_client,
                 check_ssh_connectivity=True,
             )

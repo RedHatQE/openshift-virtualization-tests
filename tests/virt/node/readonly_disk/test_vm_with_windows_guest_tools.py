@@ -101,9 +101,10 @@ def vm_with_guest_tools(
 
 @pytest.fixture(scope="class")
 def migrated_vm_with_guest_tools(
+    admin_client,
     vm_with_guest_tools,
 ):
-    migrate_vm_and_verify(vm=vm_with_guest_tools)
+    migrate_vm_and_verify(vm=vm_with_guest_tools, client=admin_client)
 
 
 @pytest.mark.polarion("CNV-9794")

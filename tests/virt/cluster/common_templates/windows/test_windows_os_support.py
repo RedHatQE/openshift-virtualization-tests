@@ -132,7 +132,7 @@ class TestCommonTemplatesWindows:
     @pytest.mark.polarion("CNV-3335")
     def test_migrate_vm(self, admin_client, matrix_windows_os_vm_from_template):
         """Test SSH connectivity after migration"""
-        migrate_vm_and_verify(vm=matrix_windows_os_vm_from_template, check_ssh_connectivity=True)
+        migrate_vm_and_verify(vm=matrix_windows_os_vm_from_template, client=admin_client, check_ssh_connectivity=True)
         validate_libvirt_persistent_domain(vm=matrix_windows_os_vm_from_template, admin_client=admin_client)
 
     @pytest.mark.polarion("CNV-5903")

@@ -157,6 +157,7 @@ class TestUpgradeStorage:
     )
     def test_vm_with_hotplug_after_upgrade(
         self,
+        admin_client,
         upgrade_namespace_scope_session,
         blank_disk_dv_with_default_sc,
         fedora_vm_for_hotplug_upg,
@@ -171,4 +172,4 @@ class TestUpgradeStorage:
             expected_bus=HOTPLUG_DISK_VIRTIO_BUS,
         )
         assert_hotplugvolume_nonexist(vm=fedora_vm_for_hotplug_upg)
-        migrate_vm_and_verify(vm=fedora_vm_for_hotplug_upg, check_ssh_connectivity=True)
+        migrate_vm_and_verify(vm=fedora_vm_for_hotplug_upg, client=admin_client, check_ssh_connectivity=True)

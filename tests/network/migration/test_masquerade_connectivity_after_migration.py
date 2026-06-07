@@ -53,12 +53,14 @@ def running_vm_for_migration(
 
 
 @pytest.fixture()
-def migrated_vmi(running_vm_for_migration):
+def migrated_vmi(admin_client, running_vm_for_migration):
     LOGGER.info(f"Migrating {running_vm_for_migration.name}. Current node: {running_vm_for_migration.vmi.node.name}")
 
     iface_name = running_vm_for_migration.vmi.interfaces[0].name
     ip_addresses_before = lookup_iface_status(vm=running_vm_for_migration, iface_name=iface_name)["ipAddresses"]
-    migrated_vmi = migrate_vm_and_verify(vm=running_vm_for_migration, wait_for_migration_success=False)
+    migrated_vmi = migrate_vm_and_verify(
+        vm=running_vm_for_migration, client=admin_client, wait_for_migration_success=False
+    )
 
     for sample in TimeoutSampler(
         wait_timeout=60,

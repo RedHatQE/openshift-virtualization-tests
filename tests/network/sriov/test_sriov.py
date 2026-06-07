@@ -99,12 +99,13 @@ class TestSriovLiveMigration:
     @pytest.mark.polarion("CNV-6455")
     def test_sriov_migration(
         self,
+        admin_client,
         subtests,
         sriov_network,
         sriov_vm_migrate,
         sriov_vm2,
     ):
-        migrate_vm_and_verify(vm=sriov_vm_migrate, check_ssh_connectivity=True)
+        migrate_vm_and_verify(vm=sriov_vm_migrate, client=admin_client, check_ssh_connectivity=True)
         dst_ips = filter_link_local_addresses(
             ip_addresses=lookup_iface_status(vm=sriov_vm_migrate, iface_name=sriov_network.name)["ipAddresses"]
         )

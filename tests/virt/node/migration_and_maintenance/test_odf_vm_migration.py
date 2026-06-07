@@ -51,5 +51,5 @@ def xfail_if_no_odf_cephfs_sc(cluster_storage_classes_names):
     indirect=True,
 )
 @pytest.mark.usefixtures("xfail_if_no_odf_cephfs_sc")
-def test_vm_with_odf_cephfs_storage_class_migrates(vm_with_cephfs_storage):
-    migrate_vm_and_verify(vm=vm_with_cephfs_storage)
+def test_vm_with_odf_cephfs_storage_class_migrates(admin_client, vm_with_cephfs_storage):
+    migrate_vm_and_verify(vm=vm_with_cephfs_storage, client=admin_client)

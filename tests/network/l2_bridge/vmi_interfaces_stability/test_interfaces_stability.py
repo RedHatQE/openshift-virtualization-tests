@@ -21,8 +21,8 @@ class TestInterfacesStability:
             assert_interfaces_stable(stable_ips=stable_ips, vmi=vmi_obj, expected_num_ifaces=len(stable_ips))
 
     @pytest.mark.polarion("CNV-14340")
-    def test_interfaces_stability_after_migration(self, running_linux_bridge_vm, stable_ips):
-        migrate_vm_and_verify(vm=running_linux_bridge_vm)
+    def test_interfaces_stability_after_migration(self, admin_client, running_linux_bridge_vm, stable_ips):
+        migrate_vm_and_verify(vm=running_linux_bridge_vm, client=admin_client)
         primary_network = lookup_primary_network(vm=running_linux_bridge_vm)
         primary_iface = lookup_iface_status(
             vm=running_linux_bridge_vm,

@@ -74,10 +74,11 @@ class TestSMPeerAuthentication:
     )
     def test_authentication_policy_from_mesh_over_migration(
         self,
+        admin_client,
         vm_fedora_with_service_mesh_annotation,
         httpbin_service_service_mesh,
     ):
-        migrate_vm_and_verify(vm=vm_fedora_with_service_mesh_annotation)
+        migrate_vm_and_verify(vm=vm_fedora_with_service_mesh_annotation, client=admin_client)
         result = run_console_command(
             vm=vm_fedora_with_service_mesh_annotation,
             command=AUTH_COMMAND.format(service=httpbin_service_service_mesh.app_name),

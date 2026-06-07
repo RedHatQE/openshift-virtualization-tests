@@ -132,8 +132,10 @@ class TestCPUHotPlugInstanceType:
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu_instance_type"])
     @pytest.mark.polarion("CNV-11402")
-    def test_migrate_snapshot_hotplugged_vm(self, hotplug_vm_snapshot_instance_type, instance_type_hotplug_vm):
-        migrate_vm_and_verify(vm=instance_type_hotplug_vm, check_ssh_connectivity=True)
+    def test_migrate_snapshot_hotplugged_vm(
+        self, admin_client, hotplug_vm_snapshot_instance_type, instance_type_hotplug_vm
+    ):
+        migrate_vm_and_verify(vm=instance_type_hotplug_vm, client=admin_client, check_ssh_connectivity=True)
 
     @pytest.mark.dependency(
         name=f"{TESTS_CLASS_NAME}::decrease_cpu_value", depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu_instance_type"]

@@ -113,8 +113,8 @@ class TestARQCanManageVMs:
 
     @pytest.mark.dependency(depends=[f"{TESTS_VM_CLASS_NAME}::vm_gated"])
     @pytest.mark.polarion("CNV-11282")
-    def test_arq_vm_migration_allowed_when_quota_reached(self, vm_for_aaq_test):
-        migrate_vm_and_verify(vm=vm_for_aaq_test)
+    def test_arq_vm_migration_allowed_when_quota_reached(self, admin_client, vm_for_aaq_test):
+        migrate_vm_and_verify(vm=vm_for_aaq_test, client=admin_client)
 
     @pytest.mark.parametrize(
         "updated_arq_quota",

@@ -82,24 +82,28 @@ def passt_running_vm_pair(
 @pytest.mark.ipv4
 @pytest.mark.single_nic
 @pytest.mark.polarion("CNV-12427")
-def test_passt_connectivity_is_preserved_during_client_live_migration(passt_enabled_in_hco, passt_running_vm_pair):
+def test_passt_connectivity_is_preserved_during_client_live_migration(
+    admin_client, passt_enabled_in_hco, passt_running_vm_pair
+):
     with client_server_active_connection(
         client_vm=passt_running_vm_pair[0],
         server_vm=passt_running_vm_pair[1],
         spec_logical_network=lookup_primary_network(vm=passt_running_vm_pair[1]).name,
     ) as (client, server):
-        migrate_vm_and_verify(vm=client.vm)
+        migrate_vm_and_verify(vm=client.vm, client=admin_client)
         assert is_tcp_connection(server=server, client=client)
 
 
 @pytest.mark.ipv4
 @pytest.mark.single_nic
 @pytest.mark.polarion("CNV-12428")
-def test_passt_connectivity_is_preserved_during_server_live_migration(passt_enabled_in_hco, passt_running_vm_pair):
+def test_passt_connectivity_is_preserved_during_server_live_migration(
+    admin_client, passt_enabled_in_hco, passt_running_vm_pair
+):
     with client_server_active_connection(
         client_vm=passt_running_vm_pair[0],
         server_vm=passt_running_vm_pair[1],
         spec_logical_network=lookup_primary_network(vm=passt_running_vm_pair[1]).name,
     ) as (client, server):
-        migrate_vm_and_verify(vm=server.vm)
+        migrate_vm_and_verify(vm=server.vm, client=admin_client)
         assert is_tcp_connection(server=server, client=client)

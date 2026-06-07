@@ -1908,19 +1908,19 @@ def wait_for_cloud_init_complete(vm, timeout=TIMEOUT_4MIN):
 
 def migrate_vm_and_verify(
     vm: VirtualMachineForTests | BaseVirtualMachine,
-    client: DynamicClient | None = None,
+    client: DynamicClient,
     timeout: int = TIMEOUT_12MIN,
     wait_for_interfaces: bool = True,
     check_ssh_connectivity: bool = False,
     wait_for_migration_success: bool = True,
 ) -> VirtualMachineInstanceMigration | None:
-    """
-    Create a migration instance. You may choose to wait for migration
-    success or not.
+    """Migrate VM and verify migration success.
 
     Args:
         vm (VirtualMachine): VM to be migrated.
-        client (DynamicClient, default=None): Client to use for migration.
+        client (DynamicClient): Client to use for migration.
+            Note: Only Cluster Admin (admin_client) can migrate VM.
+            Namespace Admin (unprivileged_client) cannot migrate VM (unless assigned kubevirt.io:migrate RoleBinding).
         timeout (int, default=12 minutes): Maximum time to wait for the migration to finish.
         wait_for_interfaces (bool, default=True): Wait for VM network interfaces after migration completes.
         check_ssh_connectivity (bool, default=False): Verify SSH connectivity to the VM after migration completes.

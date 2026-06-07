@@ -74,11 +74,12 @@ def configure_hco_live_migration_network(
     )
 
 
-def verify_compute_live_migration_after_cclm(local_vms: list[VirtualMachineForTests]) -> None:
+def verify_compute_live_migration_after_cclm(client, local_vms):
     """
     Verify compute live migration for VMs after Cross-Cluster Live Migration (CCLM).
 
     Args:
+        client: Client to use for migration.
         local_vms: List of VirtualMachineForTests objects in the local cluster
 
     Raises:
@@ -87,7 +88,7 @@ def verify_compute_live_migration_after_cclm(local_vms: list[VirtualMachineForTe
     vms_failed_migration = {}
     for vm in local_vms:
         try:
-            migrate_vm_and_verify(vm=vm, check_ssh_connectivity=True)
+            migrate_vm_and_verify(vm=vm, client=client, check_ssh_connectivity=True)
         except Exception as migration_exception:
             vms_failed_migration[vm.name] = migration_exception
     assert not vms_failed_migration, f"Failed VM migrations: {vms_failed_migration}"

@@ -75,11 +75,11 @@ class TestStorageClassMigrationAtoB:
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME_A_TO_B}::test_vm_storage_class_migration_a_to_b_running_vms"])
     @pytest.mark.polarion("CNV-11504")
-    def test_migrate_vms_after_storage_migration(self, booted_vms_for_storage_class_migration):
+    def test_migrate_vms_after_storage_migration(self, admin_client, booted_vms_for_storage_class_migration):
         vms_failed_migration = {}
         for vm in booted_vms_for_storage_class_migration:
             try:
-                migrate_vm_and_verify(vm=vm, check_ssh_connectivity=True)
+                migrate_vm_and_verify(vm=vm, client=admin_client, check_ssh_connectivity=True)
             except Exception as migration_exception:
                 vms_failed_migration[vm.name] = migration_exception
         assert not vms_failed_migration, f"Failed VM migrations: {vms_failed_migration}"
@@ -204,12 +204,12 @@ class TestStorageClassMigrationWithVolumeHotplug:
     )
     @pytest.mark.polarion("CNV-11966")
     def test_migrate_vm_with_hotplugged_volume_after_storage_migration(
-        self, source_storage_class, booted_vms_for_storage_class_migration
+        self, admin_client, source_storage_class, booted_vms_for_storage_class_migration
     ):
         vms_failed_migration = {}
         for vm in booted_vms_for_storage_class_migration:
             try:
-                migrate_vm_and_verify(vm=vm, check_ssh_connectivity=True)
+                migrate_vm_and_verify(vm=vm, client=admin_client, check_ssh_connectivity=True)
             except Exception as migration_exception:
                 vms_failed_migration[vm.name] = migration_exception
         assert not vms_failed_migration, f"Failed VM migrations: {vms_failed_migration}"
@@ -313,6 +313,7 @@ class TestStorageClassMigrationWindowsWithVTPM:
     @pytest.mark.polarion("CNV-11515")
     def test_migrate_windows_vm_with_vtpm_after_storage_migration(
         self,
+        admin_client,
         source_storage_class,
         target_storage_class,
         vms_for_storage_class_migration,
@@ -322,7 +323,7 @@ class TestStorageClassMigrationWindowsWithVTPM:
         vms_failed_migration = {}
         for vm in vms_for_storage_class_migration:
             try:
-                migrate_vm_and_verify(vm=vm, check_ssh_connectivity=True)
+                migrate_vm_and_verify(vm=vm, client=admin_client, check_ssh_connectivity=True)
             except Exception as migration_exception:
                 vms_failed_migration[vm.name] = migration_exception
         assert not vms_failed_migration, f"Failed VM migrations: {vms_failed_migration}"

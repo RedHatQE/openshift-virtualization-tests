@@ -163,11 +163,8 @@ def test_disk_expand_then_clone_success(
     indirect=True,
 )
 @pytest.mark.s390x
-def test_disk_expand_then_migrate(rhel_vm_after_expand, orig_cksum):
-    migrate_vm_and_verify(
-        vm=rhel_vm_after_expand,
-        check_ssh_connectivity=True,
-    )
+def test_disk_expand_then_migrate(admin_client, rhel_vm_after_expand, orig_cksum):
+    migrate_vm_and_verify(vm=rhel_vm_after_expand, client=admin_client, check_ssh_connectivity=True)
     check_file_unchanged(orig_cksum=orig_cksum, vm=rhel_vm_after_expand)
 
 
