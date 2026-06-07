@@ -448,3 +448,38 @@ def test_write_to_file_while_snapshot(
         snapshot_name=windows_snapshot.name,
     ) as restore:
         start_windows_vm_after_restore(vm_restore=restore, windows_vm=windows_vm_for_snapshot)
+
+
+@pytest.mark.tier3
+def test_online_windows_vm_successful_restore_golden_image(
+    windows_vm_for_snapshot_golden_image,
+    windows_snapshot_golden_image,
+    snapshot_directory_removed_golden_image,
+):
+    with VirtualMachineRestore(
+        name="restore-vm-gi",
+        namespace=windows_vm_for_snapshot_golden_image.namespace,
+        vm_name=windows_vm_for_snapshot_golden_image.name,
+        snapshot_name=windows_snapshot_golden_image.name,
+    ) as restore:
+        start_windows_vm_after_restore(vm_restore=restore, windows_vm=windows_vm_for_snapshot_golden_image)
+        assert_windows_directory_existence(
+            expected_result=True,
+            windows_vm=windows_vm_for_snapshot_golden_image,
+            directory_path=WINDOWS_DIRECTORY_PATH,
+        )
+
+
+@pytest.mark.tier3
+def test_write_to_file_while_snapshot_golden_image(
+    windows_vm_for_snapshot_golden_image,
+    windows_snapshot_golden_image,
+    file_created_during_snapshot_golden_image,
+):
+    with VirtualMachineRestore(
+        name="restore-vm-gi-write",
+        namespace=windows_vm_for_snapshot_golden_image.namespace,
+        vm_name=windows_vm_for_snapshot_golden_image.name,
+        snapshot_name=windows_snapshot_golden_image.name,
+    ) as restore:
+        start_windows_vm_after_restore(vm_restore=restore, windows_vm=windows_vm_for_snapshot_golden_image)

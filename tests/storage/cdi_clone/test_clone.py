@@ -18,6 +18,7 @@ from utilities.constants import (
     TIMEOUT_40MIN,
     Images,
 )
+from utilities.ssp import validate_os_info_vmi_vs_windows_os
 from utilities.storage import (
     check_disk_count_in_vm,
     create_dv,
@@ -293,3 +294,26 @@ def test_clone_from_block_to_fs_using_dv_template(
         ),
         storage_class=storage_class_with_filesystem_volume_mode,
     )
+
+
+@pytest.mark.tier3
+@pytest.mark.parametrize(
+    "windows_vm_from_golden_image",
+    [
+        pytest.param(
+            {
+                "vm_name": "vm-win-2022-clone",
+                "template_labels": {"os": "win2k22", "workload": "server", "flavor": "medium"},
+                "ssh": True,
+                "os_version": "2022",
+            },
+        ),
+    ],
+    indirect=True,
+)
+def test_successful_vm_from_cloned_dv_windows_golden_image(
+    unprivileged_client,
+    namespace,
+    windows_vm_from_golden_image,
+):
+    validate_os_info_vmi_vs_windows_os(vm=windows_vm_from_golden_image)

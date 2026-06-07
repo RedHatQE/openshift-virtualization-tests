@@ -1,9 +1,12 @@
 import pytest
+from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
+from pytest_testconfig import py_config
 
 from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE
 from utilities.constants import REGISTRY_STR, Images
 from utilities.storage import create_dv, data_volume
+from utilities.virt import vm_instance_from_template, wait_for_windows_vm
 
 
 @pytest.fixture()
@@ -59,3 +62,34 @@ def fedora_dv_with_block_volume_mode(
     ) as dv:
         dv.wait_for_dv_success()
         yield dv
+
+
+@pytest.fixture(scope="module")
+def windows2022_golden_image_data_source(golden_images_namespace):
+    return DataSource(
+        namespace=golden_images_namespace.name,
+        name="windows2022-golden-image",
+        client=golden_images_namespace.client,
+        ensure_exists=True,
+    )
+
+
+@pytest.fixture()
+def windows_vm_from_golden_image(
+    request,
+    unprivileged_client,
+    namespace,
+    windows2022_golden_image_data_source,
+):
+    py_config.setdefault("os_login_param", {})["win"] = {
+        "username": "Administrator",
+        "password": "Heslo123",
+    }
+    with vm_instance_from_template(
+        request=request,
+        unprivileged_client=unprivileged_client,
+        namespace=namespace,
+        data_source=windows2022_golden_image_data_source,
+    ) as vm:
+        wait_for_windows_vm(vm=vm, version=request.param["os_version"])
+        yield vm

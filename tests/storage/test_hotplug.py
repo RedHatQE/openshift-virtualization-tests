@@ -6,9 +6,11 @@ import logging
 import shlex
 
 import pytest
+from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.storage_profile import StorageProfile
+from pytest_testconfig import py_config
 
 from tests.storage.utils import assert_disk_bus
 from tests.utils import create_windows2022_dv_from_registry, create_windows2022_vm_with_vtpm_from_registry
@@ -27,6 +29,8 @@ from utilities.virt import (
     fedora_vm_body,
     migrate_vm_and_verify,
     running_vm,
+    vm_instance_from_template,
+    wait_for_windows_vm,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -293,3 +297,86 @@ class TestHotPlugWindows:
                 vm=vm_instance_from_template_multi_storage_scope_class,
                 check_ssh_connectivity=True,
             )
+
+
+@pytest.fixture(scope="class")
+def windows2022_golden_image_data_source_for_hotplug(golden_images_namespace):
+    return DataSource(
+        namespace=golden_images_namespace.name,
+        name="windows2022-golden-image",
+        client=golden_images_namespace.client,
+        ensure_exists=True,
+    )
+
+
+@pytest.fixture(scope="class")
+def windows_vm_for_hotplug_golden_image(
+    unprivileged_client,
+    namespace,
+    windows2022_golden_image_data_source_for_hotplug,
+):
+    py_config.setdefault("os_login_param", {})["win"] = {
+        "username": "Administrator",
+        "password": "Heslo123",
+    }
+    with vm_instance_from_template(
+        request={
+            "vm_name": "vm-win-2022-hotplug-gi",
+            "template_labels": {"os": "win2k22", "workload": "server", "flavor": "medium"},
+            "ssh": True,
+            "os_version": "2022",
+        },
+        unprivileged_client=unprivileged_client,
+        namespace=namespace,
+        data_source=windows2022_golden_image_data_source_for_hotplug,
+    ) as vm:
+        wait_for_windows_vm(vm=vm, version="2022")
+        yield vm
+
+
+@pytest.fixture(scope="class")
+def blank_disk_for_hotplug_golden_image(unprivileged_client, namespace, storage_class_name_scope_class):
+    with create_dv(
+        client=unprivileged_client,
+        source="blank",
+        dv_name="blank-dv-hotplug-gi",
+        namespace=namespace.name,
+        size="1Gi",
+        storage_class=storage_class_name_scope_class,
+        consume_wffc=False,
+    ) as dv:
+        yield dv
+
+
+@pytest.fixture(scope="class")
+def hotplug_volume_golden_image(namespace, windows_vm_for_hotplug_golden_image, blank_disk_for_hotplug_golden_image):
+    with virtctl_volume(
+        action="add",
+        namespace=namespace.name,
+        vm_name=windows_vm_for_hotplug_golden_image.name,
+        volume_name=blank_disk_for_hotplug_golden_image.name,
+        persist=True,
+        serial=HOTPLUG_DISK_SERIAL,
+    ) as res:
+        status, out, err = res
+        assert status, f"Failed to add volume to VM, out: {out}, err: {err}."
+        yield
+
+
+@pytest.mark.usefixtures("hotplug_volume_golden_image")
+@pytest.mark.tier3
+class TestHotPlugWindowsGoldenImage:
+    def test_windows_hotplug_golden_image(
+        self,
+        blank_disk_for_hotplug_golden_image,
+        windows_vm_for_hotplug_golden_image,
+    ):
+        wait_for_vm_volume_ready(
+            vm=windows_vm_for_hotplug_golden_image,
+            volume_name=blank_disk_for_hotplug_golden_image.name,
+        )
+        assert_disk_serial(
+            command=shlex.split("wmic diskdrive get SerialNumber"),
+            vm=windows_vm_for_hotplug_golden_image,
+        )
+        assert_hotplugvolume_nonexist(vm=windows_vm_for_hotplug_golden_image)

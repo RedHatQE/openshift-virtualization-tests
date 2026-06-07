@@ -39,3 +39,16 @@ def test_windows_memory_dump(
     windows_vm_memory_dump_deletion,
 ):
     wait_for_memory_dump_status_removed(vm=windows_vm_for_memory_dump)
+
+
+@pytest.mark.tier3
+def test_windows_memory_dump_golden_image(
+    namespace,
+    windows_vm_for_memory_dump_golden_image,
+    pvc_for_windows_memory_dump_golden_image,
+    windows_vm_memory_dump_golden_image,
+    windows_vm_memory_dump_completed_golden_image,
+    consumer_pod_for_verifying_windows_memory_dump_golden_image,
+    windows_vm_memory_dump_deletion_golden_image,
+):
+    wait_for_memory_dump_status_removed(vm=windows_vm_for_memory_dump_golden_image)
