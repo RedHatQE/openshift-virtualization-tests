@@ -288,6 +288,7 @@ def ping_before_migration(vmd_flat_overlay, vmc_flat_overlay_ip_address):
 @pytest.fixture()
 def migrated_vmc_flat_overlay(admin_client, vmc_flat_overlay):
     migrate_vm_and_verify(vm=vmc_flat_overlay, client=admin_client, check_ssh_connectivity=True)
+    return vmc_flat_overlay
 
 
 @pytest.fixture(scope="class")

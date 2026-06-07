@@ -88,7 +88,15 @@ def source_pod_log_verbosity_test(admin_client, vm_for_migration_progress_test):
 
 @pytest.fixture()
 def migrated_vm_with_policy(admin_client, migration_policy_with_bandwidth, vm_for_migration_progress_test):
-    migrate_vm_and_verify(vm=vm_for_migration_progress_test, client=admin_client, wait_for_migration_success=False)
+    migration = migrate_vm_and_verify(
+        vm=vm_for_migration_progress_test,
+        client=admin_client,
+        wait_for_migration_success=False,
+    )
+    try:
+        yield migration
+    finally:
+        migration.clean_up()
 
 
 @pytest.mark.parametrize(

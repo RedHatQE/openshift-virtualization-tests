@@ -105,6 +105,7 @@ def migrated_vm_with_guest_tools(
     vm_with_guest_tools,
 ):
     migrate_vm_and_verify(vm=vm_with_guest_tools, client=admin_client)
+    return vm_with_guest_tools
 
 
 @pytest.mark.polarion("CNV-9794")

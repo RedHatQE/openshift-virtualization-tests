@@ -260,6 +260,7 @@ def ssh_in_background(br1test_nad, running_vma, running_vmb):
 @pytest.fixture(scope="module")
 def migrated_vmb_and_wait_for_success(admin_client, running_vmb, http_service):
     migrate_vm_and_verify(vm=running_vmb, client=admin_client)
+    return running_vmb
 
 
 @pytest.fixture(scope="module")

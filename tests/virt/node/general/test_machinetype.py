@@ -125,6 +125,7 @@ def migrated_vm(admin_client, vm_for_machine_type_test, machine_type_from_kubevi
         vm=vm_for_machine_type_test, expected_machine_type=machine_type_from_kubevirt_config, admin_client=admin_client
     )
     migrate_vm_and_verify(vm=vm_for_machine_type_test, client=admin_client)
+    return vm_for_machine_type_test
 
 
 @pytest.mark.polarion("CNV-3311")

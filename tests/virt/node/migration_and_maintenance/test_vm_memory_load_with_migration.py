@@ -41,6 +41,7 @@ def migrate_vm_with_memory_load(admin_client, vm_with_memory_load):
     migrate_vm_and_verify(
         vm=vm_with_memory_load, client=admin_client, check_ssh_connectivity=True, timeout=TIMEOUT_20MIN
     )
+    return vm_with_memory_load
 
 
 @pytest.mark.usefixtures("migration_policy_with_allow_auto_converge")

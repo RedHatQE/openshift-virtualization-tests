@@ -71,3 +71,4 @@ def migrated_numa_cx1_vm(
     created_vm_cx1_instancetype,
 ):
     migrate_vm_and_verify(vm=created_vm_cx1_instancetype, client=admin_client, check_ssh_connectivity=True)
+    return created_vm_cx1_instancetype

@@ -100,6 +100,7 @@ def vm_for_migration_policy_test(
 @pytest.fixture()
 def vm_migrated_with_policy(admin_client, vm_for_migration_policy_test):
     migrate_vm_and_verify(vm=vm_for_migration_policy_test, client=admin_client)
+    return vm_for_migration_policy_test
 
 
 @pytest.fixture()
@@ -110,6 +111,7 @@ def vm_re_migrated_after_updating_migration_policy(admin_client, vm_for_migratio
     )
     remove_spec_param_from_migration_policy(migration_policy=migration_policy_a, param="allowAutoConverge")
     migrate_vm_and_verify(vm=vm_for_migration_policy_test, client=admin_client)
+    return vm_for_migration_policy_test
 
 
 @pytest.mark.rwx_default_storage

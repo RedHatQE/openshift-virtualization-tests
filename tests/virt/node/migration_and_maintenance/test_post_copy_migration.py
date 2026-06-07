@@ -76,6 +76,7 @@ def migrated_hotplugged_vm(admin_client, hotplugged_vm):
         timeout=TIMEOUT_30MIN if "windows" in hotplugged_vm.name else TIMEOUT_15MIN,
         check_ssh_connectivity=True,
     )
+    return hotplugged_vm
 
 
 @pytest.fixture()
