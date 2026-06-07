@@ -333,8 +333,10 @@ class TestGenerateInstanceTypeRhelOsMatrix:
         rhel9_item = next(item for item in result if "rhel-9" in item)
         assert rhel9_item["rhel-9"]["latest_released"] is True
 
-    def test_arch_suffix_applied_to_preference_and_data_source(self):
+    @patch("utilities.os_utils.get_cluster_architecture")
+    def test_arch_suffix_applied_to_preference_and_data_source(self, mock_get_cluster_arch):
         """arch_suffix is appended to both the preference name and the DataSource."""
+        mock_get_cluster_arch.return_value = {"amd64", "arm64"}
         result = generate_linux_instance_type_os_matrix(
             os_name="rhel",
             preferences=[RHEL10_PREFERENCE],
@@ -345,8 +347,10 @@ class TestGenerateInstanceTypeRhelOsMatrix:
         assert config["preference"] == f"{RHEL10_PREFERENCE}.{ARM_64}"
         assert config["DATA_SOURCE_NAME"] == f"rhel10-{ARM_64}"
 
-    def test_arch_suffix_omitted_from_preference_when_add_arch_suffix_false(self):
+    @patch("utilities.os_utils.get_cluster_architecture")
+    def test_arch_suffix_omitted_from_preference_when_add_arch_suffix_false(self, mock_get_cluster_arch):
         """add_arch_suffix=False keeps the preference plain while the DataSource still gets the arch suffix."""
+        mock_get_cluster_arch.return_value = {"amd64", "arm64"}
         result = generate_linux_instance_type_os_matrix(
             os_name="centos.stream",
             preferences=[CENTOS_STREAM10_PREFERENCE],

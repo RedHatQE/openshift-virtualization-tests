@@ -5,6 +5,7 @@ from typing import Any
 
 from ocp_resources.template import Template
 
+from utilities.architecture import get_cluster_architecture
 from utilities.constants import (
     CONTAINER_DISK_IMAGE_PATH_STR,
     DATA_SOURCE_NAME,
@@ -289,13 +290,16 @@ def generate_linux_instance_type_os_matrix(
 
     latest_os = max(preferences, key=_extract_version)
     instance_types: list[dict[str, dict[str, Any]]] = []
+    is_multi_arch = len(get_cluster_architecture()) > 1
 
     for preference in preferences:
         arch_preference = f"{preference}.{arch_suffix}" if arch_suffix and add_arch_suffix else preference
         data_source_name = _format_data_source_name(preference_name=preference)
         preference_config: dict[str, Any] = {
             PREFERENCE_STR: arch_preference,
-            DATA_SOURCE_NAME: f"{data_source_name}-{arch_suffix}" if arch_suffix else data_source_name,
+            DATA_SOURCE_NAME: f"{data_source_name}-{arch_suffix}"
+            if arch_suffix and is_multi_arch
+            else data_source_name,
         }
 
         if preference == latest_os:
