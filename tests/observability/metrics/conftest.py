@@ -16,9 +16,10 @@ from packaging.version import Version
 from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-import libs.net.nodenetworkconfigurationpolicy as libnncp
+from libs.net import nodenetworkconfigurationpolicy as libnncp
 from libs.net.netattachdef import CNIPluginBridgeConfig, NetConfig, NetworkAttachmentDefinition
-from libs.net.vmspec import wait_for_no_vmi_condition, wait_for_vmi_condition_status
+from libs.vm.factory import base_vmspec, fedora_vm
+from libs.vm.spec import Devices, Interface, Multus, Network
 from tests.observability.metrics.constants import (
     BINDING_NAME,
     BINDING_TYPE,
@@ -44,7 +45,7 @@ from tests.observability.metrics.utils import (
     vnic_info_from_vm_or_vmi,
 )
 from tests.observability.utils import validate_metrics_value
-from tests.utils import create_vms, start_stress_on_vm
+from tests.utils import create_vms, start_stress_on_vm, update_nad_references
 from utilities import console
 from utilities.constants import (
     IPV4_STR,
@@ -729,7 +730,7 @@ def nad_b_for_vnic_info(
     namespace,
     nad_swap_bridge_nncp,
     next_vlan_index_number,
-) -> Generator[NetworkAttachmentDefinition]:
+):
     with NetworkAttachmentDefinition(
         name=f"{_NAD_SWAP_BRIDGE_NAME}-nad-b",
         namespace=namespace.name,
@@ -747,17 +748,21 @@ def vm_for_nad_swap_test(
     unprivileged_client,
     namespace,
     nad_a_for_vnic_info,
-) -> Generator[VirtualMachineForTests]:
+):
     vm_name = "vm-nad-swap-vnic-info"
-    with VirtualMachineForTests(
-        name=vm_name,
-        namespace=namespace.name,
-        body=fedora_vm_body(name=vm_name),
-        networks={_NAD_SWAP_SECONDARY_IFACE: nad_a_for_vnic_info.name},
-        interfaces=[_NAD_SWAP_SECONDARY_IFACE],
-        client=unprivileged_client,
-    ) as vm:
-        running_vm(vm=vm, wait_for_cloud_init=False)
+    spec = base_vmspec()
+    spec.template.spec.domain.devices = Devices(
+        interfaces=[
+            Interface(name="default", masquerade={}),
+            Interface(name=_NAD_SWAP_SECONDARY_IFACE, bridge={}),
+        ]
+    )
+    spec.template.spec.networks = [
+        Network(name="default", pod={}),
+        Network(name=_NAD_SWAP_SECONDARY_IFACE, multus=Multus(networkName=nad_a_for_vnic_info.name)),
+    ]
+    with fedora_vm(namespace=namespace.name, name=vm_name, client=unprivileged_client, spec=spec) as vm:
+        vm.start(wait=True)
         yield vm
 
 
@@ -765,17 +770,11 @@ def vm_for_nad_swap_test(
 def post_nad_swap_vm(
     vm_for_nad_swap_test,
     nad_b_for_vnic_info,
-) -> Generator[VirtualMachineForTests]:
-    resource_version = vm_for_nad_swap_test.vmi.instance.metadata.resourceVersion
-    networks = list(vm_for_nad_swap_test.instance.spec.template.spec.networks)
-    for network in networks:
-        if network["name"] == _NAD_SWAP_SECONDARY_IFACE:
-            network["multus"].update({"networkName": nad_b_for_vnic_info.name})
-    ResourceEditor(patches={vm_for_nad_swap_test: {"spec": {"template": {"spec": {"networks": networks}}}}}).update()
-    wait_for_vmi_condition_status(
-        vm=vm_for_nad_swap_test, condition="MigrationRequired", resource_version=resource_version
+):
+    update_nad_references(
+        vm=vm_for_nad_swap_test,
+        nad_name_by_net={_NAD_SWAP_SECONDARY_IFACE: nad_b_for_vnic_info.name},
     )
-    wait_for_no_vmi_condition(vm=vm_for_nad_swap_test, condition="MigrationRequired")
     yield vm_for_nad_swap_test
 
 
@@ -783,7 +782,7 @@ def post_nad_swap_vm(
 def expected_vnic_info_after_swap(
     post_nad_swap_vm,
     nad_b_for_vnic_info,
-) -> dict[str, str]:
+):
     vm_interfaces = post_nad_swap_vm.instance.spec.template.spec.domain.devices.interfaces
     secondary_interface = next(iface for iface in vm_interfaces if iface["name"] == _NAD_SWAP_SECONDARY_IFACE)
     binding_info = binding_name_and_type_from_vm_or_vmi(vm_interface=secondary_interface)

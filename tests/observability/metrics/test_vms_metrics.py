@@ -474,11 +474,12 @@ class TestVmVnicInfo:
 
         Preconditions:
             - Two Network Attachment Definitions (NAD-A, NAD-B) with different VLANs on the same Linux bridge
-            - Running VM with a secondary bridge interface whose reference was swapped from NAD-A to NAD-B
-              and the triggered live migration has completed
+            - Running VM with a secondary bridge interface attached to NAD-A
 
         Steps:
-            1. Query vnic_info metric for the secondary interface
+            1. Swap the VM secondary network reference from NAD-A to NAD-B
+            2. Wait for the live migration triggered by the swap to complete
+            3. Query vnic_info metric for the secondary interface
 
         Expected:
             - vnic_info labels match the VM spec after NAD swap
