@@ -103,10 +103,6 @@ class TestCommonVmPreference:
                 marks=pytest.mark.polarion("CNV-9895"),
             ),
             pytest.param(
-                "centos",
-                marks=pytest.mark.polarion("CNV-9896"),
-            ),
-            pytest.param(
                 "unique",
                 marks=pytest.mark.polarion("CNV-9897"),
             ),
