@@ -22,3 +22,6 @@ QUAY_FEDORA_CONTAINER_IMAGE = f"docker://{Images.Fedora.FEDORA_CONTAINER_IMAGE}"
 
 TEST_FILE_NAME = "test-file.txt"
 TEST_FILE_CONTENT = "test-content"
+
+WIN2022_GOLDEN_IMAGE_TEMPLATE_LABELS: dict[str, str] = {"os": "win2k22", "workload": "server", "flavor": "medium"}
+WIN2022_GOLDEN_IMAGE_OS_VERSION: str = "2022"

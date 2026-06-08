@@ -10,6 +10,7 @@ from ocp_resources.multi_namespace_virtual_machine_storage_migration_plan import
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from pyhelper_utils.shell import run_ssh_commands
+from pytest_testconfig import config as py_config
 
 from tests.storage.storage_migration.constants import (
     CONTENT,
@@ -33,6 +34,7 @@ from utilities.constants import (
     TIMEOUT_2MIN,
     TIMEOUT_5SEC,
     U1_SMALL,
+    WINDOWS_2K22_PREFERENCE,
     Images,
 )
 from utilities.infra import create_ns
@@ -389,6 +391,38 @@ def windows_vm_with_vtpm_for_storage_migration(
         vm_instance_type=VirtualMachineClusterInstancetype(name="u1.large"),
         vm_preference=VirtualMachineClusterPreference(name="windows.11"),
         data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
+        cpu_model=modern_cpu_for_migration,
+    ) as vm:
+        vm.start()
+        yield vm
+
+
+@pytest.fixture(scope="class")
+def windows_vm_with_vtpm_golden_image_for_storage_migration(
+    admin_client,
+    unprivileged_client,
+    namespace,
+    modern_cpu_for_migration,
+    source_storage_class,
+    golden_images_namespace,
+):
+    win_ds = DataSource(
+        namespace=golden_images_namespace.name,
+        name=py_config.get("win_golden_image_name"),
+        client=admin_client,
+        ensure_exists=True,
+    )
+    with VirtualMachineForTests(
+        os_flavor=OS_FLAVOR_WINDOWS,
+        name="windows-2022-vm",
+        namespace=namespace.name,
+        client=unprivileged_client,
+        vm_instance_type=VirtualMachineClusterInstancetype(name="u1.large"),
+        vm_preference=VirtualMachineClusterPreference(name=WINDOWS_2K22_PREFERENCE),
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=win_ds,
+            storage_class=source_storage_class,
+        ),
         cpu_model=modern_cpu_for_migration,
     ) as vm:
         vm.start()

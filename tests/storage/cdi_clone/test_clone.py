@@ -144,8 +144,9 @@ def test_successful_vm_restart_with_cloned_dv(
 
 
 @pytest.mark.tier3
+@pytest.mark.windows
 @pytest.mark.parametrize(
-    ("data_volume_multi_storage_scope_function", "vm_params"),
+    ("windows_source_dv_scope_function", "vm_params"),
     [
         pytest.param(
             {
@@ -163,11 +164,11 @@ def test_successful_vm_restart_with_cloned_dv(
             marks=pytest.mark.polarion("CNV-3638"),
         ),
     ],
-    indirect=["data_volume_multi_storage_scope_function"],
+    indirect=["windows_source_dv_scope_function", "vm_params"],
 )
 def test_successful_vm_from_cloned_dv_windows(
     unprivileged_client,
-    data_volume_multi_storage_scope_function,
+    windows_source_dv_scope_function,
     vm_params,
     namespace,
 ):
@@ -175,10 +176,10 @@ def test_successful_vm_from_cloned_dv_windows(
         client=unprivileged_client,
         source="pvc",
         dv_name="dv-target",
-        namespace=data_volume_multi_storage_scope_function.namespace,
-        size=data_volume_multi_storage_scope_function.size,
-        source_pvc=data_volume_multi_storage_scope_function.name,
-        storage_class=data_volume_multi_storage_scope_function.storage_class,
+        namespace=windows_source_dv_scope_function.namespace,
+        size=windows_source_dv_scope_function.size,
+        source_pvc=windows_source_dv_scope_function.name,
+        storage_class=windows_source_dv_scope_function.storage_class,
     ) as cdv:
         cdv.wait_for_dv_success(timeout=WINDOWS_CLONE_TIMEOUT)
         create_windows_vm_validate_guest_agent_info(
