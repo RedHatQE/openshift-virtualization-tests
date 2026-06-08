@@ -2362,6 +2362,7 @@ def fetch_pid_from_linux_vm(vm, process_name):
     cmd_res = run_ssh_commands(
         host=vm.ssh_exec,
         commands=shlex.split(f"pgrep {process_name} -x || true"),
+        wait_timeout=TIMEOUT_2MIN,
     )[0].strip()
     assert cmd_res, f"VM {vm.name}, '{process_name}' process not found"
     return int(cmd_res)
@@ -2384,6 +2385,7 @@ def fetch_pid_from_windows_vm(vm, process_name):
         host=vm.ssh_exec,
         commands=shlex.split(f"powershell -Command (Get-Process -Name {process_name.removesuffix('.exe')}).Id"),
         tcp_timeout=TCP_TIMEOUT_30SEC,
+        wait_timeout=TIMEOUT_2MIN,
     )[0].strip()
     assert cmd_res, f"Process '{process_name}' not in output: {cmd_res}"
     return int(cmd_res)
@@ -2620,7 +2622,7 @@ def validate_virtctl_guest_agent_data_over_time(vm: VirtualMachineForTests) -> b
 
 def get_vm_boot_time(vm: VirtualMachineForTests) -> str:
     boot_command = 'net statistics workstation | findstr "Statistics since"' if "windows" in vm.name else "who -b"
-    return run_ssh_commands(host=vm.ssh_exec, commands=shlex.split(boot_command))[0]
+    return run_ssh_commands(host=vm.ssh_exec, commands=shlex.split(boot_command), wait_timeout=TIMEOUT_2MIN)[0]
 
 
 def username_password_from_cloud_init(vm_volumes: list[dict[str, Any]]) -> tuple[str, str]:
