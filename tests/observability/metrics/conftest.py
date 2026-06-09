@@ -18,6 +18,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from libs.net import nodenetworkconfigurationpolicy as libnncp
 from libs.net.netattachdef import CNIPluginBridgeConfig, NetConfig, NetworkAttachmentDefinition
+from libs.net.vmspec import update_nad_references
 from libs.vm.factory import base_vmspec, fedora_vm
 from libs.vm.spec import Devices, Interface, Multus, Network
 from tests.observability.metrics.constants import (
@@ -45,7 +46,7 @@ from tests.observability.metrics.utils import (
     vnic_info_from_vm_or_vmi,
 )
 from tests.observability.utils import validate_metrics_value
-from tests.utils import create_vms, start_stress_on_vm, update_nad_references
+from tests.utils import create_vms, start_stress_on_vm
 from utilities import console
 from utilities.constants import (
     IPV4_STR,

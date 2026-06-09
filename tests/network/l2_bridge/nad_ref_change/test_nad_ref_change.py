@@ -14,14 +14,13 @@ Preconditions:
 import pytest
 
 from libs.net.ip import filter_link_local_addresses
-from libs.net.vmspec import lookup_iface_status
+from libs.net.vmspec import lookup_iface_status, update_nad_references
 from tests.network.l2_bridge.libl2bridge import LINUX_BRIDGE_IFACE_NAME_1, LINUX_BRIDGE_IFACE_NAME_2
 from tests.network.l2_bridge.nad_ref_change.lib_helpers import (
     GUEST_IFACE_1,
     GUEST_IFACE_2,
     assert_connectivity,
     assert_no_connectivity,
-    update_nad_references,
 )
 
 
