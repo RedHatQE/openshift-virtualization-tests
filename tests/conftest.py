@@ -64,7 +64,7 @@ from ocp_resources.virtual_machine_instance_migration import (
 from ocp_resources.virtual_machine_instancetype import VirtualMachineInstancetype
 from ocp_resources.virtual_machine_preference import VirtualMachinePreference
 from ocp_utilities.monitoring import Prometheus
-from packaging.version import Version, parse
+from packaging.version import parse
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutSampler
 
@@ -1896,27 +1896,13 @@ def hco_target_csv_name(cnv_target_version):
 
 
 @pytest.fixture(scope="session")
-def eus_hco_target_csv_name(eus_target_cnv_version):
-    if eus_target_cnv_version is None:
-        LOGGER.warning("Cannot determine EUS HCO target CSV name: EUS target version is None (non-EUS version)")
-        return None
-    return get_hco_csv_name_by_version(cnv_target_version=eus_target_cnv_version)
-
-
-@pytest.fixture(scope="session")
 def cnv_target_version(pytestconfig):
     return pytestconfig.option.cnv_version
 
 
 @pytest.fixture(scope="session")
-def eus_target_cnv_version(pytestconfig, cnv_current_version):
-    cnv_current_version = Version(version=cnv_current_version)
-    minor = cnv_current_version.minor
-    # EUS-to-EUS upgrades are only viable between even-numbered minor versions, return None if non-eus version
-    if minor % 2:
-        LOGGER.warning(f"EUS upgrade can not be performed from non-eus version: {cnv_current_version}")
-        return None
-    return pytestconfig.option.eus_cnv_target_version or f"{cnv_current_version.major}.{minor + 2}.0"
+def cnv_channel(pytestconfig):
+    return pytestconfig.option.cnv_channel
 
 
 @pytest.fixture()
