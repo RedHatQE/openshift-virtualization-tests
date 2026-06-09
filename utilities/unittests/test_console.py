@@ -3,9 +3,29 @@
 """Unit tests for console module"""
 
 import os
+import subprocess
 from unittest.mock import MagicMock, mock_open, patch
 
+import pexpect
+import pytest
 from console import Console
+
+
+class SingleAttemptTimeoutSampler:
+    """Run a TimeoutSampler-wrapped function once without retries.
+
+    Patch ``timeout_sampler.TimeoutSampler`` (not ``console.TimeoutSampler``):
+    ``connect()`` uses ``@retry`` from timeout_sampler, which resolves
+    TimeoutSampler from that module at runtime. ``console_eof_sampler`` uses
+    the separate ``console.TimeoutSampler`` import binding.
+    """
+
+    def __init__(self, func, func_args=(), **kwargs):
+        self.func = func
+        self.func_args = func_args
+
+    def __iter__(self):
+        yield self.func(*self.func_args)
 
 
 class TestConsole:
@@ -392,3 +412,236 @@ class TestConsole:
 
         # Should not change child when no valid sample is found
         assert console.child == original_child
+
+    @patch("console.os.close")
+    @patch("console.pexpect.fdpexpect.fdspawn")
+    @patch("console.subprocess.Popen")
+    @patch("console.pty.openpty")
+    @patch("console.get_data_collector_base_directory")
+    def test_spawn_console_success(
+        self,
+        mock_get_dir,
+        mock_openpty,
+        mock_popen,
+        mock_fdspawn,
+        mock_os_close,
+    ):
+        """Test _spawn_console creates fdspawn and stores subprocess handle"""
+        mock_get_dir.return_value = "/tmp/data"
+        mock_vm = MagicMock()
+        mock_vm.name = "test-vm"
+        mock_vm.namespace = None
+
+        mock_openpty.return_value = (10, 11)
+        mock_proc = MagicMock()
+        mock_popen.return_value = mock_proc
+        mock_child = MagicMock()
+        mock_fdspawn.return_value = mock_child
+
+        console = Console(vm=mock_vm)
+        result = console._spawn_console()
+
+        assert result == mock_child
+        assert console._proc == mock_proc
+        mock_popen.assert_called_once()
+        mock_fdspawn.assert_called_once_with(fd=10, encoding="utf-8", timeout=30)
+        mock_os_close.assert_called_once_with(11)
+
+    @patch("console.os.close")
+    @patch("console.subprocess.Popen")
+    @patch("console.pty.openpty")
+    @patch("console.get_data_collector_base_directory")
+    def test_spawn_console_popen_failure(self, mock_get_dir, mock_openpty, mock_popen, mock_os_close):
+        """Test _spawn_console closes pty fds when subprocess spawn fails"""
+        mock_get_dir.return_value = "/tmp/data"
+        mock_vm = MagicMock()
+        mock_vm.name = "test-vm"
+        mock_vm.namespace = None
+
+        mock_openpty.return_value = (10, 11)
+        mock_popen.side_effect = OSError("spawn failed")
+
+        console = Console(vm=mock_vm)
+        with pytest.raises(OSError, match="spawn failed"):
+            console._spawn_console()
+
+        mock_os_close.assert_any_call(10)
+        mock_os_close.assert_any_call(11)
+        assert console._proc is None
+
+    @patch("console.os.close")
+    @patch("console.pexpect.fdpexpect.fdspawn")
+    @patch("console.subprocess.Popen")
+    @patch("console.pty.openpty")
+    @patch("console.get_data_collector_base_directory")
+    def test_spawn_console_fdspawn_failure(
+        self,
+        mock_get_dir,
+        mock_openpty,
+        mock_popen,
+        mock_fdspawn,
+        mock_os_close,
+    ):
+        """Test _spawn_console terminates subprocess when fdspawn fails"""
+        mock_get_dir.return_value = "/tmp/data"
+        mock_vm = MagicMock()
+        mock_vm.name = "test-vm"
+        mock_vm.namespace = None
+
+        mock_openpty.return_value = (10, 11)
+        mock_proc = MagicMock()
+        mock_popen.return_value = mock_proc
+        mock_fdspawn.side_effect = pexpect.exceptions.ExceptionPexpect("fdspawn failed")
+
+        console = Console(vm=mock_vm)
+        with pytest.raises(pexpect.exceptions.ExceptionPexpect, match="fdspawn failed"):
+            console._spawn_console()
+
+        mock_proc.terminate.assert_called_once()
+        mock_proc.wait.assert_called_once()
+        mock_os_close.assert_any_call(10)
+        mock_os_close.assert_any_call(11)
+        assert console._proc is None
+
+    @patch("console.os.close")
+    @patch("console.pexpect.fdpexpect.fdspawn")
+    @patch("console.subprocess.Popen")
+    @patch("console.pty.openpty")
+    @patch("console.get_data_collector_base_directory")
+    def test_spawn_console_fdspawn_failure_force_kill(
+        self,
+        mock_get_dir,
+        mock_openpty,
+        mock_popen,
+        mock_fdspawn,
+        mock_os_close,
+    ):
+        """Test _spawn_console force-kills subprocess when terminate times out"""
+        mock_get_dir.return_value = "/tmp/data"
+        mock_vm = MagicMock()
+        mock_vm.name = "test-vm"
+        mock_vm.namespace = None
+
+        mock_openpty.return_value = (10, 11)
+        mock_proc = MagicMock()
+        mock_popen.return_value = mock_proc
+        mock_proc.wait.side_effect = [subprocess.TimeoutExpired(cmd="virtctl", timeout=10), None]
+        mock_fdspawn.side_effect = pexpect.exceptions.ExceptionPexpect("fdspawn failed")
+
+        console = Console(vm=mock_vm)
+        with pytest.raises(pexpect.exceptions.ExceptionPexpect, match="fdspawn failed"):
+            console._spawn_console()
+
+        mock_proc.terminate.assert_called_once()
+        mock_proc.kill.assert_called_once()
+        assert mock_proc.wait.call_count == 2
+
+    @patch("console.get_data_collector_base_directory")
+    def test_terminate_proc_running_process(self, mock_get_dir):
+        """Test _terminate_proc gracefully terminates a running subprocess"""
+        mock_get_dir.return_value = "/tmp/data"
+        mock_vm = MagicMock()
+        mock_vm.name = "test-vm"
+        mock_vm.namespace = None
+
+        mock_proc = MagicMock()
+        mock_proc.poll.return_value = None
+
+        console = Console(vm=mock_vm)
+        console._proc = mock_proc
+        console._terminate_proc()
+
+        mock_proc.terminate.assert_called_once()
+        mock_proc.wait.assert_called_once_with(timeout=10)
+        assert console._proc is None
+
+    @patch("console.get_data_collector_base_directory")
+    def test_terminate_proc_force_kill(self, mock_get_dir):
+        """Test _terminate_proc force-kills subprocess when terminate times out"""
+        mock_get_dir.return_value = "/tmp/data"
+        mock_vm = MagicMock()
+        mock_vm.name = "test-vm"
+        mock_vm.namespace = None
+
+        mock_proc = MagicMock()
+        mock_proc.poll.return_value = None
+        mock_proc.wait.side_effect = [subprocess.TimeoutExpired(cmd="virtctl", timeout=10), None]
+
+        console = Console(vm=mock_vm)
+        console._proc = mock_proc
+        console._terminate_proc()
+
+        mock_proc.terminate.assert_called_once()
+        mock_proc.kill.assert_called_once()
+        assert mock_proc.wait.call_count == 2
+        assert console._proc is None
+
+    @patch("console.get_data_collector_base_directory")
+    def test_terminate_proc_already_exited(self, mock_get_dir):
+        """Test _terminate_proc waits without terminate when process already exited"""
+        mock_get_dir.return_value = "/tmp/data"
+        mock_vm = MagicMock()
+        mock_vm.name = "test-vm"
+        mock_vm.namespace = None
+
+        mock_proc = MagicMock()
+        mock_proc.poll.return_value = 0
+
+        console = Console(vm=mock_vm)
+        console._proc = mock_proc
+        console._terminate_proc()
+
+        mock_proc.terminate.assert_not_called()
+        mock_proc.wait.assert_called_once_with(timeout=10)
+        assert console._proc is None
+
+    @patch("console.get_data_collector_base_directory")
+    def test_console_connect_failure_cleanup(self, mock_get_dir):
+        """Test connect cleans up child and subprocess on failure"""
+        mock_get_dir.return_value = "/tmp/data"
+        mock_vm = MagicMock()
+        mock_vm.name = "test-vm"
+        mock_vm.namespace = None
+        mock_vm.username = "user"
+        mock_vm.password = "pass"
+        mock_vm.login_params = {}
+
+        console = Console(vm=mock_vm)
+        mock_child = MagicMock()
+
+        with (
+            patch("timeout_sampler.TimeoutSampler", SingleAttemptTimeoutSampler),
+            patch.object(console, "console_eof_sampler") as mock_sampler,
+            patch.object(console, "_connect", side_effect=RuntimeError("connect failed")),
+            patch.object(console, "_terminate_proc") as mock_terminate,
+        ):
+            mock_sampler.side_effect = lambda: setattr(console, "child", mock_child)
+            with pytest.raises(RuntimeError, match="connect failed"):
+                console.connect()
+
+        mock_child.close.assert_called_once()
+        mock_terminate.assert_called_once()
+
+    @patch("console.get_data_collector_base_directory")
+    def test_console_connect_failure_no_child(self, mock_get_dir):
+        """Test connect terminates subprocess when child was never set"""
+        mock_get_dir.return_value = "/tmp/data"
+        mock_vm = MagicMock()
+        mock_vm.name = "test-vm"
+        mock_vm.namespace = None
+        mock_vm.username = "user"
+        mock_vm.password = "pass"
+        mock_vm.login_params = {}
+
+        console = Console(vm=mock_vm)
+
+        with (
+            patch("timeout_sampler.TimeoutSampler", SingleAttemptTimeoutSampler),
+            patch.object(console, "console_eof_sampler"),
+            patch.object(console, "_connect", side_effect=RuntimeError("connect failed")),
+            patch.object(console, "_terminate_proc") as mock_terminate,
+        ):
+            with pytest.raises(RuntimeError, match="connect failed"):
+                console.connect()
+
+        mock_terminate.assert_called_once()
