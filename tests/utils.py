@@ -43,6 +43,7 @@ from utilities.constants import (
     TCP_TIMEOUT_30SEC,
     TIMEOUT_1MIN,
     TIMEOUT_1SEC,
+    TIMEOUT_2MIN,
     TIMEOUT_3MIN,
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
@@ -177,9 +178,7 @@ def hotplug_instance_type_vm_and_verify(vm, client, instance_type):
 
 def verify_hotplug(vm, client, sockets=None, memory_guest=None):
     vmim = get_created_migration_job(vm=vm, client=client)
-    wait_for_migration_finished(
-        namespace=vm.namespace, migration=vmim, timeout=TIMEOUT_30MIN if "windows" in vm.name else TIMEOUT_10MIN
-    )
+    wait_for_migration_finished(migration=vmim, timeout=TIMEOUT_30MIN if "windows" in vm.name else TIMEOUT_10MIN)
     wait_for_ssh_connectivity(vm=vm)
     vmi_spec_domain = vm.vmi.instance.spec.domain
     if sockets:
@@ -222,17 +221,21 @@ def get_os_cpu_count(vm):
         cmd = shlex.split("echo %NUMBER_OF_PROCESSORS%")
     else:
         cmd = shlex.split("nproc")
-    return int(run_ssh_commands(host=vm.ssh_exec, commands=cmd)[0].strip())
+    return int(run_ssh_commands(host=vm.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN)[0].strip())
 
 
 def get_os_memory_value(vm):
     if "windows" in vm.name:
         cmd = shlex.split("wmic ComputerSystem get TotalPhysicalMemory")
-        wmic_total_mem = run_ssh_commands(host=vm.ssh_exec, commands=cmd)[0].strip().split()[1]
+        wmic_total_mem = (
+            run_ssh_commands(host=vm.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN)[0].strip().split()[1]
+        )
         return f"{round(float(bitmath.Bit(int(wmic_total_mem)).to_Gib()))}Gi"
     else:
         cmd = shlex.split("lsmem | grep 'Total online'")
-        lsmem_total_mem = run_ssh_commands(host=vm.ssh_exec, commands=cmd)[0].strip().split()[-1]
+        lsmem_total_mem = (
+            run_ssh_commands(host=vm.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN)[0].strip().split()[-1]
+        )
         return f"{lsmem_total_mem}i"
 
 

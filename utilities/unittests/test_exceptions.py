@@ -9,6 +9,7 @@ import pytest
 from utilities.exceptions import (
     ClusterSanityError,
     DataVolumeConditionMessageNotFoundError,
+    MigrationStuckSchedulingError,
     MissingEnvironmentVariableError,
     MissingResourceException,
     OsDictNotFoundError,
@@ -314,3 +315,20 @@ class TestUnsupportedCPUArchitectureError:
         """Test UnsupportedCPUArchitectureError can be raised"""
         with pytest.raises(UnsupportedCPUArchitectureError):
             raise UnsupportedCPUArchitectureError("Test error")
+
+
+class TestMigrationStuckSchedulingError:
+    """Test cases for MigrationStuckSchedulingError exception"""
+
+    def test_migration_stuck_scheduling_error_init(self):
+        """Test MigrationStuckSchedulingError initialization"""
+        migration_name = "test-migration"
+        error = MigrationStuckSchedulingError(migration_name)
+        assert error.migration_name == migration_name
+
+    def test_migration_stuck_scheduling_error_str(self):
+        """Test MigrationStuckSchedulingError string representation"""
+        migration_name = "test-migration"
+        error = MigrationStuckSchedulingError(migration_name)
+        expected = "Migration test-migration is stuck in Scheduling state."
+        assert str(error) == expected
