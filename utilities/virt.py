@@ -295,6 +295,7 @@ class VirtualMachineForTests(VirtualMachine):
         hugepages_page_size=None,
         vm_affinity=None,
         annotations=None,
+        label=None,
     ):
         """
         Virtual machine creation
@@ -360,7 +361,8 @@ class VirtualMachineForTests(VirtualMachine):
                 Is set to True if py_config["data_collector"] is True.
             priority_class_name (str, optional): The name of the priority class used for the VM
             dry_run (str, default=None): If "All", the resource will be created using the dry_run flag
-            additional_labels (dict, optional): Dict of additional labels for VM (e.g. {"vm-label": "best-vm"})
+            additional_labels (dict, optional): Dict of additional labels for VMI template (e.g. {"vm-label": "best-vm"})
+            label (dict, optional): Dict of labels for VM metadata (e.g. {"changedBlockTracking": "true"})
             generate_unique_name: if True then it will set dynamic name for the vm, False will use the name of vm passed
             node_selector_labels (str, optional): Labels for node selector.
             vm_instance_type (VirtualMachineInstancetype, optional): instance type object for the VM
@@ -389,6 +391,7 @@ class VirtualMachineForTests(VirtualMachine):
             node_selector=node_selector,
             node_selector_labels=node_selector_labels,
             yaml_file=yaml_file,
+            label=label,
         )
         self.body = body
         self.interfaces = interfaces or []
@@ -708,7 +711,7 @@ class VirtualMachineForTests(VirtualMachine):
             )
 
     def _is_vm_from_template(self):
-        return f"{self.ApiGroup.VM_KUBEVIRT_IO}/template" in self.res["metadata"].setdefault("labels", {}).keys()
+        return f"{self.ApiGroup.VM_KUBEVIRT_IO}/template" in self.res["metadata"].setdefault("labels", {})
 
     def generate_body(self):
         if self.body:
@@ -1877,7 +1880,7 @@ def running_vm(
         "Internal error occurred: unable to complete request: stop/start already underway",
     ]
     vm_dv_volumes_names_list = [
-        volume.dataVolume.name for volume in vm.instance.spec.template.spec.volumes if "dataVolume" in volume.keys()
+        volume.dataVolume.name for volume in vm.instance.spec.template.spec.volumes if "dataVolume" in volume
     ]
 
     try:
