@@ -34,6 +34,10 @@ GUEST_1ST_IFACE_NAME: Final[str] = "eth0"
 GUEST_2ND_IFACE_NAME: Final[str] = "eth1"
 GUEST_3RD_IFACE_NAME: Final[str] = "eth2"
 
+IFACE_A_NAME: Final[str] = "localnet-vlan-a"
+IFACE_B_NAME: Final[str] = "localnet-vlan-b"
+CUDN_B_NAME: Final[str] = "cudn-localnet-vlan-b"
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -65,6 +69,7 @@ def localnet_vm(
     networks: list[Network],
     interfaces: list[Interface],
     network_data: cloudinit.NetworkData | None = None,
+    runcmd: list[str] | None = None,
     affinity: Affinity | None = None,
     vm_labels: dict[str, str] | None = None,
 ) -> BaseVirtualMachine:
@@ -85,6 +90,8 @@ def localnet_vm(
             Each Interface should have a name matching a Network, and additional configuration and state.
         network_data (cloudinit.NetworkData | None): Cloud-init NetworkData object containing the network
             configuration for the VM interfaces. If None, no network configuration is applied via cloud-init.
+        runcmd (list[str] | None): Commands to run on first boot via cloud-init runcmd. None means no
+            extra commands are injected.
         affinity (Affinity | None): Optional Affinity object for VM scheduling. Controls the VM scheduling
             location. If None, no affinity constraints are applied.
         vm_labels (dict[str, str] | None): Optional labels to apply to the VM template metadata.
@@ -124,7 +131,7 @@ def localnet_vm(
 
     if network_data is not None:
         # Prevents cloud-init from overriding the default OS user credentials
-        userdata = cloudinit.UserData(users=[])
+        userdata = cloudinit.UserData(users=[], runcmd=runcmd)
         disk, volume = cloudinitdisk_storage(
             data=CloudInitNoCloud(
                 networkData=cloudinit.asyaml(no_cloud=network_data),
@@ -195,7 +202,7 @@ def create_nncp_localnet_on_secondary_node_nic(
     node_nic_name: str,
     client: DynamicClient,
     mtu: int | None = None,
-) -> Generator[libnncp.NodeNetworkConfigurationPolicy, None, None]:
+) -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
     """Create NNCP to configure an OVS bridge on a secondary NIC across all worker nodes.
 
     Note:

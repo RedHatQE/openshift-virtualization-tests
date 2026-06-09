@@ -11,7 +11,7 @@ LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.usefixtures(
-        "enable_multi_network_policy_usage",
+        "multi_network_policy_enabled",
     ),
     pytest.mark.ipv4,
 ]

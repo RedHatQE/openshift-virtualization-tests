@@ -4,16 +4,20 @@ jobs = 0
 
 # Ignore rules that conflict with ruff or are intentionally suppressed.
 #
-# Handled by ruff formatter (ruff removes noqa comments for these, causing flake8 failures):
+# Handled by ruff (suppressed in flake8 to avoid duplicate enforcement):
 #   E501 — line too long; ruff formatter manages line length
 #   E201 — whitespace after '('; ruff formatter manages whitespace
 #   W503 — line break before binary operator; PEP 8 reversed this, ruff uses W504 (after)
 #   F821 — undefined name; used in global_config files with dynamic exec() loading
+#   N815 — mixedCaseClassAttribute; enforced by ruff via extend-select, suppressed per-line with # noqa: N815
+#
+# Suppressed in flake8 only (enforced by ruff via extend-select + per-line # noqa):
+#   N802 — function name should be lowercase; ast.NodeVisitor/logging.Formatter method overrides
 #
 # Intentionally suppressed (not enforced by either linter):
-#   N802 — function name should be lowercase; method overrides like formatTime from logging.Formatter
+#   TODO: rename exceptions to use Error suffix and remove N818 from ignore
 #   N818 — exception name should end with Error; existing names like MissingTemplateVariables
-ignore = N802, E501, F821, E201, W503, N818
+ignore = N802, N815, E501, F821, E201, W503, N818
 exclude =
     doc,
     .tox,
