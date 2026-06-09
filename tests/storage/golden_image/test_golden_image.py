@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Generator
 
 import pytest
 from kubernetes.client.rest import ApiException
@@ -17,12 +18,22 @@ LOGGER = logging.getLogger(__name__)
 
 @pytest.fixture(scope="module")
 def golden_image_dv_from_fedora_datasource_scope_module(
-    request,
     admin_client,
     golden_images_namespace,
     storage_class_name_scope_module,
     fedora_data_source_scope_module,
-):
+) -> Generator[DataVolume]:
+    """Create a DataVolume from Fedora DataSource for golden image tests.
+
+    Args:
+        admin_client: DynamicClient with admin privileges.
+        golden_images_namespace: Namespace for golden images.
+        storage_class_name_scope_module: Storage class name for this module.
+        fedora_data_source_scope_module: Fedora DataSource to clone from.
+
+    Yields:
+        DataVolume: The created and ready-to-use DataVolume resource.
+    """
     size = get_dv_size_from_datasource(data_source=fedora_data_source_scope_module)
     with create_dv(
         client=admin_client,
@@ -98,7 +109,6 @@ def test_regular_user_cant_create_dv_in_ns(
 @pytest.mark.s390x
 @pytest.mark.polarion("CNV-4756")
 def test_regular_user_cant_delete_dv_from_cloned_dv(
-    golden_images_namespace,
     unprivileged_client,
     golden_image_dv_from_fedora_datasource_scope_module,
 ):
