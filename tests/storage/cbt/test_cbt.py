@@ -11,9 +11,20 @@ Preconditions:
 
 import pytest
 
-__test__ = False
+from tests.storage.cbt.utils import (
+    CBT_BOOT_DISK_TEST_DATA_FILE,
+    CBT_INCREMENTAL_TEST_DATA,
+    CBT_INCREMENTAL_TEST_DATA_FILE,
+    CBT_TEST_DATA,
+    read_file_content_from_vm,
+)
 
 
+@pytest.mark.parametrize(
+    "vm_with_cbt_label",
+    [{"name": "cbt-full"}],
+    indirect=True,
+)
 class TestFullBackupRestore:
     """
     Full backup and restore validation for push and pull modes.
@@ -24,7 +35,10 @@ class TestFullBackupRestore:
     """
 
     @pytest.mark.polarion("CNV-15997")
-    def test_full_backup_push_mode_restore(self):
+    def test_full_backup_push_mode_restore(
+        self,
+        test_data_from_restored_vm_push_mode,
+    ):
         """
         Test that a VM can be backed up (push mode) and restored from a full backup.
 
@@ -42,9 +56,13 @@ class TestFullBackupRestore:
         Expected:
             - Restored VM boots successfully and test data is present
         """
+        assert test_data_from_restored_vm_push_mode == CBT_TEST_DATA
 
     @pytest.mark.polarion("CNV-15996")
-    def test_full_backup_pull_mode_restore(self):
+    def test_full_backup_pull_mode_restore(
+        self,
+        test_data_from_restored_vm_pull_mode,
+    ):
         """
         Test that a full backup in pull mode can be performed and the VM can be restored.
 
@@ -62,8 +80,14 @@ class TestFullBackupRestore:
         Expected:
             - Restored VM boots successfully and test data is present
         """
+        assert test_data_from_restored_vm_pull_mode == CBT_TEST_DATA
 
 
+@pytest.mark.parametrize(
+    "vm_with_cbt_label",
+    [{"name": "cbt-incr"}],
+    indirect=True,
+)
 class TestIncrementalBackupRestore:
     """
     Incremental backup and restore validation for push and pull modes.
@@ -75,7 +99,10 @@ class TestIncrementalBackupRestore:
     """
 
     @pytest.mark.polarion("CNV-15998")
-    def test_incremental_backup_push_mode_restore(self):
+    def test_incremental_backup_push_mode_restore(
+        self,
+        restored_vm_from_incremental_backup_push_mode,
+    ):
         """
         Test that a VM can be backed up (push mode) and restored from an incremental backup.
 
@@ -93,9 +120,26 @@ class TestIncrementalBackupRestore:
         Expected:
             - Restored VM boots successfully and all test data is present
         """
+        assert (
+            read_file_content_from_vm(
+                vm=restored_vm_from_incremental_backup_push_mode,
+                file_path=CBT_BOOT_DISK_TEST_DATA_FILE,
+            )
+            == CBT_TEST_DATA
+        )
+        assert (
+            read_file_content_from_vm(
+                vm=restored_vm_from_incremental_backup_push_mode,
+                file_path=CBT_INCREMENTAL_TEST_DATA_FILE,
+            )
+            == CBT_INCREMENTAL_TEST_DATA
+        )
 
     @pytest.mark.polarion("CNV-16000")
-    def test_incremental_backup_pull_mode_restore(self):
+    def test_incremental_backup_pull_mode_restore(
+        self,
+        restored_vm_from_incremental_backup_pull_mode,
+    ):
         """
         Test that an incremental backup in pull mode can be performed and the VM can be restored.
 
@@ -113,6 +157,20 @@ class TestIncrementalBackupRestore:
         Expected:
             - Restored VM boots successfully and all test data is present
         """
+        assert (
+            read_file_content_from_vm(
+                vm=restored_vm_from_incremental_backup_pull_mode,
+                file_path=CBT_BOOT_DISK_TEST_DATA_FILE,
+            )
+            == CBT_TEST_DATA
+        )
+        assert (
+            read_file_content_from_vm(
+                vm=restored_vm_from_incremental_backup_pull_mode,
+                file_path=CBT_INCREMENTAL_TEST_DATA_FILE,
+            )
+            == CBT_INCREMENTAL_TEST_DATA
+        )
 
 
 class TestMultipleIncrementalBackups:
@@ -124,6 +182,8 @@ class TestMultipleIncrementalBackups:
         - Full backup completed
         - Test data written to VM
     """
+
+    __test__ = False  # Exclude from PR1 - reserved for future PR
 
     @pytest.mark.polarion("CNV-16002")
     def test_multiple_incremental_backups_push_mode_restore(self):
@@ -180,6 +240,8 @@ class TestMultipleDiskBackup:
         - Test data written to both disks
     """
 
+    __test__ = False  # Exclude from PR1 - reserved for future PR
+
     @pytest.mark.polarion("CNV-16003")
     def test_backup_multiple_disks_push_mode_restore(self):
         """
@@ -221,6 +283,7 @@ class TestMultipleDiskBackup:
         """
 
 
+@pytest.mark.rwx_default_storage
 class TestBackupAfterLiveMigration:
     """
     Backup and restore after VM live migration (requires RWX shared storage).
@@ -232,6 +295,8 @@ class TestBackupAfterLiveMigration:
         - Test data written to VM
         - Full backup completed before migration
     """
+
+    __test__ = False  # Exclude from PR1 - reserved for future PR
 
     @pytest.mark.polarion("CNV-16005")
     def test_incremental_backup_after_live_migration_push_mode(self):
@@ -278,6 +343,7 @@ class TestBackupAfterLiveMigration:
         """
 
 
+@pytest.mark.usefixtures("declarative_hotplug_volumes_feature_gate_enabled")
 class TestHotplugBackup:
     """
     Backup and restore validation for VMs with hotplugged disks.
@@ -287,6 +353,8 @@ class TestHotplugBackup:
         - Full backup completed
         - Test data written to VM
     """
+
+    __test__ = False  # Exclude from PR1 - reserved for future PR
 
     @pytest.mark.polarion("CNV-16009")
     def test_backup_with_hotplugged_disk_push_mode_restore(self):
@@ -344,6 +412,8 @@ class TestBackupErrorHandling:
         - Test data written to VM
     """
 
+    __test__ = False  # Exclude from PR1 - reserved for future PR
+
     @pytest.mark.polarion("CNV-16023")
     def test_backup_fails_when_storage_full_push_mode(self):
         """
@@ -389,6 +459,8 @@ class TestConcurrentBackups:
         - 5 running VMs with CBT enabled
         - Test data written to each VM
     """
+
+    __test__ = False  # Exclude from PR1 - reserved for future PR
 
     @pytest.mark.polarion("CNV-16011")
     def test_concurrent_backups_push_mode_restore(self):
@@ -441,6 +513,8 @@ class TestWindowsVMFullBackup:
         - Test data written to Windows VM
     """
 
+    __test__ = False  # Exclude from PR1 - reserved for future PR
+
     @pytest.mark.polarion("CNV-16013")
     def test_windows_vm_full_backup_push_mode_restore(self):
         """
@@ -492,6 +566,8 @@ class TestWindowsVMIncrementalBackup:
         - Full backup completed
         - Test data written to Windows VM
     """
+
+    __test__ = False  # Exclude from PR1 - reserved for future PR
 
     @pytest.mark.polarion("CNV-16015")
     def test_windows_vm_incremental_backup_push_mode_restore(self):
