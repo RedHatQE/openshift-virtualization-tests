@@ -2,10 +2,6 @@
 Role-based access control (RBAC) tests
 
 STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-iuo/CNV-63822-role-aggregation-opt-out.md
-
-Markers:
-    - arm64
-    - post_upgrade
 """
 
 import pytest
@@ -15,16 +11,24 @@ __test__ = False
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.arm64]
 
 
-class TestRoleAggregationDisabledRBACEnforcement:
+class TestRoleAggregationDisabled:
     """
     Tests for RBAC enforcement when role aggregation is disabled.
 
     Preconditions:
         - HyperConverged CR spec.roleAggregationStrategy set to "Manual" (role aggregation disabled)
         - Unprivileged user created via HTPasswd identity provider
+        - Namespace with a RoleBinding granting the unprivileged user the parametrized ClusterRole
     """
 
-    @pytest.mark.polarion("CNV-16028")
+    @pytest.mark.parametrize(
+        "role",
+        [
+            pytest.param("admin", marks=pytest.mark.polarion("CNV-16028")),
+            pytest.param("edit", marks=pytest.mark.polarion("CNV-16262")),
+            pytest.param("view", marks=pytest.mark.polarion("CNV-16263")),
+        ],
+    )
     def test_vm_list_forbidden_when_aggregation_disabled(self):
         """
         [NEGATIVE] Test that an unprivileged user with a standard OpenShift role is forbidden
@@ -32,9 +36,6 @@ class TestRoleAggregationDisabledRBACEnforcement:
 
         Parametrize:
             - role: [admin, edit, view]
-
-        Preconditions:
-            - Namespace with a RoleBinding granting the unprivileged user the parametrized ClusterRole
 
         Steps:
             1. Attempt to list VirtualMachine resources in the namespace using the unprivileged
