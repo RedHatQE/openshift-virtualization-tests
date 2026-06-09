@@ -29,7 +29,7 @@ class TestRoleAggregationDisabled:
             pytest.param("view", marks=pytest.mark.polarion("CNV-16263")),
         ],
     )
-    def test_vm_list_forbidden_when_aggregation_disabled(self):
+    def test_vm_list_forbidden_when_aggregation_disabled(self, role):
         """
         [NEGATIVE] Test that an unprivileged user with a standard OpenShift role is forbidden
         from listing virtualization resources when role aggregation is disabled.
