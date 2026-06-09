@@ -13,7 +13,7 @@ import subprocess
 import tempfile
 from bisect import bisect_left
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from signal import SIGINT, SIGTERM, getsignal, signal
 
 import bcrypt
@@ -263,7 +263,7 @@ def session_start_time() -> datetime:
     Returns:
         datetime: UTC timestamp when test session began (timezone-naive)
     """
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 @pytest.fixture(scope="session")
@@ -2629,6 +2629,11 @@ def rwx_fs_available_storage_classes_names(cluster_storage_classes_names):
     ]
 
 
+@pytest.fixture()
+def storage_class_name_scope_function(storage_class_matrix__function__):
+    return [*storage_class_matrix__function__][0]
+
+
 @pytest.fixture(scope="session")
 def rhsm_credentials_from_bitwarden():
     return get_cnv_tests_secret_by_name(secret_name="RHSM_CREDENTIALS")
@@ -2730,7 +2735,7 @@ def is_s390x_cluster(nodes_cpu_architecture):
 def hugepages_gib_values(workers):
     """Return the list of hugepage sizes (in GiB) across all worker nodes."""
     return [
-        int(bitmath.parse_string_unsafe(value).GiB)
+        int(bitmath.parse_string(value, strict=False).GiB)
         for worker in workers
         if (value := worker.instance.status.allocatable.get(NODE_HUGE_PAGES_1GI_KEY))
     ]

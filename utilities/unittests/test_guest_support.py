@@ -17,7 +17,7 @@ sys.modules["utilities.virt"] = mock_virt
 utilities.virt = mock_virt
 
 # Import after setting up mocks to avoid circular dependency
-from utilities.guest_support import (  # noqa: E402
+from utilities.guest_support import (
     assert_windows_efi,
     check_vm_xml_hyperv,
     check_windows_vm_hvinfo,

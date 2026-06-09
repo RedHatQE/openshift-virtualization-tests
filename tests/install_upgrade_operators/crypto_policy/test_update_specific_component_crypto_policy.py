@@ -91,7 +91,7 @@ def updated_cr_with_custom_crypto_policy(
             hco_namespace=hco_namespace,
             expected_conditions={
                 **DEFAULT_HCO_CONDITIONS,
-                **{"TaintedConfiguration": Resource.Condition.Status.TRUE},
+                "TaintedConfiguration": Resource.Condition.Status.TRUE,
             },
         )
         yield {"resource": resource, "tls_policy": value}

@@ -57,7 +57,7 @@ class TestSSPJsonPatch:
             admin_client=admin_client,
             hco_namespace=hco_namespace,
             expected_conditions={
-                **{"TaintedConfiguration": Resource.Condition.Status.TRUE},
+                "TaintedConfiguration": Resource.Condition.Status.TRUE,
             },
         )
         ssp_replicas_current_value = ssp_resource_scope_function.instance.spec.templateValidator.replicas

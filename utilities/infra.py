@@ -12,10 +12,11 @@ import tarfile
 import tempfile
 import time
 import zipfile
+from collections.abc import Generator
 from contextlib import contextmanager
 from functools import cache
 from subprocess import PIPE, CalledProcessError, Popen
-from typing import Any, Generator
+from typing import Any
 
 import netaddr
 import requests
@@ -288,19 +289,19 @@ def get_daemonset_by_name(admin_client, daemonset_name, namespace_name):
 
 
 def wait_for_consistent_resource_conditions(
-    dynamic_client,
-    expected_conditions,
-    resource_kind,
-    stop_conditions=None,
-    condition_key1="type",
-    condition_key2="status",
-    namespace=None,
-    total_timeout=TIMEOUT_10MIN,
-    polling_interval=5,
-    consecutive_checks_count=10,
-    exceptions_dict=None,
-    resource_name=None,
-):
+    dynamic_client: DynamicClient,
+    expected_conditions: dict[str, str],
+    resource_kind: type[Resource],
+    stop_conditions: dict[str, str] | None = None,
+    condition_key1: str = "type",
+    condition_key2: str = "status",
+    namespace: str | None = None,
+    total_timeout: int = TIMEOUT_10MIN,
+    polling_interval: int = 5,
+    consecutive_checks_count: int = 10,
+    exceptions_dict: dict[type[Exception], list[str]] | None = None,
+    resource_name: str | None = None,
+) -> None:
     """This function awaits certain conditions of a given resource_kind (HCO, CSV, etc.).
 
     Using TimeoutSampler loop and poll the CR (of the resource_kind type) and attempt to match the expected conditions
@@ -692,8 +693,7 @@ def download_and_extract_file_from_cluster(tmpdir, url):
     with requests.get(url, verify=False, stream=True) as created_request:
         created_request.raise_for_status()
         with open(local_file_name, "wb") as file_downloaded:
-            for chunk in created_request.iter_content(chunk_size=8192):
-                file_downloaded.write(chunk)
+            file_downloaded.writelines(created_request.iter_content(chunk_size=8192))
     LOGGER.info("Extract the downloaded archive.")
     if url.endswith(zip_file_extension):
         archive_file_object = zipfile.ZipFile(file=local_file_name)
@@ -849,7 +849,7 @@ def get_node_audit_log_entries(log: str, node: str, log_entry: str) -> tuple[boo
     return True, lines
 
 
-def get_node_audit_log_line_dict(logs: list[str], node: str, log_entry: str) -> Generator[dict[str, Any], None, None]:
+def get_node_audit_log_line_dict(logs: list[str], node: str, log_entry: str) -> Generator[dict[str, Any]]:
     """
     Parse audit log entries into dictionaries.
 

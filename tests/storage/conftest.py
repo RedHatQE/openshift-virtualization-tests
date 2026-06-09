@@ -296,17 +296,6 @@ def download_image():
     get_downloaded_artifact(remote_name=f"{Images.Cdi.DIR}/{Images.Cdi.QCOW2_IMG}", local_name=LOCAL_PATH)
 
 
-def _skip_block_volumemode(storage_class_matrix):
-    storage_class = [*storage_class_matrix][0]
-    if storage_class_matrix[storage_class]["volume_mode"] == "Block":
-        pytest.skip("Test is not supported on Block volume mode")
-
-
-@pytest.fixture(scope="module")
-def skip_block_volumemode_scope_module(storage_class_matrix__module__):
-    _skip_block_volumemode(storage_class_matrix=storage_class_matrix__module__)
-
-
 @pytest.fixture()
 def default_fs_overhead(cdi_config):
     return float(cdi_config.instance.status.filesystemOverhead["global"])
@@ -495,11 +484,6 @@ def multi_storage_cirros_vm(request, namespace, unprivileged_client, storage_cla
 @pytest.fixture()
 def data_volume_template_metadata(multi_storage_cirros_vm):
     return multi_storage_cirros_vm.data_volume_template["metadata"]
-
-
-@pytest.fixture()
-def storage_class_name_scope_function(storage_class_matrix__function__):
-    return [*storage_class_matrix__function__][0]
 
 
 @pytest.fixture(scope="module")

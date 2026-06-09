@@ -60,11 +60,16 @@ class NetworkData:
 class UserData:
     """Represents user configuration for cloud-init."""
 
-    users: list[Any]
     """
     Part of cloud-init's 'users and groups' module:
     https://cloudinit.readthedocs.io/en/latest/reference/modules.html#users-and-groups
     """
+    users: list[Any]
+    """
+    Commands to run on first boot:
+    https://cloudinit.readthedocs.io/en/latest/reference/modules.html#runcmd
+    """
+    runcmd: list[str] | None = None
 
 
 def todict(no_cloud: NetworkData | UserData) -> dict[str, Any]:
@@ -97,11 +102,11 @@ def primary_iface_cloud_init() -> EthernetDevice | None:
     Returns:
         EthernetDevice with static IPv6 and optional DHCP4, or None if IPv6 is not supported.
     """
-    if not ipv6_supported_cluster():
-        return None
-    return EthernetDevice(
-        addresses=["fd10:0:2::2/120"],
-        gateway6="fd10:0:2::1",
-        dhcp4=ipv4_supported_cluster(),
-        dhcp6=False,
-    )
+    if ipv6_supported_cluster():
+        return EthernetDevice(
+            addresses=["fd10:0:2::2/120"],
+            gateway6="fd10:0:2::1",
+            dhcp4=ipv4_supported_cluster(),
+            dhcp6=False,
+        )
+    return None
