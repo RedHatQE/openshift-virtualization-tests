@@ -26,7 +26,7 @@ from tests.virt.utils import (
     get_boot_time_for_multiple_vms,
     get_non_terminated_pods,
 )
-from utilities.constants import TIMEOUT_5MIN, TIMEOUT_5SEC
+from utilities.constants import TIMEOUT_5MIN, TIMEOUT_5SEC, NamespacesNames
 from utilities.infra import wait_for_pods_deletion
 from utilities.virt import wait_for_migration_finished
 
@@ -36,8 +36,28 @@ LOGGER = logging.getLogger(__name__)
 LOCALHOST = "localhost"
 
 
+@pytest.fixture(scope="package")
+def descheduler_operator_reconciled():
+    """Restart descheduler-operator deployment to trigger reconciliation.
+
+    Workaround for the issue when descheduler is installed before other OpenShift operators.
+    After restart, the operator reconciles and adds all namespaces with prefix "openshift-"
+    to the protected list.
+    """
+    LOGGER.info("Restarting descheduler-operator deployment to trigger reconciliation")
+    deployment = Deployment(
+        name="descheduler-operator",
+        namespace=NamespacesNames.OPENSHIFT_KUBE_DESCHEDULER_OPERATOR,
+    )
+    initial_replicas = deployment.instance.spec.replicas
+    deployment.scale_replicas(replica_count=0)
+    deployment.wait_for_replicas(deployed=False)
+    deployment.scale_replicas(replica_count=initial_replicas)
+    deployment.wait_for_replicas()
+
+
 @pytest.fixture(scope="module")
-def descheduler_long_lifecycle_profile(admin_client):
+def descheduler_long_lifecycle_profile(admin_client, descheduler_operator_reconciled):
     with create_kube_descheduler(
         admin_client=admin_client,
         profiles=["LongLifecycle"],
@@ -53,6 +73,7 @@ def descheduler_long_lifecycle_profile(admin_client):
 def descheduler_kubevirt_relieve_and_migrate_profile(
     admin_client,
     schedulable_nodes,
+    descheduler_operator_reconciled,
     nodes_taints_before_descheduler_test_run,
 ):
     with create_kube_descheduler(
