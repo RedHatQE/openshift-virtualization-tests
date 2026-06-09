@@ -754,7 +754,7 @@ class TestWaitForMcpUpdateEnd:
 
         wait_for_mcp_update_end([mock_mcp])
 
-        mock_wait_updated.assert_called_once_with(machine_config_pools_list=[mock_mcp])
+        mock_wait_updated.assert_called_once_with(machine_config_pools_list=[mock_mcp], timeout=4500)
         mock_wait_ready.assert_called_once_with(machine_config_pools_list=[mock_mcp])
 
 
