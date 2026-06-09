@@ -42,7 +42,7 @@ def start_vm_with_cluster_preference(client, preference_name, namespace_name):
         name=f"rhel-vm-with-{preference_name}",
         namespace=namespace_name,
         # TODO: Add corresponding images to the VM based on preference
-        image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
+        image=Images.Fedora.FEDORA_CONTAINER_IMAGE,
         memory_guest=memory_guest,
         cpu_sockets=sockets,
         cpu_cores=cores,
