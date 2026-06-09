@@ -123,6 +123,7 @@ def test_successful_import_image(
                 "source": HTTPS,
                 "content_type": DataVolume.ContentType.ARCHIVE,
                 "configmap_name": INTERNAL_HTTP_CONFIGMAP_NAME,
+                "volume_mode": DataVolume.VolumeMode.FILE,  # Archive type only supports Filesystem volume mode
             },
             marks=pytest.mark.polarion("CNV-2338"),
         ),
@@ -131,13 +132,7 @@ def test_successful_import_image(
 )
 @pytest.mark.sno
 @pytest.mark.s390x
-def test_successful_import_secure_archive(
-    skip_block_volumemode_scope_module, internal_http_configmap, running_pod_with_dv_pvc
-):
-    """
-    Skip block volume mode - archive does not support block mode DVs,
-    https://github.com/kubevirt/containerized-data-importer/blob/main/doc/supported_operations.md
-    """
+def test_successful_import_secure_archive(internal_http_configmap, running_pod_with_dv_pvc):
     assert_num_files_in_pod(pod=running_pod_with_dv_pvc, expected_num_of_files=3)
 
 
