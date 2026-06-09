@@ -128,6 +128,16 @@ class UnsupportedCPUArchitectureError(Exception):
     """Exception raised when a CPU architecture is not supported."""
 
 
+class MigrationStuckSchedulingError(Exception):
+    """Exception raised when a migration is stuck in Scheduling state."""
+
+    def __init__(self, migration_name: str) -> None:
+        self.migration_name = migration_name
+
+    def __str__(self) -> str:
+        return f"Migration {self.migration_name} is stuck in Scheduling state."
+
+
 def raise_multiple_exceptions(exceptions):
     """Raising multiple exceptions
 

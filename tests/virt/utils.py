@@ -115,6 +115,7 @@ def get_stress_ng_pid(ssh_exec, windows=False):
         host=ssh_exec,
         commands=shlex.split(f"{command_prefix} bash -c 'pgrep {stress}'"),
         tcp_timeout=TCP_TIMEOUT_30SEC,
+        wait_timeout=TIMEOUT_2MIN,
     )[0].split("\n")[0]
 
 
@@ -140,7 +141,7 @@ def migrate_and_verify_multi_vms(vm_list):
 
     for vm in vm_list:
         migration = vms_dict[vm.name]["vm_mig"]
-        wait_for_migration_finished(namespace=vm.namespace, migration=migration)
+        wait_for_migration_finished(migration=migration)
         migration.clean_up()
 
     for vm in vm_list:
