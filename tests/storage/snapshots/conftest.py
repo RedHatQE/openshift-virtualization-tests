@@ -135,3 +135,6 @@ def vm_restore_with_predictable_names(
     ) as vm_restore:
         vm_restore.wait_restore_done(timeout=TIMEOUT_10MIN)
         yield vm_restore
+
+    if vm_restore.exists:
+        vm_restore.delete(wait=True)
