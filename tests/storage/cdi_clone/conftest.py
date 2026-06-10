@@ -119,5 +119,4 @@ def cloned_windows_dv_template_from_registry_scope_function(
         storage_class=source_dv_spec.storage.storageClassName,
     ) as cdv:
         cdv.wait_for_dv_success(timeout=WINDOWS_CLONE_TIMEOUT)
-        cdv.to_dict()
-        yield cdv.res
+        yield cdv

@@ -750,11 +750,12 @@ def create_windows2022_dv_template_from_registry(
 
 @contextmanager
 def create_windows2022_vm_with_vtpm(
-    dv_template: dict,
     namespace: str,
     client: DynamicClient,
     vm_name: str,
     cpu_model: str | None,
+    dv_template: dict | None = None,
+    dv: DataVolume | None = None,
 ) -> Generator[VirtualMachineForTests]:
     """
     Creates a Windows Server 2022 VM with vTPM from registry container disk.
@@ -769,6 +770,9 @@ def create_windows2022_vm_with_vtpm(
     Yields:
         VirtualMachineForTests: Running Windows 2022 VM with vTPM
     """
+    if dv_template is None and dv is None:
+        raise ValueError("Either dv_template or dv must be provided")
+
     with VirtualMachineForTests(
         name=vm_name,
         namespace=namespace,
@@ -776,7 +780,8 @@ def create_windows2022_vm_with_vtpm(
         os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK,
         vm_instance_type=VirtualMachineClusterInstancetype(name=U1_LARGE, client=client),
         vm_preference=VirtualMachineClusterPreference(name=WINDOWS_2K22_PREFERENCE, client=client),
-        data_volume_template=dv_template,
+        data_volume_template=dv_template if dv is None else None,
+        data_volume=dv,
         cpu_model=cpu_model,
     ) as vm:
         running_vm(vm=vm)

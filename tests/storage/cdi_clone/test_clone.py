@@ -153,7 +153,7 @@ def test_successful_vm_from_cloned_dv_windows(
 ):
     """Test cloning Windows 2022 DV and creating VM with vTPM using instance types."""
     with create_windows2022_vm_with_vtpm(
-        dv_template=cloned_windows_dv_template_from_registry_scope_function,
+        dv=cloned_windows_dv_template_from_registry_scope_function,
         namespace=namespace.name,
         client=unprivileged_client,
         vm_name=f"vm-{WIN_2K22}",
