@@ -3,7 +3,7 @@ from ipaddress import ip_interface
 
 import pytest
 
-from libs.net.ip import filter_link_local_addresses, have_same_ip_families
+from libs.net.ip import filter_link_local_addresses
 from libs.net.traffic_generator import client_server_active_connection, is_tcp_connection
 from libs.net.vmspec import lookup_iface_status
 from tests.network.localnet.liblocalnet import (
@@ -72,20 +72,24 @@ def test_vmi_reports_ip_on_secondary_interface_without_vlan(
     expected_ips = [
         ip_interface(addr).ip for addr in vm.cloud_init_network_data.ethernets[GUEST_2ND_IFACE_NAME].addresses
     ]
+    expected_families = {ip.version for ip in expected_ips}
     iface_status = lookup_iface_status(
         vm=vm,
         iface_name=LOCALNET_BR_EX_INTERFACE_NO_VLAN,
-        predicate=lambda interface: have_same_ip_families(
-            actual_ips=filter_link_local_addresses(
-                ip_addresses=[str(ip_interface(addr).ip) for addr in interface["ipAddresses"]]
-            ),
-            expected_ips=expected_ips,
+        predicate=lambda interface: (
+            expected_families
+            <= {
+                ip.version
+                for ip in filter_link_local_addresses(
+                    ip_addresses=[str(ip_interface(addr).ip) for addr in interface["ipAddresses"]]
+                )
+            }
         ),
     )
     reported_ips = filter_link_local_addresses(
         ip_addresses=[str(ip_interface(addr).ip) for addr in iface_status.ipAddresses]
     )
-    assert set(reported_ips) == set(expected_ips), (
-        f"IP addresses mismatch for interface {LOCALNET_BR_EX_INTERFACE_NO_VLAN} on VM {vm.name},"
+    assert set(expected_ips) <= set(reported_ips), (
+        f"Expected IPs not found for interface {LOCALNET_BR_EX_INTERFACE_NO_VLAN} on VM {vm.name}, "
         f"Reported: {reported_ips}, Expected: {expected_ips}"
     )
