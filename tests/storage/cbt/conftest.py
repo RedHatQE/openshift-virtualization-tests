@@ -9,6 +9,7 @@ import shlex
 from contextlib import ExitStack
 
 import pytest
+from kubernetes.utils.quantity import parse_quantity
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
