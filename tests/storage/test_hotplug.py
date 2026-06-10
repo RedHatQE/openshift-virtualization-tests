@@ -10,7 +10,7 @@ from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.storage_profile import StorageProfile
-from pytest_testconfig import py_config
+from pytest_testconfig import config as py_config
 
 from tests.storage.constants import WIN2022_GOLDEN_IMAGE_OS_VERSION, WIN2022_GOLDEN_IMAGE_TEMPLATE_LABELS
 from tests.storage.utils import assert_disk_bus

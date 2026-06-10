@@ -1,6 +1,6 @@
 import pytest
 from ocp_resources.datavolume import DataVolume
-from pytest_testconfig import py_config
+from pytest_testconfig import config as py_config
 
 from tests.storage.constants import (
     QUAY_FEDORA_CONTAINER_IMAGE,
