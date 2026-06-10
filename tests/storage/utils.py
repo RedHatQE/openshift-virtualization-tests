@@ -330,7 +330,7 @@ def assert_pvc_snapshot_clone_annotation(pvc, storage_class):
     clone_type_annotation_str = f"{Resource.ApiGroup.CDI_KUBEVIRT_IO}/cloneType"
     clone_type_annotation = pvc.instance["metadata"].get("annotations").get(clone_type_annotation_str)
     # For snapshot capable storage, 'csi-clone' may be set in the StorageProfile
-    expected_clone_type_annotation = StorageProfile(name=storage_class).instance.status.cloneStrategy
+    expected_clone_type_annotation = StorageProfile(name=storage_class, client=pvc.client).instance.status.cloneStrategy
     assert clone_type_annotation == expected_clone_type_annotation, (
         f"{clone_type_annotation_str}: {clone_type_annotation}, expected: '{expected_clone_type_annotation}'"
     )
@@ -451,7 +451,7 @@ def assert_num_files_in_pod(pod, expected_num_of_files):
 
 def assert_use_populator(pvc, storage_class, cluster_csi_drivers_names):
     expected_use_populator_value = (
-        StorageClass(name=storage_class).instance.get("provisioner") in cluster_csi_drivers_names
+        StorageClass(name=storage_class, client=pvc.client).instance.get("provisioner") in cluster_csi_drivers_names
     )
     assert pvc.use_populator == expected_use_populator_value
 
