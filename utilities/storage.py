@@ -142,10 +142,10 @@ def create_dv(
             # Make sure URL exists
             validate_file_exists_in_url(url=url)
         if not secret:
-            secret = utilities.artifactory.get_artifactory_secret(namespace=namespace)
+            secret = utilities.artifactory.get_artifactory_secret(namespace=namespace, client=client)
             artifactory_secret = secret
         if not cert_configmap:
-            cert_created = utilities.artifactory.get_artifactory_config_map(namespace=namespace)
+            cert_created = utilities.artifactory.get_artifactory_config_map(namespace=namespace, client=client)
             cert_configmap = cert_created.name
 
     with DataVolume(
