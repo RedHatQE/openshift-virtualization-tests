@@ -1,0 +1,14 @@
+SRIOV = "sriov"
+IP_FAMILY_POLICY_PREFER_DUAL_STACK = "PreferDualStack"
+IPV4_STR = "ipv4"
+IPV6_STR = "ipv6"
+LINUX_BRIDGE = "linux-bridge"
+OVS_BRIDGE = "ovs-bridge"
+FLAT_OVERLAY_STR = "layer2"
+KUBEMACPOOL_MAC_RANGE_CONFIG = "kubemacpool-mac-range-config"
+SSH_PORT_22 = 22
+PORT_80 = 80
+ACTIVE_BACKUP = "active-backup"
+KMP_VM_ASSIGNMENT_LABEL = "mutatevirtualmachines.kubemacpool.io"
+KMP_ENABLED_LABEL = "allocate"
+PUBLIC_DNS_SERVER_IP = "8.8.8.8"

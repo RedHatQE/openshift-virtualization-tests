@@ -15,7 +15,7 @@ from utilities.constants import (
     ALL_CNV_DEPLOYMENTS,
     ALL_CNV_PODS,
     ALL_HCO_RELATED_OBJECTS,
-    BREW_REGISTERY_SOURCE,
+    BREW_REGISTRY_SOURCE,
     CENTOS_STREAM9_PREFERENCE,
     CENTOS_STREAM10_PREFERENCE,
     CNV_OPERATORS,
@@ -90,7 +90,7 @@ servers = {
 cnv_registry_sources = {
     "osbs": {
         "cnv_subscription_source": HCO_CATALOG_SOURCE,
-        "source_map": BREW_REGISTERY_SOURCE,
+        "source_map": BREW_REGISTRY_SOURCE,
     },
     "hotfix": {
         "cnv_subscription_source": HCO_CATALOG_SOURCE,
@@ -100,7 +100,7 @@ cnv_registry_sources = {
     },
     "fbc": {
         "cnv_subscription_source": HCO_CATALOG_SOURCE,
-        "source_map": BREW_REGISTERY_SOURCE,
+        "source_map": BREW_REGISTRY_SOURCE,
     },
 }
 
