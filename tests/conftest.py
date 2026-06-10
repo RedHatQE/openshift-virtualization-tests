@@ -859,7 +859,7 @@ def golden_image_data_volume_scope_function(request, admin_client, golden_images
         )
 
 
-@pytest.fixture
+@pytest.fixture()
 def golden_image_data_source_scope_function(
     admin_client, golden_images_namespace, golden_image_data_volume_scope_function
 ):
@@ -1583,7 +1583,7 @@ def must_gather_image_url(csv_scope_session):
     return must_gather_image[0]
 
 
-@pytest.fixture
+@pytest.fixture()
 def term_handler_scope_function():
     orig = signal(SIGTERM, getsignal(SIGINT))
     yield
