@@ -859,12 +859,13 @@ def golden_image_data_volume_scope_function(request, admin_client, golden_images
         )
 
 
-@pytest.fixture()
+@pytest.fixture
 def golden_image_data_source_scope_function(
     admin_client, golden_images_namespace, golden_image_data_volume_scope_function
 ):
     win_ds_name = py_config.get("win_golden_image_name")
     if win_ds_name:
+        LOGGER.info(f"Using Windows golden image DataSource: {win_ds_name}")
         yield DataSource(
             namespace=golden_images_namespace.name,
             name=win_ds_name,
