@@ -27,6 +27,7 @@ from utilities.constants import (
     SANITY_TESTS_FAILURE,
     TIMEOUT_2MIN,
     TIMEOUT_5MIN,
+    X86_64,
 )
 from utilities.data_collector import (
     collect_default_cnv_must_gather_with_vm_gather,
@@ -378,7 +379,7 @@ def generate_os_matrix_dicts(os_dict: dict[str, list[str]]) -> None:
         py_config["latest_windows_os_dict"] = generate_latest_os_dict(os_matrix=py_config["windows_os_matrix"])
 
     arch = get_cluster_architecture()
-    cpu_arch = arch if arch != AMD_64 else None
+    cpu_arch = None if arch in (AMD_64, X86_64) else arch
     if instance_type_rhel_os_list := os_dict.get("instance_type_rhel_os_list"):
         py_config["instance_type_rhel_os_matrix"] = generate_linux_instance_type_os_matrix(
             os_name="rhel", preferences=instance_type_rhel_os_list, arch_suffix=cpu_arch
