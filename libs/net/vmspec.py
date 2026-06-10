@@ -303,7 +303,7 @@ def _vmi_condition_not_set(existing_conditions: list[ResourceField], required_co
 
 
 def update_nad_references(vm: BaseVirtualMachine, nad_name_by_net: dict[str, str]) -> None:
-    """Update secondary network NAD references and wait for the change to be fully applied.
+    """Update secondary NAD references and wait for the change to be fully applied.
 
     Patches the VM spec atomically, then waits for the MigrationRequired condition to
     appear (change detected) and disappear (migration completed).
@@ -312,11 +312,23 @@ def update_nad_references(vm: BaseVirtualMachine, nad_name_by_net: dict[str, str
         vm: The virtual machine to update.
         nad_name_by_net: Mapping of interface name to new NAD name.
     """
+    if not nad_name_by_net:
+        raise ValueError(f"NAD update mapping is empty for VM {vm.name}")
     resource_version = vm.vmi.instance.metadata.resourceVersion
-    networks = deepcopy(vm.template_spec.networks) or []
+    networks = vm.template_spec.networks
+    if not networks:
+        raise ValueError(f"VM {vm.name} has no template networks to update")
+    networks = deepcopy(networks)
+    updated_names = set()
     for network in networks:
-        if network.name in nad_name_by_net and network.multus:
+        if network.name in nad_name_by_net:
+            if not network.multus:
+                raise ValueError(f"Network {network.name!r} on VM {vm.name} is not a Multus network")
             network.multus.networkName = nad_name_by_net[network.name]
+            updated_names.add(network.name)
+    missing = set(nad_name_by_net) - updated_names
+    if missing:
+        raise ValueError(f"NAD update requested for unknown networks {sorted(missing)} on VM {vm.name}")
     vm.set_networks(networks=networks)
     wait_for_vmi_condition_status(vm=vm, condition="MigrationRequired", resource_version=resource_version)
     wait_for_no_vmi_condition(vm=vm, condition="MigrationRequired")

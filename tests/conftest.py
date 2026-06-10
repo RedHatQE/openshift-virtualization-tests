@@ -13,6 +13,7 @@ import subprocess
 import tempfile
 from bisect import bisect_left
 from collections import defaultdict
+from collections.abc import Generator
 from datetime import UTC, datetime
 from signal import SIGINT, SIGTERM, getsignal, signal
 
@@ -23,6 +24,7 @@ import pytest
 import requests
 import yaml
 from bs4 import BeautifulSoup
+from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.application_aware_resource_quota import ApplicationAwareResourceQuota
 from ocp_resources.catalog_source import CatalogSource
@@ -69,10 +71,12 @@ from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutSampler
 
 import utilities.hco
-from libs.net.cluster import cluster_vlan_iterator, ipv4_supported_cluster, ipv6_supported_cluster
+from libs.net import nodenetworkconfigurationpolicy as libnncp
+from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
 from libs.net.ip import filter_link_local_addresses, random_ipv4_address, random_ipv6_address
+from libs.net.netattachdef import CNIPluginBridgeConfig, NetConfig, NetworkAttachmentDefinition
 from libs.net.vmspec import lookup_iface_status
-from tests.utils import download_and_extract_tar
+from tests.utils import download_and_extract_tar, get_vlan_index_number
 from utilities.artifactory import get_artifactory_header, get_http_image_url, get_test_artifact_server_url
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.cluster import cache_admin_client, get_oc_whoami_username
@@ -2741,6 +2745,82 @@ def hugepages_gib_values(workers):
     ]
 
 
+@pytest.fixture(scope="package")
+def bridge_nncp(
+    nmstate_dependent_placeholder: None,
+    admin_client: DynamicClient,
+    hosts_common_available_ports: list[str],
+) -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
+    if not hosts_common_available_ports:
+        raise ValueError("No common worker NICs available for bridge_nncp fixture")
+    with libnncp.NodeNetworkConfigurationPolicy(
+        client=admin_client,
+        name="l2-bridge-test-nncp",
+        desired_state=libnncp.DesiredState(
+            interfaces=[
+                libnncp.Interface(
+                    name="br1-test",
+                    type=LINUX_BRIDGE,
+                    state=libnncp.Resource.Interface.State.UP,
+                    bridge=libnncp.Bridge(
+                        port=[libnncp.Port(name=hosts_common_available_ports[-1])],
+                        options=libnncp.BridgeOptions(libnncp.STP(enabled=False)),
+                    ),
+                )
+            ]
+        ),
+        node_selector={WORKER_NODE_LABEL_KEY: ""},
+    ) as nncp_br:
+        nncp_br.wait_for_status_success()
+        yield nncp_br
+
+
 @pytest.fixture(scope="module")
-def next_vlan_index_number():
-    return cluster_vlan_iterator()
+def bridge_nad_a(
+    admin_client: DynamicClient,
+    namespace: Namespace,
+    bridge_nncp: libnncp.NodeNetworkConfigurationPolicy,
+    vlan_index_number: Generator[int],
+) -> Generator[NetworkAttachmentDefinition]:
+    bridge = bridge_nncp.desired_state_spec.interfaces[0].name  # type: ignore
+    with NetworkAttachmentDefinition(
+        name="nad-vlan-a",
+        namespace=namespace.name,
+        config=NetConfig(
+            name="nad-vlan-a", plugins=[CNIPluginBridgeConfig(bridge=bridge, vlan=next(vlan_index_number))]
+        ),
+        client=admin_client,
+    ) as nad:
+        yield nad
+
+
+@pytest.fixture(scope="module")
+def vlan_index_number(vlans_list):
+    return get_vlan_index_number(vlans_list=vlans_list)
+
+
+@pytest.fixture(scope="session")
+def vlans_list():
+    vlans = py_config["vlans"]
+    if not isinstance(vlans, list):
+        vlans = vlans.split(",")
+    return [int(_id) for _id in vlans]
+
+
+@pytest.fixture(scope="module")
+def bridge_nad_b(
+    admin_client: DynamicClient,
+    namespace: Namespace,
+    bridge_nncp: libnncp.NodeNetworkConfigurationPolicy,
+    vlan_index_number: Generator[int],
+) -> Generator[NetworkAttachmentDefinition]:
+    bridge = bridge_nncp.desired_state_spec.interfaces[0].name  # type: ignore[union-attr, index]
+    with NetworkAttachmentDefinition(
+        name="nad-vlan-b",
+        namespace=namespace.name,
+        config=NetConfig(
+            name="nad-vlan-b", plugins=[CNIPluginBridgeConfig(bridge=bridge, vlan=next(vlan_index_number))]
+        ),
+        client=admin_client,
+    ) as nad:
+        yield nad

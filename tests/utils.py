@@ -782,3 +782,8 @@ def create_windows2022_vm_with_vtpm_from_registry(
         running_vm(vm=vm)
         wait_for_windows_vm(vm=vm, version="2022")
         yield vm
+
+
+def get_vlan_index_number(vlans_list: list[int]) -> Generator[int]:
+    yield from vlans_list
+    raise ValueError(f"vlans list is exhausted. Current list size is {len(vlans_list)} and all vlans are in use.")

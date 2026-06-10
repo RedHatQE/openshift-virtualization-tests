@@ -1,6 +1,5 @@
 import ipaddress
 import logging
-from collections.abc import Generator
 from functools import cache
 
 from pytest_testconfig import py_config
@@ -30,23 +29,3 @@ def ipv6_supported_cluster() -> bool:
 
 def _cluster_ip_family_supported(ip_family: int) -> bool:
     return any(ipaddress.ip_network(ip).version == ip_family for ip in py_config.get("cluster_service_network"))
-
-
-def cluster_vlan_iterator() -> Generator[int]:
-    """Yield VLAN IDs from the cluster config one at a time.
-
-    The underlying VLAN list is read from py_config once and cached. Each call
-    returns a fresh iterator so every fixture invocation starts from the beginning.
-    Raises ValueError when all VLANs have been consumed.
-    """
-    vlans = _cluster_vlans()
-    yield from vlans
-    raise ValueError(f"vlans list is exhausted. Current list size is {len(vlans)} and all vlans are in use.")
-
-
-@cache
-def _cluster_vlans() -> list[int]:
-    vlans = py_config["vlans"]
-    if not isinstance(vlans, list):
-        vlans = vlans.split(",")
-    return [int(v) for v in vlans]

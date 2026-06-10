@@ -257,11 +257,6 @@ def assert_nncp_successfully_configured(nncp):
         raise
 
 
-def get_vlan_index_number(vlans_list):
-    yield from vlans_list
-    raise ValueError(f"vlans list is exhausted. Current list size is {len(vlans_list)} and all vlans are in use.")
-
-
 def get_destination_ip_address(destination_vm):
     dst_ip = get_ip_from_vm_or_virt_handler_pod(
         family=IPV4_STR,

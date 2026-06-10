@@ -4,9 +4,8 @@ import pytest
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.namespace import Namespace
 
-from libs.net import nodenetworkconfigurationpolicy as libnncp
 from libs.net.ip import filter_link_local_addresses, random_cidr_addresses_by_family
-from libs.net.netattachdef import CNIPluginBridgeConfig, NetConfig, NetworkAttachmentDefinition
+from libs.net.netattachdef import NetworkAttachmentDefinition
 from libs.net.vmspec import lookup_iface_status, wait_for_ifaces_status
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.l2_bridge.libl2bridge import LINUX_BRIDGE_IFACE_NAME_1, LINUX_BRIDGE_IFACE_NAME_2
@@ -17,44 +16,6 @@ from tests.network.l2_bridge.nad_ref_change.lib_helpers import (
     two_secondary_bridge_vm,
 )
 from tests.network.libs.connectivity import ARP_ISOLATION_SYSCTL_CMD, poll_tcp_connectivity
-
-
-@pytest.fixture(scope="module")
-def bridge_nad_a(
-    admin_client: DynamicClient,
-    namespace: Namespace,
-    bridge_nncp: libnncp.NodeNetworkConfigurationPolicy,
-    vlan_index_number: Generator[int],
-) -> Generator[NetworkAttachmentDefinition]:
-    bridge = bridge_nncp.desired_state_spec.interfaces[0].name  # type: ignore
-    with NetworkAttachmentDefinition(
-        name="nad-vlan-a",
-        namespace=namespace.name,
-        config=NetConfig(
-            name="nad-vlan-a", plugins=[CNIPluginBridgeConfig(bridge=bridge, vlan=next(vlan_index_number))]
-        ),
-        client=admin_client,
-    ) as nad:
-        yield nad
-
-
-@pytest.fixture(scope="module")
-def bridge_nad_b(
-    admin_client: DynamicClient,
-    namespace: Namespace,
-    bridge_nncp: libnncp.NodeNetworkConfigurationPolicy,
-    vlan_index_number: Generator[int],
-) -> Generator[NetworkAttachmentDefinition]:
-    bridge = bridge_nncp.desired_state_spec.interfaces[0].name  # type: ignore[union-attr, index]
-    with NetworkAttachmentDefinition(
-        name="nad-vlan-b",
-        namespace=namespace.name,
-        config=NetConfig(
-            name="nad-vlan-b", plugins=[CNIPluginBridgeConfig(bridge=bridge, vlan=next(vlan_index_number))]
-        ),
-        client=admin_client,
-    ) as nad:
-        yield nad
 
 
 @pytest.fixture(scope="module")

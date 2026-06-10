@@ -1,6 +1,5 @@
 import logging
 import shlex
-from collections.abc import Generator
 
 import bitmath
 import pytest
@@ -16,8 +15,6 @@ from packaging.version import Version
 from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from libs.net import nodenetworkconfigurationpolicy as libnncp
-from libs.net.netattachdef import CNIPluginBridgeConfig, NetConfig, NetworkAttachmentDefinition
 from libs.net.vmspec import update_nad_references
 from libs.vm.factory import base_vmspec, fedora_vm
 from libs.vm.spec import Devices, Interface, Multus, Network
@@ -56,7 +53,6 @@ from utilities.constants import (
     KUBEVIRT_VMI_MEMORY_SWAP_OUT_TRAFFIC_BYTES,
     KUBEVIRT_VMI_MEMORY_UNUSED_BYTES,
     KUBEVIRT_VMI_MEMORY_USABLE_BYTES,
-    LINUX_BRIDGE,
     MIGRATION_POLICY_VM_LABEL,
     ONE_CPU_CORE,
     ONE_CPU_THREAD,
@@ -73,7 +69,6 @@ from utilities.constants import (
     TWO_CPU_THREADS,
     U1_MEDIUM_STR,
     VIRT_TEMPLATE_VALIDATOR,
-    WORKER_NODE_LABEL_KEY,
     Images,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile, enabled_aaq_in_hco
@@ -674,81 +669,14 @@ def expected_cpu_affinity_metric_value(admin_client, vm_with_cpu_spec):
     return str(cpu_count_from_vm_node * cpu_count_from_vm)
 
 
-_NAD_SWAP_BRIDGE_NAME = "brnadswap"
 _NAD_SWAP_SECONDARY_IFACE = "secondary"
-
-
-@pytest.fixture(scope="class")
-def nad_swap_bridge_nncp(
-    nmstate_dependent_placeholder,
-    admin_client,
-    hosts_common_available_ports,
-) -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
-    with libnncp.NodeNetworkConfigurationPolicy(
-        client=admin_client,
-        name="nad-swap-vnic-info-nncp",
-        desired_state=libnncp.DesiredState(
-            interfaces=[
-                libnncp.Interface(
-                    name=_NAD_SWAP_BRIDGE_NAME,
-                    type=LINUX_BRIDGE,
-                    state=libnncp.Resource.Interface.State.UP,
-                    bridge=libnncp.Bridge(
-                        port=[libnncp.Port(name=hosts_common_available_ports[-1])],
-                        options=libnncp.BridgeOptions(libnncp.STP(enabled=False)),
-                    ),
-                )
-            ]
-        ),
-        node_selector={WORKER_NODE_LABEL_KEY: ""},
-    ) as nncp:
-        nncp.wait_for_status_success()
-        yield nncp
-
-
-@pytest.fixture(scope="class")
-def nad_a_for_vnic_info(
-    admin_client,
-    namespace,
-    nad_swap_bridge_nncp,
-    next_vlan_index_number,
-) -> Generator[NetworkAttachmentDefinition]:
-    with NetworkAttachmentDefinition(
-        name=f"{_NAD_SWAP_BRIDGE_NAME}-nad-a",
-        namespace=namespace.name,
-        config=NetConfig(
-            name=f"{_NAD_SWAP_BRIDGE_NAME}-nad-a",
-            plugins=[CNIPluginBridgeConfig(bridge=_NAD_SWAP_BRIDGE_NAME, vlan=next(next_vlan_index_number))],
-        ),
-        client=admin_client,
-    ) as nad:
-        yield nad
-
-
-@pytest.fixture(scope="class")
-def nad_b_for_vnic_info(
-    admin_client,
-    namespace,
-    nad_swap_bridge_nncp,
-    next_vlan_index_number,
-):
-    with NetworkAttachmentDefinition(
-        name=f"{_NAD_SWAP_BRIDGE_NAME}-nad-b",
-        namespace=namespace.name,
-        config=NetConfig(
-            name=f"{_NAD_SWAP_BRIDGE_NAME}-nad-b",
-            plugins=[CNIPluginBridgeConfig(bridge=_NAD_SWAP_BRIDGE_NAME, vlan=next(next_vlan_index_number))],
-        ),
-        client=admin_client,
-    ) as nad:
-        yield nad
 
 
 @pytest.fixture(scope="class")
 def vm_for_nad_swap_test(
     unprivileged_client,
     namespace,
-    nad_a_for_vnic_info,
+    bridge_nad_a,
 ):
     vm_name = "vm-nad-swap-vnic-info"
     spec = base_vmspec()
@@ -760,7 +688,7 @@ def vm_for_nad_swap_test(
     )
     spec.template.spec.networks = [
         Network(name="default", pod={}),
-        Network(name=_NAD_SWAP_SECONDARY_IFACE, multus=Multus(networkName=nad_a_for_vnic_info.name)),
+        Network(name=_NAD_SWAP_SECONDARY_IFACE, multus=Multus(networkName=bridge_nad_a.name)),
     ]
     with fedora_vm(namespace=namespace.name, name=vm_name, client=unprivileged_client, spec=spec) as vm:
         vm.start(wait=True)
@@ -770,11 +698,11 @@ def vm_for_nad_swap_test(
 @pytest.fixture(scope="class")
 def post_nad_swap_vm(
     vm_for_nad_swap_test,
-    nad_b_for_vnic_info,
+    bridge_nad_b,
 ):
     update_nad_references(
         vm=vm_for_nad_swap_test,
-        nad_name_by_net={_NAD_SWAP_SECONDARY_IFACE: nad_b_for_vnic_info.name},
+        nad_name_by_net={_NAD_SWAP_SECONDARY_IFACE: bridge_nad_b.name},
     )
     yield vm_for_nad_swap_test
 
@@ -782,7 +710,7 @@ def post_nad_swap_vm(
 @pytest.fixture(scope="class")
 def expected_vnic_info_after_swap(
     post_nad_swap_vm,
-    nad_b_for_vnic_info,
+    bridge_nad_b,
 ):
     vm_interfaces = post_nad_swap_vm.instance.spec.template.spec.domain.devices.interfaces
     secondary_interface = next(iface for iface in vm_interfaces if iface["name"] == _NAD_SWAP_SECONDARY_IFACE)
@@ -791,5 +719,5 @@ def expected_vnic_info_after_swap(
         "vnic_name": _NAD_SWAP_SECONDARY_IFACE,
         BINDING_NAME: binding_info[BINDING_NAME],
         BINDING_TYPE: binding_info[BINDING_TYPE],
-        "network": nad_b_for_vnic_info.name,
+        "network": bridge_nad_b.name,
     }
