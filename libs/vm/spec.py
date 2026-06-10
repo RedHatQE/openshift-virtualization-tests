@@ -77,6 +77,7 @@ class Interface:
     passtBinding: dict[Any, Any] | None = None  # noqa: N815
     binding: NetBinding | None = None
     state: str | None = None
+    macAddress: str | None = None  # noqa: N815
 
 
 @dataclass
