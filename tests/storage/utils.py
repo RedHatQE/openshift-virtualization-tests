@@ -17,7 +17,6 @@ from ocp_resources.route import Route
 from ocp_resources.service import Service
 from ocp_resources.storage_class import StorageClass
 from ocp_resources.storage_profile import StorageProfile
-from ocp_resources.template import Template
 from ocp_resources.upload_token_request import UploadTokenRequest
 from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
@@ -25,9 +24,6 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from utilities import console
 from utilities.artifactory import (
-    cleanup_artifactory_secret_and_config_map,
-    get_artifactory_config_map,
-    get_artifactory_secret,
     get_http_image_url,
 )
 from utilities.constants import (
@@ -52,8 +48,6 @@ from utilities.storage import (
 )
 from utilities.virt import (
     VirtualMachineForTests,
-    VirtualMachineForTestsFromTemplate,
-    running_vm,
     vm_instance_from_template,
     wait_for_windows_vm,
 )
@@ -354,38 +348,6 @@ def get_hpp_daemonset(hco_namespace, hpp_cr_suffix, admin_client):
     )
     assert daemonset.exists, "hpp_daemonset does not exist"
     return daemonset
-
-
-@contextmanager
-def create_windows19_vm(dv_name, namespace, client, vm_name, cpu_model, storage_class):
-    artifactory_secret = get_artifactory_secret(namespace=namespace)
-    artifactory_config_map = get_artifactory_config_map(namespace=namespace)
-    dv = DataVolume(
-        name=dv_name,
-        namespace=namespace,
-        storage_class=storage_class,
-        source="http",
-        url=get_http_image_url(image_directory=Images.Windows.UEFI_WIN_DIR, image_name=Images.Windows.WIN2k19_IMG),
-        size=Images.Windows.DEFAULT_DV_SIZE,
-        client=client,
-        api_name="storage",
-        secret=artifactory_secret,
-        cert_configmap=artifactory_config_map.name,
-    )
-    dv.to_dict()
-    with VirtualMachineForTestsFromTemplate(
-        name=vm_name,
-        namespace=namespace,
-        client=client,
-        labels=Template.generate_template_labels(**py_config["latest_windows_os_dict"]["template_labels"]),
-        cpu_model=cpu_model,
-        data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
-    ) as vm:
-        running_vm(vm=vm)
-        yield vm
-    cleanup_artifactory_secret_and_config_map(
-        artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
-    )
 
 
 def create_cirros_dv(
