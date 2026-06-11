@@ -13,9 +13,8 @@ Preconditions:
 import pytest
 
 from libs.net.ip import filter_link_local_addresses
-from libs.net.vmspec import lookup_iface_status
+from libs.net.vmspec import lookup_iface_status, update_nad_references
 from tests.network.libs.connectivity import poll_tcp_connectivity
-from tests.network.libs.nad_ref import update_nad_references
 from tests.network.localnet.liblocalnet import (
     GUEST_1ST_IFACE_NAME,
     GUEST_2ND_IFACE_NAME,
