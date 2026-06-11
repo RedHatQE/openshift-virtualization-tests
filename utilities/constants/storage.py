@@ -57,8 +57,6 @@ CDI_CONFIGMAPS = [
 ]
 
 BREW_REGISTRY_SOURCE = "brew.registry.redhat.io"
-ICSP_FILE = "imageContentSourcePolicy.yaml"
-IDMS_FILE = "imageDigestMirrorSet.yaml"
 
 ACCESS_MODE = "access_mode"
 VOLUME_MODE = "volume_mode"
