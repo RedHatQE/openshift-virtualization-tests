@@ -3,8 +3,9 @@ from subprocess import check_output
 import pexpect
 import pytest
 from ocp_resources.pod import Pod
+from pytest_testconfig import config as py_config
 
-from utilities.constants import TIMEOUT_1MIN, TIMEOUT_2MIN, UNPRIVILEGED_PASSWORD, UNPRIVILEGED_USER
+from utilities.constants import TIMEOUT_1MIN, UNPRIVILEGED_PASSWORD, UNPRIVILEGED_USER
 from utilities.infra import login_with_user_password
 from utilities.storage import create_dv, get_dv_size_from_datasource
 
@@ -41,11 +42,10 @@ def dv_created_by_specific_user(
     namespace,
     client_for_test,
     fedora_data_source_scope_module,
-    storage_class_name_scope_function,
 ):
     with create_dv(
         dv_name=request.param["data_volume_name"],
-        storage_class=storage_class_name_scope_function,
+        storage_class=py_config["default_storage_class"],
         client=client_for_test,
         namespace=namespace.name,
         source_ref={
@@ -55,7 +55,7 @@ def dv_created_by_specific_user(
         },
         size=get_dv_size_from_datasource(data_source=fedora_data_source_scope_module),
     ) as dv:
-        dv.wait_for_dv_success(timeout=TIMEOUT_2MIN)
+        dv.wait_for_dv_success()
         yield dv
 
 
