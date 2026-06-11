@@ -5,22 +5,17 @@ Fixtures for setting up VMs, backups, and restores for CBT testing.
 """
 
 import secrets
-import shlex
-from contextlib import ExitStack
 
 import pytest
-from kubernetes.utils.quantity import parse_quantity
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.secret import Secret
-from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_backup import VirtualMachineBackup
 from ocp_resources.virtual_machine_backup_tracker import VirtualMachineBackupTracker
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
-from pyhelper_utils.shell import run_ssh_commands
 
 from tests.storage.cbt.utils import (
     CBT_BOOT_DISK_TEST_DATA_FILE,
@@ -28,14 +23,14 @@ from tests.storage.cbt.utils import (
     CBT_INCREMENTAL_TEST_DATA,
     CBT_INCREMENTAL_TEST_DATA_FILE,
     CBT_TEST_DATA,
-    backup_tracker_source_dict,
+    cbt_pvc_size_with_headroom,
     read_file_content_from_vm,
-    restore_vm_from_backup,
+    running_restored_vm_from_backup,
+    vm_boot_disk_size,
 )
 from utilities.constants import (
     OS_FLAVOR_RHEL,
     RHEL9_PREFERENCE,
-    TIMEOUT_10MIN,
     U1_SMALL,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile
@@ -44,6 +39,7 @@ from utilities.storage import (
     write_file_via_ssh,
 )
 from utilities.virt import VirtualMachineForTests, running_vm
+
 
 @pytest.fixture(scope="module")
 def incremental_backup_feature_gate_enabled(
@@ -171,15 +167,12 @@ def backup_pvc(
     Returns:
         PersistentVolumeClaim: PVC for backup storage
     """
-    source_disk_size = vm_with_cbt_label.data_volume_template["spec"]["storage"]["resources"]["requests"]["storage"]
-    backup_pvc_size = f"{parse_quantity(source_disk_size) // (1024**3) + 10}Gi"
-
     with PersistentVolumeClaim(
         name="cbt-backup-pvc",
         namespace=namespace.name,
         client=unprivileged_client,
         accessmodes=PersistentVolumeClaim.AccessMode.RWO,
-        size=backup_pvc_size,
+        size=cbt_pvc_size_with_headroom(source_disk_size=vm_boot_disk_size(vm=vm_with_cbt_label)),
         storage_class=storage_class_name_scope_module,
         volume_mode=DataVolume.VolumeMode.FILE,
     ) as pvc:
@@ -206,13 +199,11 @@ def completed_full_backup_push_mode(
         mode=VirtualMachineBackup.Mode.PUSH,
         pvc_name=backup_pvc.name,
         force_full_backup=True,
-        source=backup_tracker_source_dict(tracker_name=backup_tracker_for_vm.name),
+        source=VirtualMachineBackupTracker.backup_source_reference(
+            tracker_name=backup_tracker_for_vm.name,
+        ),
     ) as backup:
-        backup.wait_for_condition(
-            condition=backup.Condition.DONE,
-            status=backup.Condition.Status.TRUE,
-            timeout=TIMEOUT_10MIN,
-        )
+        backup.wait_until_done()
         yield backup
 
 
@@ -232,31 +223,18 @@ def restored_vm_from_full_backup_push_mode(
     Returns:
         VirtualMachine: Running restored VM
     """
-    # Delete the original VM to simulate restore scenario
-    vm_with_cbt_label.delete(wait=True)
-
-    source_disk_size = vm_with_cbt_label.data_volume_template["spec"]["storage"]["resources"]["requests"][
-        "storage"
-    ]
-
-    restored_vm = restore_vm_from_backup(
+    with running_restored_vm_from_backup(
         backup=completed_full_backup_push_mode,
+        source_vm=vm_with_cbt_label,
         restored_vm_name=f"{vm_with_cbt_label.name}-restored",
         namespace=namespace.name,
         client=unprivileged_client,
-        storage_class=storage_class_name_scope_module,
-        size=source_disk_size,
         admin_client=admin_client,
+        storage_class=storage_class_name_scope_module,
         backup_pvc_name=backup_pvc.name,
-    )
-
-    # Start the restored VM
-    running_vm(vm=restored_vm)
-
-    yield restored_vm
-
-    # Cleanup
-    restored_vm.delete(wait=True)
+        delete_source_vm_before_restore=True,
+    ) as restored_vm:
+        yield restored_vm
 
 
 @pytest.fixture()
@@ -280,6 +258,7 @@ def test_data_from_restored_vm_push_mode(restored_vm_from_full_backup_push_mode)
 def scratch_pvc(
     unprivileged_client,
     namespace,
+    vm_with_cbt_label,
     storage_class_name_scope_module,
 ):
     """
@@ -293,7 +272,7 @@ def scratch_pvc(
         namespace=namespace.name,
         client=unprivileged_client,
         accessmodes=PersistentVolumeClaim.AccessMode.RWO,
-        size="40Gi",  # Must be larger than source disk (30Gi) to accommodate backup data
+        size=cbt_pvc_size_with_headroom(source_disk_size=vm_boot_disk_size(vm=vm_with_cbt_label)),
         storage_class=storage_class_name_scope_module,
         volume_mode=DataVolume.VolumeMode.FILE,
     ) as pvc:
@@ -359,13 +338,11 @@ def completed_full_backup_pull_mode(
         token_secret_ref=pull_mode_token_secret_name,
         pvc_name=scratch_pvc.name,
         force_full_backup=True,
-        source=backup_tracker_source_dict(tracker_name=backup_tracker_for_vm.name),
+        source=VirtualMachineBackupTracker.backup_source_reference(
+            tracker_name=backup_tracker_for_vm.name,
+        ),
     ) as backup:
-        backup.wait_for_condition(
-            condition=backup.Condition.EXPORT_READY,
-            status=backup.Condition.Status.TRUE,
-            timeout=TIMEOUT_10MIN,
-        )
+        backup.wait_until_export_ready()
         yield backup
 
 
@@ -384,28 +361,17 @@ def restored_vm_from_full_backup_pull_mode(
     Returns:
         VirtualMachine: Running restored VM
     """
-    source_disk_size = vm_with_cbt_label.data_volume_template["spec"]["storage"]["resources"]["requests"][
-        "storage"
-    ]
-
-    restored_vm = restore_vm_from_backup(
+    with running_restored_vm_from_backup(
         backup=completed_full_backup_pull_mode,
+        source_vm=vm_with_cbt_label,
         restored_vm_name=f"{vm_with_cbt_label.name}-restored-pull",
         namespace=namespace.name,
         client=unprivileged_client,
         admin_client=admin_client,
         storage_class=storage_class_name_scope_module,
-        size=source_disk_size,
-    )
-
-    vm_with_cbt_label.delete(wait=True)
-
-    running_vm(vm=restored_vm)
-
-    yield restored_vm
-
-    # Cleanup
-    restored_vm.delete(wait=True)
+        delete_source_vm_before_restore=False,
+    ) as restored_vm:
+        yield restored_vm
 
 
 @pytest.fixture()
@@ -465,13 +431,11 @@ def completed_incremental_backup_push_mode(
         client=unprivileged_client,
         pvc_name=backup_pvc.name,
         force_full_backup=False,
-        source=backup_tracker_source_dict(tracker_name=backup_tracker_for_vm.name),
+        source=VirtualMachineBackupTracker.backup_source_reference(
+            tracker_name=backup_tracker_for_vm.name,
+        ),
     ) as backup:
-        backup.wait_for_condition(
-            condition=backup.Condition.DONE,
-            status=backup.Condition.Status.TRUE,
-            timeout=TIMEOUT_10MIN,
-        )
+        backup.wait_until_done()
         yield backup
 
 
@@ -491,28 +455,18 @@ def restored_vm_from_incremental_backup_push_mode(
     Returns:
         VirtualMachine: Running restored VM
     """
-    vm_with_cbt_label.delete(wait=True)
-
-    source_disk_size = vm_with_cbt_label.data_volume_template["spec"]["storage"]["resources"]["requests"][
-        "storage"
-    ]
-
-    restored_vm = restore_vm_from_backup(
+    with running_restored_vm_from_backup(
         backup=completed_incremental_backup_push_mode,
+        source_vm=vm_with_cbt_label,
         restored_vm_name=f"{vm_with_cbt_label.name}-restored-incremental",
         namespace=namespace.name,
         client=unprivileged_client,
-        storage_class=storage_class_name_scope_module,
-        size=source_disk_size,
         admin_client=admin_client,
+        storage_class=storage_class_name_scope_module,
         backup_pvc_name=backup_pvc.name,
-    )
-
-    running_vm(vm=restored_vm)
-
-    yield restored_vm
-
-    restored_vm.delete(wait=True)
+        delete_source_vm_before_restore=True,
+    ) as restored_vm:
+        yield restored_vm
 
 
 # Incremental backup fixtures (pull mode)
@@ -534,7 +488,7 @@ def incremental_test_data_written_to_vm_pull_mode(
         filename=CBT_INCREMENTAL_TEST_DATA_FILE,
         content=CBT_INCREMENTAL_TEST_DATA,
     )
-    release_pull_mode_backup(backup=completed_full_backup_pull_mode)
+    completed_full_backup_pull_mode.release()
     yield vm_with_cbt_label
 
 
@@ -562,13 +516,11 @@ def completed_incremental_backup_pull_mode(
         token_secret_ref=pull_mode_token_secret_name,
         pvc_name=scratch_pvc.name,
         force_full_backup=False,
-        source=backup_tracker_source_dict(tracker_name=backup_tracker_for_vm.name),
+        source=VirtualMachineBackupTracker.backup_source_reference(
+            tracker_name=backup_tracker_for_vm.name,
+        ),
     ) as backup:
-        backup.wait_for_condition(
-            condition=backup.Condition.EXPORT_READY,
-            status=backup.Condition.Status.TRUE,
-            timeout=TIMEOUT_10MIN,
-        )
+        backup.wait_until_export_ready()
         yield backup
 
 
@@ -587,22 +539,15 @@ def restored_vm_from_incremental_backup_pull_mode(
     Returns:
         VirtualMachine: Running restored VM
     """
-    source_disk_size = vm_with_cbt_label.data_volume_template["spec"]["storage"]["resources"]["requests"][
-        "storage"
-    ]
-
-    restored_vm = restore_vm_from_backup(
+    with running_restored_vm_from_backup(
         backup=completed_incremental_backup_pull_mode,
+        source_vm=vm_with_cbt_label,
         restored_vm_name=f"{vm_with_cbt_label.name}-restored-incremental-pull",
         namespace=namespace.name,
         client=unprivileged_client,
         admin_client=admin_client,
         storage_class=storage_class_name_scope_module,
-        size=source_disk_size,
-    )
+        delete_source_vm_before_restore=False,
+    ) as restored_vm:
+        yield restored_vm
 
-    vm_with_cbt_label.delete(wait=True)
-
-    running_vm(vm=restored_vm)
-
-    yield restored_vm

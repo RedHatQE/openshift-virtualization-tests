@@ -10,8 +10,8 @@ import logging
 import os
 import re
 import shlex
-from collections.abc import Callable
-from contextlib import ExitStack
+from collections.abc import Callable, Iterator
+from contextlib import ExitStack, contextmanager
 from typing import TYPE_CHECKING, Any
 
 from kubernetes.utils.quantity import parse_quantity
@@ -19,13 +19,10 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.pod import Pod
 from ocp_resources.resource import ResourceEditor
-from ocp_resources.secret import Secret
 from ocp_resources.virtual_machine_backup import VirtualMachineBackup
-from ocp_resources.virtual_machine_backup_tracker import VirtualMachineBackupTracker
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from pyhelper_utils.shell import run_ssh_commands
-from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from utilities.constants import (
     NET_UTIL_CONTAINER_IMAGE,
@@ -37,50 +34,24 @@ from utilities.constants import (
     TIMEOUT_30MIN,
     U1_SMALL,
 )
-from utilities.virt import VirtualMachineForTests
+from utilities.virt import VirtualMachineForTests, running_vm
 
 if TYPE_CHECKING:
     from ocp_resources.virtual_machine import VirtualMachine
 
 LOGGER = logging.getLogger(__name__)
 
-CONCURRENT_CBT_VM_COUNT = 5
-DATA_DISK_SIZE = "5Gi"
-UNDERSIZED_BACKUP_PVC_SIZE = "1Gi"
-
 CBT_TEST_DATA: str = "cbt-backup-test-data-content"
 CBT_INCREMENTAL_TEST_DATA: str = "cbt-incremental-backup-test-data"
-CBT_MULTI_INCREMENTAL_DATA_PHASE_1: str = "cbt-multi-incremental-data-phase-1"
-CBT_MULTI_INCREMENTAL_DATA_PHASE_2: str = "cbt-multi-incremental-data-phase-2"
-CBT_POST_MIGRATION_TEST_DATA: str = "cbt-post-migration-test-data"
-CBT_DATA_DISK_TEST_DATA: str = "cbt-data-disk-test-data"
-CBT_HOTPLUG_DISK_TEST_DATA: str = "cbt-hotplug-disk-test-data"
-CBT_WINDOWS_TEST_DATA: str = "cbt-windows-test-data"
-CBT_WINDOWS_INCREMENTAL_TEST_DATA: str = "cbt-windows-incremental-test-data"
 
 CBT_BOOT_DISK_TEST_DATA_FILE = "/tmp/cbt-test-data.txt"
 CBT_INCREMENTAL_TEST_DATA_FILE = "/tmp/cbt-incremental-test-data.txt"
-CBT_MULTI_INCREMENTAL_TEST_DATA_FILE_PHASE_1 = "/tmp/cbt-multi-incremental-test-data-phase-1.txt"
-CBT_MULTI_INCREMENTAL_TEST_DATA_FILE_PHASE_2 = "/tmp/cbt-multi-incremental-test-data-phase-2.txt"
-CBT_POST_MIGRATION_TEST_DATA_FILE = "/tmp/cbt-post-migration-test-data.txt"
-CBT_DATA_DISK_TEST_DATA_FILE = "/mnt/cbt-data/cbt-data-disk-test-data.txt"
-CBT_HOTPLUG_DISK_TEST_DATA_FILE = "/mnt/cbt-hotplug/cbt-hotplug-disk-test-data.txt"
-CBT_WINDOWS_TEST_DATA_FILE = r"C:\Users\cbt-test\cbt-windows-test-data.txt"
-CBT_WINDOWS_INCREMENTAL_TEST_DATA_FILE = r"C:\Users\cbt-test\cbt-windows-incremental-test-data.txt"
-
-CBT_DATA_DISK_MOUNT_PATH = "/mnt/cbt-data"
-CBT_DATA_DISK_DEVICE = "/dev/vdb"
-CBT_HOTPLUG_DISK_MOUNT_PATH = "/mnt/cbt-hotplug"
-CBT_HOTPLUG_DISK_DEVICE = "/dev/sda"
 
 CBT_ENABLED_LABEL: dict[str, str] = {"changedBlockTracking": "true"}
 
-CBT_BACKUP_MODE_PUSH = "Push"
-CBT_BACKUP_MODE_PULL = "Pull"
 RESTORED_DISK_FILENAME = "disk.img"
 DEFAULT_BACKUP_VOLUME_NAME = "boot"
 K8S_NAME_MAX_LENGTH = 63
-CBT_WINDOWS_TEST_USER_DIR = r"C:\Users\cbt-test"
 BACKUP_PVC_VOLUME_KEY = "backup-src"
 RESTORE_WORK_VOLUME_KEY = "restore-work"
 RESTORE_WORK_MOUNT_PATH = "/work"
@@ -94,60 +65,14 @@ PULL_RESTORE_POD_TIMEOUT_SECONDS = TIMEOUT_30MIN
 CHECKPOINT_TIMESTAMP_PATTERN = re.compile(r"(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})")
 
 
-def backup_tracker_source_dict(tracker_name: str) -> dict[str, str]:
-    """Return a VirtualMachineBackup source reference for a backup tracker."""
-    return {
-        "apiGroup": VirtualMachineBackupTracker.api_group,
-        "kind": "VirtualMachineBackupTracker",
-        "name": tracker_name,
-    }
+def vm_boot_disk_size(vm: VirtualMachine) -> str:
+    """Return the boot disk storage request from a VM data volume template."""
+    return vm.data_volume_template["spec"]["storage"]["resources"]["requests"]["storage"]
 
 
-def get_vm_disk_volume_names(vm: VirtualMachine) -> list[str]:
-    """
-    Return persistent disk volume names from a VM template.
-
-    Excludes cloud-init and other non-disk volume sources.
-
-    Args:
-        vm: VirtualMachine whose template volumes define backed-up disks
-
-    Returns:
-        list[str]: Disk volume names in template order
-    """
-    template_spec = vm.instance.spec["template"]["spec"]
-    disk_names = {disk["name"] for disk in template_spec["domain"]["devices"]["disks"]}
-    backup_volume_source_keys = ("dataVolume", "persistentVolumeClaim")
-    volume_names: list[str] = []
-    for volume in template_spec["volumes"]:
-        volume_name = volume["name"]
-        if volume_name not in disk_names:
-            continue
-        if not any(source_key in volume for source_key in backup_volume_source_keys):
-            continue
-        volume_names.append(volume_name)
-    return volume_names
-
-
-def resolve_restore_volume_names(
-    included_volumes: list[dict[str, Any]],
-    source_volume_names: list[str] | None = None,
-) -> list[str]:
-    """
-    Return volume names for qcow2 matching and restored VM disk attachment.
-
-    Prefers source VM volume names when provided; backup status may omit names or use
-    placeholders that do not match qcow2 file suffixes.
-    """
-    status_names = normalize_backup_volume_names(included_volumes=included_volumes)
-    if not source_volume_names:
-        return status_names
-    if len(source_volume_names) != len(status_names):
-        raise ValueError(
-            f"source_volume_names length {len(source_volume_names)} "
-            f"does not match backup volume count {len(status_names)}"
-        )
-    return source_volume_names
+def cbt_pvc_size_with_headroom(source_disk_size: str, headroom_gib: int = 10) -> str:
+    """Return a PVC size with headroom above the source disk capacity."""
+    return f"{parse_quantity(source_disk_size) // (1024**3) + headroom_gib}Gi"
 
 
 def _uses_placeholder_qcow2_suffixes(qcow2_suffixes: list[str]) -> bool:
@@ -155,27 +80,6 @@ def _uses_placeholder_qcow2_suffixes(qcow2_suffixes: list[str]) -> bool:
         qcow2_suffix == DEFAULT_BACKUP_VOLUME_NAME or qcow2_suffix.startswith("volume-")
         for qcow2_suffix in qcow2_suffixes
     )
-
-
-def normalize_backup_volume_names(included_volumes: list[dict[str, Any]]) -> list[str]:
-    """
-    Return backed-up volume names from backup status, with safe defaults.
-
-    The backup controller may omit volume names in includedVolumes; restore uses
-    DEFAULT_BACKUP_VOLUME_NAME for a single-volume backup.
-    """
-    if not included_volumes:
-        return [DEFAULT_BACKUP_VOLUME_NAME]
-    volume_names: list[str] = []
-    for index, volume in enumerate(included_volumes):
-        volume_name = volume.get("name") or volume.get("volumeName")
-        if volume_name:
-            volume_names.append(volume_name)
-        elif len(included_volumes) == 1:
-            volume_names.append(DEFAULT_BACKUP_VOLUME_NAME)
-        else:
-            volume_names.append(f"volume-{index}")
-    return volume_names
 
 
 def cbt_restore_resource_id(restored_vm_name: str) -> str:
@@ -201,92 +105,6 @@ def _target_volume_mount_key(volume_index: int) -> str:
 
 def _target_mount_path(volume_index: int) -> str:
     return f"/target-vol-{volume_index}"
-
-
-def chown_mount_path_for_vm_user(vm: VirtualMachineForTests, mount_path: str) -> None:
-    """Grant the VM SSH user ownership of a mounted path for test file writes."""
-    run_ssh_commands(
-        host=vm.ssh_exec,
-        commands=[shlex.split(f"sudo chown -R {vm.username}:{vm.username} {mount_path}")],
-        wait_timeout=TIMEOUT_2MIN,
-        sleep=TIMEOUT_5SEC,
-    )
-
-
-def mount_cbt_data_disk_on_vm(vm: VirtualMachineForTests) -> None:
-    """Mount the restored data disk at the expected test path on a Linux VM."""
-    run_ssh_commands(
-        host=vm.ssh_exec,
-        commands=[
-            shlex.split(f"sudo mkdir -p {CBT_DATA_DISK_MOUNT_PATH}"),
-            shlex.split(f"sudo mount {CBT_DATA_DISK_DEVICE} {CBT_DATA_DISK_MOUNT_PATH}"),
-        ],
-        wait_timeout=TIMEOUT_2MIN,
-        sleep=TIMEOUT_5SEC,
-    )
-    chown_mount_path_for_vm_user(vm=vm, mount_path=CBT_DATA_DISK_MOUNT_PATH)
-
-
-def mount_cbt_hotplug_disk_on_vm(vm: VirtualMachineForTests) -> None:
-    """Mount the restored hotplug disk at the expected test path on a Linux VM."""
-    run_ssh_commands(
-        host=vm.ssh_exec,
-        commands=[
-            shlex.split(f"sudo mkdir -p {CBT_HOTPLUG_DISK_MOUNT_PATH}"),
-            shlex.split(f"sudo mount {CBT_HOTPLUG_DISK_DEVICE} {CBT_HOTPLUG_DISK_MOUNT_PATH}"),
-        ],
-        wait_timeout=TIMEOUT_2MIN,
-        sleep=TIMEOUT_5SEC,
-    )
-    chown_mount_path_for_vm_user(vm=vm, mount_path=CBT_HOTPLUG_DISK_MOUNT_PATH)
-
-
-def wait_for_backup_to_fail(backup: VirtualMachineBackup, timeout: int = TIMEOUT_10MIN) -> None:
-    """
-    Wait until a backup reaches Failed=True or raise if it completes successfully.
-
-    Args:
-        backup: VirtualMachineBackup expected to fail
-        timeout: Seconds to wait for the Failed condition
-
-    Raises:
-        RuntimeError: If the backup reaches Done=True instead of failing
-        TimeoutExpiredError: If Failed=True is not observed within timeout
-    """
-    LOGGER.info(f"Waiting for backup {backup.name} to reach Failed=True")
-    try:
-        for backup_instance in TimeoutSampler(
-            wait_timeout=timeout,
-            sleep=TIMEOUT_5SEC,
-            func=lambda: backup.instance,
-        ):
-            conditions = backup_instance.get("status", {}).get("conditions", [])
-            for condition in conditions:
-                condition_type = condition.get("type")
-                condition_status = condition.get("status")
-                if condition_type == "Failed" and condition_status == "True":
-                    LOGGER.info(f"Backup {backup.name} reached Failed=True")
-                    return
-                if condition_type == "Done" and condition_status == "True":
-                    raise RuntimeError(
-                        f"Backup {backup.name} reached Done=True but was expected to fail. Conditions: {conditions}"
-                    )
-    except TimeoutExpiredError as timeout_error:
-        raise TimeoutExpiredError(
-            f"Backup {backup.name} did not reach Failed=True within {timeout}s. "
-            f"Status: {backup.instance.get('status', {})}"
-        ) from timeout_error
-
-
-def release_pull_mode_backup(backup: VirtualMachineBackup) -> None:
-    """
-    Delete a pull-mode backup after its export has been consumed.
-
-    Pull backups remain active until the client deletes the VirtualMachineBackup CR.
-    The admission webhook allows only one in-progress backup per source at a time.
-    """
-    LOGGER.info(f"Releasing pull-mode backup {backup.name} in namespace {backup.namespace}")
-    backup.delete(wait=True)
 
 
 def read_file_content_from_vm(vm: VirtualMachineForTests, file_path: str) -> str:
@@ -347,6 +165,50 @@ def add_pvc_volume_to_vm(
     ResourceEditor(patches={vm: patch}).update()
 
 
+@contextmanager
+def running_restored_vm_from_backup(
+    *,
+    backup: VirtualMachineBackup,
+    source_vm: VirtualMachine,
+    restored_vm_name: str,
+    namespace: str,
+    client: Any,
+    admin_client: Any,
+    storage_class: str,
+    backup_pvc_name: str | None = None,
+    delete_source_vm_before_restore: bool = True,
+) -> Iterator[VirtualMachineForTests]:
+    """
+    Restore a VM from backup, start it, and delete it on teardown.
+
+    Push-mode restores delete the source VM before materializing disks. Pull-mode
+    restores delete the source VM after restore because the export may still reference it.
+    """
+    source_disk_size = vm_boot_disk_size(vm=source_vm)
+    if delete_source_vm_before_restore:
+        source_vm.delete(wait=True)
+
+    restored_vm = restore_vm_from_backup(
+        backup=backup,
+        restored_vm_name=restored_vm_name,
+        namespace=namespace,
+        client=client,
+        storage_class=storage_class,
+        size=source_disk_size,
+        admin_client=admin_client,
+        backup_pvc_name=backup_pvc_name,
+    )
+
+    if not delete_source_vm_before_restore:
+        source_vm.delete(wait=True)
+
+    running_vm(vm=restored_vm)
+    try:
+        yield restored_vm
+    finally:
+        restored_vm.delete(wait=True)
+
+
 def restore_vm_from_backup(
     backup: VirtualMachineBackup,
     restored_vm_name: str,
@@ -384,12 +246,8 @@ def restore_vm_from_backup(
         VirtualMachine: Deployed restored VM (not started)
     """
     backup_mode = backup.instance.spec["mode"]
-    included_volumes = backup.instance.status.get("includedVolumes", [])
-    status_volume_names = normalize_backup_volume_names(included_volumes=included_volumes)
-    volume_names = resolve_restore_volume_names(
-        included_volumes=included_volumes,
-        source_volume_names=source_volume_names,
-    )
+    status_volume_names = backup.included_volume_names
+    volume_names = backup.resolve_restore_volume_names(source_volume_names=source_volume_names)
     qcow2_suffixes = source_volume_names if source_volume_names else status_volume_names
     LOGGER.info(f"CBT restore {restored_vm_name}: volume_names={volume_names}, qcow2_suffixes={qcow2_suffixes}")
     restore_id = cbt_restore_resource_id(restored_vm_name=restored_vm_name)
@@ -408,7 +266,7 @@ def restore_vm_from_backup(
             mount_path = _target_mount_path(volume_index=index)
             volume_mount_targets.append((volume_name, mount_path))
             target_pvc_size = volume_sizes[volume_name]
-            if backup_mode == CBT_BACKUP_MODE_PULL:
+            if backup_mode == VirtualMachineBackup.Mode.PULL:
                 target_pvc_size = _pull_restore_target_pvc_size(source_size=target_pvc_size)
             target_pvcs[volume_name] = stack.enter_context(
                 PersistentVolumeClaim(
@@ -436,10 +294,10 @@ def restore_vm_from_backup(
             })
 
         restore_pod_name = truncate_k8s_name(
-            name=f"cbt-rstr-{restore_id}-{'push' if backup_mode == CBT_BACKUP_MODE_PUSH else 'pull'}"
+            name=f"cbt-rstr-{restore_id}-{'push' if backup_mode == VirtualMachineBackup.Mode.PUSH else 'pull'}"
         )
 
-        if backup_mode == CBT_BACKUP_MODE_PUSH:
+        if backup_mode == VirtualMachineBackup.Mode.PUSH:
             backup_pvc = backup_pvc_name or backup.instance.spec["pvcName"]
             volume_mounts.append({"name": BACKUP_PVC_VOLUME_KEY, "mountPath": "/backup", "readOnly": True})
             volumes.append({
@@ -461,7 +319,7 @@ def restore_vm_from_backup(
                     qcow2_suffixes=qcow2_suffixes,
                 ),
             )
-        elif backup_mode == CBT_BACKUP_MODE_PULL:
+        elif backup_mode == VirtualMachineBackup.Mode.PULL:
             _run_restore_processor_pod(
                 pod_name=restore_pod_name,
                 namespace=namespace,
@@ -472,7 +330,6 @@ def restore_vm_from_backup(
                 restore_action=lambda restore_pod: _run_pull_restore(
                     restore_pod=restore_pod,
                     backup=backup,
-                    client=client,
                     volume_mount_targets=volume_mount_targets,
                     volume_sizes=volume_sizes,
                 ),
@@ -683,14 +540,9 @@ def _pull_restore_target_pvc_size(source_size: str) -> str:
     return f"{gibibytes}Gi"
 
 
-def _get_backup_export_token(backup: VirtualMachineBackup, client: Any) -> str:
+def _get_backup_export_token(backup: VirtualMachineBackup) -> str:
     """Return the pull-mode export token from tokenSecretRef."""
-    if hasattr(backup, "get_export_token"):
-        return backup.get_export_token()
-    secret_name = backup.instance.spec["tokenSecretRef"]
-    secret = Secret(name=secret_name, namespace=backup.namespace, client=client)
-    token_data = secret.instance.data["token"]
-    return base64.b64decode(token_data).decode("utf-8")
+    return backup.get_export_token()
 
 
 def _download_pull_volume(
@@ -753,7 +605,6 @@ def _download_pull_volume(
 def _run_pull_restore(
     restore_pod: Pod,
     backup: VirtualMachineBackup,
-    client: Any,
     volume_mount_targets: list[tuple[str, str]],
     volume_sizes: dict[str, str],
 ) -> None:
@@ -763,7 +614,7 @@ def _run_pull_restore(
     if not endpoint_cert:
         raise RuntimeError(f"Backup {backup.name} status has no endpointCert")
 
-    export_token = _get_backup_export_token(backup=backup, client=client)
+    export_token = _get_backup_export_token(backup=backup)
     _write_file_in_pod(restore_pod=restore_pod, file_path=PULL_CA_CERT_PATH, content=endpoint_cert)
 
     for volume, (volume_name, target_dir) in zip(included_volumes, volume_mount_targets, strict=True):
