@@ -8,6 +8,7 @@ import shlex
 import pytest
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.role_binding import RoleBinding
+from ocp_resources.virtual_machine_restore import VirtualMachineRestore
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 from pyhelper_utils.shell import run_ssh_commands
 
@@ -104,3 +105,33 @@ def file_created_during_snapshot(windows_vm_for_snapshot, windows_snapshot):
     run_ssh_commands(host=windows_vm_for_snapshot.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC)
     windows_snapshot.wait_snapshot_done(timeout=TIMEOUT_10MIN)
     windows_vm_for_snapshot.stop(wait=True)
+
+
+@pytest.fixture()
+def source_volume_name_for_predictable_name_restore(rhel_vm_for_snapshot):
+    yield next(
+        volume.name
+        for volume in rhel_vm_for_snapshot.instance.spec.template.spec.volumes
+        if getattr(volume, "dataVolume", None) or getattr(volume, "persistentVolumeClaim", None)
+    )
+
+
+@pytest.fixture()
+def vm_restore_with_predictable_names(
+    admin_client,
+    rhel_vm_for_snapshot,
+    snapshot_with_content,
+):
+    if rhel_vm_for_snapshot.ready:
+        rhel_vm_for_snapshot.stop(wait=True)
+
+    with VirtualMachineRestore(
+        name=f"{rhel_vm_for_snapshot.name}-restored",
+        namespace=rhel_vm_for_snapshot.namespace,
+        vm_name=rhel_vm_for_snapshot.name,
+        snapshot_name=snapshot_with_content[0].name,
+        client=admin_client,
+        volume_restore_policy="PrefixTargetName",
+    ) as vm_restore:
+        vm_restore.wait_restore_done(timeout=TIMEOUT_10MIN)
+        yield vm_restore
