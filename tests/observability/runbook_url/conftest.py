@@ -49,6 +49,7 @@ def available_runbook_urls():
         "https://api.github.com/repos/openshift/runbooks/contents/alerts/openshift-virtualization-operator"
     )
     sample = None
+    status_codes = []
     try:
         for sample in TimeoutSampler(
             wait_timeout=TIMEOUT_30SEC,
@@ -57,11 +58,13 @@ def available_runbook_urls():
             url=runbooks_api_url,
             timeout=TIMEOUT_10SEC,
         ):
+            status_codes.append(sample.status_code)
             if sample.status_code == requests.codes.ok:
                 return {entry["html_url"] for entry in sample.json()}
     except TimeoutExpiredError:
         LOGGER.error(
             f"Failed to fetch runbooks directory listing from '{runbooks_api_url}', "
             f"status: {sample.status_code if sample else 'no response'} "
+            f"status code history: {status_codes}"
         )
         raise
