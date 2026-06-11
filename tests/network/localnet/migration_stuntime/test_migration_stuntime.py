@@ -6,7 +6,7 @@ secondary network, for both IPv4 and IPv6, for regression detection.
 Stuntime is defined as the connectivity gap from last successful reply before loss
 to first successful reply after recovery.
 
-Stuntime is measured using ICMP ping from client to server in 0.1s intervals.
+Stuntime is measured using continuous ICMP ping from client to server.
 The under-test VMs are configured on an OVN localnet secondary network, with a single interface,
 on which IPv4/IPv6 static addresses will be defined according to the environment the test runs on.
 
