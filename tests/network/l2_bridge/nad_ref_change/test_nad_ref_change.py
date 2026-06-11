@@ -21,8 +21,8 @@ from tests.network.l2_bridge.nad_ref_change.lib_helpers import (
     GUEST_IFACE_2,
     assert_connectivity,
     assert_no_connectivity,
-    update_nad_references,
 )
+from tests.network.libs.nad_ref import update_nad_references
 
 
 @pytest.mark.usefixtures("baseline_connectivity")
