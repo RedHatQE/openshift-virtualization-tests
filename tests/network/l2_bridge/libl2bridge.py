@@ -27,7 +27,6 @@ from utilities import console
 from utilities.constants import (
     KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
     LINUX_BRIDGE,
-    NODE_ROLE_KUBERNETES_IO,
     NODE_TYPE_WORKER_LABEL,
     SRIOV,
     TIMEOUT_1MIN,
@@ -44,8 +43,6 @@ from utilities.network import (
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, prepare_cloud_init_user_data
 
 LOGGER = logging.getLogger(__name__)
-
-RHCOS9_WORKER_LABEL: Final[str] = f"{NODE_ROLE_KUBERNETES_IO}/worker-rhcos9"
 
 LINUX_BRIDGE_IFACE_NAME_1: Final[str] = "linux-bridge-1"
 LINUX_BRIDGE_IFACE_NAME_2: Final[str] = "linux-bridge-2"
