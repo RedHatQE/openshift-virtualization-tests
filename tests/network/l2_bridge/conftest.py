@@ -18,7 +18,6 @@ from tests.network.libs.dhcpd import (
     UNIQUE_CLIENT_ID,
     verify_dhcpd_activated,
 )
-from utilities.constants import LINUX_BRIDGE, WORKER_NODE_LABEL_KEY
 from utilities.data_utils import name_prefix
 from utilities.infra import get_node_selector_dict
 from utilities.network import (
@@ -286,34 +285,6 @@ def started_vmb_dhcp_client(l2_bridge_running_vm_b, eth3_nmcli_connection_uuid):
             shlex.split("sudo systemctl restart qemu-guest-agent.service"),
         ],
     )
-
-
-@pytest.fixture(scope="package")
-def bridge_nncp(
-    nmstate_dependent_placeholder: None,
-    admin_client: DynamicClient,
-    hosts_common_available_ports: list[str],
-) -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
-    with libnncp.NodeNetworkConfigurationPolicy(
-        client=admin_client,
-        name="l2-bridge-test-nncp",
-        desired_state=libnncp.DesiredState(
-            interfaces=[
-                libnncp.Interface(
-                    name="br1-test",
-                    type=LINUX_BRIDGE,
-                    state=libnncp.Resource.Interface.State.UP,
-                    bridge=libnncp.Bridge(
-                        port=[libnncp.Port(name=hosts_common_available_ports[-1])],
-                        options=libnncp.BridgeOptions(libnncp.STP(enabled=False)),
-                    ),
-                )
-            ]
-        ),
-        node_selector={WORKER_NODE_LABEL_KEY: ""},
-    ) as nncp_br:
-        nncp_br.wait_for_status_success()
-        yield nncp_br
 
 
 @pytest.fixture(scope="class")
