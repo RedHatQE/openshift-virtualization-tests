@@ -22,12 +22,12 @@ from utilities.artifactory import (
 )
 from utilities.console import Console
 from utilities.constants import (
-    ADP_NAMESPACE,
     LS_COMMAND,
     OS_FLAVOR_RHEL,
     TIMEOUT_5MIN,
     TIMEOUT_20SEC,
     Images,
+    NamespacesNames,
 )
 from utilities.infra import (
     get_pod_by_name_prefix,
@@ -56,7 +56,7 @@ def delete_velero_resource(resource: Backup | Restore, client: DynamicClient) ->
     command = ["./velero", "delete", resource.kind.lower(), resource.name, "--confirm"]
 
     try:
-        velero_pod = get_pod_by_name_prefix(client=client, pod_prefix="velero", namespace=ADP_NAMESPACE)
+        velero_pod = get_pod_by_name_prefix(client=client, pod_prefix="velero", namespace=NamespacesNames.ADP_NAMESPACE)
 
         LOGGER.info(f"Deleting Velero resource: kind={resource.kind} name={resource.name} command={' '.join(command)}")
 
@@ -96,7 +96,7 @@ class VeleroBackup(Backup):
         self,
         name: str,
         client: DynamicClient,
-        namespace: str = ADP_NAMESPACE,
+        namespace: str = NamespacesNames.ADP_NAMESPACE,
         included_namespaces: list[str] | None = None,
         teardown: bool = False,
         yaml_file: str | None = None,
@@ -203,7 +203,7 @@ class VeleroRestore(Restore):
     def __init__(
         self,
         name: str,
-        namespace: str = ADP_NAMESPACE,
+        namespace: str = NamespacesNames.ADP_NAMESPACE,
         teardown: bool = True,
         wait_complete: bool = True,
         timeout: int = TIMEOUT_5MIN,

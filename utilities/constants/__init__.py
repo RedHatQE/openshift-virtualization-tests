@@ -308,7 +308,7 @@ from utilities.constants.monitoring import (
     PENDING_STR,
     WARNING_STR,
 )
-from utilities.constants.namespaces import ADP_NAMESPACE, NamespacesNames
+from utilities.constants.namespaces import NamespacesNames
 from utilities.constants.networking import (
     ACTIVE_BACKUP,
     FLAT_OVERLAY_STR,
@@ -426,7 +426,6 @@ __all__ = [
     "AAQ_VMI_POD_USAGE",
     "ACCESS_MODE",
     "ACTIVE_BACKUP",
-    "ADP_NAMESPACE",
     "ALL_CNV_CRDS",
     "ALL_CNV_DAEMONSETS",
     "ALL_CNV_DEPLOYMENTS",

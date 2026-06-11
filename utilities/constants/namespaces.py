@@ -1,7 +1,6 @@
 """Namespace name constants.
 
 NamespacesNames groups well-known OpenShift and CNV namespace strings.
-ADP_NAMESPACE is a module-level constant used independently of the class.
 """
 
 
@@ -23,6 +22,4 @@ class NamespacesNames:
     OPENSHIFT_FRR_K8S = "openshift-frr-k8s"
     OPENSHIFT_MTV = "openshift-mtv"
     CNV_TESTS_UTILITIES = "cnv-tests-utilities"
-
-
-ADP_NAMESPACE = "openshift-adp"
+    ADP_NAMESPACE = "openshift-adp"
