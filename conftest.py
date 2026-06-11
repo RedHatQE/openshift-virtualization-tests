@@ -74,6 +74,7 @@ from utilities.pytest_utils import (
 )
 
 pytest_plugins = [
+    "tests.fixtures.network.l2_bridge",
     "tests.fixtures.network.cluster",
 ]
 
