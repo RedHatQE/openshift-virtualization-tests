@@ -17,7 +17,7 @@ import pytest
 
 from libs.net.traffic_generator import is_tcp_connection
 from libs.vm.affinity import new_node_affinity
-from tests.network.l2_bridge.libl2bridge import RHCOS9_WORKER_LABEL
+from tests.network.libs.nodes import RHCOS9_WORKER_LABEL
 from utilities.virt import migrate_vm_and_verify
 
 if TYPE_CHECKING:
