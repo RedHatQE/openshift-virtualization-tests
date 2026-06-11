@@ -35,7 +35,7 @@ class IpamStatic(Ipam):
     """
 
     type: str = field(default="static", init=False)
-    addresses: list["IpamStatic.Address"]
+    addresses: list[IpamStatic.Address]
     routes: list[IpamRoute] | None = None
 
     @dataclass

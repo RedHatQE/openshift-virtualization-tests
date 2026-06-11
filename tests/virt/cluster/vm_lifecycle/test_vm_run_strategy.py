@@ -138,7 +138,7 @@ def run_vm_action(vm, vm_action, expected_exceptions=None):
             except ApiException as e:
                 if re.search(pattern=rf"{'|'.join(expected_exceptions)}", string=str(e)):
                     return True
-                raise e
+                raise
         else:
             getattr(vm, vm_action)(wait=True, timeout=TIMEOUT_10MIN)
             return True

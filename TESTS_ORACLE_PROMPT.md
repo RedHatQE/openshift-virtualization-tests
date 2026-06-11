@@ -45,6 +45,7 @@ When possible, recommend a pytest marker (`-m marker_name`) that covers multiple
 
 Common markers in this repository (check `pytest.ini` for the full list):
 - `-m smoke` — Smoke tests (critical path validation)
+- `-m gating` — Tier2 tests in the gating CI job (often affected by utilities/HCO changes without affecting smoke)
 - `-m sriov` — SR-IOV networking tests
 - `-m gpu` — GPU passthrough tests
 - `-m dpdk` — DPDK networking tests
@@ -56,6 +57,15 @@ If a change affects all tests with a specific marker, recommend `-m marker_name`
 
 When a marker covers ALL affected tests, use: `-m marker_name`
 When a marker covers MOST but not all, use both: `-m marker_name` plus individual test paths for the uncovered ones.
+
+### Gating Test Impact Analysis
+
+Determine if any changes could affect gating tests by checking:
+- Changes to files/functions used by tests marked with `@pytest.mark.gating`
+- Changes to fixtures or utilities imported by gating tests (including fixture teardown and `yield from` cleanup)
+- Changes to `utilities/` or `libs/` even when smoke tests are unaffected
+
+Do not stop recommendations when smoke is unaffected. List specific gating test paths or `-m gating` when appropriate.
 
 ### Smoke Test Impact Analysis
 

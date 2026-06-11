@@ -42,7 +42,7 @@ class ProcessWithException(_FORK_CONTEXT.Process):  # type: ignore[name-defined]
             self._cconn.send(None)
         except Exception as e:
             self._cconn.send(e)
-            raise e
+            raise
 
     @property
     def exception(self):
@@ -65,6 +65,22 @@ class OsDictNotFoundError(Exception):
 
 class StorageCheckupConditionTimeoutExpiredError(Exception):
     pass
+
+
+class DataVolumeConditionMessageNotFoundError(Exception):
+    def __init__(
+        self, dv_name: str, expected_message: str, last_conditions: list[dict[str, str]] | None = None
+    ) -> None:
+        self.dv_name = dv_name
+        self.expected_message = expected_message
+        self.last_conditions = last_conditions
+        super().__init__(str(self))
+
+    def __str__(self) -> str:
+        msg = f"Expected message '{self.expected_message}' not found in DataVolume '{self.dv_name}' conditions."
+        if self.last_conditions:
+            msg += f" Last seen conditions: {self.last_conditions}"
+        return msg
 
 
 class StorageMigrationError(Exception):
@@ -110,6 +126,16 @@ class UnsupportedGPUDeviceError(Exception):
 
 class UnsupportedCPUArchitectureError(Exception):
     """Exception raised when a CPU architecture is not supported."""
+
+
+class MigrationStuckSchedulingError(Exception):
+    """Exception raised when a migration is stuck in Scheduling state."""
+
+    def __init__(self, migration_name: str) -> None:
+        self.migration_name = migration_name
+
+    def __str__(self) -> str:
+        return f"Migration {self.migration_name} is stuck in Scheduling state."
 
 
 def raise_multiple_exceptions(exceptions):

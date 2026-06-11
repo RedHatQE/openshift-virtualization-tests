@@ -1,7 +1,6 @@
 import logging
 import shlex
 import shutil
-import socket
 from threading import Thread
 
 from ocp_resources import pod
@@ -138,7 +137,7 @@ def start_win_upgrade_multi_vms(vm_list):
                 timeout=TIMEOUT_40MIN,
             )
             LOGGER.info(f"VM {vm.name}: Finished upgrades download/install stage")
-        except socket.timeout:
+        except TimeoutError:
             LOGGER.warning(f"VM {vm.name}: Finished upgrades download/install stage but the script was stuck")
 
     upgrade_threads_list = []

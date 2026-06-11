@@ -70,7 +70,7 @@ def vm_cluster_preferences_expected_list():
 
 @pytest.mark.polarion("CNV-9981")
 def test_base_preferences_common_annotation(base_vm_cluster_preferences, vm_cluster_preferences_expected_list):
-    assert set([preference.name for preference in base_vm_cluster_preferences]) == set(
+    assert {preference.name for preference in base_vm_cluster_preferences} == set(
         vm_cluster_preferences_expected_list
     ), "Not all base CNV cluster preferences exist"
 

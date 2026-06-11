@@ -122,7 +122,7 @@ def deployed_vms_for_descheduler_test(
 def all_existing_migrations_completed(admin_client, namespace):
     # Descheduler may trigger multiple migrations, need to wait when all succeeded
     for migration in VirtualMachineInstanceMigration.get(client=admin_client, namespace=namespace):
-        wait_for_migration_finished(namespace=namespace.name, migration=migration, timeout=TIMEOUT_5MIN)
+        wait_for_migration_finished(migration=migration, timeout=TIMEOUT_5MIN)
 
 
 @pytest.fixture(scope="class")
@@ -213,7 +213,14 @@ def unallocated_pod_count(
     node_with_least_available_memory,
 ):
     non_terminated_pod_count = len(get_non_terminated_pods(client=admin_client, node=node_with_least_available_memory))
-    return int(node_with_least_available_memory.instance.status.capacity.pods) - non_terminated_pod_count
+    capacity = int(node_with_least_available_memory.instance.status.capacity.pods)
+    # Target 85% utilization: high enough to trigger descheduler (>70%) but below scheduler preemption threshold
+    target_pod_count = int(capacity * 0.85)
+    pods_to_add = max(0, target_pod_count - non_terminated_pod_count)
+    LOGGER.info(
+        f"Node {node_with_least_available_memory.name}: current pods {non_terminated_pod_count}, will add {pods_to_add}"
+    )
+    return pods_to_add
 
 
 @pytest.fixture(scope="class")
@@ -305,9 +312,9 @@ def nodes_taints_before_descheduler_test_run(nodes):
 
     # clean up taints leftovers
     nodes_taints_after = {node: node.instance.spec.taints for node in nodes}
-    for node in nodes_taints_before:
-        if nodes_taints_after[node] != nodes_taints_before[node]:
-            ResourceEditor(patches={node: {"spec": {"taints": nodes_taints_before[node]}}}).update()
+    for node, taints_before in nodes_taints_before.items():
+        if nodes_taints_after[node] != taints_before:
+            ResourceEditor(patches={node: {"spec": {"taints": taints_before}}}).update()
 
 
 @pytest.fixture()

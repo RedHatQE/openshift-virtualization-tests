@@ -16,7 +16,6 @@ from json import JSONDecodeError
 from subprocess import run
 from typing import TYPE_CHECKING, Any
 
-import bitmath
 import jinja2
 import pexpect
 import yaml
@@ -24,6 +23,7 @@ from benedict import benedict
 from kubernetes.client import ApiException
 from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import NotFoundError
+from kubernetes.utils.quantity import parse_quantity
 from ocp_resources.daemonset import DaemonSet
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
@@ -94,6 +94,7 @@ from utilities.constants import (
     Images,
 )
 from utilities.data_collector import collect_vnc_screenshot_for_vms
+from utilities.exceptions import MigrationStuckSchedulingError, ResourceValueError
 from utilities.hco import get_hco_namespace, wait_for_hco_conditions
 from utilities.network import (
     cloud_init_network_data,
@@ -728,7 +729,7 @@ class VirtualMachineForTests(VirtualMachine):
             LOGGER.warning(
                 "Setting both memory.guest and requests.memory values! (Users should set VM memory via memory.guest!)"
             )
-            if bitmath.parse_string_unsafe(self.memory_guest) > bitmath.parse_string_unsafe(self.memory_requests):
+            if parse_quantity(self.memory_guest) > parse_quantity(self.memory_requests):
                 LOGGER.warning(
                     "Setting memory.guest bigger then requests.memory! (This might cause unpredictable issues!)"
                 )
@@ -1598,7 +1599,20 @@ class ServiceForVirtualMachineForTests(Service):
         if self.ip_families:
             self.res["spec"]["ipFamilies"] = self.ip_families
 
-    def service_ip(self, ip_family=None):
+    def service_ip(self, admin_client: DynamicClient, ip_family: str | None = None) -> str:
+        """
+        Get the IP address of the service.
+
+        Args:
+            admin_client (DynamicClient): admin client to be used for the service.
+            ip_family (str | None): IP family to be used for the service.
+
+        Returns:
+            str: IP address of the service.
+
+        Raises:
+            ResourceValueError: If the service IP cannot be retrieved.
+        """
         if self.service_type == Service.Type.CLUSTER_IP:
             if ip_family:
                 cluster_ips = [
@@ -1611,11 +1625,8 @@ class ServiceForVirtualMachineForTests(Service):
 
             return self.instance.spec.clusterIP
 
-        vm_node = Node(
-            client=get_client(),
-            name=self.vmi.instance.status.nodeName,
-        )
         if self.service_type == Service.Type.NODE_PORT:
+            vm_node = self.vm.vmi.get_node(privileged_client=admin_client)
             if ip_family:
                 internal_ips = [
                     internal_ip
@@ -1626,6 +1637,10 @@ class ServiceForVirtualMachineForTests(Service):
                 return internal_ips[0]
 
             return self.target_ip or vm_node.internal_ip
+
+        raise ResourceValueError(
+            f"Could not get service IP for service {self.vm.custom_service.name} with type {self.service_type}"
+        )
 
     @property
     def service_port(self):
@@ -1928,7 +1943,7 @@ def migrate_vm_and_verify(
     ) as migration:
         if not wait_for_migration_success:
             return migration
-        wait_for_migration_finished(namespace=vm.namespace, migration=migration, timeout=timeout)
+        wait_for_migration_finished(migration=migration, timeout=timeout)
 
     verify_vm_migrated(
         vm=vm,
@@ -1939,7 +1954,20 @@ def migrate_vm_and_verify(
     return None
 
 
-def wait_for_migration_finished(namespace, migration, timeout=TIMEOUT_12MIN):
+def wait_for_migration_finished(migration: VirtualMachineInstanceMigration, timeout: int = TIMEOUT_12MIN) -> None:
+    """
+    Wait for migration to finish.
+    If migration is stuck in Scheduling state, abort the migration and collect data.
+
+    Args:
+        migration (VirtualMachineInstanceMigration): Migration object.
+        timeout (int): Maximum time to wait for the migration to finish.
+
+    Raises:
+        MigrationStuckSchedulingError: If the migration is stuck in Scheduling state.
+        TimeoutExpiredError: If the migration does not finish within the timeout.
+    """
+
     sleep = TIMEOUT_10SEC
     samples = TimeoutSampler(wait_timeout=timeout, sleep=sleep, func=lambda: migration.instance.status.phase)
     counter = 0
@@ -1948,34 +1976,41 @@ def wait_for_migration_finished(namespace, migration, timeout=TIMEOUT_12MIN):
         for sample in samples:
             if sample == migration.Status.SUCCEEDED:
                 break
-            elif sample == "Scheduling":
+            if sample == VirtualMachineInstanceMigration.Status.SCHEDULING:
                 counter += 1
                 # If migration stuck in Scheduling state for more than 4 minutes - most likely it will be failed
                 # Need to collect data before 5 min timeout reached and target POD is removed
                 if counter >= TIMEOUT_4MIN / sleep:
-                    # Get status/events for PODs in non-running or failed state
-                    for pod in utilities.infra.get_pod_by_name_prefix(
-                        client=get_client(),
-                        pod_prefix=VIRT_LAUNCHER,
-                        namespace=namespace,
-                        get_all=True,
-                    ):
-                        if pod.status not in (Pod.Status.RUNNING, Pod.Status.COMPLETED, Pod.Status.SUCCEEDED):
-                            pod_events = [
-                                event["raw_object"]["message"]
-                                for event in pod.events(timeout=TIMEOUT_5SEC, field_selector="type==Warning")
-                            ]
-                            LOGGER.error(
-                                f"POD Conditions:\n {pod.instance.status.conditions[0]}\n"
-                                f"POD Events:\n {', '.join(pod_events)}"
-                            )
-                    raise TimeoutExpiredError(
-                        f"VMIM {migration.name} stuck in Scheduling state and probably will be failed"
-                    )
+                    log_failed_pod_events(migration=migration)
+                    raise MigrationStuckSchedulingError(migration_name=migration.name)
     except TimeoutExpiredError:
         if sample:
             LOGGER.error(f"Status of VMIM {migration.name} is {sample}")
         raise
+
+
+def log_failed_pod_events(migration: VirtualMachineInstanceMigration) -> None:
+    """
+    Log failed pod events for a migration.
+
+    Args:
+        migration (VirtualMachineInstanceMigration): Migration object.
+    """
+
+    for pod in utilities.infra.get_pod_by_name_prefix(
+        client=migration.client, pod_prefix=VIRT_LAUNCHER, namespace=migration.namespace, get_all=True
+    ):
+        # Get status/events for PODs in non-running or failed state
+        if pod.status not in {Pod.Status.RUNNING, Pod.Status.COMPLETED, Pod.Status.SUCCEEDED}:
+            pod_events = [
+                event["raw_object"]["message"]
+                for event in pod.events(timeout=TIMEOUT_5SEC, field_selector="type==Warning")
+            ]
+            LOGGER.error(
+                f"POD Name: {pod.name}\n"
+                f"POD Conditions:\n {pod.instance.status.conditions[0]}\n"
+                f"POD Events:\n {', '.join(pod_events)}"
+            )
 
 
 def verify_vm_migrated(
@@ -2331,9 +2366,7 @@ def check_migration_process_after_node_drain(client, vm, admin_client):
     LOGGER.info(f"The VMI was running on {source_node.name}")
     wait_for_node_schedulable_status(node=source_node, status=False)
     vmim = get_created_migration_job(vm=vm, client=client, timeout=TIMEOUT_5MIN)
-    wait_for_migration_finished(
-        namespace=vm.namespace, migration=vmim, timeout=TIMEOUT_30MIN if "windows" in vm.name else TIMEOUT_10MIN
-    )
+    wait_for_migration_finished(migration=vmim, timeout=TIMEOUT_30MIN if "windows" in vm.name else TIMEOUT_10MIN)
 
     target_pod = vm.vmi.get_virt_launcher_pod(privileged_client=admin_client)
     target_pod.wait_for_status(status=Pod.Status.RUNNING, timeout=TIMEOUT_3MIN)
@@ -2461,6 +2494,7 @@ def fetch_pid_from_linux_vm(vm, process_name):
     cmd_res = run_ssh_commands(
         host=vm.ssh_exec,
         commands=shlex.split(f"pgrep {process_name} -x || true"),
+        wait_timeout=TIMEOUT_2MIN,
     )[0].strip()
     assert cmd_res, f"VM {vm.name}, '{process_name}' process not found"
     return int(cmd_res)
@@ -2483,6 +2517,7 @@ def fetch_pid_from_windows_vm(vm, process_name):
         host=vm.ssh_exec,
         commands=shlex.split(f"powershell -Command (Get-Process -Name {process_name.removesuffix('.exe')}).Id"),
         tcp_timeout=TCP_TIMEOUT_30SEC,
+        wait_timeout=TIMEOUT_2MIN,
     )[0].strip()
     assert cmd_res, f"Process '{process_name}' not in output: {cmd_res}"
     return int(cmd_res)
@@ -2707,7 +2742,7 @@ def get_vm_boot_time(vm: VirtualMachineForTests) -> str:
         if "windows" in vm.name  # type: ignore[operator]
         else "who -b"
     )
-    return run_ssh_commands(host=vm.ssh_exec, commands=shlex.split(boot_command))[0]
+    return run_ssh_commands(host=vm.ssh_exec, commands=shlex.split(boot_command), wait_timeout=TIMEOUT_2MIN)[0]
 
 
 def username_password_from_cloud_init(vm_volumes: list[dict[str, Any]]) -> tuple[str, str]:
@@ -2762,7 +2797,7 @@ def run_os_command(vm: VirtualMachineForTests, command: str) -> str | None:
         return run_ssh_commands(
             host=vm.ssh_exec,
             commands=shlex.split(command),
-            timeout=5,
+            timeout=15,
             tcp_timeout=TCP_TIMEOUT_30SEC,
         )[0]
     except ProxyCommandFailure:

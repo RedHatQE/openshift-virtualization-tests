@@ -2,7 +2,6 @@
 
 """Unit tests for oadp module"""
 
-# flake8: noqa: E402
 import sys
 from re import escape
 from shlex import quote

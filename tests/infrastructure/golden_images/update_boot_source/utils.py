@@ -87,7 +87,7 @@ def get_all_dic_volume_names(client: DynamicClient, namespace: str) -> list[str]
         list[str]: Combined list of PVC and VolumeSnapshot names managed by DataImportCron.
     """
 
-    def _fetch_volume_names(resource_cls: type[PersistentVolumeClaim] | type[VolumeSnapshot]) -> list[str]:
+    def _fetch_volume_names(resource_cls: type[PersistentVolumeClaim | VolumeSnapshot]) -> list[str]:
         return [
             volume.name
             for volume in resource_cls.get(

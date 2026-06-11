@@ -282,11 +282,9 @@ class TestConnectivityAfterNmstateChanged:
                 nmstate_ds=nmstate_ds,
             )
             LOGGER.info(
-                (
-                    f"Check connectivity from {nmstate_linux_bridge_attached_running_vma.name} "
-                    f"to {nmstate_linux_bridge_attached_running_vmb.name} "
-                    f"IP {vmb_dst_ip}. NMstate restart number: {idx + 1}"
-                )
+                f"Check connectivity from {nmstate_linux_bridge_attached_running_vma.name} "
+                f"to {nmstate_linux_bridge_attached_running_vmb.name} "
+                f"IP {vmb_dst_ip}. NMstate restart number: {idx + 1}"
             )
 
             assert_ping_successful(

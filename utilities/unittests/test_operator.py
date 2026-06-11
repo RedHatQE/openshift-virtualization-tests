@@ -9,7 +9,7 @@ from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from timeout_sampler import TimeoutExpiredError
 
 # Import after setting up mocks to avoid circular dependency
-from utilities.operator import (  # noqa: E402
+from utilities.operator import (
     approve_install_plan,
     cluster_with_icsp,
     collect_mcp_data_on_update_timeout,

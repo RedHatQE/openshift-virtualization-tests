@@ -2,6 +2,7 @@ import logging
 import random
 
 import pytest
+from ocp_resources.cluster_operator import ClusterOperator
 from ocp_resources.multi_network_policy import MultiNetworkPolicy
 from ocp_resources.resource import ResourceEditor
 
@@ -20,10 +21,9 @@ from tests.network.flat_overlay.utils import (
     get_vm_kubevirt_domain_label,
     is_port_number_available,
     start_nc_response_on_vm,
-    wait_for_multi_network_policy_resources,
 )
-from utilities.constants import FLAT_OVERLAY_STR
-from utilities.infra import create_ns
+from utilities.constants import DEFAULT_RESOURCE_CONDITIONS, FLAT_OVERLAY_STR
+from utilities.infra import create_ns, wait_for_consistent_resource_conditions
 from utilities.network import assert_ping_successful, network_nad
 from utilities.virt import migrate_vm_and_verify
 
@@ -44,11 +44,24 @@ SPECIFIC_HOST_MASK = "32"
 
 
 @pytest.fixture(scope="module")
-def enable_multi_network_policy_usage(admin_client, network_operator):
-    with ResourceEditor(patches={network_operator: {"spec": {"useMultiNetworkPolicy": True}}}):
-        wait_for_multi_network_policy_resources(admin_client=admin_client, deploy_mnp_crd=True)
+def multi_network_policy_enabled(admin_client, network_operator):
+    if network_operator.instance.spec.get("useMultiNetworkPolicy"):
         yield
-    wait_for_multi_network_policy_resources(admin_client=admin_client, deploy_mnp_crd=False)
+        return
+    with ResourceEditor(patches={network_operator: {"spec": {"useMultiNetworkPolicy": True}}}):
+        wait_for_consistent_resource_conditions(
+            dynamic_client=admin_client,
+            resource_kind=ClusterOperator,
+            resource_name="network",
+            expected_conditions=DEFAULT_RESOURCE_CONDITIONS,
+        )
+        yield
+    wait_for_consistent_resource_conditions(
+        dynamic_client=admin_client,
+        resource_kind=ClusterOperator,
+        resource_name="network",
+        expected_conditions=DEFAULT_RESOURCE_CONDITIONS,
+    )
 
 
 @pytest.fixture(scope="module")

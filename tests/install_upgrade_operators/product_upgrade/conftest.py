@@ -1,6 +1,6 @@
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from ocp_resources.cluster_version import ClusterVersion
@@ -295,7 +295,7 @@ def prometheus_scope_function():
 
 @pytest.fixture(scope="session")
 def upgrade_start_timestamp():
-    return datetime.now(tz=timezone.utc)
+    return datetime.now(tz=UTC)
 
 
 @pytest.fixture(scope="session")

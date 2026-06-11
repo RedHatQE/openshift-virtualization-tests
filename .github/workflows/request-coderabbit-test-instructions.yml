@@ -1,10 +1,12 @@
-# description: Add comment for CodeRabbit to add tests instructions. A change-request comment will be added to the PR.
+# description: Add comment for CodeRabbit to add test instructions. An inline informational test-plan comment will be added.
 
 name: Request CodeRabbit tests instructions
 
 on:
   pull_request_target:
     types: [labeled]
+  issue_comment:
+    types: [created]
 
 permissions:
   pull-requests: write
@@ -13,8 +15,16 @@ permissions:
 jobs:
   comment-on-commit:
     if: |
-      github.event.label.name == 'verified' &&
-      !endsWith(github.event.pull_request.user.login, '[bot]')
+      (
+        github.event_name == 'pull_request_target' &&
+        github.event.label.name == 'verified' &&
+        !endsWith(github.event.pull_request.user.login, '[bot]')
+      ) || (
+        github.event_name == 'issue_comment' &&
+        github.event.issue.pull_request &&
+        startsWith(github.event.comment.body, '/test-plan') &&
+        !endsWith(github.event.comment.user.login, '[bot]')
+      )
     runs-on: ubuntu-latest
 
     steps:
@@ -23,14 +33,14 @@ jobs:
         uses: tspascoal/get-user-teams-membership@v4
         with:
           team: cnvqe-bot
-          username: ${{ github.event.pull_request.user.login }}
+          username: ${{ (github.event.pull_request || github.event.issue).user.login }}
           GITHUB_TOKEN: ${{ secrets.BOT3_TOKEN }}
 
       - name: Create or update comment
         if: steps.check-user-team.outputs.is-member != 'true'
         uses: peter-evans/create-or-update-comment@v5
         with:
-          issue-number: ${{ github.event.pull_request.number }}
+          issue-number: ${{ github.event.pull_request.number || github.event.issue.number }}
           token: ${{ secrets.BOT3_TOKEN }}
           body: |
             @coderabbitai
@@ -38,8 +48,9 @@ jobs:
               <summary>Test execution plan request details</summary>
 
               CRITICAL: You MUST post an inline review comment on the first changed line of the first file.
-              The inline comment should contain the Test Execution Plan with the smoke tests recommendation.
-              Do NOT submit a formal review - just post the inline comment directly.
+              The inline comment should contain the full Test Execution Plan (smoke decision, gating decision, and specific affected tests).
+              Do NOT submit a blocking review event (REQUEST_CHANGES/APPROVE).
+              Post a single inline PR comment on Files Changed (non-blocking COMMENT flow).
 
               As an expert software testing engineer, analyze all modified files in this PR and create a targeted test execution plan.
               You will post an inline review comment with the test execution plan on the first changed file.
@@ -50,32 +61,102 @@ jobs:
               1. Examine code changes in each modified file
               2. Identify affected code paths, functions, and classes
               3. Analyze pytest-specific elements: fixtures (scope, dependencies), parametrization, markers, conftest changes
-              4. Trace test dependencies through imports, shared utilities, and fixture inheritance
+              4. Trace test dependencies through imports, shared utilities, fixture inheritance, fixture teardown, and `yield from` cleanup in conftest
               5. Detect new tests introduced in the PR
-              6. **Smoke Test Impact Analysis:** Determine if any changes could affect smoke tests by checking:
-                 - Changes to files/functions used by tests marked with `@pytest.mark.smoke`
-                 - Changes to fixtures or utilities imported by smoke tests
-                 - Changes to conftest.py files that may affect smoke test execution
-                 - Changes to core infrastructure code (utilities/, libs/) that smoke tests depend on
+              6. **Utilities and libs impact (when `utilities/` or `libs/` changes):**
+                 You MUST use shell scripts (`rg`, `git diff`) to trace the full impact.
+                 Follow these sub-steps in order:
+
+                 6a. **Identify modified symbols:** For each changed file under `utilities/` or `libs/`,
+                     list every modified function or method.
+                     Example: `git diff HEAD~1 --unified=0 -- utilities/hco.py | grep '^[+-]def '`
+
+                 6b. **Find direct callers:** Search tests and conftest for each symbol from 6a.
+                     Example: `rg -l 'get_hco_version' tests/`
+
+                 6c. **Trace fixture teardown and cleanup:** Find fixtures that reach
+                     the modified symbol through yield from or context-manager wrappers.
+                     Example: `rg -l 'yield from.*enable_common_boot|def.*enable_common_boot' tests/`
+
+                 6d. **Trace same-file callers:** In each changed file, find other functions
+                     whose body calls a modified symbol (including code after `yield`
+                     in `@contextmanager` helpers).
+                     Example: `rg 'get_hco_version|enable_common_boot' utilities/hco.py`
+
+                 6e. **Expand transitively:** If function A calls modified B, then
+                     tests/fixtures that call A are affected — even when the test body
+                     never imports B directly.
+
+                 Do NOT limit impact to tests that import the modified symbol only.
+              7. **Smoke test impact:** Intersect the affected set from step 6 with smoke-marked tests.
+                 Run: `rg -l '@pytest.mark.smoke' tests/`
+                 VERIFY the above command returned actual file paths before concluding False.
+                 Set True if either condition is met:
+                 - a smoke-marked file appears in the affected set from 6b-6e, OR
+                 - any conftest.py in the smoke test's parent-directory hierarchy (up to repo root)
+                   imports or calls a modified utilities/libs symbol — including autouse fixtures
+                   that depend on modified functions. ALL tests in that directory and below are affected.
+                 Example check: for each smoke_file, scan dirname(smoke_file)/conftest.py,
+                 dirname(dirname(smoke_file))/conftest.py, etc. for modified symbol imports
+                 and autouse fixtures that depend on modified symbols.
+              8. **Gating test impact:** Intersect the affected set from step 6 with gating-marked tests.
+                 Run: `rg -l '@pytest.mark.gating' tests/`
+                 Set True if a gating-marked file also appears in the affected set from 6b-6e.
+                 Utilities/libs changes often affect gating tests without affecting smoke tests.
+                 Do NOT stop analysis after concluding `Run smoke tests: False`.
+
+              **Output rules:**
+              Do NOT include analysis step numbers (1-8) in your visible output.
 
               **Your deliverable:**
-              Your change request comment will be based on the following requirements:
+              Your inline informational comment will be based on the following requirements:
 
               **Test Execution Plan**
 
-              - **Run smoke tests: True / False** _(Based on your smoke test impact analysis - True if any changes may affect smoke tests)_
+              - **Run smoke tests: True / False** — If True, state the dependency path (test → fixture → changed symbol). True ONLY with a verified path.
+              - **Run gating tests: True / False** — If True, state the dependency path. True if any gating-marked test is in the affected set.
+              - **Affected tests to run** _(required when utilities/, libs/, or shared conftest changes — list concrete paths even when smoke is False)_
+
+              Use these formats:
               - `path/to/test_file.py` - When the entire test file needs verification
               - `path/to/test_file.py::TestClass::test_method` - When specific test(s) needed
               - `path/to/test_file.py::test_function` - When specific test(s) needed
-              - `-m marker` - When specific marker(s) can be used to cover multiple cases.
+              - `-m marker` - When a marker covers multiple affected tests (e.g. `-m gating` only if ALL gating tests in scope need run)
+              - Tag each listed test or group with its marker when not obvious, e.g. `(gating)` or `(smoke)`
+
+              **Real test commands (MANDATORY when changes affect session/runtime code):**
+
+              When the affected code runs at session/collection time (conftest fixtures, pytest plugins,
+              config hooks, session-scoped setup) or modifies runtime behavior that unit tests mock away,
+              you MUST include concrete `pytest` commands the PR author must run on a real cluster
+              to verify the change works end-to-end. Include:
+              - A command for the **error/fix path** (the scenario the PR fixes)
+              - A command for the **happy path** (regression: the normal case still works)
+              - Use lightweight tests (e.g., `--collect-only` for startup failures,
+                a single small test for runtime behavior)
+              If the PR only changes test logic (not utilities/libs/conftest), the affected test
+              paths themselves serve as the real test commands — no separate section needed.
+
+              Example output for a session-startup fix:
+              ```
+              **Real tests (cluster required)**
+              Error path (the fix):
+              `pytest tests/storage/.../test_foo.py --storage-class-matrix=nonexistent-sc --collect-only`
+              Expected: ValueError with clear message, not IndexError
+
+              Happy path (regression):
+              `pytest tests/storage/.../test_foo.py --storage-class-matrix=<valid-sc> -k test_bar`
+              Expected: session starts normally
+              ```
 
               **Guidelines:**
 
-              - Include only tests directly affected by the changes
+              - Include tests affected directly OR via fixture setup/teardown, `yield from` cleanup, or transitive utility call chains (caller calls modified helper)
               - Use a full file path only if ALL tests in that file require verification
-              - Use file path + test name if only specific tests are needed
+              - Use file path + test name when only specific tests use an affected fixture or utility wrapper (preferred for partial file impact)
               - If a test marker can cover multiple files/tests, provide the marker
               - Balance coverage vs over-testing - Keep descriptions minimal
+              - Example: if leaf helper `foo()` changes, include tests whose fixture teardown calls wrapper `bar()` where `bar()` calls `foo()`, even when the test body only imports an unrelated symbol from the same utilities module
 
               **Hardware-Related Checks (SR-IOV, GPU, DPDK):**
 
@@ -89,9 +170,9 @@ jobs:
 
               When responding to this test execution plan request, you MUST follow these rules EXACTLY:
 
-              1. **YOUR ONLY DELIVERABLE**: Post an inline review comment containing the test execution plan on the first changed line
+              1. **YOUR ONLY DELIVERABLE**: Post one non-blocking inline comment containing the test execution plan on the first changed line
               2. **THEN STOP IMMEDIATELY** - Do NOT generate any additional response
-              3. **FALLBACK ONLY**: If submitting the review fails after retrying, post as a regular PR comment
+              3. **FALLBACK ONLY**: If inline comment API calls fail after retrying, post as a regular PR comment
               4. **SILENCE = SUCCESS**: After successfully submitting the review, your task is complete. No confirmation needed.
 
               **ABSOLUTE PROHIBITIONS** (violating these creates empty/meaningless reviews):
@@ -103,14 +184,13 @@ jobs:
 
               **Remember**: The pull request review is visible to users. Additional comments are redundant noise.
 
-              CRITICAL: Before setting "Run smoke tests: True", you MUST use shell scripts to:
-                - Trace the actual fixture dependency chain from smoke tests to changed fixtures
-                - Verify that smoke tests actually import/use changed utilities or functions
-                - Confirm the dependency path exists; do NOT assume based on scope or semantics
-                - Be conservative: Session-scoped fixtures or infrastructure-sounding names do NOT
-                  automatically mean smoke test impact. Only flag smoke test impact when you can
-                  demonstrate a concrete dependency path.
-                WRONG: "This session-scoped storage fixture might affect smoke tests"
-                RIGHT: "Smoke test X uses fixture Y, which depends on the changed fixture Z"
+              CRITICAL — Verification rules for smoke and gating decisions:
+                - For each True decision, you must have traced a concrete path: test file → fixture → utility function → modified symbol.
+                - Do NOT assume impact based on scope, file proximity, or infrastructure-sounding names.
+                  Only set True when you trace a concrete path through steps 6a-6e, then 7 or 8.
+                WRONG: "utilities/hco.py changed → run smoke" (no traced dependency path)
+                WRONG: "Run smoke tests: False" with no affected-test list when gating tests use the changed utility
+                RIGHT: "Run smoke tests: False, Run gating tests: True" plus `tests/.../test_foo.py::TestBar::test_baz (gating)`
+                RIGHT: "Smoke test X uses fixture Y → wrapper Z → changed function W in utilities/hco.py"
 
             </details>
