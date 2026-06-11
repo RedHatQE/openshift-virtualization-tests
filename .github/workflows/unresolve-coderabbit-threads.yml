@@ -19,10 +19,10 @@ concurrency:
 permissions:
   # Required to unresolve review threads and add comments
   pull-requests: write
-  contents: read
 
 jobs:
   unresolve-threads:
+    name: Unresolve prematurely resolved threads
     if: "!endsWith(github.event.pull_request.user.login, '[bot]')"
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -96,12 +96,17 @@ jobs:
           echo "$ALL_THREADS" | jq -r --arg pr_author "$PR_AUTHOR" '
             .[]
             | select(.isResolved == true)
-            | select(.opening_comment.nodes[0].author.login == "coderabbitai")
+            | select(.opening_comment.nodes[0].author.login == "coderabbitai[bot]")
             | select(
-                # No substantive PR-author reply exists in the recent window
+                # No substantive reply from PR author OR CodeRabbit verification
                 (any(.recent_comments.nodes[];
-                  .author.login == $pr_author
-                  and ((.body // "") | length) >= 15
+                  (
+                    # PR author posted a substantive reply (>= 15 chars)
+                    (.author.login == $pr_author and ((.body // "") | length) >= 15)
+                    or
+                    # CodeRabbit verified the fix (contains confirmation markers)
+                    (.author.login == "coderabbitai[bot]" and ((.body // "") | test("addressed|verified|resolved|✅|concern is fully"; "i")))
+                  )
                 ) | not)
               )
             | .id
