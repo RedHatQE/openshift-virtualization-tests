@@ -1,3 +1,11 @@
+"""Networking configuration constants.
+
+Covers SR-IOV identifiers, bridge types, IP family policy strings, port numbers,
+KubeMacPool configuration names, bonding modes, and DNS/label strings.
+
+For CNV network component deployment/pod name strings use `components.py`.
+"""
+
 SRIOV = "sriov"
 IP_FAMILY_POLICY_PREFER_DUAL_STACK = "PreferDualStack"
 IPV4_STR = "ipv4"

@@ -1,3 +1,10 @@
+"""Storage constants.
+
+Covers StorageClassNames, CDI (Containerized Data Importer) label keys and
+configuration maps, HostPath Provisioner (HPP) capability flags, hotplug
+constants, and image content source policy file names.
+"""
+
 from typing import Any
 
 from ocp_resources.datavolume import DataVolume

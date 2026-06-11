@@ -1,3 +1,10 @@
+"""Monitoring and alerting constants.
+
+Alert severity strings (CRITICAL_STR, WARNING_STR, INFO_STR), operator health
+status metric names, and the full list of KubeVirt VMI metrics used in
+monitoring tests.
+"""
+
 CRITICAL_STR = "critical"
 INFO_STR = "info"
 WARNING_STR = "warning"

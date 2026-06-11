@@ -1,3 +1,9 @@
+"""Timeout constants (in seconds).
+
+All TIMEOUT_* values are plain integers. TCP_TIMEOUT_30SEC is a float for
+use with socket-level timeout parameters.
+"""
+
 TIMEOUT_1SEC = 1
 TIMEOUT_5SEC = 5
 TIMEOUT_10SEC = 10

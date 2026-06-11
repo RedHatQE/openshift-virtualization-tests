@@ -1,3 +1,9 @@
+"""Application-Aware Quota (AAQ) constants.
+
+Resource names, quota field keys, namespace labels, and pre-built quota
+specification dicts for VMI and pod resource requests/limits.
+"""
+
 AAQ_VIRTUAL_RESOURCES = "VirtualResources"
 AAQ_VMI_POD_USAGE = "VmiPodUsage"
 NODE_STR = "node"

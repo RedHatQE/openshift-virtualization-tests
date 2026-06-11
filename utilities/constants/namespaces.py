@@ -1,3 +1,10 @@
+"""Namespace name constants.
+
+NamespacesNames groups well-known OpenShift and CNV namespace strings.
+ADP_NAMESPACE is a module-level constant used independently of the class.
+"""
+
+
 class NamespacesNames:
     OPENSHIFT = "openshift"
     OPENSHIFT_MONITORING = "openshift-monitoring"

@@ -11,6 +11,7 @@
 # if triggered while the package is still being initialised.  Placing the
 # computation after all submodule imports guarantees that KUBERNETES_ARCH_LABEL
 # (from misc.py) is already in the namespace when get_cluster_architecture() runs.
+from libs.infra.images import BASE_IMAGES_DIR
 from utilities.architecture import get_cluster_architecture as _get_cluster_architecture
 from utilities.constants.aaq import (
     AAQ_NAMESPACE_LABEL,
@@ -439,6 +440,7 @@ __all__ = [
     "AUDIT_LOGS_PATH",
     "BACKUP_STORAGE_LOCATION",
     "BASE_EXCEPTIONS_DICT",
+    "BASE_IMAGES_DIR",
     "BIND_IMMEDIATE_ANNOTATION",
     "BREW_REGISTRY_SOURCE",
     "BRIDGE_MARKER",
