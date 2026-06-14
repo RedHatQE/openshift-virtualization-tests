@@ -12,6 +12,7 @@ from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClust
 from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 
+from tests.storage.constants import WIN2022_GOLDEN_IMAGE_OS_VERSION
 from tests.storage.storage_migration.constants import (
     CONTENT,
     FILE_BEFORE_STORAGE_MIGRATION,
@@ -52,6 +53,7 @@ from utilities.virt import (
     get_vm_boot_time,
     running_vm,
     vm_instance_from_template,
+    wait_for_windows_vm,
 )
 
 DEFAULT_DV_SIZE = "1Gi"
@@ -399,7 +401,6 @@ def windows_vm_with_vtpm_for_storage_migration(
 
 @pytest.fixture(scope="class")
 def windows_vm_with_vtpm_golden_image_for_storage_migration(
-    admin_client,
     unprivileged_client,
     namespace,
     modern_cpu_for_migration,
@@ -409,7 +410,7 @@ def windows_vm_with_vtpm_golden_image_for_storage_migration(
     win_ds = DataSource(
         namespace=golden_images_namespace.name,
         name=py_config.get("win_golden_image_name"),
-        client=admin_client,
+        client=golden_images_namespace.client,
         ensure_exists=True,
     )
     with VirtualMachineForTests(
@@ -426,6 +427,7 @@ def windows_vm_with_vtpm_golden_image_for_storage_migration(
         cpu_model=modern_cpu_for_migration,
     ) as vm:
         vm.start()
+        wait_for_windows_vm(vm=vm, version=WIN2022_GOLDEN_IMAGE_OS_VERSION)
         yield vm
 
 
