@@ -2,7 +2,8 @@
 
 Covers StorageClassNames, CDI (Containerized Data Importer) label keys and
 configuration maps, HostPath Provisioner (HPP) capability flags, hotplug
-constants, and image content source policy file names.
+constants, image content source policy file names, DataVolume source type
+strings, and DataImportCron schedule/garbage-collect values.
 """
 
 from typing import Any
@@ -75,3 +76,14 @@ HPP_CAPABILITIES: dict[str, Any] = {
 HOTPLUG_DISK_SERIAL = "1234567890"
 HOTPLUG_DISK_VIRTIO_BUS = "virtio"
 HOTPLUG_DISK_SCSI_BUS = "scsi"
+
+# DataVolume source type strings
+REGISTRY_STR = "registry"
+
+# DataImportCron / golden image constants
+WILDCARD_CRON_EXPRESSION = "* * * * *"
+OUTDATED = "Outdated"
+
+# Storage capacity metric field names
+CAPACITY = "capacity"
+USED = "used"

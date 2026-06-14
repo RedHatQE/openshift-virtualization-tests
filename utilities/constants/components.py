@@ -9,6 +9,8 @@ Rule of thumb: if you would use the constant in ``kubectl get <kind>/<name>``, i
 Not here:
 - HCO conditions, CRD lists, feature gate keys → ``hco.py``
 - Networking config (bridge types, kubemacpool config map names) → ``networking.py``
+- Node selector labels and infrastructure labels → ``cluster.py``
+- KubeVirt CPU model / TSC labels → ``virt.py``
 """
 
 from ocp_resources.api_service import APIService
@@ -16,86 +18,103 @@ from ocp_resources.cluster_role import ClusterRole
 from ocp_resources.cluster_role_binding import ClusterRoleBinding
 from ocp_resources.config_map import ConfigMap
 from ocp_resources.deployment import Deployment
-from ocp_resources.resource import Resource
 from ocp_resources.role_binding import RoleBinding
 from ocp_resources.service import Service
 from ocp_resources.service_account import ServiceAccount
 
-# OpenShift Virtualization component names
+# Operators
+HCO_OPERATOR = "hco-operator"
+CDI_OPERATOR = "cdi-operator"
+SSP_OPERATOR = "ssp-operator"
+HOSTPATH_PROVISIONER_OPERATOR = "hostpath-provisioner-operator"
+CNAO_OPERATOR = "cnao-operator"
+CLUSTER_NETWORK_ADDONS_OPERATOR = "cluster-network-addons-operator"
+AAQ_OPERATOR = "aaq-operator"
+KUBEVIRT_OPERATOR = "kubevirt-operator"
+KUBEVIRT_MIGRATION_OPERATOR = "kubevirt-migration-operator"
+HYPERCONVERGED_CLUSTER_OPERATOR = "hyperconverged-cluster-operator"
 VIRT_OPERATOR = "virt-operator"
-VIRT_LAUNCHER = "virt-launcher"
+
+# Deployments / controllers
 VIRT_API = "virt-api"
 VIRT_CONTROLLER = "virt-controller"
-VIRT_HANDLER = "virt-handler"
 VIRT_TEMPLATE_VALIDATOR = "virt-template-validator"
 VIRT_EXPORTPROXY = "virt-exportproxy"
-SSP_KUBEVIRT_HYPERCONVERGED = "ssp-kubevirt-hyperconverged"
-SSP_OPERATOR = "ssp-operator"
-CDI_OPERATOR = "cdi-operator"
+VIRT_PLATFORM_AUTOPILOT = "virt-platform-autopilot"
+VIRT_SYNCHRONIZATION_CONTROLLER = "virt-synchronization-controller"
+KUBEVIRT_MIGRATION_CONTROLLER = "kubevirt-migration-controller"
 CDI_APISERVER = "cdi-apiserver"
 CDI_DEPLOYMENT = "cdi-deployment"
 CDI_UPLOADPROXY = "cdi-uploadproxy"
-HCO_OPERATOR = "hco-operator"
 HCO_WEBHOOK = "hco-webhook"
+KUBEMACPOOL_CERT_MANAGER = "kubemacpool-cert-manager"
+KUBEMACPOOL_MAC_CONTROLLER_MANAGER = "kubemacpool-mac-controller-manager"
+KUBEVIRT_IPAM_CONTROLLER_MANAGER = "kubevirt-ipam-controller-manager"
+KUBEVIRT_CONSOLE_PLUGIN = "kubevirt-console-plugin"
+KUBEVIRT_APISERVER_PROXY = "kubevirt-apiserver-proxy"
+
+# DaemonSets
+VIRT_HANDLER = "virt-handler"
+BRIDGE_MARKER = "bridge-marker"
+KUBE_CNI_LINUX_BRIDGE_PLUGIN = "kube-cni-linux-bridge-plugin"
 HOSTPATH_PROVISIONER_CSI = "hostpath-provisioner-csi"
+
+# Pods / launcher
+VIRT_LAUNCHER = "virt-launcher"
+HPP_POOL = "hpp-pool"
+
+# HPP
 HOSTPATH_PROVISIONER = "hostpath-provisioner"
-HOSTPATH_PROVISIONER_OPERATOR = "hostpath-provisioner-operator"
-HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD = "hyperconverged-cluster-cli-download"
-KUBEVIRT_HCO_NAME = "kubevirt-kubevirt-hyperconverged"
+
+# HCO metadata
+HCO_CATALOG_SOURCE = "hco-catalogsource"
+HCO_BEARER_AUTH = "hco-bearer-auth"
 HCO_PART_OF_LABEL_VALUE = "hyperconverged-cluster"
 MANAGED_BY_LABEL_VALUE_OLM = "olm"
-HPP_POOL = "hpp-pool"
-HCO_CATALOG_SOURCE = "hco-catalogsource"
-KUBEVIRT_CONSOLE_PLUGIN = "kubevirt-console-plugin"
-CNAO_OPERATOR = "cnao-operator"
+KUBEVIRT_HCO_NAME = "kubevirt-kubevirt-hyperconverged"
+
+# KubeVirt / CDI CR names
+KUBEVIRT_KUBEVIRT_HYPERCONVERGED = "kubevirt-kubevirt-hyperconverged"
+CDI_KUBEVIRT_HYPERCONVERGED = "cdi-kubevirt-hyperconverged"
+SSP_KUBEVIRT_HYPERCONVERGED = "ssp-kubevirt-hyperconverged"
+MIGCONTROLLER_KUBEVIRT_HYPERCONVERGED = "migcontroller-kubevirt-hyperconverged"
+CLUSTER = "cluster"
 HYPERCONVERGED_CLUSTER = "hyperconverged-cluster"
+KUBEVIRT_CLUSTER_CRITICAL = "kubevirt-cluster-critical"
+
+# Console / UI
+KUBEVIRT_CONSOLE_PLUGIN_SERVICE = "kubevirt-console-plugin-service"
+KUBEVIRT_CONSOLE_PLUGIN_NP = "kubevirt-console-plugin-np"
+KUBEVIRT_APISERVER_PROXY_NP = "kubevirt-apiserver-proxy-np"
+KUBEVIRT_PLUGIN = "kubevirt-plugin"
+KUBEVIRT_UI_CONFIG = "kubevirt-ui-config"
+KUBEVIRT_USER_SETTINGS = "kubevirt-user-settings"
+KUBEVIRT_UI_FEATURES = "kubevirt-ui-features"
+KUBEVIRT_UI_CONFIG_READER = "kubevirt-ui-config-reader"
+KUBEVIRT_UI_CONFIG_READER_ROLE_BINDING = "kubevirt-ui-config-reader-rolebinding"
+
+# Prometheus / monitoring component names
 KUBEVIRT_HYPERCONVERGED_PROMETHEUS_RULE = "kubevirt-hyperconverged-prometheus-rule"
 KUBEMACPOOL_PROMETHEUS_RULE = "kubemacpool-prometheus-rule"
 HYPERCONVERGED_CLUSTER_OPERATOR_METRICS = "hyperconverged-cluster-operator-metrics"
 KUBEVIRT_HYPERCONVERGED_OPERATOR_METRICS = "kubevirt-hyperconverged-operator-metrics"
-KUBEVIRT_CLUSTER_CRITICAL = "kubevirt-cluster-critical"
-KUBEVIRT_KUBEVIRT_HYPERCONVERGED = "kubevirt-kubevirt-hyperconverged"
-CDI_KUBEVIRT_HYPERCONVERGED = "cdi-kubevirt-hyperconverged"
-CLUSTER = "cluster"
-KUBEVIRT_CONSOLE_PLUGIN_SERVICE = "kubevirt-console-plugin-service"
+PROMETHEUS_RULES_STR = "prometheus-rules"
+
+# Misc resource names
+HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD = "hyperconverged-cluster-cli-download"
+NGINX_CONF = "nginx-conf"
+WINDOWS_BOOTSOURCE_PIPELINE = "windows-bootsource-pipeline"
+VIRTCTL_CLI_DOWNLOADS = "virtctl-clidownloads-kubevirt-hyperconverged"
+VIRTIO_WIN = "virtio-win"
+UPLOAD_BOOT_SOURCE = "upload-boot-source"
 CREATING_VIRTUAL_MACHINE = "creating-virtual-machine"
 CREATING_VIRTUAL_MACHINE_FROM_VOLUME = "creating-virtual-machine-from-volume"
-UPLOAD_BOOT_SOURCE = "upload-boot-source"
 GRAFANA_DASHBOARD_KUBEVIRT_TOP_CONSUMERS = "grafana-dashboard-kubevirt-top-consumers"
 RHEL9_STR = "rhel9"
 RHEL10_STR = "rhel10"
 RHEL8_GUEST = "rhel8-guest"
 RHEL9_GUEST = "rhel9-guest"
 RHEL10_GUEST = "rhel10-guest"
-VIRTCTL_CLI_DOWNLOADS = "virtctl-clidownloads-kubevirt-hyperconverged"
-VIRTIO_WIN = "virtio-win"
-NGINX_CONF = "nginx-conf"
-HYPERCONVERGED_CLUSTER_OPERATOR = "hyperconverged-cluster-operator"
-PROMETHEUS_RULES_STR = "prometheus-rules"
-KUBEVIRT_UI_CONFIG = "kubevirt-ui-config"
-KUBEVIRT_USER_SETTINGS = "kubevirt-user-settings"
-KUBEVIRT_UI_FEATURES = "kubevirt-ui-features"
-KUBEVIRT_UI_CONFIG_READER = "kubevirt-ui-config-reader"
-KUBEVIRT_UI_CONFIG_READER_ROLE_BINDING = "kubevirt-ui-config-reader-rolebinding"
-HCO_BEARER_AUTH = "hco-bearer-auth"
-KUBEVIRT_CONSOLE_PLUGIN_NP = "kubevirt-console-plugin-np"
-KUBEVIRT_APISERVER_PROXY_NP = "kubevirt-apiserver-proxy-np"
-MIGCONTROLLER_KUBEVIRT_HYPERCONVERGED = "migcontroller-kubevirt-hyperconverged"
-WINDOWS_BOOTSOURCE_PIPELINE = "windows-bootsource-pipeline"
-KUBEVIRT_MIGRATION_OPERATOR = "kubevirt-migration-operator"
-KUBEVIRT_MIGRATION_CONTROLLER = "kubevirt-migration-controller"
-VIRT_PLATFORM_AUTOPILOT = "virt-platform-autopilot"
-VIRT_SYNCHRONIZATION_CONTROLLER = "virt-synchronization-controller"
-KUBEVIRT_OPERATOR = "kubevirt-operator"
-KUBEVIRT_APISERVER_PROXY = "kubevirt-apiserver-proxy"
-KUBEVIRT_PLUGIN = "kubevirt-plugin"
-AAQ_OPERATOR = "aaq-operator"
-BRIDGE_MARKER = "bridge-marker"
-CLUSTER_NETWORK_ADDONS_OPERATOR = "cluster-network-addons-operator"
-KUBE_CNI_LINUX_BRIDGE_PLUGIN = "kube-cni-linux-bridge-plugin"
-KUBEMACPOOL_CERT_MANAGER = "kubemacpool-cert-manager"
-KUBEMACPOOL_MAC_CONTROLLER_MANAGER = "kubemacpool-mac-controller-manager"
-KUBEVIRT_IPAM_CONTROLLER_MANAGER = "kubevirt-ipam-controller-manager"
 
 # Kubernetes resource kind strings
 ROLEBINDING_STR = "RoleBinding"
@@ -119,11 +138,6 @@ SSP_STR = "SSP"
 SECRET_STR = "Secret"
 NETWORKPOLICY_STR = "NetworkPolicy"
 SERVICEACCOUNT_STR = "ServiceAccount"
-
-# Node labels
-NODE_TYPE_WORKER_LABEL = {"node-type": "worker"}
-CPU_MODEL_LABEL_PREFIX = f"cpu-model.node.{Resource.ApiGroup.KUBEVIRT_IO}"
-TSC_FREQUENCY = "tsc-frequency"
 
 # All HCO related objects with kind
 ALL_HCO_RELATED_OBJECTS = [

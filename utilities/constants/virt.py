@@ -1,12 +1,15 @@
 """VM runtime configuration constants.
 
 Covers virtctl command strings, migration policy values, disk and cloud-init key names,
-eviction strategy values, Windows version tags, Tekton task/pipeline names, and
-CPU model exclusion lists.
+eviction strategy values, Windows version tags, Tekton task/pipeline names,
+CPU model exclusion lists, CPU/memory topology sizing, and VM-level hardware
+constants (NUMA, kernel driver, SSH key path).
 
 Not here:
 - CNV component deployment/pod name strings → ``components.py``
 - Instance type or preference name strings → ``instance_types.py``
+- Architecture identifiers (AMD_64, ARM_64, …) → ``architecture.py``
+- Node labels (CPU model prefix, TSC frequency, worker labels) → ``cluster.py``
 """
 
 VIRTCTL = "virtctl"
@@ -119,3 +122,29 @@ EXCLUDED_CPU_MODELS_S390X = [
 EXCLUDED_CPU_MODELS = [*EXCLUDED_CPU_MODELS_S390X, "Opteron", "Penryn"]
 # Latest windows can't boot with old cpu models
 EXCLUDED_OLD_CPU_MODELS = [*EXCLUDED_CPU_MODELS, "Westmere", "SandyBridge", "Nehalem", "IvyBridge", "Skylake"]
+
+# CPU topology
+ONE_CPU_CORE = 1
+ONE_CPU_THREAD = 1
+TWO_CPU_CORES = 2
+TWO_CPU_SOCKETS = 2
+TWO_CPU_THREADS = 2
+FOUR_CPU_SOCKETS = 4
+SIX_CPU_SOCKETS = 6
+EIGHT_CPU_SOCKETS = 8
+TEN_CPU_SOCKETS = 10
+
+# Memory sizes
+FOUR_GI_MEMORY = "4Gi"
+FIVE_GI_MEMORY = "5Gi"
+SIX_GI_MEMORY = "6Gi"
+TEN_GI_MEMORY = "10Gi"
+TWELVE_GI_MEMORY = "12Gi"
+
+NODE_HUGE_PAGES_1GI_KEY = "hugepages-1Gi"
+
+# For GPU Passthrough (compute) and SR-IOV VF binding (networking).
+KERNEL_DRIVER = "vfio-pci"
+
+CNV_VM_SSH_KEY_PATH = "CNV-SSH-KEY-PATH"
+CNV_SUPPLEMENTAL_TEMPLATES_URL = "https://raw.githubusercontent.com/RHsyseng/cnv-supplemental-templates/main/templates"

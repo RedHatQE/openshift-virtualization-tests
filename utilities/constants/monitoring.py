@@ -1,8 +1,11 @@
 """Monitoring and alerting constants.
 
 Alert severity strings (CRITICAL_STR, WARNING_STR, INFO_STR), operator health
-status metric names, and the full list of KubeVirt VMI metrics used in
-monitoring tests.
+status metric names, the full list of KubeVirt VMI metrics, and the Prometheus
+stack service name used in monitoring tests.
+
+Not here:
+- Prometheus operator deployment/pod names → ``components.py``
 """
 
 CRITICAL_STR = "critical"
@@ -43,6 +46,8 @@ KUBEVIRT_VMI_VCPU_WAIT_SECONDS_TOTAL = "kubevirt_vmi_vcpu_wait_seconds_total"
 KUBEVIRT_VMI_MEMORY_SWAP_IN_TRAFFIC_BYTES = "kubevirt_vmi_memory_swap_in_traffic_bytes"
 KUBEVIRT_VMI_MEMORY_SWAP_OUT_TRAFFIC_BYTES = "kubevirt_vmi_memory_swap_out_traffic_bytes"
 KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL = "kubevirt_vmi_memory_pgminfault_total"
+
+PROMETHEUS_K8S = "prometheus-k8s"
 
 MONITORING_METRICS = [
     KUBEVIRT_VMI_MEMORY_ACTUAL_BALLOON_BYTES,

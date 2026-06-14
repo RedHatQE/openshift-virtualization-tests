@@ -31,6 +31,8 @@ CIRROS_QCOW2_IMG = "cirros-qcow2.img"
 
 ALPINE_VERSION = "3.20.1"
 
+DEFAULT_FEDORA_REGISTRY_URL = "docker://quay.io/containerdisks/fedora:latest"
+
 
 class ArchImages:
     class AMD64:
