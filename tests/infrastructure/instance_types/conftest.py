@@ -1,7 +1,10 @@
 import pytest
+from ocp_resources.cluster_role import ClusterRole
 from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
+from ocp_resources.namespace import Namespace
 from ocp_resources.resource import Resource
+from ocp_resources.role_binding import RoleBinding
 from ocp_resources.validating_admission_policy import ValidatingAdmissionPolicy
 from ocp_resources.validating_admission_policy_binding import ValidatingAdmissionPolicyBinding
 from ocp_resources.virtual_machine_cluster_instancetype import (
@@ -23,7 +26,7 @@ from utilities.constants import (
     CONTAINER_DISK_IMAGE_PATH_STR,
     OS_FLAVOR_RHEL,
     OS_FLAVOR_WIN_CONTAINER_DISK,
-    TIMEOUT_20MIN,
+    TIMEOUT_15MIN,
     Images,
 )
 from utilities.storage import (
@@ -35,6 +38,7 @@ from utilities.storage import (
 from utilities.virt import VirtualMachineForTests
 
 COMMON_INSTANCETYPE_SELECTOR = f"{Resource.ApiGroup.INSTANCETYPE_KUBEVIRT_IO}/vendor=redhat.com"
+LATEST_WINDOWS_IMAGE_NAMESPACE = "latest-windows-image"
 
 
 @pytest.fixture(scope="session")
@@ -111,46 +115,87 @@ def windows_validating_admission_policy_binding(admin_client):
         yield vapb
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="session")
+def windows_test_images_namespace(admin_client):
+    windows_images_namespace = Namespace(
+        client=admin_client,
+        name=LATEST_WINDOWS_IMAGE_NAMESPACE,
+    )
+    if windows_images_namespace.exists:
+        yield windows_images_namespace
+    else:
+        with windows_images_namespace as win_namespace:
+            yield win_namespace
+
+
+@pytest.fixture(scope="session")
+def windows_test_images_namespace_role_binding(admin_client, windows_test_images_namespace):
+    windows_images_view_role_binding = RoleBinding(
+        client=admin_client,
+        name="windows-test-images-view",
+        namespace=windows_test_images_namespace.name,
+        subjects_kind="Group",
+        subjects_name="system:authenticated",
+        role_ref_kind=ClusterRole.kind,
+        role_ref_name="view",
+    )
+    if windows_images_view_role_binding.exists:
+        yield windows_images_view_role_binding
+    else:
+        with windows_images_view_role_binding as win_view_role_binding:
+            yield win_view_role_binding
+
+
+@pytest.fixture(scope="session")
 def latest_windows_data_volume(
-    unprivileged_client,
+    admin_client,
     default_sc,
-    namespace,
+    windows_test_images_namespace_role_binding,
+    windows_namespace_artifactory_secret_and_configmap,
 ):
-    secret = get_artifactory_secret(namespace=namespace.name)
-    cert = get_artifactory_config_map(namespace=namespace.name)
-    with DataVolume(
-        client=unprivileged_client,
+    windows_data_volume = DataVolume(
+        client=admin_client,
         name="latest-windows",
-        namespace=namespace.name,
+        namespace=windows_test_images_namespace_role_binding.namespace,
         api_name="storage",
         source="registry",
         size=Images.Windows.CONTAINER_DISK_DV_SIZE,
         storage_class=default_sc.name,
         url=f"{get_test_artifact_server_url(schema='registry')}/"
         f"{py_config['latest_windows_os_dict'][CONTAINER_DISK_IMAGE_PATH_STR]}",
-        secret=secret,
-        cert_configmap=cert.name,
-    ) as win_dv:
-        if sc_volume_binding_mode_is_wffc(sc=default_sc.name, client=win_dv.client):
-            create_dummy_first_consumer_pod(pvc=win_dv.pvc)
-        win_dv.wait_for_dv_success(timeout=TIMEOUT_20MIN)
-        yield win_dv
-    cleanup_artifactory_secret_and_config_map(artifactory_secret=secret, artifactory_config_map=cert)
+        secret=windows_namespace_artifactory_secret_and_configmap["secret"],
+        cert_configmap=windows_namespace_artifactory_secret_and_configmap["config_map"].name,
+    )
+    if windows_data_volume.exists:
+        yield windows_data_volume
+    else:
+        with windows_data_volume as win_dv:
+            if sc_volume_binding_mode_is_wffc(sc=default_sc.name, client=windows_data_volume.client):
+                create_dummy_first_consumer_pod(pvc=windows_data_volume.pvc)
+            yield win_dv
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="session")
 def latest_windows_data_source(
-    unprivileged_client,
+    admin_client,
     latest_windows_data_volume,
 ):
-    with DataSource(
+    windows_data_source = DataSource(
         name=latest_windows_data_volume.name,
         namespace=latest_windows_data_volume.namespace,
-        client=unprivileged_client,
+        client=admin_client,
         source=generate_data_source_dict(dv=latest_windows_data_volume),
-    ) as win_ds:
-        yield win_ds
+    )
+    if windows_data_source.exists:
+        yield windows_data_source
+    else:
+        with windows_data_source as win_ds:
+            windows_data_source.wait_for_condition(
+                condition=windows_data_source.Condition.READY,
+                status=windows_data_source.Condition.Status.TRUE,
+                timeout=TIMEOUT_15MIN,
+            )
+            yield win_ds
 
 
 @pytest.fixture()
@@ -188,3 +233,14 @@ def rhel_vm_for_dedicated_cpu(unprivileged_client, namespace, latest_rhel_data_s
     ) as vm:
         vm.start()
         yield vm
+
+
+@pytest.fixture(scope="session")
+def windows_namespace_artifactory_secret_and_configmap(windows_test_images_namespace_role_binding):
+    secret = get_artifactory_secret(namespace=windows_test_images_namespace_role_binding.namespace)
+    cert = get_artifactory_config_map(namespace=windows_test_images_namespace_role_binding.namespace)
+    yield {"secret": secret, "config_map": cert}
+    cleanup_artifactory_secret_and_config_map(
+        artifactory_secret=secret,
+        artifactory_config_map=cert,
+    )
