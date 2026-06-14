@@ -1,3 +1,9 @@
+"""
+Cross-cluster live migration tests.
+
+Jira epic: https://redhat.atlassian.net/browse/CNV-50823
+"""
+
 import pytest
 from pytest_testconfig import config as py_config
 
