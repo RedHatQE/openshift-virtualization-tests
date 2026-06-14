@@ -561,12 +561,11 @@ def data_volume_template_dict(
 
 
 def data_volume_template_with_source_ref_dict(data_source, storage_class=None):
-    source_dict = data_source.source.instance.to_dict()
     dv = DataVolume(
         name=utilities.infra.unique_name(name=data_source.name),
         namespace=data_source.namespace,
         size=get_dv_size_from_datasource(data_source=data_source),
-        storage_class=storage_class or source_dict["spec"].get("storageClassName"),
+        storage_class=storage_class,
         api_name="storage",
         source_ref={
             "kind": data_source.kind,
