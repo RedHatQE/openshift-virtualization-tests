@@ -1,7 +1,7 @@
 """
 Cross-cluster live migration tests.
 
-Jira epic: https://redhat.atlassian.net/browse/CNV-50823
+Jira epic: https://redhat.atlassian.net/browse/CNV-50823 # <skip-jira-utils-check>
 """
 
 import pytest
