@@ -1,17 +1,15 @@
 """CPU architecture identifiers and multi-architecture support constants.
 
 Covers architecture strings (AMD_64, ARM_64, S390X, X86_64), container platform
-strings (LINUX_AMD_64), CPU vendor identifiers (INTEL, AMD), the Kubernetes
-architecture node label, and supported architecture sets.
+strings (LINUX_AMD_64), CPU vendor identifiers (INTEL, AMD), and supported
+architecture sets.
 
 Not here:
+- Kubernetes architecture node label → ``cluster.py``
+- CPU model exclusion lists → ``cpu_models.py``
 - VM CPU topology counts (cores/sockets/threads) → ``virt.py``
 - Image architecture variants → ``images.py``
 """
-
-from ocp_resources.resource import Resource
-
-KUBERNETES_ARCH_LABEL = f"{Resource.ApiGroup.KUBERNETES_IO}/arch"
 
 AMD_64 = "amd64"
 ARM_64 = "arm64"

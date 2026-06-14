@@ -1,12 +1,13 @@
 """Cluster infrastructure constants.
 
-Covers node role and security labels, Kubernetes API verb strings, environment
-variables (KUBECONFIG, WORKERS_TYPE), CNV test run markers, service account
-names, pod security namespace labels, the base network-exception dictionary,
-and audit-log command strings.
+Covers Kubernetes node labels (architecture, worker role, CPU model prefix, TSC
+frequency, version), pod security namespace labels, Kubernetes API verb strings,
+environment variables (KUBECONFIG, WORKERS_TYPE), CNV test run markers, service
+account names, the base network-exception dictionary, and audit-log command strings.
 
 Not here:
-- Architecture identifiers → ``architecture.py``
+- Architecture identifier strings (AMD_64, ARM_64, …) → ``architecture.py``
+- CPU model exclusion lists → ``cpu_models.py``
 - VM CPU/memory topology → ``virt.py``
 - Networking pod specs → ``networking.py``
 - Pytest/test-runner strings → ``pytest.py``
@@ -22,6 +23,7 @@ from urllib3.exceptions import (
 )
 
 # Node / selector labels
+KUBERNETES_ARCH_LABEL = f"{Resource.ApiGroup.KUBERNETES_IO}/arch"
 NODE_TYPE_WORKER_LABEL = {"node-type": "worker"}
 NODE_ROLE_KUBERNETES_IO = "node-role.kubernetes.io"
 WORKER_NODE_LABEL_KEY = f"{NODE_ROLE_KUBERNETES_IO}/worker"

@@ -10,7 +10,7 @@
 # utilities.architecture.  With the package structure that lazy import would fail
 # if triggered while the package is still being initialised.  Placing the
 # computation after all submodule imports guarantees that KUBERNETES_ARCH_LABEL
-# (from architecture.py) is already in the namespace when get_cluster_architecture() runs.
+# (from cluster.py) is already in the namespace when get_cluster_architecture() runs.
 from libs.infra.images import BASE_IMAGES_DIR
 from utilities.architecture import get_cluster_architecture as _get_cluster_architecture
 from utilities.constants.aaq import (
@@ -41,7 +41,6 @@ from utilities.constants.architecture import (
     AMD_64,
     ARM_64,
     INTEL,
-    KUBERNETES_ARCH_LABEL,
     LINUX_AMD_64,
     MULTIARCH,
     S390X,
@@ -62,6 +61,7 @@ from utilities.constants.cluster import (
     DELETE_STR,
     GET_STR,
     KUBECONFIG,
+    KUBERNETES_ARCH_LABEL,
     LS_COMMAND,
     NODE_ROLE_KUBERNETES_IO,
     NODE_TYPE_WORKER_LABEL,
@@ -182,6 +182,11 @@ from utilities.constants.components import (
     VM_CONSOLE_PROXY_NAMESPACE_RESOURCES,
     WINDOWS_BOOTSOURCE_PIPELINE,
 )
+from utilities.constants.cpu_models import (
+    EXCLUDED_CPU_MODELS,
+    EXCLUDED_CPU_MODELS_S390X,
+    EXCLUDED_OLD_CPU_MODELS,
+)
 from utilities.constants.hco import (
     ALL_CNV_CRDS,
     COMMON_TEMPLATES_KEY_NAME,
@@ -239,6 +244,8 @@ from utilities.constants.instance_types import (
     U1_LARGE,
     U1_MEDIUM_STR,
     U1_SMALL,
+    WINDOWS_2K22_PREFERENCE,
+    WINDOWS_11_PREFERENCE,
     WORKLOAD_STR,
 )
 from utilities.constants.monitoring import (
@@ -341,6 +348,12 @@ from utilities.constants.storage import (
     WILDCARD_CRON_EXPRESSION,
     StorageClassNames,
 )
+from utilities.constants.tekton import (
+    TEKTON_AVAILABLE_PIPELINEREF,
+    TEKTON_AVAILABLE_TASKS,
+    WINDOWS_CUSTOMIZE_STR,
+    WINDOWS_EFI_INSTALLER_STR,
+)
 from utilities.constants.timeouts import (
     TCP_TIMEOUT_30SEC,
     TIMEOUT_1MIN,
@@ -382,9 +395,6 @@ from utilities.constants.virt import (
     ES_LIVE_MIGRATE_IF_POSSIBLE,
     ES_NONE,
     EVICTIONSTRATEGY,
-    EXCLUDED_CPU_MODELS,
-    EXCLUDED_CPU_MODELS_S390X,
-    EXCLUDED_OLD_CPU_MODELS,
     FIVE_GI_MEMORY,
     FOUR_CPU_SOCKETS,
     FOUR_GI_MEMORY,
@@ -402,8 +412,6 @@ from utilities.constants.virt import (
     SIX_CPU_SOCKETS,
     SIX_GI_MEMORY,
     STRESS_CPU_MEM_IO_COMMAND,
-    TEKTON_AVAILABLE_PIPELINEREF,
-    TEKTON_AVAILABLE_TASKS,
     TEN_CPU_SOCKETS,
     TEN_GI_MEMORY,
     TWELVE_GI_MEMORY,
@@ -417,10 +425,6 @@ from utilities.constants.virt import (
     WIN_2K25,
     WIN_10,
     WIN_11,
-    WINDOWS_2K22_PREFERENCE,
-    WINDOWS_11_PREFERENCE,
-    WINDOWS_CUSTOMIZE_STR,
-    WINDOWS_EFI_INSTALLER_STR,
 )
 
 __all__ = [
@@ -807,7 +811,7 @@ __all__ = [
     "UpgradeStreams",
 ]
 
-# Computed after all submodule imports so that KUBERNETES_ARCH_LABEL (from architecture.py)
+# Computed after all submodule imports so that KUBERNETES_ARCH_LABEL (from cluster.py)
 # is already in the utilities.constants namespace when get_cluster_architecture()
 # triggers its lazy `from utilities.constants import KUBERNETES_ARCH_LABEL`.
 # TODO: remove this when utilities modules are refactored

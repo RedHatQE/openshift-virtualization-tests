@@ -9,8 +9,7 @@ Rule of thumb: if you would use the constant in ``kubectl get <kind>/<name>``, i
 Not here:
 - HCO conditions, CRD lists, feature gate keys → ``hco.py``
 - Networking config (bridge types, kubemacpool config map names) → ``networking.py``
-- Node selector labels and infrastructure labels → ``cluster.py``
-- KubeVirt CPU model / TSC labels → ``virt.py``
+- Node selector labels and infrastructure labels (including CPU model / TSC labels) → ``cluster.py``
 """
 
 from ocp_resources.api_service import APIService

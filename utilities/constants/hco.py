@@ -5,7 +5,6 @@ feature gate key names, and the full CNV CRD list.
 
 Not here:
 - HCO-managed component deployment/pod name strings → ``components.py``
-- General operator subscription names or catalog source names that are not HCO-specific → ``misc.py``
 """
 
 from ocp_resources.aaq import AAQ

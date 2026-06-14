@@ -1,9 +1,9 @@
 """OS image constants and architecture-specific image selection.
 
 Covers OS flavor strings (OS_FLAVOR_*), image disk demo names, Alpine version,
-and the ArchImages class that maps each CPU architecture to its image set.
-The Images alias (resolved at package import time) points to the current
-cluster's architecture variant.
+the default Fedora registry URL, and the ArchImages class that maps each CPU
+architecture to its image set. The Images alias (resolved at package import time)
+points to the current cluster's architecture variant.
 """
 
 from libs.infra.images import (
