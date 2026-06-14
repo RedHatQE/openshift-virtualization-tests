@@ -2624,7 +2624,7 @@ def pause_unpause_vm_and_check_connectivity(vm: VirtualMachineForTests) -> None:
     vm.vmi.pause(wait=True)
     vm.vmi.unpause(wait=True)
     LOGGER.info("Verify VM is running and ready after unpause")
-    wait_for_ssh_connectivity(vm=vm, timeout=TIMEOUT_2MIN)
+    wait_for_ssh_connectivity(vm=vm)
 
 
 def validate_pause_unpause_linux_vm(vm: VirtualMachineForTests, pre_pause_pid: int | None = None) -> None:

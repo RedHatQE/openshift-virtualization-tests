@@ -963,7 +963,7 @@ def enable_hyperconverged_ovs_annotations(
         wait_for_reconcile_post_update=True,
         admin_client=admin_client,
     ):
-        wait_for_ovs_status(network_addons_config=network_addons_config, status=True)
+        wait_for_ovs_status(network_addons_config=network_addons_config)
         ovs_daemonset = wait_for_ovs_daemonset_resource(admin_client=admin_client, hco_namespace=hco_namespace)
         ovs_daemonset.wait_until_deployed()
         yield ovs_daemonset
