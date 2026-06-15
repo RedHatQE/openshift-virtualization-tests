@@ -172,6 +172,43 @@ When reviewing quarantine PRs, verify the **quarantine mechanism matches the fai
   - `LOGGER.info(f"VM {vm} created in {ns} namespace")`
   - `LOGGER.warning(f"CRD {crd.name} is unreadable due to {jira_id} bug")`
 
+### HCO API Version (v5.0+)
+
+- **Use v1 API** (`hco.kubevirt.io/v1`) for all HCO CR access — NEVER use v1beta1 in new code
+- **Use `get_hyperconverged_resource()`** from `utilities/infra.py` — it returns the v1 resource
+- **Feature gates format**: use list `[{"name": "fgName"}]` or `[{"name": "fgName", "state": "Disabled"}]` — NEVER use dict format `{"fgName": True}`
+- **Use v1 hierarchical field paths** — NOT flat v1beta1 paths:
+
+  | v1 path | Old v1beta1 path (DO NOT USE) |
+  |---------|------------------------------|
+  | `spec.virtualization.liveMigrationConfig` | ~~`spec.liveMigrationConfig`~~ |
+  | `spec.virtualization.permittedHostDevices` | ~~`spec.permittedHostDevices`~~ |
+  | `spec.virtualization.virtualMachineOptions` | ~~`spec.virtualMachineOptions`~~ |
+  | `spec.virtualization.ksmConfiguration` | ~~`spec.ksmConfiguration`~~ |
+  | `spec.virtualization.higherWorkloadDensity` | ~~`spec.higherWorkloadDensity`~~ |
+  | `spec.virtualization.workloadUpdateStrategy` | ~~`spec.workloadUpdateStrategy`~~ |
+  | `spec.virtualization.obsoleteCPUModels` | ~~`spec.obsoleteCPUs`~~ |
+  | `spec.virtualization.evictionStrategy` | ~~`spec.evictionStrategy`~~ |
+  | `spec.virtualization.virtualMachineOptions.defaultCPUModel` | ~~`spec.defaultCPUModel`~~ |
+  | `spec.storage.scratchSpaceStorageClass` | ~~`spec.scratchSpaceStorageClass`~~ |
+  | `spec.storage.vmStateStorageClass` | ~~`spec.vmStateStorageClass`~~ |
+  | `spec.storage.storageImport` | ~~`spec.storageImport`~~ |
+  | `spec.networking.kubeMacPoolConfiguration` | ~~`spec.kubeMacPoolConfiguration`~~ |
+  | `spec.security.certConfig` | ~~`spec.certConfig`~~ |
+  | `spec.security.tlsSecurityProfile` | ~~`spec.tlsSecurityProfile`~~ |
+  | `spec.workloadSources.dataImportCronTemplates` | ~~`spec.dataImportCronTemplates`~~ |
+  | `spec.workloadSources.enableCommonBootImageImport` | ~~`spec.enableCommonBootImageImport`~~ |
+  | `spec.workloadSources.commonBootImageNamespace` | ~~`spec.commonBootImageNamespace`~~ |
+  | `spec.workloadSources.commonTemplatesNamespace` | ~~`spec.commonTemplatesNamespace`~~ |
+  | `spec.deployment.nodePlacements.infra` / `.workload` | ~~`spec.infra`~~ / ~~`spec.workloads`~~ |
+  | `spec.deployment.uninstallStrategy` | ~~`spec.uninstallStrategy`~~ |
+  | `spec.deployment.logVerbosityConfig` | ~~`spec.logVerbosityConfig`~~ |
+  | `spec.deployment.deployVmConsoleProxy` | ~~`spec.deployVmConsoleProxy`~~ |
+  | `spec.deployment.applicationAwareConfig.enable` | ~~`spec.enableApplicationAwareQuota`~~ |
+
+- **Node placement**: `workload` (singular) in v1 — NOT `workloads` (plural)
+- **Exception**: tests that explicitly verify v1beta1 backward compatibility (conversion webhook round-trip tests) MAY use `get_hyperconverged_resource_v1beta1()` from `utilities/infra.py`. These tests must be clearly named as v1beta1 compatibility tests.
+
 ### Code Patterns (Not Enforced by Linters)
 
 **Exception Handling:**
