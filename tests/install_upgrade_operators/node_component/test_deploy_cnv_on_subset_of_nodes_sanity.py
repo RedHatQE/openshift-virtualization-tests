@@ -73,7 +73,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
     @pytest.mark.parametrize(
         "alter_np_configuration",
         [
-            {"infra": INFRA_LABEL_2, "workloads": WORK_LABEL_1},
+            {"infra": INFRA_LABEL_2, "workload": WORK_LABEL_1},
         ],
         indirect=True,
     )
@@ -106,7 +106,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
     @pytest.mark.parametrize(
         "alter_np_configuration",
         [
-            {"infra": INFRA_LABEL_2, "workloads": WORK_LABEL_3},
+            {"infra": INFRA_LABEL_2, "workload": WORK_LABEL_3},
         ],
         indirect=True,
     )
@@ -163,7 +163,11 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         LOGGER.info("Attempting to update HCO with node placement, expecting it to fail")
         try:
             with ResourceEditorValidateHCOReconcile(
-                patches={hyperconverged_resource_scope_function: {"spec": {"workloads": WORK_LABEL_1}}},
+                patches={
+                    hyperconverged_resource_scope_function: {
+                        "spec": {"deployment": {"nodePlacements": {"workload": WORK_LABEL_1}}}
+                    }
+                },
             ):
                 LOGGER.info("Expected ability to change workloads label {WORK_LABEL_1} while VM/Workload is present.")
         except ForbiddenError:
@@ -325,7 +329,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
     @pytest.mark.parametrize(
         "alter_np_configuration",
         [
-            {"workloads": WORK_LABEL_2},
+            {"workload": WORK_LABEL_2},
         ],
         indirect=True,
     )

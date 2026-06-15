@@ -69,7 +69,7 @@ def disabled_free_page_reporting_in_hco_cr(
     with ResourceEditorValidateHCOReconcile(
         patches={
             hyperconverged_resource_scope_function: {
-                "spec": {"virtualMachineOptions": {"disableFreePageReporting": True}}
+                "spec": {"virtualization": {"virtualMachineOptions": {"disableFreePageReporting": True}}}
             }
         },
         list_resource_reconcile=[KubeVirt],

@@ -44,7 +44,7 @@ def hco_vm(unprivileged_client, namespace):
     "hyperconverged_with_node_placement",
     [
         pytest.param(
-            {"infra": NODE_PLACEMENT_INFRA, "workloads": NODE_PLACEMENT_WORKLOADS},
+            {"infra": NODE_PLACEMENT_INFRA, "workload": NODE_PLACEMENT_WORKLOADS},
             marks=(pytest.mark.polarion("CNV-5715"),),
         )
     ],

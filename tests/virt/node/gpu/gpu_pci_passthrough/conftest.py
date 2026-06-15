@@ -78,13 +78,15 @@ def hco_cr_with_permitted_hostdevices(hyperconverged_resource_scope_class, suppo
         patches={
             hyperconverged_resource_scope_class: {
                 "spec": {
-                    "permittedHostDevices": {
-                        "pciHostDevices": [
-                            {
-                                "pciDeviceSelector": supported_gpu_device[DEVICE_ID_STR],
-                                "resourceName": supported_gpu_device[GPU_DEVICE_NAME_STR],
-                            }
-                        ]
+                    "virtualization": {
+                        "permittedHostDevices": {
+                            "pciHostDevices": [
+                                {
+                                    "pciDeviceSelector": supported_gpu_device[DEVICE_ID_STR],
+                                    "resourceName": supported_gpu_device[GPU_DEVICE_NAME_STR],
+                                }
+                            ]
+                        }
                     }
                 }
             }

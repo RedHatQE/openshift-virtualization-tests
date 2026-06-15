@@ -211,8 +211,11 @@ def hyperconverged_resource_before_np(admin_client, hco_namespace, hyperconverge
     Update HCO CR with infrastructure and workloads spec.
     """
     LOGGER.info("Fetching HCO to save its initial node placement configuration ")
-    initial_infra = hyperconverged_resource_scope_class.instance.to_dict()["spec"].get("infra", {})
-    initial_workloads = hyperconverged_resource_scope_class.instance.to_dict()["spec"].get("workloads", {})
+    node_placements = (
+        hyperconverged_resource_scope_class.instance.to_dict()["spec"].get("deployment", {}).get("nodePlacements", {})
+    )
+    initial_infra = node_placements.get("infra", {})
+    initial_workload = node_placements.get("workload", {})
     yield hyperconverged_resource_scope_class
     LOGGER.info("Revert to initial HCO node placement configuration ")
     apply_np_changes(
@@ -220,7 +223,7 @@ def hyperconverged_resource_before_np(admin_client, hco_namespace, hyperconverge
         hco=hyperconverged_resource_scope_class,
         hco_namespace=hco_namespace,
         infra_placement=initial_infra,
-        workloads_placement=initial_workloads,
+        workload_placement=initial_workload,
         exclude_deployments=[HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD],
     )
 
@@ -237,16 +240,16 @@ def alter_np_configuration(
     By design, this fixture will not revert back the configuration
     of HCO CR to its initial configuration so that it can be used in
     subsequent tests.
-    Passing a None "infra" or "workloads" will keep the existing correspondent value.
+    Passing a None "infra" or "workload" will keep the existing correspondent value.
     """
     infra_placement = request.param.get("infra")
-    workloads_placement = request.param.get("workloads")
+    workload_placement = request.param.get("workload")
     apply_np_changes(
         admin_client=admin_client,
         hco=hyperconverged_resource_scope_function,
         hco_namespace=hco_namespace,
         infra_placement=infra_placement,
-        workloads_placement=workloads_placement,
+        workload_placement=workload_placement,
         exclude_deployments=[HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD],
     )
     yield

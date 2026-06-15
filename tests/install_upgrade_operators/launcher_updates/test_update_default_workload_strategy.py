@@ -25,8 +25,10 @@ class TestLauncherUpdateModifyDefault:
                 {
                     "patch": {
                         "spec": {
-                            WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {
-                                "batchEvictionInterval": DEFAULT_BATCH_EVICTION_INTERVAL
+                            "virtualization": {
+                                WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {
+                                    "batchEvictionInterval": DEFAULT_BATCH_EVICTION_INTERVAL
+                                }
                             }
                         }
                     },
@@ -38,7 +40,11 @@ class TestLauncherUpdateModifyDefault:
             pytest.param(
                 {
                     "patch": {
-                        "spec": {WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {"batchEvictionSize": DEFAULT_BATCH_EVICTION_SIZE}}
+                        "spec": {
+                            "virtualization": {
+                                WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {"batchEvictionSize": DEFAULT_BATCH_EVICTION_SIZE}
+                            }
+                        }
                     },
                 },
                 MOD_CUST_DEFAULT_BATCH_EVICTION_SIZE,
@@ -49,7 +55,11 @@ class TestLauncherUpdateModifyDefault:
                 {
                     "patch": {
                         "spec": {
-                            WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {WORKLOADUPDATEMETHODS: DEFAULT_WORKLOAD_UPDATE_METHODS}
+                            "virtualization": {
+                                WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {
+                                    WORKLOADUPDATEMETHODS: DEFAULT_WORKLOAD_UPDATE_METHODS
+                                }
+                            }
                         }
                     },
                 },
@@ -68,11 +78,11 @@ class TestLauncherUpdateModifyDefault:
         updated_hco_cr,
         expected,
     ):
-        """Validate ability to update, hyperconverged's spec.workloadUpdateStrategy to custom values"""
+        """Validate ability to update, hyperconverged's spec.virtualization.workloadUpdateStrategy to custom values"""
         wait_for_spec_change(
             expected=expected,
             get_spec_func=lambda: get_hco_spec(admin_client=admin_client, hco_namespace=hco_namespace),
-            base_path=[WORKLOAD_UPDATE_STRATEGY_KEY_NAME],
+            base_path=["virtualization", WORKLOAD_UPDATE_STRATEGY_KEY_NAME],
         )
         wait_for_spec_change(
             expected=expected,
@@ -91,7 +101,9 @@ class TestLauncherUpdateModifyDefault:
                 {
                     "patch": {
                         "spec": {
-                            WORKLOAD_UPDATE_STRATEGY_KEY_NAME: DEFAULT_WORKLOAD_UPDATE_STRATEGY,
+                            "virtualization": {
+                                WORKLOAD_UPDATE_STRATEGY_KEY_NAME: DEFAULT_WORKLOAD_UPDATE_STRATEGY,
+                            }
                         }
                     },
                 },
@@ -103,7 +115,9 @@ class TestLauncherUpdateModifyDefault:
                 {
                     "patch": {
                         "spec": {
-                            WORKLOAD_UPDATE_STRATEGY_KEY_NAME: DEFAULT_WORKLOAD_UPDATE_STRATEGY,
+                            "virtualization": {
+                                WORKLOAD_UPDATE_STRATEGY_KEY_NAME: DEFAULT_WORKLOAD_UPDATE_STRATEGY,
+                            }
                         }
                     },
                 },
@@ -123,12 +137,12 @@ class TestLauncherUpdateModifyDefault:
         resource_name,
         expected,
     ):
-        """Validate ability to reset, hyperconverged's spec.workloadUpdateStrategy from custom values"""
+        """Validate ability to reset, hyperconverged's spec.virtualization.workloadUpdateStrategy from custom values"""
         if resource_name == "hyperconverged":
             wait_for_spec_change(
                 expected=expected,
                 get_spec_func=lambda: get_hco_spec(admin_client=admin_client, hco_namespace=hco_namespace),
-                base_path=[WORKLOAD_UPDATE_STRATEGY_KEY_NAME],
+                base_path=["virtualization", WORKLOAD_UPDATE_STRATEGY_KEY_NAME],
             )
         elif resource_name == "kubevirt":
             wait_for_spec_change(

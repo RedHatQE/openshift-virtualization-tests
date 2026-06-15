@@ -518,7 +518,11 @@ def update_hco_templates_spec(
     golden_images_namespace=None,
 ):
     with ResourceEditorValidateHCOReconcile(
-        patches={hyperconverged_resource: {"spec": {"workloadSources": {SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME: [updated_template]}}}},
+        patches={
+            hyperconverged_resource: {
+                "spec": {"workloadSources": {SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME: [updated_template]}}
+            }
+        },
         list_resource_reconcile=[SSP, CDI],
         wait_for_reconcile_post_update=True,
     ):

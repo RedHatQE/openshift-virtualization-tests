@@ -503,7 +503,7 @@ def download_and_extract_tar(tarfile_url, dest_path):
 @contextmanager
 def update_hco_with_persistent_storage_config(hco_cr, storage_class):
     with ResourceEditorValidateHCOReconcile(
-        patches={hco_cr: {"spec": {"vmStateStorageClass": storage_class}}},
+        patches={hco_cr: {"spec": {"storage": {"vmStateStorageClass": storage_class}}}},
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,
     ):

@@ -37,8 +37,8 @@ def deleted_stanza_on_hco_cr(request, hyperconverged_resource_scope_function):
 @pytest.fixture()
 def hco_cr_custom_values(hyperconverged_resource_scope_function):
     """
-    This fixture updates HCO CR with custom values for spec.CertConfig, spec.liveMigrationConfig and
-    spec.featureGates and cleans those up at the end.
+    This fixture updates HCO CR with custom values for spec.security.certConfig and
+    spec.virtualization.liveMigrationConfig and cleans those up at the end.
     Note: This is needed for tests that modifies such fields to default values
 
     Args:
@@ -116,12 +116,15 @@ def hco_with_non_default_feature_gates(
     hyperconverged_resource_scope_function,
 ):
     new_fgs = request.param["fgs"]
-    hco_fgs = hyperconverged_resource_scope_function.instance.to_dict()["spec"]["featureGates"]
+    hco_fgs = hyperconverged_resource_scope_function.instance.to_dict()["spec"].get("featureGates", [])
 
-    for fg in new_fgs:
-        hco_fgs[fg] = True
+    existing_fg_names = {fg["name"] for fg in hco_fgs}
+    updated_fgs = list(hco_fgs)
+    for fg_name in new_fgs:
+        if fg_name not in existing_fg_names:
+            updated_fgs.append({"name": fg_name, "state": "Enabled"})
     with ResourceEditorValidateHCOReconcile(
-        patches={hyperconverged_resource_scope_function: {"spec": {"featureGates": hco_fgs}}},
+        patches={hyperconverged_resource_scope_function: {"spec": {"featureGates": updated_fgs}}},
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,
     ):

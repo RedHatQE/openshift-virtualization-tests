@@ -35,7 +35,7 @@ def opt_in_custom_template_namespace(
     with ResourceEditorValidateHCOReconcile(
         patches={
             hyperconverged_resource_scope_class: {
-                "spec": {COMMON_TEMPLATES_NAMESPACE_KEY: custom_vm_template_namespace.name}
+                "spec": {"workloadSources": {COMMON_TEMPLATES_NAMESPACE_KEY: custom_vm_template_namespace.name}}
             }
         },
         list_resource_reconcile=[SSP, CDI],
@@ -119,7 +119,11 @@ def opted_out_custom_template_namespace(
     ssp_resource_scope_function,
 ):
     ResourceEditorValidateHCOReconcile(
-        patches={hyperconverged_resource_scope_function: {"spec": {COMMON_TEMPLATES_NAMESPACE_KEY: None}}},
+        patches={
+            hyperconverged_resource_scope_function: {
+                "spec": {"workloadSources": {COMMON_TEMPLATES_NAMESPACE_KEY: None}}
+            }
+        },
         list_resource_reconcile=[SSP, CDI],
         wait_for_reconcile_post_update=True,
     ).update()

@@ -15,6 +15,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.install_upgrade_operators.constants import (
     KEY_NAME_STR,
+    KEY_PATH_SEPARATOR,
     RESOURCE_NAME_STR,
     RESOURCE_NAMESPACE_STR,
 )
@@ -194,7 +195,7 @@ def assert_no_crypto_policy_in_hco(
     hco_crypto_policy = get_resource_crypto_policy(
         resource=HyperConverged,
         name=hco_name,
-        key_name=TLS_SECURITY_PROFILE,
+        key_name=f"security{KEY_PATH_SEPARATOR}{TLS_SECURITY_PROFILE}",
         admin_client=admin_client,
         namespace=hco_namespace,
     )
@@ -265,7 +266,7 @@ def assert_tls_ciphers_blocked(utility_pods, node, services, tls_version, allowe
 @contextmanager
 def set_hco_crypto_policy(hco_resource, tls_spec):
     with ResourceEditorValidateHCOReconcile(
-        patches={hco_resource: {"spec": {TLS_SECURITY_PROFILE: tls_spec}}},
+        patches={hco_resource: {"spec": {"security": {TLS_SECURITY_PROFILE: tls_spec}}}},
         wait_for_reconcile_post_update=True,
         list_resource_reconcile=MANAGED_CRS_LIST,
     ):

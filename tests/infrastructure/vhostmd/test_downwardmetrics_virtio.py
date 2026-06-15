@@ -96,7 +96,7 @@ def enabled_feature_gate_for_downward_metrics_scope_function(
     hyperconverged_resource_scope_function,
 ):
     with ResourceEditorValidateHCOReconcile(
-        patches={hyperconverged_resource_scope_function: {"spec": {"featureGates": {"downwardMetrics": True}}}},
+        patches={hyperconverged_resource_scope_function: {"spec": {"featureGates": [{"name": "downwardMetrics"}]}}},
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,
     ):

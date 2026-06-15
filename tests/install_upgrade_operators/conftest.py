@@ -15,7 +15,6 @@ from pytest_testconfig import py_config
 from tests.install_upgrade_operators.constants import (
     ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT,
     EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES,
-    FG_ENABLED,
     HCO_DEFAULT_FEATUREGATES,
     RESOURCE_NAME_STR,
     RESOURCE_NAMESPACE_STR,

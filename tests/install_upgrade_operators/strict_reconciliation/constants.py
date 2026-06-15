@@ -4,7 +4,7 @@ import copy
 # here because we cannot simply trust that the cluster
 # where we are going to execute the test is always going to
 # come with a vanilla configuration.
-# For instance the default for spec.certConfig.server.duration
+# For instance the default for spec.security.certConfig.server.duration
 # is 48h but this is definitively too long for a test environment
 # so we expect that the initial configuration will differ from the
 # default one.
@@ -15,6 +15,10 @@ from tests.install_upgrade_operators.constants import (
     HCO_CR_CERT_CONFIG_RENEW_BEFORE_KEY,
     HCO_CR_CERT_CONFIG_SERVER_KEY,
 )
+
+# v1 API hierarchical group keys
+HCO_SECURITY_KEY = "security"
+HCO_VIRTUALIZATION_KEY = "virtualization"
 
 DEPLOY_KUBE_SECONDARY_DNS = "deployKubeSecondaryDNS"
 CERTC_DEFAULT_48H = "48h0m0s"
@@ -121,8 +125,12 @@ EXPCT_CERTC_CUSTOM = {
 
 CUSTOM_HCO_CR_SPEC = {
     "spec": {
-        LIVE_MIGRATION_CONFIG_KEY: EXPCT_LM_CUSTOM,
-        HCO_CR_CERT_CONFIG_KEY: EXPCT_CERTC_CUSTOM,
+        HCO_VIRTUALIZATION_KEY: {
+            LIVE_MIGRATION_CONFIG_KEY: EXPCT_LM_CUSTOM,
+        },
+        HCO_SECURITY_KEY: {
+            HCO_CR_CERT_CONFIG_KEY: EXPCT_CERTC_CUSTOM,
+        },
     }
 }
 KUBEVIRT_DEFAULT = {KUBEVIRT_CR_CERT_CONFIG_SELF_SIGNED_KEY: EXPCT_CERTC_DEFAULTS}
@@ -198,14 +206,12 @@ STORAGE_IMPORT_VALUE = {
         "private-registry-example-2:5000",
     ]
 }
-OBSOLETE_CPUS_KEY = "obsoleteCPUs"
-OBSOLETE_CPUS_VALUE_HCO_CR = {
-    "cpuModels": [
-        "487",
-        "pentium5",
-        "pentiumhome",
-    ],
-}
+OBSOLETE_CPU_MODELS_KEY = "obsoleteCPUModels"
+OBSOLETE_CPU_MODELS_VALUE_HCO_CR = [
+    "487",
+    "pentium5",
+    "pentiumhome",
+]
 OBSOLETE_CPUS_VALUE_KUBEVIRT_CR = {
     "obsoleteCPUModels": {
         "487": True,

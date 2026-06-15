@@ -39,7 +39,11 @@ def hyperconverged_resource_certconfig_change(
     }
     LOGGER.info("Modifying certconfig in HCO CR")
     with ResourceEditorValidateHCOReconcile(
-        patches={hyperconverged_resource_scope_class: {"spec": {HCO_CR_CERT_CONFIG_KEY: target_certconfig_stanza}}},
+        patches={
+            hyperconverged_resource_scope_class: {
+                "spec": {"security": {HCO_CR_CERT_CONFIG_KEY: target_certconfig_stanza}}
+            }
+        },
         list_resource_reconcile=[CDI, NetworkAddonsConfig, SSP],
         wait_for_reconcile_post_update=True,
     ):

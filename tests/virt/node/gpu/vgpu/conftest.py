@@ -55,20 +55,22 @@ def hco_cr_with_node_specific_mdev_permitted_hostdevices(
         patches={
             hyperconverged_resource_scope_class: {
                 "spec": {
-                    "permittedHostDevices": {
-                        "mediatedDevices": [
-                            {
-                                "externalResourceProvider": True,
-                                "mdevNameSelector": supported_gpu_device[MDEV_NAME_STR],
-                                "resourceName": supported_gpu_device[VGPU_DEVICE_NAME_STR],
-                            },
-                            {
-                                "externalResourceProvider": True,
-                                "mdevNameSelector": supported_gpu_device[MDEV_GRID_NAME_STR],
-                                "resourceName": supported_gpu_device[VGPU_GRID_NAME_STR],
-                            },
-                        ]
-                    },
+                    "virtualization": {
+                        "permittedHostDevices": {
+                            "mediatedDevices": [
+                                {
+                                    "externalResourceProvider": True,
+                                    "mdevNameSelector": supported_gpu_device[MDEV_NAME_STR],
+                                    "resourceName": supported_gpu_device[VGPU_DEVICE_NAME_STR],
+                                },
+                                {
+                                    "externalResourceProvider": True,
+                                    "mdevNameSelector": supported_gpu_device[MDEV_GRID_NAME_STR],
+                                    "resourceName": supported_gpu_device[VGPU_GRID_NAME_STR],
+                                },
+                            ]
+                        },
+                    }
                 }
             }
         },

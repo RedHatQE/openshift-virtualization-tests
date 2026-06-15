@@ -20,14 +20,16 @@ class TestLauncherUpdateResetFields:
         [
             pytest.param(
                 {
-                    "patch": {"spec": {WORKLOAD_UPDATE_STRATEGY_KEY_NAME: None}},
+                    "patch": {"spec": {"virtualization": {WORKLOAD_UPDATE_STRATEGY_KEY_NAME: None}}},
                 },
                 DEFAULT_WORKLOAD_UPDATE_STRATEGY,
                 marks=(pytest.mark.polarion("CNV-6928"),),
             ),
             pytest.param(
                 {
-                    "patch": {"spec": {WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {"batchEvictionInterval": None}}},
+                    "patch": {
+                        "spec": {"virtualization": {WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {"batchEvictionInterval": None}}}
+                    },
                 },
                 MOD_CUST_DEFAULT_BATCH_EVICTION_INTERVAL,
                 marks=pytest.mark.polarion("CNV-6929"),
@@ -35,7 +37,9 @@ class TestLauncherUpdateResetFields:
             ),
             pytest.param(
                 {
-                    "patch": {"spec": {WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {"batchEvictionSize": None}}},
+                    "patch": {
+                        "spec": {"virtualization": {WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {"batchEvictionSize": None}}}
+                    },
                 },
                 MOD_CUST_DEFAULT_BATCH_EVICTION_SIZE,
                 marks=pytest.mark.polarion("CNV-6930"),
@@ -43,7 +47,9 @@ class TestLauncherUpdateResetFields:
             ),
             pytest.param(
                 {
-                    "patch": {"spec": {WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {WORKLOADUPDATEMETHODS: None}}},
+                    "patch": {
+                        "spec": {"virtualization": {WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {WORKLOADUPDATEMETHODS: None}}}
+                    },
                 },
                 MOD_CUST_DEFAULT_WORKLOAD_UPDATE_METHOD,
                 marks=pytest.mark.polarion("CNV-6931"),
@@ -59,11 +65,11 @@ class TestLauncherUpdateResetFields:
         updated_hco_cr,
         expected,
     ):
-        """Validate ability to reset, hyperconverged's spec.workloadUpdateStrategy from custom values"""
+        """Validate ability to reset, hyperconverged's spec.virtualization.workloadUpdateStrategy from custom values"""
         wait_for_spec_change(
             expected=expected,
             get_spec_func=lambda: get_hco_spec(admin_client=admin_client, hco_namespace=hco_namespace),
-            base_path=[WORKLOAD_UPDATE_STRATEGY_KEY_NAME],
+            base_path=["virtualization", WORKLOAD_UPDATE_STRATEGY_KEY_NAME],
         )
         wait_for_spec_change(
             expected=expected,
