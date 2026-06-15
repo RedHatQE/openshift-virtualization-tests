@@ -1317,20 +1317,23 @@ def cluster_storage_classes_names(cluster_storage_classes):
 @pytest.fixture(scope="class")
 def hyperconverged_with_node_placement(request, admin_client, hco_namespace, hyperconverged_resource_scope_class):
     """
-    Update HCO CR with infrastructure and workloads spec.
+    Update HCO CR with infrastructure and workload spec.
     """
     infra_placement = request.param["infra"]
-    workloads_placement = request.param["workloads"]
+    workload_placement = request.param["workload"]
 
     LOGGER.info("Fetching HCO to save its initial node placement configuration ")
-    initial_infra = hyperconverged_resource_scope_class.instance.to_dict()["spec"].get("infra", {})
-    initial_workloads = hyperconverged_resource_scope_class.instance.to_dict()["spec"].get("workloads", {})
+    node_placements = (
+        hyperconverged_resource_scope_class.instance.to_dict()["spec"].get("deployment", {}).get("nodePlacements", {})
+    )
+    initial_infra = node_placements.get("infra", {})
+    initial_workload = node_placements.get("workload", {})
     yield utilities.hco.apply_np_changes(
         admin_client=admin_client,
         hco=hyperconverged_resource_scope_class,
         hco_namespace=hco_namespace,
         infra_placement=infra_placement,
-        workloads_placement=workloads_placement,
+        workload_placement=workload_placement,
     )
     LOGGER.info("Revert to initial HCO node placement configuration ")
     utilities.hco.apply_np_changes(
@@ -1338,7 +1341,7 @@ def hyperconverged_with_node_placement(request, admin_client, hco_namespace, hyp
         hco=hyperconverged_resource_scope_class,
         hco_namespace=hco_namespace,
         infra_placement=initial_infra,
-        workloads_placement=initial_workloads,
+        workload_placement=initial_workload,
     )
 
 
