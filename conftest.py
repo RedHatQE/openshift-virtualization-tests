@@ -100,14 +100,14 @@ EXCLUDE_MARKER_FROM_TIER2_MARKER = [
 ]
 
 TEAM_MARKERS = {
-    "chaos": ["chaos", "deprecated_api"],
-    "virt": ["virt", "deprecated_api"],
-    "network": ["network", "deprecated_api"],
-    "storage": ["storage", "deprecated_api"],
-    "iuo": ["install_upgrade_operators", "deprecated_api"],
-    "observability": ["observability", "deprecated_api"],
-    "infrastructure": ["infrastructure", "deprecated_api"],
-    "data_protection": ["data_protection", "deprecated_api"],
+    "chaos": ["chaos", "deprecated_api", "post_test_alerts"],
+    "virt": ["virt", "deprecated_api", "post_test_alerts"],
+    "network": ["network", "deprecated_api", "post_test_alerts"],
+    "storage": ["storage", "deprecated_api", "post_test_alerts"],
+    "iuo": ["install_upgrade_operators", "deprecated_api", "post_test_alerts"],
+    "observability": ["observability", "deprecated_api", "post_test_alerts"],
+    "infrastructure": ["infrastructure", "deprecated_api", "post_test_alerts"],
+    "data_protection": ["data_protection", "deprecated_api", "post_test_alerts"],
 }
 NAMESPACE_COLLECTION = {
     "storage": [NamespacesNames.OPENSHIFT_STORAGE],
@@ -137,6 +137,7 @@ def pytest_addoption(parser):
     ci_group = parser.getgroup(name="CI")
     component_sanity_group = parser.getgroup(name="ComponentSanity")
     ai_insights_group = parser.getgroup(name="ai-job-insight")
+    post_test_alerts_group = parser.getgroup(name="PostTestAlerts")
 
     # Upgrade addoption
     install_upgrade_group.addoption(
@@ -302,6 +303,13 @@ def pytest_addoption(parser):
     deprecate_api_test_group.addoption(
         "--skip-deprecated-api-test",
         help="By default test_deprecation_audit_logs will always run, pass this flag to skip it",
+        action="store_true",
+    )
+
+    # Post test alerts group
+    post_test_alerts_group.addoption(
+        "--skip-post-test-alerts",
+        help="By default test_no_critical_alerts_after_tests will always run, pass this flag to skip it",
         action="store_true",
     )
 
@@ -560,6 +568,20 @@ def filter_deprecated_api_tests(items: list[Item], config: Config) -> list[Item]
     return items
 
 
+def filter_post_test_alerts_tests(items: list[Item], config: Config) -> list[Item]:
+    # filter out post test alerts tests, if explicitly asked or if running upgrade/install tests
+    if (
+        config.getoption("--skip-post-test-alerts")
+        or config.getoption("--install")
+        or config.getoption("--upgrade")
+        or config.getoption("--upgrade_custom")
+    ):
+        discard_tests, items_to_return = remove_tests_from_list(items=items, filter_str="post_test_alerts")
+        config.hook.pytest_deselected(items=discard_tests)
+        return items_to_return
+    return items
+
+
 def filter_sno_only_tests(items: list[Item], config: Config) -> list[Item]:
     if config.getoption("-m") and "sno" not in config.getoption("-m"):
         discard_tests, items_to_return = remove_tests_from_list(items=items, filter_str="single_node_tests")
@@ -574,6 +596,11 @@ def pytest_configure(config):
     file_or_dir = config.option.file_or_dir
     if file_or_dir and deprecation_tests_dir_path not in file_or_dir and file_or_dir != ["tests"]:
         config.option.file_or_dir.append(deprecation_tests_dir_path)
+
+    # post_test_alerts tests should always run regardless the path that passed to pytest.
+    post_test_alerts_dir_path = "tests/post_test_alerts"
+    if file_or_dir and post_test_alerts_dir_path not in file_or_dir and file_or_dir != ["tests"]:
+        config.option.file_or_dir.append(post_test_alerts_dir_path)
 
     if conformance_storage_class := config.getoption("conformance_storage_class"):
         py_config["storage_class_matrix"] = StorageClassConfig(
@@ -642,6 +669,7 @@ def pytest_collection_modifyitems(session, config, items):
     if discard:
         config.hook.pytest_deselected(items=discard)
     items[:] = filter_deprecated_api_tests(items=items, config=config)
+    items[:] = filter_post_test_alerts_tests(items=items, config=config)
     items[:] = filter_sno_only_tests(items=items, config=config)
     items[:] = filter_hpp_tests(items=items, config=config)
     items[:] = mark_nmstate_dependent_tests(items=items)
