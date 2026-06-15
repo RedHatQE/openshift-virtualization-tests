@@ -3,6 +3,8 @@ WSL2 test
 Note: The windows image runs the WSL guest (Fedora-33) at boot.
 """
 
+from __future__ import annotations
+
 import logging
 import re
 import shlex

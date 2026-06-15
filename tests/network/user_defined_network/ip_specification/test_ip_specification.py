@@ -7,6 +7,8 @@ STP Reference:
 https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-network/ip-request.md
 """
 
+from __future__ import annotations
+
 import ipaddress
 from typing import TYPE_CHECKING
 

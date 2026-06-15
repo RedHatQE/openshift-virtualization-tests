@@ -2,6 +2,8 @@
 Common templates test RHEL OS support
 """
 
+from __future__ import annotations
+
 import logging
 from typing import TYPE_CHECKING
 

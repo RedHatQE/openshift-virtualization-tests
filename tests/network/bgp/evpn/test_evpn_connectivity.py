@@ -16,6 +16,8 @@ Preconditions:
     - Running connectivity reference VM with a primary EVPN-enabled CUDN.
 """
 
+from __future__ import annotations
+
 import ipaddress
 from typing import TYPE_CHECKING
 

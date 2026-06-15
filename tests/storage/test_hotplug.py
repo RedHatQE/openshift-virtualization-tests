@@ -2,6 +2,8 @@
 Automation for Hot Plug
 """
 
+from __future__ import annotations
+
 import logging
 import shlex
 from typing import TYPE_CHECKING

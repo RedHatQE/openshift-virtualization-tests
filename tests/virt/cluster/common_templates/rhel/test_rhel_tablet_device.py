@@ -4,6 +4,8 @@ https://github.com/kubevirt/kubevirt/pull/1987
 https://libvirt.org/formatdomain.html#elementsInput
 """
 
+from __future__ import annotations
+
 import logging
 import re
 import shlex

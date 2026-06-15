@@ -8,6 +8,8 @@ Markers:
     - mixed_os_nodes
 """
 
+from __future__ import annotations
+
 import ipaddress
 from typing import TYPE_CHECKING
 

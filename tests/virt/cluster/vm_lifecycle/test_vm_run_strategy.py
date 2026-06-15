@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 # Run strategies logic can be found under
 # https://kubevirt.io/user-guide/#/creation/run-strategies?id=run-strategies
-
 import logging
 import re
 from typing import TYPE_CHECKING

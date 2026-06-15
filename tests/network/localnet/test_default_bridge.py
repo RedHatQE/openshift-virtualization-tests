@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ipaddress
 from ipaddress import ip_interface
 from typing import TYPE_CHECKING

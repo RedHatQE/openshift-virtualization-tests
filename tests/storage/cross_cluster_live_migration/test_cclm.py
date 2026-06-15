@@ -4,6 +4,8 @@ Cross-cluster live migration tests.
 Jira epic: https://redhat.atlassian.net/browse/CNV-50823 # <skip-jira-utils-check>
 """
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 import pytest
