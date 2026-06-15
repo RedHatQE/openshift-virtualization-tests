@@ -115,7 +115,7 @@ class TestHCONonDefaultFields:
                 {
                     "rpatch": {
                         "spec": {
-                            STORAGE_IMPORT_KEY_HCO_CR: STORAGE_IMPORT_VALUE,
+                            "storage": {STORAGE_IMPORT_KEY_HCO_CR: STORAGE_IMPORT_VALUE},
                         }
                     },
                     "list_resource_reconcile": [CDI],
@@ -130,7 +130,7 @@ class TestHCONonDefaultFields:
                 {
                     "rpatch": {
                         "spec": {
-                            NP_INFRA_KEY: NP_INFRA_VALUE_HCO_CR,
+                            "deployment": {"nodePlacements": {NP_INFRA_KEY: NP_INFRA_VALUE_HCO_CR}},
                         }
                     },
                     "list_resource_reconcile": [CDI, KubeVirt],
@@ -146,7 +146,7 @@ class TestHCONonDefaultFields:
                 {
                     "rpatch": {
                         "spec": {
-                            NP_WORKLOADS_KEY_HCO_CR: NP_WORKLOADS_VALUE_HCO_CR,
+                            "deployment": {"nodePlacements": {"workload": NP_WORKLOADS_VALUE_HCO_CR}},
                         }
                     },
                     "list_resource_reconcile": [CDI, KubeVirt],
