@@ -2,11 +2,10 @@ import pytest
 from pytest_testconfig import config as py_config
 
 from tests.os_params import FEDORA_LATEST, FEDORA_LATEST_LABELS
+from tests.storage.constants import STORAGE_CLASS_A, STORAGE_CLASS_B
 from tests.storage.storage_migration.constants import (
     CONTENT,
     FILE_BEFORE_STORAGE_MIGRATION,
-    STORAGE_CLASS_A,
-    STORAGE_CLASS_B,
     WINDOWS_FILE_WITH_PATH,
 )
 from tests.storage.storage_migration.utils import (
