@@ -10,7 +10,12 @@ from ocp_resources.resource import ResourceEditor
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from libs.net.ip import random_ipv4_address
-from libs.net.vmspec import lookup_iface_status, lookup_iface_status_ip, wait_for_missing_iface_status
+from libs.net.vmspec import (
+    VMInterfaceStatusNotFoundError,
+    lookup_iface_status,
+    lookup_iface_status_ip,
+    wait_for_missing_iface_status,
+)
 from libs.vm.factory import base_vmspec, fedora_vm
 from libs.vm.spec import Affinity, CloudInitNoCloud, Interface, Metadata, Multus, Network
 from libs.vm.vm import BaseVirtualMachine, add_volume_disk, cloudinitdisk_storage
@@ -31,7 +36,6 @@ from utilities.constants import (
 )
 from utilities.infra import get_pod_by_name_prefix
 from utilities.network import (
-    IfaceNotFound,
     cloud_init_network_data,
     compose_cloud_init_data_dict,
     network_device,
@@ -251,7 +255,7 @@ def get_guest_vm_interface_name_by_vmi_interface_name(vm, vm_interface_name):
     for interface in vmi_interfaces:
         if interface["name"] == vm_interface_name:
             return interface["interfaceName"]
-    raise IfaceNotFound(name=vm_interface_name)
+    raise VMInterfaceStatusNotFoundError(f"Interface {vm_interface_name} not found in VM {vm.name} status")
 
 
 @contextlib.contextmanager
@@ -294,7 +298,7 @@ def search_hot_plugged_interface_in_vmi(vm, interface_name):
     try:
         return wait_for_interface_hot_plug_completion(vmi=vm.vmi, interface_name=interface_name)
     except TimeoutExpiredError:
-        raise IfaceNotFound(name=interface_name)
+        raise VMInterfaceStatusNotFoundError(f"Interface {interface_name} not found in VM {vm.name} status")
 
 
 def get_kubemacpool_controller_log(

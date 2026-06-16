@@ -4,7 +4,7 @@ import pytest
 
 from libs.net import netattachdef
 from libs.net.ip import random_ipv4_address
-from libs.net.vmspec import lookup_iface_status_ip
+from libs.net.vmspec import VMInterfaceStatusNotFoundError, lookup_iface_status_ip
 from tests.network.l2_bridge.libl2bridge import (
     check_mac_released,
     create_bridge_interface_for_hot_plug,
@@ -21,7 +21,6 @@ from tests.network.l2_bridge.libl2bridge import (
 )
 from utilities.constants import FLAT_OVERLAY_STR, QUARANTINED, SRIOV
 from utilities.network import (
-    IfaceNotFound,
     assert_ping_successful,
     network_nad,
 )
@@ -637,7 +636,7 @@ class TestHotPlugInterfaceToVmWithSecondaryInterface:
         hot_unplugged_additional_interface,
         running_vm_with_secondary_and_hot_plugged_interfaces,
     ):
-        with pytest.raises(IfaceNotFound):
+        with pytest.raises(VMInterfaceStatusNotFoundError):
             search_hot_plugged_interface_in_vmi(
                 vm=running_vm_with_secondary_and_hot_plugged_interfaces,
                 interface_name=hot_unplugged_additional_interface.name,
@@ -691,7 +690,7 @@ class TestHotPlugInterfaceToVmWithSecondaryInterface:
         hot_unplug_secondary_interface_from_setup,
         network_attachment_definition_for_hot_plug,
     ):
-        with pytest.raises(IfaceNotFound):
+        with pytest.raises(VMInterfaceStatusNotFoundError):
             search_hot_plugged_interface_in_vmi(
                 vm=running_vm_with_secondary_and_hot_plugged_interfaces,
                 interface_name=network_attachment_definition_for_hot_plug.name,
