@@ -36,7 +36,7 @@ DEFAULT_DV_SIZE = Images.Cirros.DEFAULT_DV_SIZE
 
 
 @pytest.fixture()
-def bridge_on_node(admin_client):
+def bridge_on_node():
     """Create a Linux Bridge network device and yield it."""
     with network_device(
         interface_type=LINUX_BRIDGE,
@@ -47,7 +47,7 @@ def bridge_on_node(admin_client):
 
 
 @pytest.fixture()
-def linux_nad(admin_client, namespace, bridge_on_node):
+def linux_nad(namespace, bridge_on_node):
     """Create a Linux Bridge Network Attachment Definition (NAD) and yield it."""
     with network_nad(
         namespace=namespace,
