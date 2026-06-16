@@ -1,7 +1,7 @@
 # Compatibility shim: re-exports every public name from submodules so that
 # existing `from utilities.constants import X` statements continue to work
-# while the per-team import migration (PRs 2-6) is in progress.
-# This file will be emptied in PR 7 once all callers use direct submodule imports.
+# while the per-team import migration is in progress.
+# This file will be emptied once all callers use direct submodule imports.
 #
 # NOTE: `Images` is computed at the very bottom of this file (not in images.py)
 # to avoid a circular import: the original computation called
