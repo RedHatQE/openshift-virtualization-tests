@@ -71,5 +71,6 @@ class TestVeleroBackupHookOptOut:
             4. Check Velero backup logs for hook execution entries
 
         Expected:
-            - Backup completes with status Completed and backup logs contain freeze/unfreeze hook entries
+            - Backup completes with status Completed
+            - Backup logs contain freeze/unfreeze hook entries
         """
