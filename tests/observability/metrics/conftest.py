@@ -22,6 +22,7 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_COUNT_SUCCEEDED,
     KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
     KUBEVIRT_VMI_STATUS_ADDRESSES,
+    KUBEVIRT_VMI_SYNC_TOTAL,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
     SUM_KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_BUCKET_SUCCEEDED,
 )
@@ -661,3 +662,15 @@ def expected_cpu_affinity_metric_value(admin_client, vm_with_cpu_spec):
 
     # return multiplication for multi-CPU VMs
     return str(cpu_count_from_vm_node * cpu_count_from_vm)
+
+
+@pytest.fixture(scope="class")
+def initial_vmi_sync_total_values(prometheus, vm_for_migration_metrics_test):
+    metric_query = KUBEVIRT_VMI_SYNC_TOTAL.format(name=vm_for_migration_metrics_test.name)
+    results = prometheus.query_sampler(query=metric_query)
+    return {result["metric"]["pod"]: float(result["value"][1]) for result in results}
+
+
+@pytest.fixture(scope="class")
+def deleted_vmi_sync_total_vm(vm_for_migration_metrics_test):
+    vm_for_migration_metrics_test.delete(wait=True)
