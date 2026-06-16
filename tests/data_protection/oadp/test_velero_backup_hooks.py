@@ -32,10 +32,10 @@ class TestVeleroBackupHookOptOut:
         Steps:
             1. Pause the running VM
             2. Run Velero backup targeting the VM namespace
-            3. Check Velero backup logs for hook execution entries
+            3. Wait for Velero backup to complete
 
         Expected:
-            - Backup logs do not contain freeze/unfreeze hook entries
+            - Backup completes with status Completed
         """
 
     @pytest.mark.polarion("CNV-16268")
@@ -67,8 +67,9 @@ class TestVeleroBackupHookOptOut:
         Steps:
             1. Pause the running VM
             2. Run Velero backup targeting the VM namespace
-            3. Check Velero backup logs for hook execution entries
+            3. Wait for Velero backup to complete
+            4. Check Velero backup logs for hook execution entries
 
         Expected:
-            - Backup logs contain freeze/unfreeze hook entries
+            - Backup completes with status Completed and backup logs contain freeze/unfreeze hook entries
         """
