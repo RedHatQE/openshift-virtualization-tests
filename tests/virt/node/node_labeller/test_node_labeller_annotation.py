@@ -39,7 +39,7 @@ def worker1_supported_cpu_models_labels(worker_node1):
     return node_cpu_models_labels
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture()
 def labelled_worker_node1(worker1_supported_cpu_models_labels, worker_node1):
     updated_label = worker1_supported_cpu_models_labels[0]
     LOGGER.info(f"Updating node {worker_node1.name} label {updated_label}")
