@@ -284,6 +284,7 @@ def _upload_image(dv_name, namespace, storage_class, local_name, client):
 @pytest.mark.sno
 @pytest.mark.s390x
 @pytest.mark.polarion("CNV-2015")
+@pytest.mark.usefixtures("multiprocessing_start_method_fork")
 @pytest.mark.parametrize(
     "upload_file_path",
     [

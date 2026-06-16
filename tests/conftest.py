@@ -4,6 +4,7 @@ Pytest conftest file for CNV tests
 
 import copy
 import logging
+import multiprocessing
 import os
 import os.path
 import re
@@ -225,6 +226,22 @@ RWX_FS_STORAGE_CLASS_NAMES_LIST = [
 
 # Pre-compiled regex for audit log filename parsing: captures date and time components
 AUDIT_LOG_PATTERN = re.compile(r"audit-(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2}\.\d{3})\.log")
+
+
+@pytest.fixture(scope="module")
+def multiprocessing_start_method_fork():
+    """Temporarily set multiprocessing start method to ``fork``.
+
+    Side effects:
+        Changes the process-global multiprocessing start method to ``fork``
+        for the module lifetime, then restores the previous method on teardown.
+    """
+    # https://docs.python.org/3/library/multiprocessing.html#multiprocessing.Process
+    # https://github.com/python/cpython/issues/132898
+    original_start_method = multiprocessing.get_start_method()
+    multiprocessing.set_start_method("fork", force=True)
+    yield
+    multiprocessing.set_start_method(original_start_method, force=True)
 
 
 @pytest.fixture(scope="session")
