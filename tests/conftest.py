@@ -847,18 +847,33 @@ def golden_image_data_volume_scope_module(request, admin_client, golden_images_n
 
 @pytest.fixture()
 def golden_image_data_volume_scope_function(request, admin_client, golden_images_namespace):
-    yield from data_volume(
-        request=request,
-        namespace=golden_images_namespace,
-        storage_class=request.param["storage_class"],
-        check_dv_exists=True,
-        client=admin_client,
-    )
+    if py_config.get("win_golden_image_name"):
+        yield None
+    else:
+        yield from data_volume(
+            request=request,
+            namespace=golden_images_namespace,
+            storage_class=request.param["storage_class"],
+            check_dv_exists=True,
+            client=admin_client,
+        )
 
 
 @pytest.fixture()
-def golden_image_data_source_scope_function(admin_client, golden_image_data_volume_scope_function):
-    yield from create_or_update_data_source(admin_client=admin_client, dv=golden_image_data_volume_scope_function)
+def golden_image_data_source_scope_function(
+    admin_client, golden_images_namespace, golden_image_data_volume_scope_function
+):
+    win_ds_name = py_config.get("win_golden_image_name")
+    if win_ds_name:
+        LOGGER.info(f"Using Windows golden image DataSource: {win_ds_name}")
+        yield DataSource(
+            namespace=golden_images_namespace.name,
+            name=win_ds_name,
+            client=admin_client,
+            ensure_exists=True,
+        )
+    else:
+        yield from create_or_update_data_source(admin_client=admin_client, dv=golden_image_data_volume_scope_function)
 
 
 @pytest.fixture(scope="session")
@@ -1568,7 +1583,7 @@ def must_gather_image_url(csv_scope_session):
     return must_gather_image[0]
 
 
-@pytest.fixture
+@pytest.fixture()
 def term_handler_scope_function():
     orig = signal(SIGTERM, getsignal(SIGINT))
     yield

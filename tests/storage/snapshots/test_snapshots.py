@@ -440,6 +440,7 @@ def test_fail_to_snapshot_with_unprivileged_client_dv_permissions(
     )
 
 
+@pytest.mark.windows
 @pytest.mark.parametrize(
     "windows_vm_for_snapshot",
     [
@@ -469,6 +470,7 @@ def test_online_windows_vm_successful_restore(
         )
 
 
+@pytest.mark.windows
 @pytest.mark.parametrize(
     "windows_vm_for_snapshot",
     [

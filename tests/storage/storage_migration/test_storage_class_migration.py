@@ -223,7 +223,13 @@ class TestStorageClassMigrationWithVolumeHotplug:
         pytest.param(
             {"source_storage_class": py_config[STORAGE_CLASS_A]},
             {"target_storage_class": py_config[STORAGE_CLASS_B]},
-            {"vms_fixtures": ["windows_vm_with_vtpm_for_storage_migration"]},
+            {
+                "vms_fixtures": [
+                    "windows_vm_with_vtpm_golden_image_for_storage_migration"
+                    if py_config.get("win_golden_image_name")
+                    else "windows_vm_with_vtpm_for_storage_migration"
+                ]
+            },
             {"online_vm": [True]},  # Desired VM Running status for VMs in "vms_fixtures" list
             {"dv_wait_timeout": TIMEOUT_60MIN},
             id="mig_win_vm_with_vtpm",
@@ -231,6 +237,7 @@ class TestStorageClassMigrationWithVolumeHotplug:
     ],
     indirect=True,
 )
+@pytest.mark.windows
 @pytest.mark.tier3
 class TestStorageClassMigrationWindowsWithVTPM:
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME_WINDOWS}::test_vm_storage_class_migration_windows_vm_with_vtpm")

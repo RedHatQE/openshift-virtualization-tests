@@ -6,12 +6,15 @@ import logging
 import shlex
 
 import pytest
+from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.role_binding import RoleBinding
 from ocp_resources.virtual_machine_restore import VirtualMachineRestore
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 from pyhelper_utils.shell import run_ssh_commands
+from pytest_testconfig import config as py_config
 
+from tests.storage.constants import WIN2022_GOLDEN_IMAGE_OS_VERSION, WIN2022_GOLDEN_IMAGE_TEMPLATE_LABELS
 from tests.storage.snapshots.constants import WINDOWS_DIRECTORY_PATH
 from tests.storage.utils import (
     assert_windows_directory_existence,
@@ -20,6 +23,7 @@ from tests.storage.utils import (
     set_permissions,
 )
 from utilities.constants import TIMEOUT_2MIN, TIMEOUT_5SEC, TIMEOUT_10MIN, UNPRIVILEGED_USER
+from utilities.virt import vm_instance_from_template, wait_for_windows_vm
 
 LOGGER = logging.getLogger(__name__)
 
@@ -51,16 +55,39 @@ def windows_vm_for_snapshot(
     unprivileged_client,
     modern_cpu_for_migration,
     storage_class_matrix_snapshot_matrix__module__,
+    golden_images_namespace,
 ):
-    with create_windows19_vm(
-        dv_name=request.param["dv_name"],
-        namespace=namespace.name,
-        client=unprivileged_client,
-        vm_name=request.param["vm_name"],
-        cpu_model=modern_cpu_for_migration,
-        storage_class=[*storage_class_matrix_snapshot_matrix__module__][0],
-    ) as vm:
-        yield vm
+    win_ds_name = py_config.get("win_golden_image_name")
+    if win_ds_name:
+        data_source = DataSource(
+            namespace=golden_images_namespace.name,
+            name=win_ds_name,
+            client=golden_images_namespace.client,
+            ensure_exists=True,
+        )
+        with vm_instance_from_template(
+            request={
+                "vm_name": request.param["vm_name"],
+                "template_labels": WIN2022_GOLDEN_IMAGE_TEMPLATE_LABELS,
+                "ssh": True,
+                "os_version": WIN2022_GOLDEN_IMAGE_OS_VERSION,
+            },
+            unprivileged_client=unprivileged_client,
+            namespace=namespace,
+            data_source=data_source,
+        ) as vm:
+            wait_for_windows_vm(vm=vm, version=WIN2022_GOLDEN_IMAGE_OS_VERSION)
+            yield vm
+    else:
+        with create_windows19_vm(
+            dv_name=request.param["dv_name"],
+            namespace=namespace.name,
+            client=unprivileged_client,
+            vm_name=request.param["vm_name"],
+            cpu_model=modern_cpu_for_migration,
+            storage_class=[*storage_class_matrix_snapshot_matrix__module__][0],
+        ) as vm:
+            yield vm
 
 
 @pytest.fixture()

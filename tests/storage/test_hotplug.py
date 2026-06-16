@@ -6,10 +6,13 @@ import logging
 import shlex
 
 import pytest
+from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.storage_profile import StorageProfile
+from pytest_testconfig import config as py_config
 
+from tests.storage.constants import WIN2022_GOLDEN_IMAGE_OS_VERSION, WIN2022_GOLDEN_IMAGE_TEMPLATE_LABELS
 from tests.storage.utils import assert_disk_bus
 from tests.utils import create_windows2022_dv_from_registry, create_windows2022_vm_with_vtpm_from_registry
 from utilities.constants import HOTPLUG_DISK_SCSI_BUS, HOTPLUG_DISK_SERIAL, HOTPLUG_DISK_VIRTIO_BUS, Images
@@ -27,6 +30,8 @@ from utilities.virt import (
     fedora_vm_body,
     migrate_vm_and_verify,
     running_vm,
+    vm_instance_from_template,
+    wait_for_windows_vm,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -78,13 +83,17 @@ def windows_dv_from_registry_scope_class(
     storage_class_matrix__class__,
 ):
     """Creates a Windows 2022 DataVolume from registry container disk."""
-    with create_windows2022_dv_from_registry(
-        dv_name="dv-windows-2022-hotplug",
-        namespace=namespace.name,
-        client=unprivileged_client,
-        storage_class=next(iter(storage_class_matrix__class__)),
-    ) as dv_dict:
-        yield dv_dict
+    win_ds_name = py_config.get("win_golden_image_name")
+    if win_ds_name:
+        yield None
+    else:
+        with create_windows2022_dv_from_registry(
+            dv_name="dv-windows-2022-hotplug",
+            namespace=namespace.name,
+            client=unprivileged_client,
+            storage_class=next(iter(storage_class_matrix__class__)),
+        ) as dv_dict:
+            yield dv_dict
 
 
 @pytest.fixture(scope="class")
@@ -93,16 +102,40 @@ def vm_instance_from_template_multi_storage_scope_class(
     namespace,
     modern_cpu_for_migration,
     windows_dv_from_registry_scope_class,
+    golden_images_namespace,
 ):
-    """Creates a Windows 2022 VM with vTPM from registry container disk."""
-    with create_windows2022_vm_with_vtpm_from_registry(
-        dv_dict=windows_dv_from_registry_scope_class,
-        namespace=namespace.name,
-        client=unprivileged_client,
-        vm_name="vm-win-2022-hotplug",
-        cpu_model=modern_cpu_for_migration,
-    ) as vm:
-        yield vm
+    """Creates a Windows 2022 VM with vTPM from registry container disk or golden image."""
+    win_ds_name = py_config.get("win_golden_image_name")
+    if win_ds_name:
+        data_source = DataSource(
+            namespace=golden_images_namespace.name,
+            name=win_ds_name,
+            client=golden_images_namespace.client,
+            ensure_exists=True,
+        )
+        with vm_instance_from_template(
+            request={
+                "vm_name": "vm-win-2022-hotplug",
+                "template_labels": WIN2022_GOLDEN_IMAGE_TEMPLATE_LABELS,
+                "ssh": True,
+                "os_version": WIN2022_GOLDEN_IMAGE_OS_VERSION,
+                "cpu_model": modern_cpu_for_migration,
+            },
+            unprivileged_client=unprivileged_client,
+            namespace=namespace,
+            data_source=data_source,
+        ) as vm:
+            wait_for_windows_vm(vm=vm, version=WIN2022_GOLDEN_IMAGE_OS_VERSION)
+            yield vm
+    else:
+        with create_windows2022_vm_with_vtpm_from_registry(
+            dv_dict=windows_dv_from_registry_scope_class,
+            namespace=namespace.name,
+            client=unprivileged_client,
+            vm_name="vm-win-2022-hotplug",
+            cpu_model=modern_cpu_for_migration,
+        ) as vm:
+            yield vm
 
 
 @pytest.fixture(scope="class")
@@ -262,6 +295,7 @@ class TestHotPlugWithSerialPersist:
 )
 @pytest.mark.usefixtures("hotplug_volume_windows_scope_class")
 @pytest.mark.tier3
+@pytest.mark.windows
 class TestHotPlugWindows:
     @pytest.mark.polarion("CNV-6525")
     @pytest.mark.dependency(name="test_windows_hotplug")

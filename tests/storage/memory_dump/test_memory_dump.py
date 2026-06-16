@@ -10,6 +10,7 @@ from tests.storage.memory_dump.utils import wait_for_memory_dump_status_removed
 
 
 @pytest.mark.tier3
+@pytest.mark.windows
 @pytest.mark.parametrize(
     "golden_image_data_volume_scope_function, windows_vm_for_memory_dump",
     [
