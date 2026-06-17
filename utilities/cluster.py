@@ -44,7 +44,6 @@ def get_oc_whoami_username(*, wait_timeout: int = 30, sleep: int = 3):
     def _whoami() -> str:
         did_succeed, stdout, _ = run_command(
             command=["oc", "whoami"],
-            capture_output=True,
             check=False,
             timeout=sleep,
         )

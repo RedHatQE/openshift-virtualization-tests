@@ -335,7 +335,7 @@ class TestCreateRhelVm:
         mock_get_config_map.assert_called_once_with(namespace="test-namespace")
         mock_get_url.assert_called_once()
         mock_dv.to_dict.assert_called_once()
-        mock_running_vm.assert_called_once_with(vm=mock_vm, wait_for_interfaces=True)
+        mock_running_vm.assert_called_once_with(vm=mock_vm)
         mock_cleanup.assert_called_once_with(artifactory_secret=mock_secret, artifactory_config_map=mock_config_map)
 
     @patch("utilities.oadp.cleanup_artifactory_secret_and_config_map")
