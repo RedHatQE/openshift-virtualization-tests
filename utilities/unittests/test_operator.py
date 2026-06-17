@@ -10,6 +10,7 @@ from timeout_sampler import TimeoutExpiredError
 
 # Import after setting up mocks to avoid circular dependency
 from utilities.operator import (
+    TIMEOUT_75MIN,
     approve_install_plan,
     cluster_with_icsp,
     collect_mcp_data_on_update_timeout,
@@ -754,7 +755,7 @@ class TestWaitForMcpUpdateEnd:
 
         wait_for_mcp_update_end([mock_mcp])
 
-        mock_wait_updated.assert_called_once_with(machine_config_pools_list=[mock_mcp])
+        mock_wait_updated.assert_called_once_with(machine_config_pools_list=[mock_mcp], timeout=TIMEOUT_75MIN)
         mock_wait_ready.assert_called_once_with(machine_config_pools_list=[mock_mcp])
 
 

@@ -1,11 +1,16 @@
 import logging
 from contextlib import contextmanager
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 import pytest
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.template import Template
 from ocp_resources.virtual_machine import VirtualMachine
+
+if TYPE_CHECKING:
+    from ocp_resources.cluster_service_version import ClusterServiceVersion
+
 from ocp_resources.virtual_machine_instance_migration import (
     VirtualMachineInstanceMigration,
 )
@@ -29,11 +34,10 @@ LOGGER = logging.getLogger(__name__)
 TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 
-def get_virt_launcher_image_from_csv(csv):
-    for item in csv.instance.spec.relatedImages:
-        if VIRT_LAUNCHER in item["name"]:
-            return item["image"]
-    raise ValueError(f"Image digest for {VIRT_LAUNCHER} not found")
+def get_virt_launcher_images_from_csv(csv: ClusterServiceVersion) -> set[str]:
+    if images := {item["image"] for item in csv.instance.spec.relatedImages if VIRT_LAUNCHER in item["name"]}:
+        return images
+    raise ValueError(f"Image digests for {VIRT_LAUNCHER} not found")
 
 
 def verify_vms_ssh_connectivity(vms_list):
@@ -140,11 +144,13 @@ def wait_for_automatic_vm_migrations(vm_list: list[VirtualMachine], admin_client
     return False
 
 
-def validate_vms_pod_updated(admin_client, expected_virt_launcher_image, vm_list):
+def validate_vms_pod_updated(
+    expected_virt_launcher_images: set[str], vm_list: list[VirtualMachine]
+) -> list[dict[str, str]]:
     return [
         {pod.name: pod.instance.spec.containers[0].image}
-        for pod in [vm.vmi.get_virt_launcher_pod(privileged_client=admin_client) for vm in vm_list]
-        if pod.instance.spec.containers[0].image != expected_virt_launcher_image
+        for pod in [vm.vmi.virt_launcher_pod for vm in vm_list]
+        if pod.instance.spec.containers[0].image not in expected_virt_launcher_images
     ]
 
 
