@@ -233,7 +233,9 @@ class TestCCLMFromStorageAtoB:
         depends=[f"{TESTS_CLASS_NAME_STORAGE_A_TO_B}::test_migrate_vm_from_remote_to_local_cluster"]
     )
     @pytest.mark.polarion("CNV-15954")
-    def test_compute_live_migrate_vms_after_cclm(self, admin_client: DynamicClient, local_vms_after_cclm_migration: list[VirtualMachineForTests]):
+    def test_compute_live_migrate_vms_after_cclm(
+        self, admin_client: DynamicClient, local_vms_after_cclm_migration: list[VirtualMachineForTests]
+    ):
         verify_compute_live_migration_after_cclm(client=admin_client, local_vms=local_vms_after_cclm_migration)
 
     @pytest.mark.polarion("CNV-15959")

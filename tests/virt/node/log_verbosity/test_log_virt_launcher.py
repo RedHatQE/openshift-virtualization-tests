@@ -20,6 +20,7 @@ from utilities.virt import (
 
 if TYPE_CHECKING:
     from kubernetes.dynamic import DynamicClient
+    from ocp_resources.migration_policy import MigrationPolicy
     from ocp_resources.pod import Pod
     from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
 
@@ -98,7 +99,8 @@ def source_pod_log_verbosity_test(admin_client, vm_for_migration_progress_test):
 @pytest.fixture()
 def migrated_vm_with_policy(
     admin_client: DynamicClient,
-    migration_policy_with_bandwidth,
+    migration_policy_with_bandwidth: MigrationPolicy,
+    source_pod_log_verbosity_test: Pod,
     vm_for_migration_progress_test: VirtualMachineForTests,
 ) -> Generator[VirtualMachineInstanceMigration]:
     migration = migrate_vm_and_verify(

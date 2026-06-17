@@ -43,15 +43,15 @@ if TYPE_CHECKING:
     from tests.network.bgp.evpn.libevpn import EndpointTcpClient
 
 
+_L2_ENDPOINT_IPV4: str = f"{random_ipv4_address(net_seed=EVPN_CUDN_NET_SEED, host_address=249)}/24"
+_L2_ENDPOINT_IPV6: str = f"{random_ipv6_address(net_seed=EVPN_CUDN_NET_SEED, host_address=249)}/64"
+
+
 pytestmark = [
     pytest.mark.bgp,
     pytest.mark.ipv4,
     pytest.mark.usefixtures("evpn_setup_ready"),
 ]
-
-
-_L2_ENDPOINT_IPV4: str = f"{random_ipv4_address(net_seed=EVPN_CUDN_NET_SEED, host_address=249)}/24"
-_L2_ENDPOINT_IPV6: str = f"{random_ipv6_address(net_seed=EVPN_CUDN_NET_SEED, host_address=249)}/64"
 
 
 @pytest.mark.polarion("CNV-15227")
