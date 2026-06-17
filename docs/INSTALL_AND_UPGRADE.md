@@ -96,12 +96,27 @@ To upgrade to cnv 4.Y.z, using the cnv image that has been shipped, following co
 ```
 
 #### EUS upgrade
-You must provide --eus-ocp-images via cli, which is two comma separated ocp images for EUS upgrade.
-The default target cnv version will be 4.Y+2.0. Optionally, --eus-csv-target-version can be provided for 4.Y+2.z version.
+EUS-to-EUS upgrades are only viable between even-numbered minor versions (e.g., 4.20 -> 4.22).
+
+Parameters:
+
+| Parameter Name    |   Requirement   | Default Value |        Possible Value        |
+|:------------------|:---------------:|:-------------:|:----------------------------:|
+| `--cnv-version`   |  **Required**   |       -       |            4.Y.z             |
+| `--cnv-image`     |  **Required**   |       -       |        -image path-          |
+| `--cnv-channel`   |  **Optional**   |    stable     | stable, candidate, nightly   |
+| `--eus-ocp-images` |  **Required**   |       -       | comma-separated OCP images   |
+
 Command to run entire upgrade test suite for EUS upgrade, including pre and post upgrade validation:
 
 ```bash
---upgrade eus --eus-ocp-images <ocp_image_version_4.y+1.z>,<ocp_image_version_4.y+2.z> --eus-cnv-target-version <4.Y+2.z|None>
+--upgrade eus --cnv-version <target_version> --cnv-image <cnv_image_to_upgrade_to> --eus-ocp-images <ocp_image_4.y+1.z>,<ocp_image_4.y+2.z>
+```
+
+Command to run only EUS upgrade test, without any pre/post validation:
+
+```bash
+-m eus_upgrade --upgrade eus --cnv-version <target_version> --cnv-image <cnv_image_to_upgrade_to> --eus-ocp-images <ocp_image_4.y+1.z>,<ocp_image_4.y+2.z>
 ```
 #### Custom upgrade lanes
 
