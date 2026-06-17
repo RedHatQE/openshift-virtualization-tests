@@ -4,6 +4,7 @@ from ocp_resources.datavolume import DataVolume
 
 from utilities.constants import (
     ARM_64,
+    CENTOS_STREAM10_PREFERENCE,
     EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS,
     HPP_CAPABILITIES,
     OS_FLAVOR_FEDORA,
@@ -51,6 +52,7 @@ fedora_os_list = ["fedora-42"]
 centos_os_list = ["centos-stream-9"]
 
 instance_type_rhel_os_list = [RHEL10_PREFERENCE]
+instance_type_centos_os_list = [CENTOS_STREAM10_PREFERENCE]
 instance_type_fedora_os_list = [OS_FLAVOR_FEDORA]
 
 for _dir in dir():
