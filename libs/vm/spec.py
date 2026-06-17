@@ -27,6 +27,7 @@ class Metadata:
 @dataclass
 class VMISpec:
     domain: Domain
+    architecture: str | None = None
     networks: list[Network] | None = None
     volumes: list[Volume] | None = None
     terminationGracePeriodSeconds: int | None = None  # noqa: N815
