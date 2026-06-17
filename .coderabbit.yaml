@@ -121,6 +121,15 @@ reviews:
           newly added test functions in that same file are considered covered.
           The @pytest.mark.polarion decorator alone does NOT satisfy this requirement.
 
+          **Jira skip-marker enforcement:**
+          When a `Jira:` line appears in a test docstring for traceability, it MUST
+          also include `# <skip-jira-utils-check>` as an inline comment on the same line.
+          This is required so the project's jira-utils checker skips traceability references.
+          - Correct:   `Jira: https://redhat.atlassian.net/browse/CNV-87822  # <skip-jira-utils-check>`
+          - Incorrect: `Jira: https://redhat.atlassian.net/browse/CNV-80580`
+          This does NOT apply to `STP:` or `RFE:` lines — only `Jira:` lines need the marker.
+          Flag a missing `# <skip-jira-utils-check>` on a `Jira:` line as HIGH severity.
+
           Pass if no new test files and no new test functions are added in this PR.
 
   # Auto-review configuration
