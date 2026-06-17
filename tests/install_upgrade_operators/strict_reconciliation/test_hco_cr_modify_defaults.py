@@ -88,11 +88,13 @@ class TestOperatorsModify:
                 {
                     "patch": {
                         "spec": {
-                            HCO_SECURITY_KEY: {HCO_CR_CERT_CONFIG_KEY: {
-                                HCO_CR_CERT_CONFIG_CA_KEY: {
-                                    HCO_CR_CERT_CONFIG_DURATION_KEY: CERTC_DEFAULT_48H,
-                                },
-                            }}
+                            HCO_SECURITY_KEY: {
+                                HCO_CR_CERT_CONFIG_KEY: {
+                                    HCO_CR_CERT_CONFIG_CA_KEY: {
+                                        HCO_CR_CERT_CONFIG_DURATION_KEY: CERTC_DEFAULT_48H,
+                                    },
+                                }
+                            }
                         }
                     },
                 },
@@ -115,11 +117,13 @@ class TestOperatorsModify:
                 {
                     "patch": {
                         "spec": {
-                            HCO_SECURITY_KEY: {HCO_CR_CERT_CONFIG_KEY: {
-                                HCO_CR_CERT_CONFIG_CA_KEY: {
-                                    HCO_CR_CERT_CONFIG_RENEW_BEFORE_KEY: CERTC_DEFAULT_24H,
-                                },
-                            }}
+                            HCO_SECURITY_KEY: {
+                                HCO_CR_CERT_CONFIG_KEY: {
+                                    HCO_CR_CERT_CONFIG_CA_KEY: {
+                                        HCO_CR_CERT_CONFIG_RENEW_BEFORE_KEY: CERTC_DEFAULT_24H,
+                                    },
+                                }
+                            }
                         }
                     },
                 },
@@ -142,11 +146,13 @@ class TestOperatorsModify:
                 {
                     "patch": {
                         "spec": {
-                            HCO_SECURITY_KEY: {HCO_CR_CERT_CONFIG_KEY: {
-                                HCO_CR_CERT_CONFIG_SERVER_KEY: {
-                                    HCO_CR_CERT_CONFIG_DURATION_KEY: CERTC_DEFAULT_24H,
-                                },
-                            }}
+                            HCO_SECURITY_KEY: {
+                                HCO_CR_CERT_CONFIG_KEY: {
+                                    HCO_CR_CERT_CONFIG_SERVER_KEY: {
+                                        HCO_CR_CERT_CONFIG_DURATION_KEY: CERTC_DEFAULT_24H,
+                                    },
+                                }
+                            }
                         }
                     },
                 },
@@ -169,11 +175,13 @@ class TestOperatorsModify:
                 {
                     "patch": {
                         "spec": {
-                            HCO_SECURITY_KEY: {HCO_CR_CERT_CONFIG_KEY: {
-                                HCO_CR_CERT_CONFIG_SERVER_KEY: {
-                                    HCO_CR_CERT_CONFIG_RENEW_BEFORE_KEY: CERTC_DEFAULT_12H,
-                                },
-                            }}
+                            HCO_SECURITY_KEY: {
+                                HCO_CR_CERT_CONFIG_KEY: {
+                                    HCO_CR_CERT_CONFIG_SERVER_KEY: {
+                                        HCO_CR_CERT_CONFIG_RENEW_BEFORE_KEY: CERTC_DEFAULT_12H,
+                                    },
+                                }
+                            }
                         }
                     },
                 },
@@ -216,9 +224,11 @@ class TestOperatorsModify:
                 {
                     "patch": {
                         "spec": {
-                            HCO_VIRTUALIZATION_KEY: {LIVE_MIGRATION_CONFIG_KEY: {
-                                COMPLETION_TIMEOUT_PER_GIB_KEY: LM_COMPLETIONTIMEOUTPERGIB_DEFAULT,
-                            }}
+                            HCO_VIRTUALIZATION_KEY: {
+                                LIVE_MIGRATION_CONFIG_KEY: {
+                                    COMPLETION_TIMEOUT_PER_GIB_KEY: LM_COMPLETIONTIMEOUTPERGIB_DEFAULT,
+                                }
+                            }
                         }
                     }
                 },
@@ -244,9 +254,11 @@ class TestOperatorsModify:
                 {
                     "patch": {
                         "spec": {
-                            HCO_VIRTUALIZATION_KEY: {LIVE_MIGRATION_CONFIG_KEY: {
-                                PARALLEL_MIGRATIONS_PER_CLUSTER_KEY: LM_PARALLELMIGRATIONSPERCLUSTER_DEFAULT,
-                            }}
+                            HCO_VIRTUALIZATION_KEY: {
+                                LIVE_MIGRATION_CONFIG_KEY: {
+                                    PARALLEL_MIGRATIONS_PER_CLUSTER_KEY: LM_PARALLELMIGRATIONSPERCLUSTER_DEFAULT,
+                                }
+                            }
                         }
                     }
                 },
@@ -292,9 +304,11 @@ class TestOperatorsModify:
                 {
                     "patch": {
                         "spec": {
-                            HCO_VIRTUALIZATION_KEY: {LIVE_MIGRATION_CONFIG_KEY: {
-                                PROGRESS_TIMEOUT_KEY: LM_PROGRESSTIMEOUT_DEFAULT,
-                            }}
+                            HCO_VIRTUALIZATION_KEY: {
+                                LIVE_MIGRATION_CONFIG_KEY: {
+                                    PROGRESS_TIMEOUT_KEY: LM_PROGRESSTIMEOUT_DEFAULT,
+                                }
+                            }
                         }
                     }
                 },

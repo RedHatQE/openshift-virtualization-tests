@@ -174,7 +174,7 @@ When reviewing quarantine PRs, verify the **quarantine mechanism matches the fai
 
 ### HCO API Version (v5.0+)
 
-- **Use v1 API** (`hco.kubevirt.io/v1`) for all HCO CR access — NEVER use v1beta1 in new code
+- **Use v1 API** (`hco.kubevirt.io/v1`) for all HCO CR access — NEVER use v1beta1 in new code.
 - **Use `get_hyperconverged_resource()`** from `utilities/infra.py` — it returns the v1 resource
 - **Feature gates format**: use list `[{"name": "fgName"}]` or `[{"name": "fgName", "state": "Disabled"}]` — NEVER use dict format `{"fgName": True}`
 - **Use v1 hierarchical field paths** — NOT flat v1beta1 paths:
@@ -207,7 +207,7 @@ When reviewing quarantine PRs, verify the **quarantine mechanism matches the fai
   | `spec.deployment.applicationAwareConfig.enable` | ~~`spec.enableApplicationAwareQuota`~~ |
 
 - **Node placement**: `workload` (singular) in v1 — NOT `workloads` (plural)
-- **Exception**: tests that explicitly verify v1beta1 backward compatibility (conversion webhook round-trip tests) MAY use `get_hyperconverged_resource_v1beta1()` from `utilities/infra.py`. These tests must be clearly named as v1beta1 compatibility tests.
+- **Exception**: tests that explicitly verify v1beta1 backward compatibility MAY use `get_hyperconverged_resource_v1beta1()` from `utilities/infra.py`. These tests must be clearly named as v1beta1 compatibility tests.
 
 ### Code Patterns (Not Enforced by Linters)
 

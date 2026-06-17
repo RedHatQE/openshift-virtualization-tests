@@ -621,7 +621,7 @@ def get_hyperconverged_resource(client, hco_ns_name):
     raise ResourceNotFoundError(f"Hyperconverged: {hco_name} not found in {hco_ns_name}")
 
 
-def get_hyperconverged_resource_v1beta1(client, hco_ns_name):
+def get_hyperconverged_resource_v1beta1(client, hco_ns_name):  # skip-unused-code
     hco_name = py_config["hco_cr_name"]
     hco = HyperConverged(
         client=client,

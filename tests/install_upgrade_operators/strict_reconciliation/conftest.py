@@ -6,6 +6,9 @@ from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.network_addons_config import NetworkAddonsConfig
 from ocp_resources.resource import ResourceEditor
 
+from tests.install_upgrade_operators.constants import (
+    FG_STATE_ENABLED,
+)
 from tests.install_upgrade_operators.strict_reconciliation.constants import (
     CUSTOM_HCO_CR_SPEC,
 )
@@ -122,7 +125,7 @@ def hco_with_non_default_feature_gates(
     updated_fgs = list(hco_fgs)
     for fg_name in new_fgs:
         if fg_name not in existing_fg_names:
-            updated_fgs.append({"name": fg_name, "state": "Enabled"})
+            updated_fgs.append({"name": fg_name, "state": FG_STATE_ENABLED})
     with ResourceEditorValidateHCOReconcile(
         patches={hyperconverged_resource_scope_function: {"spec": {"featureGates": updated_fgs}}},
         list_resource_reconcile=[KubeVirt],

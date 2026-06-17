@@ -156,7 +156,7 @@ class TestHCONonDefaultFields:
                 NP_WORKLOADS_KEY_HCO_CR,
                 NP_WORKLOADS_VALUE_CDI_CR,
                 marks=(pytest.mark.polarion("CNV-6540")),
-                id="set_non_default_field_workloads",
+                id="set_non_default_field_workload",
             ),
         ],
         indirect=["deleted_stanza_on_hco_cr", "reconciled_cr_post_hco_update"],
