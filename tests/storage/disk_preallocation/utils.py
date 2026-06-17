@@ -16,6 +16,12 @@ LOGGER = logging.getLogger(__name__)
 
 
 def assert_preallocation_requested_annotation(pvc: PersistentVolumeClaim, status: str) -> None:
+    """Assert that PVC has the expected preallocation.requested annotation value.
+
+    Args:
+        pvc: PersistentVolumeClaim to check.
+        status: Expected annotation value (e.g. "true" or "false").
+    """
     preallocation_requested_annotation = (
         f"{NamespacedResource.ApiGroup.CDI_KUBEVIRT_IO}/storage.preallocation.requested"
     )
@@ -25,6 +31,12 @@ def assert_preallocation_requested_annotation(pvc: PersistentVolumeClaim, status
 
 
 def assert_preallocation_annotation(pvc: PersistentVolumeClaim, res: str) -> None:
+    """Assert that PVC has the expected preallocation annotation value.
+
+    Args:
+        pvc: PersistentVolumeClaim to check.
+        res: Expected annotation value (e.g. "true" or "false").
+    """
     preallocation_annotation = f"{NamespacedResource.ApiGroup.CDI_KUBEVIRT_IO}/storage.preallocation"
     assert pvc.instance.metadata.annotations.get(preallocation_annotation) == res, (
         f"'{preallocation_annotation}' should be '{res}'"
@@ -32,6 +44,15 @@ def assert_preallocation_annotation(pvc: PersistentVolumeClaim, res: str) -> Non
 
 
 def wait_for_cdi_preallocation_enabled(cdi_config: CDIConfig, expected_value: bool) -> None:
+    """Wait for CDIConfig status.preallocation to match the expected value.
+
+    Args:
+        cdi_config: CDIConfig resource to monitor.
+        expected_value: Expected preallocation status.
+
+    Raises:
+        TimeoutExpiredError: If preallocation status does not match within timeout.
+    """
     preallocation_status = ""
     try:
         for preallocation_status in TimeoutSampler(
