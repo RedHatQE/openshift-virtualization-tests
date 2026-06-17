@@ -8,7 +8,6 @@ https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main
 """
 
 import ipaddress
-from typing import Final
 
 import pytest
 
@@ -16,15 +15,12 @@ from libs.net.traffic_generator import TcpServer, client_server_active_connectio
 from libs.net.traffic_generator import VMTcpClient as TcpClient
 from libs.net.vmspec import lookup_iface_status_ip, lookup_primary_network
 from libs.vm.vm import BaseVirtualMachine
-from tests.network.libs import cloudinit
 from tests.network.user_defined_network.ip_specification.libipspec import (
     ip_address_annotation,
     read_guest_interface_ipv4,
 )
 from utilities.constants import PUBLIC_DNS_SERVER_IP
 from utilities.virt import migrate_vm_and_verify
-
-FIRST_GUEST_IFACE_NAME: Final[str] = "eth0"
 
 
 @pytest.mark.ipv4
@@ -62,7 +58,7 @@ class TestVMWithExplicitIPAddressSpecification:
             - IP address to specify on under-test VM.
 
         Steps:
-            1. Set IP address on under-test VM through annotation and cloud-init network-data.
+            1. Set IP address on under-test VM through annotation.
             2. Start the VM and wait for the Ip to be reported on the VMI status.
             3. Establish TCP connectivity from the ref VM to the under-test VM.
 
@@ -75,22 +71,16 @@ class TestVMWithExplicitIPAddressSpecification:
             template_annotations=ip_address_annotation(ip_address=ip_to_request, network_name=vm_logical_net_name)
         )
 
-        netdata = cloudinit.NetworkData(
-            ethernets={
-                FIRST_GUEST_IFACE_NAME: cloudinit.EthernetDevice(
-                    addresses=[str(ip_to_request)],
-                    gateway4=str(next(ipaddress.ip_network(address=ip_to_request, strict=False).hosts())),
-                )
-            }
-        )
-        vm_under_test.add_cloud_init(netdata=netdata)
-
         vm_under_test.start()
         vm_under_test.wait_for_agent_connected()
         assigned_ip = lookup_iface_status_ip(vm=vm_under_test, iface_name=vm_logical_net_name, ip_family=4)
 
         assert assigned_ip == ip_to_request.ip
-        assert read_guest_interface_ipv4(vm=vm_under_test, interface_name=FIRST_GUEST_IFACE_NAME) == ip_to_request
+        guest_ipv4 = read_guest_interface_ipv4(
+            vm=vm_under_test,
+            interface_name=vm_under_test.vmi.interfaces[0].interfaceName,
+        )
+        assert guest_ipv4 == ip_to_request
 
         with client_server_active_connection(
             client_vm=vm_for_connectivity_ref,
@@ -106,7 +96,7 @@ class TestVMWithExplicitIPAddressSpecification:
 
         Preconditions:
             - Running under-test VM, with a primary UDN network and an IP address specified
-              (through annotation & cloud-init).
+              (through annotation).
 
         Steps:
             1. Execute a ping command from the under-test VM to the external IP address.
@@ -126,7 +116,7 @@ class TestVMWithExplicitIPAddressSpecification:
 
         Preconditions:
             - Running under-test VM, with a primary UDN network and an IP address specified
-              (through annotation & cloud-init).
+              (through annotation).
             - Running connectivity reference VM, with a primary UDN network.
             - Established TCP connectivity from the ref VM to the under-test VM.
 
@@ -154,7 +144,7 @@ class TestVMWithExplicitIPAddressSpecification:
 
         Preconditions:
             - Running under-test VM, with a primary UDN network and an IP address specified
-              (through annotation & cloud-init).
+              (through annotation).
             - The specified IP address on the under-test VM.
 
         Steps:
@@ -170,4 +160,8 @@ class TestVMWithExplicitIPAddressSpecification:
         assigned_ip = lookup_iface_status_ip(vm=vm_under_test, iface_name=vm_logical_net_name, ip_family=4)
 
         assert assigned_ip == ip_to_request.ip
-        assert read_guest_interface_ipv4(vm=vm_under_test, interface_name=FIRST_GUEST_IFACE_NAME) == ip_to_request
+        guest_ipv4 = read_guest_interface_ipv4(
+            vm=vm_under_test,
+            interface_name=vm_under_test.vmi.interfaces[0].interfaceName,
+        )
+        assert guest_ipv4 == ip_to_request
