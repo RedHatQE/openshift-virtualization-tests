@@ -59,7 +59,6 @@ def _run_bws_cli(access_token: str, args: list[str]) -> str:
     # so success must be checked explicitly below.
     success, stdout, stderr = run_command(
         command=["bws", "--access-token", access_token, *args],
-        capture_output=True,
         hide_log_command=True,
     )
 

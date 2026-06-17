@@ -59,7 +59,6 @@ class TestGetAllCnvTestsSecrets:
             assert mock_run_command.call_count == 1
             call_args = mock_run_command.call_args
             assert call_args.kwargs["command"] == ["bws", "--access-token", "test-token", "secret", "list"]
-            assert call_args.kwargs["capture_output"] is True
 
     @patch("bitwarden.run_command")
     def test_get_all_cnv_tests_secrets_command_error(self, mock_run_command):

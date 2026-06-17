@@ -160,7 +160,6 @@ class TestGetOcWhoamiUsername:
         assert result == "system:admin"
         mock_run_command.assert_called_once_with(
             command=["oc", "whoami"],
-            capture_output=True,
             check=False,
             timeout=3,
         )

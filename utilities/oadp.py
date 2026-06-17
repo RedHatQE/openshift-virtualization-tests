@@ -183,7 +183,7 @@ def create_rhel_vm(
             run_strategy=VirtualMachine.RunStrategy.ALWAYS,
         ) as vm:
             if wait_running:
-                running_vm(vm=vm, wait_for_interfaces=True)
+                running_vm(vm=vm)
             yield vm
     finally:
         cleanup_artifactory_secret_and_config_map(
