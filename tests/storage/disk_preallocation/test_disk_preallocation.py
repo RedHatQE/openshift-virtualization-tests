@@ -1,5 +1,3 @@
-"""CDI disk preallocation test suite."""
-
 import pytest
 
 from tests.storage.disk_preallocation.utils import (
@@ -25,8 +23,8 @@ def test_preallocation_dv(registry_dv_with_preallocation):
 
 @pytest.mark.polarion("CNV-5513")
 @pytest.mark.sno
+@pytest.mark.usefixtures("cdi_preallocation_enabled")
 def test_preallocation_globally_dv_spec_without_preallocation(
-    cdi_preallocation_enabled,
     registry_dv_no_preallocation_spec,
 ):
     """
@@ -39,8 +37,8 @@ def test_preallocation_globally_dv_spec_without_preallocation(
 
 @pytest.mark.polarion("CNV-5741")
 @pytest.mark.sno
+@pytest.mark.usefixtures("cdi_preallocation_enabled")
 def test_preallocation_globally_dv_spec_with_preallocation_false(
-    cdi_preallocation_enabled,
     registry_dv_with_preallocation_false,
 ):
     """

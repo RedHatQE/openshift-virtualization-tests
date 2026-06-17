@@ -1,5 +1,3 @@
-"""Utility functions for CDI disk preallocation tests."""
-
 from __future__ import annotations
 
 import logging

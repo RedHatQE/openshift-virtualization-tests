@@ -1,5 +1,3 @@
-"""Pytest conftest file for CDI disk preallocation tests."""
-
 import pytest
 from ocp_resources.cdi import CDI
 
