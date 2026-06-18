@@ -32,7 +32,7 @@ def create_vm_for_jumbo_test(
 def cloud_init_data_for_secondary_traffic(index):
     network_data_data = {
         "ethernets": {
-            "eth1": {"addresses": [f"{random_ipv4_address(net_seed=0, host_address=index)}/24"]},
+            "eth1": {"addresses": [random_ipv4_address(net_seed=0, host_address=index)]},
         }
     }
 

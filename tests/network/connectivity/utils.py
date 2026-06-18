@@ -41,9 +41,9 @@ def secondary_interfaces_cloud_init_data(
         interface_name = f"eth{i + 1}"
         addresses = []
         if ipv4_supported_cluster():
-            addresses.append(f"{random_ipv4_address(net_seed=i, host_address=host_id)}/24")
+            addresses.append(random_ipv4_address(net_seed=i, host_address=host_id))
         if ipv6_supported_cluster():
-            addresses.append(f"{random_ipv6_address(net_seed=i, host_address=host_id)}/64")
+            addresses.append(random_ipv6_address(net_seed=i, host_address=host_id))
 
         ethernets[interface_name] = {"addresses": addresses}
 

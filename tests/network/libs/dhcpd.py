@@ -11,8 +11,8 @@ from utilities.network import LOGGER
 from utilities.virt import VirtualMachineForTests
 
 DHCP_IP_SUBNET: Final[str] = random_ipv4_address(net_seed=3, host_address=0).rpartition(".")[0]
-DHCP_IP_RANGE_START: Final[str] = random_ipv4_address(net_seed=3, host_address=3)
-DHCP_IP_RANGE_END: Final[str] = random_ipv4_address(net_seed=3, host_address=10)
+DHCP_IP_RANGE_START: Final[str] = random_ipv4_address(net_seed=3, host_address=3, cidr_required=False)
+DHCP_IP_RANGE_END: Final[str] = random_ipv4_address(net_seed=3, host_address=10, cidr_required=False)
 UNIQUE_CLIENT_ID = f"dhcp-client-id-{uuid.uuid4().hex[:16]}"
 DHCP_SERVICE_RESTART = "sudo systemctl restart dhcpd"
 DHCP_SERVER_CONF_FILE = """

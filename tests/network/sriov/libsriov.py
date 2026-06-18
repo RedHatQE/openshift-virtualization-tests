@@ -54,9 +54,9 @@ def sriov_cloud_init_data(
 ):
     sriov_addresses = []
     if ipv4_supported_cluster():
-        sriov_addresses.append(f"{random_ipv4_address(net_seed=net_seed, host_address=host_address)}/24")
+        sriov_addresses.append(random_ipv4_address(net_seed=net_seed, host_address=host_address))
     if ipv6_supported_cluster():
-        sriov_addresses.append(f"{random_ipv6_address(net_seed=net_seed, host_address=host_address)}/64")
+        sriov_addresses.append(random_ipv6_address(net_seed=net_seed, host_address=host_address))
 
     sriov_interface_data = {
         "ethernets": {

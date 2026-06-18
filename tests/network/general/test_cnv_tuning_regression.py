@@ -36,9 +36,7 @@ def linux_bridge_device(nmstate_dependent_placeholder, admin_client, worker_node
 def cnv_tuning_vm(unprivileged_client, worker_node1, linux_bridge_nad, linux_bridge_device):
     name = "tuning-vma"
     networks = {"net1": linux_bridge_nad.name}
-    network_data_data = {
-        "ethernets": {"eth1": {"addresses": [f"{random_ipv4_address(net_seed=0, host_address=1)}/24"]}}
-    }
+    network_data_data = {"ethernets": {"eth1": {"addresses": [random_ipv4_address(net_seed=0, host_address=1)]}}}
 
     with VirtualMachineForTests(
         namespace=linux_bridge_nad.namespace,

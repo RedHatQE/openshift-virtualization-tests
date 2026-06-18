@@ -1668,8 +1668,8 @@ def running_vm_upgrade_a(
             "ethernets": {
                 "eth1": {
                     "addresses": [
-                        f"{random_ipv4_address(net_seed=0, host_address=1)}/24",
-                        f"{random_ipv6_address(net_seed=0, host_address=1)}/64",
+                        random_ipv4_address(net_seed=0, host_address=1),
+                        random_ipv6_address(net_seed=0, host_address=1),
                     ]
                 }
             }
@@ -1712,8 +1712,8 @@ def running_vm_upgrade_b(
             "ethernets": {
                 "eth1": {
                     "addresses": [
-                        f"{random_ipv4_address(net_seed=0, host_address=2)}/24",
-                        f"{random_ipv6_address(net_seed=0, host_address=2)}/64",
+                        random_ipv4_address(net_seed=0, host_address=2),
+                        random_ipv6_address(net_seed=0, host_address=2),
                     ]
                 }
             }
