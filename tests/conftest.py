@@ -74,6 +74,7 @@ from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
 from libs.net.ip import filter_link_local_addresses, random_cidr_addresses_by_family
 from libs.net.vmspec import lookup_iface_status
 from tests.utils import download_and_extract_tar
+from utilities.architecture import get_cluster_architecture
 from utilities.artifactory import get_artifactory_header, get_http_image_url, get_test_artifact_server_url
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.cluster import cache_admin_client, get_oc_whoami_username
@@ -1043,7 +1044,7 @@ def mac_pool(admin_client, hco_namespace):
 
 @pytest.fixture(scope="session")
 def nodes_cpu_architecture():
-    return py_config["cpu_arch"]
+    return py_config.get("cpu_arch")
 
 
 @pytest.fixture(scope="session")
@@ -1495,7 +1496,7 @@ def cluster_info(
         f"\tOCS version: {ocs_current_version}\n"
         f"\tCNI type: {get_cluster_cni_type(admin_client=admin_client)}\n"
         f"\tWorkers type: {workers_type}\n"
-        f"\tCluster CPU Architecture: {nodes_cpu_architecture}\n"
+        f"\tCluster CPU Architecture: {py_config["cluster_arch"]}\n"
         f"\tIPv4 cluster: {ipv4_supported_cluster()}\n"
         f"\tIPv6 cluster: {ipv6_supported_cluster()}\n"
         f"\tVirtctl version: \n\t{virtctl_client_version}\n\t{virtctl_server_version}\n"
