@@ -346,8 +346,6 @@ LS_COMMAND = "ls -1 | sort | tr '\n' ' '"
 
 # hotplug
 HOTPLUG_DISK_SERIAL = "1234567890"
-HOTPLUG_DISK_VIRTIO_BUS = "virtio"
-HOTPLUG_DISK_SCSI_BUS = "scsi"
 
 ONE_CPU_CORE = 1
 ONE_CPU_THREAD = 1
