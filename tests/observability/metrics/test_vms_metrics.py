@@ -555,7 +555,7 @@ class TestVmiSyncTotal:
     """
     Tests for kubevirt_vmi_sync_total metric.
 
-    Jira: https://redhat.atlassian.net/browse/CNV-80580 # <skip-jira-utils-check>
+    Jira: https://redhat.atlassian.net/browse/CNV-80580  # <skip-jira-utils-check>
 
     Preconditions:
         - Running VM

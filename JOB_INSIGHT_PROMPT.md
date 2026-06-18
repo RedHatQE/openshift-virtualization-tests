@@ -212,7 +212,12 @@ Pattern guidance:
 - **Live migration failure:** Wrong migration policy, anti-affinity, or insufficient
   target node resources in test setup is `CODE ISSUE`; valid configuration plus
   `virt-controller` or `virt-handler` failure is `PRODUCT BUG`; node drain or
-  network partition is `INFRASTRUCTURE`
+  network partition is `INFRASTRUCTURE`. **CRITICAL: Do NOT infer migration cause
+  from migration object name alone.** Migration names like `kubevirt-workload-update-*`
+  do NOT prove the workload-update-controller triggered the migration. Read the test
+  source code and correlate migration timing with test operations (hot-plug, live
+  migration API calls, etc.). A migration immediately following a hot-plug action
+  (NIC or disk) is likely caused by the hot-plug, not by workload updates.
 - **SSH connectivity failure:** Read the test code to determine how SSH is used.
   Wrong credentials, missing `virtctl` binary, no retry logic, or missing
   `wait_for_ssh_connectivity()` before running commands is `CODE ISSUE`.

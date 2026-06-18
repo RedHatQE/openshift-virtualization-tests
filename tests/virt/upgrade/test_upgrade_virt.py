@@ -58,7 +58,7 @@ pytestmark = [
 @pytest.mark.usefixtures(
     "base_templates",
     "parallel_live_migrations_increased",
-    "virt_launcher_from_csv_before_upgrade",
+    "virt_launcher_images_from_csv_before_upgrade",
 )
 class TestUpgradeVirt:
     """Pre-upgrade tests"""
