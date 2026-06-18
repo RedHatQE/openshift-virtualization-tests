@@ -19,7 +19,7 @@ from utilities.constants import (
 from utilities.infra import ExecCommandOnPod, wait_for_node_status
 from utilities.oadp import VeleroBackup, create_rhel_vm
 from utilities.storage import write_file
-from utilities.virt import node_mgmt_console, wait_for_node_schedulable_status
+from utilities.virt import drain_node, wait_for_node_schedulable_status
 
 LOGGER = logging.getLogger(__name__)
 
@@ -79,9 +79,13 @@ def rebooted_vm_source_node(rhel_vm_with_dv_running, oadp_backup_in_progress, wo
 
 
 @pytest.fixture()
-def drain_vm_source_node(admin_client, rhel_vm_with_dv_running, oadp_backup_in_progress):
-    vm_node = rhel_vm_with_dv_running.vmi.node
-    with node_mgmt_console(admin_client=admin_client, node=vm_node, node_mgmt="drain"):
+def drain_vm_source_node(
+    admin_client, hco_namespace, compact_cluster, rhel_vm_with_dv_running, oadp_backup_in_progress
+):
+    vm_node = rhel_vm_with_dv_running.vmi.get_node(privileged_client=admin_client)
+    with drain_node(
+        admin_client=admin_client, node=vm_node, hco_namespace=hco_namespace, compact_cluster=compact_cluster
+    ):
         wait_for_node_schedulable_status(node=vm_node, status=False)
         yield vm_node
 

@@ -20,10 +20,10 @@ from utilities.constants import (
 )
 from utilities.virt import (
     check_migration_process_after_node_drain,
+    drain_node,
     fetch_pid_from_linux_vm,
     fetch_pid_from_windows_vm,
     migrate_vm_and_verify,
-    node_mgmt_console,
     start_and_fetch_processid_on_linux_vm,
     start_and_fetch_processid_on_windows_vm,
 )
@@ -78,9 +78,12 @@ def migrated_hotplugged_vm(hotplugged_vm):
 
 
 @pytest.fixture()
-def drained_node_with_hotplugged_vm(admin_client, hotplugged_vm):
-    with node_mgmt_console(
-        admin_client=admin_client, node=hotplugged_vm.vmi.get_node(privileged_client=admin_client), node_mgmt="drain"
+def drained_node_with_hotplugged_vm(admin_client, hco_namespace, compact_cluster, hotplugged_vm):
+    with drain_node(
+        admin_client=admin_client,
+        node=hotplugged_vm.vmi.get_node(privileged_client=admin_client),
+        hco_namespace=hco_namespace,
+        compact_cluster=compact_cluster,
     ):
         check_migration_process_after_node_drain(client=admin_client, vm=hotplugged_vm, admin_client=admin_client)
     clean_up_migration_jobs(client=admin_client, vm=hotplugged_vm)
