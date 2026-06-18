@@ -16,9 +16,8 @@ class TestRoleAggregationDisabled:
     Tests for RBAC enforcement when role aggregation is disabled.
 
     Preconditions:
-        - HyperConverged CR spec.roleAggregationStrategy set to "Manual" (role aggregation disabled)
+        - HyperConverged CR spec.roleAggregationStrategy set to "AggregateToDefault" (role aggregation enabled)
         - Unprivileged user created via HTPasswd identity provider
-        - Namespace with a RoleBinding granting the unprivileged user the parametrized ClusterRole
     """
 
     @pytest.mark.parametrize(
@@ -37,8 +36,14 @@ class TestRoleAggregationDisabled:
         Parametrize:
             - role: [admin, edit, view]
 
+        Preconditions:
+            - Namespace with a RoleBinding granting the unprivileged user the parametrized ClusterRole
+
         Steps:
-            1. Attempt to list VirtualMachine resources in the namespace using the unprivileged
+            1. List VirtualMachine resources in the namespace using the unprivileged
+               user's credentials and verify the operation succeeds
+            2. Set HyperConverged CR spec.roleAggregationStrategy to "Manual" (disable role aggregation)
+            3. Attempt to list VirtualMachine resources in the namespace using the unprivileged
                user's credentials
 
         Expected:
