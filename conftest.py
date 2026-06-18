@@ -591,6 +591,8 @@ def filter_sno_only_tests(items: list[Item], config: Config) -> list[Item]:
 
 
 def pytest_configure(config):
+    config._test_execution_start_time = datetime.datetime.now(tz=datetime.UTC)
+
     # test_deprecation_audit_logs should always run regardless the path that passed to pytest.
     deprecation_tests_dir_path = "tests/deprecated_api"
     file_or_dir = config.option.file_or_dir
