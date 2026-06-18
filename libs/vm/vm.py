@@ -227,12 +227,12 @@ class BaseVirtualMachine(VirtualMachine):
         return obj
 
 
-def container_image(base_image: str) -> str:
+def container_image(base_image: str, arch: str | None = None) -> str:
     pull_secret = infra.generate_openshift_pull_secret_file()
     image_info = get_oc_image_info(
         image=base_image,
         pull_secret=pull_secret,
-        architecture=py_config["cpu_arch"],
+        architecture=arch or py_config["cpu_arch"],
     )
     return f"{base_image}@{image_info['digest']}"
 
