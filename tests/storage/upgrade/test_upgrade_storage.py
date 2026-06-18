@@ -77,18 +77,17 @@ class TestUpgradeStorage:
     @pytest.mark.dependency(name=f"{STORAGE_NODE_ID_PREFIX}::test_vm_with_hotplug_before_upgrade")
     def test_vm_with_hotplug_before_upgrade(
         self,
-        skip_if_config_default_storage_class_access_mode_rwo,
         enabled_feature_gate_for_declarative_hotplug_volumes_upg,
         upgrade_namespace_scope_session,
-        blank_disk_dv_with_default_sc,
+        blank_disk_dv_with_rwx_sc,
         fedora_vm_for_hotplug_upg,
         hotplug_volume_upg,
     ):
-        wait_for_vm_volume_ready(vm=fedora_vm_for_hotplug_upg, volume_name=blank_disk_dv_with_default_sc.name)
+        wait_for_vm_volume_ready(vm=fedora_vm_for_hotplug_upg, volume_name=blank_disk_dv_with_rwx_sc.name)
         assert_disk_serial(vm=fedora_vm_for_hotplug_upg)
         assert_disk_bus(
             vm=fedora_vm_for_hotplug_upg,
-            volume=blank_disk_dv_with_default_sc,
+            volume=blank_disk_dv_with_rwx_sc,
             expected_bus=HOTPLUG_DISK_VIRTIO_BUS,
         )
         assert_hotplugvolume_nonexist(vm=fedora_vm_for_hotplug_upg)
@@ -158,16 +157,16 @@ class TestUpgradeStorage:
     def test_vm_with_hotplug_after_upgrade(
         self,
         upgrade_namespace_scope_session,
-        blank_disk_dv_with_default_sc,
+        blank_disk_dv_with_rwx_sc,
         fedora_vm_for_hotplug_upg,
         hotplug_volume_upg,
         fedora_vm_for_hotplug_upg_ssh_connectivity,
     ):
-        wait_for_vm_volume_ready(vm=fedora_vm_for_hotplug_upg, volume_name=blank_disk_dv_with_default_sc.name)
+        wait_for_vm_volume_ready(vm=fedora_vm_for_hotplug_upg, volume_name=blank_disk_dv_with_rwx_sc.name)
         assert_disk_serial(vm=fedora_vm_for_hotplug_upg)
         assert_disk_bus(
             vm=fedora_vm_for_hotplug_upg,
-            volume=blank_disk_dv_with_default_sc,
+            volume=blank_disk_dv_with_rwx_sc,
             expected_bus=HOTPLUG_DISK_VIRTIO_BUS,
         )
         assert_hotplugvolume_nonexist(vm=fedora_vm_for_hotplug_upg)

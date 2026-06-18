@@ -605,7 +605,7 @@ def pytest_collection_modifyitems(session, config, items):
         config (pytest.Config): The pytest configuration object.
         items (list): A list of pytest.Item objects representing the tests.
     """
-    scope_match = re.compile(r"__(module|class|function)__$")
+    scope_match = re.compile(r"__(session|module|class|function)__$")
     for item in items:
         for fixture_name in [fixture_name for fixture_name in item.fixturenames if "_matrix" in fixture_name]:
             _matrix_name = scope_match.sub("", fixture_name)
@@ -755,7 +755,7 @@ def pytest_runtest_teardown(item):
 
 
 def pytest_generate_tests(metafunc):
-    scope_match = re.compile(r"__(module|class|function)__$")
+    scope_match = re.compile(r"__(session|module|class|function)__$")
     for fixture_name in [fname for fname in metafunc.fixturenames if "_matrix" in fname]:
         scope = scope_match.findall(fixture_name)
         if not scope:

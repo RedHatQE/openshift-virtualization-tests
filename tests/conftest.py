@@ -2429,6 +2429,13 @@ def snapshot_storage_class_name_scope_module(
     return [*storage_class_matrix_snapshot_matrix__module__][0]
 
 
+@pytest.fixture(scope="session")
+def rwx_storage_class_name_scope_session(
+    storage_class_matrix_rwx_matrix__session__,
+):
+    return next(iter(storage_class_matrix_rwx_matrix__session__))
+
+
 @pytest.fixture(scope="class")
 def rhel_vm_with_cluster_instance_type_and_preference(namespace, unprivileged_client):
     with VirtualMachineForTests(

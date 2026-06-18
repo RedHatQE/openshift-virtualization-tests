@@ -1,10 +1,7 @@
 import logging
 
 import pytest
-from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
-from ocp_resources.storage_profile import StorageProfile
-from pytest_testconfig import py_config
 
 from tests.storage.upgrade.utils import (
     create_snapshot_for_upgrade,
@@ -76,13 +73,13 @@ def snapshots_for_upgrade_b(
 
 
 @pytest.fixture(scope="session")
-def blank_disk_dv_with_default_sc(upgrade_namespace_scope_session):
+def blank_disk_dv_with_rwx_sc(upgrade_namespace_scope_session, rwx_storage_class_name_scope_session):
     with create_dv(
         source="blank",
         dv_name="blank-dv",
         namespace=upgrade_namespace_scope_session.name,
         size="1Gi",
-        storage_class=py_config["default_storage_class"],
+        storage_class=rwx_storage_class_name_scope_session,
         consume_wffc=False,
         client=upgrade_namespace_scope_session.client,
     ) as dv:
@@ -136,14 +133,3 @@ def hotplug_volume_upg(fedora_vm_for_hotplug_upg):
 @pytest.fixture()
 def fedora_vm_for_hotplug_upg_ssh_connectivity(fedora_vm_for_hotplug_upg):
     wait_for_ssh_connectivity(vm=fedora_vm_for_hotplug_upg)
-
-
-@pytest.fixture(scope="session")
-def skip_if_config_default_storage_class_access_mode_rwo(admin_client):
-    storage_class = py_config["default_storage_class"]
-    access_modes = StorageProfile(name=storage_class, client=admin_client).first_claim_property_set_access_modes()
-    assert access_modes, f"Could not get the access mode from the {storage_class} storage profile"
-    access_mode = access_modes[0]
-    LOGGER.info(f"Storage class '{storage_class}' has access mode: '{access_mode}'")
-    if access_mode == DataVolume.AccessMode.RWO:
-        pytest.skip(reason="Skip when access_mode is RWO")
