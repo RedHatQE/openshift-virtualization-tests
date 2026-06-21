@@ -1,14 +1,18 @@
 import shlex
+from collections.abc import Generator
 
 import pytest
 from ocp_resources.service import Service
 
 from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
+from libs.net.traffic_generator import IPERF_SERVER_PORT
+from libs.vm.vm import BaseVirtualMachine
 from tests.network.network_service.libservice import (
     SERVICE_IP_FAMILY_POLICY_SINGLE_STACK,
     basic_expose_command,
+    service_vm,
 )
-from utilities.constants.networking import SSH_PORT_22
+from utilities.constants.networking import IP_FAMILY_POLICY_PREFER_DUAL_STACK, SSH_PORT_22
 from utilities.infra import get_node_selector_dict, run_virtctl_command
 from utilities.network import compose_cloud_init_data_dict
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
@@ -86,3 +90,40 @@ def expected_num_families_in_service(request):
     ):
         return 2
     return 1
+
+
+@pytest.fixture()
+def service_server_vm(
+    namespace,
+    unprivileged_client,
+) -> Generator[BaseVirtualMachine]:
+    with service_vm(namespace=namespace.name, name="service-server-vm", client=unprivileged_client) as vm:
+        vm.start(wait=True)
+        vm.wait_for_agent_connected()
+        yield vm
+
+
+@pytest.fixture()
+def service_client_vm(
+    namespace,
+    unprivileged_client,
+) -> Generator[BaseVirtualMachine]:
+    with service_vm(namespace=namespace.name, name="service-client-vm", client=unprivileged_client) as vm:
+        vm.start(wait=True)
+        vm.wait_for_agent_connected()
+        yield vm
+
+
+@pytest.fixture()
+def cluster_ip_service_for_server_vm(
+    service_server_vm: BaseVirtualMachine, namespace, unprivileged_client
+) -> Generator[Service]:
+    with Service(
+        name="cluster-ip-service",
+        namespace=namespace.name,
+        selector={"vm.kubevirt.io/name": service_server_vm.name},
+        ports=[{"port": IPERF_SERVER_PORT}],
+        ip_family_policy=IP_FAMILY_POLICY_PREFER_DUAL_STACK,
+        client=unprivileged_client,
+    ) as svc:
+        yield svc
