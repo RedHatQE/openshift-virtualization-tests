@@ -14,8 +14,15 @@ from pytest_testconfig import config as py_config
 
 from libs.net.cluster import is_ipv6_single_stack_cluster
 from tests.storage.cdi_upload.utils import get_storage_profile_minimum_supported_pvc_size
-from tests.storage.utils import assert_use_populator, create_windows_vm_validate_guest_agent_info
-from utilities.constants import CDI_UPLOADPROXY, QUARANTINED, TIMEOUT_1MIN, Images
+from tests.storage.utils import assert_use_populator
+from tests.utils import create_windows2022_vm_with_vtpm
+from utilities.constants import (
+    CDI_UPLOADPROXY,
+    QUARANTINED,
+    TIMEOUT_1MIN,
+    Images,
+)
+from utilities.ssp import validate_os_info_vmi_vs_windows_os
 from utilities.storage import (
     ErrorMsg,
     check_upload_virtctl_result,
@@ -34,8 +41,6 @@ POPULATED_STR = "populated"
 NON_CSI_POPULATED_STR = "imported/cloned/updated"
 DEFAULT_DV_SIZE = Images.Cdi.DEFAULT_DV_SIZE
 LOCAL_PATH = f"/tmp/{Images.Cdi.QCOW2_IMG}"
-
-LATEST_WINDOWS_OS_DICT = py_config.get("latest_windows_os_dict", {})
 
 
 def get_population_method_by_provisioner(storage_class, cluster_csi_drivers_names):
@@ -414,38 +419,21 @@ def test_virtctl_image_upload_dv_with_exist_pvc(
 
 
 @pytest.mark.tier3
-@pytest.mark.parametrize(
-    ("uploaded_dv_with_immediate_binding", "vm_params"),
-    [
-        pytest.param(
-            {
-                "dv_size": Images.Windows.DEFAULT_DV_SIZE,
-                "remote_name": LATEST_WINDOWS_OS_DICT.get("image_path"),
-                "image_file": LATEST_WINDOWS_OS_DICT.get("image_name"),
-            },
-            {
-                "vm_name": f"vm-win-{LATEST_WINDOWS_OS_DICT.get('os_version')}",
-                "template_labels": LATEST_WINDOWS_OS_DICT.get("template_labels"),
-                "ssh": True,
-                "os_version": LATEST_WINDOWS_OS_DICT.get("os_version"),
-            },
-            marks=(pytest.mark.polarion("CNV-3410")),
-        ),
-    ],
-    indirect=["uploaded_dv_with_immediate_binding"],
-)
-def test_successful_vm_from_uploaded_dv_windows(
+@pytest.mark.polarion("CNV-3410")
+def test_successful_vm_from_uploaded_dv_windows_with_vtpm(
     unprivileged_client,
     namespace,
-    uploaded_dv_with_immediate_binding,
-    vm_params,
+    uploaded_windows_dv,
+    modern_cpu_for_migration,
 ):
-    create_windows_vm_validate_guest_agent_info(
-        dv=uploaded_dv_with_immediate_binding,
-        namespace=namespace,
-        unprivileged_client=unprivileged_client,
-        vm_params=vm_params,
-    )
+    with create_windows2022_vm_with_vtpm(
+        dv=uploaded_windows_dv,
+        namespace=namespace.name,
+        client=unprivileged_client,
+        vm_name="win2022-vm",
+        cpu_model=modern_cpu_for_migration,
+    ) as vm:
+        validate_os_info_vmi_vs_windows_os(vm=vm)
 
 
 @pytest.mark.parametrize(
