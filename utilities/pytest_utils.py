@@ -385,6 +385,27 @@ def exit_pytest_execution(
     pytest.exit(reason=log_message, returncode=return_code)
 
 
+def remove_tests_from_list(items: list[pytest.Item], filter_str: str) -> tuple[list[pytest.Item], list[pytest.Item]]:
+    discard_tests: list[pytest.Item] = []
+    items_to_return: list[pytest.Item] = []
+    for item in items:
+        if filter_str in item.keywords:
+            discard_tests.append(item)
+        else:
+            items_to_return.append(item)
+    return discard_tests, items_to_return
+
+
+def filter_hpp_tests(items: list[pytest.Item], config: pytest.Config) -> list[pytest.Item]:
+    marker_expression = config.getoption("-m")
+    if not marker_expression or "hpp" not in marker_expression:
+        discard_tests, items_to_return = remove_tests_from_list(items=items, filter_str="hpp")
+        config.hook.pytest_deselected(items=discard_tests)
+        return items_to_return
+
+    return items
+
+
 def mark_nmstate_dependent_tests(items: list[pytest.Item]) -> list[pytest.Item]:
     """
     Dynamically mark tests that depend on NMState with the 'nmstate' marker.

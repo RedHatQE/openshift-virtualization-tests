@@ -55,12 +55,14 @@ from utilities.pytest_utils import (
     config_default_storage_class,
     deploy_run_in_progress_config_map,
     deploy_run_in_progress_namespace,
+    filter_hpp_tests,
     get_artifactory_server_url,
     get_base_matrix_name,
     get_cnv_version_explorer_url,
     get_matrix_params,
     get_tests_cluster_markers,
     mark_nmstate_dependent_tests,
+    remove_tests_from_list,
     reorder_early_fixtures,
     run_in_progress_config_map,
     separator,
@@ -553,33 +555,12 @@ def filter_deprecated_api_tests(items: list[Item], config: Config) -> list[Item]
     return items
 
 
-def filter_hpp_tests(items: list[Item], config: Config) -> list[Item]:
-    marker_expression = config.getoption("-m")
-    if not marker_expression or "hpp" not in marker_expression:
-        discard_tests, items_to_return = remove_tests_from_list(items=items, filter_str="hpp")
-        config.hook.pytest_deselected(items=discard_tests)
-        return items_to_return
-
-    return items
-
-
 def filter_sno_only_tests(items: list[Item], config: Config) -> list[Item]:
     if config.getoption("-m") and "sno" not in config.getoption("-m"):
         discard_tests, items_to_return = remove_tests_from_list(items=items, filter_str="single_node_tests")
         config.hook.pytest_deselected(items=discard_tests)
         return items_to_return
     return items
-
-
-def remove_tests_from_list(items: list[Item], filter_str: str) -> tuple[list[Item], list[Item]]:
-    discard_tests: list[Item] = []
-    items_to_return: list[Item] = []
-    for item in items:
-        if filter_str in item.keywords:
-            discard_tests.append(item)
-        else:
-            items_to_return.append(item)
-    return discard_tests, items_to_return
 
 
 def pytest_configure(config):
