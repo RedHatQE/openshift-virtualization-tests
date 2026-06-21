@@ -4,12 +4,11 @@ import pytest
 
 from libs.net import netattachdef
 from libs.net.ip import random_ipv4_address
-from libs.net.vmspec import lookup_iface_status_ip
+from libs.net.vmspec import VMInterfaceStatusNotFoundError, lookup_iface_status_ip
 from tests.network.l2_bridge.libl2bridge import (
     check_mac_released,
     create_bridge_interface_for_hot_plug,
     create_vm_for_hot_plug,
-    create_vm_with_hot_plugged_sriov_interface,
     create_vm_with_secondary_interface_on_setup,
     get_kubemacpool_controller_log,
     get_primary_and_hot_plugged_mac_addresses,
@@ -22,7 +21,6 @@ from tests.network.l2_bridge.libl2bridge import (
 )
 from utilities.constants import FLAT_OVERLAY_STR, QUARANTINED, SRIOV
 from utilities.network import (
-    IfaceNotFound,
     assert_ping_successful,
     network_nad,
 )
@@ -386,35 +384,23 @@ def hot_unplug_secondary_interface_from_setup(
 
 
 @pytest.fixture()
-def vm1_with_hot_plugged_sriov_interface(
-    namespace,
-    unprivileged_client,
-    sriov_network_for_hot_plug,
-    index_number,
-):
-    yield from create_vm_with_hot_plugged_sriov_interface(
+def sriov_hot_plug_vm1(namespace, unprivileged_client):
+    with create_vm_for_hot_plug(
         namespace_name=namespace.name,
         vm_name=f"{SRIOV}-{HOT_PLUG_STR}-vm1",
-        sriov_network_for_hot_plug=sriov_network_for_hot_plug,
-        ipv4_address=random_ipv4_address(net_seed=0, host_address=next(index_number)),
         client=unprivileged_client,
-    )
+    ) as vm:
+        yield vm
 
 
 @pytest.fixture()
-def vm2_with_hot_plugged_sriov_interface(
-    namespace,
-    unprivileged_client,
-    sriov_network_for_hot_plug,
-    index_number,
-):
-    yield from create_vm_with_hot_plugged_sriov_interface(
+def sriov_hot_plug_vm2(namespace, unprivileged_client):
+    with create_vm_for_hot_plug(
         namespace_name=namespace.name,
         vm_name=f"{SRIOV}-{HOT_PLUG_STR}-vm2",
-        sriov_network_for_hot_plug=sriov_network_for_hot_plug,
-        ipv4_address=random_ipv4_address(net_seed=0, host_address=next(index_number)),
         client=unprivileged_client,
-    )
+    ) as vm:
+        yield vm
 
 
 @pytest.fixture(scope="module")
@@ -575,14 +561,30 @@ class TestHotPlugInterfaceToVmWithOnlyPrimaryInterface:
     @pytest.mark.polarion("CNV-10647")
     def test_connectivity_of_hot_plugged_sriov_interface(
         self,
-        vm1_with_hot_plugged_sriov_interface,
-        vm2_with_hot_plugged_sriov_interface,
+        sriov_hot_plug_vm1,
+        sriov_hot_plug_vm2,
         sriov_network_for_hot_plug,
+        namespace,
+        index_number,
     ):
+        hot_plug_interface_and_set_address(
+            vm=sriov_hot_plug_vm1,
+            hot_plugged_interface_name=sriov_network_for_hot_plug.name,
+            net_attach_def_name=f"{namespace.name}/{sriov_network_for_hot_plug.name}",
+            ipv4_address=random_ipv4_address(net_seed=0, host_address=next(index_number)),
+            sriov=True,
+        )
+        hot_plug_interface_and_set_address(
+            vm=sriov_hot_plug_vm2,
+            hot_plugged_interface_name=sriov_network_for_hot_plug.name,
+            net_attach_def_name=f"{namespace.name}/{sriov_network_for_hot_plug.name}",
+            ipv4_address=random_ipv4_address(net_seed=0, host_address=next(index_number)),
+            sriov=True,
+        )
         assert_ping_successful(
-            src_vm=vm1_with_hot_plugged_sriov_interface,
+            src_vm=sriov_hot_plug_vm1,
             dst_ip=lookup_iface_status_ip(
-                vm=vm2_with_hot_plugged_sriov_interface,
+                vm=sriov_hot_plug_vm2,
                 iface_name=sriov_network_for_hot_plug.name,
                 ip_family=4,
             ),
@@ -634,7 +636,7 @@ class TestHotPlugInterfaceToVmWithSecondaryInterface:
         hot_unplugged_additional_interface,
         running_vm_with_secondary_and_hot_plugged_interfaces,
     ):
-        with pytest.raises(IfaceNotFound):
+        with pytest.raises(VMInterfaceStatusNotFoundError):
             search_hot_plugged_interface_in_vmi(
                 vm=running_vm_with_secondary_and_hot_plugged_interfaces,
                 interface_name=hot_unplugged_additional_interface.name,
@@ -688,7 +690,7 @@ class TestHotPlugInterfaceToVmWithSecondaryInterface:
         hot_unplug_secondary_interface_from_setup,
         network_attachment_definition_for_hot_plug,
     ):
-        with pytest.raises(IfaceNotFound):
+        with pytest.raises(VMInterfaceStatusNotFoundError):
             search_hot_plugged_interface_in_vmi(
                 vm=running_vm_with_secondary_and_hot_plugged_interfaces,
                 interface_name=network_attachment_definition_for_hot_plug.name,

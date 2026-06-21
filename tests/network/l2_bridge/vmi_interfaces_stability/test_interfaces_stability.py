@@ -1,12 +1,20 @@
-from typing import Final
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Final
 
 import pytest
 
+from libs.net.vmspec import lookup_iface_status, lookup_primary_network
 from tests.network.l2_bridge.vmi_interfaces_stability.lib_helpers import (
     assert_interfaces_stable,
     monitor_vmi_events,
 )
 from utilities.virt import migrate_vm_and_verify
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from libs.vm.vm import BaseVirtualMachine
 
 STABILITY_PERIOD_IN_SECONDS: Final[int] = 300
 
@@ -20,8 +28,20 @@ class TestInterfacesStability:
             assert_interfaces_stable(stable_ips=stable_ips, vmi=vmi_obj, expected_num_ifaces=len(stable_ips))
 
     @pytest.mark.polarion("CNV-14340")
-    def test_interfaces_stability_after_migration(self, running_linux_bridge_vm, stable_ips):
-        migrate_vm_and_verify(vm=running_linux_bridge_vm)
+    def test_interfaces_stability_after_migration(
+        self,
+        admin_client: DynamicClient,
+        running_linux_bridge_vm: BaseVirtualMachine,
+        stable_ips: dict[str, str],
+    ):
+        migrate_vm_and_verify(vm=running_linux_bridge_vm, client=admin_client)
+        primary_network = lookup_primary_network(vm=running_linux_bridge_vm)
+        primary_iface = lookup_iface_status(
+            vm=running_linux_bridge_vm,
+            iface_name=primary_network.name,
+            predicate=lambda iface: bool(iface["ipAddress"]),
+        )
+        stable_ips[primary_network.name] = primary_iface.ipAddress
         for vmi_obj in monitor_vmi_events(vm=running_linux_bridge_vm, timeout=STABILITY_PERIOD_IN_SECONDS):
             assert_interfaces_stable(stable_ips=stable_ips, vmi=vmi_obj, expected_num_ifaces=len(stable_ips))
 
@@ -30,7 +50,7 @@ class TestInterfacesStability:
         """
         Test that interface IPs remain stable after restarting the guest agent inside the VM.
 
-        Jira: https://redhat.atlassian.net/browse/CNV-85415
+        Jira: https://redhat.atlassian.net/browse/CNV-85415 # <skip-jira-utils-check>
 
         Preconditions:
             - Running Fedora VM with two secondary Linux bridge network interfaces

@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import logging
 import shlex
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Any, Generator
+from typing import Any
 
 import bitmath
 from kubernetes.dynamic import DynamicClient
@@ -87,7 +88,7 @@ def append_feature_gate_to_hco(feature_gate, resource, client, namespace):
             hco_namespace=namespace,
             expected_conditions={
                 **DEFAULT_HCO_CONDITIONS,
-                **{"TaintedConfiguration": Resource.Condition.Status.TRUE},
+                "TaintedConfiguration": Resource.Condition.Status.TRUE,
             },
         )
         yield
@@ -114,6 +115,7 @@ def get_stress_ng_pid(ssh_exec, windows=False):
         host=ssh_exec,
         commands=shlex.split(f"{command_prefix} bash -c 'pgrep {stress}'"),
         tcp_timeout=TCP_TIMEOUT_30SEC,
+        wait_timeout=TIMEOUT_2MIN,
     )[0].split("\n")[0]
 
 
@@ -127,19 +129,19 @@ def verify_stress_ng_pid_not_changed(vm, initial_pid, windows=False):
     )
 
 
-def migrate_and_verify_multi_vms(vm_list):
+def migrate_and_verify_multi_vms(client: DynamicClient, vm_list: list[VirtualMachineForTests]) -> None:
     vms_dict = {}
     failed_migrations_list = []
 
     for vm in vm_list:
         vms_dict[vm.name] = {
             "node_before": vm.vmi.node,
-            "vm_mig": migrate_vm_and_verify(vm=vm, wait_for_migration_success=False),
+            "vm_mig": migrate_vm_and_verify(vm=vm, client=client, wait_for_migration_success=False),
         }
 
     for vm in vm_list:
         migration = vms_dict[vm.name]["vm_mig"]
-        wait_for_migration_finished(namespace=vm.namespace, migration=migration)
+        wait_for_migration_finished(migration=migration)
         migration.clean_up()
 
     for vm in vm_list:
@@ -433,7 +435,7 @@ def verify_guest_boot_time(vm_list, initial_boot_time):
 
 def get_or_create_golden_image_data_source(
     admin_client: DynamicClient, golden_images_namespace: Namespace, os_dict: dict[str, Any]
-) -> Generator[DataSource, None, None]:
+) -> Generator[DataSource]:
     """Retrieves or creates a DataSource object in golden image namespace specified in the OS matrix.
 
     Args:

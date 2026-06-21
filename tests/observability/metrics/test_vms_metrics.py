@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from urllib.parse import urlparse
 
 import bitmath
@@ -48,9 +48,7 @@ def get_last_transition_time(vm):
     for condition in vm.instance.get("status", {}).get("conditions"):
         if condition.get("type") == vm.Condition.READY:
             last_transition_time = condition.get("lastTransitionTime")
-            return int(
-                (datetime.strptime(last_transition_time, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)).timestamp()
-            )
+            return int((datetime.strptime(last_transition_time, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)).timestamp())
 
 
 def check_vm_last_transition_metric_value(prometheus, metric, vm):
@@ -546,3 +544,71 @@ class TestVmCreatedByPodTotal:
             metric_name=KUBEVIRT_VM_CREATED_BY_POD_TOTAL.format(namespace=vm_for_test.namespace),
             expected_value=str(vm_created_pod_total_initial_metric_value + 1),
         )
+
+
+@pytest.mark.incremental
+class TestVmiSyncTotal:
+    """
+    Tests for kubevirt_vmi_sync_total metric.
+
+    Jira: https://redhat.atlassian.net/browse/CNV-80580  # <skip-jira-utils-check>
+
+    Preconditions:
+        - Running VM
+        - Prometheus access configured
+    """
+
+    __test__ = False
+
+    @pytest.mark.polarion("CNV-16271")
+    def test_kubevirt_vmi_sync_total(self):
+        """
+        Test that kubevirt_vmi_sync_total metric is reported by both
+        virt-controller and virt-handler after a VM starts.
+
+        Steps:
+            1. Query Prometheus for kubevirt_vmi_sync_total with the VM's
+               namespace and name
+
+        Expected:
+            - Two metric entries are returned — one from virt-controller
+              and one from virt-handler — each with a value greater than 0
+        """
+
+    @pytest.mark.polarion("CNV-16272")
+    def test_kubevirt_vmi_sync_total_increases_after_migration(self):
+        """
+        Test that kubevirt_vmi_sync_total metric value increases after
+        a VM live migration.
+
+        Preconditions:
+            - Running VM
+            - Initial kubevirt_vmi_sync_total values recorded
+
+        Steps:
+            1. Live migrate the VM
+            2. Query Prometheus for kubevirt_vmi_sync_total with the VM's
+               namespace and name
+
+        Expected:
+            - Metric values from both virt-controller and virt-handler
+              are greater than the values recorded before migration
+        """
+
+    @pytest.mark.polarion("CNV-16273")
+    def test_kubevirt_vmi_sync_total_cleared_after_vm_deletion(self):
+        """
+        Test that kubevirt_vmi_sync_total metric entry is removed
+        after the VM is deleted.
+
+        Preconditions:
+            - VM with kubevirt_vmi_sync_total metric reported
+
+        Steps:
+            1. Delete the VM
+            2. Query Prometheus for kubevirt_vmi_sync_total with the
+               deleted VM's namespace and name
+
+        Expected:
+            - Metric value is None
+        """

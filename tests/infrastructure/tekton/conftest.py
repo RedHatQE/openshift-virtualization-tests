@@ -28,11 +28,9 @@ from utilities.constants import (
     OS_FLAVOR_FEDORA,
     TEKTON_AVAILABLE_PIPELINEREF,
     TEKTON_AVAILABLE_TASKS,
-    TIMEOUT_1MIN,
     TIMEOUT_2MIN,
     TIMEOUT_10MIN,
     TIMEOUT_30SEC,
-    TIMEOUT_50MIN,
     WINDOWS_EFI_INSTALLER_STR,
 )
 from utilities.data_utils import base64_encode_str
@@ -401,9 +399,7 @@ def pipelinerun_for_disk_uploader(
 
 @pytest.fixture()
 def final_status_pipelinerun(pipelinerun_from_pipeline_template):
-    return wait_for_final_status_pipelinerun(
-        pipelinerun=pipelinerun_from_pipeline_template, wait_timeout=TIMEOUT_50MIN, sleep_interval=TIMEOUT_1MIN
-    )
+    return wait_for_final_status_pipelinerun(pipelinerun=pipelinerun_from_pipeline_template)
 
 
 @pytest.fixture()

@@ -6,24 +6,24 @@ secondary network, for both IPv4 and IPv6, for regression detection.
 Stuntime is defined as the connectivity gap from last successful reply before loss
 to first successful reply after recovery.
 
-Stuntime is measured using ICMP ping from client to server in 0.1s intervals.
+Stuntime is measured using continuous ICMP ping from client to server.
 The under-test VMs are configured on an OVN localnet secondary network, with a single interface,
 on which IPv4/IPv6 static addresses will be defined according to the environment the test runs on.
 
 Client - The connectivity initiator VM that runs continuous ping toward the server VM.
 Server - The connectivity listener VM that receives the ping and responds.
 
-STP Reference:
-https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-network/stuntime_measurement.md
+STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-network/stuntime_measurement.md
 """
 
 import pytest
 
-from libs.vm.affinity import new_pod_anti_affinity
-from tests.network.localnet.migration_stuntime.libstuntime import (
+from libs.vm.affinity import new_pod_affinity, new_pod_anti_affinity
+from tests.network.libs.stuntime import (
+    CLIENT_VM_LABEL,
     SERVER_VM_LABEL,
     STUNTIME_THRESHOLD_SECONDS,
-    compute_stuntime,
+    measure_stuntime,
 )
 from utilities.virt import migrate_vm_and_verify
 
@@ -31,36 +31,34 @@ pytestmark = [pytest.mark.tier3]
 
 """
 Preconditions:
-    - Shared under-test server VM on OVN localnet secondary network, for the IP family from ip_family parametrization.
-    - Shared under-test client VM on OVN localnet secondary network, for that same IP family,
+    - Under-test server VM on OVN localnet secondary network, for the IP family from ip_family parametrization.
+    - Under-test client VM on OVN localnet secondary network, for that same IP family,
       initially running on the same node as the server VM.
 """
 
 
 @pytest.mark.incremental
+@pytest.mark.parametrize(
+    "ip_family",
+    [
+        pytest.param(4, marks=pytest.mark.ipv4, id="ipv4"),
+        pytest.param(6, marks=pytest.mark.ipv6, id="ipv6"),
+    ],
+    indirect=True,
+)
 class TestMigrationStuntime:
-    @pytest.mark.parametrize(
-        "active_ping",
-        [
-            pytest.param(4, id="ipv4", marks=[pytest.mark.polarion("CNV-15258"), pytest.mark.ipv4]),
-            pytest.param(6, id="ipv6", marks=[pytest.mark.polarion("CNV-15272"), pytest.mark.ipv6]),
-        ],
-        indirect=True,
-    )
-    def test_client_migrates_off_server_node(
-        self,
-        admin_client,
-        localnet_stuntime_client_vm,
-        active_ping,
-    ):
+    """
+    Parametrize:
+        - ip_family:
+            - ipv4 [Markers: ipv4]
+            - ipv6 [Markers: ipv6]
+    """
+
+    @pytest.mark.polarion("CNV-15258")
+    def test_client_migrates_off_server_node(self, admin_client, ip_family, localnet_stuntime_client_vm, active_ping):
         """
         Test that measured stuntime does not exceed the global threshold when the client
         VM migrates from the node hosting the server VM into a different node.
-
-        Parametrize:
-            - active_ping:
-                - ipv4 [Markers: ipv4]
-                - ipv6 [Markers: ipv6]
 
         Preconditions:
             - Under-test server VM on OVN localnet secondary network, for the IP family from ip_family parametrization.
@@ -79,15 +77,15 @@ class TestMigrationStuntime:
         """
         localnet_stuntime_client_vm.set_template_affinity(affinity=new_pod_anti_affinity(label=SERVER_VM_LABEL))
         migrate_vm_and_verify(vm=localnet_stuntime_client_vm, client=admin_client)
-        active_ping.stop()
-        _, _, lost = active_ping.report()
-        measured_stuntime = compute_stuntime(lost_packets=lost)
+        measured_stuntime = measure_stuntime(active_ping=active_ping)
         assert measured_stuntime <= STUNTIME_THRESHOLD_SECONDS, (
             f"Stuntime {measured_stuntime}s exceeds threshold ({STUNTIME_THRESHOLD_SECONDS}s)"
         )
 
     @pytest.mark.polarion("CNV-15259")
-    def test_client_migrates_between_non_server_nodes(self):
+    def test_client_migrates_between_non_server_nodes(
+        self, admin_client, ip_family, localnet_stuntime_client_vm, active_ping
+    ):
         """
         Test that measured stuntime does not exceed the global threshold when the client VM migrates between nodes
         while the client and server VMs remain on different nodes.
@@ -107,9 +105,14 @@ class TestMigrationStuntime:
         Expected:
             - Measured stuntime does not exceed the global threshold.
         """
+        migrate_vm_and_verify(vm=localnet_stuntime_client_vm, client=admin_client)
+        measured_stuntime = measure_stuntime(active_ping=active_ping)
+        assert measured_stuntime <= STUNTIME_THRESHOLD_SECONDS, (
+            f"Stuntime {measured_stuntime}s exceeds threshold ({STUNTIME_THRESHOLD_SECONDS}s)"
+        )
 
     @pytest.mark.polarion("CNV-15260")
-    def test_client_migrates_to_server_node(self):
+    def test_client_migrates_to_server_node(self, admin_client, ip_family, localnet_stuntime_client_vm, active_ping):
         """
         Test that measured stuntime does not exceed the global threshold when the client VM migrates
         from a node other than the node hosting the server VM onto the node hosting the server VM.
@@ -129,9 +132,15 @@ class TestMigrationStuntime:
         Expected:
             - Measured stuntime does not exceed the global threshold.
         """
+        localnet_stuntime_client_vm.set_template_affinity(affinity=new_pod_affinity(label=SERVER_VM_LABEL))
+        migrate_vm_and_verify(vm=localnet_stuntime_client_vm, client=admin_client)
+        measured_stuntime = measure_stuntime(active_ping=active_ping)
+        assert measured_stuntime <= STUNTIME_THRESHOLD_SECONDS, (
+            f"Stuntime {measured_stuntime}s exceeds threshold ({STUNTIME_THRESHOLD_SECONDS}s)"
+        )
 
     @pytest.mark.polarion("CNV-15261")
-    def test_server_migrates_off_client_node(self):
+    def test_server_migrates_off_client_node(self, admin_client, ip_family, localnet_stuntime_server_vm, active_ping):
         """
         Test that measured stuntime does not exceed the global threshold when the server
         VM migrates from the node hosting the client VM into a different node.
@@ -151,9 +160,17 @@ class TestMigrationStuntime:
         Expected:
             - Measured stuntime does not exceed the global threshold.
         """
+        localnet_stuntime_server_vm.set_template_affinity(affinity=new_pod_anti_affinity(label=CLIENT_VM_LABEL))
+        migrate_vm_and_verify(vm=localnet_stuntime_server_vm, client=admin_client)
+        measured_stuntime = measure_stuntime(active_ping=active_ping)
+        assert measured_stuntime <= STUNTIME_THRESHOLD_SECONDS, (
+            f"Stuntime {measured_stuntime}s exceeds threshold ({STUNTIME_THRESHOLD_SECONDS}s)"
+        )
 
     @pytest.mark.polarion("CNV-15262")
-    def test_server_migrates_between_non_client_nodes(self):
+    def test_server_migrates_between_non_client_nodes(
+        self, admin_client, ip_family, localnet_stuntime_server_vm, active_ping
+    ):
         """
         Test that measured stuntime does not exceed the global threshold when the server VM migrates between nodes
         while the client and server VMs remain on different nodes.
@@ -173,9 +190,15 @@ class TestMigrationStuntime:
         Expected:
             - Measured stuntime does not exceed the global threshold.
         """
+        localnet_stuntime_server_vm.set_template_affinity(affinity=new_pod_anti_affinity(label=CLIENT_VM_LABEL))
+        migrate_vm_and_verify(vm=localnet_stuntime_server_vm, client=admin_client)
+        measured_stuntime = measure_stuntime(active_ping=active_ping)
+        assert measured_stuntime <= STUNTIME_THRESHOLD_SECONDS, (
+            f"Stuntime {measured_stuntime}s exceeds threshold ({STUNTIME_THRESHOLD_SECONDS}s)"
+        )
 
     @pytest.mark.polarion("CNV-15263")
-    def test_server_migrates_to_client_node(self):
+    def test_server_migrates_to_client_node(self, admin_client, ip_family, localnet_stuntime_server_vm, active_ping):
         """
         Test that measured stuntime does not exceed the global threshold when the server VM migrates from a node
         other than the node hosting the client VM onto the node hosting the client VM.
@@ -195,9 +218,9 @@ class TestMigrationStuntime:
         Expected:
             - Measured stuntime does not exceed the global threshold.
         """
-
-    test_client_migrates_between_non_server_nodes.__test__ = False
-    test_client_migrates_to_server_node.__test__ = False
-    test_server_migrates_off_client_node.__test__ = False
-    test_server_migrates_between_non_client_nodes.__test__ = False
-    test_server_migrates_to_client_node.__test__ = False
+        localnet_stuntime_server_vm.set_template_affinity(affinity=new_pod_affinity(label=CLIENT_VM_LABEL))
+        migrate_vm_and_verify(vm=localnet_stuntime_server_vm, client=admin_client)
+        measured_stuntime = measure_stuntime(active_ping=active_ping)
+        assert measured_stuntime <= STUNTIME_THRESHOLD_SECONDS, (
+            f"Stuntime {measured_stuntime}s exceeds threshold ({STUNTIME_THRESHOLD_SECONDS}s)"
+        )

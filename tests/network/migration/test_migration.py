@@ -2,9 +2,13 @@
 Network Migration test
 """
 
+from __future__ import annotations
+
 import logging
 import re
 import shlex
+from collections.abc import Generator
+from typing import TYPE_CHECKING
 
 import pytest
 from ocp_resources.service import Service
@@ -37,6 +41,9 @@ from utilities.virt import (
     fedora_vm_body,
     migrate_vm_and_verify,
 )
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
 
 PING_LOG = "ping.log"
 LOGGER = logging.getLogger(__name__)
@@ -258,10 +265,11 @@ def ssh_in_background(br1test_nad, running_vma, running_vmb):
 
 
 @pytest.fixture(scope="module")
-def migrated_vmb_and_wait_for_success(running_vmb, http_service):
-    migrate_vm_and_verify(
-        vm=running_vmb,
-    )
+def migrated_vmb_and_wait_for_success(
+    admin_client: DynamicClient, running_vmb: VirtualMachineForTests, http_service
+) -> VirtualMachineForTests:
+    migrate_vm_and_verify(vm=running_vmb, client=admin_client)
+    return running_vmb
 
 
 @pytest.fixture(scope="module")
@@ -270,7 +278,11 @@ def vma_ip_address(br1test_nad, running_vma):
 
 
 @pytest.fixture(scope="module")
-def migrated_vmb_without_waiting_for_success(vma_ip_address, running_vmb, br1test_nad):
+def migrated_vmb_without_waiting_for_success(
+    admin_client: DynamicClient,
+    vma_ip_address: str,
+    running_vmb: VirtualMachineForTests,
+) -> Generator[None]:
     """
     1. Assert ping is successful before migrating vmb.
     2. Migrate vmb without waiting for success. As soon as the VMI acquire a new IP address, return.
@@ -279,7 +291,7 @@ def migrated_vmb_without_waiting_for_success(vma_ip_address, running_vmb, br1tes
     """
     assert_ping_successful(src_vm=running_vmb, dst_ip=vma_ip_address, count=10)
     vmb_ip_before_migration = running_vmb.vmi.interfaces[0]["ipAddress"]
-    migrated_vmi = migrate_vm_and_verify(vm=running_vmb, wait_for_migration_success=False)
+    migrated_vmi = migrate_vm_and_verify(vm=running_vmb, client=admin_client, wait_for_migration_success=False)
     for sample in TimeoutSampler(
         wait_timeout=TIMEOUT_1MIN,
         sleep=1,
@@ -358,13 +370,14 @@ def test_connectivity_after_migration_and_restart(
     ],
 )
 def test_migration_with_masquerade(
+    admin_client,
     running_vma,
     running_vmb,
     ip_family,
 ):
     http_port_accessible(
         vm=running_vma,
-        server_ip=running_vmb.custom_service.service_ip(ip_family=ip_family),
+        server_ip=running_vmb.custom_service.service_ip(admin_client=admin_client, ip_family=ip_family),
         server_port=running_vmb.custom_service.service_port,
     )
 

@@ -26,7 +26,7 @@ from tests.virt.utils import (
     get_boot_time_for_multiple_vms,
     get_non_terminated_pods,
 )
-from utilities.constants import TIMEOUT_5MIN, TIMEOUT_5SEC
+from utilities.constants import TIMEOUT_5MIN, TIMEOUT_5SEC, NamespacesNames
 from utilities.infra import wait_for_pods_deletion
 from utilities.virt import wait_for_migration_finished
 
@@ -36,8 +36,29 @@ LOGGER = logging.getLogger(__name__)
 LOCALHOST = "localhost"
 
 
+@pytest.fixture(scope="package")
+def descheduler_operator_reconciled(admin_client):
+    """Restart descheduler-operator deployment to trigger reconciliation.
+
+    Workaround for the issue when descheduler is installed before other OpenShift operators.
+    After restart, the operator reconciles and adds all namespaces with prefix "openshift-"
+    to the protected list.
+    """
+    LOGGER.info("Restarting descheduler-operator deployment to trigger reconciliation")
+    deployment = Deployment(
+        name="descheduler-operator",
+        namespace=NamespacesNames.OPENSHIFT_KUBE_DESCHEDULER_OPERATOR,
+        client=admin_client,
+    )
+    initial_replicas = deployment.instance.spec.replicas
+    deployment.scale_replicas(replica_count=0)
+    deployment.wait_for_replicas(deployed=False)
+    deployment.scale_replicas(replica_count=initial_replicas)
+    deployment.wait_for_replicas()
+
+
 @pytest.fixture(scope="module")
-def descheduler_long_lifecycle_profile(admin_client):
+def descheduler_long_lifecycle_profile(admin_client, descheduler_operator_reconciled):
     with create_kube_descheduler(
         admin_client=admin_client,
         profiles=["LongLifecycle"],
@@ -53,6 +74,7 @@ def descheduler_long_lifecycle_profile(admin_client):
 def descheduler_kubevirt_relieve_and_migrate_profile(
     admin_client,
     schedulable_nodes,
+    descheduler_operator_reconciled,
     nodes_taints_before_descheduler_test_run,
 ):
     with create_kube_descheduler(
@@ -122,7 +144,7 @@ def deployed_vms_for_descheduler_test(
 def all_existing_migrations_completed(admin_client, namespace):
     # Descheduler may trigger multiple migrations, need to wait when all succeeded
     for migration in VirtualMachineInstanceMigration.get(client=admin_client, namespace=namespace):
-        wait_for_migration_finished(namespace=namespace.name, migration=migration, timeout=TIMEOUT_5MIN)
+        wait_for_migration_finished(migration=migration, timeout=TIMEOUT_5MIN)
 
 
 @pytest.fixture(scope="class")
@@ -213,7 +235,14 @@ def unallocated_pod_count(
     node_with_least_available_memory,
 ):
     non_terminated_pod_count = len(get_non_terminated_pods(client=admin_client, node=node_with_least_available_memory))
-    return int(node_with_least_available_memory.instance.status.capacity.pods) - non_terminated_pod_count
+    capacity = int(node_with_least_available_memory.instance.status.capacity.pods)
+    # Target 85% utilization: high enough to trigger descheduler (>70%) but below scheduler preemption threshold
+    target_pod_count = int(capacity * 0.85)
+    pods_to_add = max(0, target_pod_count - non_terminated_pod_count)
+    LOGGER.info(
+        f"Node {node_with_least_available_memory.name}: current pods {non_terminated_pod_count}, will add {pods_to_add}"
+    )
+    return pods_to_add
 
 
 @pytest.fixture(scope="class")
@@ -230,6 +259,7 @@ def utilization_imbalance(
     with PodDisruptionBudget(
         name=utilization_imbalance_deployment_name,
         namespace=namespace.name,
+        client=admin_client,
         min_available=unallocated_pod_count,
         selector=evict_protected_pod_selector,
     ):
@@ -305,9 +335,9 @@ def nodes_taints_before_descheduler_test_run(nodes):
 
     # clean up taints leftovers
     nodes_taints_after = {node: node.instance.spec.taints for node in nodes}
-    for node in nodes_taints_before:
-        if nodes_taints_after[node] != nodes_taints_before[node]:
-            ResourceEditor(patches={node: {"spec": {"taints": nodes_taints_before[node]}}}).update()
+    for node, taints_before in nodes_taints_before.items():
+        if nodes_taints_after[node] != taints_before:
+            ResourceEditor(patches={node: {"spec": {"taints": taints_before}}}).update()
 
 
 @pytest.fixture()

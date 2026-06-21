@@ -152,8 +152,8 @@ def consecutive_checks_for_mcp_condition(mcp_sampler, machine_config_pools_list)
         raise
 
 
-def wait_for_mcp_update_end(machine_config_pools_list):
-    wait_for_mcp_updated_condition_true(machine_config_pools_list=machine_config_pools_list)
+def wait_for_mcp_update_end(machine_config_pools_list, timeout=TIMEOUT_75MIN):
+    wait_for_mcp_updated_condition_true(machine_config_pools_list=machine_config_pools_list, timeout=timeout)
     wait_for_mcp_ready_machine_count(machine_config_pools_list=machine_config_pools_list)
 
 
@@ -204,7 +204,7 @@ def collect_mcp_data_on_update_timeout(machine_config_pools_list, not_matching_m
     LOGGER.error(
         f"Out of MCPs {mcps_to_check}, following MCPs {not_matching_mcps} were not at desired "
         f"condition {condition_type} before timeout.\n"
-        f"Current MCP status={str({mcp.name: mcp.instance.status.conditions for mcp in machine_config_pools_list})}"
+        f"Current MCP status={ {mcp.name: mcp.instance.status.conditions for mcp in machine_config_pools_list}!s}"
     )
     collect_ocp_must_gather(since_time=since_time)
 
@@ -407,7 +407,7 @@ def wait_for_csv_successful_state(admin_client, namespace_name, subscription_nam
     raise ResourceNotFoundError(f"Subscription {subscription_name} not found in namespace: {namespace_name}")
 
 
-def wait_for_mcp_update_completion(machine_config_pools_list, initial_mcp_conditions, nodes):
+def wait_for_mcp_update_completion(machine_config_pools_list, initial_mcp_conditions, nodes, timeout=TIMEOUT_75MIN):
     initial_updating_transition_times = get_mcp_updating_transition_times(mcp_conditions=initial_mcp_conditions)
 
     wait_for_mcp_update_start(
@@ -416,6 +416,7 @@ def wait_for_mcp_update_completion(machine_config_pools_list, initial_mcp_condit
     )
     wait_for_mcp_update_end(
         machine_config_pools_list=machine_config_pools_list,
+        timeout=timeout,
     )
     wait_for_nodes_to_have_same_kubelet_version(nodes=nodes)
     wait_for_all_nodes_ready(nodes=nodes)

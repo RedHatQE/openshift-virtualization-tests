@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 # Run strategies logic can be found under
 # https://kubevirt.io/user-guide/#/creation/run-strategies?id=run-strategies
-
 import logging
 import re
+from typing import TYPE_CHECKING
 
 import pytest
 from kubernetes.client.rest import ApiException
@@ -16,6 +18,11 @@ from timeout_sampler import TimeoutSampler
 from tests.os_params import RHEL_LATEST
 from utilities.constants import TIMEOUT_10MIN
 from utilities.virt import migrate_vm_and_verify, running_vm
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from utilities.virt import VirtualMachineForTests
 
 pytestmark = pytest.mark.post_upgrade
 
@@ -138,7 +145,7 @@ def run_vm_action(vm, vm_action, expected_exceptions=None):
             except ApiException as e:
                 if re.search(pattern=rf"{'|'.join(expected_exceptions)}", string=str(e)):
                     return True
-                raise e
+                raise
         else:
             getattr(vm, vm_action)(wait=True, timeout=TIMEOUT_10MIN)
             return True
@@ -182,10 +189,10 @@ def pause_unpause_vmi_and_verify_status(vm):
     verify_vm_ready_status(vm=vm)
 
 
-def migrate_validate_run_strategy_vm(vm, run_strategy):
+def migrate_validate_run_strategy_vm(vm: VirtualMachineForTests, client: DynamicClient, run_strategy: str) -> None:
     LOGGER.info(f"The VM migration with runStrategy {run_strategy}")
     verify_vm_ready_status(vm=vm)
-    migrate_vm_and_verify(vm=vm)
+    migrate_vm_and_verify(vm=vm, client=client)
     verify_vm_ready_status(vm=vm)
     verify_vm_run_strategy(vm=vm, run_strategy=run_strategy)
 
@@ -304,5 +311,12 @@ class TestRunStrategyAdvancedActions:
     )
     @pytest.mark.rwx_default_storage
     @pytest.mark.usefixtures("start_vm_if_not_running")
-    def test_run_strategy_migrate_vm(self, lifecycle_vm, request_updated_vm_run_strategy):
-        migrate_validate_run_strategy_vm(vm=lifecycle_vm, run_strategy=request_updated_vm_run_strategy)
+    def test_run_strategy_migrate_vm(
+        self,
+        admin_client: DynamicClient,
+        lifecycle_vm: VirtualMachineForTests,
+        request_updated_vm_run_strategy: str,
+    ):
+        migrate_validate_run_strategy_vm(
+            vm=lifecycle_vm, client=admin_client, run_strategy=request_updated_vm_run_strategy
+        )

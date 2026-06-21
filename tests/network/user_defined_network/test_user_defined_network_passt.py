@@ -1,7 +1,9 @@
-from typing import Generator
+from __future__ import annotations
+
+from collections.abc import Generator
+from typing import TYPE_CHECKING
 
 import pytest
-from kubernetes.dynamic import DynamicClient
 from ocp_resources.hyperconverged import HyperConverged
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.namespace import Namespace
@@ -11,10 +13,14 @@ from timeout_sampler import TimeoutExpiredError, retry
 from libs.net.traffic_generator import client_server_active_connection, is_tcp_connection
 from libs.net.udn import UDN_PASST_CORE_BINDING_NAME
 from libs.net.vmspec import lookup_primary_network
-from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs.vm_factory import udn_vm
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.virt import LOGGER, migrate_vm_and_verify
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from libs.vm.vm import BaseVirtualMachine
 
 
 @retry(wait_timeout=400, sleep=10, exceptions_dict={})
@@ -31,7 +37,7 @@ def wait_for_ready_vm_with_restart(vm: BaseVirtualMachine) -> bool:
 @pytest.fixture(scope="module")
 def passt_enabled_in_hco(
     hyperconverged_resource_scope_module: HyperConverged,
-) -> Generator[None, None, None]:
+) -> Generator[None]:
     with ResourceEditorValidateHCOReconcile(
         patches={
             hyperconverged_resource_scope_module: {
@@ -51,7 +57,7 @@ def passt_running_vm_pair(
     udn_affinity_label: tuple[str, str],
     admin_client: DynamicClient,
     passt_enabled_in_hco,
-) -> Generator[tuple[BaseVirtualMachine, BaseVirtualMachine], None, None]:
+) -> Generator[tuple[BaseVirtualMachine, BaseVirtualMachine]]:
     with (
         udn_vm(
             namespace_name=udn_namespace.name,
@@ -82,24 +88,28 @@ def passt_running_vm_pair(
 @pytest.mark.ipv4
 @pytest.mark.single_nic
 @pytest.mark.polarion("CNV-12427")
-def test_passt_connectivity_is_preserved_during_client_live_migration(passt_enabled_in_hco, passt_running_vm_pair):
+def test_passt_connectivity_is_preserved_during_client_live_migration(
+    admin_client: DynamicClient, passt_running_vm_pair: tuple[BaseVirtualMachine, BaseVirtualMachine]
+):
     with client_server_active_connection(
         client_vm=passt_running_vm_pair[0],
         server_vm=passt_running_vm_pair[1],
         spec_logical_network=lookup_primary_network(vm=passt_running_vm_pair[1]).name,
     ) as (client, server):
-        migrate_vm_and_verify(vm=client.vm)
+        migrate_vm_and_verify(vm=client.vm, client=admin_client)
         assert is_tcp_connection(server=server, client=client)
 
 
 @pytest.mark.ipv4
 @pytest.mark.single_nic
 @pytest.mark.polarion("CNV-12428")
-def test_passt_connectivity_is_preserved_during_server_live_migration(passt_enabled_in_hco, passt_running_vm_pair):
+def test_passt_connectivity_is_preserved_during_server_live_migration(
+    admin_client: DynamicClient, passt_running_vm_pair: tuple[BaseVirtualMachine, BaseVirtualMachine]
+):
     with client_server_active_connection(
         client_vm=passt_running_vm_pair[0],
         server_vm=passt_running_vm_pair[1],
         spec_logical_network=lookup_primary_network(vm=passt_running_vm_pair[1]).name,
     ) as (client, server):
-        migrate_vm_and_verify(vm=server.vm)
+        migrate_vm_and_verify(vm=server.vm, client=admin_client)
         assert is_tcp_connection(server=server, client=client)

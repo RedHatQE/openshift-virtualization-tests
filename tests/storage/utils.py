@@ -1,9 +1,10 @@
 import ast
 import logging
 import shlex
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Generator
 
+import pytest
 import requests
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.cluster_role import ClusterRole
@@ -11,7 +12,6 @@ from ocp_resources.config_map import ConfigMap
 from ocp_resources.daemonset import DaemonSet
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.hostpath_provisioner import HostPathProvisioner
-from ocp_resources.pod import Pod
 from ocp_resources.resource import Resource
 from ocp_resources.role_binding import RoleBinding
 from ocp_resources.route import Route
@@ -24,6 +24,7 @@ from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+from tests.storage.constants import NO_STORAGE_CLASS_FAILURE_MESSAGE
 from utilities import console
 from utilities.artifactory import (
     cleanup_artifactory_secret_and_config_map,
@@ -35,11 +36,13 @@ from utilities.constants import (
     CDI_UPLOADPROXY,
     LS_COMMAND,
     TIMEOUT_2MIN,
+    TIMEOUT_5MIN,
     TIMEOUT_5SEC,
     TIMEOUT_20SEC,
     TIMEOUT_30MIN,
     Images,
 )
+from utilities.exceptions import DataVolumeConditionMessageNotFoundError
 from utilities.infra import (
     get_pod_by_name_prefix,
 )
@@ -279,47 +282,57 @@ def get_importer_pod(
         raise
 
 
-def wait_for_importer_container_message(importer_pod, msg):
-    LOGGER.info(f"Wait for {importer_pod.name} container to show message: {msg}")
-    try:
-        sampled_msg = TimeoutSampler(
-            wait_timeout=120,
-            sleep=5,
-            func=lambda: (
-                importer_container_status_reason(importer_pod) == Pod.Status.CRASH_LOOPBACK_OFF
-                and msg
-                in importer_pod.instance.status
-                .containerStatuses[0]
-                .get("lastState", {})
-                .get("terminated", {})
-                .get("message", "")
-            ),
-        )
-        for sample in sampled_msg:
-            if sample:
-                return
-    except TimeoutExpiredError:
-        LOGGER.error(f"{importer_pod.name} did not get message: {msg}")
-        raise
-
-
-def importer_container_status_reason(pod):
+def wait_for_dv_condition_message(dv: DataVolume, expected_message: str, timeout: int = TIMEOUT_5MIN) -> None:
     """
-    Get status for why importer pod container is waiting or terminated
-    (for container status running there is no 'reason' key)
+    Wait for DataVolume condition to contain expected message.
+
+    Uses substring matching (not exact match) because CDI messages
+    often include variable context like timestamps, pod names, or URLs.
+
+    Monitors ADDED and MODIFIED events. DELETED events cause immediate failure.
+    Other event types are logged and ignored.
+
+    Example:
+        Expected: "certificate signed by unknown authority"
+        Actual message: "Unable to connect: ... x509: certificate signed by unknown authority"
+
+    Args:
+        dv: DataVolume resource to monitor for condition messages
+        expected_message: Expected message substring to find in condition messages
+        timeout: Timeout in seconds for the operation, default is TIMEOUT_5MIN.
+
+    Raises:
+        DataVolumeConditionMessageNotFoundError: If expected message not found within timeout
+            or if the DataVolume is deleted during monitoring.
     """
-    container_state = pod.instance.status.containerStatuses[0].state
-    if container_state.waiting:
-        return container_state.waiting.reason
-    if container_state.terminated:
-        return container_state.terminated.reason
+    LOGGER.info(f"Watching {dv.name} for message: {expected_message} for up to {timeout} seconds.")
+    last_conditions: list[dict[str, str]] = []
+    deleted = False
+    for event in dv.watcher(timeout=timeout):
+        event_type = event["type"]
+        if event_type == "DELETED":
+            deleted = True
+            break
+        if event_type not in ("ADDED", "MODIFIED"):
+            LOGGER.info(f"Ignoring {event_type} event for DataVolume {dv.name}")
+            continue
+        last_conditions = (event["object"].status or {}).get("conditions", [])
+        if any(expected_message in condition.get("message", "") for condition in last_conditions):
+            LOGGER.info(f"Found expected message in {dv.name}: {expected_message}")
+            return
+
+    reason = f"DataVolume '{dv.name}' was deleted" if deleted else f"Timed out after {timeout} seconds"
+    LOGGER.error(f"{reason} while waiting for message: {expected_message}")
+    raise DataVolumeConditionMessageNotFoundError(
+        dv_name=dv.name, expected_message=expected_message, last_conditions=last_conditions
+    )
 
 
 def assert_pvc_snapshot_clone_annotation(pvc, storage_class):
     clone_type_annotation_str = f"{Resource.ApiGroup.CDI_KUBEVIRT_IO}/cloneType"
     clone_type_annotation = pvc.instance["metadata"].get("annotations").get(clone_type_annotation_str)
     # For snapshot capable storage, 'csi-clone' may be set in the StorageProfile
-    expected_clone_type_annotation = StorageProfile(name=storage_class).instance.status.cloneStrategy
+    expected_clone_type_annotation = StorageProfile(name=storage_class, client=pvc.client).instance.status.cloneStrategy
     assert clone_type_annotation == expected_clone_type_annotation, (
         f"{clone_type_annotation_str}: {clone_type_annotation}, expected: '{expected_clone_type_annotation}'"
     )
@@ -377,29 +390,6 @@ def create_windows19_vm(dv_name, namespace, client, vm_name, cpu_model, storage_
     )
 
 
-def create_cirros_dv(
-    namespace,
-    name,
-    storage_class,
-    client,
-    access_modes=None,
-    volume_mode=None,
-    dv_size=Images.Cirros.DEFAULT_DV_SIZE,
-):
-    with create_dv(
-        dv_name=f"dv-{name}",
-        namespace=namespace,
-        url=get_http_image_url(image_directory=Images.Cirros.DIR, image_name=Images.Cirros.QCOW2_IMG),
-        size=dv_size,
-        storage_class=storage_class,
-        access_modes=access_modes,
-        volume_mode=volume_mode,
-        client=client,
-    ) as dv:
-        dv.wait_for_dv_success()
-        yield dv
-
-
 def check_snapshot_indication(snapshot, is_online):
     snapshot_indications = snapshot.instance.status.indications
     online = "Online"
@@ -429,15 +419,18 @@ def get_file_url(url, file_name):
 
 
 def assert_num_files_in_pod(pod, expected_num_of_files):
-    num_of_file_in_pod = pod.execute(command=shlex.split("ls -1 /pvc")).count("\n")
-    assert num_of_file_in_pod == expected_num_of_files, (
-        f"Number of file in pod is {num_of_file_in_pod}, while the expected is {expected_num_of_files}"
+    files = [
+        line for line in pod.execute(command=shlex.split("ls -1 /pvc")).splitlines() if line and line != "lost+found"
+    ]
+    num_of_files_in_pod = len(files)
+    assert num_of_files_in_pod == expected_num_of_files, (
+        f"Number of files in pod is {num_of_files_in_pod}, while the expected is {expected_num_of_files}"
     )
 
 
 def assert_use_populator(pvc, storage_class, cluster_csi_drivers_names):
     expected_use_populator_value = (
-        StorageClass(name=storage_class).instance.get("provisioner") in cluster_csi_drivers_names
+        StorageClass(name=storage_class, client=pvc.client).instance.get("provisioner") in cluster_csi_drivers_names
     )
     assert pvc.use_populator == expected_use_populator_value
 
@@ -513,3 +506,26 @@ def check_file_in_vm(
         vm_console.expect(pattern=file_name, timeout=TIMEOUT_20SEC)
         vm_console.sendline(f"cat {file_name}")
         vm_console.expect(pattern=file_content, timeout=TIMEOUT_20SEC)
+
+
+def get_storage_class_for_storage_migration(storage_class: str, cluster_storage_classes_names: list[str]) -> str:
+    """Validate that the requested storage class exists in the cluster.
+
+    Args:
+        storage_class: Name of the storage class to validate.
+        cluster_storage_classes_names: List of available storage class names in the cluster.
+
+    Returns:
+        The validated storage class name if it exists.
+
+    Raises:
+        pytest.Failed: If the storage class is not found in the cluster.
+    """
+    if storage_class in cluster_storage_classes_names:
+        return storage_class
+
+    pytest.fail(
+        NO_STORAGE_CLASS_FAILURE_MESSAGE.format(
+            storage_class=storage_class, cluster_storage_classes_names=cluster_storage_classes_names
+        )
+    )

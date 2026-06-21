@@ -42,7 +42,7 @@ def start_vm_with_cluster_preference(client, preference_name, namespace_name):
         name=f"rhel-vm-with-{preference_name}",
         namespace=namespace_name,
         # TODO: Add corresponding images to the VM based on preference
-        image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
+        image=Images.Fedora.FEDORA_CONTAINER_IMAGE,
         memory_guest=memory_guest,
         cpu_sockets=sockets,
         cpu_cores=cores,
@@ -70,7 +70,7 @@ def vm_cluster_preferences_expected_list():
 
 @pytest.mark.polarion("CNV-9981")
 def test_base_preferences_common_annotation(base_vm_cluster_preferences, vm_cluster_preferences_expected_list):
-    assert set([preference.name for preference in base_vm_cluster_preferences]) == set(
+    assert {preference.name for preference in base_vm_cluster_preferences} == set(
         vm_cluster_preferences_expected_list
     ), "Not all base CNV cluster preferences exist"
 

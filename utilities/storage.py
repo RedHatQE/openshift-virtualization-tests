@@ -2,8 +2,9 @@ import logging
 import math
 import os
 import shlex
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Any, Dict, Generator
+from typing import Any
 
 import cachetools.func
 import kubernetes
@@ -65,6 +66,7 @@ HPP_CSI = "hpp-csi"
 
 
 LOGGER = logging.getLogger(__name__)
+_DEFAULT_DISK_SERIAL_COMMAND = shlex.split("sudo ls /dev/disk/by-id")
 
 
 def create_dummy_first_consumer_pod(volume_mode=DataVolume.VolumeMode.FILE, dv=None, pvc=None):
@@ -140,10 +142,10 @@ def create_dv(
             # Make sure URL exists
             validate_file_exists_in_url(url=url)
         if not secret:
-            secret = utilities.artifactory.get_artifactory_secret(namespace=namespace)
+            secret = utilities.artifactory.get_artifactory_secret(namespace=namespace, client=client)
             artifactory_secret = secret
         if not cert_configmap:
-            cert_created = utilities.artifactory.get_artifactory_config_map(namespace=namespace)
+            cert_created = utilities.artifactory.get_artifactory_config_map(namespace=namespace, client=client)
             cert_configmap = cert_created.name
 
     with DataVolume(
@@ -180,13 +182,13 @@ def create_dv(
 def data_volume(
     namespace: Namespace,
     client: DynamicClient,
-    storage_class_matrix: Dict[str, Dict[str, Any]] | None = None,
+    storage_class_matrix: dict[str, dict[str, Any]] | None = None,
     storage_class: str | None = None,
     request: FixtureRequest | None = None,
-    os_matrix: Dict[str, Dict[str, Any]] | None = None,
+    os_matrix: dict[str, dict[str, Any]] | None = None,
     check_dv_exists: bool = False,
     bind_immediate: bool | None = None,
-) -> Generator[DataVolume, None, None]:
+) -> Generator[DataVolume]:
     """
     DV creation using create_dv.
 
@@ -304,8 +306,7 @@ def get_downloaded_artifact(remote_name, local_name):
     with requests.get(url, headers=artifactory_header, verify=False, stream=True) as created_request:
         created_request.raise_for_status()
         with open(local_name, "wb") as file_downloaded:
-            for chunk in created_request.iter_content(chunk_size=8192):
-                file_downloaded.write(chunk)
+            file_downloaded.writelines(created_request.iter_content(chunk_size=8192))
     try:
         assert os.path.isfile(local_name)
         return True
@@ -564,12 +565,11 @@ def data_volume_template_dict(
 
 
 def data_volume_template_with_source_ref_dict(data_source, storage_class=None):
-    source_dict = data_source.source.instance.to_dict()
     dv = DataVolume(
         name=utilities.infra.unique_name(name=data_source.name),
         namespace=data_source.namespace,
         size=get_dv_size_from_datasource(data_source=data_source),
-        storage_class=storage_class or source_dict["spec"].get("storageClassName"),
+        storage_class=storage_class,
         api_name="storage",
         source_ref={
             "kind": data_source.kind,
@@ -692,7 +692,7 @@ def run_command_on_cirros_vm_and_check_output(vm, command, expected_result):
         vm_console.expect(expected_result, timeout=20)
 
 
-def assert_disk_serial(vm, command=shlex.split("sudo ls /dev/disk/by-id")):
+def assert_disk_serial(vm, command=_DEFAULT_DISK_SERIAL_COMMAND):
     assert (
         HOTPLUG_DISK_SERIAL
         in run_ssh_commands(host=vm.ssh_exec, commands=command, wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC)[0]

@@ -10,9 +10,14 @@ from ocp_resources.resource import ResourceEditor
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from libs.net.ip import random_ipv4_address
-from libs.net.vmspec import lookup_iface_status, lookup_iface_status_ip, wait_for_missing_iface_status
+from libs.net.vmspec import (
+    VMInterfaceStatusNotFoundError,
+    lookup_iface_status,
+    lookup_iface_status_ip,
+    wait_for_missing_iface_status,
+)
 from libs.vm.factory import base_vmspec, fedora_vm
-from libs.vm.spec import Affinity, CloudInitNoCloud, Interface, Multus, Network
+from libs.vm.spec import Affinity, CloudInitNoCloud, Interface, Metadata, Multus, Network
 from libs.vm.vm import BaseVirtualMachine, add_volume_disk, cloudinitdisk_storage
 from tests.network.libs import cloudinit
 from tests.network.libs.cloudinit import primary_iface_cloud_init
@@ -31,7 +36,6 @@ from utilities.constants import (
 )
 from utilities.infra import get_pod_by_name_prefix
 from utilities.network import (
-    IfaceNotFound,
     cloud_init_network_data,
     compose_cloud_init_data_dict,
     network_device,
@@ -42,6 +46,9 @@ from utilities.virt import VirtualMachineForTests, fedora_vm_body, prepare_cloud
 LOGGER = logging.getLogger(__name__)
 
 RHCOS9_WORKER_LABEL: Final[str] = f"{NODE_ROLE_KUBERNETES_IO}/worker-rhcos9"
+
+LINUX_BRIDGE_IFACE_NAME_1: Final[str] = "linux-bridge-1"
+LINUX_BRIDGE_IFACE_NAME_2: Final[str] = "linux-bridge-2"
 
 
 NETWORK_MANAGER_UNMANAGE_RUNCMD = [
@@ -151,7 +158,7 @@ def hot_plug_interface(
 def hot_unplug_interface(vm, hot_plugged_interface_name):
     interfaces = vm.get_interfaces()
     unplugged_interface = next(interface for interface in interfaces if interface["name"] == hot_plugged_interface_name)
-    unplugged_interface.update(dict(state="absent"))
+    unplugged_interface.update({"state": "absent"})
 
     update_hot_plug_config_in_vm(vm=vm, interfaces=interfaces)
 
@@ -248,7 +255,7 @@ def get_guest_vm_interface_name_by_vmi_interface_name(vm, vm_interface_name):
     for interface in vmi_interfaces:
         if interface["name"] == vm_interface_name:
             return interface["interfaceName"]
-    raise IfaceNotFound(name=vm_interface_name)
+    raise VMInterfaceStatusNotFoundError(f"Interface {vm_interface_name} not found in VM {vm.name} status")
 
 
 @contextlib.contextmanager
@@ -291,7 +298,7 @@ def search_hot_plugged_interface_in_vmi(vm, interface_name):
     try:
         return wait_for_interface_hot_plug_completion(vmi=vm.vmi, interface_name=interface_name)
     except TimeoutExpiredError:
-        raise IfaceNotFound(name=interface_name)
+        raise VMInterfaceStatusNotFoundError(f"Interface {interface_name} not found in VM {vm.name} status")
 
 
 def get_kubemacpool_controller_log(
@@ -321,28 +328,6 @@ def get_primary_and_hot_plugged_mac_addresses(vm, hot_plugged_interface):
         {primary_interface.name: primary_interface.macAddress},
         {hot_plugged_interface: hot_plugged_interface_mac},
     ]
-
-
-def create_vm_with_hot_plugged_sriov_interface(
-    namespace_name,
-    vm_name,
-    sriov_network_for_hot_plug,
-    ipv4_address,
-    client,
-):
-    with create_vm_for_hot_plug(
-        namespace_name=namespace_name,
-        vm_name=vm_name,
-        client=client,
-    ) as vm:
-        hot_plug_interface_and_set_address(
-            vm=vm,
-            hot_plugged_interface_name=sriov_network_for_hot_plug.name,
-            net_attach_def_name=f"{namespace_name}/{sriov_network_for_hot_plug.name}",
-            ipv4_address=ipv4_address,
-            sriov=True,
-        )
-        yield vm
 
 
 def wait_for_no_packet_loss_after_connection(src_vm, dst_ip, interface=None):
@@ -380,6 +365,7 @@ def secondary_network_vm(
     secondary_iface_name: str,
     secondary_iface_addresses: list[str],
     affinity: Affinity | None = None,
+    labels: dict[str, str] | None = None,
 ) -> BaseVirtualMachine:
     """Create a Fedora VM with a masquerade primary interface and a secondary Linux bridge interface.
 
@@ -391,6 +377,7 @@ def secondary_network_vm(
         secondary_iface_name: Name of the secondary network interface in the VM spec.
         secondary_iface_addresses: CIDR addresses to assign to the secondary interface via cloud-init.
         affinity: Optional node or pod affinity rules for scheduling.
+        labels: Optional labels to apply to the VM template metadata for pod scheduling.
     """
     spec = base_vmspec()
     spec.template.spec.domain.devices.interfaces = [  # type: ignore
@@ -403,6 +390,11 @@ def secondary_network_vm(
     ]
     if affinity:
         spec.template.spec.affinity = affinity
+
+    if labels:
+        spec.template.metadata = spec.template.metadata or Metadata()
+        spec.template.metadata.labels = spec.template.metadata.labels or {}
+        spec.template.metadata.labels.update(labels)
 
     ethernets = {}
     primary = primary_iface_cloud_init()

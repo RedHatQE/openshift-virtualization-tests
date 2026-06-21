@@ -11,6 +11,7 @@ from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from pytest_testconfig import config as py_config
 
+from libs.net.vmspec import VMInterfaceSpecNotFoundError
 from libs.vm.spec import (
     Affinity,
     CloudInitNoCloud,
@@ -18,6 +19,7 @@ from libs.vm.spec import (
     Devices,
     Disk,
     Metadata,
+    Network,
     SpecDisk,
     VMISpec,
     VMSpec,
@@ -26,7 +28,6 @@ from libs.vm.spec import (
 from tests.network.libs import cloudinit
 from utilities import infra
 from utilities.constants import CLOUD_INIT_DISK_NAME
-from utilities.network import IfaceNotFound
 from utilities.virt import get_oc_image_info, vm_console_run_commands
 
 if TYPE_CHECKING:
@@ -88,13 +89,13 @@ class BaseVirtualMachine(VirtualMachine):
 
     def set_interface_state(self, network_name: str, state: str) -> None:
         if not self._spec.template.spec.domain.devices:
-            raise IfaceNotFound(name=network_name)
+            raise VMInterfaceSpecNotFoundError(f"Interface {network_name} not found in VM {self.name} spec")
         for interface in self._spec.template.spec.domain.devices.interfaces or []:
             if interface.name == network_name:
                 interface.state = state
                 break
         else:
-            raise IfaceNotFound(name=network_name)
+            raise VMInterfaceSpecNotFoundError(f"Interface {network_name} not found in VM {self.name} spec")
 
         devices = asdict(obj=self._spec.template.spec.domain.devices, dict_factory=self._filter_out_none_values)
         patches = {
@@ -114,6 +115,19 @@ class BaseVirtualMachine(VirtualMachine):
             self: {"spec": {"template": {"metadata": {"annotations": self._spec.template.metadata.annotations}}}}
         }
         ResourceEditor(patches=patches).update()
+
+    def set_networks(self, networks: list[Network]) -> None:
+        """Replace all secondary networks in the VM spec with a single atomic patch.
+
+        Updates the in-memory spec first so the object stays consistent with the cluster
+        without requiring a re-fetch after the patch.
+
+        Args:
+            networks: Full list of Network entries to apply (including the pod network).
+        """
+        self._spec.template.spec.networks = networks
+        serialized = [asdict(obj=net, dict_factory=self._filter_out_none_values) for net in networks]
+        ResourceEditor(patches={self: {"spec": {"template": {"spec": {"networks": serialized}}}}}).update()
 
     def set_template_affinity(self, affinity: Affinity | None) -> None:
         """Replace the VM template affinity.

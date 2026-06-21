@@ -46,12 +46,6 @@ def get_population_method_by_provisioner(storage_class, cluster_csi_drivers_name
     )
 
 
-@pytest.fixture(scope="function")
-def skip_no_reencrypt_route(upload_proxy_route):
-    if not upload_proxy_route.termination == "reencrypt":
-        pytest.skip("Skip testing. The upload proxy route is not re-encrypt.")
-
-
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2192")
 def test_successful_virtctl_upload_no_url(unprivileged_client, namespace, tmpdir):
@@ -138,7 +132,6 @@ def test_image_upload_with_overridden_url(
 def test_virtctl_image_upload_with_ca(
     unprivileged_client,
     enabled_ca,
-    skip_no_reencrypt_route,
     tmpdir,
     namespace,
 ):

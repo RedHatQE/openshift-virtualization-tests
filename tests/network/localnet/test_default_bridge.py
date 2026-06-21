@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import ipaddress
 from ipaddress import ip_interface
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -11,8 +14,12 @@ from tests.network.localnet.liblocalnet import (
     LOCALNET_BR_EX_INTERFACE,
     LOCALNET_BR_EX_INTERFACE_NO_VLAN,
 )
-from utilities.constants import QUARANTINED
 from utilities.virt import migrate_vm_and_verify
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from libs.net.traffic_generator import TcpServer, VMTcpClient
 
 
 @pytest.mark.gating
@@ -21,11 +28,12 @@ from utilities.virt import migrate_vm_and_verify
 @pytest.mark.usefixtures("nncp_localnet")
 @pytest.mark.polarion("CNV-11775")
 def test_connectivity_over_migration_between_localnet_vms(
-    subtests,
-    localnet_active_connections,
+    admin_client: DynamicClient,
+    subtests: pytest.Subtests,
+    localnet_active_connections: list[tuple[VMTcpClient, TcpServer]],
 ):
     client, _ = localnet_active_connections[0]
-    migrate_vm_and_verify(vm=client.vm)
+    migrate_vm_and_verify(vm=client.vm, client=admin_client)
     for client, server in localnet_active_connections:
         with subtests.test(f"IPv{ipaddress.ip_address(client.server_ip).version}"):
             assert is_tcp_connection(server=server, client=client)
@@ -61,10 +69,6 @@ def test_connectivity_post_migration_between_localnet_vms(
 @pytest.mark.s390x
 @pytest.mark.usefixtures("nncp_localnet")
 @pytest.mark.polarion("CNV-12363")
-@pytest.mark.xfail(
-    reason=f"{QUARANTINED}: The requested IPv6 address is assigned but not visible in VMI: CNV-80582",
-    run=False,
-)
 def test_vmi_reports_ip_on_secondary_interface_without_vlan(
     localnet_running_vms,
 ):

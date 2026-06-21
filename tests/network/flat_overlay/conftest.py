@@ -1,7 +1,11 @@
+from __future__ import annotations
+
 import logging
 import random
+from typing import TYPE_CHECKING
 
 import pytest
+from ocp_resources.cluster_operator import ClusterOperator
 from ocp_resources.multi_network_policy import MultiNetworkPolicy
 from ocp_resources.resource import ResourceEditor
 
@@ -20,12 +24,16 @@ from tests.network.flat_overlay.utils import (
     get_vm_kubevirt_domain_label,
     is_port_number_available,
     start_nc_response_on_vm,
-    wait_for_multi_network_policy_resources,
 )
-from utilities.constants import FLAT_OVERLAY_STR
-from utilities.infra import create_ns
+from utilities.constants import DEFAULT_RESOURCE_CONDITIONS, FLAT_OVERLAY_STR
+from utilities.infra import create_ns, wait_for_consistent_resource_conditions
 from utilities.network import assert_ping_successful, network_nad
 from utilities.virt import migrate_vm_and_verify
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from utilities.virt import VirtualMachineForTests
 
 LOGGER = logging.getLogger(__name__)
 
@@ -44,11 +52,24 @@ SPECIFIC_HOST_MASK = "32"
 
 
 @pytest.fixture(scope="module")
-def enable_multi_network_policy_usage(admin_client, network_operator):
-    with ResourceEditor(patches={network_operator: {"spec": {"useMultiNetworkPolicy": True}}}):
-        wait_for_multi_network_policy_resources(admin_client=admin_client, deploy_mnp_crd=True)
+def multi_network_policy_enabled(admin_client, network_operator):
+    if network_operator.instance.spec.get("useMultiNetworkPolicy"):
         yield
-    wait_for_multi_network_policy_resources(admin_client=admin_client, deploy_mnp_crd=False)
+        return
+    with ResourceEditor(patches={network_operator: {"spec": {"useMultiNetworkPolicy": True}}}):
+        wait_for_consistent_resource_conditions(
+            dynamic_client=admin_client,
+            resource_kind=ClusterOperator,
+            resource_name="network",
+            expected_conditions=DEFAULT_RESOURCE_CONDITIONS,
+        )
+        yield
+    wait_for_consistent_resource_conditions(
+        dynamic_client=admin_client,
+        resource_kind=ClusterOperator,
+        resource_name="network",
+        expected_conditions=DEFAULT_RESOURCE_CONDITIONS,
+    )
 
 
 @pytest.fixture(scope="module")
@@ -273,8 +294,11 @@ def ping_before_migration(vmd_flat_overlay, vmc_flat_overlay_ip_address):
 
 
 @pytest.fixture()
-def migrated_vmc_flat_overlay(vmc_flat_overlay):
-    migrate_vm_and_verify(vm=vmc_flat_overlay, check_ssh_connectivity=True)
+def migrated_vmc_flat_overlay(
+    admin_client: DynamicClient, vmc_flat_overlay: VirtualMachineForTests
+) -> VirtualMachineForTests:
+    migrate_vm_and_verify(vm=vmc_flat_overlay, client=admin_client, check_ssh_connectivity=True)
+    return vmc_flat_overlay
 
 
 @pytest.fixture(scope="class")

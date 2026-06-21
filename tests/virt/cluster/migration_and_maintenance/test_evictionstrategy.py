@@ -15,7 +15,7 @@ from utilities.constants import (
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.virt import (
     check_migration_process_after_node_drain,
-    node_mgmt_console,
+    drain_node,
     restart_vm_wait_for_running_vm,
     wait_for_node_schedulable_status,
 )
@@ -46,9 +46,11 @@ def assert_vm_restarts_after_node_drain(source_node, vmi, vmi_old_uid):
 
 
 @pytest.fixture()
-def drained_node(admin_client, vm_for_test_from_template_scope_class):
+def drained_node(admin_client, hco_namespace, compact_cluster, vm_for_test_from_template_scope_class):
     source_node = vm_for_test_from_template_scope_class.vmi.get_node(privileged_client=admin_client)
-    with node_mgmt_console(admin_client=admin_client, node=source_node, node_mgmt="drain"):
+    with drain_node(
+        admin_client=admin_client, node=source_node, hco_namespace=hco_namespace, compact_cluster=compact_cluster
+    ):
         yield source_node
 
 

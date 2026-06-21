@@ -27,6 +27,7 @@ class Metadata:
 @dataclass
 class VMISpec:
     domain: Domain
+    architecture: str | None = None
     networks: list[Network] | None = None
     volumes: list[Volume] | None = None
     terminationGracePeriodSeconds: int | None = None  # noqa: N815
@@ -55,6 +56,7 @@ class Devices:
     disks: list[SpecDisk] | None = None
     interfaces: list[Interface] | None = None
     rng: dict[Any, Any] | None = None
+    autoattachPodInterface: bool | None = None  # noqa: N815
 
 
 @dataclass
@@ -77,6 +79,7 @@ class Interface:
     passtBinding: dict[Any, Any] | None = None  # noqa: N815
     binding: NetBinding | None = None
     state: str | None = None
+    macAddress: str | None = None  # noqa: N815
 
 
 @dataclass

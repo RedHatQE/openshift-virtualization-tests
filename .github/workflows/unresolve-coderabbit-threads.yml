@@ -1,0 +1,163 @@
+# description: Unresolve CodeRabbit review threads that were resolved without
+# being addressed. Runs on every push to a PR via pull_request_target.
+#
+# Logic: When a PR is pushed, scan all resolved CodeRabbit review threads.
+# If a thread was resolved without a substantive PR-author reply or CodeRabbit
+# verification, unresolve it so CodeRabbit can re-evaluate.
+
+name: Unresolve unaddressed CodeRabbit threads
+
+on:
+  pull_request_target:
+    types: [synchronize]
+
+concurrency:
+  group: unresolve-threads-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  # Required to unresolve review threads and add comments
+  pull-requests: write
+
+jobs:
+  unresolve-threads:
+    name: Check resolved CodeRabbit threads
+    # Webhook payload uses REST-format logins where bots have [bot] suffix
+    if: "!endsWith(github.event.pull_request.user.login, '[bot]')"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check and unresolve unaddressed threads
+        env:
+          GH_TOKEN: ${{ secrets.BOT3_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          set -euo pipefail
+
+          # Bot identity constants — GraphQL returns login without [bot] suffix
+          # and uses __typename to distinguish bots from human users.
+          BOT_LOGIN="coderabbitai"
+          BOT_TYPE="Bot"
+
+          # --- Helper: check if a thread should be unresolved ---
+          check_and_unresolve_thread() {
+            local thread_data="$1"
+            local thread_id
+            thread_id=$(echo "$thread_data" | jq -r '.id')
+
+            # Check if the opening comment is from CodeRabbit — if not, skip
+            local opener_login opener_type
+            opener_login=$(echo "$thread_data" | jq -r '.opening_comment.nodes[0].author.login // ""')
+            opener_type=$(echo "$thread_data" | jq -r '.opening_comment.nodes[0].author.__typename // ""')
+            if [ "$opener_login" != "$BOT_LOGIN" ] || [ "$opener_type" != "$BOT_TYPE" ]; then
+              echo "Thread $thread_id not opened by CodeRabbit (opener: $opener_login, type: $opener_type). Skipping."
+              return
+            fi
+
+            # Check for a substantive reply from PR author (>= 15 chars) or CodeRabbit verification
+            local has_response
+            has_response=$(echo "$thread_data" | jq -r --arg pr_author "$PR_AUTHOR" --arg bot_login "$BOT_LOGIN" --arg bot_type "$BOT_TYPE" '
+              any(.recent_comments.nodes[];
+                (
+                  # PR author posted a substantive reply (>= 15 chars)
+                  (.author.login == $pr_author and ((.body // "") | length) >= 15)
+                  or
+                  # CodeRabbit verified the fix
+                  (.author.login == $bot_login and .author.__typename == $bot_type and ((.body // "") | test("\\b(addressed|verified|resolved)\\b|✅|concern is fully"; "i")))
+                )
+              )
+            ')
+
+            if [ "$has_response" = "true" ]; then
+              echo "Thread $thread_id has a substantive response. Keeping resolved."
+              return
+            fi
+
+            # No substantive reply — unresolve the thread
+            echo "Unresolving thread: $thread_id"
+            if gh api graphql -f query="
+              mutation {
+                unresolveReviewThread(input: {threadId: \"$thread_id\"}) {
+                  thread {
+                    id
+                    isResolved
+                  }
+                }
+              }
+            "; then
+              # Add a comment explaining why it was unresolved
+              gh api graphql -f query="
+                mutation {
+                  addPullRequestReviewThreadReply(input: {pullRequestReviewThreadId: \"$thread_id\", body: \"⚠️ This thread was automatically unresolved because it was resolved without a substantive response. Please address the review comment and explain how it was resolved before resolving this thread again.\"}) {
+                    comment {
+                      id
+                    }
+                  }
+                }
+              " || echo "  Warning: failed to add comment to $thread_id"
+            else
+              echo "  Warning: failed to unresolve $thread_id"
+            fi
+          }
+
+          echo "Scanning all resolved threads for PR #$PR_NUMBER"
+          CURSOR=""
+          while true; do
+            if [ -n "$CURSOR" ]; then
+              AFTER_ARG="-f after=$CURSOR"
+            else
+              AFTER_ARG=""
+            fi
+            PAGE=$(gh api graphql -f query='
+              query($owner: String!, $repo: String!, $pr: Int!, $after: String) {
+                repository(owner: $owner, name: $repo) {
+                  pullRequest(number: $pr) {
+                    reviewThreads(first: 100, after: $after) {
+                      nodes {
+                        id
+                        isResolved
+                        opening_comment: comments(first: 1) {
+                          nodes {
+                            author {
+                              login
+                              __typename
+                            }
+                          }
+                        }
+                        recent_comments: comments(last: 5) {
+                          nodes {
+                            author {
+                              login
+                              __typename
+                            }
+                            body
+                          }
+                        }
+                      }
+                      pageInfo {
+                        hasNextPage
+                        endCursor
+                      }
+                    }
+                  }
+                }
+              }
+            ' -f owner="${REPO%%/*}" -f repo="${REPO##*/}" -F pr="$PR_NUMBER" $AFTER_ARG)
+
+            # Process each resolved thread on this page
+            echo "$PAGE" | jq -c '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == true)' | while read -r thread; do
+              check_and_unresolve_thread "$thread"
+            done
+
+            # Check for next page
+            HAS_NEXT=$(echo "$PAGE" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage')
+            if [ "$HAS_NEXT" != "true" ]; then
+              break
+            fi
+            CURSOR=$(echo "$PAGE" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.endCursor')
+          done
+
+          echo "Done checking CodeRabbit threads."

@@ -18,6 +18,18 @@ issue_enrichment: {}
 reviews:
   # Explicit instructions applied to every review, including PR description validation
   path_instructions:
+    - path: "utilities/unittests/**"
+      instructions: |
+        ## Unit Tests — Relaxed Rules
+        Files under `utilities/unittests/` are unit tests for shared utilities.
+        Do NOT enforce:
+        - STD docstring format (Preconditions/Steps/Expected sections)
+        - STP link requirements
+        - RFE/Jira link requirements
+        - Coverage tracking rules
+        These rules apply only to feature/integration tests under `tests/`.
+        DO still enforce: code quality, type hints, naming conventions, and all other coding standards.
+
     - path: "**"
       instructions: |
         ## PR Template Validation
@@ -31,6 +43,20 @@ reviews:
         - `##### jira-ticket:` — must be present (may be empty)
         If any required section is absent, or `What this PR does / why we need it:` has no content,
         flag it as HIGH severity and ask the author to restore the missing template section(s).
+
+        ## Approval Policy
+        You may approve the PR when ALL of the following are true:
+        - All your review comments have been addressed with either:
+          - a code/doc change that fixes the issue, or
+          - a substantive author response that justifies no code change.
+          Thread "resolved" state alone is not sufficient.
+          OR you had no review comments.
+        - If you posted a test execution plan comment requesting tests, and the PR author replied
+          with a comment explaining why the requested tests are not needed or were already covered,
+          treat that as an acceptable response — do not block approval on the test plan alone.
+        - The author's explanation must be reasonable and specific (not just "N/A" or "not needed").
+          Accept explanations like: "these tests were already run in CI", "this change is docs-only",
+          "the affected tests are quarantined", or "verified manually on cluster X".
 
   # Assertive profile for strict enforcement of coding standards
   profile: assertive
@@ -78,9 +104,12 @@ reviews:
         mode: error
         instructions: |
           Check ONLY code that is newly added (not modified) in this PR's diff.
+          SKIP this check entirely for files under `utilities/unittests/` — unit tests
+          do not require STP/RFE/Jira links.
+
           This applies to two cases:
-          A) A newly added test file (test_*.py)
-          B) A newly added test function (def test_*) in an existing test file
+          A) A newly added test file (test_*.py) under `tests/`
+          B) A newly added test function (def test_*) in an existing test file under `tests/`
 
           For each case, at least one of the following MUST appear in the
           module, class, or test function docstring:
@@ -91,6 +120,15 @@ reviews:
           If a module-level or class-level STP link already exists in the file,
           newly added test functions in that same file are considered covered.
           The @pytest.mark.polarion decorator alone does NOT satisfy this requirement.
+
+          **Jira skip-marker enforcement:**
+          When a `Jira:` line appears in a test docstring for traceability, it MUST
+          also include `# <skip-jira-utils-check>` as an inline comment on the same line.
+          This is required so the project's jira-utils checker skips traceability references.
+          - Correct:   `Jira: https://redhat.atlassian.net/browse/CNV-87822  # <skip-jira-utils-check>`
+          - Incorrect: `Jira: https://redhat.atlassian.net/browse/CNV-80580`
+          This does NOT apply to `STP:` or `RFE:` lines — only `Jira:` lines need the marker.
+          Flag a missing `# <skip-jira-utils-check>` on a `Jira:` line as HIGH severity.
 
           Pass if no new test files and no new test functions are added in this PR.
 
@@ -104,6 +142,7 @@ reviews:
       - "WIP"
     base_branches:
       - main
+      - cnv-4.22
       - cnv-4.21
       - cnv-4.20
       - cnv-4.19

@@ -9,14 +9,13 @@ import re
 import secrets
 import shlex
 from collections import defaultdict
+from collections.abc import Generator
 from contextlib import contextmanager
 from copy import deepcopy
 from functools import cache
 from json import JSONDecodeError
-from subprocess import run
 from typing import TYPE_CHECKING, Any
 
-import bitmath
 import jinja2
 import pexpect
 import yaml
@@ -24,6 +23,7 @@ from benedict import benedict
 from kubernetes.client import ApiException
 from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import NotFoundError
+from kubernetes.utils.quantity import parse_quantity
 from ocp_resources.daemonset import DaemonSet
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
@@ -87,6 +87,7 @@ from utilities.constants import (
     TIMEOUT_12MIN,
     TIMEOUT_25MIN,
     TIMEOUT_30MIN,
+    VIRT_API,
     VIRT_HANDLER,
     VIRT_LAUNCHER,
     VIRTCTL,
@@ -94,6 +95,7 @@ from utilities.constants import (
     Images,
 )
 from utilities.data_collector import collect_vnc_screenshot_for_vms
+from utilities.exceptions import MigrationStuckSchedulingError, ResourceValueError
 from utilities.hco import get_hco_namespace, wait_for_hco_conditions
 from utilities.network import (
     cloud_init_network_data,
@@ -728,7 +730,7 @@ class VirtualMachineForTests(VirtualMachine):
             LOGGER.warning(
                 "Setting both memory.guest and requests.memory values! (Users should set VM memory via memory.guest!)"
             )
-            if bitmath.parse_string_unsafe(self.memory_guest) > bitmath.parse_string_unsafe(self.memory_requests):
+            if parse_quantity(self.memory_guest) > parse_quantity(self.memory_requests):
                 LOGGER.warning(
                     "Setting memory.guest bigger then requests.memory! (This might cause unpredictable issues!)"
                 )
@@ -1495,8 +1497,8 @@ def vm_console_run_commands(
         Dict of the commands outputs, where the key is the command and the value is the output as a list of lines.
     """
     output = {}
-    # Source: https://www.tutorialspoint.com/how-can-i-remove-the-ansi-escape-sequences-from-a-string-in-python
-    ansi_escape = re.compile(r"(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]")
+    # Strip CSI (ESC[…) and OSC (ESC]…BEL/ST) terminal escape sequences
+    ansi_escape = re.compile(r"(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]|\x1B\][^\x07\x1B]*(?:\x07|\x1B\\)")
     prompt = r"\$ "
     with Console(vm=vm, prompt=prompt) as vmc:
         for command in commands:
@@ -1598,7 +1600,20 @@ class ServiceForVirtualMachineForTests(Service):
         if self.ip_families:
             self.res["spec"]["ipFamilies"] = self.ip_families
 
-    def service_ip(self, ip_family=None):
+    def service_ip(self, admin_client: DynamicClient, ip_family: str | None = None) -> str:
+        """
+        Get the IP address of the service.
+
+        Args:
+            admin_client (DynamicClient): admin client to be used for the service.
+            ip_family (str | None): IP family to be used for the service.
+
+        Returns:
+            str: IP address of the service.
+
+        Raises:
+            ResourceValueError: If the service IP cannot be retrieved.
+        """
         if self.service_type == Service.Type.CLUSTER_IP:
             if ip_family:
                 cluster_ips = [
@@ -1611,11 +1626,8 @@ class ServiceForVirtualMachineForTests(Service):
 
             return self.instance.spec.clusterIP
 
-        vm_node = Node(
-            client=get_client(),
-            name=self.vmi.instance.status.nodeName,
-        )
         if self.service_type == Service.Type.NODE_PORT:
+            vm_node = self.vm.vmi.get_node(privileged_client=admin_client)
             if ip_family:
                 internal_ips = [
                     internal_ip
@@ -1626,6 +1638,10 @@ class ServiceForVirtualMachineForTests(Service):
                 return internal_ips[0]
 
             return self.target_ip or vm_node.internal_ip
+
+        raise ResourceValueError(
+            f"Could not get service IP for service {self.vm.custom_service.name} with type {self.service_type}"
+        )
 
     @property
     def service_port(self):
@@ -1892,19 +1908,19 @@ def wait_for_cloud_init_complete(vm, timeout=TIMEOUT_4MIN):
 
 def migrate_vm_and_verify(
     vm: VirtualMachineForTests | BaseVirtualMachine,
-    client: DynamicClient | None = None,
+    client: DynamicClient,
     timeout: int = TIMEOUT_12MIN,
     wait_for_interfaces: bool = True,
     check_ssh_connectivity: bool = False,
     wait_for_migration_success: bool = True,
 ) -> VirtualMachineInstanceMigration | None:
-    """
-    Create a migration instance. You may choose to wait for migration
-    success or not.
+    """Migrate VM and verify migration success.
 
     Args:
         vm (VirtualMachine): VM to be migrated.
-        client (DynamicClient, default=None): Client to use for migration.
+        client (DynamicClient): Client to use for migration.
+            Note: Only Cluster Admin (admin_client) can migrate VM.
+            Namespace Admin (unprivileged_client) cannot migrate VM (unless assigned kubevirt.io:migrate RoleBinding).
         timeout (int, default=12 minutes): Maximum time to wait for the migration to finish.
         wait_for_interfaces (bool, default=True): Wait for VM network interfaces after migration completes.
         check_ssh_connectivity (bool, default=False): Verify SSH connectivity to the VM after migration completes.
@@ -1928,7 +1944,7 @@ def migrate_vm_and_verify(
     ) as migration:
         if not wait_for_migration_success:
             return migration
-        wait_for_migration_finished(namespace=vm.namespace, migration=migration, timeout=timeout)
+        wait_for_migration_finished(migration=migration, timeout=timeout)
 
     verify_vm_migrated(
         vm=vm,
@@ -1939,7 +1955,20 @@ def migrate_vm_and_verify(
     return None
 
 
-def wait_for_migration_finished(namespace, migration, timeout=TIMEOUT_12MIN):
+def wait_for_migration_finished(migration: VirtualMachineInstanceMigration, timeout: int = TIMEOUT_12MIN) -> None:
+    """
+    Wait for migration to finish.
+    If migration is stuck in Scheduling state, abort the migration and collect data.
+
+    Args:
+        migration (VirtualMachineInstanceMigration): Migration object.
+        timeout (int): Maximum time to wait for the migration to finish.
+
+    Raises:
+        MigrationStuckSchedulingError: If the migration is stuck in Scheduling state.
+        TimeoutExpiredError: If the migration does not finish within the timeout.
+    """
+
     sleep = TIMEOUT_10SEC
     samples = TimeoutSampler(wait_timeout=timeout, sleep=sleep, func=lambda: migration.instance.status.phase)
     counter = 0
@@ -1948,34 +1977,41 @@ def wait_for_migration_finished(namespace, migration, timeout=TIMEOUT_12MIN):
         for sample in samples:
             if sample == migration.Status.SUCCEEDED:
                 break
-            elif sample == "Scheduling":
+            if sample == VirtualMachineInstanceMigration.Status.SCHEDULING:
                 counter += 1
                 # If migration stuck in Scheduling state for more than 4 minutes - most likely it will be failed
                 # Need to collect data before 5 min timeout reached and target POD is removed
                 if counter >= TIMEOUT_4MIN / sleep:
-                    # Get status/events for PODs in non-running or failed state
-                    for pod in utilities.infra.get_pod_by_name_prefix(
-                        client=get_client(),
-                        pod_prefix=VIRT_LAUNCHER,
-                        namespace=namespace,
-                        get_all=True,
-                    ):
-                        if pod.status not in (Pod.Status.RUNNING, Pod.Status.COMPLETED, Pod.Status.SUCCEEDED):
-                            pod_events = [
-                                event["raw_object"]["message"]
-                                for event in pod.events(timeout=TIMEOUT_5SEC, field_selector="type==Warning")
-                            ]
-                            LOGGER.error(
-                                f"POD Conditions:\n {pod.instance.status.conditions[0]}\n"
-                                f"POD Events:\n {', '.join(pod_events)}"
-                            )
-                    raise TimeoutExpiredError(
-                        f"VMIM {migration.name} stuck in Scheduling state and probably will be failed"
-                    )
+                    log_failed_pod_events(migration=migration)
+                    raise MigrationStuckSchedulingError(migration_name=migration.name)
     except TimeoutExpiredError:
         if sample:
             LOGGER.error(f"Status of VMIM {migration.name} is {sample}")
         raise
+
+
+def log_failed_pod_events(migration: VirtualMachineInstanceMigration) -> None:
+    """
+    Log failed pod events for a migration.
+
+    Args:
+        migration (VirtualMachineInstanceMigration): Migration object.
+    """
+
+    for pod in utilities.infra.get_pod_by_name_prefix(
+        client=migration.client, pod_prefix=VIRT_LAUNCHER, namespace=migration.namespace, get_all=True
+    ):
+        # Get status/events for PODs in non-running or failed state
+        if pod.status not in {Pod.Status.RUNNING, Pod.Status.COMPLETED, Pod.Status.SUCCEEDED}:
+            pod_events = [
+                event["raw_object"]["message"]
+                for event in pod.events(timeout=TIMEOUT_5SEC, field_selector="type==Warning")
+            ]
+            LOGGER.error(
+                f"POD Name: {pod.name}\n"
+                f"POD Conditions:\n {pod.instance.status.conditions[0]}\n"
+                f"POD Events:\n {', '.join(pod_events)}"
+            )
 
 
 def verify_vm_migrated(
@@ -2110,27 +2146,80 @@ def vm_instance_from_template(
         yield vm
 
 
+def _uncordon_and_stabilize(admin_client: DynamicClient, node: Node, hco_namespace: str) -> None:
+    """
+    Uncordon a node and wait for KubeVirt to stabilize.
+
+    Args:
+        admin_client: Admin Kubernetes client
+        node: Node to uncordon
+        hco_namespace: HCO namespace
+    """
+    LOGGER.info(f"Uncordon node {node.name}")
+    run_command(command=shlex.split(f"oc adm uncordon {node.name}"))
+    wait_for_node_schedulable_status(node=node, status=True)
+    wait_for_kv_stabilize(admin_client=admin_client, hco_namespace=hco_namespace)
+
+
 @contextmanager
-def node_mgmt_console(admin_client, node, node_mgmt):
+def cordon_node(admin_client: DynamicClient, node: Node) -> Generator[None]:
+    """
+    Cordon a node and uncordon it on exit.
+
+    Args:
+        admin_client: Admin Kubernetes client
+        node: Node to cordon
+
+    Yields:
+        None: Control returns while node is cordoned, uncordon happens on exit.
+    """
     hco_namespace = get_hco_namespace(admin_client=admin_client)
     try:
-        LOGGER.info(f"{node_mgmt.capitalize()} the node {node.name}")
-        extra_opts = "--delete-emptydir-data --ignore-daemonsets=true --force" if node_mgmt == "drain" else ""
-        run(
-            f"nohup oc adm {node_mgmt} {node.name} {extra_opts} &",
-            shell=True,
-        )
+        LOGGER.info(f"Cordon the node {node.name}")
+        run_command(command=shlex.split(f"oc adm cordon {node.name}"))
         yield
     finally:
-        if node_mgmt == "drain":
-            LOGGER.info("Terminate drain process")
-            run(
-                shlex.split('pkill -f "oc adm drain"'),
-            )
-        LOGGER.info(f"Uncordon node {node.name}")
-        run(f"oc adm uncordon {node.name}", shell=True)
-        wait_for_node_schedulable_status(node=node, status=True)
-        wait_for_kv_stabilize(admin_client=admin_client, hco_namespace=hco_namespace)
+        _uncordon_and_stabilize(admin_client=admin_client, node=node, hco_namespace=hco_namespace)
+
+
+@contextmanager
+def drain_node(
+    admin_client: DynamicClient, node: Node, hco_namespace: str, compact_cluster: bool = False
+) -> Generator[None]:
+    """
+    Drain a node and uncordon it on exit.
+
+    On compact clusters, relocates virt-api pods before drain to avoid webhook race conditions.
+
+    Args:
+        admin_client: Admin Kubernetes client
+        node: Node to drain
+        hco_namespace: HCO namespace
+        compact_cluster: If True, relocate virt-api pods before drain.
+    """
+    if compact_cluster:
+        for pod in utilities.infra.get_pods(
+            client=admin_client,
+            namespace=hco_namespace,
+            label=f"{Pod.ApiGroup.KUBEVIRT_IO}={VIRT_API}",
+        ):
+            if pod.node.name == node.name:
+                LOGGER.info(
+                    f"Compact cluster: cordoning {node.name} and deleting virt-api pod {pod.name} "
+                    "before drain to avoid webhook race"
+                )
+                with cordon_node(admin_client=admin_client, node=node):
+                    pod.delete(wait=True)
+
+    try:
+        LOGGER.info(f"Drain the node {node.name}")
+        cmd = f"nohup oc adm drain {node.name} --delete-emptydir-data --ignore-daemonsets=true --force &>/dev/null &"
+        run_command(command=["/bin/bash", "-c", cmd])
+        yield
+    finally:
+        LOGGER.info("Terminate drain process")
+        run_command(command=shlex.split('pkill -f "oc adm drain"'), check=False, verify_stderr=False)
+        _uncordon_and_stabilize(admin_client=admin_client, node=node, hco_namespace=hco_namespace)
 
 
 @contextmanager
@@ -2331,9 +2420,7 @@ def check_migration_process_after_node_drain(client, vm, admin_client):
     LOGGER.info(f"The VMI was running on {source_node.name}")
     wait_for_node_schedulable_status(node=source_node, status=False)
     vmim = get_created_migration_job(vm=vm, client=client, timeout=TIMEOUT_5MIN)
-    wait_for_migration_finished(
-        namespace=vm.namespace, migration=vmim, timeout=TIMEOUT_30MIN if "windows" in vm.name else TIMEOUT_10MIN
-    )
+    wait_for_migration_finished(migration=vmim, timeout=TIMEOUT_30MIN if "windows" in vm.name else TIMEOUT_10MIN)
 
     target_pod = vm.vmi.get_virt_launcher_pod(privileged_client=admin_client)
     target_pod.wait_for_status(status=Pod.Status.RUNNING, timeout=TIMEOUT_3MIN)
@@ -2461,6 +2548,7 @@ def fetch_pid_from_linux_vm(vm, process_name):
     cmd_res = run_ssh_commands(
         host=vm.ssh_exec,
         commands=shlex.split(f"pgrep {process_name} -x || true"),
+        wait_timeout=TIMEOUT_2MIN,
     )[0].strip()
     assert cmd_res, f"VM {vm.name}, '{process_name}' process not found"
     return int(cmd_res)
@@ -2483,6 +2571,7 @@ def fetch_pid_from_windows_vm(vm, process_name):
         host=vm.ssh_exec,
         commands=shlex.split(f"powershell -Command (Get-Process -Name {process_name.removesuffix('.exe')}).Id"),
         tcp_timeout=TCP_TIMEOUT_30SEC,
+        wait_timeout=TIMEOUT_2MIN,
     )[0].strip()
     assert cmd_res, f"Process '{process_name}' not in output: {cmd_res}"
     return int(cmd_res)
@@ -2589,7 +2678,7 @@ def pause_unpause_vm_and_check_connectivity(vm: VirtualMachineForTests) -> None:
     vm.vmi.pause(wait=True)
     vm.vmi.unpause(wait=True)
     LOGGER.info("Verify VM is running and ready after unpause")
-    wait_for_ssh_connectivity(vm=vm, timeout=TIMEOUT_2MIN)
+    wait_for_ssh_connectivity(vm=vm)
 
 
 def validate_pause_unpause_linux_vm(vm: VirtualMachineForTests, pre_pause_pid: int | None = None) -> None:
@@ -2707,7 +2796,7 @@ def get_vm_boot_time(vm: VirtualMachineForTests) -> str:
         if "windows" in vm.name  # type: ignore[operator]
         else "who -b"
     )
-    return run_ssh_commands(host=vm.ssh_exec, commands=shlex.split(boot_command))[0]
+    return run_ssh_commands(host=vm.ssh_exec, commands=shlex.split(boot_command), wait_timeout=TIMEOUT_2MIN)[0]
 
 
 def username_password_from_cloud_init(vm_volumes: list[dict[str, Any]]) -> tuple[str, str]:
@@ -2762,7 +2851,7 @@ def run_os_command(vm: VirtualMachineForTests, command: str) -> str | None:
         return run_ssh_commands(
             host=vm.ssh_exec,
             commands=shlex.split(command),
-            timeout=5,
+            timeout=15,
             tcp_timeout=TCP_TIMEOUT_30SEC,
         )[0]
     except ProxyCommandFailure:

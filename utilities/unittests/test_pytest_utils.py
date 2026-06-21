@@ -7,7 +7,15 @@ from unittest.mock import MagicMock, mock_open, patch
 import pytest
 
 import utilities.constants
-from utilities.constants import AMD_64, ARM_64, CENTOS_STREAM9_PREFERENCE, OS_FLAVOR_FEDORA, RHEL9_PREFERENCE, S390X
+from utilities.constants import (
+    AMD_64,
+    ARM_64,
+    CENTOS_STREAM9_PREFERENCE,
+    MULTIARCH,
+    OS_FLAVOR_FEDORA,
+    RHEL9_PREFERENCE,
+    S390X,
+)
 from utilities.exceptions import MissingEnvironmentVariableError, UnsupportedCPUArchitectureError
 
 # Circular dependencies are already mocked in conftest.py
@@ -1558,7 +1566,7 @@ class TestGenerateInstanceTypeMatrixDicts:
         ]
 
     @pytest.mark.parametrize(
-        ("cpu_arch", "expected_add_arch_suffix"),
+        ("cpu_arch", "expected_add_preference_arch_suffix"),
         [
             (None, True),
             (ARM_64, True),
@@ -1577,9 +1585,10 @@ class TestGenerateInstanceTypeMatrixDicts:
         mock_generate_instance_type,
         sample_instance_type_matrix,
         cpu_arch,
-        expected_add_arch_suffix,
+        expected_add_preference_arch_suffix,
     ):
         """Test RHEL matrix generation across architecture variants."""
+        mock_py_config["cluster_type"] = AMD_64
         mock_generate_instance_type.return_value = sample_instance_type_matrix
         mock_generate_latest.return_value = sample_instance_type_matrix[0][RHEL9_PREFERENCE]
 
@@ -1590,7 +1599,8 @@ class TestGenerateInstanceTypeMatrixDicts:
             os_name="rhel",
             preferences=[RHEL9_PREFERENCE],
             arch_suffix=cpu_arch,
-            add_arch_suffix=expected_add_arch_suffix,
+            add_preference_arch_suffix=expected_add_preference_arch_suffix,
+            add_data_source_arch_suffix=False,
         )
         assert mock_py_config["instance_type_rhel_os_matrix"] == sample_instance_type_matrix
         assert mock_py_config["latest_instance_type_rhel_os_dict"] == sample_instance_type_matrix[0][RHEL9_PREFERENCE]
@@ -1605,7 +1615,8 @@ class TestGenerateInstanceTypeMatrixDicts:
                     "os_name": OS_FLAVOR_FEDORA,
                     "preferences": [OS_FLAVOR_FEDORA],
                     "arch_suffix": None,
-                    "add_arch_suffix": True,
+                    "add_preference_arch_suffix": True,
+                    "add_data_source_arch_suffix": False,
                 },
                 "instance_type_fedora_os_matrix",
                 [{OS_FLAVOR_FEDORA: {"preference": OS_FLAVOR_FEDORA}}],
@@ -1617,7 +1628,8 @@ class TestGenerateInstanceTypeMatrixDicts:
                     "os_name": OS_FLAVOR_FEDORA,
                     "preferences": [OS_FLAVOR_FEDORA],
                     "arch_suffix": AMD_64,
-                    "add_arch_suffix": False,
+                    "add_preference_arch_suffix": False,
+                    "add_data_source_arch_suffix": False,
                 },
                 "instance_type_fedora_os_matrix",
                 [{OS_FLAVOR_FEDORA: {"preference": OS_FLAVOR_FEDORA}}],
@@ -1629,7 +1641,8 @@ class TestGenerateInstanceTypeMatrixDicts:
                     "os_name": "centos.stream",
                     "preferences": [CENTOS_STREAM9_PREFERENCE],
                     "arch_suffix": None,
-                    "add_arch_suffix": False,
+                    "add_preference_arch_suffix": False,
+                    "add_data_source_arch_suffix": False,
                 },
                 "instance_type_centos_os_matrix",
                 [{CENTOS_STREAM9_PREFERENCE: {"preference": CENTOS_STREAM9_PREFERENCE}}],
@@ -1641,7 +1654,8 @@ class TestGenerateInstanceTypeMatrixDicts:
                     "os_name": "centos.stream",
                     "preferences": [CENTOS_STREAM9_PREFERENCE],
                     "arch_suffix": S390X,
-                    "add_arch_suffix": False,
+                    "add_preference_arch_suffix": False,
+                    "add_data_source_arch_suffix": False,
                 },
                 "instance_type_centos_os_matrix",
                 [{CENTOS_STREAM9_PREFERENCE: {"preference": CENTOS_STREAM9_PREFERENCE}}],
@@ -1653,7 +1667,8 @@ class TestGenerateInstanceTypeMatrixDicts:
                     "os_name": "centos.stream",
                     "preferences": [CENTOS_STREAM9_PREFERENCE],
                     "arch_suffix": ARM_64,
-                    "add_arch_suffix": False,
+                    "add_preference_arch_suffix": False,
+                    "add_data_source_arch_suffix": False,
                 },
                 "instance_type_centos_os_matrix",
                 [{CENTOS_STREAM9_PREFERENCE: {"preference": CENTOS_STREAM9_PREFERENCE}}],
@@ -1674,6 +1689,7 @@ class TestGenerateInstanceTypeMatrixDicts:
         matrix_value,
     ):
         """Test Fedora and CentOS matrix generation call signatures."""
+        mock_py_config["cluster_type"] = AMD_64
         mock_generate_instance_type.return_value = matrix_value
 
         generate_instance_type_matrix_dicts(os_dict=os_dict, cpu_arch=cpu_arch)
@@ -1692,6 +1708,7 @@ class TestGenerateInstanceTypeMatrixDicts:
         sample_instance_type_matrix,
     ):
         """Test that latest_instance_type_rhel_os_dict is populated correctly"""
+        mock_py_config["cluster_type"] = AMD_64
         mock_generate_instance_type.return_value = sample_instance_type_matrix
         expected_latest = {"preference": RHEL9_PREFERENCE, "latest_released": True}
         mock_generate_latest.return_value = expected_latest
@@ -1709,11 +1726,49 @@ class TestGenerateInstanceTypeMatrixDicts:
         mock_generate_instance_type,
     ):
         """Test that empty os_dict doesn't call any generation functions"""
+        mock_py_config["cluster_type"] = AMD_64
         os_dict = {}
         generate_instance_type_matrix_dicts(os_dict=os_dict)
 
         mock_generate_instance_type.assert_not_called()
-        assert mock_py_config == {}
+        assert mock_py_config == {"cluster_type": AMD_64}
+
+    @pytest.mark.parametrize(
+        ("cpu_arch", "expected_add_preference_arch_suffix"),
+        [
+            (AMD_64, False),
+            (ARM_64, True),
+            (S390X, True),
+        ],
+        ids=["multiarch_amd64", "multiarch_arm64", "multiarch_s390x"],
+    )
+    @patch("utilities.pytest_utils.generate_linux_instance_type_os_matrix")
+    @patch("utilities.pytest_utils.generate_latest_os_dict")
+    @patch("utilities.pytest_utils.py_config", new_callable=dict)
+    def test_multiarch_sets_data_source_arch_suffix_for_all_arches(
+        self,
+        mock_py_config,
+        mock_generate_latest,
+        mock_generate_instance_type,
+        sample_instance_type_matrix,
+        cpu_arch,
+        expected_add_preference_arch_suffix,
+    ):
+        """On multiarch clusters add_data_source_arch_suffix is True for every architecture."""
+        mock_py_config["cluster_type"] = MULTIARCH
+        mock_generate_instance_type.return_value = sample_instance_type_matrix
+        mock_generate_latest.return_value = sample_instance_type_matrix[0][RHEL9_PREFERENCE]
+
+        os_dict = {"instance_type_rhel_os_list": [RHEL9_PREFERENCE]}
+        generate_instance_type_matrix_dicts(os_dict=os_dict, cpu_arch=cpu_arch)
+
+        mock_generate_instance_type.assert_called_once_with(
+            os_name="rhel",
+            preferences=[RHEL9_PREFERENCE],
+            arch_suffix=cpu_arch,
+            add_preference_arch_suffix=expected_add_preference_arch_suffix,
+            add_data_source_arch_suffix=True,
+        )
 
 
 class TestUpdateLatestOsConfig:

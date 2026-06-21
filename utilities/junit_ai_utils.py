@@ -101,8 +101,8 @@ def enrich_junit_xml(session) -> None:
         )
         response.raise_for_status()
         result = response.json()
-    except Exception as ex:
-        logger.exception(f"Failed to enrich JUnit XML, original preserved. {ex}")
+    except (requests.RequestException, OSError, ValueError) as error:
+        logger.error(f"Failed to enrich JUnit XML, original preserved. Error: {error}")
         return
 
     if enriched_xml := result.get("enriched_xml"):

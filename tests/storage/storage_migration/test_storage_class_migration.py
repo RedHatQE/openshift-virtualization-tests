@@ -1,12 +1,15 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import pytest
 from pytest_testconfig import config as py_config
 
 from tests.os_params import FEDORA_LATEST, FEDORA_LATEST_LABELS
+from tests.storage.constants import STORAGE_CLASS_A, STORAGE_CLASS_B
 from tests.storage.storage_migration.constants import (
     CONTENT,
     FILE_BEFORE_STORAGE_MIGRATION,
-    STORAGE_CLASS_A,
-    STORAGE_CLASS_B,
     WINDOWS_FILE_WITH_PATH,
 )
 from tests.storage.storage_migration.utils import (
@@ -18,6 +21,11 @@ from tests.storage.storage_migration.utils import (
 from utilities.constants import TIMEOUT_60MIN
 from utilities.storage import verify_file_in_windows_vm
 from utilities.virt import migrate_vm_and_verify
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from utilities.virt import VirtualMachineForTests
 
 TESTS_CLASS_NAME_A_TO_B = "TestStorageClassMigrationAtoB"
 TESTS_CLASS_NAME_B_TO_A = "TestStorageClassMigrationBtoA"
@@ -76,11 +84,13 @@ class TestStorageClassMigrationAtoB:
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME_A_TO_B}::test_vm_storage_class_migration_a_to_b_running_vms"])
     @pytest.mark.polarion("CNV-11504")
-    def test_migrate_vms_after_storage_migration(self, booted_vms_for_storage_class_migration):
+    def test_migrate_vms_after_storage_migration(
+        self, admin_client: DynamicClient, booted_vms_for_storage_class_migration: list[VirtualMachineForTests]
+    ):
         vms_failed_migration = {}
         for vm in booted_vms_for_storage_class_migration:
             try:
-                migrate_vm_and_verify(vm=vm, check_ssh_connectivity=True)
+                migrate_vm_and_verify(vm=vm, client=admin_client, check_ssh_connectivity=True)
             except Exception as migration_exception:
                 vms_failed_migration[vm.name] = migration_exception
         assert not vms_failed_migration, f"Failed VM migrations: {vms_failed_migration}"
@@ -203,14 +213,17 @@ class TestStorageClassMigrationWithVolumeHotplug:
     @pytest.mark.dependency(
         depends=[f"{TESTS_CLASS_NAME_VOLUME_HOTPLUG}::test_vm_storage_class_migration_with_hotplugged_volume"]
     )
+    @pytest.mark.usefixtures("source_storage_class")
     @pytest.mark.polarion("CNV-11966")
     def test_migrate_vm_with_hotplugged_volume_after_storage_migration(
-        self, source_storage_class, booted_vms_for_storage_class_migration
+        self,
+        admin_client: DynamicClient,
+        booted_vms_for_storage_class_migration: list[VirtualMachineForTests],
     ):
         vms_failed_migration = {}
         for vm in booted_vms_for_storage_class_migration:
             try:
-                migrate_vm_and_verify(vm=vm, check_ssh_connectivity=True)
+                migrate_vm_and_verify(vm=vm, client=admin_client, check_ssh_connectivity=True)
             except Exception as migration_exception:
                 vms_failed_migration[vm.name] = migration_exception
         assert not vms_failed_migration, f"Failed VM migrations: {vms_failed_migration}"
@@ -311,19 +324,19 @@ class TestStorageClassMigrationWindowsWithVTPM:
     @pytest.mark.dependency(
         depends=[f"{TESTS_CLASS_NAME_WINDOWS}::test_vm_storage_class_migration_windows_vm_with_vtpm"]
     )
+    @pytest.mark.usefixtures(
+        "source_storage_class", "target_storage_class", "online_vms_for_storage_class_migration", "dv_wait_timeout"
+    )
     @pytest.mark.polarion("CNV-11515")
     def test_migrate_windows_vm_with_vtpm_after_storage_migration(
         self,
-        source_storage_class,
-        target_storage_class,
-        vms_for_storage_class_migration,
-        online_vms_for_storage_class_migration,
-        dv_wait_timeout,
+        admin_client: DynamicClient,
+        vms_for_storage_class_migration: list[VirtualMachineForTests],
     ):
         vms_failed_migration = {}
         for vm in vms_for_storage_class_migration:
             try:
-                migrate_vm_and_verify(vm=vm, check_ssh_connectivity=True)
+                migrate_vm_and_verify(vm=vm, client=admin_client, check_ssh_connectivity=True)
             except Exception as migration_exception:
                 vms_failed_migration[vm.name] = migration_exception
         assert not vms_failed_migration, f"Failed VM migrations: {vms_failed_migration}"

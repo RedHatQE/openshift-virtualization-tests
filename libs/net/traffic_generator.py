@@ -1,7 +1,8 @@
 import contextlib
 import logging
 from abc import ABC, abstractmethod
-from typing import Final, Generator
+from collections.abc import Generator
+from typing import Final, Self
 
 from ocp_resources.pod import Pod
 from ocp_utilities.exceptions import CommandExecFailed
@@ -32,7 +33,7 @@ class BaseTcpClient(ABC):
         return self._server_ip
 
     @abstractmethod
-    def __enter__(self) -> "BaseTcpClient":
+    def __enter__(self) -> Self:
         pass
 
     @abstractmethod
@@ -53,6 +54,8 @@ class TcpServer:
         vm (BaseVirtualMachine): The virtual machine where the server runs.
         port (int): The port on which the server listens for client connections.
         bind_ip (str): The IP address to bind the server to (optional).
+        bind_dev (str): Guest network device to bind the server socket to via SO_BINDTODEVICE
+            (e.g. "eth1"). Forces responses out this interface, bypassing ECMP routing.
     """
 
     def __init__(
@@ -60,13 +63,15 @@ class TcpServer:
         vm: BaseVirtualMachine,
         port: int,
         bind_ip: str | None = None,
+        bind_dev: str | None = None,
     ):
         self._vm = vm
         self._port = port
         self._cmd = f"{_IPERF_BIN} --server --port {self._port} --one-off"
         self._cmd += f" --bind {bind_ip}" if bind_ip else ""
+        self._cmd += f" --bind-dev {bind_dev}" if bind_dev else ""
 
-    def __enter__(self) -> "TcpServer":
+    def __enter__(self) -> Self:
         self._vm.console(
             commands=[f"{self._cmd} &"],
             timeout=_DEFAULT_CMD_TIMEOUT_SEC,
@@ -100,6 +105,8 @@ class VMTcpClient(BaseTcpClient):
         server_port (int): The port on which the server listens for connections.
         maximum_segment_size (int): Define explicitly the TCP payload size (in bytes).
                                     Default value is 0 (do not change mss).
+        bind_dev (str): Guest network device to bind the client socket to via SO_BINDTODEVICE
+            (e.g. "eth1"). Forces traffic out this interface, bypassing ECMP routing.
     """
 
     def __init__(
@@ -108,12 +115,14 @@ class VMTcpClient(BaseTcpClient):
         server_ip: str,
         server_port: int,
         maximum_segment_size: int = 0,
+        bind_dev: str | None = None,
     ):
         super().__init__(server_ip=server_ip, server_port=server_port)
         self._vm = vm
+        self._cmd += f" --bind-dev {bind_dev}" if bind_dev else ""
         self._cmd += f" --set-mss {maximum_segment_size}" if maximum_segment_size else ""
 
-    def __enter__(self) -> "VMTcpClient":
+    def __enter__(self) -> Self:
         self._vm.console(
             commands=[f"{self._cmd} &"],
             timeout=_DEFAULT_CMD_TIMEOUT_SEC,
@@ -182,7 +191,7 @@ class PodTcpClient(BaseTcpClient):
         self._container = container or _IPERF_BIN
         self._cmd += f" --bind {bind_interface}" if bind_interface else ""
 
-    def __enter__(self) -> "PodTcpClient":
+    def __enter__(self) -> Self:
         # run the command in the background using nohup to ensure it keeps running after the exec session ends
         self._pod.execute(
             command=["sh", "-c", f"nohup {self._cmd} >/tmp/{_IPERF_BIN}.log 2>&1 &"], container=self._container
@@ -212,7 +221,7 @@ def active_tcp_connections(
     client_vm: BaseVirtualMachine,
     server_vm: BaseVirtualMachine,
     iface_name: str,
-) -> Generator[list[tuple[VMTcpClient, TcpServer]], None, None]:
+) -> Generator[list[tuple[VMTcpClient, TcpServer]]]:
     """Start iperf3 client-server connections for all IPs on the server's interface.
        The helper assumed the ip addresses are up.
 
@@ -250,7 +259,7 @@ def client_server_active_connection(
     port: int = IPERF_SERVER_PORT,
     maximum_segment_size: int = 0,
     ip_family: int = 4,
-) -> Generator[tuple[VMTcpClient, TcpServer], None, None]:
+) -> Generator[tuple[VMTcpClient, TcpServer]]:
     """Start iperf3 client-server connection with continuous TCP traffic flow.
 
     Automatically starts an iperf3 server and client, with traffic flowing continuously
