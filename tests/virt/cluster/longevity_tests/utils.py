@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 import logging
 import shlex
 import shutil
 from threading import Thread
+from typing import TYPE_CHECKING
 
 from ocp_resources import pod
 from ocp_resources.data_source import DataSource
@@ -31,6 +34,9 @@ from utilities.virt import (
     wait_for_ssh_connectivity,
 )
 
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
 LOGGER = logging.getLogger(__name__)
 ADMIN_DOWNLOADS_FOLDER_PATH = r"C:\Users\Administrator\Downloads"
 
@@ -41,13 +47,19 @@ def decorate_log(msg):
     return f"{msg_decor}{msg}{msg_decor}"
 
 
-def run_migration_loop(iterations, vms_with_pids, os_type, wsl2_guest=False):
+def run_migration_loop(
+    client: DynamicClient,
+    iterations: int,
+    vms_with_pids: dict[str, dict[str, VirtualMachineForTests]],
+    os_type: str,
+    wsl2_guest: bool = False,
+) -> None:
     for iteration in range(iterations):
         LOGGER.info(decorate_log(f"Iteration {iteration + 1}"))
 
         LOGGER.info(decorate_log("VM Migration"))
         vm_list = [vms_with_pids[vm_name]["vm"] for vm_name in vms_with_pids]
-        migrate_and_verify_multi_vms(vm_list=vm_list)
+        migrate_and_verify_multi_vms(client=client, vm_list=vm_list)
 
         LOGGER.info(decorate_log("PID check"))
         verify_pid_after_migrate_multi_vms(vms_with_pids=vms_with_pids, os_type=os_type)

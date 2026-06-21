@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import logging
 import re
 import shlex
+from typing import TYPE_CHECKING
 
 import pytest
 from pyhelper_utils.shell import run_ssh_commands
@@ -9,6 +12,11 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 from tests.os_params import FEDORA_LATEST, FEDORA_LATEST_LABELS
 from utilities.constants import TIMEOUT_1MIN
 from utilities.virt import migrate_vm_and_verify, running_vm, vm_instance_from_template
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from utilities.virt import VirtualMachineForTests
 
 LOGGER = logging.getLogger(__name__)
 
@@ -92,7 +100,8 @@ def get_disk_usage(ssh_exec):
 )
 @pytest.mark.s390x
 @pytest.mark.rwx_default_storage
-def test_fedora_vm_load_migration(vm_with_fio, running_fio_in_vm):
+@pytest.mark.usefixtures("running_fio_in_vm")
+def test_fedora_vm_load_migration(admin_client: DynamicClient, vm_with_fio: VirtualMachineForTests):
     LOGGER.info("Test migrate VM with disk load")
-    migrate_vm_and_verify(vm=vm_with_fio, check_ssh_connectivity=True)
+    migrate_vm_and_verify(vm=vm_with_fio, client=admin_client, check_ssh_connectivity=True)
     get_disk_usage(ssh_exec=vm_with_fio.ssh_exec)

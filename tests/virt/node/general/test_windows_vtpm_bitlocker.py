@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import logging
 import shlex
+from typing import TYPE_CHECKING
 
 import pytest
 from ocp_resources.template import Template
@@ -17,6 +20,9 @@ from utilities.virt import (
     restart_vm_wait_for_running_vm,
     running_vm,
 )
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
 
 pytestmark = [pytest.mark.tier3, pytest.mark.ibm_bare_metal, pytest.mark.special_infra, pytest.mark.high_resource_vm]
 
@@ -121,8 +127,10 @@ def bitlocker_encrypted_vm(windows_vtpm_vm):
 
 
 @pytest.fixture(scope="class")
-def migrated_encrypted_vm(bitlocker_encrypted_vm):
-    migrate_vm_and_verify(vm=bitlocker_encrypted_vm, check_ssh_connectivity=True)
+def migrated_encrypted_vm(
+    admin_client: DynamicClient, bitlocker_encrypted_vm: VirtualMachineForTestsFromTemplate
+) -> VirtualMachineForTestsFromTemplate:
+    migrate_vm_and_verify(vm=bitlocker_encrypted_vm, client=admin_client, check_ssh_connectivity=True)
     return bitlocker_encrypted_vm
 
 

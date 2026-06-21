@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 import base64
 import logging
 import os
 import shlex
+from typing import TYPE_CHECKING
 
 import pytest
 from ocp_resources.config_map import ConfigMap
@@ -19,6 +22,9 @@ from utilities.constants import BASE_IMAGES_DIR, OS_FLAVOR_WINDOWS, TCP_TIMEOUT_
 from utilities.ssp import get_windows_timezone
 from utilities.storage import get_downloaded_artifact
 from utilities.virt import VirtualMachineForTests, migrate_vm_and_verify, running_vm
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
 
 LOGGER = logging.getLogger(__name__)
 
@@ -200,8 +206,9 @@ def attached_sysprep_volume_to_vm(sysprep_vm_credentials_from_bitwarden, sysprep
 
 
 @pytest.fixture()
-def migrated_sysprep_vm(sysprep_vm):
-    migrate_vm_and_verify(vm=sysprep_vm, check_ssh_connectivity=True)
+def migrated_sysprep_vm(admin_client: DynamicClient, sysprep_vm: VirtualMachineForTests) -> VirtualMachineForTests:
+    migrate_vm_and_verify(vm=sysprep_vm, client=admin_client, check_ssh_connectivity=True)
+    return sysprep_vm
 
 
 @pytest.fixture()

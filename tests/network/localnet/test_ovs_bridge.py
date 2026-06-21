@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import ipaddress
 from ipaddress import ip_interface
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -13,16 +16,22 @@ from tests.network.localnet.liblocalnet import (
 )
 from utilities.virt import migrate_vm_and_verify
 
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from libs.net.traffic_generator import TcpServer, VMTcpClient
+
 
 @pytest.mark.s390x
 @pytest.mark.usefixtures("nncp_localnet_on_secondary_node_nic")
 @pytest.mark.polarion("CNV-11905")
 def test_connectivity_over_migration_between_ovs_bridge_localnet_vms(
-    subtests,
-    ovs_bridge_localnet_active_connections,
+    admin_client: DynamicClient,
+    subtests: pytest.Subtests,
+    ovs_bridge_localnet_active_connections: list[tuple[VMTcpClient, TcpServer]],
 ):
     client, _ = ovs_bridge_localnet_active_connections[0]
-    migrate_vm_and_verify(vm=client.vm)
+    migrate_vm_and_verify(vm=client.vm, client=admin_client)
     for client, server in ovs_bridge_localnet_active_connections:
         with subtests.test(msg=f"IPv{ipaddress.ip_address(client.server_ip).version}"):
             assert is_tcp_connection(server=server, client=client)

@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import pytest
 from pytest_testconfig import config as py_config
 
@@ -12,6 +16,11 @@ from tests.virt.cluster.longevity_tests.constants import (
     WSL2_VM_PARAMS,
 )
 from tests.virt.cluster.longevity_tests.utils import run_migration_loop
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from utilities.virt import VirtualMachineForTests
 
 pytestmark = [pytest.mark.longevity, pytest.mark.special_infra]
 
@@ -28,8 +37,11 @@ pytestmark = [pytest.mark.longevity, pytest.mark.special_infra]
     ],
     indirect=True,
 )
-def test_migration_storm_linux_vms(linux_vms_with_pids):
+def test_migration_storm_linux_vms(
+    admin_client: DynamicClient, linux_vms_with_pids: dict[str, dict[str, VirtualMachineForTests]]
+):
     run_migration_loop(
+        client=admin_client,
         iterations=int(py_config["linux_iterations"]),
         vms_with_pids=linux_vms_with_pids,
         os_type=LINUX_OS_PREFIX,
@@ -47,8 +59,11 @@ def test_migration_storm_linux_vms(linux_vms_with_pids):
     ],
     indirect=True,
 )
-def test_migration_storm_windows_vms(windows_vms_with_pids):
+def test_migration_storm_windows_vms(
+    admin_client: DynamicClient, windows_vms_with_pids: dict[str, dict[str, VirtualMachineForTests]]
+):
     run_migration_loop(
+        client=admin_client,
         iterations=int(py_config["windows_iterations"]),
         vms_with_pids=windows_vms_with_pids,
         os_type=WINDOWS_OS_PREFIX,
@@ -66,8 +81,11 @@ def test_migration_storm_windows_vms(windows_vms_with_pids):
     ],
     indirect=True,
 )
-def test_migration_storm_wsl2_vms(wsl2_vms_with_pids):
+def test_migration_storm_wsl2_vms(
+    admin_client: DynamicClient, wsl2_vms_with_pids: dict[str, dict[str, VirtualMachineForTests]]
+):
     run_migration_loop(
+        client=admin_client,
         iterations=int(py_config["windows_iterations"]),
         vms_with_pids=wsl2_vms_with_pids,
         os_type=WINDOWS_OS_PREFIX,

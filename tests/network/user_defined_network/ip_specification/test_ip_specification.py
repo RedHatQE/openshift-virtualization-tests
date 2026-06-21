@@ -7,7 +7,10 @@ STP Reference:
 https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-network/ip-request.md
 """
 
+from __future__ import annotations
+
 import ipaddress
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -21,6 +24,9 @@ from tests.network.user_defined_network.ip_specification.libipspec import (
 )
 from utilities.constants import PUBLIC_DNS_SERVER_IP
 from utilities.virt import migrate_vm_and_verify
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
 
 
 @pytest.mark.ipv4
@@ -109,8 +115,9 @@ class TestVMWithExplicitIPAddressSpecification:
     @pytest.mark.polarion("CNV-12586")
     def test_seamless_cluster_connectivity_is_preserved_over_live_migration(
         self,
+        admin_client: DynamicClient,
         client_server_tcp_connectivity_between_vms: tuple[TcpClient, TcpServer],
-    ) -> None:
+    ):
         """
         Test that a VM with an explicit IP address specified can preserve connectivity during live migration.
 
@@ -128,7 +135,7 @@ class TestVMWithExplicitIPAddressSpecification:
         """
         client, server = client_server_tcp_connectivity_between_vms
 
-        migrate_vm_and_verify(vm=server.vm)
+        migrate_vm_and_verify(vm=server.vm, client=admin_client)
 
         assert is_tcp_connection(server=server, client=client)
 
