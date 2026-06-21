@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import ipaddress
+from typing import TYPE_CHECKING
 
 import pytest
 from ocp_resources.utils.constants import TIMEOUT_1MINUTE
@@ -10,6 +13,11 @@ from libs.net.vmspec import lookup_iface_status_ip, lookup_primary_network
 from tests.network.libs.vm_factory import udn_vm
 from utilities.constants import PUBLIC_DNS_SERVER_IP, QUARANTINED, TIMEOUT_1MIN
 from utilities.virt import migrate_vm_and_verify
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from libs.vm.vm import BaseVirtualMachine
 
 IP_ADDRESS = "ipAddress"
 SERVER_PORT = 5201
@@ -77,12 +85,14 @@ class TestPrimaryUdn:
 
     @pytest.mark.polarion("CNV-11674")
     @pytest.mark.single_nic
-    def test_ip_address_is_preserved_after_live_migration(self, vma_udn):
+    def test_ip_address_is_preserved_after_live_migration(
+        self, admin_client: DynamicClient, vma_udn: BaseVirtualMachine
+    ):
         ip_before_migration = str(
             lookup_iface_status_ip(vm=vma_udn, iface_name=lookup_primary_network(vm=vma_udn).name, ip_family=4)
         )
         assert ip_before_migration
-        migrate_vm_and_verify(vm=vma_udn)
+        migrate_vm_and_verify(vm=vma_udn, client=admin_client)
         ip_after_migration = str(
             lookup_iface_status_ip(vm=vma_udn, iface_name=lookup_primary_network(vm=vma_udn).name, ip_family=4)
         )
@@ -108,8 +118,10 @@ class TestPrimaryUdn:
     @pytest.mark.polarion("CNV-11427")
     @pytest.mark.single_nic
     @pytest.mark.gating
-    def test_connectivity_is_preserved_during_client_live_migration(self, server, client):
-        migrate_vm_and_verify(vm=client.vm)
+    def test_connectivity_is_preserved_during_client_live_migration(
+        self, admin_client: DynamicClient, server: TcpServer, client: TcpClient
+    ):
+        migrate_vm_and_verify(vm=client.vm, client=admin_client)
         assert is_tcp_connection(server=server, client=client)
 
     @pytest.mark.polarion("CNV-12177")
@@ -118,6 +130,8 @@ class TestPrimaryUdn:
         reason=f"{QUARANTINED}: Failed migration of vm in UDN: CNV-72782",
         run=False,
     )
-    def test_connectivity_is_preserved_during_server_live_migration(self, server, client):
-        migrate_vm_and_verify(vm=server.vm)
+    def test_connectivity_is_preserved_during_server_live_migration(
+        self, admin_client: DynamicClient, server: TcpServer, client: TcpClient
+    ):
+        migrate_vm_and_verify(vm=server.vm, client=admin_client)
         assert is_tcp_connection(server=server, client=client)

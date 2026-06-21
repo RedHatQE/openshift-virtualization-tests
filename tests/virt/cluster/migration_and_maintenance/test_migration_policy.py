@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import pytest
 from ocp_resources.migration_policy import MigrationPolicy
 from ocp_resources.resource import ResourceEditor
@@ -10,6 +14,9 @@ from utilities.virt import (
     migrate_vm_and_verify,
     running_vm,
 )
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
 
 pytestmark = pytest.mark.data_collector_scope(scope="module")
 
@@ -98,18 +105,26 @@ def vm_for_migration_policy_test(
 
 
 @pytest.fixture()
-def vm_migrated_with_policy(vm_for_migration_policy_test):
-    migrate_vm_and_verify(vm=vm_for_migration_policy_test)
+def vm_migrated_with_policy(
+    admin_client: DynamicClient, vm_for_migration_policy_test: VirtualMachineForTests
+) -> VirtualMachineForTests:
+    migrate_vm_and_verify(vm=vm_for_migration_policy_test, client=admin_client)
+    return vm_for_migration_policy_test
 
 
 @pytest.fixture()
-def vm_re_migrated_after_updating_migration_policy(vm_for_migration_policy_test, migration_policy_a):
+def vm_re_migrated_after_updating_migration_policy(
+    admin_client: DynamicClient,
+    vm_for_migration_policy_test: VirtualMachineForTests,
+    migration_policy_a: MigrationPolicy,
+) -> VirtualMachineForTests:
     assert_applied_migration_configuration(
         vmi=vm_for_migration_policy_test.vmi,
         migration_policy=migration_policy_a,
     )
     remove_spec_param_from_migration_policy(migration_policy=migration_policy_a, param="allowAutoConverge")
-    migrate_vm_and_verify(vm=vm_for_migration_policy_test)
+    migrate_vm_and_verify(vm=vm_for_migration_policy_test, client=admin_client)
+    return vm_for_migration_policy_test
 
 
 @pytest.mark.rwx_default_storage

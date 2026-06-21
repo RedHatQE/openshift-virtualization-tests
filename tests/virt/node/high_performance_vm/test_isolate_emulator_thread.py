@@ -2,7 +2,10 @@
 Test isolateEmulatorThread feature.
 """
 
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 
 import pytest
 from ocp_resources.template import Template
@@ -12,6 +15,11 @@ from tests.utils import (
     validate_dedicated_emulatorthread,
 )
 from utilities.virt import migrate_vm_and_verify, vm_instance_from_template
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from utilities.virt import VirtualMachineForTests
 
 LOGGER = logging.getLogger(__name__)
 
@@ -81,5 +89,7 @@ class TestIsolateEmulatorThread:
     @pytest.mark.rwx_default_storage
     @pytest.mark.dependency(depends=[ISOLATE_EMULATOR_THREAD])
     @pytest.mark.polarion("CNV-10554")
-    def test_vm_with_isolate_emulator_thread_live_migrates(self, isolated_emulatorthread_vm):
-        migrate_vm_and_verify(vm=isolated_emulatorthread_vm)
+    def test_vm_with_isolate_emulator_thread_live_migrates(
+        self, admin_client: DynamicClient, isolated_emulatorthread_vm: VirtualMachineForTests
+    ):
+        migrate_vm_and_verify(vm=isolated_emulatorthread_vm, client=admin_client)
