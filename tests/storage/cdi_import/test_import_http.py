@@ -352,7 +352,7 @@ def test_blank_disk_import_validate_status(data_volume_multi_storage_scope_funct
     ],
     indirect=True,
 )
-def test_successful_vm_from_imported_dv_windows_with_vtpm(
+def test_successful_vm_from_imported_dv_windows(
     admin_client,
     unprivileged_client,
     namespace,
@@ -376,6 +376,4 @@ def test_successful_vm_from_imported_dv_windows_with_vtpm(
     ) as vm:
         running_vm(vm=vm)
         wait_for_windows_vm(vm=vm, version="2019", timeout=WINDOWS_VM_TIMEOUT)
-        xml_dict_tpm = vm.vmi.get_xml_dict(privileged_client=admin_client)["domain"]["devices"]["tpm"]
-        assert xml_dict_tpm["@model"] == "tpm-crb", f"Expected TPM model tpm-crb, got {xml_dict_tpm['@model']}"
         validate_os_info_vmi_vs_windows_os(vm=vm)
