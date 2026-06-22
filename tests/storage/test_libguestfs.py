@@ -5,7 +5,7 @@ import pytest
 from ocp_resources.pod import Pod
 from pytest_testconfig import config as py_config
 
-from utilities.constants import TIMEOUT_1MIN, UNPRIVILEGED_PASSWORD, UNPRIVILEGED_USER
+from utilities.constants import QUARANTINED, TIMEOUT_1MIN, UNPRIVILEGED_PASSWORD, UNPRIVILEGED_USER
 from utilities.infra import login_with_user_password
 from utilities.storage import create_dv, get_dv_size_from_datasource
 
@@ -95,6 +95,10 @@ def client_for_test(request, admin_client, unprivileged_client):
         ),
     ],
     indirect=True,
+)
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: Timeout exceeded. Tracked in CNV-62312",
+    run=False,
 )
 @pytest.mark.s390x
 def test_virtctl_libguestfs_with_specific_user(
