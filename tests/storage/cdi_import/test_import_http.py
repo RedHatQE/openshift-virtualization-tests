@@ -7,7 +7,9 @@ import logging
 import pytest
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 from ocp_resources.datavolume import DataVolume
-from pytest_testconfig import config as py_config
+from ocp_resources.template import Template
+from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
+from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.storage.constants import (
@@ -28,6 +30,9 @@ from utilities.constants import (
     TIMEOUT_1MIN,
     TIMEOUT_2MIN,
     TIMEOUT_5MIN,
+    TIMEOUT_60MIN,
+    U1_LARGE,
+    WINDOWS_2K19_PREFERENCE,
     Images,
 )
 from utilities.ssp import validate_os_info_vmi_vs_windows_os
@@ -35,7 +40,7 @@ from utilities.storage import (
     ErrorMsg,
     create_dv,
 )
-from utilities.virt import running_vm
+from utilities.virt import VirtualMachineForTestsFromTemplate, get_windows_os_dict, running_vm, wait_for_windows_vm
 
 pytestmark = [
     pytest.mark.post_upgrade,
@@ -47,7 +52,7 @@ ISO_IMG = "Core-current.iso"
 TAR_IMG = "archive.tar"
 DEFAULT_DV_SIZE = Images.Alpine.DEFAULT_DV_SIZE
 SMALL_DV_SIZE = "200Mi"
-LATEST_WINDOWS_OS_DICT = py_config.get("latest_windows_os_dict", {})
+WINDOWS_VM_TIMEOUT = TIMEOUT_60MIN
 
 
 @pytest.mark.xfail(
@@ -328,35 +333,42 @@ def test_blank_disk_import_validate_status(data_volume_multi_storage_scope_funct
 
 @pytest.mark.tier3
 @pytest.mark.parametrize(
-    "data_volume_multi_storage_scope_function,"
-    "vm_instance_from_template_multi_storage_scope_function,"
-    "started_windows_vm",
+    "data_volume_multi_storage_scope_function",
     [
         pytest.param(
             {
-                "dv_name": "dv-win-22",
+                "dv_name": "dv-win-19",
                 "source": HTTP,
-                "image": f"{Images.Windows.DIR}/{Images.Windows.WIN2022_IMG}",
+                "image": f"{Images.Windows.UEFI_WIN_DIR}/{Images.Windows.WIN2k19_IMG}",
                 "dv_size": Images.Windows.DEFAULT_DV_SIZE,
             },
-            {
-                "vm_name": f"vm-win-{LATEST_WINDOWS_OS_DICT.get('os_version')}",
-                "template_labels": LATEST_WINDOWS_OS_DICT.get("template_labels"),
-                "ssh": True,
-            },
-            {"os_version": LATEST_WINDOWS_OS_DICT.get("os_version")},
             marks=pytest.mark.polarion("CNV-3637"),
         ),
     ],
     indirect=True,
 )
 def test_successful_vm_from_imported_dv_windows(
+    admin_client,
     unprivileged_client,
     namespace,
     data_volume_multi_storage_scope_function,
-    vm_instance_from_template_multi_storage_scope_function,
-    started_windows_vm,
+    modern_cpu_for_migration,
 ):
-    validate_os_info_vmi_vs_windows_os(
-        vm=vm_instance_from_template_multi_storage_scope_function,
-    )
+    win2019_os_dict = get_windows_os_dict(windows_version="win-2019")
+    with VirtualMachineForTestsFromTemplate(
+        name="win2019-vm",
+        namespace=namespace.name,
+        client=unprivileged_client,
+        labels=Template.generate_template_labels(**win2019_os_dict["template_labels"]),
+        existing_data_volume=data_volume_multi_storage_scope_function,
+        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_LARGE, client=unprivileged_client),
+        vm_preference=VirtualMachineClusterPreference(name=WINDOWS_2K19_PREFERENCE, client=unprivileged_client),
+        data_volume_template={
+            "metadata": data_volume_multi_storage_scope_function.res["metadata"],
+            "spec": data_volume_multi_storage_scope_function.res["spec"],
+        },
+        cpu_model=modern_cpu_for_migration,
+    ) as vm:
+        running_vm(vm=vm)
+        wait_for_windows_vm(vm=vm, version="2019", timeout=WINDOWS_VM_TIMEOUT)
+        validate_os_info_vmi_vs_windows_os(vm=vm)

@@ -819,6 +819,7 @@ CENTOS_STREAM10_PREFERENCE = "centos.stream10"
 RHEL8_PREFERENCE = "rhel.8"
 RHEL9_PREFERENCE = "rhel.9"
 RHEL10_PREFERENCE = "rhel.10"
+WINDOWS_2K22_PREFERENCE = "windows.2k22"
 U1_SMALL = "u1.small"
 U1_LARGE = "u1.large"
 PROMETHEUS_K8S = "prometheus-k8s"
@@ -960,6 +961,7 @@ WIN_2K19 = "win2k19"
 
 # Windows VirtualMachine preferences
 WINDOWS_11_PREFERENCE = "windows.11"
+WINDOWS_2K19_PREFERENCE = "windows.2k19"
 WINDOWS_2K22_PREFERENCE = "windows.2k22"
 
 HYPERV_FEATURES_LABELS_DOM_XML = [
