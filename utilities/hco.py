@@ -512,8 +512,15 @@ def update_hco_templates_spec(
     custom_datasource_name=None,
     golden_images_namespace=None,
 ):
+    existing_spec_templates = list(
+        hyperconverged_resource.instance.to_dict()["spec"].get(SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME, [])
+    )
     with ResourceEditorValidateHCOReconcile(
-        patches={hyperconverged_resource: {"spec": {SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME: [updated_template]}}},
+        patches={
+            hyperconverged_resource: {
+                "spec": {SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME: existing_spec_templates + [updated_template]}
+            }
+        },
         list_resource_reconcile=[SSP, CDI],
         wait_for_reconcile_post_update=True,
     ):

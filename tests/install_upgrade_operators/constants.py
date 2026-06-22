@@ -1,3 +1,8 @@
+from ocp_resources.cdi import CDI
+from ocp_resources.kubevirt import KubeVirt
+from ocp_resources.network_addons_config import NetworkAddonsConfig
+from ocp_resources.ssp import SSP
+
 SECTION_TITLE = "section_title"
 FILE_SUFFIX = "file_suffix"
 HCO_CR_CERT_CONFIG_CA_KEY = "ca"
@@ -58,6 +63,7 @@ HCO_DEFAULT_FEATUREGATES = {
     "containerPathVolumes": FG_DISABLED,
 }
 CUSTOM_DATASOURCE_NAME = "custom-datasource"
+MANAGED_CRS_LIST = [KubeVirt, CDI, NetworkAddonsConfig, SSP]
 WORKLOAD_UPDATE_STRATEGY_KEY_NAME = "workloadUpdateStrategy"
 KUBEMACPOOL_SERVICE = "kubemacpool-service"
 

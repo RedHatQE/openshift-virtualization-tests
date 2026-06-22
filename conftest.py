@@ -34,6 +34,7 @@ from libs.storage.config import StorageClassConfig
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.constants import (
     AMD_64,
+    MULTIARCH,
     QUARANTINED,
     SETUP_ERROR,
     TIMEOUT_5MIN,
@@ -561,6 +562,15 @@ def filter_sno_only_tests(items: list[Item], config: Config) -> list[Item]:
     return items
 
 
+def filter_multiarch_tests(items: list[Item], config: Config) -> list[Item]:
+    if py_config.get("cluster_type") == MULTIARCH:
+        return items
+    discard_tests, items_to_return = remove_tests_from_list(items=items, filter_str="multiarch")
+    if discard_tests:
+        config.hook.pytest_deselected(items=discard_tests)
+    return items_to_return
+
+
 def remove_tests_from_list(items: list[Item], filter_str: str) -> tuple[list[Item], list[Item]]:
     discard_tests: list[Item] = []
     items_to_return: list[Item] = []
@@ -638,6 +648,7 @@ def pytest_collection_modifyitems(session, config, items):
         config.hook.pytest_deselected(items=discard)
     items[:] = filter_deprecated_api_tests(items=items, config=config)
     items[:] = filter_sno_only_tests(items=items, config=config)
+    items[:] = filter_multiarch_tests(items=items, config=config)
     items[:] = mark_nmstate_dependent_tests(items=items)
 
 

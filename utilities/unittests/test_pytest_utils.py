@@ -1945,7 +1945,7 @@ class TestUpdateCpuArchRelatedConfig:
             mock_logger.warning.assert_called_once_with("OS matrix generation is not supported for multi-arch runs!")
             mock_generate_common.assert_not_called()
             mock_generate_instance.assert_not_called()
-            assert "cpu_arch" not in mock_py_config
+            assert mock_py_config["cpu_arch"] == ["amd64", "arm64"]
 
     @patch("utilities.pytest_utils.generate_instance_type_matrix_dicts")
     @patch("utilities.pytest_utils.generate_common_template_matrix_dicts")
@@ -2170,7 +2170,7 @@ class TestUpdateCpuArchRelatedConfig:
             mock_logger.warning.assert_called_once_with("OS matrix generation is not supported for multi-arch runs!")
             mock_generate_common.assert_not_called()
             mock_generate_instance.assert_not_called()
-            assert "cpu_arch" not in mock_py_config
+            assert mock_py_config["cpu_arch"] == ["amd64", "arm64", "s390x"]
 
     @patch("utilities.pytest_utils.generate_instance_type_matrix_dicts")
     @patch("utilities.pytest_utils.generate_common_template_matrix_dicts")

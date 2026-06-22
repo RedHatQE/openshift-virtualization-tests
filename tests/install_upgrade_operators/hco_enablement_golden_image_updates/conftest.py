@@ -1,18 +1,25 @@
 import pytest
+from ocp_resources.data_import_cron import DataImportCron
+from ocp_resources.data_source import DataSource
 from ocp_resources.image_stream import ImageStream
 from ocp_resources.pod import Pod
 from ocp_utilities.infra import get_pods_by_name_prefix
 
+from tests.install_upgrade_operators.constants import ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT
 from tests.install_upgrade_operators.hco_enablement_golden_image_updates.utils import (
+    COMMON_TEMPLATE,
     CUSTOM_TEMPLATE,
     HCO_CR_DATA_IMPORT_SCHEDULE_KEY,
     get_modifed_common_template_names,
     get_random_minutes_hours_fields_from_data_import_schedule,
     get_templates_by_type_from_hco_status,
+    get_templates_resources_names_dict,
 )
 from utilities.constants import (
     COMMON_TEMPLATES_KEY_NAME,
+    FEATURE_GATES,
     HCO_OPERATOR,
+    KUBERNETES_ARCH_LABEL,
     SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
 )
 from utilities.ssp import get_ssp_resource
@@ -113,3 +120,50 @@ def ssp_spec_templates_scope_function(ssp_resource_scope_function):
 @pytest.fixture(scope="session")
 def common_templates_scope_session(hyperconverged_status_scope_session):
     return hyperconverged_status_scope_session[SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME]
+
+
+@pytest.fixture(scope="session")
+def worker_architectures(schedulable_nodes):
+    return {node.labels[KUBERNETES_ARCH_LABEL] for node in schedulable_nodes}
+
+
+@pytest.fixture(scope="class")
+def default_common_template_hco_status(hyperconverged_status_templates_scope_class):
+    return get_templates_by_type_from_hco_status(
+        hco_status_templates=hyperconverged_status_templates_scope_class, template_type=COMMON_TEMPLATE
+    )
+
+
+@pytest.fixture(scope="class")
+def default_common_templates_related_resources(
+    default_common_template_hco_status,
+    hyperconverged_resource_scope_class,
+    worker_architectures,
+):
+    """Return expected golden image resource names for the current cluster state.
+
+    When enableMultiArchBootImageImport is enabled:
+        - DataImportCrons: arch-specific only (base names are replaced)
+        - DataSources: both arch-specific and agnostic pointers
+        - ImageStreams: always base names
+    When disabled: all base names.
+    """
+    base_resources = get_templates_resources_names_dict(templates=default_common_template_hco_status)
+
+    feature_gate_enabled = hyperconverged_resource_scope_class.instance.spec.get(FEATURE_GATES, {}).get(
+        ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT, False
+    )
+
+    if not feature_gate_enabled:
+        return base_resources
+
+    result = {}
+    for kind, base_names in base_resources.items():
+        arch_names = {f"{name}-{arch}" for name in base_names for arch in worker_architectures}
+        if kind == DataImportCron.kind:
+            result[kind] = arch_names
+        elif kind == DataSource.kind:
+            result[kind] = base_names | arch_names
+        else:
+            result[kind] = base_names
+    return result

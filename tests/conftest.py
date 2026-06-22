@@ -74,6 +74,7 @@ from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
 from libs.net.ip import filter_link_local_addresses, random_ipv4_address, random_ipv6_address
 from libs.net.vmspec import lookup_iface_status
 from tests.utils import download_and_extract_tar
+from utilities.architecture import get_cluster_architecture
 from utilities.artifactory import get_artifactory_header, get_http_image_url, get_test_artifact_server_url
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.cluster import cache_admin_client, get_oc_whoami_username
@@ -463,6 +464,7 @@ def schedulable_nodes(nodes):
     """
     schedulable_label = "kubevirt.io/schedulable"
     cpu_arch = py_config.get("cpu_arch")
+    cpu_archs = [cpu_arch] if isinstance(cpu_arch, str) else cpu_arch
     schedulable = [
         node
         for node in nodes
@@ -471,7 +473,7 @@ def schedulable_nodes(nodes):
         and not node.instance.spec.unschedulable
         and not kubernetes_taint_exists(node)
         and node.kubelet_ready
-        and (not cpu_arch or node.labels.get(KUBERNETES_ARCH_LABEL) == cpu_arch)
+        and (not cpu_archs or node.labels.get(KUBERNETES_ARCH_LABEL) in cpu_archs)
     ]
 
     LOGGER.info(f"Schedulable nodes: {[node.name for node in schedulable]}, node architecture: {cpu_arch or 'all'}")
@@ -1043,7 +1045,7 @@ def mac_pool(admin_client, hco_namespace):
 
 @pytest.fixture(scope="session")
 def nodes_cpu_architecture():
-    return py_config["cpu_arch"]
+    return py_config.get("cpu_arch")
 
 
 @pytest.fixture(scope="session")
@@ -1495,7 +1497,7 @@ def cluster_info(
         f"\tOCS version: {ocs_current_version}\n"
         f"\tCNI type: {get_cluster_cni_type(admin_client=admin_client)}\n"
         f"\tWorkers type: {workers_type}\n"
-        f"\tCluster CPU Architecture: {nodes_cpu_architecture}\n"
+        f"\tCluster CPU Architecture: {nodes_cpu_architecture or ', '.join(sorted(get_cluster_architecture()))}\n"
         f"\tIPv4 cluster: {ipv4_supported_cluster()}\n"
         f"\tIPv6 cluster: {ipv6_supported_cluster()}\n"
         f"\tVirtctl version: \n\t{virtctl_client_version}\n\t{virtctl_server_version}\n"

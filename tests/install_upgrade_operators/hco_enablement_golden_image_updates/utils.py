@@ -1,14 +1,19 @@
 import logging
 import re
+from typing import Any
 
 from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.data_import_cron import DataImportCron
+from ocp_resources.data_source import DataSource
+from ocp_resources.image_stream import ImageStream
+from ocp_resources.resource import Resource
 
 from tests.install_upgrade_operators.constants import CUSTOM_DATASOURCE_NAME
 from utilities.constants import (
     OUTDATED,
     SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
+    TIMEOUT_10MIN,
     WILDCARD_CRON_EXPRESSION,
 )
 
@@ -104,3 +109,51 @@ def get_template_dict_by_name(template_name, templates):
     for template in templates:
         if template["metadata"]["name"] == template_name:
             return template
+
+
+def get_templates_resources_names_dict(templates: list[dict[str, Any]]) -> dict[str, set[str]]:
+    """Extract resource names from HCO DataImportCronTemplates, grouped by kind.
+
+    Returns:
+        dict[str, set[str]]: Mapping of resource kind to set of names.
+            Keys: DataImportCron.kind and DataSource.kind are always present;
+                  ImageStream.kind is present only when templates contain an image stream.
+    """
+    resource_dict: dict[str, set[str]] = {}
+    for template in templates:
+        image_stream_name = template["spec"]["template"]["spec"]["source"]["registry"].get("imageStream")
+        if image_stream_name:
+            resource_dict.setdefault(ImageStream.kind, set()).add(image_stream_name)
+        resource_dict.setdefault(DataImportCron.kind, set()).add(template["metadata"]["name"])
+        resource_dict.setdefault(DataSource.kind, set()).add(template["spec"]["managedDataSource"])
+    return resource_dict
+
+
+def verify_resource_not_in_ns(resource_type: type[Resource], namespace: str, client: DynamicClient) -> None:
+    resources = resource_type.get(client=client, namespace=namespace)
+    resources_names = {resource.name for resource in resources}
+    assert not resources_names, f"{resource_type.kind} resources shouldn't exist in {namespace}: {resources_names}"
+
+
+def verify_resource_in_ns(
+    expected_resource_names: set[str],
+    namespace: str,
+    client: DynamicClient,
+    resource_type: type[Resource],
+    ready_condition: str | None = None,
+) -> None:
+    """Verify that resources exist in namespace and optionally in ready condition."""
+    resources = list(resource_type.get(client=client, namespace=namespace))
+    resources_names = {resource.name for resource in resources}
+    missing_resources_names = expected_resource_names - resources_names
+    assert not missing_resources_names, f"Missing {resource_type.kind} in {namespace}: {missing_resources_names}"
+
+    if ready_condition:
+        LOGGER.info(f"Verify that {expected_resource_names} are in {ready_condition} condition")
+        for resource in resources:
+            if resource.name in expected_resource_names:
+                resource.wait_for_condition(
+                    condition=ready_condition,
+                    status=resource.Condition.Status.TRUE,
+                    timeout=TIMEOUT_10MIN,
+                )
