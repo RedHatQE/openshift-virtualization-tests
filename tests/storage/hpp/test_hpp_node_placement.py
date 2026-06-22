@@ -19,7 +19,7 @@ from utilities.storage import check_disk_count_in_vm
 
 LOGGER = logging.getLogger(__name__)
 
-pytestmark = pytest.mark.usefixtures("skip_test_if_no_hpp_sc")
+pytestmark = pytest.mark.hpp
 
 
 @pytest.mark.destructive
