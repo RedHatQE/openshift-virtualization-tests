@@ -9,6 +9,12 @@ from utilities.constants import QUARANTINED, TIMEOUT_1MIN, UNPRIVILEGED_PASSWORD
 from utilities.infra import login_with_user_password
 from utilities.storage import create_dv, get_dv_size_from_datasource
 
+"""
+Test virtctl guestfs command with specific user.
+Jira: https://redhat.atlassian.net/browse/CNV-7487
+"""
+
+
 pytestmark = pytest.mark.post_upgrade
 
 
