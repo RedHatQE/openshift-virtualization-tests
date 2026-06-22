@@ -5,6 +5,10 @@ from tests.storage.disk_preallocation.utils import (
     assert_preallocation_requested_annotation,
 )
 
+"""
+Test preallocation functionality for DataVolumes
+Jira: http://redhat.atlassian.net/browse/CNV-6008
+"""
 pytestmark = pytest.mark.post_upgrade
 
 
