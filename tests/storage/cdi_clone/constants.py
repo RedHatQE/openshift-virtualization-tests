@@ -1,4 +1,6 @@
-"""Constants for CDI clone tests."""
+"""
+Constants for CDI clone tests.
+"""
 
 from utilities.constants import TIMEOUT_40MIN
 

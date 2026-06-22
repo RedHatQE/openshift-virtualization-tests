@@ -11,7 +11,7 @@ from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.storage_profile import StorageProfile
 
 from tests.storage.utils import assert_disk_bus
-from tests.utils import create_windows2022_dv_template_from_registry, create_windows2022_vm_with_vtpm
+from tests.utils import create_windows2022_dv_template_from_registry, create_windows2022_vm_from_template_with_vtpm
 from utilities.constants import HOTPLUG_DISK_SCSI_BUS, HOTPLUG_DISK_SERIAL, HOTPLUG_DISK_VIRTIO_BUS, Images
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.jira import is_jira_open
@@ -95,7 +95,7 @@ def vm_instance_from_template_multi_storage_scope_class(
     windows_dv_from_registry_scope_class,
 ):
     """Creates a Windows 2022 VM with vTPM from registry container disk."""
-    with create_windows2022_vm_with_vtpm(
+    with create_windows2022_vm_from_template_with_vtpm(
         dv_template=windows_dv_from_registry_scope_class,
         namespace=namespace.name,
         client=unprivileged_client,
