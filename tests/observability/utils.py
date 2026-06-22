@@ -1,44 +1,11 @@
-import datetime
 import logging
 
 from ocp_utilities.monitoring import Prometheus
-from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.constants import SSP_COMMON_TEMPLATES_MODIFICATION_REVERTED
-from utilities.constants import (
-    TIMEOUT_4MIN,
-    TIMEOUT_15SEC,
-)
-from utilities.monitoring import get_metrics_value
 
 LOGGER = logging.getLogger(__name__)
 ALLOW_ALERTS_ON_HEALTHY_CLUSTER_LIST = [SSP_COMMON_TEMPLATES_MODIFICATION_REVERTED]
-
-
-def validate_metrics_value(
-    prometheus: Prometheus, metric_name: str, expected_value: str, timeout: int = TIMEOUT_4MIN
-) -> None:
-    samples = TimeoutSampler(
-        wait_timeout=timeout,
-        sleep=TIMEOUT_15SEC,
-        func=get_metrics_value,
-        prometheus=prometheus,
-        metrics_name=metric_name,
-    )
-    sample = None
-    comparison_values_log = {}
-    try:
-        for sample in samples:
-            if sample:
-                comparison_values_log[datetime.datetime.now()] = (
-                    f"metric: {metric_name} value is: {sample}, the expected value is {expected_value}"
-                )
-                if sample == expected_value:
-                    LOGGER.info("Metrics value matches the expected value!")
-                    return
-    except TimeoutExpiredError:
-        LOGGER.error(f"Metrics value: {sample}, expected: {expected_value}, comparison log: {comparison_values_log}")
-        raise
 
 
 def verify_no_listed_alerts_on_cluster(prometheus: Prometheus, alerts_list: list[str]) -> None:

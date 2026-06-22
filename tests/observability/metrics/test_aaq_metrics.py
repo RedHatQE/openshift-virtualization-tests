@@ -4,7 +4,7 @@ from tests.observability.metrics.utils import (
     timestamp_to_seconds,
     validate_values_from_kube_application_aware_resourcequota_metric,
 )
-from tests.observability.utils import validate_metrics_value
+from utilities.monitoring import validate_metrics_value
 
 pytestmark = [
     pytest.mark.usefixtures(

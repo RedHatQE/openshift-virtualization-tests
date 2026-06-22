@@ -36,7 +36,6 @@ from tests.observability.metrics.utils import (
     network_packets_received,
     vnic_info_from_vm_or_vmi,
 )
-from tests.observability.utils import validate_metrics_value
 from tests.utils import create_vms, start_stress_on_vm
 from utilities import console
 from utilities.constants import (
@@ -72,7 +71,7 @@ from utilities.infra import (
     get_pod_by_name_prefix,
     unique_name,
 )
-from utilities.monitoring import get_metrics_value
+from utilities.monitoring import get_metrics_value, validate_metrics_value
 from utilities.network import assert_ping_successful, get_ip_from_vm_or_virt_handler_pod, ping
 from utilities.ssp import verify_ssp_pod_is_running
 from utilities.storage import (
