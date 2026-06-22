@@ -1,4 +1,6 @@
-from typing import Final
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Final
 
 import pytest
 
@@ -8,6 +10,11 @@ from tests.network.l2_bridge.vmi_interfaces_stability.lib_helpers import (
     monitor_vmi_events,
 )
 from utilities.virt import migrate_vm_and_verify
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from libs.vm.vm import BaseVirtualMachine
 
 STABILITY_PERIOD_IN_SECONDS: Final[int] = 300
 
@@ -21,8 +28,13 @@ class TestInterfacesStability:
             assert_interfaces_stable(stable_ips=stable_ips, vmi=vmi_obj, expected_num_ifaces=len(stable_ips))
 
     @pytest.mark.polarion("CNV-14340")
-    def test_interfaces_stability_after_migration(self, running_linux_bridge_vm, stable_ips):
-        migrate_vm_and_verify(vm=running_linux_bridge_vm)
+    def test_interfaces_stability_after_migration(
+        self,
+        admin_client: DynamicClient,
+        running_linux_bridge_vm: BaseVirtualMachine,
+        stable_ips: dict[str, str],
+    ):
+        migrate_vm_and_verify(vm=running_linux_bridge_vm, client=admin_client)
         primary_network = lookup_primary_network(vm=running_linux_bridge_vm)
         primary_iface = lookup_iface_status(
             vm=running_linux_bridge_vm,

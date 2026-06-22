@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import pytest
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 from ocp_resources.datavolume import DataVolume
@@ -26,6 +30,9 @@ from utilities.virt import (
     restart_vm_wait_for_running_vm,
     running_vm,
 )
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
 
 pytestmark = [pytest.mark.usefixtures("skip_if_no_common_modern_cpu")]
 
@@ -132,8 +139,11 @@ class TestCPUHotPlugInstanceType:
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu_instance_type"])
     @pytest.mark.polarion("CNV-11402")
-    def test_migrate_snapshot_hotplugged_vm(self, hotplug_vm_snapshot_instance_type, instance_type_hotplug_vm):
-        migrate_vm_and_verify(vm=instance_type_hotplug_vm, check_ssh_connectivity=True)
+    @pytest.mark.usefixtures("hotplug_vm_snapshot_instance_type")
+    def test_migrate_snapshot_hotplugged_vm(
+        self, admin_client: DynamicClient, instance_type_hotplug_vm: VirtualMachineForTests
+    ):
+        migrate_vm_and_verify(vm=instance_type_hotplug_vm, client=admin_client, check_ssh_connectivity=True)
 
     @pytest.mark.dependency(
         name=f"{TESTS_CLASS_NAME}::decrease_cpu_value", depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu_instance_type"]

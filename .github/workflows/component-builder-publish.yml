@@ -13,8 +13,8 @@ jobs:
   guest-fedora-amd64:
     runs-on: ubuntu-latest
     env:
-      FEDORA_IMAGE: Fedora-Cloud-Base-Generic-41-1.4.x86_64.qcow2
-      FEDORA_VERSION: 41
+      FEDORA_IMAGE: Fedora-Cloud-Base-Generic-43-1.6.x86_64.qcow2
+      FEDORA_VERSION: 43
       CPU_ARCH: amd64
       FULL_EMULATION: "true"
       DEBIAN_FRONTEND: noninteractive
@@ -34,11 +34,20 @@ jobs:
         run: sudo chmod 0644 /boot/vmlinuz*
       - name: Fetch base Fedora image
         working-directory: ./containers/fedora
-        run: wget -q "https://download.fedoraproject.org/pub/fedora/linux/releases/41/Cloud/x86_64/images/${{ env.FEDORA_IMAGE }}"
+        run: wget -q "https://download.fedoraproject.org/pub/fedora/linux/releases/43/Cloud/x86_64/images/${{ env.FEDORA_IMAGE }}"
       - name: Install uv
         uses: astral-sh/setup-uv@v8.2.0
         with:
           version: "0.11.21"
+      - name: Install Bitwarden Secrets Manager CLI
+        env:
+          BWS_VERSION: "2.1.0"
+        run: |
+          curl -fsSL "https://github.com/bitwarden/sdk-sm/releases/download/bws-v${BWS_VERSION}/bws-x86_64-unknown-linux-gnu-${BWS_VERSION}.zip" -o bws.zip
+          unzip -o bws.zip -d /usr/local/bin
+          chmod +x /usr/local/bin/bws
+          rm bws.zip
+          bws --version
       - name: Create VM
         working-directory: ./containers/fedora
         env:

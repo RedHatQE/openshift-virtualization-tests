@@ -16,7 +16,10 @@ Preconditions:
     - Running connectivity reference VM with a primary EVPN-enabled CUDN.
 """
 
+from __future__ import annotations
+
 import ipaddress
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -32,8 +35,17 @@ from tests.network.bgp.evpn.libevpn import (
 )
 from utilities.virt import migrate_vm_and_verify
 
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from libs.net.traffic_generator import TcpServer
+    from libs.vm.vm import BaseVirtualMachine
+    from tests.network.bgp.evpn.libevpn import EndpointTcpClient
+
+
 _L2_ENDPOINT_IPV4: str = f"{random_ipv4_address(net_seed=EVPN_CUDN_NET_SEED, host_address=249)}/24"
 _L2_ENDPOINT_IPV6: str = f"{random_ipv6_address(net_seed=EVPN_CUDN_NET_SEED, host_address=249)}/64"
+
 
 pytestmark = [
     pytest.mark.bgp,
@@ -86,9 +98,10 @@ def test_stretched_l2_connectivity_udn_vm_and_external_provider(external_l2_endp
 
 @pytest.mark.polarion("CNV-15229")
 def test_stretched_l2_connectivity_is_preserved_over_live_migration(
-    evpn_stretched_l2_active_connections,
-    vm_evpn_target,
-    subtests,
+    admin_client: DynamicClient,
+    evpn_stretched_l2_active_connections: list[tuple[EndpointTcpClient, TcpServer]],
+    vm_evpn_target: BaseVirtualMachine,
+    subtests: pytest.Subtests,
 ):
     """
     Preconditions:
@@ -102,7 +115,7 @@ def test_stretched_l2_connectivity_is_preserved_over_live_migration(
     Expected:
     - The initial TCP connection is preserved (no disconnection).
     """
-    migrate_vm_and_verify(vm=vm_evpn_target)
+    migrate_vm_and_verify(vm=vm_evpn_target, client=admin_client)
     for client, server in evpn_stretched_l2_active_connections:
         with subtests.test(f"IPv{ipaddress.ip_address(client.server_ip).version}"):
             assert is_tcp_connection(server=server, client=client)
@@ -129,9 +142,10 @@ def test_routed_l3_connectivity_udn_vm_and_external_provider(external_l3_endpoin
 
 @pytest.mark.polarion("CNV-15231")
 def test_routed_l3_connectivity_is_preserved_over_live_migration(
-    evpn_routed_l3_active_connections,
-    vm_evpn_target,
-    subtests,
+    admin_client: DynamicClient,
+    evpn_routed_l3_active_connections: list[tuple[EndpointTcpClient, TcpServer]],
+    vm_evpn_target: BaseVirtualMachine,
+    subtests: pytest.Subtests,
 ):
     """
     Preconditions:
@@ -145,7 +159,7 @@ def test_routed_l3_connectivity_is_preserved_over_live_migration(
     Expected:
     - The initial TCP connection is preserved (no disconnection).
     """
-    migrate_vm_and_verify(vm=vm_evpn_target)
+    migrate_vm_and_verify(vm=vm_evpn_target, client=admin_client)
     for client, server in evpn_routed_l3_active_connections:
         with subtests.test(f"IPv{ipaddress.ip_address(client.server_ip).version}"):
             assert is_tcp_connection(server=server, client=client)

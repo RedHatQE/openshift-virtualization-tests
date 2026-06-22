@@ -9,11 +9,11 @@ import re
 import secrets
 import shlex
 from collections import defaultdict
+from collections.abc import Generator
 from contextlib import contextmanager
 from copy import deepcopy
 from functools import cache
 from json import JSONDecodeError
-from subprocess import run
 from typing import TYPE_CHECKING, Any
 
 import jinja2
@@ -87,6 +87,7 @@ from utilities.constants import (
     TIMEOUT_12MIN,
     TIMEOUT_25MIN,
     TIMEOUT_30MIN,
+    VIRT_API,
     VIRT_HANDLER,
     VIRT_LAUNCHER,
     VIRTCTL,
@@ -1907,19 +1908,19 @@ def wait_for_cloud_init_complete(vm, timeout=TIMEOUT_4MIN):
 
 def migrate_vm_and_verify(
     vm: VirtualMachineForTests | BaseVirtualMachine,
-    client: DynamicClient | None = None,
+    client: DynamicClient,
     timeout: int = TIMEOUT_12MIN,
     wait_for_interfaces: bool = True,
     check_ssh_connectivity: bool = False,
     wait_for_migration_success: bool = True,
 ) -> VirtualMachineInstanceMigration | None:
-    """
-    Create a migration instance. You may choose to wait for migration
-    success or not.
+    """Migrate VM and verify migration success.
 
     Args:
         vm (VirtualMachine): VM to be migrated.
-        client (DynamicClient, default=None): Client to use for migration.
+        client (DynamicClient): Client to use for migration.
+            Note: Only Cluster Admin (admin_client) can migrate VM.
+            Namespace Admin (unprivileged_client) cannot migrate VM (unless assigned kubevirt.io:migrate RoleBinding).
         timeout (int, default=12 minutes): Maximum time to wait for the migration to finish.
         wait_for_interfaces (bool, default=True): Wait for VM network interfaces after migration completes.
         check_ssh_connectivity (bool, default=False): Verify SSH connectivity to the VM after migration completes.
@@ -2145,27 +2146,80 @@ def vm_instance_from_template(
         yield vm
 
 
+def _uncordon_and_stabilize(admin_client: DynamicClient, node: Node, hco_namespace: str) -> None:
+    """
+    Uncordon a node and wait for KubeVirt to stabilize.
+
+    Args:
+        admin_client: Admin Kubernetes client
+        node: Node to uncordon
+        hco_namespace: HCO namespace
+    """
+    LOGGER.info(f"Uncordon node {node.name}")
+    run_command(command=shlex.split(f"oc adm uncordon {node.name}"))
+    wait_for_node_schedulable_status(node=node, status=True)
+    wait_for_kv_stabilize(admin_client=admin_client, hco_namespace=hco_namespace)
+
+
 @contextmanager
-def node_mgmt_console(admin_client, node, node_mgmt):
+def cordon_node(admin_client: DynamicClient, node: Node) -> Generator[None]:
+    """
+    Cordon a node and uncordon it on exit.
+
+    Args:
+        admin_client: Admin Kubernetes client
+        node: Node to cordon
+
+    Yields:
+        None: Control returns while node is cordoned, uncordon happens on exit.
+    """
     hco_namespace = get_hco_namespace(admin_client=admin_client)
     try:
-        LOGGER.info(f"{node_mgmt.capitalize()} the node {node.name}")
-        extra_opts = "--delete-emptydir-data --ignore-daemonsets=true --force" if node_mgmt == "drain" else ""
-        run(
-            f"nohup oc adm {node_mgmt} {node.name} {extra_opts} &",
-            shell=True,
-        )
+        LOGGER.info(f"Cordon the node {node.name}")
+        run_command(command=shlex.split(f"oc adm cordon {node.name}"))
         yield
     finally:
-        if node_mgmt == "drain":
-            LOGGER.info("Terminate drain process")
-            run(
-                shlex.split('pkill -f "oc adm drain"'),
-            )
-        LOGGER.info(f"Uncordon node {node.name}")
-        run(f"oc adm uncordon {node.name}", shell=True)
-        wait_for_node_schedulable_status(node=node, status=True)
-        wait_for_kv_stabilize(admin_client=admin_client, hco_namespace=hco_namespace)
+        _uncordon_and_stabilize(admin_client=admin_client, node=node, hco_namespace=hco_namespace)
+
+
+@contextmanager
+def drain_node(
+    admin_client: DynamicClient, node: Node, hco_namespace: str, compact_cluster: bool = False
+) -> Generator[None]:
+    """
+    Drain a node and uncordon it on exit.
+
+    On compact clusters, relocates virt-api pods before drain to avoid webhook race conditions.
+
+    Args:
+        admin_client: Admin Kubernetes client
+        node: Node to drain
+        hco_namespace: HCO namespace
+        compact_cluster: If True, relocate virt-api pods before drain.
+    """
+    if compact_cluster:
+        for pod in utilities.infra.get_pods(
+            client=admin_client,
+            namespace=hco_namespace,
+            label=f"{Pod.ApiGroup.KUBEVIRT_IO}={VIRT_API}",
+        ):
+            if pod.node.name == node.name:
+                LOGGER.info(
+                    f"Compact cluster: cordoning {node.name} and deleting virt-api pod {pod.name} "
+                    "before drain to avoid webhook race"
+                )
+                with cordon_node(admin_client=admin_client, node=node):
+                    pod.delete(wait=True)
+
+    try:
+        LOGGER.info(f"Drain the node {node.name}")
+        cmd = f"nohup oc adm drain {node.name} --delete-emptydir-data --ignore-daemonsets=true --force &>/dev/null &"
+        run_command(command=["/bin/bash", "-c", cmd])
+        yield
+    finally:
+        LOGGER.info("Terminate drain process")
+        run_command(command=shlex.split('pkill -f "oc adm drain"'), check=False, verify_stderr=False)
+        _uncordon_and_stabilize(admin_client=admin_client, node=node, hco_namespace=hco_namespace)
 
 
 @contextmanager
