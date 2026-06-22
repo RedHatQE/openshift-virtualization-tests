@@ -1,6 +1,6 @@
 import json
 import logging
-from collections.abc import Collection, Generator
+from collections.abc import Collection, Iterator
 from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
@@ -361,7 +361,7 @@ def disable_common_boot_image_import_hco_spec(
     golden_images_namespace: Namespace,
     golden_images_data_import_crons: list[DataImportCron],
     exclude_data_source_names: Collection[str] | None = None,
-) -> Generator[None]:
+) -> Iterator[None]:
     if hco_resource.instance.spec[ENABLE_COMMON_BOOT_IMAGE_IMPORT]:
         update_common_boot_image_import_spec(
             hco_resource=hco_resource,

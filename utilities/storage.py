@@ -1139,7 +1139,7 @@ def verify_boot_sources_reimported(
             When None, all DIC-managed DataSources are verified.
 
     Returns:
-        True if all DataSources reached Ready=True otherwise false
+        True if all non-excluded DIC-managed DataSources reached Ready=True, otherwise False
     """
     try:
         for data_source in get_data_sources_managed_by_data_import_cron(client=admin_client, namespace=namespace):
