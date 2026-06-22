@@ -25,6 +25,7 @@ from utilities.pytest_utils import (
     deploy_run_in_progress_config_map,
     deploy_run_in_progress_namespace,
     exit_pytest_execution,
+    filter_hpp_tests,
     generate_common_template_matrix_dicts,
     generate_instance_type_matrix_dicts,
     get_artifactory_server_url,
@@ -34,6 +35,7 @@ from utilities.pytest_utils import (
     get_matrix_params,
     get_tests_cluster_markers,
     mark_nmstate_dependent_tests,
+    remove_tests_from_list,
     reorder_early_fixtures,
     run_in_progress_config_map,
     separator,
@@ -2367,3 +2369,122 @@ class TestAssertIncrementalClassesFullyCollected:
         item.function.__name__ = test_name
         item.keywords = {"incremental": True} if is_incremental else {}
         return item
+
+
+class TestRemoveTestsFromList:
+    """Test cases for remove_tests_from_list function."""
+
+    def test_splits_items_by_keyword(self):
+        """Items with matching keyword are separated from those without."""
+        item_with_hpp = MagicMock()
+        item_with_hpp.keywords = {"hpp": True, "storage": True}
+        item_without_hpp = MagicMock()
+        item_without_hpp.keywords = {"storage": True}
+
+        discarded, kept = remove_tests_from_list(items=[item_with_hpp, item_without_hpp], filter_str="hpp")
+
+        assert discarded == [item_with_hpp]
+        assert kept == [item_without_hpp]
+
+    def test_all_items_match(self):
+        """All items discarded when all have the keyword."""
+        item_one = MagicMock()
+        item_one.keywords = {"hpp": True}
+        item_two = MagicMock()
+        item_two.keywords = {"hpp": True}
+
+        discarded, kept = remove_tests_from_list(items=[item_one, item_two], filter_str="hpp")
+
+        assert discarded == [item_one, item_two]
+        assert kept == []
+
+    def test_no_items_match(self):
+        """No items discarded when none have the keyword."""
+        item_one = MagicMock()
+        item_one.keywords = {"storage": True}
+        item_two = MagicMock()
+        item_two.keywords = {"network": True}
+
+        discarded, kept = remove_tests_from_list(items=[item_one, item_two], filter_str="hpp")
+
+        assert discarded == []
+        assert kept == [item_one, item_two]
+
+    def test_empty_items_list(self):
+        """Empty input returns two empty lists."""
+        discarded, kept = remove_tests_from_list(items=[], filter_str="hpp")
+
+        assert discarded == []
+        assert kept == []
+
+
+class TestFilterHppTests:
+    """Test cases for filter_hpp_tests function."""
+
+    def test_removes_hpp_tests_when_no_marker_expression(self):
+        """HPP tests are filtered out when no -m option is set."""
+        item_hpp = MagicMock()
+        item_hpp.keywords = {"hpp": True}
+        item_other = MagicMock()
+        item_other.keywords = {"storage": True}
+        config = MagicMock()
+        config.getoption.return_value = None
+
+        result = filter_hpp_tests(items=[item_hpp, item_other], config=config)
+
+        assert result == [item_other]
+        config.hook.pytest_deselected.assert_called_once_with(items=[item_hpp])
+
+    def test_removes_hpp_tests_when_marker_does_not_include_hpp(self):
+        """HPP tests are filtered out when -m is set but does not contain 'hpp'."""
+        item_hpp = MagicMock()
+        item_hpp.keywords = {"hpp": True}
+        item_other = MagicMock()
+        item_other.keywords = {"storage": True}
+        config = MagicMock()
+        config.getoption.return_value = "smoke"
+
+        result = filter_hpp_tests(items=[item_hpp, item_other], config=config)
+
+        assert result == [item_other]
+        config.hook.pytest_deselected.assert_called_once_with(items=[item_hpp])
+
+    def test_keeps_hpp_tests_when_marker_includes_hpp(self):
+        """All tests are kept when -m includes 'hpp'."""
+        item_hpp = MagicMock()
+        item_hpp.keywords = {"hpp": True}
+        item_other = MagicMock()
+        item_other.keywords = {"storage": True}
+        items = [item_hpp, item_other]
+        config = MagicMock()
+        config.getoption.return_value = "hpp"
+
+        result = filter_hpp_tests(items=items, config=config)
+
+        assert result == items
+        config.hook.pytest_deselected.assert_not_called()
+
+    def test_keeps_hpp_tests_when_marker_contains_hpp_in_expression(self):
+        """All tests are kept when -m contains 'hpp' as part of a larger expression."""
+        item_hpp = MagicMock()
+        item_hpp.keywords = {"hpp": True}
+        items = [item_hpp]
+        config = MagicMock()
+        config.getoption.return_value = "hpp and storage"
+
+        result = filter_hpp_tests(items=items, config=config)
+
+        assert result == items
+        config.hook.pytest_deselected.assert_not_called()
+
+    def test_empty_marker_expression_filters_hpp(self):
+        """HPP tests are filtered out when -m is an empty string."""
+        item_hpp = MagicMock()
+        item_hpp.keywords = {"hpp": True}
+        config = MagicMock()
+        config.getoption.return_value = ""
+
+        result = filter_hpp_tests(items=[item_hpp], config=config)
+
+        assert result == []
+        config.hook.pytest_deselected.assert_called_once_with(items=[item_hpp])
