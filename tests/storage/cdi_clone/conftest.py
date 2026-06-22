@@ -5,7 +5,7 @@ from tests.storage.cdi_clone.constants import WINDOWS_CLONE_TIMEOUT
 from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE
 from tests.utils import create_windows2022_dv_from_registry
 from utilities.constants import REGISTRY_STR, WIN_2K22, Images
-from utilities.storage import create_dv, data_volume
+from utilities.storage import create_dummy_first_consumer_pod, create_dv, data_volume, sc_volume_binding_mode_is_wffc
 
 
 @pytest.fixture()
@@ -76,6 +76,8 @@ def source_dv_windows_registry_scope_class(
         client=unprivileged_client,
         storage_class=storage_class_name_scope_class,
     ) as dv:
+        if sc_volume_binding_mode_is_wffc(sc=storage_class_name_scope_class, client=unprivileged_client):
+            create_dummy_first_consumer_pod(dv=dv)
         dv.wait_for_dv_success(timeout=WINDOWS_CLONE_TIMEOUT)
         yield dv
 
