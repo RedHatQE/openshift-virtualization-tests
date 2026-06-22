@@ -1375,6 +1375,11 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
     def to_dict(self):
         self.set_login_params()
         self.body = self.process_template()
+        if self.vm_instance_type:
+            domain = self.body.get("spec", {}).get("template", {}).get("spec", {}).get("domain", {})
+            domain.pop("cpu", None)
+            domain.pop("memory", None)
+            self.body.get("metadata", {}).get("annotations", {}).pop("vm.kubevirt.io/validations", None)
         super().to_dict()
 
         if self.vm_dict:
