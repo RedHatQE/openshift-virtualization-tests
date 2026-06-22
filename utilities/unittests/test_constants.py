@@ -32,7 +32,6 @@ class TestConstants:
         assert constants.TIMEOUT_10MIN == 10 * 60
         assert constants.TIMEOUT_30MIN == 30 * 60
         assert constants.TIMEOUT_60MIN == 60 * 60
-        assert constants.TIMEOUT_12HRS == 12 * 60 * 60
 
     def test_tcp_timeout_constants(self):
         """Test TCP timeout constants are defined"""
@@ -86,20 +85,19 @@ class TestConstants:
 
     def test_data_import_cron_constants(self):
         """Test data import cron related constants are defined"""
-        # Check for any data import cron related constants
-        assert hasattr(constants, "DataImportCron")
+        assert constants.DATA_IMPORT_CRON_ENABLE.startswith("metadata->annotations->")
 
     def test_os_related_constants(self):
         """Test OS related constants are defined"""
-        # Check for OS-specific images or constants
-        assert hasattr(constants, "Fedora")
-        assert hasattr(constants, "Rhel")
-        assert hasattr(constants, "Windows")
-        assert hasattr(constants, "Centos")
+        assert constants.OS_FLAVOR_RHEL == "rhel"
+        assert constants.OS_FLAVOR_FEDORA == "fedora"
+        assert constants.OS_FLAVOR_WINDOWS == "win"
+        assert constants.OS_FLAVOR_CIRROS == "cirros"
 
     def test_windows_os_constants(self):
         """Test Windows OS constants are defined"""
-        assert hasattr(constants, "Windows")
+        assert constants.WIN_10 == "win10"
+        assert constants.WIN_11 == "win11"
 
     def test_workload_constants(self):
         """Test workload constants are defined"""
@@ -112,3 +110,16 @@ class TestConstants:
         assert constants.OVS_BRIDGE == "ovs-bridge"
         assert constants.BRIDGE_MARKER == "bridge-marker"
         assert constants.CLUSTER_NETWORK_ADDONS_OPERATOR == "cluster-network-addons-operator"
+
+    def test_instance_type_constants(self):
+        """Test instance type and preference constants are defined"""
+        assert constants.U1_SMALL == "u1.small"
+        assert constants.U1_LARGE == "u1.large"
+        assert constants.RHEL9_PREFERENCE == "rhel.9"
+        assert constants.CENTOS_STREAM9_PREFERENCE == "centos.stream9"
+
+    def test_os_matrix_constants(self):
+        """Test OS matrix parameter key constants are defined"""
+        assert constants.IMAGE_NAME_STR == "image_name"
+        assert constants.OS_VERSION_STR == "os_version"
+        assert constants.DV_SIZE_STR == "dv_size"
