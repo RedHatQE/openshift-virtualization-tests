@@ -15,7 +15,7 @@ from utilities.constants import (
     ALL_CNV_DEPLOYMENTS,
     ALL_CNV_PODS,
     ALL_HCO_RELATED_OBJECTS,
-    BREW_REGISTERY_SOURCE,
+    BREW_REGISTRY_SOURCE,
     CENTOS_STREAM9_PREFERENCE,
     CENTOS_STREAM10_PREFERENCE,
     CNV_OPERATORS,
@@ -69,11 +69,11 @@ def _get_default_storage_class(sc_list):
 
 no_unprivileged_client = False
 hco_cr_name = "kubevirt-hyperconverged"
-hco_namespace = "openshift-cnv"
-openshift_apiserver_namespace = "openshift-apiserver"
-sriov_namespace = "openshift-sriov-network-operator"
-marketplace_namespace = "openshift-marketplace"
-machine_api_namespace = "openshift-machine-api"
+hco_namespace = NamespacesNames.OPENSHIFT_CNV
+openshift_apiserver_namespace = NamespacesNames.OPENSHIFT_APISERVER
+sriov_namespace = NamespacesNames.OPENSHIFT_SRIOV_NETWORK_OPERATOR
+marketplace_namespace = NamespacesNames.OPENSHIFT_MARKETPLACE
+machine_api_namespace = NamespacesNames.MACHINE_API_NAMESPACE
 golden_images_namespace = NamespacesNames.OPENSHIFT_VIRTUALIZATION_OS_IMAGES
 hco_subscription = ""  # TODO: remove constants/HCO_SUBSCRIPTION and use this instead.
 disconnected_cluster = False
@@ -90,7 +90,7 @@ servers = {
 cnv_registry_sources = {
     "osbs": {
         "cnv_subscription_source": HCO_CATALOG_SOURCE,
-        "source_map": BREW_REGISTERY_SOURCE,
+        "source_map": BREW_REGISTRY_SOURCE,
     },
     "hotfix": {
         "cnv_subscription_source": HCO_CATALOG_SOURCE,
@@ -100,7 +100,7 @@ cnv_registry_sources = {
     },
     "fbc": {
         "cnv_subscription_source": HCO_CATALOG_SOURCE,
-        "source_map": BREW_REGISTERY_SOURCE,
+        "source_map": BREW_REGISTRY_SOURCE,
     },
 }
 
