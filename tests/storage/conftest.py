@@ -29,6 +29,7 @@ from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+from tests.storage.cdi_clone.constants import WINDOWS_CLONE_TIMEOUT
 from tests.storage.constants import (
     CIRROS_QCOW2_IMG,
     HPP_STORAGE_CLASSES,
@@ -42,7 +43,7 @@ from tests.storage.utils import (
     hpp_cr_suffix,
     is_hpp_cr_legacy,
 )
-from tests.utils import create_cirros_vm
+from tests.utils import create_cirros_vm, create_windows2022_dv_from_registry
 from utilities.artifactory import (
     get_artifactory_config_map,
     get_artifactory_secret,
@@ -59,6 +60,7 @@ from utilities.constants import (
     TIMEOUT_5SEC,
     TIMEOUT_30MIN,
     U1_SMALL,
+    WIN_2K22,
     Images,
 )
 from utilities.hco import (
@@ -541,3 +543,19 @@ def unique_suffix():
 @pytest.fixture(scope="class")
 def dv_wait_timeout(request):
     return request.param.get("dv_wait_timeout") if hasattr(request, "param") else TIMEOUT_30MIN
+
+
+@pytest.fixture(scope="session")
+def source_dv_windows_registry_scope_session(
+    admin_client,
+    golden_images_namespace,
+):
+    """Fixture that imports a Windows 2022 DataVolume from registry into the golden images namespace."""
+    with create_windows2022_dv_from_registry(
+        dv_name=f"dv-source-{WIN_2K22}-registry",
+        namespace=golden_images_namespace.name,
+        client=admin_client,
+        storage_class=py_config["default_storage_class"],
+    ) as dv:
+        dv.wait_for_dv_success(timeout=WINDOWS_CLONE_TIMEOUT)
+        yield dv

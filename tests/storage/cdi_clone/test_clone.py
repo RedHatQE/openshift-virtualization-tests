@@ -185,7 +185,7 @@ class TestWindowsClonedDv:
         pytest.param(
             {
                 "dv_name": "dv-source-win",
-                "image": f"{Images.Windows.DIR}/{Images.Windows.WIN11_IMG}",
+                "image": f"{Images.Windows.DIR}/{Images.Windows.WIN2022_IMG}",
                 "dv_size": Images.Windows.DEFAULT_DV_SIZE,
             },
             marks=(pytest.mark.polarion("CNV-3552"), pytest.mark.tier3()),
