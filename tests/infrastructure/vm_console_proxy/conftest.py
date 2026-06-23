@@ -30,7 +30,13 @@ from tests.infrastructure.vm_console_proxy.utils import (
     create_vnc_console_token,
     get_vm_console_proxy_resource,
 )
-from utilities.constants import OS_FLAVOR_RHEL, RHEL10_PREFERENCE, TIMEOUT_10MIN, U1_SMALL, Images
+from utilities.constants import Images
+from utilities.constants.images import OS_FLAVOR_RHEL
+from utilities.constants.instance_types import (
+    RHEL10_PREFERENCE,
+    U1_SMALL,
+)
+from utilities.constants.timeouts import TIMEOUT_10MIN
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import login_with_token, login_with_user_password
 from utilities.virt import VirtualMachineForTests, wait_for_running_vm

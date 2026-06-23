@@ -15,8 +15,8 @@ from tests.infrastructure.golden_images.update_boot_source.utils import (
     wait_for_created_volume_from_data_import_cron,
     wait_for_existing_auto_update_data_import_crons,
 )
-from utilities.constants import (
-    DEFAULT_FEDORA_REGISTRY_URL,
+from utilities.constants.images import DEFAULT_FEDORA_REGISTRY_URL
+from utilities.constants.timeouts import (
     TIMEOUT_2MIN,
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,

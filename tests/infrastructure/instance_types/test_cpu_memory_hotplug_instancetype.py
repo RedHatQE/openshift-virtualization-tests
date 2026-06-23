@@ -16,7 +16,7 @@ from tests.utils import (
     update_vm_instancetype_name,
     wait_for_guest_os_cpu_count,
 )
-from utilities.constants import (
+from utilities.constants.virt import (
     FOUR_CPU_SOCKETS,
     SIX_CPU_SOCKETS,
     TEN_CPU_SOCKETS,

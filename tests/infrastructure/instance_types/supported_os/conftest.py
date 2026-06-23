@@ -10,13 +10,13 @@ from utilities.artifactory import (
     get_artifactory_config_map,
     get_artifactory_secret,
 )
-from utilities.constants import (
+from utilities.constants import Images
+from utilities.constants.hco import DATA_SOURCE_NAME
+from utilities.constants.images import OS_FLAVOR_WIN_CONTAINER_DISK
+from utilities.constants.instance_types import RHEL8_PREFERENCE
+from utilities.constants.os_matrix import (
     CONTAINER_DISK_IMAGE_PATH_STR,
-    DATA_SOURCE_NAME,
     DATA_SOURCE_STR,
-    OS_FLAVOR_WIN_CONTAINER_DISK,
-    RHEL8_PREFERENCE,
-    Images,
 )
 from utilities.storage import get_test_artifact_server_url
 from utilities.virt import VirtualMachineForTests
