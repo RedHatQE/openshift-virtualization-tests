@@ -398,9 +398,11 @@ def localnet_active_connections(
 
 
 @pytest.fixture()
-def migrated_localnet_vm(localnet_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine]) -> BaseVirtualMachine:
+def migrated_localnet_vm(
+    admin_client: DynamicClient, localnet_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine]
+) -> BaseVirtualMachine:
     vm, _ = localnet_running_vms
-    migrate_vm_and_verify(vm=vm)
+    migrate_vm_and_verify(vm=vm, client=admin_client)
     return vm
 
 

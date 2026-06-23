@@ -26,9 +26,9 @@ from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.exceptions import ResourceTeardownError
 
 from utilities.constants import (
-    ADP_NAMESPACE,
     LS_COMMAND,
     TIMEOUT_20SEC,
+    NamespacesNames,
 )
 from utilities.oadp import (
     VeleroBackup,
@@ -67,7 +67,7 @@ class TestDeleteVeleroResource:
         mock_get_pod.assert_called_once_with(
             client=mock_client,
             pod_prefix="velero",
-            namespace=ADP_NAMESPACE,
+            namespace=NamespacesNames.ADP_NAMESPACE,
         )
 
         mock_pod.execute.assert_called_once_with(command=["./velero", "delete", kind.lower(), name, "--confirm"])
@@ -335,7 +335,7 @@ class TestCreateRhelVm:
         mock_get_config_map.assert_called_once_with(namespace="test-namespace")
         mock_get_url.assert_called_once()
         mock_dv.to_dict.assert_called_once()
-        mock_running_vm.assert_called_once_with(vm=mock_vm, wait_for_interfaces=True)
+        mock_running_vm.assert_called_once_with(vm=mock_vm)
         mock_cleanup.assert_called_once_with(artifactory_secret=mock_secret, artifactory_config_map=mock_config_map)
 
     @patch("utilities.oadp.cleanup_artifactory_secret_and_config_map")
