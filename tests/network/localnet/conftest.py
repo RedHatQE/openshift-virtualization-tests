@@ -31,9 +31,7 @@ from tests.network.localnet.liblocalnet import (
     localnet_cudn,
     localnet_vm,
 )
-from utilities.constants import (
-    WORKER_NODE_LABEL_KEY,
-)
+from utilities.constants.cluster import WORKER_NODE_LABEL_KEY
 from utilities.infra import create_ns
 from utilities.virt import migrate_vm_and_verify
 
