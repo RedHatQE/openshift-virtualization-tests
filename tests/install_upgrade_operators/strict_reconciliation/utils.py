@@ -20,7 +20,10 @@ from tests.install_upgrade_operators.utils import (
     get_function_name,
     get_network_addon_config,
 )
-from utilities.constants import TIMEOUT_3MIN, TIMEOUT_5SEC
+from utilities.constants.timeouts import (
+    TIMEOUT_3MIN,
+    TIMEOUT_5SEC,
+)
 from utilities.hco import get_hco_spec
 from utilities.infra import get_hyperconverged_resource
 from utilities.storage import get_hyperconverged_cdi

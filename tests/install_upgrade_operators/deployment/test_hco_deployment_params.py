@@ -6,7 +6,7 @@ from tests.install_upgrade_operators.deployment.utils import (
     validate_liveness_probe_fields,
     validate_request_fields,
 )
-from utilities.constants import (
+from utilities.constants.components import (
     ALL_CNV_DEPLOYMENTS,
     HCO_OPERATOR,
     HCO_WEBHOOK,

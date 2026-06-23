@@ -3,7 +3,10 @@ from collections import defaultdict
 
 import pytest
 
-from utilities.constants import BRIDGE_MARKER, CLUSTER_NETWORK_ADDONS_OPERATOR
+from utilities.constants.components import (
+    BRIDGE_MARKER,
+    CLUSTER_NETWORK_ADDONS_OPERATOR,
+)
 from utilities.infra import get_node_audit_log_line_dict
 
 LOGGER = logging.getLogger(__name__)
