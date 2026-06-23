@@ -11,7 +11,9 @@ from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.volume_snapshot import VolumeSnapshot
 
 from tests.os_params import RHEL_LATEST_LABELS
-from utilities.constants import DATA_IMPORT_CRON_ENABLE, RHEL9_STR, TIMEOUT_3MIN
+from utilities.constants.components import RHEL9_STR
+from utilities.constants.hco import DATA_IMPORT_CRON_ENABLE
+from utilities.constants.timeouts import TIMEOUT_3MIN
 from utilities.hco import (
     disable_common_boot_image_import_hco_spec,
     update_hco_templates_spec,

@@ -8,7 +8,8 @@ import uuid
 import pytest
 from ocp_resources.datavolume import DataVolume
 
-from utilities.constants import TIMEOUT_1MIN, TIMEOUT_2MIN, Images
+from utilities.constants import Images
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_2MIN
 from utilities.storage import check_upload_virtctl_result, create_dv, get_downloaded_artifact, virtctl_upload_dv
 
 LOGGER = logging.getLogger(__name__)

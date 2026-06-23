@@ -9,7 +9,7 @@ from ocp_resources.resource import Resource
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.storage.utils import get_importer_pod
-from utilities.constants import TIMEOUT_1MIN, TIMEOUT_5SEC, TIMEOUT_20SEC
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_5SEC, TIMEOUT_20SEC
 
 if TYPE_CHECKING:
     from ocp_resources.persistent_volume_claim import PersistentVolumeClaim

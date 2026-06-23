@@ -20,7 +20,9 @@ from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 
 from tests.storage.constants import TEST_FILE_CONTENT, TEST_FILE_NAME
 from tests.storage.vm_export.utils import create_blank_dv_by_specific_user, get_manifest_from_vmexport, get_manifest_url
-from utilities.constants import OS_FLAVOR_RHEL, U1_SMALL, UNPRIVILEGED_PASSWORD, UNPRIVILEGED_USER
+from utilities.constants.images import OS_FLAVOR_RHEL
+from utilities.constants.instance_types import U1_SMALL
+from utilities.constants.pytest import UNPRIVILEGED_PASSWORD, UNPRIVILEGED_USER
 from utilities.infra import create_ns, login_with_user_password
 from utilities.storage import data_volume_template_with_source_ref_dict, write_file_via_ssh
 from utilities.virt import VirtualMachineForTests, running_vm
