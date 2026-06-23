@@ -7,32 +7,60 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+env:
+  FEDORA_VERSION: 43
+  REMOTE_REPOSITORY: quay.io/openshift-cnv/qe-cnv-tests-fedora-staging
+
 jobs:
-  guest-fedora-amd64:
+  guest-fedora:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            url_arch: x86_64
+            qemu_package: qemu-system-x86
+            fedora_url: https://download.fedoraproject.org/pub/fedora/linux/releases/43/Cloud/x86_64/images
+          - arch: arm64
+            url_arch: aarch64
+            qemu_package: qemu-system-aarch64
+            fedora_url: https://download.fedoraproject.org/pub/fedora/linux/releases/43/Cloud/aarch64/images
+          - arch: s390x
+            url_arch: s390x
+            qemu_package: qemu-system-s390x
+            fedora_url: https://download.fedoraproject.org/pub/fedora-secondary/releases/43/Cloud/s390x/images
     env:
-      FEDORA_IMAGE: Fedora-Cloud-Base-Generic-43-1.6.x86_64.qcow2
-      FEDORA_VERSION: 43
-      CPU_ARCH: amd64
+      FEDORA_IMAGE_BASE: Fedora-Cloud-Base-Generic-43-1.6
+      CPU_ARCH: ${{ matrix.arch }}
       FULL_EMULATION: "true"
       DEBIAN_FRONTEND: noninteractive
     steps:
       - name: Check out code
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Install dependencies for VM build
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            qemu-system-x86 \
+            ${{ matrix.qemu_package }} \
             libvirt-daemon-system \
             virtinst cloud-image-utils \
             libguestfs-tools
+
       - name: Tweak hosted runner to enable 'virt-sysprep'
         # https://bugs.launchpad.net/ubuntu/+source/linux/+bug/759725
         run: sudo chmod 0644 /boot/vmlinuz*
+
       - name: Fetch base Fedora image
         working-directory: ./containers/fedora
-        run: wget -q "https://download.fedoraproject.org/pub/fedora/linux/releases/43/Cloud/x86_64/images/${{ env.FEDORA_IMAGE }}"
+        run: |
+          FEDORA_IMAGE="${FEDORA_IMAGE_BASE}.${{ matrix.url_arch }}.qcow2"
+          wget -q "${{ matrix.fedora_url }}/${FEDORA_IMAGE}"
+
       - name: Install uv
         uses: astral-sh/setup-uv@v8.2.0
         with:
@@ -42,17 +70,19 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
           NO_SECRETS: "true"
+          FEDORA_IMAGE: ${{ env.FEDORA_IMAGE_BASE }}.${{ matrix.url_arch }}.qcow2
         run: ./build.sh
+
       - name: Save container image as tarball
         env:
           local_repository: "localhost/fedora"
-          remote_repository: "quay.io/openshift-cnv/qe-cnv-tests-fedora-staging"
           arch_tag: "${{ env.FEDORA_VERSION }}-${{ env.CPU_ARCH }}"
         run: |
           mkdir -p artifacts
-          podman tag "${local_repository}":"${arch_tag}" "${remote_repository}":"${arch_tag}"
-          podman save -o artifacts/fedora-image-${{ env.CPU_ARCH }}.tar "${remote_repository}":"${arch_tag}"
+          podman tag "${local_repository}":"${arch_tag}" "${{ env.REMOTE_REPOSITORY }}":"${arch_tag}"
+          podman save -o artifacts/fedora-image-${{ env.CPU_ARCH }}.tar "${{ env.REMOTE_REPOSITORY }}":"${arch_tag}"
           echo "Saved image to artifacts/fedora-image-${{ env.CPU_ARCH }}.tar"
+
       - name: Upload container image artifact
         uses: actions/upload-artifact@v7
         with:
