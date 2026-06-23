@@ -6,6 +6,7 @@ import pytest
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.namespace import Namespace
 
+from libs.net import nodenetworkconfigurationpolicy as libnncp
 from libs.net.ip import random_cidr_addresses_by_family
 from libs.net.traffic_generator import TcpServer, VMTcpClient, active_tcp_connections
 from libs.net.vmspec import wait_for_ifaces_status
@@ -15,7 +16,6 @@ from libs.vm.spec import Interface, Multus, Network
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs import cloudinit
 from tests.network.libs import cluster_user_defined_network as libcudn
-from tests.network.libs import nodenetworkconfigurationpolicy as libnncp
 from tests.network.libs.cloudinit import EthernetDevice
 from tests.network.libs.nodes import RHCOS9_WORKER_LABEL
 from tests.network.localnet.liblocalnet import (
