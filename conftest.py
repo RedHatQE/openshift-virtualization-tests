@@ -599,6 +599,7 @@ def pytest_collection_modifyitems(session, config, items):
     4. Adds the tier2 marker for tests without an exclusion marker.
     5. Filters upgrade tests based on the --upgrade option.
     6. Dynamically mark NMState-dependent tests.
+    7. Auto-adds the quarantined marker for xfail-quarantined tests.
 
     Args:
         session (pytest.Session): The pytest session object.
@@ -628,6 +629,14 @@ def pytest_collection_modifyitems(session, config, items):
 
         # Add tier2 marker for tests without an exclusion marker.
         add_tier2_marker(item=item)
+
+        # Auto-add quarantined marker for xfail tests with QUARANTINED reason
+        for marker in item.iter_markers(name="xfail"):
+            reason = marker.kwargs.get("reason", "")
+            run = marker.kwargs.get("run", True)
+            if QUARANTINED in reason and not run:
+                item.add_marker(marker="quarantined")
+                break
 
         # All tests are verified on amd64 platforms, adding `amd64` to all tests
         item.add_marker(marker=AMD_64)
