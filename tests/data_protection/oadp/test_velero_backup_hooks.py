@@ -1,76 +1,62 @@
 """
 Velero Backup Hook Opt-Out Tests
 
-STP Reference:
-Jira: CNV-79727
+STP Reference: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/remove-velero-hooks-stp.md
+Jira: https://redhat.atlassian.net/browse/CNV-79727 # <skip-jira-utils-check>
 """
 
 import pytest
 
 
-class TestVeleroBackupHookOptOut:
+class TestVeleroHookOptOutPausedVM:
     """
-    Tests for Velero backup hook opt-out with paused VMs and full backup/restore.
-
-    STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/pull/116
+    Tests for Velero backup hook opt-out on paused VMs.
 
     Preconditions:
-        - OADP operator installed and configured
-        - Velero configured with default backup storage location
+        - Running VM with per-VM opt-out annotation
+        - VM paused
     """
 
     __test__ = False
 
     @pytest.mark.polarion("CNV-16267")
-    def test_backup_paused_vm_hooks_disabled(self):
+    def test_backup_succeeds_with_hooks_disabled_on_paused_vm(self):
         """
-        Test that Velero backup of a paused VM completes with hooks disabled.
-
-        Preconditions:
-            - VM deployed with kubevirt.io/skip-backup-hooks: "true"
-
-        Steps:
-            1. Pause the running VM
-            2. Run Velero backup targeting the VM namespace
-            3. Wait for Velero backup to complete
-
-        Expected:
-            - Backup completes with status Completed
-        """
-
-    @pytest.mark.polarion("CNV-16268")
-    def test_full_backup_restore_hooks_disabled(self):
-        """
-        Test that full Velero backup and restore completes with hooks disabled.
-
-        Preconditions:
-            - Running VM deployed with kubevirt.io/skip-backup-hooks: "true"
+        Test that backup completes without hooks on a paused VM with opt-out.
 
         Steps:
             1. Run Velero backup targeting the VM namespace
-            2. Delete the VM and its namespace
-            3. Restore from backup
-            4. Wait for VM to reach Running state
-
-        Expected:
-            - VM is Running
-        """
-
-    @pytest.mark.polarion("CNV-16269")
-    def test_backup_paused_vm_default_hooks(self):
-        """
-        Test that Velero backup of a paused VM attempts hooks by default.
-
-        Preconditions:
-            - VM deployed without opt-out annotation
-
-        Steps:
-            1. Pause the running VM
-            2. Run Velero backup targeting the VM namespace
-            3. Wait for Velero backup to complete
-            4. Check Velero backup logs for hook execution entries
+            2. Wait for backup to complete
 
         Expected:
             - Backup completes with status Completed
-            - Backup logs contain freeze/unfreeze hook entries
+            - No freeze/unfreeze hooks executed during backup
+        """
+
+
+class TestVeleroHookOptOutBackupRestore:
+    """
+    Tests for full Velero backup and restore with hook opt-out.
+
+    Preconditions:
+        - Running VM with per-VM opt-out annotation disabling backup hooks
+    """
+
+    __test__ = False
+
+    @pytest.mark.polarion("CNV-16268")
+    def test_full_backup_restore_with_hooks_disabled(self):
+        """
+        Test that full backup and restore workflow completes with hooks disabled.
+
+        Steps:
+            1. Run Velero backup
+            2. Delete VM and namespace
+            3. Restore from backup
+            4. Wait for restore to complete
+
+        Expected:
+            - Backup completes successfully without hooks
+            - Restore completes successfully
+            - VM is running after restore
         """
