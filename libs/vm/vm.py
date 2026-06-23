@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import uuid
 from dataclasses import asdict
 from typing import TYPE_CHECKING, Any
@@ -10,6 +11,7 @@ from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from pytest_testconfig import config as py_config
+from timeout_sampler import TimeoutSampler
 
 from libs.net.vmspec import VMInterfaceSpecNotFoundError
 from libs.vm.spec import (
@@ -29,6 +31,8 @@ from tests.network.libs import cloudinit
 from utilities import infra
 from utilities.constants import CLOUD_INIT_DISK_NAME
 from utilities.virt import get_oc_image_info, vm_console_run_commands
+
+LOGGER = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from kubernetes.dynamic import DynamicClient
@@ -142,6 +146,25 @@ class BaseVirtualMachine(VirtualMachine):
         template_affinity = asdict(obj=affinity) if affinity else None
         patches = {self: {"spec": {"template": {"spec": {"affinity": template_affinity}}}}}
         ResourceEditor(patches=patches).update()
+
+    def wait_for_vmi_affinity(self, timeout: int = 10) -> None:
+        """Wait for the VMI to reflect the current template affinity.
+
+        Args:
+            timeout: Maximum seconds to wait for reconciliation.
+        """
+        template_affinity = self._spec.template.spec.affinity
+        expected_affinity = (
+            asdict(obj=template_affinity, dict_factory=self._filter_out_none_values) if template_affinity else None
+        )
+        LOGGER.info(f"Waiting for VMI {self.name} affinity to match VM template")
+        for sample in TimeoutSampler(
+            wait_timeout=timeout,
+            sleep=1,
+            func=lambda: self.vmi.instance.to_dict()["spec"].get("affinity"),
+        ):
+            if sample == expected_affinity:
+                break
 
     @property
     def template_spec(self) -> VMISpec:

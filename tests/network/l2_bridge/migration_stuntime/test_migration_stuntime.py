@@ -16,11 +16,73 @@ Server - The connectivity listener VM that receives the ping and responds.
 STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-network/stuntime_measurement.md
 """
 
+import json
+import logging
+
 import pytest
 
 from libs.vm.affinity import new_pod_affinity, new_pod_anti_affinity
 from tests.network.libs.stuntime import CLIENT_VM_LABEL, SERVER_VM_LABEL, STUNTIME_THRESHOLD_SECONDS, measure_stuntime
 from utilities.virt import migrate_vm_and_verify
+
+_LOGGER = logging.getLogger(__name__)
+
+
+def _log_affinity_state(client_vm, server_vm):
+    for label, vm in [("CLIENT", client_vm), ("SERVER", server_vm)]:
+        vm_name = vm.name
+        vmi_name = vm.vmi.name
+        pod_name = vm.vmi.virt_launcher_pod.name
+        vm_affinity = vm.instance.to_dict()["spec"]["template"]["spec"].get("affinity")
+        vmi_affinity = vm.vmi.instance.to_dict()["spec"].get("affinity")
+        pod_affinity = vm.vmi.virt_launcher_pod.instance.to_dict()["spec"].get("affinity")
+        _LOGGER.info(f"{label} VM TEMPLATE ({vm_name}) affinity: {json.dumps(vm_affinity, indent=2)}")
+        _LOGGER.info(f"{label} VMI ({vmi_name}) affinity: {json.dumps(vmi_affinity, indent=2)}")
+        _LOGGER.info(f"{label} POD ({pod_name}) affinity: {json.dumps(pod_affinity, indent=2)}")
+
+
+def _has_stuntime_affinity_rules(affinity_section):
+    """Check if an affinity section contains stuntime label rules (not kubevirt-internal ones)."""
+    for rule in affinity_section.get("requiredDuringSchedulingIgnoredDuringExecution", []):
+        label_selector = rule.get("labelSelector", {})
+        for expr in label_selector.get("matchExpressions", []):
+            if expr.get("key", "").startswith("stuntime."):
+                return True
+    return False
+
+
+def _assert_vm_placement(client_vm, server_vm, same_node):
+    client_node = client_vm.vmi.instance.status.nodeName
+    server_node = server_vm.vmi.instance.status.nodeName
+    _LOGGER.info(f"CLIENT on {client_node}, SERVER on {server_node}")
+    if same_node:
+        assert client_node == server_node, (
+            f"Expected VMs on same node, but CLIENT on {client_node} and SERVER on {server_node}"
+        )
+    else:
+        assert client_node != server_node, f"Expected VMs on different nodes, but both on {client_node}"
+
+
+def _assert_affinity_after_migration(vm, expected_type):
+    vm_name = vm.name
+    vmi_name = vm.vmi.name
+    pod_name = vm.vmi.virt_launcher_pod.name
+    vm_affinity = vm.instance.to_dict()["spec"]["template"]["spec"].get("affinity")
+    vmi_affinity = vm.vmi.instance.to_dict()["spec"].get("affinity")
+    pod_affinity = vm.vmi.virt_launcher_pod.instance.to_dict()["spec"].get("affinity")
+    stale_type = "podAntiAffinity" if expected_type == "podAffinity" else "podAffinity"
+    _LOGGER.info(f"VM TEMPLATE ({vm_name}) affinity: {json.dumps(vm_affinity, indent=2)}")
+    _LOGGER.info(f"VMI ({vmi_name}) affinity AFTER migration: {json.dumps(vmi_affinity, indent=2)}")
+    _LOGGER.info(f"POD ({pod_name}) affinity AFTER migration: {json.dumps(pod_affinity, indent=2)}")
+    assert expected_type in vm_affinity, f"VM template ({vm_name}) missing {expected_type}: {vm_affinity}"
+    assert expected_type in vmi_affinity, f"VMI ({vmi_name}) missing {expected_type}: {vmi_affinity}"
+    assert stale_type not in vmi_affinity, f"VMI ({vmi_name}) has stale {stale_type}: {vmi_affinity}"
+    assert expected_type in pod_affinity, f"POD ({pod_name}) missing {expected_type}: {pod_affinity}"
+    if stale_type in pod_affinity:
+        assert not _has_stuntime_affinity_rules(pod_affinity[stale_type]), (
+            f"POD ({pod_name}) has stale stuntime {stale_type}: {pod_affinity[stale_type]}"
+        )
+
 
 pytestmark = [pytest.mark.tier3]
 
@@ -49,7 +111,7 @@ Preconditions:
 class TestMigrationStuntime:
     @pytest.mark.polarion("CNV-15252")
     def test_client_migrates_off_server_node(
-        self, admin_client, l2_bridge_ip_family, stuntime_client_vm, l2_bridge_active_ping
+        self, admin_client, l2_bridge_ip_family, stuntime_client_vm, stuntime_server_vm, l2_bridge_active_ping
     ):
         """
         Test that measured stuntime does not exceed the global threshold when the client
@@ -71,7 +133,14 @@ class TestMigrationStuntime:
             - Measured stuntime does not exceed the global threshold.
         """
         stuntime_client_vm.set_template_affinity(affinity=new_pod_anti_affinity(label=SERVER_VM_LABEL))
-        migrate_vm_and_verify(vm=stuntime_client_vm, client=admin_client)
+        stuntime_client_vm.wait_for_vmi_affinity()
+        try:
+            migrate_vm_and_verify(vm=stuntime_client_vm, client=admin_client)
+        except Exception:
+            _log_affinity_state(client_vm=stuntime_client_vm, server_vm=stuntime_server_vm)
+            raise
+        _assert_affinity_after_migration(vm=stuntime_client_vm, expected_type="podAntiAffinity")
+        _assert_vm_placement(client_vm=stuntime_client_vm, server_vm=stuntime_server_vm, same_node=False)
         measured_stuntime = measure_stuntime(active_ping=l2_bridge_active_ping)
         assert measured_stuntime <= STUNTIME_THRESHOLD_SECONDS, (
             f"Stuntime {measured_stuntime}s exceeds threshold ({STUNTIME_THRESHOLD_SECONDS}s)"
@@ -79,7 +148,7 @@ class TestMigrationStuntime:
 
     @pytest.mark.polarion("CNV-15253")
     def test_client_migrates_between_non_server_nodes(
-        self, admin_client, l2_bridge_ip_family, stuntime_client_vm, l2_bridge_active_ping
+        self, admin_client, l2_bridge_ip_family, stuntime_client_vm, stuntime_server_vm, l2_bridge_active_ping
     ):
         """
         Test that measured stuntime does not exceed the global threshold when the client VM migrates between nodes
@@ -100,7 +169,12 @@ class TestMigrationStuntime:
         Expected:
             - Measured stuntime does not exceed the global threshold.
         """
-        migrate_vm_and_verify(vm=stuntime_client_vm, client=admin_client)
+        try:
+            migrate_vm_and_verify(vm=stuntime_client_vm, client=admin_client)
+        except Exception:
+            _log_affinity_state(client_vm=stuntime_client_vm, server_vm=stuntime_server_vm)
+            raise
+        _assert_vm_placement(client_vm=stuntime_client_vm, server_vm=stuntime_server_vm, same_node=False)
         measured_stuntime = measure_stuntime(active_ping=l2_bridge_active_ping)
         assert measured_stuntime <= STUNTIME_THRESHOLD_SECONDS, (
             f"Stuntime {measured_stuntime}s exceeds threshold ({STUNTIME_THRESHOLD_SECONDS}s)"
@@ -108,7 +182,7 @@ class TestMigrationStuntime:
 
     @pytest.mark.polarion("CNV-15254")
     def test_client_migrates_to_server_node(
-        self, admin_client, l2_bridge_ip_family, stuntime_client_vm, l2_bridge_active_ping
+        self, admin_client, l2_bridge_ip_family, stuntime_client_vm, stuntime_server_vm, l2_bridge_active_ping
     ):
         """
         Test that measured stuntime does not exceed the global threshold when the client VM migrates
@@ -130,7 +204,14 @@ class TestMigrationStuntime:
             - Measured stuntime does not exceed the global threshold.
         """
         stuntime_client_vm.set_template_affinity(affinity=new_pod_affinity(label=SERVER_VM_LABEL))
-        migrate_vm_and_verify(vm=stuntime_client_vm, client=admin_client)
+        stuntime_client_vm.wait_for_vmi_affinity()
+        try:
+            migrate_vm_and_verify(vm=stuntime_client_vm, client=admin_client)
+        except Exception:
+            _log_affinity_state(client_vm=stuntime_client_vm, server_vm=stuntime_server_vm)
+            raise
+        _assert_affinity_after_migration(vm=stuntime_client_vm, expected_type="podAffinity")
+        _assert_vm_placement(client_vm=stuntime_client_vm, server_vm=stuntime_server_vm, same_node=True)
         measured_stuntime = measure_stuntime(active_ping=l2_bridge_active_ping)
         assert measured_stuntime <= STUNTIME_THRESHOLD_SECONDS, (
             f"Stuntime {measured_stuntime}s exceeds threshold ({STUNTIME_THRESHOLD_SECONDS}s)"
@@ -138,7 +219,7 @@ class TestMigrationStuntime:
 
     @pytest.mark.polarion("CNV-15255")
     def test_server_migrates_off_client_node(
-        self, admin_client, l2_bridge_ip_family, stuntime_server_vm, l2_bridge_active_ping
+        self, admin_client, l2_bridge_ip_family, stuntime_client_vm, stuntime_server_vm, l2_bridge_active_ping
     ):
         """
         Test that measured stuntime does not exceed the global threshold when the server
@@ -160,7 +241,14 @@ class TestMigrationStuntime:
             - Measured stuntime does not exceed the global threshold.
         """
         stuntime_server_vm.set_template_affinity(affinity=new_pod_anti_affinity(label=CLIENT_VM_LABEL))
-        migrate_vm_and_verify(vm=stuntime_server_vm, client=admin_client)
+        stuntime_server_vm.wait_for_vmi_affinity()
+        try:
+            migrate_vm_and_verify(vm=stuntime_server_vm, client=admin_client)
+        except Exception:
+            _log_affinity_state(client_vm=stuntime_client_vm, server_vm=stuntime_server_vm)
+            raise
+        _assert_affinity_after_migration(vm=stuntime_server_vm, expected_type="podAntiAffinity")
+        _assert_vm_placement(client_vm=stuntime_client_vm, server_vm=stuntime_server_vm, same_node=False)
         measured_stuntime = measure_stuntime(active_ping=l2_bridge_active_ping)
         assert measured_stuntime <= STUNTIME_THRESHOLD_SECONDS, (
             f"Stuntime {measured_stuntime}s exceeds threshold ({STUNTIME_THRESHOLD_SECONDS}s)"
@@ -168,7 +256,7 @@ class TestMigrationStuntime:
 
     @pytest.mark.polarion("CNV-15256")
     def test_server_migrates_between_non_client_nodes(
-        self, admin_client, l2_bridge_ip_family, stuntime_server_vm, l2_bridge_active_ping
+        self, admin_client, l2_bridge_ip_family, stuntime_client_vm, stuntime_server_vm, l2_bridge_active_ping
     ):
         """
         Test that measured stuntime does not exceed the global threshold when the server VM migrates between nodes
@@ -190,7 +278,14 @@ class TestMigrationStuntime:
             - Measured stuntime does not exceed the global threshold.
         """
         stuntime_server_vm.set_template_affinity(affinity=new_pod_anti_affinity(label=CLIENT_VM_LABEL))
-        migrate_vm_and_verify(vm=stuntime_server_vm, client=admin_client)
+        stuntime_server_vm.wait_for_vmi_affinity()
+        try:
+            migrate_vm_and_verify(vm=stuntime_server_vm, client=admin_client)
+        except Exception:
+            _log_affinity_state(client_vm=stuntime_client_vm, server_vm=stuntime_server_vm)
+            raise
+        _assert_affinity_after_migration(vm=stuntime_server_vm, expected_type="podAntiAffinity")
+        _assert_vm_placement(client_vm=stuntime_client_vm, server_vm=stuntime_server_vm, same_node=False)
         measured_stuntime = measure_stuntime(active_ping=l2_bridge_active_ping)
         assert measured_stuntime <= STUNTIME_THRESHOLD_SECONDS, (
             f"Stuntime {measured_stuntime}s exceeds threshold ({STUNTIME_THRESHOLD_SECONDS}s)"
@@ -198,7 +293,7 @@ class TestMigrationStuntime:
 
     @pytest.mark.polarion("CNV-15257")
     def test_server_migrates_to_client_node(
-        self, admin_client, l2_bridge_ip_family, stuntime_server_vm, l2_bridge_active_ping
+        self, admin_client, l2_bridge_ip_family, stuntime_client_vm, stuntime_server_vm, l2_bridge_active_ping
     ):
         """
         Test that measured stuntime does not exceed the global threshold when the server VM migrates from a node
@@ -220,7 +315,14 @@ class TestMigrationStuntime:
             - Measured stuntime does not exceed the global threshold.
         """
         stuntime_server_vm.set_template_affinity(affinity=new_pod_affinity(label=CLIENT_VM_LABEL))
-        migrate_vm_and_verify(vm=stuntime_server_vm, client=admin_client)
+        stuntime_server_vm.wait_for_vmi_affinity()
+        try:
+            migrate_vm_and_verify(vm=stuntime_server_vm, client=admin_client)
+        except Exception:
+            _log_affinity_state(client_vm=stuntime_client_vm, server_vm=stuntime_server_vm)
+            raise
+        _assert_affinity_after_migration(vm=stuntime_server_vm, expected_type="podAffinity")
+        _assert_vm_placement(client_vm=stuntime_client_vm, server_vm=stuntime_server_vm, same_node=True)
         measured_stuntime = measure_stuntime(active_ping=l2_bridge_active_ping)
         assert measured_stuntime <= STUNTIME_THRESHOLD_SECONDS, (
             f"Stuntime {measured_stuntime}s exceeds threshold ({STUNTIME_THRESHOLD_SECONDS}s)"
