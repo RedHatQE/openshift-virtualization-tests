@@ -7,7 +7,7 @@ from ocp_resources.datavolume import DataVolume
 
 from tests.storage.restricted_namespace_cloning.constants import TARGET_DV
 from tests.storage.utils import assert_pvc_snapshot_clone_annotation
-from utilities.constants import PVC
+from utilities.constants.storage import PVC
 from utilities.storage import (
     ErrorMsg,
     create_dv,
