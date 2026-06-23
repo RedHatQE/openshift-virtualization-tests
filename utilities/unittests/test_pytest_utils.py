@@ -7,7 +7,15 @@ from unittest.mock import MagicMock, mock_open, patch
 import pytest
 
 import utilities.constants
-from utilities.constants import AMD_64, ARM_64, CENTOS_STREAM9_PREFERENCE, OS_FLAVOR_FEDORA, RHEL9_PREFERENCE, S390X
+from utilities.constants import (
+    AMD_64,
+    ARM_64,
+    CENTOS_STREAM9_PREFERENCE,
+    MULTIARCH,
+    OS_FLAVOR_FEDORA,
+    RHEL9_PREFERENCE,
+    S390X,
+)
 from utilities.exceptions import MissingEnvironmentVariableError, UnsupportedCPUArchitectureError
 
 # Circular dependencies are already mocked in conftest.py
@@ -17,6 +25,7 @@ from utilities.pytest_utils import (
     deploy_run_in_progress_config_map,
     deploy_run_in_progress_namespace,
     exit_pytest_execution,
+    filter_hpp_tests,
     generate_common_template_matrix_dicts,
     generate_instance_type_matrix_dicts,
     get_artifactory_server_url,
@@ -26,6 +35,7 @@ from utilities.pytest_utils import (
     get_matrix_params,
     get_tests_cluster_markers,
     mark_nmstate_dependent_tests,
+    remove_tests_from_list,
     reorder_early_fixtures,
     run_in_progress_config_map,
     separator,
@@ -1558,7 +1568,7 @@ class TestGenerateInstanceTypeMatrixDicts:
         ]
 
     @pytest.mark.parametrize(
-        ("cpu_arch", "expected_add_arch_suffix"),
+        ("cpu_arch", "expected_add_preference_arch_suffix"),
         [
             (None, True),
             (ARM_64, True),
@@ -1577,9 +1587,10 @@ class TestGenerateInstanceTypeMatrixDicts:
         mock_generate_instance_type,
         sample_instance_type_matrix,
         cpu_arch,
-        expected_add_arch_suffix,
+        expected_add_preference_arch_suffix,
     ):
         """Test RHEL matrix generation across architecture variants."""
+        mock_py_config["cluster_type"] = AMD_64
         mock_generate_instance_type.return_value = sample_instance_type_matrix
         mock_generate_latest.return_value = sample_instance_type_matrix[0][RHEL9_PREFERENCE]
 
@@ -1590,7 +1601,8 @@ class TestGenerateInstanceTypeMatrixDicts:
             os_name="rhel",
             preferences=[RHEL9_PREFERENCE],
             arch_suffix=cpu_arch,
-            add_arch_suffix=expected_add_arch_suffix,
+            add_preference_arch_suffix=expected_add_preference_arch_suffix,
+            add_data_source_arch_suffix=False,
         )
         assert mock_py_config["instance_type_rhel_os_matrix"] == sample_instance_type_matrix
         assert mock_py_config["latest_instance_type_rhel_os_dict"] == sample_instance_type_matrix[0][RHEL9_PREFERENCE]
@@ -1605,7 +1617,8 @@ class TestGenerateInstanceTypeMatrixDicts:
                     "os_name": OS_FLAVOR_FEDORA,
                     "preferences": [OS_FLAVOR_FEDORA],
                     "arch_suffix": None,
-                    "add_arch_suffix": True,
+                    "add_preference_arch_suffix": True,
+                    "add_data_source_arch_suffix": False,
                 },
                 "instance_type_fedora_os_matrix",
                 [{OS_FLAVOR_FEDORA: {"preference": OS_FLAVOR_FEDORA}}],
@@ -1617,7 +1630,8 @@ class TestGenerateInstanceTypeMatrixDicts:
                     "os_name": OS_FLAVOR_FEDORA,
                     "preferences": [OS_FLAVOR_FEDORA],
                     "arch_suffix": AMD_64,
-                    "add_arch_suffix": False,
+                    "add_preference_arch_suffix": False,
+                    "add_data_source_arch_suffix": False,
                 },
                 "instance_type_fedora_os_matrix",
                 [{OS_FLAVOR_FEDORA: {"preference": OS_FLAVOR_FEDORA}}],
@@ -1629,7 +1643,8 @@ class TestGenerateInstanceTypeMatrixDicts:
                     "os_name": "centos.stream",
                     "preferences": [CENTOS_STREAM9_PREFERENCE],
                     "arch_suffix": None,
-                    "add_arch_suffix": False,
+                    "add_preference_arch_suffix": False,
+                    "add_data_source_arch_suffix": False,
                 },
                 "instance_type_centos_os_matrix",
                 [{CENTOS_STREAM9_PREFERENCE: {"preference": CENTOS_STREAM9_PREFERENCE}}],
@@ -1641,7 +1656,8 @@ class TestGenerateInstanceTypeMatrixDicts:
                     "os_name": "centos.stream",
                     "preferences": [CENTOS_STREAM9_PREFERENCE],
                     "arch_suffix": S390X,
-                    "add_arch_suffix": False,
+                    "add_preference_arch_suffix": False,
+                    "add_data_source_arch_suffix": False,
                 },
                 "instance_type_centos_os_matrix",
                 [{CENTOS_STREAM9_PREFERENCE: {"preference": CENTOS_STREAM9_PREFERENCE}}],
@@ -1653,7 +1669,8 @@ class TestGenerateInstanceTypeMatrixDicts:
                     "os_name": "centos.stream",
                     "preferences": [CENTOS_STREAM9_PREFERENCE],
                     "arch_suffix": ARM_64,
-                    "add_arch_suffix": False,
+                    "add_preference_arch_suffix": False,
+                    "add_data_source_arch_suffix": False,
                 },
                 "instance_type_centos_os_matrix",
                 [{CENTOS_STREAM9_PREFERENCE: {"preference": CENTOS_STREAM9_PREFERENCE}}],
@@ -1674,6 +1691,7 @@ class TestGenerateInstanceTypeMatrixDicts:
         matrix_value,
     ):
         """Test Fedora and CentOS matrix generation call signatures."""
+        mock_py_config["cluster_type"] = AMD_64
         mock_generate_instance_type.return_value = matrix_value
 
         generate_instance_type_matrix_dicts(os_dict=os_dict, cpu_arch=cpu_arch)
@@ -1692,6 +1710,7 @@ class TestGenerateInstanceTypeMatrixDicts:
         sample_instance_type_matrix,
     ):
         """Test that latest_instance_type_rhel_os_dict is populated correctly"""
+        mock_py_config["cluster_type"] = AMD_64
         mock_generate_instance_type.return_value = sample_instance_type_matrix
         expected_latest = {"preference": RHEL9_PREFERENCE, "latest_released": True}
         mock_generate_latest.return_value = expected_latest
@@ -1709,11 +1728,49 @@ class TestGenerateInstanceTypeMatrixDicts:
         mock_generate_instance_type,
     ):
         """Test that empty os_dict doesn't call any generation functions"""
+        mock_py_config["cluster_type"] = AMD_64
         os_dict = {}
         generate_instance_type_matrix_dicts(os_dict=os_dict)
 
         mock_generate_instance_type.assert_not_called()
-        assert mock_py_config == {}
+        assert mock_py_config == {"cluster_type": AMD_64}
+
+    @pytest.mark.parametrize(
+        ("cpu_arch", "expected_add_preference_arch_suffix"),
+        [
+            (AMD_64, False),
+            (ARM_64, True),
+            (S390X, True),
+        ],
+        ids=["multiarch_amd64", "multiarch_arm64", "multiarch_s390x"],
+    )
+    @patch("utilities.pytest_utils.generate_linux_instance_type_os_matrix")
+    @patch("utilities.pytest_utils.generate_latest_os_dict")
+    @patch("utilities.pytest_utils.py_config", new_callable=dict)
+    def test_multiarch_sets_data_source_arch_suffix_for_all_arches(
+        self,
+        mock_py_config,
+        mock_generate_latest,
+        mock_generate_instance_type,
+        sample_instance_type_matrix,
+        cpu_arch,
+        expected_add_preference_arch_suffix,
+    ):
+        """On multiarch clusters add_data_source_arch_suffix is True for every architecture."""
+        mock_py_config["cluster_type"] = MULTIARCH
+        mock_generate_instance_type.return_value = sample_instance_type_matrix
+        mock_generate_latest.return_value = sample_instance_type_matrix[0][RHEL9_PREFERENCE]
+
+        os_dict = {"instance_type_rhel_os_list": [RHEL9_PREFERENCE]}
+        generate_instance_type_matrix_dicts(os_dict=os_dict, cpu_arch=cpu_arch)
+
+        mock_generate_instance_type.assert_called_once_with(
+            os_name="rhel",
+            preferences=[RHEL9_PREFERENCE],
+            arch_suffix=cpu_arch,
+            add_preference_arch_suffix=expected_add_preference_arch_suffix,
+            add_data_source_arch_suffix=True,
+        )
 
 
 class TestUpdateLatestOsConfig:
@@ -2312,3 +2369,122 @@ class TestAssertIncrementalClassesFullyCollected:
         item.function.__name__ = test_name
         item.keywords = {"incremental": True} if is_incremental else {}
         return item
+
+
+class TestRemoveTestsFromList:
+    """Test cases for remove_tests_from_list function."""
+
+    def test_splits_items_by_keyword(self):
+        """Items with matching keyword are separated from those without."""
+        item_with_hpp = MagicMock()
+        item_with_hpp.keywords = {"hpp": True, "storage": True}
+        item_without_hpp = MagicMock()
+        item_without_hpp.keywords = {"storage": True}
+
+        discarded, kept = remove_tests_from_list(items=[item_with_hpp, item_without_hpp], filter_str="hpp")
+
+        assert discarded == [item_with_hpp]
+        assert kept == [item_without_hpp]
+
+    def test_all_items_match(self):
+        """All items discarded when all have the keyword."""
+        item_one = MagicMock()
+        item_one.keywords = {"hpp": True}
+        item_two = MagicMock()
+        item_two.keywords = {"hpp": True}
+
+        discarded, kept = remove_tests_from_list(items=[item_one, item_two], filter_str="hpp")
+
+        assert discarded == [item_one, item_two]
+        assert kept == []
+
+    def test_no_items_match(self):
+        """No items discarded when none have the keyword."""
+        item_one = MagicMock()
+        item_one.keywords = {"storage": True}
+        item_two = MagicMock()
+        item_two.keywords = {"network": True}
+
+        discarded, kept = remove_tests_from_list(items=[item_one, item_two], filter_str="hpp")
+
+        assert discarded == []
+        assert kept == [item_one, item_two]
+
+    def test_empty_items_list(self):
+        """Empty input returns two empty lists."""
+        discarded, kept = remove_tests_from_list(items=[], filter_str="hpp")
+
+        assert discarded == []
+        assert kept == []
+
+
+class TestFilterHppTests:
+    """Test cases for filter_hpp_tests function."""
+
+    def test_removes_hpp_tests_when_no_marker_expression(self):
+        """HPP tests are filtered out when no -m option is set."""
+        item_hpp = MagicMock()
+        item_hpp.keywords = {"hpp": True}
+        item_other = MagicMock()
+        item_other.keywords = {"storage": True}
+        config = MagicMock()
+        config.getoption.return_value = None
+
+        result = filter_hpp_tests(items=[item_hpp, item_other], config=config)
+
+        assert result == [item_other]
+        config.hook.pytest_deselected.assert_called_once_with(items=[item_hpp])
+
+    def test_removes_hpp_tests_when_marker_does_not_include_hpp(self):
+        """HPP tests are filtered out when -m is set but does not contain 'hpp'."""
+        item_hpp = MagicMock()
+        item_hpp.keywords = {"hpp": True}
+        item_other = MagicMock()
+        item_other.keywords = {"storage": True}
+        config = MagicMock()
+        config.getoption.return_value = "smoke"
+
+        result = filter_hpp_tests(items=[item_hpp, item_other], config=config)
+
+        assert result == [item_other]
+        config.hook.pytest_deselected.assert_called_once_with(items=[item_hpp])
+
+    def test_keeps_hpp_tests_when_marker_includes_hpp(self):
+        """All tests are kept when -m includes 'hpp'."""
+        item_hpp = MagicMock()
+        item_hpp.keywords = {"hpp": True}
+        item_other = MagicMock()
+        item_other.keywords = {"storage": True}
+        items = [item_hpp, item_other]
+        config = MagicMock()
+        config.getoption.return_value = "hpp"
+
+        result = filter_hpp_tests(items=items, config=config)
+
+        assert result == items
+        config.hook.pytest_deselected.assert_not_called()
+
+    def test_keeps_hpp_tests_when_marker_contains_hpp_in_expression(self):
+        """All tests are kept when -m contains 'hpp' as part of a larger expression."""
+        item_hpp = MagicMock()
+        item_hpp.keywords = {"hpp": True}
+        items = [item_hpp]
+        config = MagicMock()
+        config.getoption.return_value = "hpp and storage"
+
+        result = filter_hpp_tests(items=items, config=config)
+
+        assert result == items
+        config.hook.pytest_deselected.assert_not_called()
+
+    def test_empty_marker_expression_filters_hpp(self):
+        """HPP tests are filtered out when -m is an empty string."""
+        item_hpp = MagicMock()
+        item_hpp.keywords = {"hpp": True}
+        config = MagicMock()
+        config.getoption.return_value = ""
+
+        result = filter_hpp_tests(items=[item_hpp], config=config)
+
+        assert result == []
+        config.hook.pytest_deselected.assert_called_once_with(items=[item_hpp])
