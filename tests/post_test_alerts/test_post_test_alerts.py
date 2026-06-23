@@ -44,7 +44,7 @@ def test_no_critical_alerts_after_tests(prometheus, request):
         - None of the critical alerts fired during test execution
     """
     start_time = request.config._test_execution_start_time
-    duration_seconds = int((datetime.datetime.now(tz=datetime.UTC) - start_time).total_seconds())
+    duration_seconds = max(int((datetime.datetime.now(tz=datetime.UTC) - start_time).total_seconds()), 1)
     LOGGER.info(
         f"Checking {len(POST_TEST_CRITICAL_ALERTS)} critical alerts"
         f" were not triggered during test execution (last {duration_seconds}s)"
