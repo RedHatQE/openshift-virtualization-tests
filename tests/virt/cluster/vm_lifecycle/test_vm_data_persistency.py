@@ -13,10 +13,12 @@ from tests.os_params import (
     WINDOWS_LATEST,
     WINDOWS_LATEST_LABELS,
 )
-from utilities.constants import (
-    LINUX_STR,
+from utilities.constants.images import (
     OS_FLAVOR_RHEL,
     OS_FLAVOR_WINDOWS,
+)
+from utilities.constants.instance_types import LINUX_STR
+from utilities.constants.timeouts import (
     TIMEOUT_2MIN,
     TIMEOUT_5MIN,
     TIMEOUT_30MIN,

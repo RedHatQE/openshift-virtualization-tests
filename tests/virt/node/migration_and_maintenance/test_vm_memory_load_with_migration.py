@@ -13,7 +13,9 @@ from tests.os_params import (
 from tests.utils import start_stress_on_vm
 from tests.virt.constants import WINDOWS_10_WSL
 from tests.virt.utils import get_stress_ng_pid, verify_stress_ng_pid_not_changed
-from utilities.constants import STRESS_CPU_MEM_IO_COMMAND, TIMEOUT_20MIN, Images
+from utilities.constants import Images
+from utilities.constants.timeouts import TIMEOUT_20MIN
+from utilities.constants.virt import STRESS_CPU_MEM_IO_COMMAND
 from utilities.virt import migrate_vm_and_verify
 
 if TYPE_CHECKING:
