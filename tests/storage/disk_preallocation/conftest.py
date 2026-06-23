@@ -1,10 +1,10 @@
 import pytest
 from ocp_resources.cdi import CDI
+from utilities.constants.storage import REGISTRY_STR
 
 from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE
 from tests.storage.disk_preallocation.utils import wait_for_cdi_preallocation_enabled
 from utilities.constants import Images
-from utilities.constants.storage import REGISTRY_STR
 from utilities.hco import (
     ResourceEditorValidateHCOReconcile,
     hco_cr_jsonpatch_annotations_dict,
