@@ -47,15 +47,23 @@ from requests import HTTPError, Timeout, TooManyRedirects
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 
 import utilities.virt
-from utilities.constants import (
+from utilities.constants.architecture import (
     AMD_64,
+    X86_64,
+)
+from utilities.constants.cluster import (
     AUDIT_LOGS_PATH,
+    KUBECONFIG,
+    OC_ADM_LOGS_COMMAND,
+)
+from utilities.constants.components import (
     CLUSTER,
     HCO_CATALOG_SOURCE,
-    KUBECONFIG,
-    NET_UTIL_CONTAINER_IMAGE,
-    OC_ADM_LOGS_COMMAND,
-    PROMETHEUS_K8S,
+)
+from utilities.constants.monitoring import PROMETHEUS_K8S
+from utilities.constants.namespaces import NamespacesNames
+from utilities.constants.networking import NET_UTIL_CONTAINER_IMAGE
+from utilities.constants.timeouts import (
     TIMEOUT_1MIN,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
@@ -66,10 +74,8 @@ from utilities.constants import (
     TIMEOUT_10MIN,
     TIMEOUT_10SEC,
     TIMEOUT_30SEC,
-    VIRTCTL,
-    X86_64,
-    NamespacesNames,
 )
+from utilities.constants.virt import VIRTCTL
 from utilities.exceptions import (
     UrlNotFoundError,
     UtilityPodNotFoundError,
