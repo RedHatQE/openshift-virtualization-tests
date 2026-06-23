@@ -13,7 +13,7 @@ from pytest_testconfig import config as py_config
 
 import utilities.hco
 import utilities.infra
-from utilities.constants import TIMEOUT_20MIN
+from utilities.constants.timeouts import TIMEOUT_20MIN
 from utilities.must_gather import run_must_gather
 
 LOGGER = logging.getLogger(__name__)

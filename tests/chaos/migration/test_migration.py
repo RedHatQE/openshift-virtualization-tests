@@ -10,17 +10,17 @@ from tests.chaos.migration.utils import (
     assert_migration_result_and_cleanup,
 )
 from tests.chaos.utils import verify_vm_service_reachable
-from utilities.constants import (
-    PORT_80,
-    QUARANTINED,
+from utilities.constants.namespaces import NamespacesNames
+from utilities.constants.networking import PORT_80
+from utilities.constants.pytest import QUARANTINED
+from utilities.constants.storage import StorageClassNames
+from utilities.constants.timeouts import (
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
     TIMEOUT_15MIN,
     TIMEOUT_30SEC,
-    NamespacesNames,
-    StorageClassNames,
 )
 from utilities.infra import wait_for_pods_running
 from utilities.virt import wait_for_vmi_relocation_and_running

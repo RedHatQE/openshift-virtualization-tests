@@ -29,7 +29,8 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 import utilities.infra
 from libs.net.ip import ICMP_HEADER_SIZE, ip_header_size
 from libs.net.vmspec import IpNotFound, VMInterfaceStatusNotFoundError, lookup_iface_status_ip
-from utilities.constants import (
+from utilities.constants.cluster import WORKERS_TYPE
+from utilities.constants.networking import (
     ACTIVE_BACKUP,
     FLAT_OVERLAY_STR,
     IPV4_STR,
@@ -37,10 +38,11 @@ from utilities.constants import (
     LINUX_BRIDGE,
     OVS_BRIDGE,
     SRIOV,
+)
+from utilities.constants.timeouts import (
     TIMEOUT_3MIN,
     TIMEOUT_8MIN,
     TIMEOUT_90SEC,
-    WORKERS_TYPE,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile
 

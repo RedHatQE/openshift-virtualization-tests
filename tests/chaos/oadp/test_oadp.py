@@ -3,7 +3,7 @@ import logging
 import pytest
 
 from tests.os_params import RHEL_LATEST
-from utilities.constants import TIMEOUT_10MIN
+from utilities.constants.timeouts import TIMEOUT_10MIN
 
 LOGGER = logging.getLogger(__name__)
 
