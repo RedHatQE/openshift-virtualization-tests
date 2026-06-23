@@ -1,7 +1,7 @@
 """
 Velero Backup Hook Opt-Out Tests
 
-STP Reference: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/remove-velero-hooks-stp.md
+STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/remove-velero-hooks-stp.md
 Jira: https://redhat.atlassian.net/browse/CNV-79727 # <skip-jira-utils-check>
 """
 
