@@ -2,6 +2,7 @@ import logging
 import shlex
 
 from ocp_resources.resource import Resource
+from pyhelper_utils.shell import run_command
 
 from libs.net.ip import random_ipv4_address
 from tests.network.flat_overlay.constants import (
@@ -18,6 +19,12 @@ from utilities.virt import (
 )
 
 LOGGER = logging.getLogger(__name__)
+
+
+def restart_ovnkube_node_daemonset() -> None:
+    """Restarts the ovnkube-node DaemonSet and waits for the rollout to complete."""
+    run_command(command=shlex.split("oc rollout restart daemonset/ovnkube-node -n openshift-ovn-kubernetes"))
+    run_command(command=shlex.split("oc rollout status daemonset/ovnkube-node -n openshift-ovn-kubernetes --timeout=10m"))
 
 
 def create_flat_overlay_vm(
