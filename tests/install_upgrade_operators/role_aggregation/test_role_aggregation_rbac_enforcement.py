@@ -2,13 +2,19 @@
 Role-based access control (RBAC) tests
 
 STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-iuo/CNV-63822-role-aggregation-opt-out.md
+
+Markers:
+    - post_upgrade
+    - arm64
+
+Preconditions:
+    - Unprivileged user created via HTPasswd identity provider
+    - Namespace for RBAC testing
 """
 
 import pytest
 
 __test__ = False
-
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.arm64]
 
 
 class TestRoleAggregationDisabled:
@@ -17,7 +23,7 @@ class TestRoleAggregationDisabled:
 
     Preconditions:
         - HyperConverged CR spec.roleAggregationStrategy set to "AggregateToDefault" (role aggregation enabled)
-        - Unprivileged user created via HTPasswd identity provider
+        - RoleBinding granting the unprivileged user the parametrized ClusterRole in the namespace
     """
 
     @pytest.mark.parametrize(
@@ -37,12 +43,11 @@ class TestRoleAggregationDisabled:
             - role: [admin, edit, view]
 
         Preconditions:
-            - Namespace with a RoleBinding granting the unprivileged user the parametrized ClusterRole
+            - User can list VirtualMachine resources in the namespace successfully
 
         Steps:
-            1. List VirtualMachine resources in the namespace using the unprivileged
-               user's credentials and verify the operation succeeds
-            2. Set HyperConverged CR spec.roleAggregationStrategy to "Manual" (disable role aggregation)
+            1. Set HyperConverged CR spec.roleAggregationStrategy to "Manual" (disable role aggregation)
+            2. Wait for the kubevirt.io aggregated role labels to be removed from the user
             3. Attempt to list VirtualMachine resources in the namespace using the unprivileged
                user's credentials
 
@@ -53,11 +58,13 @@ class TestRoleAggregationDisabled:
 
 class TestRoleAggregationReenabledAccess:
     """
-    Tests for role-specific access when role aggregation is enabled.
+    Tests for role-specific access when role aggregation is re-enabled.
 
     Preconditions:
-        - HyperConverged CR spec.roleAggregationStrategy set to "AggregateToDefault" (role aggregation enabled)
-        - Unprivileged user created via HTPasswd identity provider
+        - HyperConverged CR spec.roleAggregationStrategy set to "Manual" (role aggregation disabled)
+        - RoleBinding granting the unprivileged user the respective ClusterRole in the namespace
+        - HyperConverged CR spec.roleAggregationStrategy restored to "AggregateToDefault" (role aggregation re-enabled)
+        - Wait for the kubevirt.io aggregated role labels to be added to the user
     """
 
     @pytest.mark.polarion("CNV-16029")
@@ -67,7 +74,7 @@ class TestRoleAggregationReenabledAccess:
         call on VirtualMachine resources when role aggregation is enabled.
 
         Preconditions:
-            - Namespace with a RoleBinding granting the unprivileged user the admin ClusterRole
+            - Unprivileged user with the admin ClusterRole bound in the namespace
 
         Steps:
             1. Issue a raw DELETE request to the VirtualMachine collection API endpoint
@@ -84,7 +91,7 @@ class TestRoleAggregationReenabledAccess:
         using a server-side dry-run when role aggregation is enabled.
 
         Preconditions:
-            - Namespace with a RoleBinding granting the unprivileged user the edit ClusterRole
+            - Unprivileged user with the edit ClusterRole bound in the namespace
 
         Steps:
             1. Create a VirtualMachine using server-side dry-run with the unprivileged
@@ -101,7 +108,7 @@ class TestRoleAggregationReenabledAccess:
         resources when role aggregation is enabled.
 
         Preconditions:
-            - Namespace with a RoleBinding granting the unprivileged user the view ClusterRole
+            - Unprivileged user with the view ClusterRole bound in the namespace
 
         Steps:
             1. List VirtualMachine resources in the namespace using the unprivileged user's credentials
