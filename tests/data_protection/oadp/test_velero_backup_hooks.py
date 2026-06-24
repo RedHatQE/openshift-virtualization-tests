@@ -27,7 +27,7 @@ class TestVeleroBackupHookOptOut:
             - VM with backup hooks disabled, paused
 
         Steps:
-            Run Velero backup
+            1. Run Velero backup
 
         Expected:
             Backup completes successfully without freeze/unfreeze hook execution
