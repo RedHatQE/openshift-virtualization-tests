@@ -461,11 +461,6 @@ def data_volume_template_metadata(multi_storage_cirros_vm):
     return multi_storage_cirros_vm.data_volume_template["metadata"]
 
 
-@pytest.fixture()
-def storage_class_name_scope_function(storage_class_matrix__function__):
-    return [*storage_class_matrix__function__][0]
-
-
 @pytest.fixture(scope="module")
 def storage_class_name_scope_module(storage_class_matrix__module__):
     return [*storage_class_matrix__module__][0]
