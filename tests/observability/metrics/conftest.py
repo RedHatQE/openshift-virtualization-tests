@@ -61,7 +61,7 @@ from utilities.constants import (
     TWO_CPU_CORES,
     TWO_CPU_SOCKETS,
     TWO_CPU_THREADS,
-    U1_MEDIUM_STR,
+    U1_SMALL,
     VIRT_TEMPLATE_VALIDATOR,
     Images,
 )
@@ -578,7 +578,7 @@ def fedora_vm_with_stress_ng(namespace, unprivileged_client, golden_images_names
         client=unprivileged_client,
         name="fedora-vm-test-with-stress-ng",
         namespace=namespace.name,
-        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_MEDIUM_STR),
+        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL),
         vm_preference=VirtualMachineClusterPreference(name=OS_FLAVOR_FEDORA),
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=DataSource(
