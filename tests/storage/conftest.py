@@ -73,6 +73,7 @@ from utilities.infra import (
 )
 from utilities.storage import (
     data_volume_template_with_source_ref_dict,
+    generate_data_source_dict,
     get_downloaded_artifact,
     write_file_via_ssh,
 )
@@ -559,3 +560,20 @@ def source_dv_windows_registry_scope_session(
     ) as dv:
         dv.wait_for_dv_success(timeout=WINDOWS_CLONE_TIMEOUT)
         yield dv
+
+
+@pytest.fixture(scope="session")
+def windows_data_source_scope_session(
+    admin_client,
+    golden_images_namespace,
+    source_dv_windows_registry_scope_session,
+):
+    """Fixture that imports a Windows DataVolume from registry into the golden images namespace."""
+
+    with DataSource(
+        namespace=golden_images_namespace.name,
+        name="ds-windows-registry",
+        client=admin_client,
+        source=generate_data_source_dict(source_dv_windows_registry_scope_session),
+    ) as ds:
+        yield ds
