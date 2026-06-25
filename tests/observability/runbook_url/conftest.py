@@ -84,7 +84,7 @@ def available_runbook_urls(cnv_prometheus_rule_alerts):
                     sleep=TIMEOUT_10SEC,
                     func=session.head,
                     exceptions_dict={
-                        ConnectionError: [],
+                        requests.exceptions.ConnectionError: [],
                         requests.exceptions.Timeout: [],
                     },
                     url=raw_url,
