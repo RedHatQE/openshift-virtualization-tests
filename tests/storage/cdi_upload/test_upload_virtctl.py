@@ -420,6 +420,45 @@ def test_virtctl_image_upload_dv_with_exist_pvc(
         )
 
 
+@pytest.mark.polarion("CNV-16270")
+@pytest.mark.usefixtures("primary_udn_for_upload", "download_image")
+def test_virtctl_image_upload_dv_in_pudn_namespace(
+    admin_client,
+    udn_namespace_for_dv_upload,
+    storage_class_name_immediate_binding_scope_module,
+):
+    """
+    Test that uploading a disk image to a DataVolume succeeds in a namespace
+    with a primary User Defined Network (UDN).
+
+    Jira: https://redhat.atlassian.net/browse/CNV-58018 # <skip-jira-utils-check>
+
+    Preconditions:
+        - Namespace with a primary UDN label
+        - Layer2 User Defined Network with role "Primary" in the namespace
+
+    Steps:
+        1. Upload a disk image to a DataVolume in the UDN namespace via virtctl
+
+    Expected:
+        - Upload completes successfully
+        - DataVolume phase is "Succeeded"
+    """
+    dv_name = f"cnv-16270-{storage_class_name_immediate_binding_scope_module}"
+    with virtctl_upload_dv(
+        client=udn_namespace_for_dv_upload.client,
+        namespace=udn_namespace_for_dv_upload.name,
+        name=dv_name,
+        size=DEFAULT_DV_SIZE,
+        image_path=LOCAL_PATH,
+        storage_class=storage_class_name_immediate_binding_scope_module,
+        insecure=True,
+    ) as res:
+        check_upload_virtctl_result(result=res)
+        dv = DataVolume(namespace=udn_namespace_for_dv_upload.name, name=dv_name, client=admin_client)
+        dv.wait_for_dv_success(timeout=TIMEOUT_1MIN)
+
+
 @pytest.mark.tier3
 @pytest.mark.parametrize(
     ("uploaded_dv_with_immediate_binding", "vm_params"),
