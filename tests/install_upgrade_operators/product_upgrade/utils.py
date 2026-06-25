@@ -9,6 +9,7 @@ from threading import Thread
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from ocp_resources.subscription import Subscription
     from ocp_utilities.monitoring import Prometheus
 
 from deepdiff import DeepDiff
@@ -21,15 +22,15 @@ from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.machine_config_pool import MachineConfigPool
 from ocp_resources.namespace import Namespace
 from ocp_resources.resource import Resource, ResourceEditor
-from ocp_resources.subscription import Subscription
+from packaging.version import Version
 from pyhelper_utils.shell import run_command
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.install_upgrade_operators.constants import WORKLOAD_UPDATE_STRATEGY_KEY_NAME, WORKLOADUPDATEMETHODS
 from tests.install_upgrade_operators.utils import wait_for_install_plan
+from tests.upgrade_params import EUS
 from utilities.constants import (
     BASE_EXCEPTIONS_DICT,
-    BREW_REGISTERY_SOURCE,
     FIRING_STATE,
     HCO_CATALOG_SOURCE,
     IMAGE_CRON_STR,
@@ -52,6 +53,7 @@ from utilities.infra import (
     get_deployments,
     get_pod_by_name_prefix,
     get_pods,
+    stable_channel_released_to_prod,
     wait_for_consistent_resource_conditions,
     wait_for_version_explorer_response,
 )
@@ -458,6 +460,7 @@ def verify_upgrade_ocp(
         machine_config_pools_list=machine_config_pools_list,
         initial_mcp_conditions=initial_mcp_conditions,
         nodes=nodes,
+        timeout=TIMEOUT_180MIN,
     )
 
     wait_for_cluster_version_stable_conditions(
@@ -552,46 +555,162 @@ def get_alerts_fired_during_upgrade(
     return alerts_by_name
 
 
-def get_upgrade_path(target_version: str, channel: str = "stable") -> list[dict[str, Any]]:
-    paths = wait_for_version_explorer_response(
+def get_upgrade_path(target_version: str, channel: str = "stable") -> dict[str, Any]:
+    """Query the version explorer for upgrade paths to a target CNV version on a given channel."""
+    return wait_for_version_explorer_response(
         api_end_point="GetUpgradePath",
         query_string=f"targetVersion={target_version}&channel={channel}",
     )
-    return paths["path"]
 
 
-def get_iib_images_of_cnv_versions(
-    versions: list[str], errata_status: str = "true", target_channel: str = "stable"
-) -> dict[str, Any] | None:
-    def _find_channel_build(channels_dict: list[dict], channel: str) -> dict | None:
-        return next((build_dict for build_dict in channels_dict if build_dict["channel"] == channel), None)
+def find_path_with_start_version(paths: list[dict[str, Any]], start_version: str) -> dict[str, Any] | None:
+    """Find an upgrade path entry matching start_version."""
+    for path in paths:
+        if str(path["startVersion"]).lstrip("v") == start_version:
+            return path
+    return None
 
-    target_version_images = {}
 
-    for version in versions:
-        successful_builds = get_build_info_by_version(version=version, errata_status=errata_status)["successful_builds"]
+def get_cnv_image_url_for_version(version: str, channel: str) -> str:
+    """Return the CNV image URL of the first successful build for a version on a given channel."""
+    builds = get_build_info_by_version(version=version, channel=channel)["successful_builds"]
+    assert builds, f"No successful builds for {version} on {channel} channel"
+    return builds[0]["iib"]
 
-        if errata_status == "true":
-            # Look for builds with QE or SHIPPED_LIVE errata status
-            if not (successful_builds or successful_builds[0]["errata_status"] in ["QE", "SHIPPED_LIVE"]):
-                return None
+
+def get_stable_released_builds(minor_version: str) -> list[dict[str, Any]]:
+    """Return stable released builds for a minor version, sorted newest-first."""
+    builds = wait_for_version_explorer_response(
+        api_end_point="GetReleasedBuilds",
+        query_string=f"minor_version={minor_version}&stage=false",
+    )["builds"]
+    stable_builds = sorted(
+        [build for build in builds if stable_channel_released_to_prod(channels=build["channels"])],
+        key=lambda build: Version(version=build["csv_version"]),
+        reverse=True,
+    )
+    assert stable_builds, f"No stable released builds for {minor_version}"
+    return stable_builds
+
+
+def get_stable_channel_iib(build: dict[str, Any]) -> str:
+    """Extract the IIB URL from a build's stable channel entry."""
+    stable_entry = next(
+        (item for item in build["channels"] if item.get("channel") == "stable" and item.get("released_to_prod")),
+        None,
+    )
+    if not stable_entry:
+        raise ValueError(f"No stable released channel entry in build: {build}")
+    return stable_entry["iib"]
+
+
+def build_version_images(
+    versions: list[str],
+    target_version: str,
+    target_cnv_image_url: str,
+    channel: str = "stable",
+) -> dict[str, dict[str, str]]:
+    """Build a {version: {"cnv_image_url": ..., "channel": ...}} dict from a versions list."""
+    images: dict[str, dict[str, str]] = {}
+    for raw_version in versions:
+        version = raw_version.lstrip("v")
+        if version == target_version:
+            images[version] = {"cnv_image_url": target_cnv_image_url, "channel": channel}
         else:
-            successful_builds = get_build_info_by_version(version=version, errata_status=errata_status)[
-                "successful_builds"
-            ]
-        for build in successful_builds:
-            if build_info_dict := _find_channel_build(channels_dict=build["channels"], channel=target_channel):
-                break
-        assert build_info_dict, f"Couldn't find build info for {version} version in {target_channel} channel"
-        target_version_images[version] = f"{BREW_REGISTERY_SOURCE}/rh-osbs/iib:{build_info_dict['iib'].split(':')[-1]}"
-
-    assert target_version_images, f"Couldn't find build info for {versions} versions"
-    return target_version_images
+            images[version] = {
+                "cnv_image_url": get_cnv_image_url_for_version(version=version, channel=channel),
+                "channel": channel,
+            }
+    return images
 
 
-def get_build_info_by_version(version: str, errata_status: str = "true") -> dict[str, Any]:
+def find_intermediate_cnv_versions(
+    current_version: str,
+    target_version: str,
+    target_channel: str = "stable",
+) -> tuple[dict[str, dict[str, str]], dict[str, Any]]:
+    """Find the intermediate CNV versions for an EUS-to-EUS upgrade.
+
+    Walks stable z-streams for the intermediate minor (current+1) from latest to oldest,
+    picks the first valid startVersion in the target's upgrade path, then resolves the
+    full hop path from current to intermediate.
+
+    Returns:
+        Tuple of (non_eus_images, target_step).
+    """
+    target_paths = get_upgrade_path(target_version=target_version, channel=target_channel)["path"]
+    assert target_paths, f"No upgrade paths for {target_version} on {target_channel} channel"
+
+    current = Version(version=current_version)
+    intermediate_minor = f"{current.major}.{current.minor + 1}"
+    stable_builds = get_stable_released_builds(minor_version=intermediate_minor)
+
+    for build in stable_builds:
+        intermediate_version = build["csv_version"].lstrip("v")
+        target_step = find_path_with_start_version(paths=target_paths, start_version=intermediate_version)
+        if not target_step:
+            continue
+
+        LOGGER.info(f"Using {intermediate_version} as intermediate version for EUS upgrade to {target_version}")
+        intermediate_iib = get_stable_channel_iib(build=build)
+
+        intermediate_paths = get_upgrade_path(target_version=intermediate_version, channel="stable")["path"]
+        intermediate_step = find_path_with_start_version(paths=intermediate_paths, start_version=current_version)
+
+        if intermediate_step:
+            non_eus_images = build_version_images(
+                versions=intermediate_step["versions"],
+                target_version=intermediate_version,
+                target_cnv_image_url=intermediate_iib,
+            )
+        else:
+            non_eus_images = {intermediate_version: {"cnv_image_url": intermediate_iib, "channel": "stable"}}
+
+        return non_eus_images, target_step
+
+    raise AssertionError(f"No valid intermediate in {intermediate_minor} for upgrade to {target_version}")
+
+
+def build_eus_upgrade_path_dict(
+    current_cnv_version: str,
+    target_cnv_version: str,
+    target_channel: str = "stable",
+    target_cnv_image_url: str | None = None,
+) -> dict[str, dict[str, dict[str, str]]]:
+    """Build the EUS-to-EUS upgrade path with IIB images for each phase.
+
+    Args:
+        current_cnv_version: Currently installed CNV version (e.g., "4.20.15").
+        target_cnv_version: EUS target CNV version (e.g., "4.22.0").
+        target_channel: Channel for the target GetUpgradePath query (default "stable").
+        target_cnv_image_url: CNV image URL for the EUS target (from --cnv-image CLI arg).
+
+    Returns:
+        Dict with "non-eus" and "eus" keys, each mapping version string
+        to a dict with "cnv_image_url" and "channel" keys.
+    """
+    assert target_cnv_image_url, "target_cnv_image_url is required for EUS upgrade path"
+    non_eus_images, target_step = find_intermediate_cnv_versions(
+        current_version=current_cnv_version,
+        target_version=target_cnv_version,
+        target_channel=target_channel,
+    )
+    eus_images = build_version_images(
+        versions=target_step["versions"],
+        target_version=target_cnv_version,
+        target_cnv_image_url=target_cnv_image_url,
+        channel=target_channel,
+    )
+    upgrade_path = {"non-eus": non_eus_images, EUS: eus_images}
+    LOGGER.info(f"Upgrade path for EUS-to-EUS upgrade: {upgrade_path}")
+    return upgrade_path
+
+
+def get_build_info_by_version(version: str, channel: str = "stable") -> dict[str, Any]:
+    """Get successful builds for a CNV version from the version explorer, filtered by channel."""
     return wait_for_version_explorer_response(
-        api_end_point="GetSuccessfulBuildsByVersion", query_string=f"version={version}&errata_status={errata_status}"
+        api_end_point="GetSuccessfulBuildsByVersion",
+        query_string=f"version={version}&channel={channel}",
     )
 
 
@@ -620,9 +739,19 @@ def perform_cnv_upgrade(
     cnv_target_version: str,
     subscription: Subscription | None = None,
     subscription_source: str | None = None,
-    subscription_channel: str = "",
+    subscription_channel: str | None = None,
 ) -> None:
     hco_target_csv_name = get_hco_csv_name_by_version(cnv_target_version=cnv_target_version)
+
+    if subscription or subscription_source or subscription_channel:
+        assert subscription and subscription_source and subscription_channel, (
+            "subscription, subscription_source, and subscription_channel must all be provided together"
+        )
+        update_subscription_source(
+            subscription=subscription,
+            subscription_source=subscription_source,
+            subscription_channel=subscription_channel,
+        )
 
     LOGGER.info("Updating image in CatalogSource")
     update_image_in_catalog_source(
@@ -631,12 +760,6 @@ def perform_cnv_upgrade(
         catalog_source_name=HCO_CATALOG_SOURCE,
         cr_name=cr_name,
     )
-    if subscription and subscription_source:
-        update_subscription_source(
-            subscription=subscription,
-            subscription_source=subscription_source,
-            subscription_channel=subscription_channel,
-        )
     LOGGER.info("Approving CNV InstallPlan")
     approve_cnv_upgrade_install_plan(
         dyn_client=admin_client,
