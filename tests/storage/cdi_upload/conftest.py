@@ -7,8 +7,12 @@ import uuid
 
 import pytest
 from ocp_resources.datavolume import DataVolume
+from ocp_resources.user_defined_network import Layer2UserDefinedNetwork
 
 from utilities.constants import TIMEOUT_2MIN, TIMEOUT_40MIN, Images
+from libs.net.ip import random_ipv4_address
+from libs.net.udn import create_udn_namespace
+from utilities.constants import TIMEOUT_1MIN, TIMEOUT_2MIN, Images
 from utilities.storage import check_upload_virtctl_result, create_dv, get_downloaded_artifact, virtctl_upload_dv
 
 LOGGER = logging.getLogger(__name__)
@@ -92,3 +96,23 @@ def uploaded_windows_dv(
         dv = DataVolume(namespace=namespace.name, name=dv_name, client=unprivileged_client)
         dv.wait_for_dv_success(timeout=TIMEOUT_40MIN)
         yield dv
+@pytest.fixture(scope="module")
+def udn_namespace_for_dv_upload(admin_client):
+    yield from create_udn_namespace(name="test-cdi-upload-udn-ns", client=admin_client)
+
+
+@pytest.fixture(scope="module")
+def primary_udn_for_upload(admin_client, udn_namespace_for_dv_upload):
+    with Layer2UserDefinedNetwork(
+        name="layer2-udn-upload",
+        namespace=udn_namespace_for_dv_upload.name,
+        role="Primary",
+        subnets=[f"{random_ipv4_address(net_seed=0, host_address=0)}/24"],
+        ipam={"lifecycle": "Persistent"},
+        client=admin_client,
+    ) as udn:
+        udn.wait_for_condition(
+            condition="NetworkAllocationSucceeded",
+            status=udn.Condition.Status.TRUE,
+        )
+        yield udn
