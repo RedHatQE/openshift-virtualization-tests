@@ -2799,6 +2799,11 @@ def rwx_fs_available_storage_classes_names(cluster_storage_classes_names):
     ]
 
 
+@pytest.fixture()
+def storage_class_name_scope_function(storage_class_matrix__function__):
+    return [*storage_class_matrix__function__][0]
+
+
 @pytest.fixture(scope="session")
 def rhsm_credentials_from_bitwarden():
     return get_cnv_tests_secret_by_name(secret_name="RHSM_CREDENTIALS")
