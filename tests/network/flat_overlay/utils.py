@@ -24,7 +24,9 @@ LOGGER = logging.getLogger(__name__)
 def restart_ovnkube_node_daemonset() -> None:
     """Restarts the ovnkube-node DaemonSet and waits for the rollout to complete."""
     run_command(command=shlex.split("oc rollout restart daemonset/ovnkube-node -n openshift-ovn-kubernetes"))
-    run_command(command=shlex.split("oc rollout status daemonset/ovnkube-node -n openshift-ovn-kubernetes --timeout=10m"))
+    run_command(
+        command=shlex.split("oc rollout status daemonset/ovnkube-node -n openshift-ovn-kubernetes --timeout=10m")
+    )
 
 
 def create_flat_overlay_vm(
