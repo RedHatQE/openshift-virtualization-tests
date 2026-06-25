@@ -1,11 +1,16 @@
 import logging
 from contextlib import contextmanager
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 import pytest
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.template import Template
 from ocp_resources.virtual_machine import VirtualMachine
+
+if TYPE_CHECKING:
+    from ocp_resources.cluster_service_version import ClusterServiceVersion
+
 from ocp_resources.virtual_machine_instance_migration import (
     VirtualMachineInstanceMigration,
 )
@@ -19,9 +24,6 @@ from utilities.constants import (
     VIRT_LAUNCHER,
 )
 from utilities.exceptions import ResourceMissingFieldError
-from utilities.infra import (
-    get_pod_disruption_budget,
-)
 from utilities.virt import (
     VirtualMachineForTestsFromTemplate,
     get_vm_boot_time,
@@ -33,10 +35,9 @@ LOGGER = logging.getLogger(__name__)
 TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 
-def get_virt_launcher_image_from_csv(csv):
-    for item in csv.instance.spec.relatedImages:
-        if VIRT_LAUNCHER in item["name"]:
-            return item["image"]
+def get_virt_launcher_images_from_csv(csv: "ClusterServiceVersion") -> set[str]:
+    if images := {item["image"] for item in csv.instance.spec.relatedImages if VIRT_LAUNCHER in item["name"]}:
+        return images
     raise ValueError(f"Image digest for {VIRT_LAUNCHER} not found")
 
 
@@ -78,30 +79,6 @@ def get_src_pvc_default_name(template):
         return param_value_list[0]
 
     raise ResourceMissingFieldError(f"Template {template.name} does not have a parameter {DATA_SOURCE_NAME}")
-
-
-def get_all_migratable_vms(admin_client, namespaces):
-    # Check pod disruption budget associated with given namespaces. Collect associated vm names. These vms are
-    # the only migratable ones
-    pod_disruption_budget_list = [
-        pod_disruption_budget
-        for ns in namespaces
-        for pod_disruption_budget in get_pod_disruption_budget(admin_client=admin_client, namespace_name=ns.name)
-    ]
-    pod_disruption_budget_info = {
-        pod_disruption_budget.name: pod_disruption_budget.instance.metadata.ownerReferences[0]["name"]
-        for pod_disruption_budget in pod_disruption_budget_list
-    }
-    LOGGER.info(f"PodDisruptionBudgets: {pod_disruption_budget_info}")
-
-    return [
-        VirtualMachine(
-            client=admin_client,
-            namespace=pod_disruption_budget.namespace,
-            name=pod_disruption_budget.instance.metadata.ownerReferences[0]["name"],
-        )
-        for pod_disruption_budget in pod_disruption_budget_list
-    ]
 
 
 def get_workload_update_migrations_list(namespaces):
@@ -164,11 +141,13 @@ def wait_for_automatic_vm_migrations(vm_list):
         raise
 
 
-def validate_vms_pod_updated(admin_client, expected_virt_launcher_image, vm_list):
+def validate_vms_pod_updated(
+    expected_virt_launcher_images: set[str], vm_list: list[VirtualMachine]
+) -> list[dict[str, str]]:
     return [
         {pod.name: pod.instance.spec.containers[0].image}
         for pod in [vm.vmi.virt_launcher_pod for vm in vm_list]
-        if pod.instance.spec.containers[0].image != expected_virt_launcher_image
+        if pod.instance.spec.containers[0].image not in expected_virt_launcher_images
     ]
 
 
