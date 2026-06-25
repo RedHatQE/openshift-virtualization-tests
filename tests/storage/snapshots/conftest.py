@@ -19,7 +19,8 @@ from tests.storage.utils import (
     create_windows_directory,
     set_permissions,
 )
-from utilities.constants import TIMEOUT_2MIN, TIMEOUT_5SEC, TIMEOUT_10MIN, UNPRIVILEGED_USER
+from utilities.constants.pytest import UNPRIVILEGED_USER
+from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5SEC, TIMEOUT_10MIN
 
 LOGGER = logging.getLogger(__name__)
 
