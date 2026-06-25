@@ -67,18 +67,20 @@ def cloned_windows_dv_scope_class(
     unprivileged_client,
     namespace,
     storage_class_name_scope_class,
-    source_dv_windows_registry_scope_session,
+    windows_data_source_scope_session,
 ):
-    """Fixture that creates a cloned DataVolume from the session-scoped Windows 2022 source DV."""
+    """Fixture that creates a cloned DataVolume from the session-scoped Windows DataSource."""
     with create_dv(
         client=unprivileged_client,
-        source="pvc",
         dv_name=f"dv-target-{WIN_2K22}-clone",
         namespace=namespace.name,
         size=Images.Windows.CONTAINER_DISK_DV_SIZE,
-        source_pvc=source_dv_windows_registry_scope_session.name,
-        source_namespace=source_dv_windows_registry_scope_session.namespace,
         storage_class=storage_class_name_scope_class,
+        source_ref={
+            "kind": windows_data_source_scope_session.kind,
+            "name": windows_data_source_scope_session.name,
+            "namespace": windows_data_source_scope_session.namespace,
+        },
     ) as cdv:
         cdv.wait_for_dv_success(timeout=WINDOWS_CLONE_TIMEOUT)
         yield cdv
