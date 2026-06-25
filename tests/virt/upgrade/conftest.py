@@ -165,7 +165,6 @@ def vms_for_upgrade_dict_before(vms_for_upgrade):
 
 @pytest.fixture()
 def unupdated_vmi_pods_names(
-    admin_client,
     virt_migratable_vms,
     virt_launcher_images_from_csv_before_upgrade,
     csv_after_upgrade,
@@ -177,7 +176,7 @@ def unupdated_vmi_pods_names(
         )
         return []
 
-    wait_for_automatic_vm_migrations(vm_list=virt_migratable_vms, admin_client=admin_client)
+    wait_for_automatic_vm_migrations(vm_list=virt_migratable_vms)
     return validate_vms_pod_updated(
         expected_virt_launcher_images=virt_launcher_images_after_upgrade,
         vm_list=virt_migratable_vms,
@@ -379,9 +378,9 @@ def virt_launcher_images_from_csv_before_upgrade(csv_scope_session):
 
 
 @pytest.fixture()
-def csv_after_upgrade(admin_client, hco_namespace, hco_target_csv_name, eus_hco_target_csv_name):
+def csv_after_upgrade(admin_client, hco_namespace, hco_target_csv_name):
     return get_csv_by_name(
         admin_client=admin_client,
         namespace=hco_namespace.name,
-        csv_name=hco_target_csv_name or eus_hco_target_csv_name,
+        csv_name=hco_target_csv_name,
     )
