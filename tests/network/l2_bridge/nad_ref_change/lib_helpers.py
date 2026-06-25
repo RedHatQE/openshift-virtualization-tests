@@ -1,7 +1,10 @@
 from typing import Final
 
 from kubernetes.dynamic import DynamicClient
+from ocp_resources.datavolume import DataVolume
 
+from libs.net.ip import filter_link_local_addresses
+from libs.net.vmspec import lookup_iface_status
 from libs.vm.factory import base_vmspec, fedora_vm
 from libs.vm.spec import (
     CloudInitNoCloud,
@@ -9,8 +12,10 @@ from libs.vm.spec import (
     Interface,
     Multus,
     Network,
+    VMSpec,
 )
-from libs.vm.vm import BaseVirtualMachine, add_volume_disk, cloudinitdisk_storage
+from libs.vm.vm import BaseVirtualMachine, add_volume_disk, cloudinitdisk_storage, data_volume_storage
+from tests.network.l2_bridge.libl2bridge import LINUX_BRIDGE_IFACE_NAME_1, LINUX_BRIDGE_IFACE_NAME_2
 from tests.network.libs import cloudinit
 from tests.network.libs.cloudinit import primary_iface_cloud_init
 from tests.network.libs.connectivity import poll_tcp_connectivity
@@ -73,6 +78,37 @@ def assert_no_connectivity(
     )
 
 
+def assert_baseline_connectivity(
+    client_vm: BaseVirtualMachine,
+    ref_vm: BaseVirtualMachine,
+) -> None:
+    """Assert baseline connectivity: client reaches ref on VLAN-A, not on VLAN-B.
+
+    Args:
+        client_vm: VM initiating the connections.
+        ref_vm: Reference VM with interfaces on both VLANs.
+    """
+    for server_ip in filter_link_local_addresses(
+        ip_addresses=lookup_iface_status(vm=ref_vm, iface_name=LINUX_BRIDGE_IFACE_NAME_1).ipAddresses
+    ):
+        poll_tcp_connectivity(
+            client_vm=client_vm,
+            server_vm=ref_vm,
+            server_ip=str(server_ip),
+            server_bind_dev=GUEST_IFACE_1,
+        )
+    for server_ip in filter_link_local_addresses(
+        ip_addresses=lookup_iface_status(vm=ref_vm, iface_name=LINUX_BRIDGE_IFACE_NAME_2).ipAddresses
+    ):
+        poll_tcp_connectivity(
+            client_vm=client_vm,
+            server_vm=ref_vm,
+            server_ip=str(server_ip),
+            server_bind_dev=GUEST_IFACE_2,
+            expect_connectivity=False,
+        )
+
+
 def two_secondary_bridge_vm(
     namespace: str,
     name: str,
@@ -99,6 +135,62 @@ def two_secondary_bridge_vm(
         iface_names: Logical interface names for the VM spec, aligned with nad_names.
         runcmd: Commands to run on first boot via cloud-init runcmd. None means no extra commands.
     """
+    return fedora_vm(
+        namespace=namespace,
+        name=name,
+        client=client,
+        spec=_bridge_vm_spec(
+            nad_names=nad_names,
+            ip_addresses=ip_addresses,
+            iface_names=iface_names,
+            runcmd=runcmd,
+        ),
+    )
+
+
+def non_migratable_bridge_vm(
+    namespace: str,
+    name: str,
+    client: DynamicClient,
+    nad_names: list[str],
+    ip_addresses: list[list[str]],
+    iface_names: list[str],
+    data_volume: DataVolume,
+    runcmd: list[str] | None = None,
+) -> BaseVirtualMachine:
+    """Create a Fedora VM with secondary bridge interfaces backed by an existing RWO DataVolume.
+
+    The VM references the provided, already-deployed DataVolume by name via a dataVolume
+    volume reference. The RWO access mode of the backing PVC makes the VM non-live-migratable.
+
+    Args:
+        namespace: Namespace to deploy the VM in.
+        name: VM name.
+        client: Kubernetes dynamic client.
+        nad_names: NAD names for the secondary interfaces, in spec order.
+        ip_addresses: Per-interface CIDR address lists, aligned with nad_names.
+        iface_names: Logical interface names for the VM spec, aligned with nad_names.
+        data_volume: Existing deployed DataVolume referenced by name; its RWO access mode
+            makes the VM non-migratable.
+        runcmd: Commands to run on first boot via cloud-init runcmd. None means no extra commands.
+    """
+    spec = _bridge_vm_spec(
+        nad_names=nad_names,
+        ip_addresses=ip_addresses,
+        iface_names=iface_names,
+        runcmd=runcmd,
+    )
+    disk, volume = data_volume_storage(name=data_volume.name)
+    spec.template.spec = add_volume_disk(vmi_spec=spec.template.spec, volume=volume, disk=disk)
+    return fedora_vm(namespace=namespace, name=name, client=client, spec=spec)
+
+
+def _bridge_vm_spec(
+    nad_names: list[str],
+    ip_addresses: list[list[str]],
+    iface_names: list[str],
+    runcmd: list[str] | None = None,
+) -> VMSpec:
     spec = base_vmspec()
     spec.template.spec.domain.devices = Devices(
         interfaces=[
@@ -126,4 +218,4 @@ def two_secondary_bridge_vm(
         )
     )
     spec.template.spec = add_volume_disk(vmi_spec=spec.template.spec, volume=volume, disk=disk)
-    return fedora_vm(namespace=namespace, name=name, client=client, spec=spec)
+    return spec
