@@ -283,11 +283,6 @@ def jira_88737_open():
     return is_jira_open(jira_id="CNV-88737")
 
 
-@pytest.fixture(scope="session")
-def jira_86102_open():
-    return is_jira_open(jira_id="CNV-88764")
-
-
 @pytest.fixture()
 def expected_value(request, is_s390x_cluster):
     expected = request.param.copy()
