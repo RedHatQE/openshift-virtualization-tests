@@ -156,6 +156,12 @@ class Volume:
     name: str
     containerDisk: ContainerDisk | None = None  # noqa: N815
     cloudInitNoCloud: CloudInitNoCloud | None = None  # noqa: N815
+    dataVolume: DataVolumeRef | None = None  # noqa: N815
+
+
+@dataclass
+class DataVolumeRef:
+    name: str
 
 
 @dataclass

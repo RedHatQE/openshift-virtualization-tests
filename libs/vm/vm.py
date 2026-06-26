@@ -16,6 +16,7 @@ from libs.vm.spec import (
     Affinity,
     CloudInitNoCloud,
     ContainerDisk,
+    DataVolumeRef,
     Devices,
     Disk,
     Metadata,
@@ -246,6 +247,10 @@ def cloudinitdisk_storage(data: CloudInitNoCloud) -> tuple[SpecDisk, Volume]:
     return SpecDisk(name=CLOUD_INIT_DISK_NAME, disk=Disk(bus="virtio")), Volume(
         name=CLOUD_INIT_DISK_NAME, cloudInitNoCloud=data
     )
+
+
+def data_volume_storage(name: str) -> tuple[SpecDisk, Volume]:
+    return SpecDisk(name=name, disk=Disk(bus="virtio")), Volume(name=name, dataVolume=DataVolumeRef(name=name))
 
 
 def add_volume_disk(vmi_spec: VMISpec, volume: Volume, disk: SpecDisk) -> VMISpec:
