@@ -8,7 +8,6 @@ from ocp_resources.daemonset import DaemonSet
 from ocp_resources.deployment import Deployment
 from ocp_resources.infrastructure import Infrastructure
 from ocp_resources.performance_profile import PerformanceProfile
-from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.utils import (
     verify_cpumanager_workers,
@@ -17,17 +16,9 @@ from tests.utils import (
 )
 from tests.virt.node.gpu.constants import (
     GPU_CARDS_MAP,
-    GPU_WORKLOAD_CONFIG_LABEL,
-    MDEV_NAME_STR,
     NVIDIA_SANDBOX_VALIDATOR_DS,
     NVIDIA_VGPU_DEVICE_MANAGER_DS,
     NVIDIA_VGPU_MANAGER_DS,
-    VGPU_CONFIG_LABEL,
-)
-from tests.virt.node.gpu.utils import (
-    apply_node_labels,
-    toggle_vgpu_deploy_labels,
-    wait_for_ds_ready,
 )
 from tests.virt.utils import (
     get_allocatable_memory_per_node,
@@ -38,15 +29,9 @@ from tests.virt.utils import (
     patch_hco_cr_with_mdev_permitted_hostdevices,
     update_hco_memory_overcommit,
 )
-from utilities.constants import (
-    AMD,
-    INTEL,
-    TIMEOUT_1MIN,
-    TIMEOUT_5SEC,
-    NamespacesNames,
-)
+from utilities.constants import AMD, INTEL, NamespacesNames
 from utilities.exceptions import ResourceValueError, UnsupportedGPUDeviceError
-from utilities.infra import ExecCommandOnPod, get_nodes_with_label, get_resources_by_name_prefix, label_nodes
+from utilities.infra import get_nodes_with_label, get_resources_by_name_prefix
 from utilities.pytest_utils import exit_pytest_execution
 from utilities.virt import get_nodes_gpu_info, vm_instance_from_template
 
@@ -237,19 +222,6 @@ def hco_cr_with_mdev_permitted_hostdevices_scope_session(hyperconverged_resource
 
 
 @pytest.fixture(scope="session")
-def gpu_nodes_labeled_with_vgpu_config(nodes_with_supported_gpus, supported_gpu_device):
-    yield from label_nodes(
-        nodes=nodes_with_supported_gpus,
-        labels={VGPU_CONFIG_LABEL: supported_gpu_device[MDEV_NAME_STR].split()[-1]},
-    )
-
-
-@pytest.fixture(scope="session")
-def gpu_nodes_labeled_with_vm_vgpu(nodes_with_supported_gpus, gpu_nodes_labeled_with_vgpu_config):
-    yield from label_nodes(nodes=nodes_with_supported_gpus, labels={GPU_WORKLOAD_CONFIG_LABEL: "vm-vgpu"})
-
-
-@pytest.fixture(scope="session")
 def nvidia_vgpu_manager_ds(admin_client):
     return get_resources_by_name_prefix(
         prefix=NVIDIA_VGPU_MANAGER_DS,
@@ -274,60 +246,6 @@ def nvidia_vgpu_device_manager_ds(admin_client):
         namespace=NamespacesNames.NVIDIA_GPU_OPERATOR,
         name=NVIDIA_VGPU_DEVICE_MANAGER_DS,
     )
-
-
-@pytest.fixture(scope="session")
-def vgpu_ready_nodes(
-    gpu_nodes,
-    nodes_with_supported_gpus,
-    gpu_nodes_labeled_with_vm_vgpu,
-    nvidia_vgpu_manager_ds,
-    nvidia_sandbox_validator_ds,
-    nvidia_vgpu_device_manager_ds,
-):
-    wait_for_ds_ready(ds=nvidia_vgpu_manager_ds, expected=len(nodes_with_supported_gpus))
-    toggle_vgpu_deploy_labels(
-        gpu_nodes=gpu_nodes,
-        nodes_with_supported_gpus=nodes_with_supported_gpus,
-        sandbox_validator_ds=nvidia_sandbox_validator_ds,
-        vgpu_device_manager_ds=nvidia_vgpu_device_manager_ds,
-    )
-    yield gpu_nodes_labeled_with_vm_vgpu
-    apply_node_labels(nodes=nodes_with_supported_gpus, labels={"nvidia.com/vgpu.config.state": None})
-
-
-@pytest.fixture(scope="session")
-def non_existent_mdev_bus_nodes(workers_utility_pods, vgpu_ready_nodes):
-    """
-    Check if the mdev_bus needed for vGPU is available.
-
-    On the Worker Node on which GPU Device exists, check if the
-    mdev_bus needed for vGPU is available.
-    If it's not available, this means the nvidia-vgpu-manager-daemonset
-    Pod might not be in running state in the nvidia-gpu-operator namespace.
-    """
-    desired_bus = "mdev_bus"
-    non_existent_mdev_bus_nodes = []
-    for node in vgpu_ready_nodes:
-        pod_exec = ExecCommandOnPod(utility_pods=workers_utility_pods, node=node)
-        try:
-            for sample in TimeoutSampler(
-                wait_timeout=TIMEOUT_1MIN,
-                sleep=TIMEOUT_5SEC,
-                func=pod_exec.exec,
-                command=f"ls /sys/class | grep {desired_bus} || true",
-            ):
-                if sample:
-                    return
-        except TimeoutExpiredError:
-            non_existent_mdev_bus_nodes.append(node.name)
-    if non_existent_mdev_bus_nodes:
-        pytest.fail(
-            reason=(
-                f"On these nodes: {non_existent_mdev_bus_nodes} {desired_bus} is not available."
-                "Ensure that in 'nvidia-gpu-operator' namespace nvidia-vgpu-manager-daemonset Pod is Running."
-            )
-        )
 
 
 @pytest.fixture(scope="session")
