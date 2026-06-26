@@ -10,10 +10,11 @@ LOGGER = logging.getLogger(__name__)
 
 
 def dv_stop_status_restart_threshold(dv: DataVolume, restart_count_threshold: int = 3) -> bool:
-    """Returns a stop status function that detects excessive DV restarts.
+    """Function for detecting excessive DV restarts.
 
-    The returned closure accepts a DataVolume and returns True if the restart
-    count exceeds the threshold (default: 3).
+    Args:
+        dv: The DataVolume to check.
+        restart_count_threshold: The threshold for restart count (default: 3).
 
     Returns:
         True if restarts exceed threshold.
