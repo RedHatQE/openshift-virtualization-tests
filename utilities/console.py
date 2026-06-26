@@ -5,12 +5,12 @@ import pexpect
 from ocp_resources.virtual_machine import VirtualMachine
 from timeout_sampler import TimeoutSampler, retry
 
-from utilities.constants import (
+from utilities.constants.timeouts import (
     TIMEOUT_5MIN,
     TIMEOUT_10SEC,
     TIMEOUT_30SEC,
-    VIRTCTL,
 )
+from utilities.constants.virt import VIRTCTL
 from utilities.data_collector import get_data_collector_base_directory
 
 LOGGER = logging.getLogger(__name__)

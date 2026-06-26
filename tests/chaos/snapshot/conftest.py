@@ -2,7 +2,12 @@ import pytest
 from ocp_resources.datavolume import DataVolume
 
 from tests.chaos.snapshot.utils import VirtualMachineSnapshotWithDeadline
-from utilities.constants import OS_FLAVOR_RHEL, TIMEOUT_8MIN, TIMEOUT_10MIN, Images
+from utilities.constants import Images
+from utilities.constants.images import OS_FLAVOR_RHEL
+from utilities.constants.timeouts import (
+    TIMEOUT_8MIN,
+    TIMEOUT_10MIN,
+)
 from utilities.virt import VirtualMachineForTests
 
 
