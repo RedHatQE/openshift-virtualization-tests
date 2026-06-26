@@ -6,6 +6,7 @@ import pytest
 from ocp_resources.datavolume import DataVolume
 
 from tests.os_params import FEDORA_LATEST, WINDOWS_11, WINDOWS_11_TEMPLATE_LABELS
+from tests.storage.stop_status_utils import dv_stop_status_restart_threshold
 from tests.storage.utils import (
     assert_pvc_snapshot_clone_annotation,
     assert_use_populator,
@@ -93,7 +94,11 @@ def test_successful_clone_of_large_image(
         storage_class=data_volume_multi_storage_scope_function.storage_class,
         client=namespace.client,
     ) as cdv:
-        cdv.wait_for_dv_success(timeout=WINDOWS_CLONE_TIMEOUT)
+        cdv.wait_for_dv_success(
+            timeout=WINDOWS_CLONE_TIMEOUT,
+            stop_status_func=dv_stop_status_restart_threshold,
+            dv=cdv,
+        )
 
 
 @pytest.mark.sno
@@ -125,7 +130,10 @@ def test_successful_vm_restart_with_cloned_dv(
             cdv.wait_for_status(status=DataVolume.Status.PENDING_POPULATION, timeout=TIMEOUT_1MIN)
             cdv.pvc.wait()
         else:
-            cdv.wait_for_dv_success()
+            cdv.wait_for_dv_success(
+                stop_status_func=dv_stop_status_restart_threshold,
+                dv=cdv,
+            )
         with create_vm_from_dv(
             client=unprivileged_client,
             dv=cdv,
@@ -180,7 +188,11 @@ def test_successful_vm_from_cloned_dv_windows(
         source_pvc=data_volume_multi_storage_scope_function.name,
         storage_class=data_volume_multi_storage_scope_function.storage_class,
     ) as cdv:
-        cdv.wait_for_dv_success(timeout=WINDOWS_CLONE_TIMEOUT)
+        cdv.wait_for_dv_success(
+            timeout=WINDOWS_CLONE_TIMEOUT,
+            stop_status_func=dv_stop_status_restart_threshold,
+            dv=cdv,
+        )
         create_windows_vm_validate_guest_agent_info(
             dv=cdv,
             namespace=namespace,
@@ -227,7 +239,14 @@ def test_successful_snapshot_clone(
         source_pvc=data_volume_snapshot_capable_storage_scope_function.name,
         storage_class=storage_class,
     ) as cdv:
+<<<<<<< HEAD
         cdv.wait_for_dv_success()
+=======
+        cdv.wait_for_dv_success(
+            stop_status_func=dv_stop_status_restart_threshold,
+            dv=cdv,
+        )
+>>>>>>> cfbe5ad7 (only return bool and only restart reason for now)
         if OS_FLAVOR_WINDOWS not in data_volume_snapshot_capable_storage_scope_function.url.split("/")[-1]:
             with create_vm_from_dv(
                 client=unprivileged_client,
