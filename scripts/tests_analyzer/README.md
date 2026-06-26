@@ -52,6 +52,7 @@ This enables CI pipelines to skip expensive test suites when changes don't affec
   - Uses git diff to identify which specific fixtures/functions were modified
   - Computes transitive fixture dependencies
   - Only triggers if marked test uses at least one affected fixture
+  - Changes to `pytest_plugins` variable trigger all dependent tests (structural change)
 
 ### SKIP tests if:
 - No marked test dependencies are affected
@@ -64,6 +65,19 @@ This enables CI pipelines to skip expensive test suites when changes don't affec
 - Computes transitive impact (fixtures that depend on modified fixtures)
 - Only triggers marked tests that actually use affected fixtures
 - Falls back to conservative behavior if git diff fails
+
+### Opaque conftest import narrowing:
+- When a conftest opaquely imports a changed file (e.g., `from module import *` or re-exports), the analyzer performs symbol-level narrowing before flagging all tests
+- Checks whether any fixture in the conftest actually calls a modified symbol
+- Falls back to file-level flagging only when symbol-level analysis is inconclusive
+
+### Symbol extraction from diffs:
+- Decorator lines are included in symbol line ranges, so marker-only changes (e.g., adding `@pytest.mark.polarion`) correctly map to the decorated function or class
+- Pure-deletion hunks extract deleted `def`/`class` names for symbol-level narrowing instead of triggering a conservative full-file fallback
+
+### Safe-line heuristic:
+- Lines that do not map to any symbol are checked against a set of safe patterns before triggering a full-file fallback
+- Recognized safe patterns: `TYPE_CHECKING` guards, `__all__` assignments, closing parentheses/brackets, and import continuation lines
 
 **Note:** Infrastructure (utilities/, libs/) and conftest.py changes only trigger marked tests if they are actually imported/used by a marked test. Blanket rules that triggered on ANY infrastructure or conftest change have been removed to reduce false positives.
 
