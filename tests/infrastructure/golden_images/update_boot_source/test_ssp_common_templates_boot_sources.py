@@ -11,7 +11,15 @@ from tests.infrastructure.golden_images.utils import (
     assert_missing_golden_image_pvc,
     assert_os_version_mismatch_in_vm,
 )
-from utilities.constants import DEFAULT_FEDORA_REGISTRY_URL, OS_FLAVOR_FEDORA, TIMEOUT_5MIN, TIMEOUT_5SEC, Images
+from utilities.constants import Images
+from utilities.constants.images import (
+    DEFAULT_FEDORA_REGISTRY_URL,
+    OS_FLAVOR_FEDORA,
+)
+from utilities.constants.timeouts import (
+    TIMEOUT_5MIN,
+    TIMEOUT_5SEC,
+)
 from utilities.infra import (
     validate_os_info_vmi_vs_linux_os,
 )
