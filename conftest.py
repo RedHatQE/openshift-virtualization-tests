@@ -73,7 +73,6 @@ from utilities.pytest_utils import (
     validate_collected_tests_arch_params,
 )
 
-pytest_plugins = []
 pytest_plugins = [
     "tests.fixtures.network.l2_bridge",
     "tests.fixtures.network.cluster",
