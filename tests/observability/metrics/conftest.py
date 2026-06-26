@@ -15,7 +15,12 @@ from packaging.version import Version
 from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+from libs.net.vmspec import update_nad_references
+from libs.vm.factory import base_vmspec, fedora_vm
+from libs.vm.spec import Devices, Interface, Multus, Network
 from tests.observability.metrics.constants import (
+    BINDING_NAME,
+    BINDING_TYPE,
     GUEST_LOAD_TIME_PERIODS,
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
     KUBEVIRT_VM_CREATED_BY_POD_TOTAL,
@@ -27,6 +32,7 @@ from tests.observability.metrics.constants import (
 )
 from tests.observability.metrics.utils import (
     SINGLE_VM,
+    binding_name_and_type_from_vm_or_vmi,
     create_windows11_wsl2_vm,
     disk_file_system_info,
     enable_swap_fedora_vm,
@@ -100,6 +106,7 @@ METRICS_WITH_WINDOWS_VM_BUGS = [
     KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL,
 ]
 MINIMUM_QEMU_GUEST_AGENT_VERSION_FOR_GUEST_LOAD_METRICS = "9.6"
+_NAD_SWAP_SECONDARY_IFACE = "secondary"
 
 
 @pytest.fixture(scope="module")
@@ -661,3 +668,54 @@ def expected_cpu_affinity_metric_value(admin_client, vm_with_cpu_spec):
 
     # return multiplication for multi-CPU VMs
     return str(cpu_count_from_vm_node * cpu_count_from_vm)
+
+
+@pytest.fixture(scope="class")
+def vm_for_nad_swap_test(
+    unprivileged_client,
+    namespace,
+    bridge_nad_a,
+):
+    vm_name = "vm-nad-swap-vnic-info"
+    spec = base_vmspec()
+    spec.template.spec.domain.devices = Devices(
+        interfaces=[
+            Interface(name="default", masquerade={}),
+            Interface(name=_NAD_SWAP_SECONDARY_IFACE, bridge={}),
+        ]
+    )
+    spec.template.spec.networks = [
+        Network(name="default", pod={}),
+        Network(name=_NAD_SWAP_SECONDARY_IFACE, multus=Multus(networkName=bridge_nad_a.name)),
+    ]
+    with fedora_vm(namespace=namespace.name, name=vm_name, client=unprivileged_client, spec=spec) as vm:
+        vm.start(wait=True)
+        yield vm
+
+
+@pytest.fixture(scope="class")
+def post_nad_swap_vm(
+    vm_for_nad_swap_test,
+    bridge_nad_b,
+):
+    update_nad_references(
+        vm=vm_for_nad_swap_test,
+        nad_name_by_net={_NAD_SWAP_SECONDARY_IFACE: bridge_nad_b.name},
+    )
+    yield vm_for_nad_swap_test
+
+
+@pytest.fixture(scope="class")
+def expected_vnic_info_after_swap(
+    post_nad_swap_vm,
+    bridge_nad_b,
+):
+    vm_interfaces = post_nad_swap_vm.instance.spec.template.spec.domain.devices.interfaces
+    secondary_interface = next(iface for iface in vm_interfaces if iface["name"] == _NAD_SWAP_SECONDARY_IFACE)
+    binding_info = binding_name_and_type_from_vm_or_vmi(vm_interface=secondary_interface)
+    return {
+        "vnic_name": _NAD_SWAP_SECONDARY_IFACE,
+        BINDING_NAME: binding_info[BINDING_NAME],
+        BINDING_TYPE: binding_info[BINDING_TYPE],
+        "network": bridge_nad_b.name,
+    }
