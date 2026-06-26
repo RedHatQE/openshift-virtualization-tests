@@ -31,7 +31,6 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.storage.constants import (
     CIRROS_QCOW2_IMG,
-    HPP_STORAGE_CLASSES,
     HTTPS_CONFIG_MAP_NAME,
     INTERNAL_HTTP_CONFIGMAP_NAME,
 )
@@ -216,13 +215,6 @@ def upload_proxy_route(admin_client):
             upload_route = route
     assert upload_route is not None
     yield upload_route
-
-
-@pytest.fixture(scope="session")
-def skip_test_if_no_hpp_sc(cluster_storage_classes):
-    existing_hpp_sc = [sc.name for sc in cluster_storage_classes if sc.name in HPP_STORAGE_CLASSES]
-    if not existing_hpp_sc:
-        pytest.skip(f"This test runs only on one of the hpp storage classes: {HPP_STORAGE_CLASSES}")
 
 
 @pytest.fixture()

@@ -15,6 +15,8 @@ jobs:
     name: Run Utilities Unit Tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # Org members run automatically; outside contributors need maintainer approval
+    environment: ${{ (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name != github.repository && !contains(fromJSON('["COLLABORATOR","MEMBER","OWNER"]'), github.event.pull_request.author_association)) && 'external-pr-tests' || '' }}
     permissions:
       contents: read
       pull-requests: read
@@ -23,10 +25,12 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
+          allow-unsafe-pr-checkout: true
+          persist-credentials: false
 
       - name: Install uv
         uses: astral-sh/setup-uv@v8.2.0

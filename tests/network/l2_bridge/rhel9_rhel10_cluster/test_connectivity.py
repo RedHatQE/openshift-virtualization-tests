@@ -8,14 +8,23 @@ Markers:
     - mixed_os_nodes
 """
 
+from __future__ import annotations
+
 import ipaddress
+from typing import TYPE_CHECKING
 
 import pytest
 
 from libs.net.traffic_generator import is_tcp_connection
 from libs.vm.affinity import new_node_affinity
-from tests.network.l2_bridge.libl2bridge import RHCOS9_WORKER_LABEL
+from tests.network.libs.nodes import RHCOS9_WORKER_LABEL
 from utilities.virt import migrate_vm_and_verify
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from libs.net.traffic_generator import TcpServer, VMTcpClient
+    from libs.vm.vm import BaseVirtualMachine
 
 
 @pytest.mark.mixed_os_nodes
@@ -31,9 +40,10 @@ class TestConnectivity:
     @pytest.mark.polarion("CNV-15949")
     def test_linux_bridge_connectivity_preserved_during_server_migration_to_rhcos10(
         self,
-        subtests,
-        bridge_running_vms,
-        bridge_active_tcp_connections,
+        admin_client: DynamicClient,
+        subtests: pytest.Subtests,
+        bridge_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine],
+        bridge_active_tcp_connections: list[tuple[VMTcpClient, TcpServer]],
     ):
         """
         Test that an active TCP connection over a secondary Linux bridge network
@@ -52,7 +62,7 @@ class TestConnectivity:
         """
         server_vm, _ = bridge_running_vms
         server_vm.set_template_affinity(affinity=new_node_affinity(key=RHCOS9_WORKER_LABEL, exists=False))
-        migrate_vm_and_verify(vm=server_vm)
+        migrate_vm_and_verify(vm=server_vm, client=admin_client)
         for client, server in bridge_active_tcp_connections:
             with subtests.test(msg=f"IPv{ipaddress.ip_address(client.server_ip).version} after migration to RHCOS 10"):
                 assert is_tcp_connection(server=server, client=client), (
@@ -62,9 +72,10 @@ class TestConnectivity:
     @pytest.mark.polarion("CNV-15964")
     def test_linux_bridge_connectivity_preserved_during_server_migration_to_rhcos9(
         self,
-        subtests,
-        bridge_running_vms,
-        bridge_active_tcp_connections,
+        admin_client: DynamicClient,
+        subtests: pytest.Subtests,
+        bridge_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine],
+        bridge_active_tcp_connections: list[tuple[VMTcpClient, TcpServer]],
     ):
         """
         Test that an active TCP connection over a secondary Linux bridge network
@@ -83,7 +94,7 @@ class TestConnectivity:
         """
         server_vm, _ = bridge_running_vms
         server_vm.set_template_affinity(affinity=new_node_affinity(key=RHCOS9_WORKER_LABEL, exists=True))
-        migrate_vm_and_verify(vm=server_vm)
+        migrate_vm_and_verify(vm=server_vm, client=admin_client)
         for client, server in bridge_active_tcp_connections:
             with subtests.test(
                 msg=f"IPv{ipaddress.ip_address(client.server_ip).version} after migration back to RHCOS 9"

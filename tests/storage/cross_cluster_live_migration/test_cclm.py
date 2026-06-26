@@ -4,6 +4,10 @@ Cross-cluster live migration tests.
 Jira epic: https://redhat.atlassian.net/browse/CNV-50823 # <skip-jira-utils-check>
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import pytest
 from pytest_testconfig import config as py_config
 
@@ -17,6 +21,11 @@ from tests.storage.cross_cluster_live_migration.utils import (
 )
 from tests.storage.utils import check_file_in_vm
 from utilities.constants import TIMEOUT_10MIN, TIMEOUT_50MIN
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from utilities.virt import VirtualMachineForTests
 
 TESTS_CLASS_NAME_SEVERAL_VMS = "TestCCLMSeveralVMs"
 TESTS_CLASS_NAME_WINDOWS_VM = "TestCCLMWindowsWithVTPM"
@@ -91,8 +100,10 @@ class TestCCLMSeveralVMs:
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME_SEVERAL_VMS}::test_migrate_vm_from_remote_to_local_cluster"])
     @pytest.mark.polarion("CNV-12038")
-    def test_compute_live_migrate_vms_after_cclm(self, local_vms_after_cclm_migration):
-        verify_compute_live_migration_after_cclm(local_vms=local_vms_after_cclm_migration)
+    def test_compute_live_migrate_vms_after_cclm(
+        self, admin_client: DynamicClient, local_vms_after_cclm_migration: list[VirtualMachineForTests]
+    ):
+        verify_compute_live_migration_after_cclm(client=admin_client, local_vms=local_vms_after_cclm_migration)
 
     @pytest.mark.polarion("CNV-14334")
     def test_source_vms_can_be_deleted(self, vms_for_cclm):
@@ -142,8 +153,10 @@ class TestCCLMWindowsWithVTPM:
         depends=[f"{TESTS_CLASS_NAME_WINDOWS_VM}::test_migrate_windows_vm_from_remote_to_local_cluster"]
     )
     @pytest.mark.polarion("CNV-12474")
-    def test_compute_live_migrate_windows_vms_after_cclm(self, local_vms_after_cclm_migration):
-        verify_compute_live_migration_after_cclm(local_vms=local_vms_after_cclm_migration)
+    def test_compute_live_migrate_windows_vms_after_cclm(
+        self, admin_client: DynamicClient, local_vms_after_cclm_migration: list[VirtualMachineForTests]
+    ):
+        verify_compute_live_migration_after_cclm(client=admin_client, local_vms=local_vms_after_cclm_migration)
 
     @pytest.mark.polarion("CNV-14336")
     def test_source_vms_can_be_deleted(self, vms_for_cclm):
@@ -220,8 +233,10 @@ class TestCCLMFromStorageAtoB:
         depends=[f"{TESTS_CLASS_NAME_STORAGE_A_TO_B}::test_migrate_vm_from_remote_to_local_cluster"]
     )
     @pytest.mark.polarion("CNV-15954")
-    def test_compute_live_migrate_vms_after_cclm(self, local_vms_after_cclm_migration):
-        verify_compute_live_migration_after_cclm(local_vms=local_vms_after_cclm_migration)
+    def test_compute_live_migrate_vms_after_cclm(
+        self, admin_client: DynamicClient, local_vms_after_cclm_migration: list[VirtualMachineForTests]
+    ):
+        verify_compute_live_migration_after_cclm(client=admin_client, local_vms=local_vms_after_cclm_migration)
 
     @pytest.mark.polarion("CNV-15959")
     def test_source_vms_can_be_deleted(self, vms_for_cclm):

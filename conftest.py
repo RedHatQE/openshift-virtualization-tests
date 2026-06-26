@@ -55,12 +55,14 @@ from utilities.pytest_utils import (
     config_default_storage_class,
     deploy_run_in_progress_config_map,
     deploy_run_in_progress_namespace,
+    filter_hpp_tests,
     get_artifactory_server_url,
     get_base_matrix_name,
     get_cnv_version_explorer_url,
     get_matrix_params,
     get_tests_cluster_markers,
     mark_nmstate_dependent_tests,
+    remove_tests_from_list,
     reorder_early_fixtures,
     run_in_progress_config_map,
     separator,
@@ -71,7 +73,12 @@ from utilities.pytest_utils import (
     validate_collected_tests_arch_params,
 )
 
-pytest_plugins = ["tests.fixtures.storage.validation_os_images"]
+pytest_plugins = []
+pytest_plugins = [
+    "tests.fixtures.network.l2_bridge",
+    "tests.fixtures.network.cluster",
+    "tests.fixtures.storage.validation_os_images",
+]
 
 LOGGER = logging.getLogger(__name__)
 BASIC_LOGGER = logging.getLogger("basic")
@@ -563,17 +570,6 @@ def filter_sno_only_tests(items: list[Item], config: Config) -> list[Item]:
     return items
 
 
-def remove_tests_from_list(items: list[Item], filter_str: str) -> tuple[list[Item], list[Item]]:
-    discard_tests: list[Item] = []
-    items_to_return: list[Item] = []
-    for item in items:
-        if filter_str in item.keywords:
-            discard_tests.append(item)
-        else:
-            items_to_return.append(item)
-    return discard_tests, items_to_return
-
-
 def pytest_configure(config):
     # test_deprecation_audit_logs should always run regardless the path that passed to pytest.
     deprecation_tests_dir_path = "tests/deprecated_api"
@@ -601,6 +597,7 @@ def pytest_collection_modifyitems(session, config, items):
     4. Adds the tier2 marker for tests without an exclusion marker.
     5. Filters upgrade tests based on the --upgrade option.
     6. Dynamically mark NMState-dependent tests.
+    7. Auto-adds the quarantined marker for xfail-quarantined tests.
 
     Args:
         session (pytest.Session): The pytest session object.
@@ -631,6 +628,14 @@ def pytest_collection_modifyitems(session, config, items):
         # Add tier2 marker for tests without an exclusion marker.
         add_tier2_marker(item=item)
 
+        # Auto-add quarantined marker for xfail tests with QUARANTINED reason
+        for marker in item.iter_markers(name="xfail"):
+            reason = marker.kwargs.get("reason", "")
+            run = marker.kwargs.get("run", True)
+            if QUARANTINED in reason and not run:
+                item.add_marker(marker="quarantined")
+                break
+
         # All tests are verified on amd64 platforms, adding `amd64` to all tests
         item.add_marker(marker=AMD_64)
     #  Collect only 'upgrade_custom' tests when running pytest with --upgrade_custom
@@ -640,6 +645,7 @@ def pytest_collection_modifyitems(session, config, items):
         config.hook.pytest_deselected(items=discard)
     items[:] = filter_deprecated_api_tests(items=items, config=config)
     items[:] = filter_sno_only_tests(items=items, config=config)
+    items[:] = filter_hpp_tests(items=items, config=config)
     items[:] = mark_nmstate_dependent_tests(items=items)
 
 

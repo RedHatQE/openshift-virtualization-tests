@@ -28,7 +28,7 @@ class ContinuousPing:
 
     Example:
         >>> with ContinuousPing(source_vm=client_vm, destination_ip=server_ip) as ping:
-        ...     migrate_vm_and_verify(vm=client_vm)
+        ...     migrate_vm_and_verify(vm=client_vm, client=admin_client)
         ...     ping.stop()
         ...     transmitted, received, lost = ping.report()
     """
