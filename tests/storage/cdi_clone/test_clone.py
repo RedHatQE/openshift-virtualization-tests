@@ -239,14 +239,10 @@ def test_successful_snapshot_clone(
         source_pvc=data_volume_snapshot_capable_storage_scope_function.name,
         storage_class=storage_class,
     ) as cdv:
-<<<<<<< HEAD
-        cdv.wait_for_dv_success()
-=======
         cdv.wait_for_dv_success(
             stop_status_func=dv_stop_status_restart_threshold,
             dv=cdv,
         )
->>>>>>> cfbe5ad7 (only return bool and only restart reason for now)
         if OS_FLAVOR_WINDOWS not in data_volume_snapshot_capable_storage_scope_function.url.split("/")[-1]:
             with create_vm_from_dv(
                 client=unprivileged_client,
