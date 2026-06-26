@@ -42,8 +42,8 @@ LOGGER = logging.getLogger(__name__)
     ],
 )
 def test_default_workload_update_strategy(admin_client, hco_namespace, resource_name, expected):
-    """Validates by default, hyperconverged's and kubevirt's spec.workloadUpdateStrategy is set to correct values"""
-    LOGGER.info("Ensure HCO is is in stable condition before checking for spec.workloadUpdateStrategy")
+    """Validates by default, hyperconverged's and kubevirt's spec.virtualization.workloadUpdateStrategy is set to correct values"""
+    LOGGER.info("Ensure HCO is is in stable condition before checking for spec.virtualization.workloadUpdateStrategy")
     LOGGER.info(f"Validating default values:{expected} for :{resource_name}")
     wait_for_hco_conditions(
         admin_client=admin_client,
@@ -53,7 +53,7 @@ def test_default_workload_update_strategy(admin_client, hco_namespace, resource_
         wait_for_spec_change(
             expected=expected,
             get_spec_func=lambda: get_hco_spec(admin_client=admin_client, hco_namespace=hco_namespace),
-            base_path=[WORKLOAD_UPDATE_STRATEGY_KEY_NAME],
+            base_path=["virtualization", WORKLOAD_UPDATE_STRATEGY_KEY_NAME],
         )
     elif resource_name == "kubevirt":
         wait_for_spec_change(

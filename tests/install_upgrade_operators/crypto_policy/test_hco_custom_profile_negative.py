@@ -29,7 +29,7 @@ def test_set_hco_crypto_failed_without_required_cipher(
         "ECDHE-ECDSA-AES256-GCM-SHA384",
         "ECDHE-RSA-AES256-GCM-SHA384",
     ]
-    tls_spec = {"spec": {TLS_SECURITY_PROFILE: tls_custom_profile}}
+    tls_spec = {"spec": {"security": {TLS_SECURITY_PROFILE: tls_custom_profile}}}
     with pytest.raises(ForbiddenError, match=r"missing an HTTP/2-required"):
         with ResourceEditorValidateHCOReconcile(
             patches={hyperconverged_resource_scope_function: tls_spec},
@@ -48,7 +48,11 @@ def test_set_ciphers_for_tlsv13(hyperconverged_resource_scope_function):
     tls_custom_profile[TLS_CUSTOM_POLICY]["minTLSVersion"] = "VersionTLS13"
     with pytest.raises(ForbiddenError, match=error_string):
         with ResourceEditorValidateHCOReconcile(
-            patches={hyperconverged_resource_scope_function: {"spec": {TLS_SECURITY_PROFILE: tls_custom_profile}}}
+            patches={
+                hyperconverged_resource_scope_function: {
+                    "spec": {"security": {TLS_SECURITY_PROFILE: tls_custom_profile}}
+                }
+            }
         ):
             LOGGER.error(
                 "Setting HCO with custom tlsSecurityProfile with TLS Version 1.3 "

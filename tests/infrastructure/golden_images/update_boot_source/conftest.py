@@ -74,7 +74,9 @@ def updated_hco_with_custom_data_import_cron_scope_function(request, hyperconver
     )
     with ResourceEditorValidateHCOReconcile(
         patches={
-            hyperconverged_resource_scope_function: {"spec": {"dataImportCronTemplates": [data_import_cron_dict]}}
+            hyperconverged_resource_scope_function: {
+                "spec": {"workloadSources": {"dataImportCronTemplates": [data_import_cron_dict]}}
+            }
         },
         list_resource_reconcile=[SSP, CDI],
     ):
@@ -163,7 +165,11 @@ def updated_data_import_cron(
     with ResourceEditor(
         patches={
             hyperconverged_resource_scope_function: {
-                "spec": {"dataImportCronTemplates": [updated_hco_with_custom_data_import_cron_scope_function]}
+                "spec": {
+                    "workloadSources": {
+                        "dataImportCronTemplates": [updated_hco_with_custom_data_import_cron_scope_function]
+                    }
+                }
             }
         }
     ):

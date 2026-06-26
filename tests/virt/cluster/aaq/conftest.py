@@ -69,7 +69,9 @@ def updated_aaq_allocation_method(hyperconverged_resource_scope_class, aaq_alloc
         patches={
             hyperconverged_resource_scope_class: {
                 "spec": {
-                    "applicationAwareConfig": {"vmiCalcConfigName": aaq_allocation_methods_matrix__class__},
+                    "deployment": {
+                        "applicationAwareConfig": {"vmiCalcConfigName": aaq_allocation_methods_matrix__class__}
+                    },
                 }
             }
         },
@@ -171,7 +173,7 @@ def enabled_acrq_support(admin_client, hco_namespace, hyperconverged_resource_sc
         patches={
             hyperconverged_resource_scope_module: {
                 "spec": {
-                    "applicationAwareConfig": {"allowApplicationAwareClusterResourceQuota": True},
+                    "deployment": {"applicationAwareConfig": {"allowApplicationAwareClusterResourceQuota": True}},
                 }
             }
         },

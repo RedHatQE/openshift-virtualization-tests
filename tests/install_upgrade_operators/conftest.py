@@ -15,7 +15,6 @@ from pytest_testconfig import py_config
 from tests.install_upgrade_operators.constants import (
     ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT,
     EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES,
-    FG_ENABLED,
     HCO_DEFAULT_FEATUREGATES,
     RESOURCE_NAME_STR,
     RESOURCE_NAMESPACE_STR,
@@ -285,10 +284,10 @@ def jira_76659_open():
 
 @pytest.fixture()
 def expected_value(request, is_s390x_cluster):
-    expected = request.param.copy()
-    if expected == EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES and is_s390x_cluster:
+    expected = request.param.copy() if isinstance(request.param, (dict, set)) else list(request.param)
+    if isinstance(expected, set) and expected == EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES and is_s390x_cluster:
         expected |= S390X_SPECIFIC_KUBEVIRT_FEATUREGATES
-    if expected == HCO_DEFAULT_FEATUREGATES:
+    if isinstance(expected, list) and expected == HCO_DEFAULT_FEATUREGATES:
         if py_config["cluster_type"] == MULTIARCH:
-            expected[ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT] = FG_ENABLED
+            expected = [{"name": ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT}]
     return expected

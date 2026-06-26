@@ -53,7 +53,7 @@ def enabled_feature_gate_for_declarative_hotplug_volumes(
 ):
     with ResourceEditorValidateHCOReconcile(
         patches={
-            hyperconverged_resource_scope_module: {"spec": {"featureGates": {"declarativeHotplugVolumes": True}}},
+            hyperconverged_resource_scope_module: {"spec": {"featureGates": [{"name": "declarativeHotplugVolumes"}]}},
         },
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,

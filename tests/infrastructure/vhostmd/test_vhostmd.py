@@ -51,7 +51,7 @@ def download_and_install_vm_dump_metrics(vm, rpm_file_name):
 @pytest.fixture(scope="module")
 def enabled_downward_metrics_hco_featuregate(hyperconverged_resource_scope_module):
     with ResourceEditorValidateHCOReconcile(
-        patches={hyperconverged_resource_scope_module: {"spec": {"featureGates": {"downwardMetrics": True}}}},
+        patches={hyperconverged_resource_scope_module: {"spec": {"featureGates": [{"name": "downwardMetrics"}]}}},
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,
     ):

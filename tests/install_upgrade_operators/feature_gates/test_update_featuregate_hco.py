@@ -5,12 +5,8 @@ from tests.install_upgrade_operators.constants import (
     DEVELOPER_CONFIGURATION,
     DISABLE_MDEV_CONFIGURATION,
     FEATUREGATES,
-    FG_ENABLED,
 )
-from utilities.constants import QUARANTINED, VALUE_STR
 from utilities.hco import ResourceEditorValidateHCOReconcile
-
-FEATUREGATE_NAME_KEY_STR = "featuregate_name"
 
 pytestmark = [pytest.mark.s390x, pytest.mark.skip_must_gather_collection]
 
@@ -28,20 +24,13 @@ def updated_fg_hco(
         yield
 
 
-@pytest.mark.xfail(
-    reason=f"{QUARANTINED}: HCO feature gate being replaced with different spec; Tracked in CNV-79304",
-    run=False,
-)
 @pytest.mark.parametrize(
-    ("updated_fg_hco", "kubevirt_featuregate_name", "hco_featuregate"),
+    ("updated_fg_hco", "kubevirt_featuregate_name", "expected_hco_featuregate"),
     [
         pytest.param(
-            {"featuregate": {DISABLE_MDEV_CONFIGURATION: FG_ENABLED}},
+            {"featuregate": [{"name": DISABLE_MDEV_CONFIGURATION}]},
             "DisableMDEVConfiguration",
-            {
-                FEATUREGATE_NAME_KEY_STR: DISABLE_MDEV_CONFIGURATION,
-                VALUE_STR: FG_ENABLED,
-            },
+            {"name": DISABLE_MDEV_CONFIGURATION},
             marks=pytest.mark.polarion("CNV-10091"),
             id="test_enable_fg_disable_mdev_config_hco",
         ),
@@ -53,15 +42,14 @@ def test_enable_fg_hco(
     hco_spec,
     kubevirt_resource,
     kubevirt_featuregate_name,
-    hco_featuregate,
+    expected_hco_featuregate,
 ):
-    actual_value = hco_spec[FEATUREGATES][hco_featuregate[FEATUREGATE_NAME_KEY_STR]]
-    expected_value = hco_featuregate[VALUE_STR]
-    assert actual_value == expected_value, (
-        f"Current HCO featuregate {VALUE_STR}: {actual_value}, expected: {expected_value}"
+    actual_featuregates = hco_spec.get(FEATUREGATES, [])
+    assert expected_hco_featuregate in actual_featuregates, (
+        f"Expected HCO featuregate {expected_hco_featuregate} not found in: {actual_featuregates}"
     )
 
     enabled_featuregates = kubevirt_resource.instance.spec["configuration"][DEVELOPER_CONFIGURATION][FEATUREGATES]
     assert kubevirt_featuregate_name in enabled_featuregates, (
-        f"Current Kubevirt featuregate {VALUE_STR}: {enabled_featuregates}, expected: {expected_value}"
+        f"KubeVirt featuregate {kubevirt_featuregate_name} not found in: {enabled_featuregates}"
     )

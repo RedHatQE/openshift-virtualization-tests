@@ -33,6 +33,6 @@ def test_enable_and_delete_spec_enable_common_boot_image_import_hco_cr(
     hyperconverged_resource_scope_function,
 ):
     wait_for_auto_boot_config_stabilization(admin_client=admin_client, hco_namespace=hco_namespace)
-    assert not hyperconverged_resource_scope_function.instance.spec[ENABLE_COMMON_BOOT_IMAGE_IMPORT], (
-        f"Spec {ENABLE_COMMON_BOOT_IMAGE_IMPORT} was not disabled in HCO."
-    )
+    assert not hyperconverged_resource_scope_function.instance.spec["workloadSources"][
+        ENABLE_COMMON_BOOT_IMAGE_IMPORT
+    ], f"Spec {ENABLE_COMMON_BOOT_IMAGE_IMPORT} was not disabled in HCO."

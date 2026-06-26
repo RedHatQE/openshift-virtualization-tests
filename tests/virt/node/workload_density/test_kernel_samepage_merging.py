@@ -100,7 +100,11 @@ def ksm_enabled_in_hco(hyperconverged_resource_scope_class):
     with ResourceEditorValidateHCOReconcile(
         patches={
             hyperconverged_resource_scope_class: {
-                "spec": {"ksmConfiguration": {"nodeLabelSelector": {"matchLabels": KERNEL_SAMEPAGE_MERGING_TEST_LABEL}}}
+                "spec": {
+                    "virtualization": {
+                        "ksmConfiguration": {"nodeLabelSelector": {"matchLabels": KERNEL_SAMEPAGE_MERGING_TEST_LABEL}}
+                    }
+                }
             }
         },
         list_resource_reconcile=[KubeVirt],

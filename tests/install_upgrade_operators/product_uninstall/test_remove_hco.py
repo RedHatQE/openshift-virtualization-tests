@@ -29,11 +29,17 @@ DV_PARAMS = {
 }
 
 
+def _get_uninstall_strategy(resource_obj):
+    if resource_obj.kind == HyperConverged.kind:
+        return resource_obj.instance.spec.deployment.uninstallStrategy
+    return resource_obj.instance.spec.uninstallStrategy
+
+
 def assert_expected_strategy(resource_objects, expected_strategy):
     incorrect_components = {
-        component: resource_obj.instance.spec.uninstallStrategy
+        component: _get_uninstall_strategy(resource_obj=resource_obj)
         for component, resource_obj in resource_objects.items()
-        if resource_obj.instance.spec.uninstallStrategy != expected_strategy
+        if _get_uninstall_strategy(resource_obj=resource_obj) != expected_strategy
     }
 
     assert not incorrect_components, (
@@ -133,7 +139,9 @@ def hco_uninstall_strategy_remove_workloads(
     hyperconverged_resource_scope_function,
 ):
     with ResourceEditorValidateHCOReconcile(
-        patches={hyperconverged_resource_scope_function: {"spec": {"uninstallStrategy": REMOVE_STRATEGY}}}
+        patches={
+            hyperconverged_resource_scope_function: {"spec": {"deployment": {"uninstallStrategy": REMOVE_STRATEGY}}}
+        }
     ):
         wait_for_hco_conditions(
             admin_client=admin_client,

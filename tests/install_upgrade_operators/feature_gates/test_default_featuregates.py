@@ -12,7 +12,7 @@ pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.s390x, pyte
 
 @pytest.fixture()
 def hco_featuregates(hco_spec):
-    return hco_spec[FEATUREGATES]
+    return hco_spec.get(FEATUREGATES, [])
 
 
 @pytest.mark.parametrize(
@@ -45,6 +45,6 @@ def test_default_featuregates_by_resource(
     featuregates_fixture,
 ):
     actual = request.getfixturevalue(featuregates_fixture)
-    if isinstance(actual, list):
+    if isinstance(expected_value, set) and isinstance(actual, list):
         actual = set(actual)
     assert expected_value == actual, f"Expected featuregates: {expected_value}, actual: {actual}"

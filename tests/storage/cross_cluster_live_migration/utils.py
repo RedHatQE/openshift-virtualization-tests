@@ -43,7 +43,7 @@ def configure_hco_live_migration_network(
         return
 
     LOGGER.info("Adding live migration network configuration to HCO spec patch")
-    spec_patch = {"liveMigrationConfig": {"network": network_for_live_migration.name}}
+    spec_patch = {"virtualization": {"liveMigrationConfig": {"network": network_for_live_migration.name}}}
 
     virt_handler_daemonset = get_daemonset_by_name(
         admin_client=client,

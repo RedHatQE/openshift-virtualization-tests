@@ -5,6 +5,7 @@ from ocp_resources.cdi import CDI
 from ocp_resources.kubevirt import KubeVirt
 
 from tests.install_upgrade_operators.strict_reconciliation.constants import (
+    HCO_VIRTUALIZATION_KEY,
     NP_INFRA_KEY,
     NP_INFRA_VALUE_CDI_CR,
     NP_INFRA_VALUE_HCO_CR,
@@ -12,8 +13,8 @@ from tests.install_upgrade_operators.strict_reconciliation.constants import (
     NP_WORKLOADS_KEY_HCO_CR,
     NP_WORKLOADS_VALUE_CDI_CR,
     NP_WORKLOADS_VALUE_HCO_CR,
-    OBSOLETE_CPUS_KEY,
-    OBSOLETE_CPUS_VALUE_HCO_CR,
+    OBSOLETE_CPU_MODELS_KEY,
+    OBSOLETE_CPU_MODELS_VALUE_HCO_CR,
     OBSOLETE_CPUS_VALUE_KUBEVIRT_CR,
     RESOURCE_REQUIREMENTS,
     SCRATCH_SPACE_STORAGE_CLASS_KEY,
@@ -37,7 +38,7 @@ LOGGER = logging.getLogger(__name__)
 
 def get_resource_current_value(resource_spec, field_to_validate):
     current_value = None
-    if field_to_validate == OBSOLETE_CPUS_KEY:
+    if field_to_validate == OBSOLETE_CPU_MODELS_KEY:
         current_value = resource_spec["configuration"]
     elif field_to_validate == RESOURCE_REQUIREMENTS_KEY_HCO_CR:
         current_value = resource_spec["config"]["podResourceRequirements"]
@@ -80,7 +81,9 @@ class TestHCONonDefaultFields:
                 {
                     "rpatch": {
                         "spec": {
-                            SCRATCH_SPACE_STORAGE_CLASS_KEY: SCRATCH_SPACE_STORAGE_CLASS_VALUE,
+                            "storage": {
+                                SCRATCH_SPACE_STORAGE_CLASS_KEY: SCRATCH_SPACE_STORAGE_CLASS_VALUE,
+                            },
                         }
                     },
                     "list_resource_reconcile": [CDI],
@@ -95,22 +98,24 @@ class TestHCONonDefaultFields:
                 {
                     "rpatch": {
                         "spec": {
-                            OBSOLETE_CPUS_KEY: OBSOLETE_CPUS_VALUE_HCO_CR,
+                            HCO_VIRTUALIZATION_KEY: {
+                                OBSOLETE_CPU_MODELS_KEY: OBSOLETE_CPU_MODELS_VALUE_HCO_CR,
+                            },
                         }
                     },
                     "list_resource_reconcile": [KubeVirt],
                 },
                 {"resource_class": KubeVirt, "resource_name": KUBEVIRT_HCO_NAME},
-                OBSOLETE_CPUS_KEY,
+                OBSOLETE_CPU_MODELS_KEY,
                 OBSOLETE_CPUS_VALUE_KUBEVIRT_CR,
                 marks=(pytest.mark.polarion("CNV-6544")),
-                id="set_non_default_field_obsoleteCPUs",
+                id="set_non_default_field_obsoleteCPUModels",
             ),
             pytest.param(
                 {
                     "rpatch": {
                         "spec": {
-                            STORAGE_IMPORT_KEY_HCO_CR: STORAGE_IMPORT_VALUE,
+                            "storage": {STORAGE_IMPORT_KEY_HCO_CR: STORAGE_IMPORT_VALUE},
                         }
                     },
                     "list_resource_reconcile": [CDI],
@@ -125,7 +130,7 @@ class TestHCONonDefaultFields:
                 {
                     "rpatch": {
                         "spec": {
-                            NP_INFRA_KEY: NP_INFRA_VALUE_HCO_CR,
+                            "deployment": {"nodePlacements": {NP_INFRA_KEY: NP_INFRA_VALUE_HCO_CR}},
                         }
                     },
                     "list_resource_reconcile": [CDI, KubeVirt],
@@ -141,7 +146,7 @@ class TestHCONonDefaultFields:
                 {
                     "rpatch": {
                         "spec": {
-                            NP_WORKLOADS_KEY_HCO_CR: NP_WORKLOADS_VALUE_HCO_CR,
+                            "deployment": {"nodePlacements": {"workload": NP_WORKLOADS_VALUE_HCO_CR}},
                         }
                     },
                     "list_resource_reconcile": [CDI, KubeVirt],
@@ -151,7 +156,7 @@ class TestHCONonDefaultFields:
                 NP_WORKLOADS_KEY_HCO_CR,
                 NP_WORKLOADS_VALUE_CDI_CR,
                 marks=(pytest.mark.polarion("CNV-6540")),
-                id="set_non_default_field_workloads",
+                id="set_non_default_field_workload",
             ),
         ],
         indirect=["deleted_stanza_on_hco_cr", "reconciled_cr_post_hco_update"],

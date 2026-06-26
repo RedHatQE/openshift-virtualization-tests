@@ -19,7 +19,7 @@ LOGGER = logging.getLogger(__name__)
 @pytest.mark.parametrize(
     "hyperconverged_with_node_placement",
     [
-        {"infra": NODE_PLACEMENT_INFRA, "workloads": NODE_PLACEMENT_WORKLOADS},
+        {"infra": NODE_PLACEMENT_INFRA, "workload": NODE_PLACEMENT_WORKLOADS},
     ],
     indirect=True,
 )
