@@ -851,17 +851,6 @@ def data_volume_scope_class(request, namespace):
     )
 
 
-@pytest.fixture(scope="module")
-def golden_image_data_volume_scope_module(request, admin_client, golden_images_namespace):
-    yield from data_volume(
-        request=request,
-        namespace=golden_images_namespace,
-        storage_class=request.param["storage_class"],
-        check_dv_exists=True,
-        client=admin_client,
-    )
-
-
 @pytest.fixture()
 def golden_image_data_volume_scope_function(request, admin_client, golden_images_namespace):
     yield from data_volume(

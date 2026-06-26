@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Generator
 
 import pytest
 from kubernetes.client.rest import ApiException
@@ -6,7 +7,6 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from pytest_testconfig import config as py_config
 
-from tests.os_params import RHEL_LATEST
 from utilities.constants import PVC, TIMEOUT_20MIN
 from utilities.storage import ErrorMsg, create_dv, get_dv_size_from_datasource
 
@@ -14,16 +14,41 @@ pytestmark = pytest.mark.post_upgrade
 
 
 LOGGER = logging.getLogger(__name__)
-LATEST_RHEL_IMAGE = RHEL_LATEST["image_path"]
-RHEL_IMAGE_SIZE = RHEL_LATEST["dv_size"]
 
 
-DV_PARAM = {
-    "dv_name": "golden-image-dv",
-    "image": LATEST_RHEL_IMAGE,
-    "dv_size": RHEL_IMAGE_SIZE,
-    "storage_class": py_config["default_storage_class"],
-}
+@pytest.fixture(scope="module")
+def golden_image_dv_from_fedora_datasource_scope_module(
+    admin_client,
+    golden_images_namespace,
+    storage_class_name_scope_module,
+    fedora_data_source_scope_module,
+) -> Generator[DataVolume]:
+    """Create a DataVolume from Fedora DataSource for golden image tests.
+
+    Args:
+        admin_client: DynamicClient with admin privileges.
+        golden_images_namespace: Namespace for golden images.
+        storage_class_name_scope_module: Storage class name for this module.
+        fedora_data_source_scope_module: Fedora DataSource to clone from.
+
+    Yields:
+        DataVolume: The created and ready-to-use DataVolume resource.
+    """
+    size = get_dv_size_from_datasource(data_source=fedora_data_source_scope_module)
+    with create_dv(
+        client=admin_client,
+        dv_name=f"golden-image-fedora-{storage_class_name_scope_module}",
+        namespace=golden_images_namespace.name,
+        size=size,
+        storage_class=storage_class_name_scope_module,
+        source_ref={
+            "kind": fedora_data_source_scope_module.kind,
+            "name": fedora_data_source_scope_module.name,
+            "namespace": fedora_data_source_scope_module.namespace,
+        },
+    ) as dv:
+        dv.wait_for_dv_success()
+        yield dv
 
 
 @pytest.fixture
@@ -81,18 +106,11 @@ def test_regular_user_cant_create_dv_in_ns(
 
 
 @pytest.mark.sno
-@pytest.mark.parametrize(
-    "golden_image_data_volume_scope_module",
-    [
-        pytest.param(DV_PARAM, marks=pytest.mark.polarion("CNV-4756")),
-    ],
-    indirect=True,
-)
 @pytest.mark.s390x
+@pytest.mark.polarion("CNV-4756")
 def test_regular_user_cant_delete_dv_from_cloned_dv(
-    golden_images_namespace,
     unprivileged_client,
-    golden_image_data_volume_scope_module,
+    golden_image_dv_from_fedora_datasource_scope_module,
 ):
     LOGGER.info("Try as a regular user, to delete a dv from golden image NS and receive the proper error")
     with pytest.raises(
@@ -100,53 +118,41 @@ def test_regular_user_cant_delete_dv_from_cloned_dv(
         match=ErrorMsg.CANNOT_DELETE_RESOURCE,
     ):
         DataVolume(
-            name=golden_image_data_volume_scope_module.name,
-            namespace=golden_image_data_volume_scope_module.namespace,
+            name=golden_image_dv_from_fedora_datasource_scope_module.name,
+            namespace=golden_image_dv_from_fedora_datasource_scope_module.namespace,
             client=unprivileged_client,
         ).delete()
 
 
 @pytest.mark.sno
-@pytest.mark.parametrize(
-    "golden_image_data_volume_scope_module",
-    [
-        pytest.param(DV_PARAM, marks=pytest.mark.polarion("CNV-4758")),
-    ],
-    indirect=True,
-)
 @pytest.mark.s390x
+@pytest.mark.polarion("CNV-4758")
 def test_regular_user_can_list_all_pvc_in_ns(
     golden_images_namespace,
     unprivileged_client,
-    golden_image_data_volume_scope_module,
+    golden_image_dv_from_fedora_datasource_scope_module,
 ):
     LOGGER.info("Make sure regular user have permissions to view PVC's in golden image NS")
     assert list(
         PersistentVolumeClaim.get(
             client=unprivileged_client,
             namespace=golden_images_namespace.name,
-            field_selector=f"metadata.name=={golden_image_data_volume_scope_module.name}",
+            field_selector=f"metadata.name=={golden_image_dv_from_fedora_datasource_scope_module.name}",
         )
     )
 
 
 @pytest.mark.sno
-@pytest.mark.parametrize(
-    "golden_image_data_volume_scope_module",
-    [
-        pytest.param(DV_PARAM, marks=pytest.mark.polarion("CNV-4760")),
-    ],
-    indirect=True,
-)
 @pytest.mark.s390x
+@pytest.mark.polarion("CNV-4760")
 def test_regular_user_cant_clone_dv_in_ns(
     unprivileged_client,
-    golden_image_data_volume_scope_module,
+    golden_image_dv_from_fedora_datasource_scope_module,
 ):
     LOGGER.info("Try to clone a DV in the golden image NS and fail with the proper message")
 
-    storage_class = golden_image_data_volume_scope_module.storage_class
-    golden_images_namespace = golden_image_data_volume_scope_module.namespace
+    storage_class = golden_image_dv_from_fedora_datasource_scope_module.storage_class
+    golden_images_namespace = golden_image_dv_from_fedora_datasource_scope_module.namespace
 
     with pytest.raises(
         ApiException,
@@ -156,8 +162,8 @@ def test_regular_user_cant_clone_dv_in_ns(
             dv_name=f"cnv-4760-{storage_class}",
             namespace=golden_images_namespace,
             source=PVC,
-            size=golden_image_data_volume_scope_module.size,
-            source_pvc=golden_image_data_volume_scope_module.pvc.name,
+            size=golden_image_dv_from_fedora_datasource_scope_module.size,
+            source_pvc=golden_image_dv_from_fedora_datasource_scope_module.pvc.name,
             source_namespace=golden_images_namespace,
             client=unprivileged_client,
             storage_class=storage_class,
