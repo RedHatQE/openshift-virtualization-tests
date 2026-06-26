@@ -51,6 +51,7 @@ from utilities.constants import (
     TIMEOUT_30SEC,
     TIMEOUT_40MIN,
     USED,
+    VIRT_CONTROLLER,
     VIRT_HANDLER,
     Images,
 )
@@ -813,3 +814,85 @@ def validate_values_from_kube_application_aware_resourcequota_metric(
             return metric_sample
 
     raise TimeoutError("Timed out waiting for Prometheus metrics to match expected values.")
+
+
+def validate_vmi_sync_total_reported(
+    prometheus: Prometheus,
+    metric_query: str,
+) -> None:
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_4MIN,
+        sleep=TIMEOUT_15SEC,
+        func=prometheus.query_sampler,
+        query=metric_query,
+    )
+    sample = None
+    try:
+        for sample in samples:
+            if not sample or len(sample) < 2:
+                continue
+            pods = {result["metric"]["pod"] for result in sample}
+            has_controller = any(pod.startswith(VIRT_CONTROLLER) for pod in pods)
+            has_handler = any(pod.startswith(VIRT_HANDLER) for pod in pods)
+            all_positive = all(float(result["value"][1]) > 0 for result in sample)
+            if has_controller and has_handler and all_positive:
+                return
+    except TimeoutExpiredError:
+        LOGGER.error(f"Expected entries from both virt-controller and virt-handler, got: {sample}")
+        raise
+
+
+def validate_vmi_sync_total_after_migration(
+    prometheus: Prometheus,
+    metric_query: str,
+    initial_values: dict[str, float],
+) -> None:
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_4MIN,
+        sleep=TIMEOUT_15SEC,
+        func=prometheus.query_sampler,
+        query=metric_query,
+    )
+    current_values = None
+    try:
+        for sample in samples:
+            if not sample:
+                continue
+            current_values = {result["metric"]["pod"]: float(result["value"][1]) for result in sample}
+            if not current_values:
+                continue
+            controller_same_and_increased = all(
+                pod in current_values and current_values[pod] > value
+                for pod, value in initial_values.items()
+                if pod.startswith(VIRT_CONTROLLER)
+            )
+            new_handler_with_value = any(
+                pod.startswith(VIRT_HANDLER) and pod not in initial_values and value > 0
+                for pod, value in current_values.items()
+            )
+            if controller_same_and_increased and new_handler_with_value:
+                return
+    except TimeoutExpiredError:
+        LOGGER.error(f"Post-migration validation failed. Initial: {initial_values}, current: {current_values}")
+        raise
+
+
+def validate_metric_value_cleared(
+    prometheus: Prometheus,
+    metric_name: str,
+    timeout: int = TIMEOUT_4MIN,
+) -> None:
+    samples = TimeoutSampler(
+        wait_timeout=timeout,
+        sleep=TIMEOUT_15SEC,
+        func=prometheus.query_sampler,
+        query=metric_name,
+    )
+    sample = None
+    try:
+        for sample in samples:
+            if not sample or all(result["value"][1] == "0" or result["value"][1] is None for result in sample):
+                return
+    except TimeoutExpiredError:
+        LOGGER.error(f"Metric {metric_name} still has non-zero values: {sample}")
+        raise
