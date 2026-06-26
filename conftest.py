@@ -71,6 +71,8 @@ from utilities.pytest_utils import (
     validate_collected_tests_arch_params,
 )
 
+pytest_plugins = ["tests.fixtures.storage.validation_os_images"]
+
 LOGGER = logging.getLogger(__name__)
 BASIC_LOGGER = logging.getLogger("basic")
 

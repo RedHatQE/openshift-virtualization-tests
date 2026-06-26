@@ -12,7 +12,7 @@ from ocp_resources.storage_profile import StorageProfile
 
 from tests.storage.utils import assert_disk_bus
 from tests.utils import create_windows2022_vm_from_template_with_vtpm
-from utilities.constants import HOTPLUG_DISK_SCSI_BUS, HOTPLUG_DISK_SERIAL, HOTPLUG_DISK_VIRTIO_BUS, Images
+from utilities.constants import HOTPLUG_DISK_SCSI_BUS, HOTPLUG_DISK_SERIAL, HOTPLUG_DISK_VIRTIO_BUS, WIN_2K22, Images
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.jira import is_jira_open
 from utilities.storage import (
@@ -77,18 +77,18 @@ def vm_instance_from_template_multi_storage_scope_class(
     unprivileged_client,
     namespace,
     modern_cpu_for_migration,
-    windows_data_source_scope_session,
+    windows_validation_os_images_data_source_scope_session,
     storage_class_matrix__class__,
 ):
-    """Creates a Windows 2022 VM with vTPM from registry container disk."""
+    """Creates a Windows 2022 VM with vTPM from the session-scoped Windows DataSource."""
     with create_windows2022_vm_from_template_with_vtpm(
         dv_template=data_volume_template_with_source_ref_dict(
-            windows_data_source_scope_session,
+            windows_validation_os_images_data_source_scope_session,
             storage_class=next(iter(storage_class_matrix__class__)),
         ),
         namespace=namespace.name,
         client=unprivileged_client,
-        vm_name="vm-win-2022-hotplug",
+        vm_name=f"vm-{WIN_2K22}-hotplug",
         cpu_model=modern_cpu_for_migration,
     ) as vm:
         yield vm

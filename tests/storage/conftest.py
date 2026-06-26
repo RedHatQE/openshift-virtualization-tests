@@ -12,14 +12,11 @@ import pytest
 import shortuuid
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.cdi import CDI
-from ocp_resources.cluster_role import ClusterRole
 from ocp_resources.config_map import ConfigMap
 from ocp_resources.csi_driver import CSIDriver
 from ocp_resources.data_source import DataSource
-from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.exceptions import ExecOnPodError
-from ocp_resources.role_binding import RoleBinding
 from ocp_resources.route import Route
 from ocp_resources.secret import Secret
 from ocp_resources.virtual_machine_cluster_instancetype import (
@@ -32,7 +29,6 @@ from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.storage.cdi_clone.constants import WINDOWS_CLONE_TIMEOUT
 from tests.storage.constants import (
     CIRROS_QCOW2_IMG,
     HPP_STORAGE_CLASSES,
@@ -48,10 +44,8 @@ from tests.storage.utils import (
 )
 from tests.utils import create_cirros_vm
 from utilities.artifactory import (
-    cleanup_artifactory_secret_and_config_map,
     get_artifactory_config_map,
     get_artifactory_secret,
-    get_test_artifact_server_url,
 )
 from utilities.constants import (
     CDI_OPERATOR,
@@ -65,7 +59,6 @@ from utilities.constants import (
     TIMEOUT_5SEC,
     TIMEOUT_30MIN,
     U1_SMALL,
-    WIN_2K22,
     Images,
 )
 from utilities.hco import (
@@ -75,15 +68,10 @@ from utilities.hco import (
 from utilities.infra import (
     INTERNAL_HTTP_SERVER_ADDRESS,
     ExecCommandOnPod,
-    create_ns,
 )
-from utilities.os_utils import get_windows_container_disk_path
 from utilities.storage import (
-    create_dummy_first_consumer_pod,
     data_volume_template_with_source_ref_dict,
-    generate_data_source_dict,
     get_downloaded_artifact,
-    sc_volume_binding_mode_is_wffc,
     write_file_via_ssh,
 )
 from utilities.virt import VirtualMachineForTests, running_vm
@@ -553,112 +541,3 @@ def unique_suffix():
 @pytest.fixture(scope="class")
 def dv_wait_timeout(request):
     return request.param.get("dv_wait_timeout") if hasattr(request, "param") else TIMEOUT_30MIN
-
-
-@pytest.fixture(scope="session")
-def windows_golden_image_exists_scope_session(golden_images_namespace, admin_client):
-    data_source = DataSource(
-        name=WIN_2K22,
-        namespace=golden_images_namespace.name,
-        client=admin_client,
-    )
-    if not data_source.exists:
-        return False
-
-    conditions = data_source.instance.get("status", {}).get("conditions", [])
-    return any(
-        condition.get("type") == data_source.Condition.READY
-        and condition.get("status") == data_source.Condition.Status.TRUE
-        for condition in conditions
-    )
-
-
-@pytest.fixture(scope="session")
-def windows_image_namespace(windows_golden_image_exists_scope_session, golden_images_namespace, admin_client):
-    if not windows_golden_image_exists_scope_session:
-        yield from create_ns(name="validation-os-images", admin_client=admin_client)
-    else:
-        yield golden_images_namespace
-
-
-@pytest.fixture(scope="session")
-def windows_image_namespace_clone_rbac(
-    admin_client, windows_image_namespace, windows_golden_image_exists_scope_session
-):
-    """Grants view permissions in the windows image namespace so unprivileged clients can clone from it."""
-    if not windows_golden_image_exists_scope_session:
-        with RoleBinding(
-            client=admin_client,
-            name="windows-image-view",
-            namespace=windows_image_namespace.name,
-            subjects_kind="Group",
-            subjects_name="system:authenticated",
-            role_ref_kind=ClusterRole.kind,
-            role_ref_name="view",
-        ) as role_binding:
-            yield role_binding
-    else:
-        yield
-
-
-@pytest.fixture(scope="session")
-def windows_registry_dv_scope_session(
-    admin_client,
-    windows_image_namespace,
-    windows_golden_image_exists_scope_session,
-):
-    """Fixture that imports a Windows 2022 DataVolume from registry into the windows image namespace if the golden image does not exist."""
-    if not windows_golden_image_exists_scope_session:
-        artifactory_secret = get_artifactory_secret(namespace=windows_image_namespace.name, client=admin_client)
-        artifactory_config_map = get_artifactory_config_map(namespace=windows_image_namespace.name, client=admin_client)
-        try:
-            with DataVolume(
-                name=WIN_2K22,
-                namespace=windows_image_namespace.name,
-                storage_class=py_config["default_storage_class"],
-                source="registry",
-                url=f"{get_test_artifact_server_url(schema='registry')}/{get_windows_container_disk_path(os_value=WIN_2K22)}",
-                size=Images.Windows.CONTAINER_DISK_DV_SIZE,
-                client=admin_client,
-                api_name="storage",
-                secret=artifactory_secret,
-                cert_configmap=artifactory_config_map.name,
-            ) as dv:
-                if sc_volume_binding_mode_is_wffc(sc=py_config["default_storage_class"], client=admin_client):
-                    create_dummy_first_consumer_pod(dv=dv)
-                dv.wait_for_dv_success(timeout=WINDOWS_CLONE_TIMEOUT)
-                yield dv
-        finally:
-            cleanup_artifactory_secret_and_config_map(
-                artifactory_secret=artifactory_secret,
-                artifactory_config_map=artifactory_config_map,
-            )
-    else:
-        yield
-
-
-@pytest.fixture(scope="session")
-def windows_data_source_scope_session(
-    admin_client,
-    golden_images_namespace,
-    windows_image_namespace,
-    windows_image_namespace_clone_rbac,
-    windows_registry_dv_scope_session,
-    windows_golden_image_exists_scope_session,
-):
-    """Fixture that provides a Windows DataSource, reusing existing golden image if available."""
-    if windows_golden_image_exists_scope_session:
-        yield DataSource(
-            namespace=golden_images_namespace.name,
-            name=WIN_2K22,
-            client=admin_client,
-            ensure_exists=True,
-        )
-    else:
-        with DataSource(
-            namespace=windows_image_namespace.name,
-            name=WIN_2K22,
-            client=admin_client,
-            source=generate_data_source_dict(dv=windows_registry_dv_scope_session),
-        ) as ds:
-            yield ds
