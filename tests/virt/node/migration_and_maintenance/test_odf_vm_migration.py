@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from tests.os_params import FEDORA_LATEST, FEDORA_LATEST_LABELS
-from utilities.constants import StorageClassNames
+from utilities.constants.storage import StorageClassNames
 from utilities.storage import data_volume_template_with_source_ref_dict
 from utilities.virt import migrate_vm_and_verify, vm_instance_from_template
 

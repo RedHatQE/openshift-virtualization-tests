@@ -10,7 +10,7 @@ from tests.utils import (
     get_numa_node_cpu_dict,
     get_vm_cpu_list,
 )
-from utilities.constants import SRIOV
+from utilities.constants.networking import SRIOV
 from utilities.infra import ExecCommandOnPod
 from utilities.network import sriov_network_dict
 from utilities.virt import VirtualMachineForTests, fedora_vm_body

@@ -13,7 +13,9 @@ from ocp_resources.virtual_machine_cluster_preference import (
 )
 
 from tests.os_params import WINDOWS_10
-from utilities.constants import OS_FLAVOR_WINDOWS, TIMEOUT_3MIN, VIRTIO_WIN
+from utilities.constants.components import VIRTIO_WIN
+from utilities.constants.images import OS_FLAVOR_WINDOWS
+from utilities.constants.timeouts import TIMEOUT_3MIN
 from utilities.virt import VirtualMachineForTests, migrate_vm_and_verify, running_vm
 
 if TYPE_CHECKING:

@@ -6,7 +6,7 @@ import pytest
 
 from tests.virt.node.gpu.utils import install_nvidia_drivers_on_windows_vm
 from tests.virt.utils import build_node_affinity_dict
-from utilities.constants import OS_FLAVOR_WINDOWS
+from utilities.constants.images import OS_FLAVOR_WINDOWS
 from utilities.virt import vm_instance_from_template
 
 

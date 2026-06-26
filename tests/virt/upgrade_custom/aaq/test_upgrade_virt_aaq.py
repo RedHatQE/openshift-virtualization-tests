@@ -10,7 +10,7 @@ from tests.upgrade_params import (
 )
 from tests.virt.upgrade_custom.aaq.constants import UPGRADE_QUOTA_FOR_ONE_VMI
 from tests.virt.utils import check_arq_status_values, check_pod_in_gated_state
-from utilities.constants import DEPENDENCY_SCOPE_SESSION
+from utilities.constants.pytest import DEPENDENCY_SCOPE_SESSION
 
 LOGGER = logging.getLogger(__name__)
 
