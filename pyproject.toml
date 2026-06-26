@@ -48,6 +48,9 @@ ignore = [
 "scripts/tests_analyzer/pytest_marker_analyzer.py" = ["N802"]
 # N802: logging.Formatter.formatTime override
 "utilities/logger.py" = ["N802"]
+# PLC0415: cluster_info lazily imports heavy k8s/OCP deps inside functions
+# to avoid import failures in unit-test environments without a cluster
+"scripts/reportportal/rp_manual_reporter/cluster_info.py" = ["PLC0415"]
 
 [tool.ruff.lint.isort]
 order-by-type = true
