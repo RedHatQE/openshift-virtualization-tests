@@ -690,10 +690,22 @@ def download_and_extract_file_from_cluster(tmpdir, url):
     LOGGER.info(f"Downloading archive using: url={url}")
     urllib3.disable_warnings()  # TODO: remove this when we fix the SSL warning
     local_file_name = os.path.join(tmpdir, url.split("/")[-1])
-    with requests.get(url, verify=False, stream=True) as created_request:
-        created_request.raise_for_status()
-        with open(local_file_name, "wb") as file_downloaded:
-            file_downloaded.writelines(created_request.iter_content(chunk_size=8192))
+
+    def _download_file() -> bool:
+        with requests.get(url=url, verify=False, stream=True) as response:
+            response.raise_for_status()
+            with open(local_file_name, "wb") as file_downloaded:
+                file_downloaded.writelines(response.iter_content(chunk_size=8192))
+        return True
+
+    for sample in TimeoutSampler(
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_10SEC,
+        func=_download_file,
+        exceptions_dict={requests.exceptions.SSLError: [], requests.exceptions.ConnectionError: []},
+    ):
+        if sample:
+            break
     LOGGER.info("Extract the downloaded archive.")
     if url.endswith(zip_file_extension):
         archive_file_object = zipfile.ZipFile(file=local_file_name)
