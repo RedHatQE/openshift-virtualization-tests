@@ -27,12 +27,10 @@ from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 
 from utilities.artifactory import (
-    cleanup_artifactory_secret_and_config_map,
     get_artifactory_config_map,
     get_artifactory_header,
     get_artifactory_secret,
     get_http_image_url,
-    get_test_artifact_server_url,
 )
 from utilities.constants import (
     DISK_SERIAL,
@@ -51,7 +49,6 @@ from utilities.constants import (
     TIMEOUT_15SEC,
     TIMEOUT_30MIN,
     U1_LARGE,
-    WIN_2K22,
     WINDOWS_2K22_PREFERENCE,
     Images,
 )
@@ -61,7 +58,6 @@ from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import (
     ExecCommandOnPod,
 )
-from utilities.os_utils import get_windows_container_disk_path
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
@@ -705,62 +701,18 @@ def verify_rwx_default_storage(client: DynamicClient) -> None:
 
 
 @contextmanager
-def create_windows2022_dv_from_registry(
-    dv_name: str,
-    namespace: str,
-    client: DynamicClient,
-    storage_class: str,
-) -> Generator[dict]:
-    """
-    Creates a Windows Server 2022 DataVolume from registry container disk.
-
-    Args:
-        dv_name: Name for the DataVolume
-        namespace: Kubernetes namespace
-        client: Kubernetes client
-        storage_class: Storage class name
-
-    Yields:
-        dict: DataVolume template dictionary with metadata and spec
-    """
-    artifactory_secret = get_artifactory_secret(namespace=namespace)
-    artifactory_config_map = get_artifactory_config_map(namespace=namespace)
-
-    dv = DataVolume(
-        name=dv_name,
-        namespace=namespace,
-        storage_class=storage_class,
-        source="registry",
-        url=f"{get_test_artifact_server_url(schema='registry')}/{get_windows_container_disk_path(os_value=WIN_2K22)}",
-        size=Images.Windows.CONTAINER_DISK_DV_SIZE,
-        client=client,
-        api_name="storage",
-        secret=artifactory_secret,
-        cert_configmap=artifactory_config_map.name,
-    )
-    dv.to_dict()
-
-    try:
-        yield {"metadata": dv.res["metadata"], "spec": dv.res["spec"]}
-    finally:
-        cleanup_artifactory_secret_and_config_map(
-            artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
-        )
-
-
-@contextmanager
-def create_windows2022_vm_with_vtpm_from_registry(
-    dv_dict: dict,
+def create_windows2022_vm_from_dv_with_vtpm(
     namespace: str,
     client: DynamicClient,
     vm_name: str,
     cpu_model: str | None,
+    dv: DataVolume | None = None,
 ) -> Generator[VirtualMachineForTests]:
     """
-    Creates a Windows Server 2022 VM with vTPM from registry container disk.
+    Creates a Windows Server 2022 VM with vTPM.
 
     Args:
-        dv_dict: DataVolume template dictionary with metadata and spec
+        dv_template: DataVolume template dictionary with metadata and spec
         namespace: Kubernetes namespace
         client: Kubernetes client
         vm_name: Name for the VirtualMachine
@@ -769,6 +721,7 @@ def create_windows2022_vm_with_vtpm_from_registry(
     Yields:
         VirtualMachineForTests: Running Windows 2022 VM with vTPM
     """
+
     with VirtualMachineForTests(
         name=vm_name,
         namespace=namespace,
@@ -776,7 +729,44 @@ def create_windows2022_vm_with_vtpm_from_registry(
         os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK,
         vm_instance_type=VirtualMachineClusterInstancetype(name=U1_LARGE, client=client),
         vm_preference=VirtualMachineClusterPreference(name=WINDOWS_2K22_PREFERENCE, client=client),
-        data_volume_template=dv_dict,
+        data_volume=dv,
+        cpu_model=cpu_model,
+    ) as vm:
+        running_vm(vm=vm)
+        wait_for_windows_vm(vm=vm, version="2022")
+        yield vm
+
+
+@contextmanager
+def create_windows2022_vm_from_template_with_vtpm(
+    namespace: str,
+    client: DynamicClient,
+    vm_name: str,
+    cpu_model: str | None,
+    dv_template: dict | None = None,
+) -> Generator[VirtualMachineForTests]:
+    """
+    Creates a Windows Server 2022 VM with vTPM from dv template.
+
+    Args:
+        dv_template: DataVolume template dictionary with metadata and spec
+        namespace: Kubernetes namespace
+        client: Kubernetes client
+        vm_name: Name for the VirtualMachine
+        cpu_model: CPU model specification (can be None)
+
+    Yields:
+        VirtualMachineForTests: Running Windows 2022 VM with vTPM
+    """
+
+    with VirtualMachineForTests(
+        name=vm_name,
+        namespace=namespace,
+        client=client,
+        os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK,
+        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_LARGE, client=client),
+        vm_preference=VirtualMachineClusterPreference(name=WINDOWS_2K22_PREFERENCE, client=client),
+        data_volume_template=dv_template,
         cpu_model=cpu_model,
     ) as vm:
         running_vm(vm=vm)

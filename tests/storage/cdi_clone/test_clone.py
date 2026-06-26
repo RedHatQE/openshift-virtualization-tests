@@ -5,19 +5,20 @@ Clone tests
 import pytest
 from ocp_resources.datavolume import DataVolume
 
-from tests.os_params import FEDORA_LATEST, WINDOWS_11, WINDOWS_11_TEMPLATE_LABELS
+from tests.os_params import FEDORA_LATEST
 from tests.storage.utils import (
     assert_pvc_snapshot_clone_annotation,
     assert_use_populator,
-    create_windows_vm_validate_guest_agent_info,
 )
+from tests.utils import create_windows2022_vm_from_dv_with_vtpm
 from utilities.constants import (
     OS_FLAVOR_FEDORA,
     OS_FLAVOR_WINDOWS,
     TIMEOUT_1MIN,
-    TIMEOUT_40MIN,
+    WIN_2K22,
     Images,
 )
+from utilities.ssp import validate_os_info_vmi_vs_windows_os
 from utilities.storage import (
     check_disk_count_in_vm,
     create_dv,
@@ -32,8 +33,6 @@ from utilities.virt import (
     restart_vm_wait_for_running_vm,
     running_vm,
 )
-
-WINDOWS_CLONE_TIMEOUT = TIMEOUT_40MIN
 
 
 def create_vm_from_clone_dv_template(
@@ -62,38 +61,6 @@ def create_vm_from_clone_dv_template(
         ),
     ) as vm:
         running_vm(vm=vm)
-
-
-@pytest.mark.tier3
-@pytest.mark.parametrize(
-    "data_volume_multi_storage_scope_function",
-    [
-        pytest.param(
-            {
-                "dv_name": "dv-source",
-                "image": f"{Images.Windows.DIR}/{Images.Windows.WIN11_IMG}",
-                "dv_size": Images.Windows.DEFAULT_DV_SIZE,
-            },
-            marks=(pytest.mark.polarion("CNV-1892")),
-        ),
-    ],
-    indirect=True,
-)
-@pytest.mark.s390x
-def test_successful_clone_of_large_image(
-    namespace,
-    data_volume_multi_storage_scope_function,
-):
-    with create_dv(
-        source="pvc",
-        dv_name="dv-target",
-        namespace=namespace.name,
-        size=data_volume_multi_storage_scope_function.size,
-        source_pvc=data_volume_multi_storage_scope_function.name,
-        storage_class=data_volume_multi_storage_scope_function.storage_class,
-        client=namespace.client,
-    ) as cdv:
-        cdv.wait_for_dv_success(timeout=WINDOWS_CLONE_TIMEOUT)
 
 
 @pytest.mark.sno
@@ -144,49 +111,64 @@ def test_successful_vm_restart_with_cloned_dv(
 
 
 @pytest.mark.tier3
-@pytest.mark.parametrize(
-    ("data_volume_multi_storage_scope_function", "vm_params"),
-    [
-        pytest.param(
-            {
-                "dv_name": "dv-source",
-                "source": "http",
-                "image": f"{Images.Windows.DIR}/{Images.Windows.WIN11_IMG}",
-                "dv_size": Images.Windows.DEFAULT_DV_SIZE,
-            },
-            {
-                "vm_name": f"vm-win-{WINDOWS_11.get('os_version')}",
-                "template_labels": WINDOWS_11_TEMPLATE_LABELS,
-                "os_version": WINDOWS_11.get("os_version"),
-                "ssh": True,
-            },
-            marks=pytest.mark.polarion("CNV-3638"),
-        ),
-    ],
-    indirect=["data_volume_multi_storage_scope_function"],
-)
-def test_successful_vm_from_cloned_dv_windows(
-    unprivileged_client,
-    data_volume_multi_storage_scope_function,
-    vm_params,
-    namespace,
-):
-    with create_dv(
-        client=unprivileged_client,
-        source="pvc",
-        dv_name="dv-target",
-        namespace=data_volume_multi_storage_scope_function.namespace,
-        size=data_volume_multi_storage_scope_function.size,
-        source_pvc=data_volume_multi_storage_scope_function.name,
-        storage_class=data_volume_multi_storage_scope_function.storage_class,
-    ) as cdv:
-        cdv.wait_for_dv_success(timeout=WINDOWS_CLONE_TIMEOUT)
-        create_windows_vm_validate_guest_agent_info(
-            dv=cdv,
-            namespace=namespace,
-            unprivileged_client=unprivileged_client,
-            vm_params=vm_params,
+@pytest.mark.incremental
+class TestWindowsClonedDv:
+    """
+    Tests for Windows 2022 DV cloning from registry and VM creation with vTPM.
+
+    Preconditions:
+        - Windows Server 2022 DataVolume imported from registry
+        - Cloned DataVolume created from the source DataVolume (PVC clone)
+    """
+
+    @pytest.mark.polarion("CNV-1892")
+    def test_clone_dv_windows(self, cloned_windows_dv_scope_class):
+        """
+        Test that a Windows 2022 DataVolume can be cloned from a registry source.
+
+        Preconditions:
+            - Cloned DataVolume created from the source DataVolume (PVC clone)
+
+        Steps:
+            1. Verify the cloned DataVolume status
+
+        Expected:
+            - Cloned DataVolume status is "Succeeded"
+        """
+        assert cloned_windows_dv_scope_class.status == DataVolume.Status.SUCCEEDED, (
+            f"Cloned DV status is {cloned_windows_dv_scope_class.status}, expected {DataVolume.Status.SUCCEEDED}"
         )
+
+    @pytest.mark.polarion("CNV-3638")
+    def test_vm_from_cloned_dv_windows(
+        self,
+        unprivileged_client,
+        namespace,
+        modern_cpu_for_migration,
+        cloned_windows_dv_scope_class,
+    ):
+        """
+        Test that a Windows 2022 VM with vTPM boots from a cloned DataVolume.
+
+        Preconditions:
+            - Cloned DataVolume created from the source DataVolume (PVC clone)
+
+        Steps:
+            1. Create a Windows 2022 VM with vTPM from the cloned DataVolume using instance type and preference
+            2. Wait for the VM to reach Running state
+            3. Wait for Windows OS to be ready inside the VM
+
+        Expected:
+            - VM OS info reported by VMI matches the expected Windows OS parameters
+        """
+        with create_windows2022_vm_from_dv_with_vtpm(
+            dv=cloned_windows_dv_scope_class,
+            namespace=namespace.name,
+            client=unprivileged_client,
+            vm_name=f"vm-{WIN_2K22}",
+            cpu_model=modern_cpu_for_migration,
+        ) as vm:
+            validate_os_info_vmi_vs_windows_os(vm=vm)
 
 
 @pytest.mark.parametrize(
@@ -203,7 +185,7 @@ def test_successful_vm_from_cloned_dv_windows(
         pytest.param(
             {
                 "dv_name": "dv-source-win",
-                "image": f"{Images.Windows.DIR}/{Images.Windows.WIN11_IMG}",
+                "image": f"{Images.Windows.DIR}/{Images.Windows.WIN2022_IMG}",
                 "dv_size": Images.Windows.DEFAULT_DV_SIZE,
             },
             marks=(pytest.mark.polarion("CNV-3552"), pytest.mark.tier3()),
