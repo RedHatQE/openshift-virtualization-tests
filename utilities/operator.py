@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from pprint import pformat
 
+from kubernetes.client.exceptions import ApiException
 from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.catalog_source import CatalogSource
@@ -31,6 +32,7 @@ from utilities.constants import (
     TIMEOUT_10SEC,
     TIMEOUT_15MIN,
     TIMEOUT_20MIN,
+    TIMEOUT_30SEC,
     TIMEOUT_75MIN,
 )
 from utilities.data_collector import collect_ocp_must_gather
@@ -559,10 +561,10 @@ def cluster_with_icsp():
     return len(icsp_list) > 0
 
 
-def get_cluster_operator_status_conditions(admin_client, operator_conditions=None):
+def get_cluster_operator_status_conditions(admin_client, operator_conditions=None, request_timeout=TIMEOUT_30SEC):
     operator_conditions = operator_conditions or DEFAULT_RESOURCE_CONDITIONS
     cluster_operator_status = {}
-    for cluster_operator in list(ClusterOperator.get(client=admin_client)):
+    for cluster_operator in list(ClusterOperator.get(client=admin_client, _request_timeout=request_timeout)):
         operator_name = cluster_operator.name
         cluster_operator_status[operator_name] = {}
         for condition in cluster_operator.instance.get("status", {}).get("conditions", []):
@@ -599,6 +601,7 @@ def wait_for_cluster_operator_stabilize(admin_client, wait_timeout=TIMEOUT_20MIN
         wait_timeout=wait_timeout,
         sleep=10,
         func=get_failed_cluster_operator,
+        exceptions_dict={ApiException: []},
         admin_client=admin_client,
     )
     consecutive_check = 0
