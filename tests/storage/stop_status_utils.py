@@ -25,7 +25,8 @@ def dv_stop_status_restart_threshold(dv: DataVolume, restart_count_threshold: in
             restart_count_threshold=4,
         )
     """
-    restart_count = getattr(dv.instance.status, "restartCount", 0) or 0
+    dv_status = getattr(dv.instance, "status", None)
+    restart_count = getattr(dv_status, "restartCount", 0) or 0
     if restart_count >= restart_count_threshold:
         LOGGER.error(f"DV {dv.name} has {restart_count} restarts, stopping")
         return True
