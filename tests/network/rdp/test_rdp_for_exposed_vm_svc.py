@@ -10,10 +10,8 @@ from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 
 from tests.os_params import WINDOWS_2019, WINDOWS_2019_OS
-from utilities.constants import (
-    OS_FLAVOR_WINDOWS,
-    TIMEOUT_5MIN,
-)
+from utilities.constants.images import OS_FLAVOR_WINDOWS
+from utilities.constants.timeouts import TIMEOUT_5MIN
 from utilities.virt import VirtualMachineForTests, vm_instance_from_template, wait_for_windows_vm
 
 LOGGER = logging.getLogger(__name__)

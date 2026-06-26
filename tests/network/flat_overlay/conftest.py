@@ -25,7 +25,8 @@ from tests.network.flat_overlay.utils import (
     is_port_number_available,
     start_nc_response_on_vm,
 )
-from utilities.constants import DEFAULT_RESOURCE_CONDITIONS, FLAT_OVERLAY_STR
+from utilities.constants.hco import DEFAULT_RESOURCE_CONDITIONS
+from utilities.constants.networking import FLAT_OVERLAY_STR
 from utilities.infra import create_ns, wait_for_consistent_resource_conditions
 from utilities.network import assert_ping_successful, network_nad
 from utilities.virt import migrate_vm_and_verify
