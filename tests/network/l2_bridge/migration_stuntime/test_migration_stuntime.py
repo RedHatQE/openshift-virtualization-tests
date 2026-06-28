@@ -19,7 +19,12 @@ STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob
 import pytest
 
 from libs.vm.affinity import new_pod_affinity, new_pod_anti_affinity
-from tests.network.libs.stuntime import CLIENT_VM_LABEL, SERVER_VM_LABEL, STUNTIME_THRESHOLD_SECONDS, measure_stuntime
+from tests.network.libs.stuntime import (
+    CLIENT_VM_LABEL,
+    SERVER_VM_LABEL,
+    STUNTIME_THRESHOLD_SECONDS,
+    measure_stuntime,
+)
 from utilities.virt import migrate_vm_and_verify
 
 pytestmark = [pytest.mark.tier3]
@@ -71,6 +76,7 @@ class TestMigrationStuntime:
             - Measured stuntime does not exceed the global threshold.
         """
         stuntime_client_vm.set_template_affinity(affinity=new_pod_anti_affinity(label=SERVER_VM_LABEL))
+
         migrate_vm_and_verify(vm=stuntime_client_vm, client=admin_client)
         measured_stuntime = measure_stuntime(active_ping=l2_bridge_active_ping)
         assert measured_stuntime <= STUNTIME_THRESHOLD_SECONDS, (
@@ -130,6 +136,7 @@ class TestMigrationStuntime:
             - Measured stuntime does not exceed the global threshold.
         """
         stuntime_client_vm.set_template_affinity(affinity=new_pod_affinity(label=SERVER_VM_LABEL))
+
         migrate_vm_and_verify(vm=stuntime_client_vm, client=admin_client)
         measured_stuntime = measure_stuntime(active_ping=l2_bridge_active_ping)
         assert measured_stuntime <= STUNTIME_THRESHOLD_SECONDS, (
@@ -160,6 +167,7 @@ class TestMigrationStuntime:
             - Measured stuntime does not exceed the global threshold.
         """
         stuntime_server_vm.set_template_affinity(affinity=new_pod_anti_affinity(label=CLIENT_VM_LABEL))
+
         migrate_vm_and_verify(vm=stuntime_server_vm, client=admin_client)
         measured_stuntime = measure_stuntime(active_ping=l2_bridge_active_ping)
         assert measured_stuntime <= STUNTIME_THRESHOLD_SECONDS, (
@@ -219,6 +227,7 @@ class TestMigrationStuntime:
             - Measured stuntime does not exceed the global threshold.
         """
         stuntime_server_vm.set_template_affinity(affinity=new_pod_affinity(label=CLIENT_VM_LABEL))
+
         migrate_vm_and_verify(vm=stuntime_server_vm, client=admin_client)
         measured_stuntime = measure_stuntime(active_ping=l2_bridge_active_ping)
         assert measured_stuntime <= STUNTIME_THRESHOLD_SECONDS, (

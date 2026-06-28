@@ -76,6 +76,7 @@ class TestMigrationStuntime:
             - Measured stuntime does not exceed the global threshold.
         """
         localnet_stuntime_client_vm.set_template_affinity(affinity=new_pod_anti_affinity(label=SERVER_VM_LABEL))
+
         migrate_vm_and_verify(vm=localnet_stuntime_client_vm, client=admin_client)
         measured_stuntime = measure_stuntime(active_ping=active_ping)
         assert measured_stuntime <= STUNTIME_THRESHOLD_SECONDS, (
@@ -133,6 +134,7 @@ class TestMigrationStuntime:
             - Measured stuntime does not exceed the global threshold.
         """
         localnet_stuntime_client_vm.set_template_affinity(affinity=new_pod_affinity(label=SERVER_VM_LABEL))
+
         migrate_vm_and_verify(vm=localnet_stuntime_client_vm, client=admin_client)
         measured_stuntime = measure_stuntime(active_ping=active_ping)
         assert measured_stuntime <= STUNTIME_THRESHOLD_SECONDS, (
@@ -161,6 +163,7 @@ class TestMigrationStuntime:
             - Measured stuntime does not exceed the global threshold.
         """
         localnet_stuntime_server_vm.set_template_affinity(affinity=new_pod_anti_affinity(label=CLIENT_VM_LABEL))
+
         migrate_vm_and_verify(vm=localnet_stuntime_server_vm, client=admin_client)
         measured_stuntime = measure_stuntime(active_ping=active_ping)
         assert measured_stuntime <= STUNTIME_THRESHOLD_SECONDS, (
@@ -218,6 +221,7 @@ class TestMigrationStuntime:
             - Measured stuntime does not exceed the global threshold.
         """
         localnet_stuntime_server_vm.set_template_affinity(affinity=new_pod_affinity(label=CLIENT_VM_LABEL))
+
         migrate_vm_and_verify(vm=localnet_stuntime_server_vm, client=admin_client)
         measured_stuntime = measure_stuntime(active_ping=active_ping)
         assert measured_stuntime <= STUNTIME_THRESHOLD_SECONDS, (
