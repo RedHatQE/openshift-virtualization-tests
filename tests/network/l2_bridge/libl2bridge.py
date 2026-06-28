@@ -207,8 +207,10 @@ def create_bridge_interface_for_hot_plug(
         yield br
 
 
-def set_secondary_static_ip_address(vm, ipv4_address, vmi_interface):
-    guest_vm_interface = get_guest_vm_interface_name_by_vmi_interface_name(
+def set_secondary_static_ip_address(
+    vm: VirtualMachineForTests, ipv4_address: str, vmi_interface: str, guest_device_name: str | None = None
+) -> None:
+    guest_vm_interface = guest_device_name or get_guest_vm_interface_name_by_vmi_interface_name(
         vm=vm,
         vm_interface_name=vmi_interface,
     )
@@ -242,6 +244,7 @@ def hot_plug_interface_and_set_address(
         vm=vm,
         ipv4_address=ipv4_address,
         vmi_interface=iface.name,
+        guest_device_name=iface.interfaceName,
     )
 
     return iface
