@@ -20,13 +20,15 @@ from tests.install_upgrade_operators.crypto_policy.constants import (
 from tests.install_upgrade_operators.crypto_policy.utils import (
     get_resources_crypto_policy_dict,
 )
-from utilities.constants import (
+from utilities.constants.hco import (
     DEFAULT_HCO_CONDITIONS,
-    TIMEOUT_5MIN,
-    TIMEOUT_10SEC,
     TLS_CUSTOM_POLICY,
     TLS_OLD_POLICY,
     TLS_SECURITY_PROFILE,
+)
+from utilities.constants.timeouts import (
+    TIMEOUT_5MIN,
+    TIMEOUT_10SEC,
 )
 from utilities.hco import (
     is_hco_tainted,

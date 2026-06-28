@@ -9,7 +9,9 @@ from ocp_resources.virtual_machine import VirtualMachine
 from pytest_testconfig import config as py_config
 
 from tests.install_upgrade_operators.product_uninstall.constants import BLOCK_REMOVAL_TEST_NODE_ID
-from utilities.constants import CDI_SECRETS, DEFAULT_HCO_CONDITIONS, TIMEOUT_10MIN
+from utilities.constants.hco import DEFAULT_HCO_CONDITIONS
+from utilities.constants.storage import CDI_SECRETS
+from utilities.constants.timeouts import TIMEOUT_10MIN
 from utilities.hco import (
     ResourceEditorValidateHCOReconcile,
     get_hco_version,

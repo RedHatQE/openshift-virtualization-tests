@@ -40,15 +40,15 @@ from tests.install_upgrade_operators.crypto_policy.utils import (
     get_services_pqc_status,
     update_apiserver_crypto_policy,
 )
-from utilities.constants import (
+from utilities.constants.components import (
     CDI_KUBEVIRT_HYPERCONVERGED,
     CLUSTER,
     KUBEVIRT_HCO_NAME,
     MIGCONTROLLER_KUBEVIRT_HYPERCONVERGED,
     SSP_KUBEVIRT_HYPERCONVERGED,
-    TIMEOUT_60MIN,
-    TLS_SECURITY_PROFILE,
 )
+from utilities.constants.hco import TLS_SECURITY_PROFILE
+from utilities.constants.timeouts import TIMEOUT_60MIN
 from utilities.exceptions import MissingResourceException
 from utilities.hco import enabled_aaq_in_hco, update_hco_annotations, wait_for_hco_conditions
 from utilities.infra import ExecCommandOnPod

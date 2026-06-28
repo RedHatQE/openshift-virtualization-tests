@@ -1,6 +1,9 @@
 import pytest
 
-from utilities.constants import ALL_CNV_DAEMONSETS, HOSTPATH_PROVISIONER_CSI
+from utilities.constants.components import (
+    ALL_CNV_DAEMONSETS,
+    HOSTPATH_PROVISIONER_CSI,
+)
 from utilities.infra import get_daemonsets
 
 pytestmark = [

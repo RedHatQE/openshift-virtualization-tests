@@ -2,7 +2,7 @@ import pytest
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 
-from utilities.constants import ES_NONE
+from utilities.constants.virt import ES_NONE
 from utilities.infra import create_ns, get_node_selector_dict
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 

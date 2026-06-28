@@ -1,6 +1,6 @@
 import pytest
 
-from utilities.constants import VIRT_OPERATOR
+from utilities.constants.components import VIRT_OPERATOR
 
 pytestmark = pytest.mark.sno
 

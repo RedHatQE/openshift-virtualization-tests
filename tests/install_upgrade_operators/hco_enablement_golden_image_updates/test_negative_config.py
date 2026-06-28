@@ -15,7 +15,7 @@ from tests.install_upgrade_operators.hco_enablement_golden_image_updates.utils i
     CUSTOM_CRON_TEMPLATE,
     get_template_dict_by_name,
 )
-from utilities.constants import (
+from utilities.constants.hco import (
     DATA_IMPORT_CRON_ENABLE,
     SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
 )

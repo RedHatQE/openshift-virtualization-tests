@@ -10,7 +10,7 @@ from tests.install_upgrade_operators.hco_enablement_golden_image_updates.utils i
     get_template_dict_by_name,
     get_templates_by_type_from_hco_status,
 )
-from utilities.constants import QUARANTINED
+from utilities.constants.pytest import QUARANTINED
 from utilities.hco import (
     update_hco_templates_spec,
     wait_for_auto_boot_config_stabilization,

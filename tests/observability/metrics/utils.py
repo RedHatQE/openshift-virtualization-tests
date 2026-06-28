@@ -34,11 +34,16 @@ from utilities.artifactory import (
     get_artifactory_secret,
     get_test_artifact_server_url,
 )
-from utilities.constants import (
+from utilities.constants import Images
+from utilities.constants.aaq import NODE_STR
+from utilities.constants.components import VIRT_HANDLER
+from utilities.constants.images import OS_FLAVOR_WINDOWS
+from utilities.constants.storage import (
     CAPACITY,
-    NODE_STR,
-    OS_FLAVOR_WINDOWS,
     REGISTRY_STR,
+    USED,
+)
+from utilities.constants.timeouts import (
     TIMEOUT_1MIN,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
@@ -50,9 +55,6 @@ from utilities.constants import (
     TIMEOUT_20SEC,
     TIMEOUT_30SEC,
     TIMEOUT_40MIN,
-    USED,
-    VIRT_HANDLER,
-    Images,
 )
 from utilities.monitoring import get_metrics_value
 from utilities.virt import VirtualMachineForTests, running_vm

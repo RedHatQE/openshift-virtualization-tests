@@ -4,7 +4,7 @@ import re
 import pytest
 from pyhelper_utils.shell import run_command
 
-from utilities.constants import AMD_64
+from utilities.constants.architecture import AMD_64
 from utilities.infra import get_machine_platform
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.gating, pytest.mark.s390x, pytest.mark.conformance]

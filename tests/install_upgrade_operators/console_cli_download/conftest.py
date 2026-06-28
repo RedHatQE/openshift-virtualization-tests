@@ -6,7 +6,7 @@ from ocp_resources.resource import ResourceEditor
 from ocp_resources.route import Route
 
 from tests.install_upgrade_operators.console_cli_download.utils import validate_custom_cli_downloads_urls_updated
-from utilities.constants import (
+from utilities.constants.components import (
     HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD,
     VIRTCTL_CLI_DOWNLOADS,
 )

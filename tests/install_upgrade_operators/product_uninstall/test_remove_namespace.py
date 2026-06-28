@@ -5,7 +5,7 @@ import pytest
 from kubernetes.client.rest import ApiException
 
 from tests.install_upgrade_operators.product_uninstall.constants import BLOCK_REMOVAL_TEST_NODE_ID
-from utilities.constants import TIMEOUT_10MIN
+from utilities.constants.timeouts import TIMEOUT_10MIN
 
 LOGGER = logging.getLogger(__name__)
 

@@ -6,13 +6,13 @@ import logging
 
 import pytest
 
-from utilities.constants import (
+from utilities.constants.components import (
     BRIDGE_MARKER,
     CLUSTER_NETWORK_ADDONS_OPERATOR,
     HOSTPATH_PROVISIONER,
     HOSTPATH_PROVISIONER_CSI,
-    LINUX_BRIDGE,
 )
+from utilities.constants.networking import LINUX_BRIDGE
 
 pytestmark = [
     pytest.mark.post_upgrade,

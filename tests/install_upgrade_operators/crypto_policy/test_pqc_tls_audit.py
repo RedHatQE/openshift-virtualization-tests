@@ -8,7 +8,7 @@ import logging
 
 import pytest
 
-from utilities.constants import HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD
+from utilities.constants.components import HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD
 
 LOGGER = logging.getLogger(__name__)
 pytestmark = pytest.mark.post_upgrade

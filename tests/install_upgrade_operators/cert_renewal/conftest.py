@@ -19,7 +19,10 @@ from tests.install_upgrade_operators.constants import (
     HCO_CR_CERT_CONFIG_KEY,
     HCO_CR_CERT_CONFIG_SERVER_KEY,
 )
-from utilities.constants import TIMEOUT_1MIN, TIMEOUT_11MIN
+from utilities.constants.timeouts import (
+    TIMEOUT_1MIN,
+    TIMEOUT_11MIN,
+)
 from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_conditions
 from utilities.jira import is_jira_open
 

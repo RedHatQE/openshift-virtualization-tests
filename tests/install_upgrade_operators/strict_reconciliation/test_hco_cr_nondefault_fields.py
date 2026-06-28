@@ -24,11 +24,11 @@ from tests.install_upgrade_operators.strict_reconciliation.constants import (
 from tests.install_upgrade_operators.strict_reconciliation.utils import (
     compare_expected_with_cr,
 )
-from utilities.constants import (
+from utilities.constants.components import (
     CDI_KUBEVIRT_HYPERCONVERGED,
     KUBEVIRT_HCO_NAME,
-    RESOURCE_REQUIREMENTS_KEY_HCO_CR,
 )
+from utilities.constants.hco import RESOURCE_REQUIREMENTS_KEY_HCO_CR
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.arm64, pytest.mark.s390x]
 

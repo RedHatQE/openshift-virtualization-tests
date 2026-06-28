@@ -5,7 +5,7 @@ from ocp_utilities.monitoring import Prometheus
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.observability.constants import SSP_COMMON_TEMPLATES_MODIFICATION_REVERTED
-from utilities.constants import (
+from utilities.constants.timeouts import (
     TIMEOUT_4MIN,
     TIMEOUT_15SEC,
 )

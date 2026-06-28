@@ -11,7 +11,7 @@ from tests.upgrade_params import (
     IUO_CNV_ALERT_ORDERING_NODE_ID,
     IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID,
 )
-from utilities.constants import DEPENDENCY_SCOPE_SESSION
+from utilities.constants.pytest import DEPENDENCY_SCOPE_SESSION
 
 LOGGER = logging.getLogger(__name__)
 

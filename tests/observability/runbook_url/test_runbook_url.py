@@ -2,7 +2,7 @@ import logging
 
 import pytest
 
-from utilities.constants import CNV_PROMETHEUS_RULES
+from utilities.constants.components import CNV_PROMETHEUS_RULES
 
 LOGGER = logging.getLogger(__name__)
 

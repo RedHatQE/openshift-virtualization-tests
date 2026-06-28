@@ -14,12 +14,12 @@ from tests.install_upgrade_operators.hco_enablement_golden_image_updates.utils i
     get_modifed_common_template_names,
     get_template_dict_by_name,
 )
-from utilities.constants import (
+from utilities.constants.hco import (
     DATA_IMPORT_CRON_ENABLE,
-    QUARANTINED,
     SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
-    WILDCARD_CRON_EXPRESSION,
 )
+from utilities.constants.pytest import QUARANTINED
+from utilities.constants.storage import WILDCARD_CRON_EXPRESSION
 from utilities.hco import ResourceEditorValidateHCOReconcile
 
 pytestmark = [pytest.mark.gating, pytest.mark.arm64, pytest.mark.s390x]

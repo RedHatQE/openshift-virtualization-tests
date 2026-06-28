@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from utilities.constants import SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME
+from utilities.constants.hco import SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME
 
 pytestmark = [pytest.mark.gating, pytest.mark.arm64, pytest.mark.s390x, pytest.mark.conformance]
 

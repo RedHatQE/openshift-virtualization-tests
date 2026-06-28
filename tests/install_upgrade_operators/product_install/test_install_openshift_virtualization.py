@@ -8,11 +8,11 @@ from tests.install_upgrade_operators.product_install.constants import (
 from tests.install_upgrade_operators.product_install.utils import (
     validate_hpp_installation,
 )
-from utilities.constants import (
+from utilities.constants.monitoring import (
     KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS,
     PENDING_STR,
-    TIMEOUT_10MIN,
 )
+from utilities.constants.timeouts import TIMEOUT_10MIN
 from utilities.hco import wait_for_hco_conditions
 from utilities.infra import wait_for_pods_running
 from utilities.monitoring import (

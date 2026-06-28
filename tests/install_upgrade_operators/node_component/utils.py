@@ -7,7 +7,11 @@ from ocp_resources.pod import Pod
 from ocp_resources.resource import ResourceEditor
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from utilities.constants import (
+from utilities.constants.cluster import (
+    NODE_ROLE_KUBERNETES_IO,
+    WORKER_NODE_LABEL_KEY,
+)
+from utilities.constants.components import (
     BRIDGE_MARKER,
     CDI_APISERVER,
     CDI_DEPLOYMENT,
@@ -17,27 +21,27 @@ from utilities.constants import (
     HCO_OPERATOR,
     HCO_WEBHOOK,
     HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD,
-    IMAGE_CRON_STR,
     KUBE_CNI_LINUX_BRIDGE_PLUGIN,
     KUBEMACPOOL_CERT_MANAGER,
     KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
     KUBEVIRT_APISERVER_PROXY,
     KUBEVIRT_CONSOLE_PLUGIN,
     KUBEVIRT_IPAM_CONTROLLER_MANAGER,
-    NODE_ROLE_KUBERNETES_IO,
     SSP_OPERATOR,
-    TIMEOUT_4MIN,
-    TIMEOUT_5MIN,
-    TIMEOUT_5SEC,
-    TIMEOUT_10MIN,
-    TIMEOUT_30SEC,
     VIRT_API,
     VIRT_CONTROLLER,
     VIRT_EXPORTPROXY,
     VIRT_HANDLER,
     VIRT_OPERATOR,
     VIRT_TEMPLATE_VALIDATOR,
-    WORKER_NODE_LABEL_KEY,
+)
+from utilities.constants.hco import IMAGE_CRON_STR
+from utilities.constants.timeouts import (
+    TIMEOUT_4MIN,
+    TIMEOUT_5MIN,
+    TIMEOUT_5SEC,
+    TIMEOUT_10MIN,
+    TIMEOUT_30SEC,
 )
 from utilities.hco import wait_for_hco_post_update_stable_state
 

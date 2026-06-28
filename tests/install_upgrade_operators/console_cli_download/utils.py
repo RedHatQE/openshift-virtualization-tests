@@ -3,7 +3,11 @@ import logging
 from kubernetes.dynamic import DynamicClient
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from utilities.constants import TIMEOUT_1MIN, TIMEOUT_5SEC, VIRTCTL_CLI_DOWNLOADS
+from utilities.constants.components import VIRTCTL_CLI_DOWNLOADS
+from utilities.constants.timeouts import (
+    TIMEOUT_1MIN,
+    TIMEOUT_5SEC,
+)
 from utilities.infra import get_console_spec_links
 
 LOGGER = logging.getLogger(__name__)

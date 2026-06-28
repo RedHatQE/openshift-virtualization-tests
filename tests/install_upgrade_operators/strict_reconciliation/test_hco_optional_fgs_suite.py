@@ -6,7 +6,7 @@ from tests.install_upgrade_operators.strict_reconciliation.utils import (
     validate_featuregates_not_in_cdi_cr,
     wait_for_fg_update,
 )
-from utilities.constants import FEATURE_GATES
+from utilities.constants.hco import FEATURE_GATES
 from utilities.hco import get_hco_spec, wait_for_hco_conditions
 from utilities.virt import (
     get_kubevirt_hyperconverged_spec,

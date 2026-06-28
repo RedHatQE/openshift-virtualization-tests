@@ -12,7 +12,7 @@ from tests.install_upgrade_operators.relationship_labels.constants import (
 from tests.install_upgrade_operators.relationship_labels.utils import (
     verify_component_labels_by_resource,
 )
-from utilities.constants import VERSION_LABEL_KEY
+from utilities.constants.cluster import VERSION_LABEL_KEY
 
 pytestmark = [
     pytest.mark.post_upgrade,

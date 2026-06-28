@@ -4,9 +4,11 @@ from ocp_resources.deployment import Deployment
 from ocp_utilities.operators import TIMEOUT_5MIN
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from utilities.constants import (
+from utilities.constants.components import (
     HOSTPATH_PROVISIONER,
     HOSTPATH_PROVISIONER_OPERATOR,
+)
+from utilities.constants.timeouts import (
     TIMEOUT_5SEC,
     TIMEOUT_15MIN,
 )

@@ -1,7 +1,11 @@
 import pytest
 from ocp_resources.resource import Resource
 
-from utilities.constants import VIRT_CONTROLLER, VIRT_HANDLER, VIRT_OPERATOR
+from utilities.constants.components import (
+    VIRT_CONTROLLER,
+    VIRT_HANDLER,
+    VIRT_OPERATOR,
+)
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
 

@@ -14,7 +14,7 @@ from tests.install_upgrade_operators.hco_enablement_golden_image_updates.utils i
     COMMON_TEMPLATE,
     get_templates_by_type_from_hco_status,
 )
-from utilities.constants import (
+from utilities.constants.timeouts import (
     TIMEOUT_3MIN,
     TIMEOUT_10MIN,
 )

@@ -13,7 +13,7 @@ from tests.install_upgrade_operators.crypto_policy.constants import (
     TLS_VERSION_1_3,
 )
 from tests.install_upgrade_operators.crypto_policy.utils import check_service_accepts_tls_version
-from utilities.constants import HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD
+from utilities.constants.components import HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD
 
 LOGGER = logging.getLogger(__name__)
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.tier3]
