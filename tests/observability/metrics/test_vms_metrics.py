@@ -32,15 +32,17 @@ from tests.observability.metrics.utils import (
     validate_vnic_info,
 )
 from tests.observability.utils import validate_metrics_value
-from utilities.constants import (
+from utilities.constants.pytest import QUARANTINED
+from utilities.constants.storage import (
     CAPACITY,
-    MIGRATION_POLICY_VM_LABEL,
-    QUARANTINED,
+    USED,
+)
+from utilities.constants.timeouts import (
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
     TIMEOUT_30SEC,
-    USED,
 )
+from utilities.constants.virt import MIGRATION_POLICY_VM_LABEL
 from utilities.infra import get_node_selector_dict
 from utilities.monitoring import get_metrics_value
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
@@ -555,7 +557,7 @@ class TestVmiSyncTotal:
     """
     Tests for kubevirt_vmi_sync_total metric.
 
-    Jira: https://redhat.atlassian.net/browse/CNV-80580 # <skip-jira-utils-check>
+    Jira: https://redhat.atlassian.net/browse/CNV-80580  # <skip-jira-utils-check>
 
     Preconditions:
         - Running VM
@@ -582,8 +584,9 @@ class TestVmiSyncTotal:
         )
 
     @pytest.mark.polarion("CNV-16272")
+    @pytest.mark.usefixtures("migration_succeeded_scope_class")
     def test_kubevirt_vmi_sync_total_increases_after_migration(
-        self, prometheus, initial_vmi_sync_total_values, vm_for_migration_metrics_test, migration_succeeded_scope_class
+        self, prometheus, initial_vmi_sync_total_values, vm_for_migration_metrics_test
     ):
         """
         Test that kubevirt_vmi_sync_total metric value increases after
@@ -609,9 +612,8 @@ class TestVmiSyncTotal:
         )
 
     @pytest.mark.polarion("CNV-16273")
-    def test_kubevirt_vmi_sync_total_cleared_after_vm_deletion(
-        self, prometheus, vm_for_migration_metrics_test, deleted_vmi_sync_total_vm
-    ):
+    @pytest.mark.usefixtures("deleted_vmi_sync_total_vm")
+    def test_kubevirt_vmi_sync_total_cleared_after_vm_deletion(self, prometheus, vm_for_migration_metrics_test):
         """
         Test that kubevirt_vmi_sync_total metric entry is removed
         after the VM is deleted.

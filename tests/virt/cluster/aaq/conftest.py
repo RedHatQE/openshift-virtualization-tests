@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 
 import pytest
 from ocp_resources.application_aware_cluster_resource_quota import ApplicationAwareClusterResourceQuota
@@ -40,6 +43,9 @@ from utilities.virt import (
     restart_vm_wait_for_running_vm,
     running_vm,
 )
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
 
 LOGGER = logging.getLogger(__name__)
 
@@ -153,8 +159,9 @@ def updated_arq_quota(request, namespace, application_aware_resource_quota):
 
 
 @pytest.fixture()
-def migrated_arq_vm(vm_for_aaq_test):
-    migrate_vm_and_verify(vm=vm_for_aaq_test)
+def migrated_arq_vm(admin_client: DynamicClient, vm_for_aaq_test: VirtualMachineForTests) -> VirtualMachineForTests:
+    migrate_vm_and_verify(vm=vm_for_aaq_test, client=admin_client)
+    return vm_for_aaq_test
 
 
 # ACRQ - ApplicationAwareClusterResourceQuota, cluster level object containing quotas for multiple resources

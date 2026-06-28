@@ -14,14 +14,16 @@ jobs:
       contents: read
       pull-requests: write
 
-    # safe to use pull_request_target because we only run this for trusted collaborators
-    if: contains(fromJson('["OWNER","MEMBER","COLLABORATOR","CONTRIBUTOR"]'), github.event.pull_request.author_association)
+    # Org members run automatically; outside contributors need maintainer approval
+    environment: ${{ (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name != github.repository && !contains(fromJSON('["COLLABORATOR","MEMBER","OWNER"]'), github.event.pull_request.author_association)) && 'external-pr-tests' || '' }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
+          allow-unsafe-pr-checkout: true
+          persist-credentials: false
 
       - name: Set up QEMU for multi-arch builds
         uses: docker/setup-qemu-action@v4

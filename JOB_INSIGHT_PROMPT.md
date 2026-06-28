@@ -212,7 +212,12 @@ Pattern guidance:
 - **Live migration failure:** Wrong migration policy, anti-affinity, or insufficient
   target node resources in test setup is `CODE ISSUE`; valid configuration plus
   `virt-controller` or `virt-handler` failure is `PRODUCT BUG`; node drain or
-  network partition is `INFRASTRUCTURE`
+  network partition is `INFRASTRUCTURE`. **CRITICAL: Do NOT infer migration cause
+  from migration object name alone.** Migration names like `kubevirt-workload-update-*`
+  do NOT prove the workload-update-controller triggered the migration. Read the test
+  source code and correlate migration timing with test operations (hot-plug, live
+  migration API calls, etc.). A migration immediately following a hot-plug action
+  (NIC or disk) is likely caused by the hot-plug, not by workload updates.
 - **SSH connectivity failure:** Read the test code to determine how SSH is used.
   Wrong credentials, missing `virtctl` binary, no retry logic, or missing
   `wait_for_ssh_connectivity()` before running commands is `CODE ISSUE`.
@@ -239,6 +244,19 @@ Pattern guidance:
   cleanup blocked by infrastructure is `INFRASTRUCTURE`
 - **Console access failure:** Wrong `pexpect` patterns or timeouts in test is
   `CODE ISSUE`; `virtctl console` unable to connect to a healthy VMI is `PRODUCT BUG`
+- **Timeout mismatch with product code:** When a test uses `TimeoutSampler` or
+  `wait_for_status` to wait for a product-initiated operation (e.g., pod creation by
+  `virtctl`, DataVolume import by CDI), compare the test's timeout against the
+  product's own internal timeout for the SAME operation. If the product allows a
+  significantly longer wait (e.g., product waits 500s but test waits 60s), the test
+  timeout is too aggressive — classify as `CODE ISSUE`, not `PRODUCT BUG`. The product
+  defines what is a reasonable wait time for its own operations. To verify: read the
+  product source code for the operation being tested and find its timeout constant.
+  Example: `virtctl guestfs` internally waits 500s for the libguestfs pod to reach
+  Running (`pkg/virtctl/guestfs/guestfs.go`), but a test that only waits 60s
+  (`TIMEOUT_1MIN`) for the same pod is a test timeout issue — the pod may need time
+  for image pull, scheduling, or volume attach, all within the product's expected
+  tolerance.
 
 ### Jira Search Keyword Guidance
 

@@ -14,17 +14,21 @@ from timeout_sampler import TimeoutSampler
 from tests.install_upgrade_operators.product_install.constants import (
     HCO_NOT_INSTALLED_ALERT,
 )
-from utilities.constants import (
-    CRITICAL_STR,
-    HCO_CATALOG_SOURCE,
+from utilities.constants.components import HCO_CATALOG_SOURCE
+from utilities.constants.hco import (
     HCO_SUBSCRIPTION,
+    PRODUCTION_CATALOG_SOURCE,
+)
+from utilities.constants.monitoring import (
+    CRITICAL_STR,
     INFO_STR,
     PENDING_STR,
-    PRODUCTION_CATALOG_SOURCE,
+)
+from utilities.constants.storage import StorageClassNames
+from utilities.constants.timeouts import (
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
-    StorageClassNames,
 )
 from utilities.infra import (
     create_ns,

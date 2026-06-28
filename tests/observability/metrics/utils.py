@@ -34,11 +34,19 @@ from utilities.artifactory import (
     get_artifactory_secret,
     get_test_artifact_server_url,
 )
-from utilities.constants import (
+from utilities.constants import Images
+from utilities.constants.aaq import NODE_STR
+from utilities.constants.components import (
+    VIRT_CONTROLLER,
+    VIRT_HANDLER,
+)
+from utilities.constants.images import OS_FLAVOR_WINDOWS
+from utilities.constants.storage import (
     CAPACITY,
-    NODE_STR,
-    OS_FLAVOR_WINDOWS,
     REGISTRY_STR,
+    USED,
+)
+from utilities.constants.timeouts import (
     TIMEOUT_1MIN,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
@@ -50,10 +58,6 @@ from utilities.constants import (
     TIMEOUT_20SEC,
     TIMEOUT_30SEC,
     TIMEOUT_40MIN,
-    USED,
-    VIRT_CONTROLLER,
-    VIRT_HANDLER,
-    Images,
 )
 from utilities.monitoring import get_metrics_value
 from utilities.virt import VirtualMachineForTests, running_vm
@@ -819,7 +823,19 @@ def validate_values_from_kube_application_aware_resourcequota_metric(
 def validate_vmi_sync_total_reported_and_positive(
     prometheus: Prometheus,
     metric_query: str,
-) -> None:
+) -> list[dict[str, str]]:
+    """Polls until kubevirt_vmi_sync_total has positive values from both virt-controller and virt-handler.
+
+    Args:
+        prometheus: Prometheus client instance.
+        metric_query: PromQL query for kubevirt_vmi_sync_total.
+
+    Returns:
+        List of Prometheus result dicts from the first passing sample.
+
+    Raises:
+        TimeoutExpiredError: If the metric does not stabilize within TIMEOUT_4MIN.
+    """
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_4MIN,
         sleep=TIMEOUT_15SEC,
@@ -836,10 +852,11 @@ def validate_vmi_sync_total_reported_and_positive(
             has_handler = any(pod.startswith(VIRT_HANDLER) for pod in pods)
             all_positive = all(float(result["value"][1]) > 0 for result in sample)
             if has_controller and has_handler and all_positive:
-                return
+                return sample
     except TimeoutExpiredError:
         LOGGER.error(f"Expected entries from both virt-controller and virt-handler, got: {sample}")
         raise
+    return []
 
 
 def validate_vmi_sync_total_after_migration(
@@ -847,6 +864,16 @@ def validate_vmi_sync_total_after_migration(
     metric_query: str,
     initial_values: dict[str, float],
 ) -> None:
+    """Polls until virt-controller values increase and a new virt-handler pod reports a positive value.
+
+    Args:
+        prometheus: Prometheus client instance.
+        metric_query: PromQL query for kubevirt_vmi_sync_total.
+        initial_values: Pod-to-value mapping captured before migration.
+
+    Raises:
+        TimeoutExpiredError: If the expected post-migration pattern is not observed within TIMEOUT_4MIN.
+    """
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_4MIN,
         sleep=TIMEOUT_15SEC,
@@ -879,6 +906,16 @@ def validate_metric_value_cleared(
     metric_name: str,
     timeout: int = TIMEOUT_4MIN,
 ) -> None:
+    """Polls until the metric returns no samples or all values are zero.
+
+    Args:
+        prometheus: Prometheus client instance.
+        metric_name: PromQL query for the metric to check.
+        timeout: Maximum wait time in seconds.
+
+    Raises:
+        TimeoutExpiredError: If the metric still has non-zero values after timeout.
+    """
     samples = TimeoutSampler(
         wait_timeout=timeout,
         sleep=TIMEOUT_15SEC,

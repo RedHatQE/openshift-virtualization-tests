@@ -385,6 +385,27 @@ def exit_pytest_execution(
     pytest.exit(reason=log_message, returncode=return_code)
 
 
+def remove_tests_from_list(items: list[pytest.Item], filter_str: str) -> tuple[list[pytest.Item], list[pytest.Item]]:
+    discard_tests: list[pytest.Item] = []
+    items_to_return: list[pytest.Item] = []
+    for item in items:
+        if filter_str in item.keywords:
+            discard_tests.append(item)
+        else:
+            items_to_return.append(item)
+    return discard_tests, items_to_return
+
+
+def filter_hpp_tests(items: list[pytest.Item], config: pytest.Config) -> list[pytest.Item]:
+    marker_expression = config.getoption("-m")
+    if not marker_expression or "hpp" not in marker_expression:
+        discard_tests, items_to_return = remove_tests_from_list(items=items, filter_str="hpp")
+        config.hook.pytest_deselected(items=discard_tests)
+        return items_to_return
+
+    return items
+
+
 def mark_nmstate_dependent_tests(items: list[pytest.Item]) -> list[pytest.Item]:
     """
     Dynamically mark tests that depend on NMState with the 'nmstate' marker.
@@ -508,14 +529,16 @@ def generate_instance_type_matrix_dicts(os_dict: dict[str, Any], cpu_arch: str |
             "instance_type_rhel_os_list").
         cpu_arch: Optional architecture suffix.
     """
-    add_arch_suffix = cpu_arch != AMD_64
+    add_preference_arch_suffix = cpu_arch != AMD_64
+    add_data_source_arch_suffix = py_config["cluster_type"] == MULTIARCH
 
     if instance_type_rhel_os_list := os_dict.get("instance_type_rhel_os_list"):
         py_config["instance_type_rhel_os_matrix"] = generate_linux_instance_type_os_matrix(
             os_name="rhel",
             preferences=instance_type_rhel_os_list,
             arch_suffix=cpu_arch,
-            add_arch_suffix=add_arch_suffix,
+            add_preference_arch_suffix=add_preference_arch_suffix,
+            add_data_source_arch_suffix=add_data_source_arch_suffix,
         )
         py_config["latest_instance_type_rhel_os_dict"] = generate_latest_os_dict(
             os_matrix=py_config["instance_type_rhel_os_matrix"]
@@ -525,14 +548,16 @@ def generate_instance_type_matrix_dicts(os_dict: dict[str, Any], cpu_arch: str |
             os_name="fedora",
             preferences=instance_type_fedora_os_list,
             arch_suffix=cpu_arch,
-            add_arch_suffix=add_arch_suffix,
+            add_preference_arch_suffix=add_preference_arch_suffix,
+            add_data_source_arch_suffix=add_data_source_arch_suffix,
         )
     if instance_type_centos_os_list := os_dict.get("instance_type_centos_os_list"):
         py_config["instance_type_centos_os_matrix"] = generate_linux_instance_type_os_matrix(
             os_name="centos.stream",
             preferences=instance_type_centos_os_list,
             arch_suffix=cpu_arch,
-            add_arch_suffix=False,
+            add_preference_arch_suffix=False,
+            add_data_source_arch_suffix=add_data_source_arch_suffix,
         )
 
 

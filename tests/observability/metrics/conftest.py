@@ -41,31 +41,37 @@ from tests.observability.metrics.utils import (
 from tests.observability.utils import validate_metrics_value
 from tests.utils import create_vms, start_stress_on_vm
 from utilities import console
-from utilities.constants import (
-    IPV4_STR,
+from utilities.constants import Images
+from utilities.constants.components import (
+    SSP_OPERATOR,
+    VIRT_TEMPLATE_VALIDATOR,
+)
+from utilities.constants.images import OS_FLAVOR_FEDORA
+from utilities.constants.instance_types import U1_SMALL
+from utilities.constants.monitoring import (
     KUBEVIRT_VMI_MEMORY_PGMAJFAULT_TOTAL,
     KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL,
     KUBEVIRT_VMI_MEMORY_SWAP_IN_TRAFFIC_BYTES,
     KUBEVIRT_VMI_MEMORY_SWAP_OUT_TRAFFIC_BYTES,
     KUBEVIRT_VMI_MEMORY_UNUSED_BYTES,
     KUBEVIRT_VMI_MEMORY_USABLE_BYTES,
-    MIGRATION_POLICY_VM_LABEL,
-    ONE_CPU_CORE,
-    ONE_CPU_THREAD,
-    OS_FLAVOR_FEDORA,
-    SSP_OPERATOR,
-    STRESS_CPU_MEM_IO_COMMAND,
+)
+from utilities.constants.networking import IPV4_STR
+from utilities.constants.timeouts import (
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
     TIMEOUT_4MIN,
     TIMEOUT_5MIN,
     TIMEOUT_15SEC,
+)
+from utilities.constants.virt import (
+    MIGRATION_POLICY_VM_LABEL,
+    ONE_CPU_CORE,
+    ONE_CPU_THREAD,
+    STRESS_CPU_MEM_IO_COMMAND,
     TWO_CPU_CORES,
     TWO_CPU_SOCKETS,
     TWO_CPU_THREADS,
-    U1_MEDIUM_STR,
-    VIRT_TEMPLATE_VALIDATOR,
-    Images,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile, enabled_aaq_in_hco
 from utilities.infra import (
@@ -580,7 +586,7 @@ def fedora_vm_with_stress_ng(namespace, unprivileged_client, golden_images_names
         client=unprivileged_client,
         name="fedora-vm-test-with-stress-ng",
         namespace=namespace.name,
-        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_MEDIUM_STR),
+        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL),
         vm_preference=VirtualMachineClusterPreference(name=OS_FLAVOR_FEDORA),
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=DataSource(
@@ -668,8 +674,7 @@ def expected_cpu_affinity_metric_value(admin_client, vm_with_cpu_spec):
 @pytest.fixture(scope="class")
 def initial_vmi_sync_total_values(prometheus, vm_for_migration_metrics_test):
     metric_query = KUBEVIRT_VMI_SYNC_TOTAL.format(vm_name=vm_for_migration_metrics_test.name)
-    validate_vmi_sync_total_reported_and_positive(prometheus=prometheus, metric_query=metric_query)
-    results = prometheus.query_sampler(query=metric_query)
+    results = validate_vmi_sync_total_reported_and_positive(prometheus=prometheus, metric_query=metric_query)
     return {result["metric"]["pod"]: float(result["value"][1]) for result in results}
 
 
