@@ -189,7 +189,6 @@ class TestMigrationStuntime:
         Expected:
             - Measured stuntime does not exceed the global threshold.
         """
-        stuntime_server_vm.set_template_affinity(affinity=new_pod_anti_affinity(label=CLIENT_VM_LABEL))
         migrate_vm_and_verify(vm=stuntime_server_vm, client=admin_client)
         measured_stuntime = measure_stuntime(active_ping=l2_bridge_active_ping)
         assert measured_stuntime <= STUNTIME_THRESHOLD_SECONDS, (
