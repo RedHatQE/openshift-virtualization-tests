@@ -73,6 +73,11 @@ from utilities.pytest_utils import (
     validate_collected_tests_arch_params,
 )
 
+pytest_plugins = [
+    "tests.fixtures.network.l2_bridge",
+    "tests.fixtures.network.cluster",
+]
+
 LOGGER = logging.getLogger(__name__)
 BASIC_LOGGER = logging.getLogger("basic")
 

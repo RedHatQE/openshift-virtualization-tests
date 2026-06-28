@@ -22,6 +22,7 @@ from scripts.tests_analyzer.pytest_marker_analyzer import (
     _collect_test_attribute_accesses,
     _collect_test_function_calls,
     _expand_modified_members_transitively,
+    _extract_deleted_symbols_from_diff,
     _extract_modified_items_from_conftest,
     _extract_modified_symbols,
     _get_modified_function_names,
@@ -691,6 +692,59 @@ class TestParseDiffForFunctions:
         result = _parse_diff_for_functions(diff_content=diff_content)
         assert result == set()
 
+    def test_new_function_added_after_existing(self) -> None:
+        diff_content = textwrap.dedent("""\
+            @@ -93,3 +96,25 @@ def uploaded_dv_scope_class(request):
+            +
+            +@pytest.fixture(scope="module")
+            +def uploaded_dv_in_udn_namespace(request):
+            +    yield from create_dv(request)
+        """)
+        result = _parse_diff_for_functions(diff_content=diff_content)
+        assert result == {"uploaded_dv_in_udn_namespace"}, "New function added after existing should be detected"
+
+    def test_new_function_added_does_not_mark_existing_as_modified(self) -> None:
+        diff_content = textwrap.dedent("""\
+            @@ -50,3 +50,10 @@ def existing_func():
+            +
+            +def brand_new_func():
+            +    do_something()
+            +    do_more()
+        """)
+        result = _parse_diff_for_functions(diff_content=diff_content)
+        assert "existing_func" not in result, (
+            "Existing function in @@ header should not be marked as modified when only new code was added"
+        )
+        assert result == {"brand_new_func"}, "Only the newly added function should be in the result"
+
+    def test_removed_function_detected(self) -> None:
+        diff_content = textwrap.dedent("""\
+            @@ -50,10 +50,3 @@ def existing_func():
+            -
+            -def removed_func():
+            -    do_something()
+            -    do_more()
+        """)
+        result = _parse_diff_for_functions(diff_content=diff_content)
+        assert "existing_func" not in result, (
+            "Existing function in @@ header should not be marked when a different function was removed"
+        )
+        assert result == {"removed_func"}, "Removed function should be detected in the diff"
+
+    def test_new_async_function_added_after_existing(self) -> None:
+        diff_content = textwrap.dedent("""\
+            @@ -93,3 +96,10 @@ def existing_func():
+            +
+            +async def new_async_handler(request):
+            +    data = await fetch()
+            +    return data
+        """)
+        result = _parse_diff_for_functions(diff_content=diff_content)
+        assert result == {"new_async_handler"}, "New async function added after existing should be detected"
+        assert "existing_func" not in result, (
+            "Existing function in @@ header should not be marked when only new async code was added"
+        )
+
 
 class TestSymbolClassificationModifiedMembers:
     def test_default_empty_dict(self):
@@ -918,9 +972,19 @@ class TestExtractModifiedItemsFromConftestDiffFailure:
         """)
         )
 
-        with patch(
-            "scripts.tests_analyzer.pytest_marker_analyzer._get_modified_function_names",
-            return_value=set(),
+        no_pytest_plugins = SymbolClassification(
+            modified_symbols={"os"},
+            new_symbols=set(),
+        )
+        with (
+            patch(
+                "scripts.tests_analyzer.pytest_marker_analyzer._get_modified_function_names",
+                return_value=set(),
+            ),
+            patch(
+                "scripts.tests_analyzer.pytest_marker_analyzer._extract_modified_symbols",
+                return_value=no_pytest_plugins,
+            ),
         ):
             modified_fixtures, modified_functions = _extract_modified_items_from_conftest(
                 changed_file=conftest,
@@ -976,10 +1040,20 @@ class TestExtractModifiedItemsFromConftestDiffFailure:
         """)
         )
 
-        with patch(
-            "scripts.tests_analyzer.pytest_marker_analyzer._get_modified_function_names",
-            return_value=set(),
-        ) as mock_get_modified:
+        no_pytest_plugins = SymbolClassification(
+            modified_symbols=set(),
+            new_symbols=set(),
+        )
+        with (
+            patch(
+                "scripts.tests_analyzer.pytest_marker_analyzer._get_modified_function_names",
+                return_value=set(),
+            ) as mock_get_modified,
+            patch(
+                "scripts.tests_analyzer.pytest_marker_analyzer._extract_modified_symbols",
+                return_value=no_pytest_plugins,
+            ),
+        ):
             _extract_modified_items_from_conftest(
                 changed_file=conftest,
                 base_branch="main",
@@ -1137,8 +1211,8 @@ class TestExtractModifiedSymbolsUnattributed:
 
         assert result is None
 
-    def test_pure_deletion_still_returns_none(self, tmp_path: Path) -> None:
-        """When diff is pure deletion (no added lines), still returns None."""
+    def test_pure_deletion_returns_empty_classification(self, tmp_path: Path) -> None:
+        """When diff is pure deletion of non-symbol lines, returns empty SymbolClassification."""
         file_path = tmp_path / "module.py"
         file_path.write_text("def foo(): pass\n")
 
@@ -1156,8 +1230,9 @@ class TestExtractModifiedSymbolsUnattributed:
                 github_pr_info=None,
             )
 
-        # Pure deletion should return None (conservative fallback)
-        assert result is None
+        # Pure deletion now returns SymbolClassification (not None) to enable symbol narrowing
+        assert result is not None
+        assert result.modified_symbols == set()  # No def/class in deleted lines
 
     def test_executable_module_level_code_returns_none(self, tmp_path: Path) -> None:
         """When unmapped line is executable code (e.g. function call), returns None (conservative)."""
@@ -1318,6 +1393,55 @@ class TestExtractModifiedSymbolsUnattributed:
             )
 
         assert result is None, "Executable module-level code should trigger conservative fallback"
+
+    def test_new_decorated_function_classified_as_new_symbol(self, tmp_path: Path) -> None:
+        """A newly added decorated function should be classified as a new symbol.
+
+        When a diff adds a decorated function (decorator + def + body), all
+        changed lines fall within the function's symbol range because
+        ``_symbol_start_line`` includes decorators.  The function should be
+        classified as a *new* symbol (not modified), and no conservative
+        fallback should occur.
+        """
+        source = textwrap.dedent("""\
+            import pytest
+
+            @pytest.mark.some_marker("ID-1234")
+            def test_new_feature():
+                pass
+        """)
+        file_path = tmp_path / "module.py"
+        file_path.write_text(source)
+
+        # Diff that adds the decorated function (lines 3-5).  _symbol_start_line
+        # includes the decorator, so the symbol range covers all changed lines.
+        diff_content = (
+            "--- a/module.py\n"
+            "+++ b/module.py\n"
+            "@@ -1,2 +1,5 @@\n"
+            " import pytest\n"
+            " \n"
+            '+@pytest.mark.some_marker("ID-1234")\n'
+            "+def test_new_feature():\n"
+            "+    pass\n"
+        )
+        mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
+        with patch(
+            "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+            return_value=mock_result,
+        ):
+            result = _extract_modified_symbols(
+                file_path=file_path,
+                base_branch="main",
+                repo_root=tmp_path,
+                github_pr_info=None,
+            )
+
+        assert result is not None, "Decorated new function should not trigger conservative fallback"
+        assert "test_new_feature" in result.new_symbols, "Newly added decorated function should be in new_symbols"
+        assert "test_new_feature" not in result.modified_symbols, (
+            "Newly added function should not appear in modified_symbols"
+        )
 
     def test_line_number_beyond_source_returns_none(self, tmp_path: Path) -> None:
         """When changed line number exceeds source length, returns None (conservative)."""
@@ -1870,6 +1994,234 @@ class TestImportVisitorTypeChecking:
         assert "libs.vm.vm" in visitor.imports
 
 
+class TestCheckConftestPathwayOpaqueNarrowing:
+    """Opaque conftest imports should use symbol-level narrowing when available."""
+
+    def test_opaque_import_narrowed_by_modified_symbols(self, tmp_path: Path) -> None:
+        """When conftest opaquely imports a changed file but no fixture calls modified symbols, test is safe."""
+        repo_root = tmp_path
+        conftest_path = tmp_path / "tests" / "conftest.py"
+        conftest_path.parent.mkdir(parents=True)
+        conftest_path.touch()
+
+        changed_file = tmp_path / "utilities" / "hco.py"
+        changed_file.parent.mkdir(parents=True)
+        changed_file.touch()
+
+        test_file = tmp_path / "tests" / "test_smoke.py"
+        test_file.touch()
+
+        marked_test = MarkedTest(
+            file_path=test_file,
+            test_name="test_smoke",
+            node_id="tests/test_smoke.py::test_smoke",
+            dependencies={conftest_path},
+            fixtures={"vm_fixture"},
+            symbol_imports={},
+        )
+
+        # Conftest opaquely imports the changed file
+        conftest_opaque_deps: dict[Path, set[Path]] = {
+            conftest_path: {changed_file},
+        }
+
+        # Symbol analysis shows only verify_boot_sources was modified
+        modified_symbols_cache: dict[Path, SymbolClassification | None] = {
+            changed_file: SymbolClassification(
+                modified_symbols={"verify_boot_sources_reimported"},
+                new_symbols=set(),
+            ),
+        }
+
+        # The test's fixture does NOT call verify_boot_sources_reimported
+        fixtures_dict: dict[str, Fixture] = {
+            "vm_fixture": Fixture(
+                name="vm_fixture",
+                file_path=conftest_path,
+                function_calls={"create_vm", "wait_for_vm"},
+            ),
+        }
+
+        is_affected, matching_deps = _check_conftest_pathway(
+            changed_file=changed_file,
+            marked_test=marked_test,
+            conftest_symbol_imports={},
+            conftest_opaque_deps=conftest_opaque_deps,
+            modified_symbols_cache=modified_symbols_cache,
+            fixtures_dict=fixtures_dict,
+            repo_root=repo_root,
+        )
+
+        assert not is_affected, (
+            f"Test should NOT be flagged when opaque import is narrowed and no fixture calls modified symbols, "
+            f"but got matching_deps={matching_deps}"
+        )
+
+    def test_opaque_import_flags_when_fixture_calls_modified_symbol(self, tmp_path: Path) -> None:
+        """When conftest opaquely imports a changed file AND a fixture calls the modified symbol, flag test."""
+        repo_root = tmp_path
+        conftest_path = tmp_path / "tests" / "conftest.py"
+        conftest_path.parent.mkdir(parents=True)
+        conftest_path.touch()
+
+        changed_file = tmp_path / "utilities" / "hco.py"
+        changed_file.parent.mkdir(parents=True)
+        changed_file.touch()
+
+        test_file = tmp_path / "tests" / "test_hco_update.py"
+        test_file.touch()
+
+        marked_test = MarkedTest(
+            file_path=test_file,
+            test_name="test_hco_update",
+            node_id="tests/test_hco_update.py::test_hco_update",
+            dependencies={conftest_path},
+            fixtures={"hco_fixture"},
+            symbol_imports={},
+        )
+
+        conftest_opaque_deps: dict[Path, set[Path]] = {
+            conftest_path: {changed_file},
+        }
+
+        modified_symbols_cache: dict[Path, SymbolClassification | None] = {
+            changed_file: SymbolClassification(
+                modified_symbols={"verify_boot_sources_reimported"},
+                new_symbols=set(),
+            ),
+        }
+
+        # This fixture DOES call the modified symbol
+        fixtures_dict: dict[str, Fixture] = {
+            "hco_fixture": Fixture(
+                name="hco_fixture",
+                file_path=conftest_path,
+                function_calls={"verify_boot_sources_reimported", "get_hco_cr"},
+            ),
+        }
+
+        is_affected, matching_deps = _check_conftest_pathway(
+            changed_file=changed_file,
+            marked_test=marked_test,
+            conftest_symbol_imports={},
+            conftest_opaque_deps=conftest_opaque_deps,
+            modified_symbols_cache=modified_symbols_cache,
+            fixtures_dict=fixtures_dict,
+            repo_root=repo_root,
+        )
+
+        assert is_affected, "Test SHOULD be flagged when fixture calls the modified symbol"
+        assert any("via fixture hco_fixture" in dep for dep in matching_deps)
+
+    def test_opaque_import_only_new_symbols_skips(self, tmp_path: Path) -> None:
+        """When opaquely imported file has only new symbols (no modifications), test is safe."""
+        repo_root = tmp_path
+        conftest_path = tmp_path / "tests" / "conftest.py"
+        conftest_path.parent.mkdir(parents=True)
+        conftest_path.touch()
+
+        changed_file = tmp_path / "utilities" / "hco.py"
+        changed_file.parent.mkdir(parents=True)
+        changed_file.touch()
+
+        test_file = tmp_path / "tests" / "test_smoke.py"
+        test_file.touch()
+
+        marked_test = MarkedTest(
+            file_path=test_file,
+            test_name="test_smoke",
+            node_id="tests/test_smoke.py::test_smoke",
+            dependencies={conftest_path},
+            fixtures={"vm_fixture"},
+            symbol_imports={},
+        )
+
+        conftest_opaque_deps: dict[Path, set[Path]] = {
+            conftest_path: {changed_file},
+        }
+
+        # Only new symbols — nothing was modified
+        modified_symbols_cache: dict[Path, SymbolClassification | None] = {
+            changed_file: SymbolClassification(
+                modified_symbols=set(),
+                new_symbols={"new_helper_function"},
+            ),
+        }
+
+        fixtures_dict: dict[str, Fixture] = {
+            "vm_fixture": Fixture(
+                name="vm_fixture",
+                file_path=conftest_path,
+                function_calls={"create_vm"},
+            ),
+        }
+
+        is_affected, _ = _check_conftest_pathway(
+            changed_file=changed_file,
+            marked_test=marked_test,
+            conftest_symbol_imports={},
+            conftest_opaque_deps=conftest_opaque_deps,
+            modified_symbols_cache=modified_symbols_cache,
+            fixtures_dict=fixtures_dict,
+            repo_root=repo_root,
+        )
+
+        assert not is_affected, "Test should NOT be flagged when only new symbols were added"
+
+    def test_opaque_import_no_classification_falls_back(self, tmp_path: Path) -> None:
+        """When classification is None (diff failed), fall back to conservative file-level flagging."""
+        repo_root = tmp_path
+        conftest_path = tmp_path / "tests" / "conftest.py"
+        conftest_path.parent.mkdir(parents=True)
+        conftest_path.touch()
+
+        changed_file = tmp_path / "utilities" / "hco.py"
+        changed_file.parent.mkdir(parents=True)
+        changed_file.touch()
+
+        test_file = tmp_path / "tests" / "test_smoke.py"
+        test_file.touch()
+
+        marked_test = MarkedTest(
+            file_path=test_file,
+            test_name="test_smoke",
+            node_id="tests/test_smoke.py::test_smoke",
+            dependencies={conftest_path},
+            fixtures={"vm_fixture"},
+            symbol_imports={},
+        )
+
+        conftest_opaque_deps: dict[Path, set[Path]] = {
+            conftest_path: {changed_file},
+        }
+
+        # Classification is None — diff parsing failed
+        modified_symbols_cache: dict[Path, SymbolClassification | None] = {
+            changed_file: None,
+        }
+
+        fixtures_dict: dict[str, Fixture] = {
+            "vm_fixture": Fixture(
+                name="vm_fixture",
+                file_path=conftest_path,
+                function_calls={"create_vm"},
+            ),
+        }
+
+        is_affected, matching_deps = _check_conftest_pathway(
+            changed_file=changed_file,
+            marked_test=marked_test,
+            conftest_symbol_imports={},
+            conftest_opaque_deps=conftest_opaque_deps,
+            modified_symbols_cache=modified_symbols_cache,
+            fixtures_dict=fixtures_dict,
+            repo_root=repo_root,
+        )
+
+        assert is_affected, "Test SHOULD be flagged when classification is None (conservative fallback)"
+        assert any("opaque import" in dep for dep in matching_deps)
+
+
 class TestCheckConftestPathwayTransitive:
     """Transitive conftest narrowing: conftest -> intermediate -> changed_file."""
 
@@ -2228,3 +2580,503 @@ class TestCheckConftestPathwayTransitive:
         )
         assert len(matching_deps) == 1
         assert "lookup_iface_status" in matching_deps[0]
+
+
+class TestExtractDeletedSymbolsFromDiff:
+    """Tests for _extract_deleted_symbols_from_diff extracting function/class names."""
+
+    def test_deleted_function(self) -> None:
+        """Detects deleted function definitions."""
+        diff = (
+            "@@ -10,5 +10,0 @@\n"
+            "-def skip_no_reencrypt_route(upload_proxy_route):\n"
+            "-    if upload_proxy_route.termination != 'reencrypt':\n"
+            "-        pytest.skip('Skip testing.')\n"
+        )
+        result = _extract_deleted_symbols_from_diff(diff_content=diff)
+        assert result == {"skip_no_reencrypt_route"}
+
+    def test_deleted_async_function(self) -> None:
+        """Detects deleted async function definitions."""
+        diff = "@@ -1,3 +1,0 @@\n-async def fetch_data(url):\n-    return await get(url)\n"
+        result = _extract_deleted_symbols_from_diff(diff_content=diff)
+        assert result == {"fetch_data"}
+
+    def test_deleted_class_and_members(self) -> None:
+        """Deleted class and its member methods are both extracted as symbols."""
+        diff = "@@ -1,4 +1,0 @@\n-class OldHelper:\n-    def method(self):\n-        pass\n"
+        result = _extract_deleted_symbols_from_diff(diff_content=diff)
+        assert result == {"OldHelper", "method"}
+
+    def test_no_deletions_returns_empty(self) -> None:
+        """No deletion lines produces empty set."""
+        diff = "@@ -1,2 +1,3 @@\n context\n+new_line\n context\n"
+        result = _extract_deleted_symbols_from_diff(diff_content=diff)
+        assert result == set()
+
+    def test_file_header_not_matched(self) -> None:
+        """--- file header is not treated as a deletion."""
+        diff = "--- a/old_file.py\n+++ b/new_file.py\n@@ -1,1 +1,1 @@\n-old_content\n+new_content\n"
+        result = _extract_deleted_symbols_from_diff(diff_content=diff)
+        assert result == set()
+
+    def test_mixed_deletions_and_additions(self) -> None:
+        """Only deleted symbol definitions are captured, not added ones."""
+        diff = "@@ -1,4 +1,4 @@\n-def old_func():\n-    pass\n+def new_func():\n+    pass\n"
+        result = _extract_deleted_symbols_from_diff(diff_content=diff)
+        assert result == {"old_func"}
+
+    def test_deleted_class_member_collides_with_toplevel(self) -> None:
+        """Deleted class members are returned as bare names, which may collide with unrelated top-level symbols."""
+        diff = (
+            "@@ -1,6 +1,0 @@\n"
+            "-class OldHelper:\n"
+            "-    def setup(self):\n"
+            "-        pass\n"
+            "-    def teardown(self):\n"
+            "-        pass\n"
+        )
+        result = _extract_deleted_symbols_from_diff(diff_content=diff)
+        # Both the class and its members are extracted as independent symbols.
+        # "setup" and "teardown" could collide with unrelated top-level fixtures,
+        # causing broader test selection — acceptable over-reporting for safety.
+        assert result == {"OldHelper", "setup", "teardown"}
+
+
+class TestPureDeletionSymbolNarrowing:
+    """Tests that pure-deletion diffs enable symbol-level narrowing."""
+
+    def test_pure_deletion_returns_classification_not_none(self, tmp_path: Path) -> None:
+        """When a diff only deletes a function, returns SymbolClassification with the deleted symbol."""
+        source = textwrap.dedent("""\
+            import pytest
+
+            def remaining_func():
+                pass
+        """)
+        file_path = tmp_path / "module.py"
+        file_path.write_text(source)
+
+        # Diff that only deletes a function (no additions)
+        diff_content = "@@ -3,4 +3,0 @@\n-def deleted_func():\n-    if True:\n-        pytest.skip()\n"
+        mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
+        with patch(
+            "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+            return_value=mock_result,
+        ):
+            result = _extract_modified_symbols(
+                file_path=file_path,
+                base_branch="main",
+                repo_root=tmp_path,
+                github_pr_info=None,
+            )
+
+        assert result is not None, "Should return SymbolClassification, not None (was the old bug)"
+        assert result.modified_symbols == {"deleted_func"}
+        assert result.new_symbols == set()
+
+    def test_pure_deletion_no_symbols_returns_empty_classification(self, tmp_path: Path) -> None:
+        """When a diff deletes only non-symbol lines, returns empty classification."""
+        source = textwrap.dedent("""\
+            import os
+
+            def my_func():
+                pass
+        """)
+        file_path = tmp_path / "module.py"
+        file_path.write_text(source)
+
+        # Diff that deletes only a comment/blank line (no function/class defs)
+        diff_content = "@@ -1,2 +1,1 @@\n-# old comment\n"
+        mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
+        with patch(
+            "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+            return_value=mock_result,
+        ):
+            result = _extract_modified_symbols(
+                file_path=file_path,
+                base_branch="main",
+                repo_root=tmp_path,
+                github_pr_info=None,
+            )
+
+        assert result is not None, "Should return SymbolClassification, not None"
+        assert result.modified_symbols == set()
+
+
+class TestTypeCheckingLineSafety:
+    """Tests that if TYPE_CHECKING: lines are treated as safe unmapped lines."""
+
+    def test_type_checking_guard_is_safe(self, tmp_path: Path) -> None:
+        """if TYPE_CHECKING: line should NOT cause conservative fallback."""
+        source = textwrap.dedent("""\
+            from __future__ import annotations
+
+            from typing import TYPE_CHECKING
+
+            if TYPE_CHECKING:
+                from some_module import SomeType
+
+            CONSTANT = 42
+
+            def my_func():
+                pass
+        """)
+        file_path = tmp_path / "module.py"
+        file_path.write_text(source)
+
+        # Diff that adds TYPE_CHECKING guard (lines 3-6 are additions)
+        diff_content = (
+            "@@ -1,2 +1,7 @@\n"
+            " from __future__ import annotations\n"
+            " \n"
+            "+from typing import TYPE_CHECKING\n"
+            "+\n"
+            "+if TYPE_CHECKING:\n"
+            "+    from some_module import SomeType\n"
+            "+\n"
+        )
+        mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
+        with patch(
+            "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+            return_value=mock_result,
+        ):
+            result = _extract_modified_symbols(
+                file_path=file_path,
+                base_branch="main",
+                repo_root=tmp_path,
+                github_pr_info=None,
+            )
+
+        assert result is not None, (
+            "Should return SymbolClassification, not None \u2014 if TYPE_CHECKING: should be treated as safe"
+        )
+        assert result.has_unattributed_changes is True
+
+    def test_typing_type_checking_guard_is_safe(self, tmp_path: Path) -> None:
+        """if typing.TYPE_CHECKING: line should NOT cause conservative fallback."""
+        source = textwrap.dedent("""\
+            import typing
+
+            if typing.TYPE_CHECKING:
+                from some_module import SomeType
+
+            def my_func():
+                pass
+        """)
+        file_path = tmp_path / "module.py"
+        file_path.write_text(source)
+
+        diff_content = (
+            "@@ -1,1 +1,5 @@\n+import typing\n+\n+if typing.TYPE_CHECKING:\n+    from some_module import SomeType\n+\n"
+        )
+        mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
+        with patch(
+            "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+            return_value=mock_result,
+        ):
+            result = _extract_modified_symbols(
+                file_path=file_path,
+                base_branch="main",
+                repo_root=tmp_path,
+                github_pr_info=None,
+            )
+
+        assert result is not None, (
+            "Should return SymbolClassification, not None \u2014 if typing.TYPE_CHECKING: should be treated as safe"
+        )
+        assert result.has_unattributed_changes is True
+
+
+class TestDecoratorLineRange:
+    """Tests that decorator lines are included in symbol line ranges."""
+
+    def test_function_with_decorators_includes_decorator_lines(self) -> None:
+        """Decorator lines are included in the function's line range."""
+        source = "@pytest.mark.smoke\n@pytest.mark.s390x\ndef test_something():\n    pass\n"
+        symbol_map = _build_line_to_symbol_map(source=source)
+        # Decorator at line 1 should be included in the range
+        assert symbol_map.top_level[0] == (1, 4, "test_something"), (
+            "Function range should start at first decorator line"
+        )
+
+    def test_class_with_decorators_includes_decorator_lines(self) -> None:
+        """Decorator lines are included in the class's line range."""
+        source = "@pytest.mark.some_marker('FAKE-1234')\nclass TestFoo:\n    def test_bar(self):\n        pass\n"
+        symbol_map = _build_line_to_symbol_map(source=source)
+        assert symbol_map.top_level[0] == (1, 4, "TestFoo"), "Class range should start at first decorator line"
+
+    def test_function_without_decorators_unchanged(self) -> None:
+        """Functions without decorators start at def keyword."""
+        source = "def plain_function():\n    return 1\n"
+        symbol_map = _build_line_to_symbol_map(source=source)
+        assert symbol_map.top_level[0] == (1, 2, "plain_function"), (
+            "Function without decorators should start at def line"
+        )
+
+    def test_class_member_with_decorator_includes_decorator_lines(self) -> None:
+        """Class member decorator lines are included in member line range."""
+        source = "class Foo:\n    @pytest.fixture\n    def my_fixture(self):\n        return 1\n"
+        symbol_map = _build_line_to_symbol_map(source=source)
+        members = symbol_map.class_members["Foo"].members
+        assert members["my_fixture"] == (2, 4), "Member range should start at decorator line"
+
+    def test_decorator_change_maps_to_function(self, tmp_path: Path) -> None:
+        """Decorator-only diff change maps to the decorated function."""
+        source = (
+            "import pytest\n"
+            "\n"
+            "@pytest.mark.smoke\n"
+            "@pytest.mark.s390x\n"
+            "def test_something():\n"
+            "    pass\n"
+            "\n"
+            "def test_other():\n"
+            "    pass\n"
+        )
+        diff = (
+            "--- a/tests/example/test_file.py\n"
+            "+++ b/tests/example/test_file.py\n"
+            "@@ -3,6 +3,7 @@\n"
+            " @pytest.mark.smoke\n"
+            "+@pytest.mark.s390x\n"
+            " def test_something():\n"
+            "     pass\n"
+        )
+        source_file = tmp_path / "tests" / "example" / "test_file.py"
+        source_file.parent.mkdir(parents=True, exist_ok=True)
+        source_file.write_text(source)
+
+        with (
+            patch(
+                "scripts.tests_analyzer.pytest_marker_analyzer._get_diff_content",
+                return_value=diff,
+            ),
+            patch(
+                "scripts.tests_analyzer.pytest_marker_analyzer._fetch_file_at_ref",
+                return_value=source,
+            ),
+        ):
+            result = _extract_modified_symbols(
+                file_path=source_file,
+                base_branch="main",
+                repo_root=tmp_path,
+                github_pr_info=None,
+            )
+        assert result is not None, "Should return SymbolClassification, not None"
+        assert "test_something" in result.modified_symbols, "Decorator change should map to test_something"
+        assert "test_other" not in result.modified_symbols, "Unmodified function should not be in modified symbols"
+
+
+class TestImportContinuationSafety:
+    """Tests that multi-line import continuation lines are treated as safe."""
+
+    def test_import_continuation_line_is_safe(self, tmp_path: Path) -> None:
+        """Import continuation lines do not trigger conservative fallback."""
+        source = (
+            "from utilities.constants import (\n"
+            "    TIMEOUT_1MIN,\n"
+            "    TIMEOUT_2MIN,\n"
+            ")\n"
+            "\n"
+            "def existing_func():\n"
+            "    pass\n"
+        )
+        diff = (
+            "--- a/utilities/example.py\n"
+            "+++ b/utilities/example.py\n"
+            "@@ -1,3 +1,4 @@\n"
+            " from utilities.constants import (\n"
+            "     TIMEOUT_1MIN,\n"
+            "+    TIMEOUT_2MIN,\n"
+            " )\n"
+        )
+        source_file = tmp_path / "utilities" / "example.py"
+        source_file.parent.mkdir(parents=True, exist_ok=True)
+        source_file.write_text(source)
+
+        with (
+            patch(
+                "scripts.tests_analyzer.pytest_marker_analyzer._get_diff_content",
+                return_value=diff,
+            ),
+            patch(
+                "scripts.tests_analyzer.pytest_marker_analyzer._fetch_file_at_ref",
+                return_value=source,
+            ),
+        ):
+            result = _extract_modified_symbols(
+                file_path=source_file,
+                base_branch="main",
+                repo_root=tmp_path,
+                github_pr_info=None,
+            )
+        assert result is not None, "Import continuation should not trigger file-level fallback"
+        assert result.has_unattributed_changes is True
+        assert result.modified_symbols == set()
+
+    def test_import_continuation_with_alias(self, tmp_path: Path) -> None:
+        """Import continuation with 'as' alias is treated as safe."""
+        source = "from collections.abc import (\n    Generator,\n    Collection as Col,\n)\n\ndef func():\n    pass\n"
+        diff = (
+            "--- a/utilities/example.py\n"
+            "+++ b/utilities/example.py\n"
+            "@@ -1,3 +1,4 @@\n"
+            " from collections.abc import (\n"
+            "     Generator,\n"
+            "+    Collection as Col,\n"
+            " )\n"
+        )
+        source_file = tmp_path / "utilities" / "example.py"
+        source_file.parent.mkdir(parents=True, exist_ok=True)
+        source_file.write_text(source)
+
+        with (
+            patch(
+                "scripts.tests_analyzer.pytest_marker_analyzer._get_diff_content",
+                return_value=diff,
+            ),
+            patch(
+                "scripts.tests_analyzer.pytest_marker_analyzer._fetch_file_at_ref",
+                return_value=source,
+            ),
+        ):
+            result = _extract_modified_symbols(
+                file_path=source_file,
+                base_branch="main",
+                repo_root=tmp_path,
+                github_pr_info=None,
+            )
+        assert result is not None, "Import continuation with alias should not trigger fallback"
+
+    def test_closing_paren_is_safe(self, tmp_path: Path) -> None:
+        """Closing parenthesis of multi-line import is treated as safe."""
+        source = "from os.path import (\n    join,\n)\n\ndef func():\n    pass\n"
+        diff = "--- a/utils.py\n+++ b/utils.py\n@@ -1,2 +1,3 @@\n from os.path import (\n+    join,\n )\n"
+        source_file = tmp_path / "utils.py"
+        source_file.write_text(source)
+
+        with (
+            patch(
+                "scripts.tests_analyzer.pytest_marker_analyzer._get_diff_content",
+                return_value=diff,
+            ),
+            patch(
+                "scripts.tests_analyzer.pytest_marker_analyzer._fetch_file_at_ref",
+                return_value=source,
+            ),
+        ):
+            result = _extract_modified_symbols(
+                file_path=source_file,
+                base_branch="main",
+                repo_root=tmp_path,
+                github_pr_info=None,
+            )
+        assert result is not None, "Closing paren should not trigger file-level fallback"
+
+
+class TestParseDiffForFunctionsContextReset:
+    """Tests that _parse_diff_for_functions resets context on new function definitions."""
+
+    def test_appended_function_not_attributed_to_context(self) -> None:
+        """New function appended after context function is attributed correctly."""
+        diff = (
+            "@@ -50,6 +50,15 @@ def existing_fixture():\n"
+            "     return dv\n"
+            " \n"
+            " \n"
+            "+def new_fixture():\n"
+            '+    """Brand new fixture."""\n'
+            "+    return something\n"
+        )
+        result = _parse_diff_for_functions(diff_content=diff)
+        assert "new_fixture" in result, "Appended function should be in modified set"
+        assert "existing_fixture" not in result, (
+            "Context function should NOT be in modified set when only new code is appended after it"
+        )
+
+    def test_modified_context_function_still_detected(self) -> None:
+        """When both the context function and an appended function are modified."""
+        diff = (
+            "@@ -50,6 +50,15 @@ def existing_fixture():\n"
+            "-    return old_dv\n"
+            "+    return new_dv\n"
+            " \n"
+            " \n"
+            "+def new_fixture():\n"
+            "+    return something\n"
+        )
+        result = _parse_diff_for_functions(diff_content=diff)
+        assert "existing_fixture" in result, "Modified context function should be detected"
+        assert "new_fixture" in result, "Appended function should also be detected"
+
+    def test_deleted_function_attributed_correctly(self) -> None:
+        """Deleted function definition is attributed to the deleted function, not context."""
+        diff = (
+            "@@ -50,10 +50,3 @@ def existing_fixture():\n"
+            "     return dv\n"
+            " \n"
+            " \n"
+            "-def old_fixture():\n"
+            '-    """Old fixture to remove."""\n'
+            "-    return old_thing\n"
+        )
+        result = _parse_diff_for_functions(diff_content=diff)
+        assert "old_fixture" in result, "Deleted function should be in modified set"
+        assert "existing_fixture" not in result, (
+            "Context function should NOT be in modified set when only a subsequent function is deleted"
+        )
+
+    def test_async_function_appended(self) -> None:
+        """Async function appended after context is attributed correctly."""
+        diff = (
+            "@@ -10,3 +10,8 @@ def sync_func():\n     pass\n \n+async def new_async_func():\n+    await something()\n"
+        )
+        result = _parse_diff_for_functions(diff_content=diff)
+        assert "new_async_func" in result, "Appended async function should be in modified set"
+        assert "sync_func" not in result, (
+            "Context function should NOT be in modified set when only async function is appended after it"
+        )
+
+    def test_decorator_before_appended_function(self) -> None:
+        """Decorator before appended function is not attributed to context function."""
+        diff = (
+            "@@ -50,6 +50,16 @@ def existing_fixture():\n"
+            "     return dv\n"
+            " \n"
+            '+@pytest.fixture(scope="session")\n'
+            "+def new_fixture():\n"
+            "+    return something\n"
+        )
+        result = _parse_diff_for_functions(diff_content=diff)
+        assert "new_fixture" in result, "Appended function with decorator should be in modified set"
+        assert "existing_fixture" not in result, (
+            "Context function should NOT be in modified set when decorator belongs to appended function"
+        )
+
+    def test_parse_diff_decorator_bound_to_context_def(self) -> None:
+        """Decorator-only diff followed by context def line binds to that function."""
+        diff = "@@ -10,6 +10,7 @@ def other_func\n+@pytest.mark.tier3\n def existing_fixture():\n     pass\n"
+        result = _parse_diff_for_functions(diff_content=diff)
+        assert result == {"existing_fixture"}, f"Decorator change should bind only to context def line, got {result}"
+
+
+class TestPytestPluginsDetection:
+    """Tests that pytest_plugins changes are detected by symbol-level analysis."""
+
+    def test_pytest_plugins_in_symbol_map(self) -> None:
+        """pytest_plugins assignment is tracked as a top-level symbol."""
+        source = textwrap.dedent("""\
+            import logging
+            import pytest
+
+            pytest_plugins = [
+                "tests.fixtures.network.l2_bridge",
+                "tests.fixtures.network.cluster",
+            ]
+
+            LOGGER = logging.getLogger(__name__)
+        """)
+        symbol_map = _build_line_to_symbol_map(source=source)
+        symbol_names = {name for _, _, name in symbol_map.top_level}
+        assert "pytest_plugins" in symbol_names, "pytest_plugins assignment should be tracked as a top-level symbol"
