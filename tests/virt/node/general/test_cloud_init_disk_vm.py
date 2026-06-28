@@ -18,7 +18,6 @@ def vm_with_cloud_init_disk(namespace):
 
 
 @pytest.mark.polarion("CNV-10555")
-@pytest.mark.jira("CNV-87521", run=False)
 def test_vm_with_cloud_init_disk_logging_no_disk_capacity(vm_with_cloud_init_disk, admin_client):
     assert "No disk capacity" not in vm_with_cloud_init_disk.vmi.get_virt_launcher_pod(
         privileged_client=admin_client
