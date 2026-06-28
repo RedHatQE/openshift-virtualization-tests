@@ -1,10 +1,19 @@
 import ipaddress
-from typing import Final
+import json
+import logging
+from typing import TYPE_CHECKING, Final
 
 from timeout_sampler import TimeoutExpiredError, retry
 
 from libs.net.traffic_generator import IPERF_SERVER_PORT, TcpServer, VMTcpClient
+from libs.net.vmspec import IpNotFound
 from libs.vm.vm import BaseVirtualMachine
+from utilities.virt import vm_console_run_commands
+
+if TYPE_CHECKING:
+    from utilities.virt import VirtualMachineForTests
+
+LOGGER = logging.getLogger(__name__)
 
 ARP_ISOLATION_SYSCTL_CMD: Final[list[str]] = [
     # Only answer ARP for the IP assigned to the receiving interface —
@@ -66,3 +75,38 @@ def poll_tcp_connectivity(
     except TimeoutExpiredError:
         reachable = False
     return reachable if expect_connectivity else not reachable
+
+
+def read_guest_interface_ipv4(
+    vm: VirtualMachineForTests | BaseVirtualMachine,
+    interface_name: str,
+) -> ipaddress.IPv4Interface:
+    """Retrieve the IPv4 address and prefix length of an interface from the VM guest OS.
+
+    Args:
+        vm: The virtual machine to query.
+        interface_name: The name of the network interface (e.g., "eth0").
+
+    Returns:
+        IPv4 address with prefix length (e.g., 192.168.1.5/24).
+
+    Raises:
+        IpNotFound: If no IPv4 address is found or console output cannot be parsed.
+    """
+    cmd: Final[str] = f"ip -j -4 addr show {interface_name}"
+    output = vm_console_run_commands(vm=vm, commands=[cmd], timeout=30)
+    LOGGER.info(f"Command {cmd} output: {output[cmd]}")
+
+    try:
+        iface_info = json.loads(output[cmd][1])
+    except (IndexError, json.JSONDecodeError) as err:
+        raise IpNotFound(f"Failed to parse console JSON from VM {vm.name} for '{cmd}': {output[cmd]}") from err
+
+    if iface_info and "addr_info" in iface_info[0]:
+        for addr in iface_info[0]["addr_info"]:
+            if addr["family"] == "inet":
+                ip_str = addr["local"]
+                prefix_len = addr["prefixlen"]
+                return ipaddress.IPv4Interface(address=f"{ip_str}/{prefix_len}")
+
+    raise IpNotFound(f"No IPv4 address found on {interface_name} in VM {vm.name}")
