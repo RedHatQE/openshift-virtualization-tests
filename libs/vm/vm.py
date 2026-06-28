@@ -10,6 +10,7 @@ from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from pytest_testconfig import config as py_config
+from timeout_sampler import retry
 
 from libs.net.vmspec import VMInterfaceSpecNotFoundError
 from libs.vm.spec import (
@@ -33,6 +34,10 @@ from utilities.virt import get_oc_image_info, vm_console_run_commands
 
 if TYPE_CHECKING:
     from kubernetes.dynamic import DynamicClient
+
+
+class VMControllerGenerationNotProcessedError(Exception):
+    """Raised if VM controller fails to process the current generation within the timeout."""
 
 
 class BaseVirtualMachine(VirtualMachine):
@@ -151,6 +156,7 @@ class BaseVirtualMachine(VirtualMachine):
 
         Serializes without dict_factory so that None-valued fields (e.g. podAffinity: None)
         are preserved as null in the merge patch, ensuring the old affinity type is removed.
+        Waits until the VM controller has processed the updated generation before returning.
 
         Args:
             affinity: Affinity object to set, or None to clear.
@@ -159,6 +165,23 @@ class BaseVirtualMachine(VirtualMachine):
         template_affinity = asdict(obj=affinity) if affinity else None
         patches = {self: {"spec": {"template": {"spec": {"affinity": template_affinity}}}}}
         ResourceEditor(patches=patches).update()
+        self._wait_for_vm_controller_processed_generation()
+
+    @retry(
+        wait_timeout=10,
+        sleep=1,
+        exceptions_dict={VMControllerGenerationNotProcessedError: []},
+    )
+    def _wait_for_vm_controller_processed_generation(self) -> bool:
+        """Wait until the VM controller has processed the current VM generation."""
+        generation = self.instance.metadata.generation
+        desired_generation = self.instance.status.desiredGeneration
+        if generation != desired_generation:
+            raise VMControllerGenerationNotProcessedError(
+                f"VM {self.name} generation not processed by controller: "
+                f"generation={generation}, desiredGeneration={desired_generation}"
+            )
+        return True
 
     @property
     def template_spec(self) -> VMISpec:

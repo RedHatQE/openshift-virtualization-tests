@@ -19,7 +19,12 @@ STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob
 import pytest
 
 from libs.vm.affinity import new_pod_affinity, new_pod_anti_affinity
-from tests.network.libs.stuntime import CLIENT_VM_LABEL, SERVER_VM_LABEL, STUNTIME_THRESHOLD_SECONDS, measure_stuntime
+from tests.network.libs.stuntime import (
+    CLIENT_VM_LABEL,
+    SERVER_VM_LABEL,
+    STUNTIME_THRESHOLD_SECONDS,
+    measure_stuntime,
+)
 from utilities.virt import migrate_vm_and_verify
 
 pytestmark = [pytest.mark.tier3]
