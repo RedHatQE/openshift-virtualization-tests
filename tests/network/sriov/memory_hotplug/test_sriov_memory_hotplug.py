@@ -16,6 +16,7 @@ from tests.network.sriov.memory_hotplug.lib_helpers import hotplug_memory_and_wa
 _HOTPLUG_MEMORY: Final[str] = "3Gi"
 
 
+@pytest.mark.jira("CNV-91360", run=False)
 @pytest.mark.sriov
 @pytest.mark.usefixtures("running_sriov_vms")
 @pytest.mark.incremental
