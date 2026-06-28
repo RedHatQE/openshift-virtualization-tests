@@ -15,7 +15,6 @@ from utilities.constants.components import (
     HOSTPATH_PROVISIONER_CSI,
     HPP_POOL,
     KUBEVIRT_MIGRATION_CONTROLLER,
-    VIRT_PLATFORM_AUTOPILOT,
 )
 
 pytestmark = [pytest.mark.sno, pytest.mark.arm64, pytest.mark.s390x]
@@ -52,12 +51,9 @@ def test_no_new_cnv_pods_added(cnv_pods, cnv_jobs):
 def test_pods_priority_class_value(
     cnv_pods_by_type,
     xfail_if_jira_76659_open_and_migration_controller_pod,
-    jira_86102_open,
 ):
     if any(pod.name.startswith((HPP_POOL, HOSTPATH_PROVISIONER_CSI)) for pod in cnv_pods_by_type):
         pytest.xfail("HPP pods don't have priority class name")
-    if any(pod.name.startswith(VIRT_PLATFORM_AUTOPILOT) for pod in cnv_pods_by_type) and jira_86102_open:
-        pytest.xfail(f"{VIRT_PLATFORM_AUTOPILOT} pod has no priority class name due to CNV-86102 bug")
     validate_cnv_pods_priority_class_name_exists(pod_list=cnv_pods_by_type)
     validate_priority_class_value(pod_list=cnv_pods_by_type)
 
