@@ -44,7 +44,7 @@ def enabled_vm_console_proxy_spec(admin_client, hyperconverged_resource_scope_cl
         patches={
             hyperconverged_resource_scope_class: {
                 "spec": {
-                    "deployVmConsoleProxy": True,
+                    "deployment": {"deployVmConsoleProxy": True},
                 }
             }
         },

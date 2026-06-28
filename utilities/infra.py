@@ -615,6 +615,19 @@ def get_hyperconverged_resource(client, hco_ns_name):
         namespace=hco_ns_name,
         name=hco_name,
     )
+    hco.api_version = f"{hco.ApiGroup.HCO_KUBEVIRT_IO}/{hco.ApiVersion.V1}"
+    if hco.exists:
+        return hco
+    raise ResourceNotFoundError(f"Hyperconverged: {hco_name} not found in {hco_ns_name}")
+
+
+def get_hyperconverged_resource_v1beta1(client, hco_ns_name):  # skip-unused-code
+    hco_name = py_config["hco_cr_name"]
+    hco = HyperConverged(
+        client=client,
+        namespace=hco_ns_name,
+        name=hco_name,
+    )
     hco.api_version = f"{hco.ApiGroup.HCO_KUBEVIRT_IO}/{hco.ApiVersion.V1BETA1}"
     if hco.exists:
         return hco

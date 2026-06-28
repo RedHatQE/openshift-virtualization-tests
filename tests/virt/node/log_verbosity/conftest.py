@@ -27,7 +27,7 @@ def updated_log_verbosity_config(
     with ResourceEditorValidateHCOReconcile(
         patches={
             hyperconverged_resource_scope_class: {
-                "spec": {"logVerbosityConfig": log_verbosity_level_six_config_dict[request.param]}
+                "spec": {"deployment": {"logVerbosityConfig": log_verbosity_level_six_config_dict[request.param]}}
             }
         },
         list_resource_reconcile=[KubeVirt],

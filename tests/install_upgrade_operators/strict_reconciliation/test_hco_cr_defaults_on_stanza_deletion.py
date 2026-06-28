@@ -28,6 +28,8 @@ from tests.install_upgrade_operators.strict_reconciliation.constants import (
     EXPCT_LM_CUSTOM_PO,
     EXPCT_LM_CUSTOM_PT,
     EXPCT_LM_DEFAULTS,
+    HCO_SECURITY_KEY,
+    HCO_VIRTUALIZATION_KEY,
     LIVE_MIGRATION_CONFIG_KEY,
     LM_COMPLETIONTIMEOUTPERGIB_CUSTOM,
     LM_PARALLELMIGRATIONSPERCLUSTER_CUSTOM,
@@ -52,7 +54,11 @@ class TestCRDefaultsOnStanzaDeletion:
                 {
                     "rpatch": {
                         "spec": {
-                            HCO_CR_CERT_CONFIG_KEY: {HCO_CR_CERT_CONFIG_CA_KEY: {HCO_CR_CERT_CONFIG_DURATION_KEY: None}}
+                            HCO_SECURITY_KEY: {
+                                HCO_CR_CERT_CONFIG_KEY: {
+                                    HCO_CR_CERT_CONFIG_CA_KEY: {HCO_CR_CERT_CONFIG_DURATION_KEY: None}
+                                }
+                            }
                         }
                     },
                 },
@@ -64,8 +70,10 @@ class TestCRDefaultsOnStanzaDeletion:
                 {
                     "rpatch": {
                         "spec": {
-                            HCO_CR_CERT_CONFIG_KEY: {
-                                HCO_CR_CERT_CONFIG_CA_KEY: {HCO_CR_CERT_CONFIG_RENEW_BEFORE_KEY: None}
+                            HCO_SECURITY_KEY: {
+                                HCO_CR_CERT_CONFIG_KEY: {
+                                    HCO_CR_CERT_CONFIG_CA_KEY: {HCO_CR_CERT_CONFIG_RENEW_BEFORE_KEY: None}
+                                }
                             }
                         }
                     },
@@ -76,7 +84,7 @@ class TestCRDefaultsOnStanzaDeletion:
             ),
             pytest.param(
                 {
-                    "rpatch": {"spec": {HCO_CR_CERT_CONFIG_KEY: {HCO_CR_CERT_CONFIG_CA_KEY: {}}}},
+                    "rpatch": {"spec": {HCO_SECURITY_KEY: {HCO_CR_CERT_CONFIG_KEY: {HCO_CR_CERT_CONFIG_CA_KEY: {}}}}},
                 },
                 EXPCT_CERTC_DEFAULTS,
                 id="defaults_cr_ca_empty",
@@ -84,7 +92,7 @@ class TestCRDefaultsOnStanzaDeletion:
             ),
             pytest.param(
                 {
-                    "rpatch": {"spec": {HCO_CR_CERT_CONFIG_KEY: {HCO_CR_CERT_CONFIG_CA_KEY: None}}},
+                    "rpatch": {"spec": {HCO_SECURITY_KEY: {HCO_CR_CERT_CONFIG_KEY: {HCO_CR_CERT_CONFIG_CA_KEY: None}}}},
                 },
                 EXPCT_CERTC_DEFAULTS,
                 id="defaults_cr_ca_none",
@@ -94,8 +102,10 @@ class TestCRDefaultsOnStanzaDeletion:
                 {
                     "rpatch": {
                         "spec": {
-                            HCO_CR_CERT_CONFIG_KEY: {
-                                HCO_CR_CERT_CONFIG_SERVER_KEY: {HCO_CR_CERT_CONFIG_DURATION_KEY: None}
+                            HCO_SECURITY_KEY: {
+                                HCO_CR_CERT_CONFIG_KEY: {
+                                    HCO_CR_CERT_CONFIG_SERVER_KEY: {HCO_CR_CERT_CONFIG_DURATION_KEY: None}
+                                }
                             }
                         }
                     },
@@ -108,8 +118,10 @@ class TestCRDefaultsOnStanzaDeletion:
                 {
                     "rpatch": {
                         "spec": {
-                            HCO_CR_CERT_CONFIG_KEY: {
-                                HCO_CR_CERT_CONFIG_SERVER_KEY: {HCO_CR_CERT_CONFIG_RENEW_BEFORE_KEY: None}
+                            HCO_SECURITY_KEY: {
+                                HCO_CR_CERT_CONFIG_KEY: {
+                                    HCO_CR_CERT_CONFIG_SERVER_KEY: {HCO_CR_CERT_CONFIG_RENEW_BEFORE_KEY: None}
+                                }
                             }
                         }
                     },
@@ -120,7 +132,9 @@ class TestCRDefaultsOnStanzaDeletion:
             ),
             pytest.param(
                 {
-                    "rpatch": {"spec": {HCO_CR_CERT_CONFIG_KEY: {HCO_CR_CERT_CONFIG_SERVER_KEY: {}}}},
+                    "rpatch": {
+                        "spec": {HCO_SECURITY_KEY: {HCO_CR_CERT_CONFIG_KEY: {HCO_CR_CERT_CONFIG_SERVER_KEY: {}}}}
+                    },
                 },
                 EXPCT_CERTC_DEFAULTS,
                 id="defaults_cr_server_empty",
@@ -128,7 +142,9 @@ class TestCRDefaultsOnStanzaDeletion:
             ),
             pytest.param(
                 {
-                    "rpatch": {"spec": {HCO_CR_CERT_CONFIG_KEY: {HCO_CR_CERT_CONFIG_SERVER_KEY: None}}},
+                    "rpatch": {
+                        "spec": {HCO_SECURITY_KEY: {HCO_CR_CERT_CONFIG_KEY: {HCO_CR_CERT_CONFIG_SERVER_KEY: None}}}
+                    },
                 },
                 EXPCT_CERTC_DEFAULTS,
                 id="defaults_cr_server_none",
@@ -136,7 +152,7 @@ class TestCRDefaultsOnStanzaDeletion:
             ),
             pytest.param(
                 {
-                    "rpatch": {"spec": {HCO_CR_CERT_CONFIG_KEY: {}}},
+                    "rpatch": {"spec": {HCO_SECURITY_KEY: {HCO_CR_CERT_CONFIG_KEY: {}}}},
                 },
                 EXPCT_CERTC_DEFAULTS,
                 id="defaults_cr_empty",
@@ -144,7 +160,7 @@ class TestCRDefaultsOnStanzaDeletion:
             ),
             pytest.param(
                 {
-                    "rpatch": {"spec": {HCO_CR_CERT_CONFIG_KEY: None}},
+                    "rpatch": {"spec": {HCO_SECURITY_KEY: {HCO_CR_CERT_CONFIG_KEY: None}}},
                 },
                 EXPCT_CERTC_DEFAULTS,
                 id="defaults_cr_none",
@@ -178,8 +194,10 @@ class TestCRDefaultsOnStanzaDeletion:
                 {
                     "rpatch": {
                         "spec": {
-                            HCO_CR_CERT_CONFIG_KEY: {
-                                HCO_CR_CERT_CONFIG_CA_KEY: {HCO_CR_CERT_CONFIG_DURATION_KEY: CERTC_CUSTOM_96H}
+                            HCO_SECURITY_KEY: {
+                                HCO_CR_CERT_CONFIG_KEY: {
+                                    HCO_CR_CERT_CONFIG_CA_KEY: {HCO_CR_CERT_CONFIG_DURATION_KEY: CERTC_CUSTOM_96H}
+                                }
                             }
                         }
                     },
@@ -193,8 +211,10 @@ class TestCRDefaultsOnStanzaDeletion:
                 {
                     "rpatch": {
                         "spec": {
-                            HCO_CR_CERT_CONFIG_KEY: {
-                                HCO_CR_CERT_CONFIG_CA_KEY: {HCO_CR_CERT_CONFIG_RENEW_BEFORE_KEY: CERTC_CUSTOM_36H}
+                            HCO_SECURITY_KEY: {
+                                HCO_CR_CERT_CONFIG_KEY: {
+                                    HCO_CR_CERT_CONFIG_CA_KEY: {HCO_CR_CERT_CONFIG_RENEW_BEFORE_KEY: CERTC_CUSTOM_36H}
+                                }
                             }
                         }
                     },
@@ -208,8 +228,10 @@ class TestCRDefaultsOnStanzaDeletion:
                 {
                     "rpatch": {
                         "spec": {
-                            HCO_CR_CERT_CONFIG_KEY: {
-                                HCO_CR_CERT_CONFIG_SERVER_KEY: {HCO_CR_CERT_CONFIG_DURATION_KEY: CERTC_CUSTOM_36H}
+                            HCO_SECURITY_KEY: {
+                                HCO_CR_CERT_CONFIG_KEY: {
+                                    HCO_CR_CERT_CONFIG_SERVER_KEY: {HCO_CR_CERT_CONFIG_DURATION_KEY: CERTC_CUSTOM_36H}
+                                }
                             }
                         }
                     },
@@ -223,8 +245,12 @@ class TestCRDefaultsOnStanzaDeletion:
                 {
                     "rpatch": {
                         "spec": {
-                            HCO_CR_CERT_CONFIG_KEY: {
-                                HCO_CR_CERT_CONFIG_SERVER_KEY: {HCO_CR_CERT_CONFIG_RENEW_BEFORE_KEY: CERTC_CUSTOM_18H}
+                            HCO_SECURITY_KEY: {
+                                HCO_CR_CERT_CONFIG_KEY: {
+                                    HCO_CR_CERT_CONFIG_SERVER_KEY: {
+                                        HCO_CR_CERT_CONFIG_RENEW_BEFORE_KEY: CERTC_CUSTOM_18H
+                                    }
+                                }
                             }
                         }
                     },
@@ -243,10 +269,8 @@ class TestCRDefaultsOnStanzaDeletion:
         hyperconverged_resource_scope_function,
         expected,
     ):
-        assert (
-            hyperconverged_resource_scope_function.instance.to_dict().get("spec").get(HCO_CR_CERT_CONFIG_KEY)
-            == expected
-        )
+        hco_spec = hyperconverged_resource_scope_function.instance.to_dict()["spec"]
+        assert hco_spec.get(HCO_SECURITY_KEY, {}).get(HCO_CR_CERT_CONFIG_KEY) == expected
 
     @pytest.mark.parametrize(
         "deleted_stanza_on_hco_cr, expected",
@@ -301,7 +325,13 @@ class TestCRDefaultsOnStanzaDeletion:
         [
             pytest.param(
                 {
-                    "rpatch": {"spec": {LIVE_MIGRATION_CONFIG_KEY: {PARALLEL_MIGRATIONS_PER_CLUSTER_KEY: None}}},
+                    "rpatch": {
+                        "spec": {
+                            HCO_VIRTUALIZATION_KEY: {
+                                LIVE_MIGRATION_CONFIG_KEY: {PARALLEL_MIGRATIONS_PER_CLUSTER_KEY: None}
+                            }
+                        }
+                    },
                 },
                 EXPCT_LM_DEFAULTS,
                 id="defaults_lm_pm_none",
@@ -309,7 +339,13 @@ class TestCRDefaultsOnStanzaDeletion:
             ),
             pytest.param(
                 {
-                    "rpatch": {"spec": {LIVE_MIGRATION_CONFIG_KEY: {PARALLEL_OUTBOUND_MIGRATIONS_PER_NODE_KEY: None}}},
+                    "rpatch": {
+                        "spec": {
+                            HCO_VIRTUALIZATION_KEY: {
+                                LIVE_MIGRATION_CONFIG_KEY: {PARALLEL_OUTBOUND_MIGRATIONS_PER_NODE_KEY: None}
+                            }
+                        }
+                    },
                 },
                 EXPCT_LM_DEFAULTS,
                 id="defaults_lm_po_none",
@@ -317,7 +353,11 @@ class TestCRDefaultsOnStanzaDeletion:
             ),
             pytest.param(
                 {
-                    "rpatch": {"spec": {LIVE_MIGRATION_CONFIG_KEY: {COMPLETION_TIMEOUT_PER_GIB_KEY: None}}},
+                    "rpatch": {
+                        "spec": {
+                            HCO_VIRTUALIZATION_KEY: {LIVE_MIGRATION_CONFIG_KEY: {COMPLETION_TIMEOUT_PER_GIB_KEY: None}}
+                        }
+                    },
                 },
                 EXPCT_LM_DEFAULTS,
                 id="defaults_lm_c_none",
@@ -325,7 +365,9 @@ class TestCRDefaultsOnStanzaDeletion:
             ),
             pytest.param(
                 {
-                    "rpatch": {"spec": {LIVE_MIGRATION_CONFIG_KEY: {PROGRESS_TIMEOUT_KEY: None}}},
+                    "rpatch": {
+                        "spec": {HCO_VIRTUALIZATION_KEY: {LIVE_MIGRATION_CONFIG_KEY: {PROGRESS_TIMEOUT_KEY: None}}}
+                    },
                 },
                 EXPCT_LM_DEFAULTS,
                 id="defaults_lm_pt_none",
@@ -333,7 +375,7 @@ class TestCRDefaultsOnStanzaDeletion:
             ),
             pytest.param(
                 {
-                    "rpatch": {"spec": {LIVE_MIGRATION_CONFIG_KEY: {}}},
+                    "rpatch": {"spec": {HCO_VIRTUALIZATION_KEY: {LIVE_MIGRATION_CONFIG_KEY: {}}}},
                 },
                 EXPCT_LM_DEFAULTS,
                 id="defaults_lm_empty",
@@ -341,7 +383,7 @@ class TestCRDefaultsOnStanzaDeletion:
             ),
             pytest.param(
                 {
-                    "rpatch": {"spec": {LIVE_MIGRATION_CONFIG_KEY: None}},
+                    "rpatch": {"spec": {HCO_VIRTUALIZATION_KEY: {LIVE_MIGRATION_CONFIG_KEY: None}}},
                 },
                 EXPCT_LM_DEFAULTS,
                 id="defaults_lm_none",
@@ -375,8 +417,10 @@ class TestCRDefaultsOnStanzaDeletion:
                 {
                     "rpatch": {
                         "spec": {
-                            LIVE_MIGRATION_CONFIG_KEY: {
-                                PARALLEL_MIGRATIONS_PER_CLUSTER_KEY: LM_PARALLELMIGRATIONSPERCLUSTER_CUSTOM
+                            HCO_VIRTUALIZATION_KEY: {
+                                LIVE_MIGRATION_CONFIG_KEY: {
+                                    PARALLEL_MIGRATIONS_PER_CLUSTER_KEY: LM_PARALLELMIGRATIONSPERCLUSTER_CUSTOM
+                                }
                             }
                         },
                     },
@@ -390,8 +434,12 @@ class TestCRDefaultsOnStanzaDeletion:
                 {
                     "rpatch": {
                         "spec": {
-                            LIVE_MIGRATION_CONFIG_KEY: {
-                                PARALLEL_OUTBOUND_MIGRATIONS_PER_NODE_KEY: LM_PARALLELOUTBOUNDMIGRATIONSPERNODE_CUSTOM
+                            HCO_VIRTUALIZATION_KEY: {
+                                LIVE_MIGRATION_CONFIG_KEY: {
+                                    PARALLEL_OUTBOUND_MIGRATIONS_PER_NODE_KEY: (
+                                        LM_PARALLELOUTBOUNDMIGRATIONSPERNODE_CUSTOM
+                                    )
+                                }
                             }
                         }
                     },
@@ -405,8 +453,10 @@ class TestCRDefaultsOnStanzaDeletion:
                 {
                     "rpatch": {
                         "spec": {
-                            LIVE_MIGRATION_CONFIG_KEY: {
-                                COMPLETION_TIMEOUT_PER_GIB_KEY: LM_COMPLETIONTIMEOUTPERGIB_CUSTOM
+                            HCO_VIRTUALIZATION_KEY: {
+                                LIVE_MIGRATION_CONFIG_KEY: {
+                                    COMPLETION_TIMEOUT_PER_GIB_KEY: LM_COMPLETIONTIMEOUTPERGIB_CUSTOM
+                                }
                             }
                         }
                     },
@@ -418,7 +468,13 @@ class TestCRDefaultsOnStanzaDeletion:
             ),
             pytest.param(
                 {
-                    "rpatch": {"spec": {LIVE_MIGRATION_CONFIG_KEY: {PROGRESS_TIMEOUT_KEY: LM_PROGRESSTIMEOUT_CUSTOM}}},
+                    "rpatch": {
+                        "spec": {
+                            HCO_VIRTUALIZATION_KEY: {
+                                LIVE_MIGRATION_CONFIG_KEY: {PROGRESS_TIMEOUT_KEY: LM_PROGRESSTIMEOUT_CUSTOM}
+                            }
+                        }
+                    },
                     "list_resource_reconcile": [KubeVirt],
                 },
                 EXPCT_LM_CUSTOM_PT,
@@ -434,7 +490,5 @@ class TestCRDefaultsOnStanzaDeletion:
         hyperconverged_resource_scope_function,
         expected,
     ):
-        assert (
-            hyperconverged_resource_scope_function.instance.to_dict().get("spec").get(LIVE_MIGRATION_CONFIG_KEY)
-            == expected
-        )
+        hco_spec = hyperconverged_resource_scope_function.instance.to_dict()["spec"]
+        assert hco_spec.get(HCO_VIRTUALIZATION_KEY, {}).get(LIVE_MIGRATION_CONFIG_KEY) == expected

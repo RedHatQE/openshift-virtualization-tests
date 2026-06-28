@@ -238,15 +238,17 @@ class TestGetHcoSpec:
 
         mock_hco = MagicMock()
         mock_hco.instance.to_dict.return_value = {
-            "spec": {"infra": {}, "workloads": {}, "featureGates": {"enableCommonBootImageImport": True}}
+            "spec": {
+                "deployment": {"nodePlacements": {"infra": {}, "workload": {}}},
+                "workloadSources": {"enableCommonBootImageImport": True},
+            }
         }
         mock_get_hco.return_value = mock_hco
 
         result = get_hco_spec(mock_admin_client, mock_namespace)
 
-        assert "infra" in result
-        assert "workloads" in result
-        assert "featureGates" in result
+        assert "deployment" in result
+        assert "workloadSources" in result
         mock_get_hco.assert_called_once_with(client=mock_admin_client, hco_ns_name="openshift-cnv")
 
 
@@ -538,7 +540,9 @@ class TestApplyNpChanges:
         mock_hco = MagicMock()
         mock_namespace = MagicMock()
 
-        mock_hco.instance.to_dict.return_value = {"spec": {"infra": None, "workloads": None}}
+        mock_hco.instance.to_dict.return_value = {
+            "spec": {"deployment": {"nodePlacements": {"infra": None, "workload": None}}}
+        }
 
         new_infra_placement = {"nodeSelector": {"node-role.kubernetes.io/worker": ""}}
 
@@ -557,7 +561,9 @@ class TestApplyNpChanges:
         mock_namespace = MagicMock()
 
         existing_placement = {"nodeSelector": {"node-role.kubernetes.io/worker": ""}}
-        mock_hco.instance.to_dict.return_value = {"spec": {"infra": existing_placement, "workloads": None}}
+        mock_hco.instance.to_dict.return_value = {
+            "spec": {"deployment": {"nodePlacements": {"infra": existing_placement, "workload": None}}}
+        }
 
         apply_np_changes(mock_admin_client, mock_hco, mock_namespace, infra_placement=existing_placement)
 
@@ -750,7 +756,7 @@ class TestDisableCommonBootImageImportHcoSpec:
         """Test disabling common boot image import when it's enabled"""
         mock_admin_client = MagicMock()
         mock_hco = MagicMock()
-        mock_hco.instance.spec = {"enableCommonBootImageImport": True}
+        mock_hco.instance.spec = {"workloadSources": {"enableCommonBootImageImport": True}}
         mock_namespace = MagicMock()
         mock_dics = [MagicMock()]
 
@@ -775,7 +781,7 @@ class TestDisableCommonBootImageImportHcoSpec:
         """Test context manager when common boot image import is already disabled"""
         mock_admin_client = MagicMock()
         mock_hco = MagicMock()
-        mock_hco.instance.spec = {"enableCommonBootImageImport": False}
+        mock_hco.instance.spec = {"workloadSources": {"enableCommonBootImageImport": False}}
         mock_namespace = MagicMock()
         mock_dics = [MagicMock()]
 
@@ -839,7 +845,7 @@ class TestUpdateCommonBootImageImportSpec:
     def test_update_spec_enable(self, mock_editor_class, mock_sampler):
         """Test enabling common boot image import spec"""
         mock_hco = MagicMock()
-        mock_hco.instance.spec = {"enableCommonBootImageImport": True}
+        mock_hco.instance.spec = {"workloadSources": {"enableCommonBootImageImport": True}}
 
         mock_editor = MagicMock()
         mock_editor_class.return_value = mock_editor
@@ -858,7 +864,7 @@ class TestUpdateCommonBootImageImportSpec:
     def test_update_spec_timeout(self, mock_editor_class, mock_sampler):
         """Test timeout when spec doesn't update"""
         mock_hco = MagicMock()
-        mock_hco.instance.spec = {"enableCommonBootImageImport": False}
+        mock_hco.instance.spec = {"workloadSources": {"enableCommonBootImageImport": False}}
 
         mock_editor = MagicMock()
         mock_editor_class.return_value = mock_editor
@@ -1060,7 +1066,7 @@ class TestEnabledAaqInHco:
         call_args = mock_editor_class.call_args
         patches = call_args[1]["patches"]
         assert mock_hco in patches
-        assert patches[mock_hco]["spec"]["enableApplicationAwareQuota"] is True
+        assert patches[mock_hco]["spec"]["deployment"]["applicationAwareConfig"]["enable"] is True
 
     @patch("utilities.hco.TimeoutSampler")
     @patch("utilities.hco.utilities.infra.get_pod_by_name_prefix")
@@ -1087,8 +1093,9 @@ class TestEnabledAaqInHco:
         # Verify ACRQ support is included
         call_args = mock_editor_class.call_args
         patches = call_args[1]["patches"]
-        assert patches[mock_hco]["spec"]["applicationAwareConfig"] == {
-            "allowApplicationAwareClusterResourceQuota": True
+        assert patches[mock_hco]["spec"]["deployment"]["applicationAwareConfig"] == {
+            "enable": True,
+            "allowApplicationAwareClusterResourceQuota": True,
         }
 
     @patch("utilities.hco.TimeoutSampler")
