@@ -1,6 +1,7 @@
 from ocp_resources.resource import Resource
 
-from utilities.constants import (
+from utilities.constants.cluster import VERSION_LABEL_KEY
+from utilities.constants.components import (
     AAQ_OPERATOR,
     BRIDGE_MARKER,
     CDI_APISERVER,
@@ -54,7 +55,6 @@ from utilities.constants import (
     SSP_KUBEVIRT_HYPERCONVERGED,
     SSP_OPERATOR,
     UPLOAD_BOOT_SOURCE,
-    VERSION_LABEL_KEY,
     VIRT_API,
     VIRT_CONTROLLER,
     VIRT_EXPORTPROXY,

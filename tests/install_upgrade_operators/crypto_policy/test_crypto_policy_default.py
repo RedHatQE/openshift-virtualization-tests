@@ -24,13 +24,13 @@ from tests.install_upgrade_operators.crypto_policy.constants import (
 from tests.install_upgrade_operators.crypto_policy.utils import (
     assert_tls_version_connection,
 )
-from utilities.constants import (
+from utilities.constants.components import (
     CDI_KUBEVIRT_HYPERCONVERGED,
     CLUSTER,
     KUBEVIRT_HCO_NAME,
     SSP_KUBEVIRT_HYPERCONVERGED,
-    TLS_SECURITY_PROFILE,
 )
+from utilities.constants.hco import TLS_SECURITY_PROFILE
 
 LOGGER = logging.getLogger(__name__)
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.s390x]

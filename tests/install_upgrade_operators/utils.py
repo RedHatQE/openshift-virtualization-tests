@@ -25,9 +25,11 @@ from tests.install_upgrade_operators.constants import (
     KONFLUX_PIPELINE,
     RH_IDMS_SOURCE,
 )
-from utilities.constants import (
+from utilities.constants.hco import (
     HCO_SUBSCRIPTION,
     PRODUCTION_CATALOG_SOURCE,
+)
+from utilities.constants.timeouts import (
     TIMEOUT_1MIN,
     TIMEOUT_5SEC,
     TIMEOUT_10SEC,

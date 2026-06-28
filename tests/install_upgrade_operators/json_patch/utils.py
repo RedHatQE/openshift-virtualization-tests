@@ -4,7 +4,10 @@ from ocp_resources.resource import Resource
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.install_upgrade_operators.json_patch.constants import DISABLE_TLS, PATH_CDI
-from utilities.constants import TIMEOUT_5MIN, TIMEOUT_30SEC
+from utilities.constants.timeouts import (
+    TIMEOUT_5MIN,
+    TIMEOUT_30SEC,
+)
 from utilities.hco import HCO_JSONPATCH_ANNOTATION_COMPONENT_DICT
 
 LOGGER = logging.getLogger(__name__)

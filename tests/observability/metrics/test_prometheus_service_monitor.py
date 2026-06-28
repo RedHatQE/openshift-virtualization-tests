@@ -1,7 +1,7 @@
 import pytest
 from ocp_resources.service_monitor import ServiceMonitor
 
-from utilities.constants import VIRT_OPERATOR
+from utilities.constants.components import VIRT_OPERATOR
 
 
 @pytest.fixture()

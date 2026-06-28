@@ -14,7 +14,10 @@ from tests.install_upgrade_operators.crypto_policy.utils import (
     assert_tls_ciphers_blocked,
     assert_tls_version_connection,
 )
-from utilities.constants import TLS_CUSTOM_POLICY, TLS_OLD_POLICY
+from utilities.constants.hco import (
+    TLS_CUSTOM_POLICY,
+    TLS_OLD_POLICY,
+)
 
 pytestmark = pytest.mark.tier3
 

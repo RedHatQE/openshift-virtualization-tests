@@ -10,22 +10,24 @@ from tests.install_upgrade_operators.node_component.utils import (
     wait_for_pod_node_selector_clean_up,
 )
 from tests.install_upgrade_operators.utils import get_network_addon_config
-from utilities.constants import (
+from utilities.constants.components import (
     BRIDGE_MARKER,
     CDI_APISERVER,
     CDI_DEPLOYMENT,
     CDI_UPLOADPROXY,
-    HCO_SUBSCRIPTION,
     HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD,
-    IMAGE_CRON_STR,
     KUBE_CNI_LINUX_BRIDGE_PLUGIN,
     KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
-    TIMEOUT_5MIN,
     VIRT_API,
     VIRT_CONTROLLER,
     VIRT_HANDLER,
     VIRT_TEMPLATE_VALIDATOR,
 )
+from utilities.constants.hco import (
+    HCO_SUBSCRIPTION,
+    IMAGE_CRON_STR,
+)
+from utilities.constants.timeouts import TIMEOUT_5MIN
 from utilities.hco import add_labels_to_nodes, apply_np_changes, wait_for_hco_conditions
 from utilities.infra import (
     get_daemonset_by_name,

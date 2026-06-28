@@ -8,7 +8,10 @@ from tests.install_upgrade_operators.crypto_policy.constants import (
     MANAGED_CRS_LIST,
     TLS_CUSTOM_PROFILE,
 )
-from utilities.constants import TLS_CUSTOM_POLICY, TLS_SECURITY_PROFILE
+from utilities.constants.hco import (
+    TLS_CUSTOM_POLICY,
+    TLS_SECURITY_PROFILE,
+)
 from utilities.hco import ResourceEditorValidateHCOReconcile
 
 LOGGER = logging.getLogger(__name__)

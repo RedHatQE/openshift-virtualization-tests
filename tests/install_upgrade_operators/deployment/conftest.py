@@ -1,6 +1,9 @@
 import pytest
 
-from utilities.constants import HPP_POOL, KUBEVIRT_MIGRATION_CONTROLLER
+from utilities.constants.components import (
+    HPP_POOL,
+    KUBEVIRT_MIGRATION_CONTROLLER,
+)
 from utilities.infra import get_deployment_by_name, get_deployments
 
 

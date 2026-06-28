@@ -30,11 +30,11 @@ from tests.install_upgrade_operators.utils import (
     get_resource_by_name,
     get_resource_key_value,
 )
-from utilities.constants import (
-    CLUSTER,
+from utilities.constants.components import CLUSTER
+from utilities.constants.hco import TLS_SECURITY_PROFILE
+from utilities.constants.timeouts import (
     TIMEOUT_2MIN,
     TIMEOUT_60MIN,
-    TLS_SECURITY_PROFILE,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_conditions
 from utilities.infra import ExecCommandOnPod

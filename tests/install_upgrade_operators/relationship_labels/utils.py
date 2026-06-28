@@ -6,7 +6,11 @@ from tests.install_upgrade_operators.relationship_labels.constants import (
     KUBEVIRT_APISERVER_PROXY,
     VIRITO_WIN_STORAGE,
 )
-from utilities.constants import POD_STR, ROLEBINDING_STR, VIRTIO_WIN
+from utilities.constants.components import (
+    POD_STR,
+    ROLEBINDING_STR,
+    VIRTIO_WIN,
+)
 
 LOGGER = logging.getLogger(__name__)
 

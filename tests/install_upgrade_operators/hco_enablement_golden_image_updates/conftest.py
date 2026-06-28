@@ -10,9 +10,9 @@ from tests.install_upgrade_operators.hco_enablement_golden_image_updates.utils i
     get_random_minutes_hours_fields_from_data_import_schedule,
     get_templates_by_type_from_hco_status,
 )
-from utilities.constants import (
+from utilities.constants.components import HCO_OPERATOR
+from utilities.constants.hco import (
     COMMON_TEMPLATES_KEY_NAME,
-    HCO_OPERATOR,
     SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
 )
 from utilities.ssp import get_ssp_resource

@@ -3,7 +3,7 @@ import pytest
 from tests.install_upgrade_operators.strict_reconciliation.utils import (
     validate_related_objects,
 )
-from utilities.constants import ALL_HCO_RELATED_OBJECTS
+from utilities.constants.components import ALL_HCO_RELATED_OBJECTS
 
 pytestmark = [
     pytest.mark.post_upgrade,

@@ -13,7 +13,8 @@ from ocp_resources.resource import Resource
 from ocp_resources.service import Service
 
 from tests.install_upgrade_operators.relationship_labels.constants import PART_OF_LABEL_KEY
-from utilities.constants import HCO_PART_OF_LABEL_VALUE, NamespacesNames
+from utilities.constants.components import HCO_PART_OF_LABEL_VALUE
+from utilities.constants.namespaces import NamespacesNames
 from utilities.data_collector import get_data_collector_base_directory
 from utilities.exceptions import ResourceMismatch
 

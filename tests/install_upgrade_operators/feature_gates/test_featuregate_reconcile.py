@@ -14,7 +14,7 @@ from tests.install_upgrade_operators.constants import (
     RESOURCE_TYPE_STR,
 )
 from tests.install_upgrade_operators.utils import get_resource_key_value
-from utilities.constants import (
+from utilities.constants.components import (
     CDI_KUBEVIRT_HYPERCONVERGED,
     KUBEVIRT_KUBEVIRT_HYPERCONVERGED,
 )

@@ -12,7 +12,10 @@ from tests.install_upgrade_operators.crypto_policy.utils import (
     set_hco_crypto_policy,
     update_apiserver_crypto_policy,
 )
-from utilities.constants import TIMEOUT_2MIN, TIMEOUT_10SEC
+from utilities.constants.timeouts import (
+    TIMEOUT_2MIN,
+    TIMEOUT_10SEC,
+)
 
 LOGGER = logging.getLogger(__name__)
 pytestmark = pytest.mark.tier3

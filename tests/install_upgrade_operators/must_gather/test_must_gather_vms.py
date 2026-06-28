@@ -31,7 +31,8 @@ from tests.install_upgrade_operators.must_gather.utils import (
     validate_no_empty_files_collected_must_gather_vm,
 )
 from tests.os_params import FEDORA_LATEST
-from utilities.constants import ARM_64, COUNT_FIVE
+from utilities.constants.architecture import ARM_64
+from utilities.constants.cluster import COUNT_FIVE
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.skip_must_gather_collection, pytest.mark.arm64, pytest.mark.s390x]
 

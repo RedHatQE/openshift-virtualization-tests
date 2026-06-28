@@ -1,6 +1,6 @@
 import pytest
 
-from utilities.constants import (
+from utilities.constants.hco import (
     COMMON_TEMPLATES_KEY_NAME,
     SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
 )

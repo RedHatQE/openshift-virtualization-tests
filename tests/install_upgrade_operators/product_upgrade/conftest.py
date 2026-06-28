@@ -38,11 +38,11 @@ from tests.install_upgrade_operators.utils import (
     wait_for_operator_condition,
 )
 from tests.upgrade_params import EUS
-from utilities.constants import (
-    HCO_CATALOG_SOURCE,
+from utilities.constants.components import HCO_CATALOG_SOURCE
+from utilities.constants.namespaces import NamespacesNames
+from utilities.constants.timeouts import (
     TIMEOUT_10MIN,
     TIMEOUT_180MIN,
-    NamespacesNames,
 )
 from utilities.data_collector import (
     get_data_collector_base_directory,

@@ -7,7 +7,8 @@ from tests.install_upgrade_operators.constants import (
     FEATUREGATES,
     FG_ENABLED,
 )
-from utilities.constants import QUARANTINED, VALUE_STR
+from utilities.constants.cluster import VALUE_STR
+from utilities.constants.pytest import QUARANTINED
 from utilities.hco import ResourceEditorValidateHCOReconcile
 
 FEATUREGATE_NAME_KEY_STR = "featuregate_name"

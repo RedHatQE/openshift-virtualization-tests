@@ -8,7 +8,7 @@ from pytest_testconfig import config as py_config
 from tests.install_upgrade_operators.csv.csv_permissions_audit.utils import (
     get_csv_permissions,
 )
-from utilities.constants import (
+from utilities.constants.components import (
     AAQ_OPERATOR,
     CDI_OPERATOR,
     CLUSTER_NETWORK_ADDONS_OPERATOR,
