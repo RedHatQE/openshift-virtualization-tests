@@ -4,24 +4,35 @@ BAD_HTTPGET_PATH = "/metrics-fake"
 SSP_COMMON_TEMPLATES_MODIFICATION_REVERTED = "SSPCommonTemplatesModificationReverted"
 KUBEVIRT_VMI_NUMBER_OF_OUTDATED = "kubevirt_vmi_number_of_outdated"
 VIRT_ALERTS_LIST = [
+    # virt-operator
     "VirtOperatorDown",
     "NoReadyVirtOperator",
-    "LowVirtOperatorCount",
-    "VirtAPIDown",
-    "LowVirtOperatorCount",
-    "VirtHandlerDaemonSetRolloutFailing",
     "LowReadyVirtOperatorsCount",
+    "LowVirtOperatorCount",
     "NoLeadingVirtOperator",
     "VirtOperatorRESTErrorsBurst",
     "VirtOperatorRESTErrorsHigh",
+    # virt-api
+    "VirtAPIDown",
+    "NoReadyVirtAPI",
+    "LowReadyVirtAPICount",
+    "LowVirtAPICount",
     "VirtApiRESTErrorsBurst",
     "VirtApiRESTErrorsHigh",
-    "LowReadyVirtControllersCount",
+    # virt-controller
+    "VirtControllerDown",
     "NoReadyVirtController",
-    "VirtControllerRESTErrorsHigh",
+    "LowReadyVirtControllersCount",
+    "LowVirtControllersCount",
     "VirtControllerRESTErrorsBurst",
-    "VirtHandlerRESTErrorsHigh",
+    "VirtControllerRESTErrorsHigh",
+    # virt-handler
+    "VirtHandlerDown",
+    "NoReadyVirtHandler",
+    "LowReadyVirtHandlerCount",
+    "VirtHandlerDaemonSetRolloutFailing",
     "VirtHandlerRESTErrorsBurst",
+    "VirtHandlerRESTErrorsHigh",
 ]
 SSP_ALERTS_LIST = [
     "SSPDown",
