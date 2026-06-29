@@ -33,7 +33,6 @@ class TestStorageMigrationRetentionPolicy:
     """
 
     @pytest.mark.polarion("CNV-16297")
-    @pytest.mark.tier2
     def test_retention_policy_default_behavior(self):
         """
         Test that default behavior is keepSource when retentionPolicy is not specified.
@@ -56,7 +55,6 @@ class TestStorageMigrationRetentionPolicy:
         """
 
     @pytest.mark.polarion("CNV-16298")
-    @pytest.mark.tier2
     def test_namespace_level_retention_policy_delete_source(self):
         """
         Test namespace-level retentionPolicy=deleteSource.
@@ -79,7 +77,6 @@ class TestStorageMigrationRetentionPolicy:
         """
 
     @pytest.mark.polarion("CNV-16299")
-    @pytest.mark.tier2
     def test_spec_level_retention_policy_delete_source(self):
         """
         Test plan-level retentionPolicy=deleteSource.
@@ -102,7 +99,6 @@ class TestStorageMigrationRetentionPolicy:
         """
 
     @pytest.mark.polarion("CNV-16301")
-    @pytest.mark.tier2
     def test_namespace_level_retention_policy_keep_source(self):
         """
         Test namespace-level retentionPolicy=keepSource.
@@ -125,7 +121,6 @@ class TestStorageMigrationRetentionPolicy:
         """
 
     @pytest.mark.polarion("CNV-16302")
-    @pytest.mark.tier2
     def test_spec_level_retention_policy_keep_source(self):
         """
         Test plan-level retentionPolicy=keepSource.
@@ -159,7 +154,6 @@ class TestSingleNamespaceStorageMigrationRetentionPolicy:
     """
 
     @pytest.mark.polarion("CNV-16303")
-    @pytest.mark.tier2
     def test_single_namespace_retention_policy_keep_source(self):
         """
         Test plan-level retentionPolicy=keepSource in single namespace plan.
@@ -182,7 +176,6 @@ class TestSingleNamespaceStorageMigrationRetentionPolicy:
         """
 
     @pytest.mark.polarion("CNV-16304")
-    @pytest.mark.tier2
     def test_single_namespace_retention_policy_delete_source(self):
         """
         Test plan-level retentionPolicy=deleteSource in single namespace plan.
@@ -218,7 +211,6 @@ class TestStorageMigrationCombinedRetentionPolicy:
     """
 
     @pytest.mark.polarion("CNV-16305")
-    @pytest.mark.tier2
     def test_combined_namespace_and_spec_level_retention_policy(self):
         """
         Test combination of namespace-level and plan-level retentionPolicy.
@@ -242,7 +234,6 @@ class TestStorageMigrationCombinedRetentionPolicy:
         """
 
     @pytest.mark.polarion("CNV-16306")
-    @pytest.mark.tier2
     def test_combined_namespace_keep_spec_delete(self):
         """
         Test combination: namespace-level keepSource + plan-level deleteSource.
@@ -266,7 +257,6 @@ class TestStorageMigrationCombinedRetentionPolicy:
         """
 
     @pytest.mark.polarion("CNV-16307")
-    @pytest.mark.tier2
     def test_combined_both_delete(self):
         """
         Test combination: namespace-level deleteSource + plan-level deleteSource.
@@ -289,7 +279,6 @@ class TestStorageMigrationCombinedRetentionPolicy:
         """
 
     @pytest.mark.polarion("CNV-16308")
-    @pytest.mark.tier2
     def test_combined_both_keep(self):
         """
         Test combination: namespace-level keepSource + plan-level keepSource.
@@ -324,7 +313,6 @@ class TestStorageMigrationFailureRetentionPolicy:
     """
 
     @pytest.mark.polarion("CNV-16309")
-    @pytest.mark.tier2
     def test_failed_migration_with_delete_source_policy(self):
         """
         Test that source PVC/DataVolume is retained when migration fails with retentionPolicy=deleteSource. [NEGATIVE]
@@ -348,7 +336,6 @@ class TestStorageMigrationFailureRetentionPolicy:
         """
 
     @pytest.mark.polarion("CNV-16310")
-    @pytest.mark.tier2
     def test_failed_migration_with_keep_source_policy(self):
         """
         Test that source PVC/DataVolume is retained when migration fails with retentionPolicy=keepSource. [NEGATIVE]
@@ -372,7 +359,6 @@ class TestStorageMigrationFailureRetentionPolicy:
         """
 
     @pytest.mark.polarion("CNV-16311")
-    @pytest.mark.tier2
     def test_failed_multi_namespace_migration_with_delete_source_policy(self):
         """
         Test that source PVCs are retained when MultiNamespace migration fails with retentionPolicy=deleteSource. [NEGATIVE]
