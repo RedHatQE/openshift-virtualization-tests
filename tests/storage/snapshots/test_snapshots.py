@@ -23,7 +23,8 @@ from tests.storage.snapshots.utils import (
     start_windows_vm_after_restore,
 )
 from tests.storage.utils import assert_windows_directory_existence
-from utilities.constants import LS_COMMAND, TIMEOUT_1MIN, TIMEOUT_10SEC
+from utilities.constants.cluster import LS_COMMAND
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_10SEC
 from utilities.storage import run_command_on_vm_and_check_output
 from utilities.virt import restart_vm_wait_for_running_vm, running_vm
 

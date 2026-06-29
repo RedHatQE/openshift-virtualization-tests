@@ -19,7 +19,7 @@ from tests.storage.online_resize.utils import (
     vm_restore,
     wait_for_resize,
 )
-from utilities.constants import TIMEOUT_1MIN, TIMEOUT_4MIN, TIMEOUT_5SEC
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_4MIN, TIMEOUT_5SEC
 from utilities.storage import add_dv_to_vm, create_dv, vm_snapshot
 from utilities.virt import migrate_vm_and_verify, running_vm
 
