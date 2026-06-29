@@ -56,6 +56,7 @@ def test_connectivity_post_migration_between_localnet_vms(
                 assert is_tcp_connection(server=server, client=client)
 
 
+@pytest.mark.jira("CNV-90600", run=False)
 @pytest.mark.single_nic
 @pytest.mark.s390x
 @pytest.mark.usefixtures("nncp_localnet")
