@@ -39,31 +39,37 @@ from tests.observability.metrics.utils import (
 from tests.observability.utils import validate_metrics_value
 from tests.utils import create_vms, start_stress_on_vm
 from utilities import console
-from utilities.constants import (
-    IPV4_STR,
+from utilities.constants import Images
+from utilities.constants.components import (
+    SSP_OPERATOR,
+    VIRT_TEMPLATE_VALIDATOR,
+)
+from utilities.constants.images import OS_FLAVOR_FEDORA
+from utilities.constants.instance_types import U1_SMALL
+from utilities.constants.monitoring import (
     KUBEVIRT_VMI_MEMORY_PGMAJFAULT_TOTAL,
     KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL,
     KUBEVIRT_VMI_MEMORY_SWAP_IN_TRAFFIC_BYTES,
     KUBEVIRT_VMI_MEMORY_SWAP_OUT_TRAFFIC_BYTES,
     KUBEVIRT_VMI_MEMORY_UNUSED_BYTES,
     KUBEVIRT_VMI_MEMORY_USABLE_BYTES,
-    MIGRATION_POLICY_VM_LABEL,
-    ONE_CPU_CORE,
-    ONE_CPU_THREAD,
-    OS_FLAVOR_FEDORA,
-    SSP_OPERATOR,
-    STRESS_CPU_MEM_IO_COMMAND,
+)
+from utilities.constants.networking import IPV4_STR
+from utilities.constants.timeouts import (
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
     TIMEOUT_4MIN,
     TIMEOUT_5MIN,
     TIMEOUT_15SEC,
+)
+from utilities.constants.virt import (
+    MIGRATION_POLICY_VM_LABEL,
+    ONE_CPU_CORE,
+    ONE_CPU_THREAD,
+    STRESS_CPU_MEM_IO_COMMAND,
     TWO_CPU_CORES,
     TWO_CPU_SOCKETS,
     TWO_CPU_THREADS,
-    U1_SMALL,
-    VIRT_TEMPLATE_VALIDATOR,
-    Images,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile, enabled_aaq_in_hco
 from utilities.infra import (
