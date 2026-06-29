@@ -13,7 +13,8 @@ from tests.os_params import (
     WINDOWS_2019_OS,
     WINDOWS_2019_TEMPLATE_LABELS,
 )
-from utilities.constants import TIMEOUT_2MIN, VIRTIO
+from utilities.constants.timeouts import TIMEOUT_2MIN
+from utilities.constants.virt import VIRTIO
 from utilities.virt import restart_vm_wait_for_running_vm, vm_instance_from_template
 
 RHEL_TESTS_CLASS_NAME = "TestLatestRHEL"

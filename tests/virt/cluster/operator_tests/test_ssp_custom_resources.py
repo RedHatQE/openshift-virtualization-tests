@@ -5,11 +5,11 @@ import pytest
 from ocp_resources.pod import Pod
 
 from tests.virt.cluster.utils import verify_pods_priority_class_value
-from utilities.constants import (
-    DEFAULT_RESOURCE_CONDITIONS,
+from utilities.constants.components import (
     SSP_OPERATOR,
     VIRT_TEMPLATE_VALIDATOR,
 )
+from utilities.constants.hco import DEFAULT_RESOURCE_CONDITIONS
 from utilities.infra import get_pod_by_name_prefix
 
 LOGGER = logging.getLogger(__name__)

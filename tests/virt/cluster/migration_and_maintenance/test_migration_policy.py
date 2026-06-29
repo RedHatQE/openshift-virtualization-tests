@@ -6,7 +6,7 @@ import pytest
 from ocp_resources.migration_policy import MigrationPolicy
 from ocp_resources.resource import ResourceEditor
 
-from utilities.constants import MIGRATION_POLICY_VM_LABEL
+from utilities.constants.virt import MIGRATION_POLICY_VM_LABEL
 from utilities.infra import label_project
 from utilities.virt import (
     VirtualMachineForTests,

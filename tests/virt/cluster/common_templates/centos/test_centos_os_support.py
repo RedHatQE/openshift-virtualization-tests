@@ -17,7 +17,7 @@ from tests.virt.cluster.common_templates.utils import (
     vm_os_version,
 )
 from utilities import console
-from utilities.constants import LINUX_STR
+from utilities.constants.instance_types import LINUX_STR
 from utilities.infra import validate_os_info_vmi_vs_linux_os
 from utilities.virt import (
     check_vm_xml_smbios,

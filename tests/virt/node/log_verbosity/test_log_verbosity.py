@@ -10,7 +10,11 @@ from ocp_resources.pod import Pod
 from tests.virt.node.log_verbosity.constants import (
     VIRT_LOG_VERBOSITY_LEVEL_6,
 )
-from utilities.constants import VIRT_API, VIRT_CONTROLLER, VIRT_HANDLER
+from utilities.constants.components import (
+    VIRT_API,
+    VIRT_CONTROLLER,
+    VIRT_HANDLER,
+)
 from utilities.infra import get_pods
 
 LOGGER = logging.getLogger(__name__)

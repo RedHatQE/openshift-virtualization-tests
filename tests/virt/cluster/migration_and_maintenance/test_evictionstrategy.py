@@ -6,11 +6,13 @@ from ocp_resources.resource import ResourceEditor
 from timeout_sampler import TimeoutSampler
 
 from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS
-from utilities.constants import (
-    EVICTIONSTRATEGY,
-    LIVE_MIGRATE,
+from utilities.constants.timeouts import (
     TIMEOUT_3MIN,
     TIMEOUT_5MIN,
+)
+from utilities.constants.virt import (
+    EVICTIONSTRATEGY,
+    LIVE_MIGRATE,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.virt import (

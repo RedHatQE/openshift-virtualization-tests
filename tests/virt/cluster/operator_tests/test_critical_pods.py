@@ -8,7 +8,11 @@ import pytest
 from ocp_resources.pod import Pod
 
 from tests.virt.cluster.utils import verify_pods_priority_class_value
-from utilities.constants import VIRT_API, VIRT_CONTROLLER, VIRT_HANDLER
+from utilities.constants.components import (
+    VIRT_API,
+    VIRT_CONTROLLER,
+    VIRT_HANDLER,
+)
 
 pytestmark = [
     pytest.mark.post_upgrade,

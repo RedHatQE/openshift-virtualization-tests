@@ -5,7 +5,7 @@ VM with CPU flag
 import pytest
 from timeout_sampler import TimeoutExpiredError
 
-from utilities.constants import TIMEOUT_1MIN
+from utilities.constants.timeouts import TIMEOUT_1MIN
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]

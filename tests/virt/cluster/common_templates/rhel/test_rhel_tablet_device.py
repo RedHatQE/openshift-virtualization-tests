@@ -18,7 +18,7 @@ from pyhelper_utils.shell import run_ssh_commands
 
 from tests.os_params import FEDORA_LATEST, RHEL_LATEST, RHEL_LATEST_LABELS
 from tests.virt.cluster.common_templates.utils import check_vm_xml_tablet_device, set_vm_tablet_device_dict
-from utilities.constants import VIRTIO
+from utilities.constants.virt import VIRTIO
 from utilities.virt import VirtualMachineForTestsFromTemplate, migrate_vm_and_verify
 
 if TYPE_CHECKING:

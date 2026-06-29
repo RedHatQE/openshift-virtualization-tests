@@ -11,7 +11,10 @@ from tests.virt.cluster.vm_cloning.constants import (
     SECOND_DISK_PATH,
     SECOND_DISK_TEST_FILE_STR,
 )
-from utilities.constants import TIMEOUT_1SEC, TIMEOUT_10SEC
+from utilities.constants.timeouts import (
+    TIMEOUT_1SEC,
+    TIMEOUT_10SEC,
+)
 
 if TYPE_CHECKING:
     from ocp_resources.virtual_machine import VirtualMachine

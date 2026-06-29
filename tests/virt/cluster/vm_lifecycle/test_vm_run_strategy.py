@@ -16,7 +16,7 @@ from rrmngmnt import power_manager
 from timeout_sampler import TimeoutSampler
 
 from tests.os_params import RHEL_LATEST
-from utilities.constants import TIMEOUT_10MIN
+from utilities.constants.timeouts import TIMEOUT_10MIN
 from utilities.virt import migrate_vm_and_verify, running_vm
 
 if TYPE_CHECKING:

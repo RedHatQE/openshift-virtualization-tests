@@ -9,7 +9,8 @@ from tests.virt.node.gpu.constants import (
 from tests.virt.upgrade.utils import vm_from_template
 from tests.virt.utils import build_node_affinity_dict, verify_gpu_device_exists_on_node
 from utilities.artifactory import get_test_artifact_server_url
-from utilities.constants import ES_NONE, TIMEOUT_30MIN
+from utilities.constants.timeouts import TIMEOUT_30MIN
+from utilities.constants.virt import ES_NONE
 from utilities.storage import (
     create_dv,
     generate_data_source_dict,

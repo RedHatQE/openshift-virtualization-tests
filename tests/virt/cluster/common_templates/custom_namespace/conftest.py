@@ -12,7 +12,7 @@ from tests.virt.cluster.common_templates.custom_namespace.utils import (
     remove_templates,
     wait_for_ssp_custom_template_namespace,
 )
-from utilities.constants import NamespacesNames
+from utilities.constants.namespaces import NamespacesNames
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import create_ns
 

@@ -9,7 +9,7 @@ from tests.virt.cluster.common_templates.utils import (
     xfail_old_guest_agent_version,
 )
 from tests.virt.utils import get_data_volume_template_dict_with_default_storage_class
-from utilities.constants import REGEDIT_PROC_NAME
+from utilities.constants.virt import REGEDIT_PROC_NAME
 from utilities.virt import (
     start_and_fetch_processid_on_linux_vm,
     start_and_fetch_processid_on_windows_vm,

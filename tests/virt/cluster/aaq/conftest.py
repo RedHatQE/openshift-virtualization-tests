@@ -23,15 +23,19 @@ from tests.virt.cluster.aaq.utils import (
 )
 from tests.virt.constants import ACRQ_NAMESPACE_LABEL, ACRQ_TEST
 from tests.virt.utils import update_hco_memory_overcommit, wait_for_virt_launcher_pod, wait_when_pod_in_gated_state
-from utilities.constants import (
+from utilities.constants import Images
+from utilities.constants.aaq import (
     AAQ_NAMESPACE_LABEL,
-    POD_CONTAINER_SPEC,
-    POD_SECURITY_CONTEXT_SPEC,
-    TIMEOUT_1MIN,
-    TIMEOUT_5SEC,
     VM_CPU_CORES,
     VM_MEMORY_GUEST,
-    Images,
+)
+from utilities.constants.networking import (
+    POD_CONTAINER_SPEC,
+    POD_SECURITY_CONTEXT_SPEC,
+)
+from utilities.constants.timeouts import (
+    TIMEOUT_1MIN,
+    TIMEOUT_5SEC,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile, enabled_aaq_in_hco
 from utilities.infra import create_ns, get_pod_by_name_prefix, label_project

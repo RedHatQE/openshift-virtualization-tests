@@ -16,12 +16,12 @@ from ocp_resources.virtual_machine_instance_migration import (
 )
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from utilities.constants import (
-    DATA_SOURCE_NAME,
+from utilities.constants.components import VIRT_LAUNCHER
+from utilities.constants.hco import DATA_SOURCE_NAME
+from utilities.constants.timeouts import (
     TIMEOUT_3MIN,
     TIMEOUT_10SEC,
     TIMEOUT_180MIN,
-    VIRT_LAUNCHER,
 )
 from utilities.exceptions import ResourceMissingFieldError
 from utilities.virt import (

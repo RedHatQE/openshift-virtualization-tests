@@ -6,12 +6,12 @@ from ocp_resources.virtual_machine_cluster_preference import (
     VirtualMachineClusterPreference,
 )
 
-from utilities.constants import (
-    OS_FLAVOR_RHEL,
+from utilities.constants import Images
+from utilities.constants.images import OS_FLAVOR_RHEL
+from utilities.constants.instance_types import (
     RHEL9_PREFERENCE,
     RHEL_WITH_INSTANCETYPE_AND_PREFERENCE,
     U1_SMALL,
-    Images,
 )
 from utilities.virt import (
     VirtualMachineForCloning,

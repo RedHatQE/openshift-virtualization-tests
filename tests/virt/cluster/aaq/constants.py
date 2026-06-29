@@ -1,4 +1,4 @@
-from utilities.constants import (
+from utilities.constants.aaq import (
     POD_LIMITS_CPU,
     POD_LIMITS_MEMORY,
     POD_REQUESTS_CPU,

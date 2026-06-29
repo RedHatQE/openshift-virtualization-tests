@@ -8,7 +8,7 @@ from tests.os_params import (
     WINDOWS_LATEST,
     WINDOWS_LATEST_LABELS,
 )
-from utilities.constants import VIRT_LAUNCHER
+from utilities.constants.components import VIRT_LAUNCHER
 from utilities.virt import vm_instance_from_template
 
 LOGGER = logging.getLogger(__name__)

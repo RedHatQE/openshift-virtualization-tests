@@ -11,8 +11,8 @@ from tests.utils import (
     hotplug_spec_vm_and_verify_hotplug,
 )
 from tests.virt.utils import append_feature_gate_to_hco
-from utilities.constants import (
-    AMD_64,
+from utilities.constants.architecture import AMD_64
+from utilities.constants.virt import (
     EIGHT_CPU_SOCKETS,
     FOUR_CPU_SOCKETS,
     FOUR_GI_MEMORY,

@@ -5,7 +5,7 @@ from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 from ocp_resources.template import Template
 
 from tests.os_params import FEDORA_LATEST
-from utilities.constants import NamespacesNames
+from utilities.constants.namespaces import NamespacesNames
 from utilities.virt import (
     VirtualMachineForTestsFromTemplate,
     add_validation_rule_to_annotation,

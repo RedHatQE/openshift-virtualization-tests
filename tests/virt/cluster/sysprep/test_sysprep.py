@@ -16,9 +16,14 @@ from ocp_resources.virtual_machine_cluster_preference import (
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutSampler
 
+from libs.infra.images import BASE_IMAGES_DIR
 from tests.os_params import WINDOWS_2019
 from utilities.bitwarden import get_cnv_tests_secret_by_name
-from utilities.constants import BASE_IMAGES_DIR, OS_FLAVOR_WINDOWS, TCP_TIMEOUT_30SEC, TIMEOUT_5MIN
+from utilities.constants.images import OS_FLAVOR_WINDOWS
+from utilities.constants.timeouts import (
+    TCP_TIMEOUT_30SEC,
+    TIMEOUT_5MIN,
+)
 from utilities.ssp import get_windows_timezone
 from utilities.storage import get_downloaded_artifact
 from utilities.virt import VirtualMachineForTests, migrate_vm_and_verify, running_vm

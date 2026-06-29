@@ -1,7 +1,17 @@
 from ocp_resources.template import Template
 
 from tests.utils import generate_attached_rhsm_secret_dict, generate_rhsm_cloud_init_data
-from utilities.constants import AMD, INTEL, REGEDIT_PROC_NAME, WIN_10, WIN_11, Images, StorageClassNames
+from utilities.constants import Images
+from utilities.constants.architecture import (
+    AMD,
+    INTEL,
+)
+from utilities.constants.storage import StorageClassNames
+from utilities.constants.virt import (
+    REGEDIT_PROC_NAME,
+    WIN_10,
+    WIN_11,
+)
 from utilities.virt import (
     fetch_pid_from_linux_vm,
     fetch_pid_from_windows_vm,

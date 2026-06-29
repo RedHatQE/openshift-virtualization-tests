@@ -14,12 +14,14 @@ from tests.utils import (
 )
 from tests.virt.constants import VM_LABEL
 from tests.virt.utils import assert_migration_post_copy_mode
-from utilities.constants import (
+from utilities.constants.timeouts import (
+    TIMEOUT_15MIN,
+    TIMEOUT_30MIN,
+)
+from utilities.constants.virt import (
     REGEDIT_PROC_NAME,
     SIX_CPU_SOCKETS,
     SIX_GI_MEMORY,
-    TIMEOUT_15MIN,
-    TIMEOUT_30MIN,
 )
 from utilities.virt import (
     check_migration_process_after_node_drain,

@@ -14,7 +14,7 @@ from tests.utils import (
     hotplug_spec_vm,
     wait_for_guest_os_cpu_count,
 )
-from utilities.constants import (
+from utilities.constants.virt import (
     FIVE_GI_MEMORY,
     FOUR_CPU_SOCKETS,
     FOUR_GI_MEMORY,
