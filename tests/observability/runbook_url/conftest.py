@@ -36,7 +36,7 @@ def cnv_prometheus_rule_alerts(hpp_cr_installed):
         )
         LOGGER.info(f"Loading alerts from rule: {rule_name}")
         result[rule_name] = {
-            alert.get("alert"): alert.get("annotations").get("runbook_url")
+            alert.get("alert"): (alert.get("annotations") or {}).get("runbook_url")
             for group in prometheus_rule.instance.spec.groups
             for alert in group["rules"]
             if alert.get("alert")
