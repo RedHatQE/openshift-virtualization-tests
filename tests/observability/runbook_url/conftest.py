@@ -8,8 +8,8 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from utilities.constants.components import CNV_PROMETHEUS_RULES, KUBEMACPOOL_PROMETHEUS_RULE
 from utilities.constants.timeouts import (
-    TIMEOUT_10SEC,
     TIMEOUT_1MIN,
+    TIMEOUT_10SEC,
 )
 from utilities.jira import is_jira_open
 
