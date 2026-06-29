@@ -10,7 +10,7 @@ from tests.install_upgrade_operators.pod_validation.utils import (
     validate_cnv_pods_resource_request,
     validate_priority_class_value,
 )
-from utilities.constants import (
+from utilities.constants.components import (
     ALL_CNV_PODS,
     HOSTPATH_PROVISIONER_CSI,
     HPP_POOL,

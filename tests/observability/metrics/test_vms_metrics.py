@@ -28,15 +28,17 @@ from tests.observability.metrics.utils import (
     validate_vnic_info,
 )
 from tests.observability.utils import validate_metrics_value
-from utilities.constants import (
+from utilities.constants.pytest import QUARANTINED
+from utilities.constants.storage import (
     CAPACITY,
-    MIGRATION_POLICY_VM_LABEL,
-    QUARANTINED,
+    USED,
+)
+from utilities.constants.timeouts import (
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
     TIMEOUT_30SEC,
-    USED,
 )
+from utilities.constants.virt import MIGRATION_POLICY_VM_LABEL
 from utilities.infra import get_node_selector_dict
 from utilities.monitoring import get_metrics_value
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
