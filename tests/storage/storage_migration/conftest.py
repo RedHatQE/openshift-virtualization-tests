@@ -25,15 +25,10 @@ from tests.storage.storage_migration.utils import (
 )
 from tests.storage.utils import create_windows_directory, get_storage_class_for_storage_migration
 from utilities.artifactory import get_http_image_url
-from utilities.constants import (
-    OS_FLAVOR_FEDORA,
-    OS_FLAVOR_RHEL,
-    OS_FLAVOR_WINDOWS,
-    TIMEOUT_2MIN,
-    TIMEOUT_5SEC,
-    U1_SMALL,
-    Images,
-)
+from utilities.constants import Images
+from utilities.constants.images import OS_FLAVOR_FEDORA, OS_FLAVOR_RHEL, OS_FLAVOR_WINDOWS
+from utilities.constants.instance_types import U1_SMALL
+from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5SEC
 from utilities.infra import create_ns
 from utilities.storage import (
     create_dv,

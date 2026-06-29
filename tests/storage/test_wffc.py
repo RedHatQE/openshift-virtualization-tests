@@ -9,12 +9,9 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 
-from utilities.constants import (
-    OS_FLAVOR_RHEL,
-    TIMEOUT_2MIN,
-    TIMEOUT_30SEC,
-    Images,
-)
+from utilities.constants import Images
+from utilities.constants.images import OS_FLAVOR_RHEL
+from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_30SEC
 from utilities.storage import (
     add_dv_to_vm,
     check_disk_count_in_vm,

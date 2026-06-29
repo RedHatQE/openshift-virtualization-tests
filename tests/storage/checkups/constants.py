@@ -1,6 +1,6 @@
 from ocp_resources.resource import Resource
 
-from utilities.constants import CREATE_STR, DELETE_STR, GET_STR, UPDATE_STR
+from utilities.constants.cluster import CREATE_STR, DELETE_STR, GET_STR, UPDATE_STR
 
 ACCESS_MODES = "accessModes"
 NON_EXISTENT_STR = "nonexistent"

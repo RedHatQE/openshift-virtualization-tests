@@ -18,18 +18,17 @@ from ocp_resources.service_account import ServiceAccount
 
 from tests.storage.utils import import_image_to_dv, upload_image_to_dv
 from utilities.artifactory import get_test_artifact_server_url
-from utilities.constants import (
-    CDI_APISERVER,
+from utilities.constants import Images
+from utilities.constants.components import CDI_APISERVER, CDI_OPERATOR
+from utilities.constants.storage import (
     CDI_CONFIGMAPS,
     CDI_LABEL,
-    CDI_OPERATOR,
     CDI_SECRETS,
     CDI_UPLOAD,
     CDI_UPLOAD_TMP_PVC,
     SOURCE_POD,
-    TIMEOUT_10MIN,
-    Images,
 )
+from utilities.constants.timeouts import TIMEOUT_10MIN
 from utilities.storage import (
     create_dv,
     data_volume,

@@ -8,7 +8,10 @@ from ocp_resources.resource import Resource
 
 from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE
 from tests.storage.utils import create_role_binding
-from utilities.constants import BIND_IMMEDIATE_ANNOTATION, OS_FLAVOR_FEDORA, REGISTRY_STR, TIMEOUT_10MIN, Images
+from utilities.constants import Images
+from utilities.constants.images import OS_FLAVOR_FEDORA
+from utilities.constants.storage import BIND_IMMEDIATE_ANNOTATION, REGISTRY_STR
+from utilities.constants.timeouts import TIMEOUT_10MIN
 from utilities.infra import create_ns
 from utilities.storage import create_dv, data_volume_template_with_source_ref_dict
 from utilities.virt import VirtualMachineForTests, running_vm

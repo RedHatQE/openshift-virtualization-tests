@@ -3,7 +3,7 @@ from kubernetes.client.rest import ApiException
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 
 from tests.storage.snapshots.constants import ERROR_MSG_USER_CANNOT_CREATE_VM_SNAPSHOTS
-from utilities.constants import TIMEOUT_10MIN
+from utilities.constants.timeouts import TIMEOUT_10MIN
 from utilities.virt import running_vm
 
 

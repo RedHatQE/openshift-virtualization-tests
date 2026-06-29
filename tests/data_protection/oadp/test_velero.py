@@ -2,13 +2,9 @@ import pytest
 from ocp_resources.datavolume import DataVolume
 
 from tests.data_protection.oadp.utils import FILE_PATH_FOR_WINDOWS_BACKUP, wait_for_restored_dv
-from utilities.constants import (
-    FILE_NAME_FOR_BACKUP,
-    TEXT_TO_TEST,
-    TIMEOUT_10SEC,
-    TIMEOUT_15MIN,
-    Images,
-)
+from utilities.constants import Images
+from utilities.constants.oadp import FILE_NAME_FOR_BACKUP, TEXT_TO_TEST
+from utilities.constants.timeouts import TIMEOUT_10SEC, TIMEOUT_15MIN
 from utilities.oadp import check_file_in_running_vm
 from utilities.storage import verify_file_in_windows_vm
 from utilities.virt import wait_for_running_vm

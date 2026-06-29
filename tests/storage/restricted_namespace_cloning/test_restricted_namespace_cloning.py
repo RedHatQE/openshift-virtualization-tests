@@ -22,7 +22,8 @@ from tests.storage.restricted_namespace_cloning.constants import (
     VERBS_SRC,
 )
 from tests.storage.restricted_namespace_cloning.utils import create_dv_negative, verify_snapshot_used_namespace_transfer
-from utilities.constants import OS_FLAVOR_FEDORA, Images
+from utilities.constants import Images
+from utilities.constants.images import OS_FLAVOR_FEDORA
 from utilities.storage import create_vm_from_dv
 
 LOGGER = logging.getLogger(__name__)

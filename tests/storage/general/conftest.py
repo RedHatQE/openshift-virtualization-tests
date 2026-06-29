@@ -11,7 +11,12 @@ from pytest_testconfig import config as py_config
 
 from tests.storage.cdi_import.utils import get_importer_pod_node, wait_dv_and_get_importer
 from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE
-from utilities.constants import AMD_64, OS_FLAVOR_FEDORA, REGISTRY_STR, TIMEOUT_5MIN, TIMEOUT_12MIN, U1_SMALL, Images
+from utilities.constants import Images
+from utilities.constants.architecture import AMD_64
+from utilities.constants.images import OS_FLAVOR_FEDORA
+from utilities.constants.instance_types import U1_SMALL
+from utilities.constants.storage import REGISTRY_STR
+from utilities.constants.timeouts import TIMEOUT_5MIN, TIMEOUT_12MIN
 from utilities.storage import create_dv, data_volume_template_with_source_ref_dict, get_dv_size_from_datasource
 from utilities.virt import VirtualMachineForTests, running_vm
 

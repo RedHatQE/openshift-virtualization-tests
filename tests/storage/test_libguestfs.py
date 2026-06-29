@@ -11,7 +11,8 @@ import pytest
 from ocp_resources.pod import Pod
 from pytest_testconfig import config as py_config
 
-from utilities.constants import TIMEOUT_1MIN, TIMEOUT_10MIN, UNPRIVILEGED_PASSWORD, UNPRIVILEGED_USER
+from utilities.constants.pytest import UNPRIVILEGED_PASSWORD, UNPRIVILEGED_USER
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_10MIN
 from utilities.infra import login_with_user_password
 from utilities.storage import create_dv, get_dv_size_from_datasource
 

@@ -2,7 +2,8 @@ import pytest
 from ocp_resources.datavolume import DataVolume
 
 from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE
-from utilities.constants import REGISTRY_STR, Images
+from utilities.constants import Images
+from utilities.constants.storage import REGISTRY_STR
 from utilities.storage import create_dv, data_volume
 
 

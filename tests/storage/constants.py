@@ -1,4 +1,5 @@
-from utilities.constants import Images, StorageClassNames
+from utilities.constants import Images
+from utilities.constants.storage import StorageClassNames
 from utilities.storage import HppCsiStorageClass
 
 CIRROS_QCOW2_IMG = f"{Images.Cirros.DIR}/{Images.Cirros.QCOW2_IMG}"
