@@ -7,7 +7,7 @@ from tests.virt.node.descheduler.utils import (
     verify_at_least_one_vm_migrated,
     wait_for_overutilized_soft_taint,
 )
-from utilities.constants import TIMEOUT_15MIN
+from utilities.constants.timeouts import TIMEOUT_15MIN
 
 LOGGER = logging.getLogger(__name__)
 

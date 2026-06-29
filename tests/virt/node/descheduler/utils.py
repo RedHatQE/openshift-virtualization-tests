@@ -14,13 +14,13 @@ from tests.virt.node.descheduler.constants import (
     DESCHEDULER_SOFT_TAINT_KEY,
     DESCHEDULING_INTERVAL_120SEC,
 )
-from utilities.constants import (
+from utilities.constants.namespaces import NamespacesNames
+from utilities.constants.timeouts import (
     TIMEOUT_1MIN,
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
     TIMEOUT_20SEC,
-    NamespacesNames,
 )
 from utilities.virt import (
     VirtualMachineForTests,

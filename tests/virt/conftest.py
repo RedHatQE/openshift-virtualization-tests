@@ -38,12 +38,14 @@ from tests.virt.utils import (
     patch_hco_cr_with_mdev_permitted_hostdevices,
     update_hco_memory_overcommit,
 )
-from utilities.constants import (
+from utilities.constants.architecture import (
     AMD,
     INTEL,
+)
+from utilities.constants.namespaces import NamespacesNames
+from utilities.constants.timeouts import (
     TIMEOUT_1MIN,
     TIMEOUT_5SEC,
-    NamespacesNames,
 )
 from utilities.exceptions import ResourceValueError, UnsupportedGPUDeviceError
 from utilities.infra import ExecCommandOnPod, get_nodes_with_label, get_resources_by_name_prefix, label_nodes

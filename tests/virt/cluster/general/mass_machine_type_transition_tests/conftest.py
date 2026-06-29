@@ -6,7 +6,8 @@ from ocp_resources.service_account import ServiceAccount
 
 from tests.utils import get_image_from_csv
 from tests.virt.constants import MachineTypesNames
-from utilities.constants import TIMEOUT_2MIN, Images
+from utilities.constants import Images
+from utilities.constants.timeouts import TIMEOUT_2MIN
 from utilities.infra import add_scc_to_service_account, create_ns
 from utilities.virt import VirtualMachineForTests, restart_vm_wait_for_running_vm, wait_for_running_vm
 

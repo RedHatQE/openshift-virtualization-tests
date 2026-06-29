@@ -13,7 +13,8 @@ from pyhelper_utils.shell import run_ssh_commands
 
 from tests.os_params import WINDOWS_10, WINDOWS_LATEST, WINDOWS_LATEST_LABELS
 from tests.virt.cluster.common_templates.utils import check_vm_xml_tablet_device, set_vm_tablet_device_dict
-from utilities.constants import TCP_TIMEOUT_30SEC, VIRTIO
+from utilities.constants.timeouts import TCP_TIMEOUT_30SEC
+from utilities.constants.virt import VIRTIO
 
 pytestmark = [
     pytest.mark.special_infra,

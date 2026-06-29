@@ -15,7 +15,12 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 from tests.os_params import WINDOWS_10_TEMPLATE_LABELS
 from tests.utils import start_stress_on_vm
 from tests.virt.constants import WINDOWS_10_WSL
-from utilities.constants import STRESS_CPU_MEM_IO_COMMAND, TCP_TIMEOUT_30SEC, TIMEOUT_15MIN, Images
+from utilities.constants import Images
+from utilities.constants.timeouts import (
+    TCP_TIMEOUT_30SEC,
+    TIMEOUT_15MIN,
+)
+from utilities.constants.virt import STRESS_CPU_MEM_IO_COMMAND
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 pytestmark = pytest.mark.tier3

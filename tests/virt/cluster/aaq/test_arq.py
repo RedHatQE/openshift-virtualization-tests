@@ -13,7 +13,7 @@ from tests.virt.cluster.aaq.constants import (
 )
 from tests.virt.cluster.aaq.utils import restart_vm_wait_for_gated_state
 from tests.virt.utils import check_arq_status_values, wait_when_pod_in_gated_state
-from utilities.constants import (
+from utilities.constants.aaq import (
     LIMITS_CPU_STR,
     LIMITS_MEMORY_STR,
     POD_LIMITS_CPU,

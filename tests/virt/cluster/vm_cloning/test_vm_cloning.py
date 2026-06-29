@@ -18,7 +18,8 @@ from tests.virt.cluster.vm_cloning.utils import (
     assert_target_vm_has_new_pvc_disks,
     check_if_files_present_after_cloning,
 )
-from utilities.constants import RHEL_WITH_INSTANCETYPE_AND_PREFERENCE, Images
+from utilities.constants import Images
+from utilities.constants.instance_types import RHEL_WITH_INSTANCETYPE_AND_PREFERENCE
 from utilities.storage import (
     add_dv_to_vm,
     check_disk_count_in_vm,

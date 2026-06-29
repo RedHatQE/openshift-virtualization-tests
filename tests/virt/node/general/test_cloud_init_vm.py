@@ -4,7 +4,7 @@ Test VM with cloudInit disk.
 
 import pytest
 
-from utilities.constants import CLOUD_INIT_NO_CLOUD
+from utilities.constants.virt import CLOUD_INIT_NO_CLOUD
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.arm64]

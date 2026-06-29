@@ -18,7 +18,9 @@ from pyhelper_utils.shell import run_ssh_commands
 
 from tests.utils import verify_wsl2_guest_works
 from tests.virt.constants import WINDOWS_10_WSL, WINDOWS_11_WSL
-from utilities.constants import OS_FLAVOR_WINDOWS, TCP_TIMEOUT_30SEC, Images
+from utilities.constants import Images
+from utilities.constants.images import OS_FLAVOR_WINDOWS
+from utilities.constants.timeouts import TCP_TIMEOUT_30SEC
 from utilities.virt import (
     VirtualMachineForTests,
     migrate_vm_and_verify,

@@ -11,7 +11,7 @@ from tests.virt.node.gpu.constants import (
     VGPU_DEVICE_NAME_STR,
 )
 from tests.virt.utils import fetch_gpu_device_name_from_vm_instance, verify_gpu_device_exists_in_vm
-from utilities.constants import (
+from utilities.constants.timeouts import (
     TCP_TIMEOUT_30SEC,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,

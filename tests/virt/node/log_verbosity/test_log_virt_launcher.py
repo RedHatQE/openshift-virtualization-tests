@@ -10,7 +10,11 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 from tests.virt.node.log_verbosity.constants import (
     VIRT_LOG_VERBOSITY_LEVEL_6,
 )
-from utilities.constants import MIGRATION_POLICY_VM_LABEL, TIMEOUT_1MIN, TIMEOUT_5SEC
+from utilities.constants.timeouts import (
+    TIMEOUT_1MIN,
+    TIMEOUT_5SEC,
+)
+from utilities.constants.virt import MIGRATION_POLICY_VM_LABEL
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,

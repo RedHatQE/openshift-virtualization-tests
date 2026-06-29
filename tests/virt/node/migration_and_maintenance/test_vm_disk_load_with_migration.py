@@ -10,7 +10,7 @@ from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.os_params import FEDORA_LATEST, FEDORA_LATEST_LABELS
-from utilities.constants import TIMEOUT_1MIN
+from utilities.constants.timeouts import TIMEOUT_1MIN
 from utilities.virt import migrate_vm_and_verify, running_vm, vm_instance_from_template
 
 if TYPE_CHECKING:

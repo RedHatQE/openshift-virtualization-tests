@@ -4,7 +4,7 @@ Test node feature discovery.
 
 import pytest
 
-from utilities.constants import CPU_MODEL_LABEL_PREFIX
+from utilities.constants.cluster import CPU_MODEL_LABEL_PREFIX
 from utilities.hco import update_hco_annotations
 from utilities.virt import wait_for_kv_stabilize, wait_for_updated_kv_value
 

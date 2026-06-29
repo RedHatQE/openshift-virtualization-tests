@@ -19,7 +19,7 @@ from tests.virt.utils import (
     verify_gpu_device_exists_in_vm,
     verify_gpu_device_exists_on_node,
 )
-from utilities.constants import TIMEOUT_5SEC
+from utilities.constants.timeouts import TIMEOUT_5SEC
 from utilities.virt import (
     CIRROS_IMAGE,
     VirtualMachineForTests,

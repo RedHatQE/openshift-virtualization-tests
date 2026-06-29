@@ -8,7 +8,7 @@ from tests.os_params import (
     WINDOWS_LATEST,
     WINDOWS_LATEST_LABELS,
 )
-from utilities.constants import ROOTDISK
+from utilities.constants.virt import ROOTDISK
 from utilities.virt import get_guest_os_info, vm_instance_from_template
 
 pytestmark = pytest.mark.usefixtures("skip_test_if_no_ocs_sc")
