@@ -34,11 +34,16 @@ from utilities.artifactory import (
     get_artifactory_secret,
     get_test_artifact_server_url,
 )
-from utilities.constants import (
+from utilities.constants import Images
+from utilities.constants.aaq import NODE_STR
+from utilities.constants.components import VIRT_HANDLER
+from utilities.constants.images import OS_FLAVOR_WINDOWS
+from utilities.constants.storage import (
     CAPACITY,
-    NODE_STR,
-    OS_FLAVOR_WINDOWS,
     REGISTRY_STR,
+    USED,
+)
+from utilities.constants.timeouts import (
     TIMEOUT_1MIN,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
@@ -50,9 +55,6 @@ from utilities.constants import (
     TIMEOUT_20SEC,
     TIMEOUT_30SEC,
     TIMEOUT_40MIN,
-    USED,
-    VIRT_HANDLER,
-    Images,
 )
 from utilities.monitoring import get_metrics_value
 from utilities.virt import VirtualMachineForTests, running_vm
@@ -595,21 +597,21 @@ def validate_vnic_info(prometheus: Prometheus, vnic_info_to_compare: dict[str, s
         func=prometheus.query,
         query=metric_name,
     )
-    sample = None
+    mismatch_vnic_info = None
     try:
         for sample in samples:
             if sample and (result := sample.get("data", {}).get("result")):
                 vnic_info_metric_result = result[0].get("metric")
-                break
+                mismatch_vnic_info = {}
+                for info, expected_value in vnic_info_to_compare.items():
+                    actual_value = vnic_info_metric_result.get(info)
+                    if actual_value != expected_value:
+                        mismatch_vnic_info[info] = {f"Expected: {expected_value}", f"Actual: {actual_value}"}
+                if not mismatch_vnic_info:
+                    return
     except TimeoutExpiredError:
-        LOGGER.error(f"Metric value of: {metric_name} is: {sample}, should not be empty.")
+        LOGGER.error(f"There is a mismatch between expected and actual results:\n {mismatch_vnic_info}")
         raise
-    mismatch_vnic_info = {}
-    for info, expected_value in vnic_info_to_compare.items():
-        actual_value = vnic_info_metric_result.get(info)
-        if actual_value != expected_value:
-            mismatch_vnic_info[info] = {f"Expected: {expected_value}", f"Actual: {actual_value}"}
-    assert not mismatch_vnic_info, f"There is a mismatch between expected and actual results:\n {mismatch_vnic_info}"
 
 
 def get_metric_labels_non_empty_value(prometheus: Prometheus, metric_name: str) -> dict[str, str]:

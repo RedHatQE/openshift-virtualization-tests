@@ -28,7 +28,9 @@ from tests.storage.restricted_namespace_cloning.constants import (
     VM_FOR_TEST,
 )
 from tests.storage.restricted_namespace_cloning.utils import verify_snapshot_used_namespace_transfer
-from utilities.constants import OS_FLAVOR_FEDORA, QUARANTINED, Images
+from utilities.constants import Images
+from utilities.constants.images import OS_FLAVOR_FEDORA
+from utilities.constants.pytest import QUARANTINED
 from utilities.storage import ErrorMsg
 from utilities.virt import VirtualMachineForTests
 

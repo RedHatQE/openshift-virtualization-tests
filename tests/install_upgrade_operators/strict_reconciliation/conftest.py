@@ -16,7 +16,8 @@ from tests.install_upgrade_operators.strict_reconciliation.utils import (
     wait_for_resource_version_update,
 )
 from tests.utils import wait_for_cr_labels_change
-from utilities.constants import TIMEOUT_1MIN, VERSION_LABEL_KEY
+from utilities.constants.cluster import VERSION_LABEL_KEY
+from utilities.constants.timeouts import TIMEOUT_1MIN
 from utilities.hco import ResourceEditorValidateHCOReconcile
 
 LOGGER = logging.getLogger(__name__)
