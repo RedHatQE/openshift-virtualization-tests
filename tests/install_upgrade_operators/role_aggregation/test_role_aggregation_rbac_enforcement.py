@@ -1,5 +1,5 @@
 """
-Role-based access control (RBAC) tests
+Role Aggregation Opt-Out RBAC Enforcement Tests
 
 STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-iuo/CNV-63822-role-aggregation-opt-out.md
 
@@ -47,7 +47,7 @@ class TestRoleAggregationDisabled:
 
         Steps:
             1. Set HyperConverged CR spec.roleAggregationStrategy to "Manual" (disable role aggregation)
-            2. Wait for the kubevirt.io aggregated role labels to be removed from the user
+            2. Wait for the aggregation labels to be removed from the kubevirt.io ClusterRoles
             3. Attempt to list VirtualMachine resources in the namespace using the unprivileged
                user's credentials
 
@@ -64,7 +64,7 @@ class TestRoleAggregationReenabledAccess:
         - HyperConverged CR spec.roleAggregationStrategy set to "Manual" (role aggregation disabled)
         - RoleBinding granting the unprivileged user the respective ClusterRole in the namespace
         - HyperConverged CR spec.roleAggregationStrategy restored to "AggregateToDefault" (role aggregation re-enabled)
-        - Wait for the kubevirt.io aggregated role labels to be added to the user
+        - Wait for the aggregation labels to be restored on the kubevirt.io ClusterRoles
     """
 
     @pytest.mark.polarion("CNV-16029")
