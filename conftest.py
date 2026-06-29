@@ -76,6 +76,7 @@ from utilities.pytest_utils import (
 pytest_plugins = [
     "tests.fixtures.network.l2_bridge",
     "tests.fixtures.network.cluster",
+    "tests.fixtures.images.validation_os_images",
 ]
 
 LOGGER = logging.getLogger(__name__)

@@ -26,3 +26,4 @@ class NamespacesNames:
     OPENSHIFT_MTV = "openshift-mtv"
     CNV_TESTS_UTILITIES = "cnv-tests-utilities"
     ADP_NAMESPACE = "openshift-adp"
+    VALIDATION_OS_IMAGES = "validation-os-images"
