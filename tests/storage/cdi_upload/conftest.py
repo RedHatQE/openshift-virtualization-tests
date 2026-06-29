@@ -11,7 +11,8 @@ from ocp_resources.user_defined_network import Layer2UserDefinedNetwork
 
 from libs.net.ip import random_ipv4_address
 from libs.net.udn import create_udn_namespace
-from utilities.constants import TIMEOUT_1MIN, TIMEOUT_2MIN, Images
+from utilities.constants import Images
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_2MIN
 from utilities.storage import check_upload_virtctl_result, create_dv, get_downloaded_artifact, virtctl_upload_dv
 
 LOGGER = logging.getLogger(__name__)
