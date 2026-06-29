@@ -5,15 +5,16 @@ Clone tests
 import pytest
 from ocp_resources.datavolume import DataVolume
 
-from tests.os_params import FEDORA_LATEST, WINDOWS_11, WINDOWS_11_TEMPLATE_LABELS
+from tests.os_params import FEDORA_LATEST
 from tests.storage.utils import (
     assert_pvc_snapshot_clone_annotation,
     assert_use_populator,
-    create_windows_vm_validate_guest_agent_info,
 )
-from utilities.constants import Images
+from tests.utils import create_windows2022_vm_using_existing_dv
+from utilities.constants import WIN_2K22, Images
 from utilities.constants.images import OS_FLAVOR_FEDORA, OS_FLAVOR_WINDOWS
-from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_40MIN
+from utilities.constants.timeouts import TIMEOUT_1MIN
+from utilities.ssp import validate_os_info_vmi_vs_windows_os
 from utilities.storage import (
     check_disk_count_in_vm,
     create_dv,
@@ -28,8 +29,6 @@ from utilities.virt import (
     restart_vm_wait_for_running_vm,
     running_vm,
 )
-
-WINDOWS_CLONE_TIMEOUT = TIMEOUT_40MIN
 
 
 def create_vm_from_clone_dv_template(
@@ -60,6 +59,7 @@ def create_vm_from_clone_dv_template(
         running_vm(vm=vm)
 
 
+<<<<<<< HEAD
 @pytest.mark.tier3
 @pytest.mark.parametrize(
     "data_volume_multi_storage_scope_function",
@@ -93,6 +93,8 @@ def test_successful_clone_of_large_image(
         cdv.wait_for_dv_success(timeout=WINDOWS_CLONE_TIMEOUT)
 
 
+=======
+>>>>>>> ecf9cc62 (Use DataSource sourceRef for Windows VM cloning with vTPM)
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2148")
 @pytest.mark.gating()
@@ -141,6 +143,7 @@ def test_successful_vm_restart_with_cloned_dv(
 
 
 @pytest.mark.tier3
+<<<<<<< HEAD
 @pytest.mark.parametrize(
     ("data_volume_multi_storage_scope_function", "vm_params"),
     [
@@ -184,7 +187,66 @@ def test_successful_vm_from_cloned_dv_windows(
             namespace=namespace,
             unprivileged_client=unprivileged_client,
             vm_params=vm_params,
+=======
+@pytest.mark.incremental
+class TestWindowsClonedDv:
+    """
+    Tests for Windows 2022 DV cloning, and VM creation with vTPM.
+
+    Preconditions:
+        - Windows Server 2022 DataVolume
+        - Cloned DataVolume created from the source DataVolume (PVC clone)
+    """
+
+    @pytest.mark.polarion("CNV-1892")
+    def test_clone_dv_windows(self, cloned_windows_dv_multi_storage_scope_class):
+        """
+        Test that a large image can be cloned.
+
+        Preconditions:
+            - Cloned DataVolume created from the source DataVolume (PVC clone)
+
+        Steps:
+            1. Verify the cloned DataVolume status
+
+        Expected:
+            - Cloned DataVolume status is "Succeeded"
+        """
+        assert cloned_windows_dv_multi_storage_scope_class.status == DataVolume.Status.SUCCEEDED, (
+            f"Cloned DV status is {cloned_windows_dv_multi_storage_scope_class.status}, expected {DataVolume.Status.SUCCEEDED}"
+>>>>>>> ecf9cc62 (Use DataSource sourceRef for Windows VM cloning with vTPM)
         )
+
+    @pytest.mark.polarion("CNV-3638")
+    def test_vm_from_cloned_dv_windows(
+        self,
+        unprivileged_client,
+        namespace,
+        modern_cpu_for_migration,
+        cloned_windows_dv_multi_storage_scope_class,
+    ):
+        """
+        Test that a Windows 2022 VM with vTPM boots from a cloned DataVolume.
+
+        Preconditions:
+            - Cloned DataVolume created from the source DataVolume (PVC clone)
+
+        Steps:
+            1. Create a Windows 2022 VM with vTPM from the cloned DataVolume using instance type and preference
+            2. Wait for the VM to reach Running state
+            3. Wait for Windows OS to be ready inside the VM
+
+        Expected:
+            - VM OS info reported by VMI matches the expected Windows OS parameters
+        """
+        with create_windows2022_vm_using_existing_dv(
+            namespace=namespace.name,
+            client=unprivileged_client,
+            vm_name=f"vm-{WIN_2K22}",
+            cpu_model=modern_cpu_for_migration,
+            existing_data_volume=cloned_windows_dv_multi_storage_scope_class,
+        ) as vm:
+            validate_os_info_vmi_vs_windows_os(vm=vm)
 
 
 @pytest.mark.parametrize(
@@ -200,8 +262,13 @@ def test_successful_vm_from_cloned_dv_windows(
         ),
         pytest.param(
             {
+<<<<<<< HEAD
                 "dv_name": f"dv-source-{OS_FLAVOR_WINDOWS}",
                 "image": f"{Images.Windows.DIR}/{Images.Windows.WIN11_IMG}",
+=======
+                "dv_name": "dv-source-win",
+                "image": f"{Images.Windows.DIR}/{Images.Windows.WIN2022_IMG}",
+>>>>>>> ecf9cc62 (Use DataSource sourceRef for Windows VM cloning with vTPM)
                 "dv_size": Images.Windows.DEFAULT_DV_SIZE,
             },
             marks=(pytest.mark.polarion("CNV-3552"), pytest.mark.tier3()),
