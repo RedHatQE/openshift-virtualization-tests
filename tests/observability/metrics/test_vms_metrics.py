@@ -467,7 +467,9 @@ class TestVmVnicInfo:
             ),
         ],
     )
-    def test_metric_kubevirt_vm_vnic_info_after_nad_swap(self, query):
+    def test_metric_kubevirt_vm_vnic_info_after_nad_swap(
+        self, prometheus, post_nad_swap_vm, expected_vnic_info_after_swap, query
+    ):
         """
         Test that vnic_info metric updates the network label after a NAD swap.
 
@@ -480,13 +482,17 @@ class TestVmVnicInfo:
 
         Steps:
             1. Swap the VM secondary network reference from NAD-A to NAD-B
-            2. Query vnic_info metric for the secondary interface
+            2. Wait for the live migration triggered by the swap to complete
+            3. Query vnic_info metric for the secondary interface
 
         Expected:
             - vnic_info labels match the VM spec after NAD swap
         """
-
-    test_metric_kubevirt_vm_vnic_info_after_nad_swap.__test__ = False
+        validate_vnic_info(
+            prometheus=prometheus,
+            vnic_info_to_compare=expected_vnic_info_after_swap,
+            metric_name=query.format(vm_name=post_nad_swap_vm.name),
+        )
 
 
 class TestVmiPhaseTransitionFromDeletion:

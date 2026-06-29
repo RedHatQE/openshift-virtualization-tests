@@ -30,7 +30,10 @@ from tests.storage.utils import (
     create_role_binding,
     set_permissions,
 )
-from utilities.constants import OS_FLAVOR_FEDORA, PVC, UNPRIVILEGED_USER, Images
+from utilities.constants import Images
+from utilities.constants.images import OS_FLAVOR_FEDORA
+from utilities.constants.pytest import UNPRIVILEGED_USER
+from utilities.constants.storage import PVC
 from utilities.infra import create_ns
 from utilities.storage import create_dv, get_dv_size_from_datasource
 from utilities.virt import VirtualMachineForTests, running_vm
