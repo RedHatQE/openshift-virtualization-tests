@@ -12,13 +12,9 @@ from tests.storage.utils import (
     assert_use_populator,
     create_windows_vm_validate_guest_agent_info,
 )
-from utilities.constants import (
-    OS_FLAVOR_FEDORA,
-    OS_FLAVOR_WINDOWS,
-    TIMEOUT_1MIN,
-    TIMEOUT_40MIN,
-    Images,
-)
+from utilities.constants import Images
+from utilities.constants.images import OS_FLAVOR_FEDORA, OS_FLAVOR_WINDOWS
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_40MIN
 from utilities.storage import (
     check_disk_count_in_vm,
     create_dv,

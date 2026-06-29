@@ -7,7 +7,7 @@ import pytest
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.namespace import Namespace
 
-import tests.network.libs.nodenetworkconfigurationpolicy as libnncp
+from libs.net import nodenetworkconfigurationpolicy as libnncp
 from libs.net.ip import random_ip_addresses_by_family
 from libs.net.netattachdef import (
     CNIPluginBandwidthConfig,

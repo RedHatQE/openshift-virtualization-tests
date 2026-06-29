@@ -31,7 +31,6 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.storage.constants import (
     CIRROS_QCOW2_IMG,
-    HPP_STORAGE_CLASSES,
     HTTPS_CONFIG_MAP_NAME,
     INTERNAL_HTTP_CONFIGMAP_NAME,
 )
@@ -44,20 +43,13 @@ from tests.storage.utils import (
 )
 from tests.utils import create_cirros_vm
 from utilities.artifactory import get_artifactory_config_map, get_artifactory_secret
-from utilities.constants import (
-    CDI_OPERATOR,
-    CDI_UPLOADPROXY,
-    CNV_TEST_SERVICE_ACCOUNT,
-    OS_FLAVOR_FEDORA,
-    OS_FLAVOR_RHEL,
-    RHEL10_PREFERENCE,
-    SECURITY_CONTEXT,
-    TIMEOUT_1MIN,
-    TIMEOUT_5SEC,
-    TIMEOUT_30MIN,
-    U1_SMALL,
-    Images,
-)
+from utilities.constants import Images
+from utilities.constants.cluster import CNV_TEST_SERVICE_ACCOUNT
+from utilities.constants.components import CDI_OPERATOR, CDI_UPLOADPROXY
+from utilities.constants.images import OS_FLAVOR_FEDORA, OS_FLAVOR_RHEL
+from utilities.constants.instance_types import RHEL10_PREFERENCE, U1_SMALL
+from utilities.constants.networking import SECURITY_CONTEXT
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_5SEC, TIMEOUT_30MIN
 from utilities.hco import (
     ResourceEditorValidateHCOReconcile,
     hco_cr_jsonpatch_annotations_dict,
@@ -209,13 +201,6 @@ def upload_proxy_route(admin_client):
             upload_route = route
     assert upload_route is not None
     yield upload_route
-
-
-@pytest.fixture(scope="session")
-def skip_test_if_no_hpp_sc(cluster_storage_classes):
-    existing_hpp_sc = [sc.name for sc in cluster_storage_classes if sc.name in HPP_STORAGE_CLASSES]
-    if not existing_hpp_sc:
-        pytest.skip(f"This test runs only on one of the hpp storage classes: {HPP_STORAGE_CLASSES}")
 
 
 @pytest.fixture()

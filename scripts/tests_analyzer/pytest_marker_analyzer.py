@@ -1228,13 +1228,29 @@ def _extract_symbol_imports_from_file(file_path: Path, repo_root: Path) -> dict[
     return symbol_imports
 
 
+def _symbol_start_line(node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef) -> int:
+    """Return the start line of a symbol, including its decorators.
+
+    Args:
+        node: AST node for a function, async function, or class definition.
+
+    Returns:
+        Line number of the first decorator if present, otherwise the ``def``/``class`` line.
+    """
+    if node.decorator_list:
+        return node.decorator_list[0].lineno
+    return node.lineno
+
+
 def _build_line_to_symbol_map(source: str) -> SymbolMap:
     """Build a hierarchical mapping from line ranges to symbols.
 
     Parses the AST of the given source to identify top-level definitions
     (functions, async functions, classes, and module-level assignments) and
-    their line ranges. For classes, also extracts member-level line ranges
-    and intra-class call graphs.
+    their line ranges.  Decorator lines are included in the range so that
+    changes to markers (e.g. ``@pytest.mark.s390x``) map to the decorated
+    symbol.  For classes, also extracts member-level line ranges and
+    intra-class call graphs.
 
     Args:
         source: Python source code text.
@@ -1248,15 +1264,15 @@ def _build_line_to_symbol_map(source: str) -> SymbolMap:
 
     for node in ast.iter_child_nodes(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            symbols.append((node.lineno, node.end_lineno or node.lineno, node.name))
+            symbols.append((_symbol_start_line(node=node), node.end_lineno or node.lineno, node.name))
 
         elif isinstance(node, ast.ClassDef):
-            symbols.append((node.lineno, node.end_lineno or node.lineno, node.name))
+            symbols.append((_symbol_start_line(node=node), node.end_lineno or node.lineno, node.name))
             # Extract class members with line ranges
             members: dict[str, tuple[int, int]] = {}
             for child in ast.iter_child_nodes(node):
                 if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                    members[child.name] = (child.lineno, child.end_lineno or child.lineno)
+                    members[child.name] = (_symbol_start_line(node=child), child.end_lineno or child.lineno)
             # Build intra-class call graph
             internal_calls = _build_intra_class_call_graph(class_node=node)
             class_members[node.name] = ClassMemberInfo(
@@ -1488,6 +1504,43 @@ def _diff_has_deletions(diff_content: str) -> bool:
     return any(line.startswith("-") and not line.startswith("---") for line in diff_content.splitlines())
 
 
+def _extract_deleted_symbols_from_diff(diff_content: str) -> set[str]:
+    """Extract names of functions and classes that were deleted in a diff.
+
+    Scans deletion lines (``-``) for ``def`` and ``class`` statements to
+    identify symbols that were removed.  This avoids the need to fetch
+    and parse the old file source.
+
+    Note:
+        When a class with methods is deleted, both the class name *and* its member
+        method names are returned as separate symbols.  This may cause broader
+        dependency matching than strictly necessary (a member name like ``setup``
+        could collide with an unrelated top-level function), but is acceptable
+        because over-reporting is safer than under-reporting for test selection.
+
+    Args:
+        diff_content: Unified diff text.
+
+    Returns:
+        Set of deleted function/class names.
+    """
+    deleted_symbols: set[str] = set()
+    for line in diff_content.splitlines():
+        if not line.startswith("-") or line.startswith("---"):
+            continue
+        stripped = line[1:].strip()
+        # Match function definitions
+        func_match = re.match(pattern=r"(?:async\s+)?def\s+(\w+)\s*\(", string=stripped)
+        if func_match:
+            deleted_symbols.add(func_match.group(1))
+            continue
+        # Match class definitions
+        class_match = re.match(pattern=r"class\s+(\w+)[\s:(]", string=stripped)
+        if class_match:
+            deleted_symbols.add(class_match.group(1))
+    return deleted_symbols
+
+
 def _get_diff_content(
     file_path: Path,
     base_branch: str,
@@ -1690,8 +1743,8 @@ def _extract_modified_symbols(
 
     Returns:
         ``SymbolClassification`` with modified and new symbol sets, or
-        ``None`` when symbol-level analysis is not possible (diff failure,
-        pure deletion, or parse errors).  A ``None`` return signals the
+        ``None`` when symbol-level analysis is not possible (diff failure
+        or parse errors).  A ``None`` return signals the
         caller to fall back to file-level dependency tracking.
 
         When some changed lines fall outside any named symbol (e.g. import
@@ -1721,7 +1774,10 @@ def _extract_modified_symbols(
         if has_deletions:
             if file_status == "renamed":
                 return SymbolClassification(modified_symbols=set(), new_symbols=set())
-            return None  # Pure deletion — cannot safely narrow impact
+            # Pure deletion — extract deleted symbol names from the diff
+            # to enable symbol-level narrowing instead of conservative fallback
+            deleted_symbols = _extract_deleted_symbols_from_diff(diff_content=diff_content)
+            return SymbolClassification(modified_symbols=deleted_symbols, new_symbols=set())
         return SymbolClassification(modified_symbols=set(), new_symbols=set())
 
     try:
@@ -1777,7 +1833,35 @@ def _extract_modified_symbols(
             # or potentially impactful executable code.
             if line_number <= len(source_lines):
                 line_content = source_lines[line_number - 1].strip()
-                if not line_content or line_content.startswith(("#", "import ", "from ", '"""', "'''", '"', "'")):
+                if not line_content or line_content.startswith((
+                    "#",
+                    "@",
+                    "import ",
+                    "from ",
+                    '"""',
+                    "'''",
+                    '"',
+                    "'",
+                    "if TYPE_CHECKING:",
+                    "if typing.TYPE_CHECKING:",
+                    ")",  # Closing paren of multi-line import/expression.
+                    # If the opening line (e.g. "setup(") is also changed,
+                    # it triggers fallback before we reach ")".  A standalone
+                    # ")" diff without its opener is rare but possible (e.g.
+                    # reformatting); accepted as low-risk over-narrowing.
+                    "__all__",
+                )):
+                    has_unattributed = True
+                elif re.match(pattern=r"^[A-Za-z_]\w*(?:\s+as\s+\w+)?\s*,\s*$", string=line_content):
+                    # Import continuation line (e.g. "TIMEOUT_2MIN," inside
+                    # a multi-line "from ... import (...)" block).
+                    # Trailing comma is required to avoid matching bare identifiers.
+                    # NOTE: This also matches identifiers inside module-level tuples/lists
+                    # (e.g. "HandlerA," in a registry tuple).  In practice, such
+                    # constructs are ast.Assign nodes whose line ranges are tracked
+                    # in the symbol map, so their inner lines are attributed before
+                    # reaching this branch.  The regex only fires for truly
+                    # unattributed lines (outside all symbol ranges).
                     has_unattributed = True
                 else:
                     # Executable module-level code — conservative fallback
@@ -2103,7 +2187,51 @@ def _check_conftest_pathway(
         # Check if conftest opaquely imports the changed file
         opaque_set = conftest_opaque_deps.get(conftest_path, set())
         if changed_file in opaque_set:
-            # Can't determine which symbols — conservative: flag test
+            # Try symbol-level narrowing before falling back to file-level
+            classification = modified_symbols_cache.get(changed_file)
+            if (
+                classification is not None
+                and not classification.modified_symbols
+                and classification.new_symbols
+                and not classification.has_unattributed_changes
+            ):
+                # Only new symbols added — cannot break existing tests
+                conftest_resolved = True
+                continue
+            if classification is not None and not classification.modified_symbols:
+                # Empty modified_symbols without new_symbols — could be pure deletion
+                # or unmapped module-level edits; fall back to conservative behavior
+                matching_deps.append(
+                    f"{changed_file.relative_to(repo_root)} (opaque import via {conftest_path.relative_to(repo_root)})"
+                )
+                return True, matching_deps
+            if classification is not None and classification.modified_symbols:
+                if classification.has_unattributed_changes:
+                    # Module-level changes with opaque import — conservative fallback
+                    matching_deps.append(
+                        f"{changed_file.relative_to(repo_root)} "
+                        f"(opaque import via {conftest_path.relative_to(repo_root)})"
+                    )
+                    return True, matching_deps
+                fixture_match = False
+                for fixture_name, fixture in fixtures_dict.items():
+                    if (
+                        fixture.file_path == conftest_path
+                        and fixture_name in used_fixtures
+                        and fixture.function_calls & classification.modified_symbols
+                    ):
+                        symbols_str = ", ".join(sorted(fixture.function_calls & classification.modified_symbols))
+                        matching_deps.append(
+                            f"{changed_file.relative_to(repo_root)} (via fixture {fixture_name}: {symbols_str})"
+                        )
+                        fixture_match = True
+                        break
+                if fixture_match:
+                    return True, matching_deps
+                # No fixture calls modified symbols — pathway resolved as safe
+                conftest_resolved = True
+                continue
+            # classification is None — diff failed, fall back to file-level
             matching_deps.append(
                 f"{changed_file.relative_to(repo_root)} (opaque import via {conftest_path.relative_to(repo_root)})"
             )
@@ -2207,6 +2335,7 @@ def _check_test_impact(
     pr_diffs_cache: dict[str, str] | None = None,
     pr_file_statuses: dict[str, str] | None = None,
     is_checkout: bool = False,
+    pr_head_ref: str | None = None,
 ) -> dict[str, Any] | None:
     """Check if a single test is affected by changed files (for parallel execution).
 
@@ -2240,6 +2369,8 @@ def _check_test_impact(
             to their unified diff content.
         pr_file_statuses: Optional mapping of relative file paths to their
             GitHub file status strings.
+        pr_head_ref: Optional PR head commit SHA used in remote (no-checkout)
+            mode to fetch the correct version of files from GitHub.
 
     Returns:
         Dictionary with test info if affected, ``None`` otherwise.
@@ -2322,7 +2453,15 @@ def _check_test_impact(
                 pr_diffs_cache=pr_diffs_cache,
                 file_status=file_status_conftest,
                 is_checkout=is_checkout,
+                pr_head_ref=pr_head_ref,
             )
+
+            # None signals structural change (e.g., pytest_plugins modified)
+            # — flag test unconditionally since fixture loading may change
+            if modified_fixtures is None:
+                test_affected = True
+                matching_deps.append(f"{changed_file.relative_to(repo_root)} (pytest_plugins changed — structural)")
+                continue
 
             # Get all transitively affected fixtures
             affected_fixtures = _get_affected_fixtures_helper(
@@ -2478,7 +2617,8 @@ def _extract_modified_items_from_conftest(
     pr_diffs_cache: dict[str, str] | None = None,
     file_status: str | None = None,
     is_checkout: bool = False,
-) -> tuple[set[str], set[str]]:
+    pr_head_ref: str | None = None,
+) -> tuple[set[str] | None, set[str] | None]:
     """Extract modified fixtures and functions from conftest.py.
 
     Filters out purely new functions and fixtures that did not exist in
@@ -2494,6 +2634,8 @@ def _extract_modified_items_from_conftest(
             to their unified diff content.
         file_status: Optional file status from GitHub PR files API
             (``"added"``, ``"modified"``, ``"removed"``, ``"renamed"``).
+        pr_head_ref: Optional PR head commit SHA used in remote (no-checkout)
+            mode to fetch the correct version of files from GitHub.
 
     Returns:
         Tuple of (modified_fixtures, modified_functions) containing only
@@ -2536,6 +2678,30 @@ def _extract_modified_items_from_conftest(
             if changed_file.exists():
                 return all_fixtures, set()
             return set(), set()
+
+        # Check for critical module-level variables (e.g., pytest_plugins)
+        # that affect pytest's fixture/plugin loading and are invisible
+        # to function-level diff tracking.
+        classification = _extract_modified_symbols(
+            file_path=changed_file,
+            base_branch=base_branch,
+            repo_root=repo_root,
+            github_pr_info=github_pr_info,
+            pr_diffs_cache=pr_diffs_cache,
+            file_status=file_status,
+            is_checkout=is_checkout,
+            pr_head_ref=pr_head_ref,
+        )
+        if classification is None or "pytest_plugins" in (classification.modified_symbols | classification.new_symbols):
+            # pytest_plugins controls plugin/fixture loading — signal to caller
+            # that ALL tests depending on this conftest should be flagged.
+            # Return None to indicate structural change (distinct from empty set
+            # which means "no impact").
+            logger.info(
+                msg="pytest_plugins modified in conftest — structural change",
+                extra={"file": str(changed_file)},
+            )
+            return None, None
 
         # Filter out purely new functions/fixtures (additive-change detection)
         if modified_function_names and file_status not in ("added", "renamed"):
@@ -2641,26 +2807,59 @@ def _parse_diff_for_functions(diff_content: str) -> set[str]:
     modified = set()
     current_function = None
     has_changes_in_function = False
+    pending_decorator_change = False
 
     for line in diff_content.splitlines():
         if line.startswith("@@"):
-            if current_function and has_changes_in_function:
+            if current_function and (has_changes_in_function or pending_decorator_change):
                 modified.add(current_function)
 
             match = re.search(pattern=r"@@.*@@\s*(?:async\s+)?def\s+(\w+)", string=line)
             if match:
                 current_function = match.group(1)
                 has_changes_in_function = False
+                pending_decorator_change = False
             else:
                 current_function = None
+                pending_decorator_change = False
             continue
 
         if line.startswith(("+", "-")) and not line.startswith(("+++", "---", "@@")):
             stripped = line[1:].strip()
             if stripped and not stripped.startswith("#"):
+                # Check if this line defines a new function — reset tracking
+                func_match = re.match(pattern=r"(?:async\s+)?def\s+(\w+)\s*\(", string=stripped)
+                if func_match:
+                    # Save previous function if it had real (non-decorator) changes
+                    if current_function and has_changes_in_function:
+                        modified.add(current_function)
+                    # Pending decorator belongs to the NEW function, not the old one
+                    current_function = func_match.group(1)
+                    has_changes_in_function = True
+                    pending_decorator_change = False
+                elif stripped.startswith("@"):
+                    # Decorator line — defer until we know if it belongs to
+                    # the current function or a newly appended one
+                    pending_decorator_change = True
+                else:
+                    # Regular code change — commit any pending decorator
+                    if pending_decorator_change:
+                        has_changes_in_function = True
+                        pending_decorator_change = False
+                    has_changes_in_function = True
+        elif pending_decorator_change and line.startswith(" "):
+            # Context line (unchanged) following a decorator change —
+            # bind pending decorator to the function on this context line
+            context_stripped = line[1:].strip()
+            context_func = re.match(pattern=r"(?:async\s+)?def\s+(\w+)\s*\(", string=context_stripped)
+            if context_func:
+                if current_function and has_changes_in_function:
+                    modified.add(current_function)
+                current_function = context_func.group(1)
                 has_changes_in_function = True
+                pending_decorator_change = False
 
-    if current_function and has_changes_in_function:
+    if current_function and (has_changes_in_function or pending_decorator_change):
         modified.add(current_function)
 
     return modified
@@ -3485,6 +3684,7 @@ class MarkerTestAnalyzer:
                     pr_diffs_cache=pr_diffs_cache,
                     pr_file_statuses=pr_file_statuses,
                     is_checkout=self.is_checkout,
+                    pr_head_ref=pr_head_ref,
                 ): node_id
                 for node_id, marked_test in self.marked_tests.items()
             }

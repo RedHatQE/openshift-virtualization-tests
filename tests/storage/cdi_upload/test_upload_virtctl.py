@@ -15,7 +15,10 @@ from pytest_testconfig import config as py_config
 from libs.net.cluster import is_ipv6_single_stack_cluster
 from tests.storage.cdi_upload.utils import get_storage_profile_minimum_supported_pvc_size
 from tests.storage.utils import assert_use_populator, create_windows_vm_validate_guest_agent_info
-from utilities.constants import CDI_UPLOADPROXY, QUARANTINED, TIMEOUT_1MIN, Images
+from utilities.constants import Images
+from utilities.constants.components import CDI_UPLOADPROXY
+from utilities.constants.pytest import QUARANTINED
+from utilities.constants.timeouts import TIMEOUT_1MIN
 from utilities.storage import (
     ErrorMsg,
     check_upload_virtctl_result,
@@ -411,6 +414,45 @@ def test_virtctl_image_upload_dv_with_exist_pvc(
             expected_success=False,
             expected_output="No DataVolume is associated with the existing PVC",
         )
+
+
+@pytest.mark.polarion("CNV-16270")
+@pytest.mark.usefixtures("primary_udn_for_upload", "download_image")
+def test_virtctl_image_upload_dv_in_pudn_namespace(
+    admin_client,
+    udn_namespace_for_dv_upload,
+    storage_class_name_immediate_binding_scope_module,
+):
+    """
+    Test that uploading a disk image to a DataVolume succeeds in a namespace
+    with a primary User Defined Network (UDN).
+
+    Jira: https://redhat.atlassian.net/browse/CNV-58018 # <skip-jira-utils-check>
+
+    Preconditions:
+        - Namespace with a primary UDN label
+        - Layer2 User Defined Network with role "Primary" in the namespace
+
+    Steps:
+        1. Upload a disk image to a DataVolume in the UDN namespace via virtctl
+
+    Expected:
+        - Upload completes successfully
+        - DataVolume phase is "Succeeded"
+    """
+    dv_name = f"cnv-16270-{storage_class_name_immediate_binding_scope_module}"
+    with virtctl_upload_dv(
+        client=udn_namespace_for_dv_upload.client,
+        namespace=udn_namespace_for_dv_upload.name,
+        name=dv_name,
+        size=DEFAULT_DV_SIZE,
+        image_path=LOCAL_PATH,
+        storage_class=storage_class_name_immediate_binding_scope_module,
+        insecure=True,
+    ) as res:
+        check_upload_virtctl_result(result=res)
+        dv = DataVolume(namespace=udn_namespace_for_dv_upload.name, name=dv_name, client=admin_client)
+        dv.wait_for_dv_success(timeout=TIMEOUT_1MIN)
 
 
 @pytest.mark.tier3

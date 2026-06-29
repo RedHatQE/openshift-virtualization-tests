@@ -26,9 +26,9 @@ from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.exceptions import ResourceTeardownError
 
 from utilities.constants import (
-    ADP_NAMESPACE,
     LS_COMMAND,
     TIMEOUT_20SEC,
+    NamespacesNames,
 )
 from utilities.oadp import (
     VeleroBackup,
@@ -67,7 +67,7 @@ class TestDeleteVeleroResource:
         mock_get_pod.assert_called_once_with(
             client=mock_client,
             pod_prefix="velero",
-            namespace=ADP_NAMESPACE,
+            namespace=NamespacesNames.ADP_NAMESPACE,
         )
 
         mock_pod.execute.assert_called_once_with(command=["./velero", "delete", kind.lower(), name, "--confirm"])

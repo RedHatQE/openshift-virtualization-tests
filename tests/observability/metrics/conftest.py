@@ -15,7 +15,12 @@ from packaging.version import Version
 from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+from libs.net.vmspec import update_nad_references
+from libs.vm.factory import base_vmspec, fedora_vm
+from libs.vm.spec import Devices, Interface, Multus, Network
 from tests.observability.metrics.constants import (
+    BINDING_NAME,
+    BINDING_TYPE,
     GUEST_LOAD_TIME_PERIODS,
     KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI,
     KUBEVIRT_VM_CREATED_BY_POD_TOTAL,
@@ -27,6 +32,7 @@ from tests.observability.metrics.constants import (
 )
 from tests.observability.metrics.utils import (
     SINGLE_VM,
+    binding_name_and_type_from_vm_or_vmi,
     create_windows11_wsl2_vm,
     disk_file_system_info,
     enable_swap_fedora_vm,
@@ -39,31 +45,37 @@ from tests.observability.metrics.utils import (
 from tests.observability.utils import validate_metrics_value
 from tests.utils import create_vms, start_stress_on_vm
 from utilities import console
-from utilities.constants import (
-    IPV4_STR,
+from utilities.constants import Images
+from utilities.constants.components import (
+    SSP_OPERATOR,
+    VIRT_TEMPLATE_VALIDATOR,
+)
+from utilities.constants.images import OS_FLAVOR_FEDORA
+from utilities.constants.instance_types import U1_SMALL
+from utilities.constants.monitoring import (
     KUBEVIRT_VMI_MEMORY_PGMAJFAULT_TOTAL,
     KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL,
     KUBEVIRT_VMI_MEMORY_SWAP_IN_TRAFFIC_BYTES,
     KUBEVIRT_VMI_MEMORY_SWAP_OUT_TRAFFIC_BYTES,
     KUBEVIRT_VMI_MEMORY_UNUSED_BYTES,
     KUBEVIRT_VMI_MEMORY_USABLE_BYTES,
-    MIGRATION_POLICY_VM_LABEL,
-    ONE_CPU_CORE,
-    ONE_CPU_THREAD,
-    OS_FLAVOR_FEDORA,
-    SSP_OPERATOR,
-    STRESS_CPU_MEM_IO_COMMAND,
+)
+from utilities.constants.networking import IPV4_STR
+from utilities.constants.timeouts import (
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
     TIMEOUT_4MIN,
     TIMEOUT_5MIN,
     TIMEOUT_15SEC,
+)
+from utilities.constants.virt import (
+    MIGRATION_POLICY_VM_LABEL,
+    ONE_CPU_CORE,
+    ONE_CPU_THREAD,
+    STRESS_CPU_MEM_IO_COMMAND,
     TWO_CPU_CORES,
     TWO_CPU_SOCKETS,
     TWO_CPU_THREADS,
-    U1_MEDIUM_STR,
-    VIRT_TEMPLATE_VALIDATOR,
-    Images,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile, enabled_aaq_in_hco
 from utilities.infra import (
@@ -100,6 +112,7 @@ METRICS_WITH_WINDOWS_VM_BUGS = [
     KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL,
 ]
 MINIMUM_QEMU_GUEST_AGENT_VERSION_FOR_GUEST_LOAD_METRICS = "9.6"
+_NAD_SWAP_SECONDARY_IFACE = "secondary"
 
 
 @pytest.fixture(scope="module")
@@ -578,7 +591,7 @@ def fedora_vm_with_stress_ng(namespace, unprivileged_client, golden_images_names
         client=unprivileged_client,
         name="fedora-vm-test-with-stress-ng",
         namespace=namespace.name,
-        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_MEDIUM_STR),
+        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL),
         vm_preference=VirtualMachineClusterPreference(name=OS_FLAVOR_FEDORA),
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=DataSource(
@@ -661,3 +674,54 @@ def expected_cpu_affinity_metric_value(admin_client, vm_with_cpu_spec):
 
     # return multiplication for multi-CPU VMs
     return str(cpu_count_from_vm_node * cpu_count_from_vm)
+
+
+@pytest.fixture(scope="class")
+def vm_for_nad_swap_test(
+    unprivileged_client,
+    namespace,
+    bridge_nad_a,
+):
+    vm_name = "vm-nad-swap-vnic-info"
+    spec = base_vmspec()
+    spec.template.spec.domain.devices = Devices(
+        interfaces=[
+            Interface(name="default", masquerade={}),
+            Interface(name=_NAD_SWAP_SECONDARY_IFACE, bridge={}),
+        ]
+    )
+    spec.template.spec.networks = [
+        Network(name="default", pod={}),
+        Network(name=_NAD_SWAP_SECONDARY_IFACE, multus=Multus(networkName=bridge_nad_a.name)),
+    ]
+    with fedora_vm(namespace=namespace.name, name=vm_name, client=unprivileged_client, spec=spec) as vm:
+        vm.start(wait=True)
+        yield vm
+
+
+@pytest.fixture(scope="class")
+def post_nad_swap_vm(
+    vm_for_nad_swap_test,
+    bridge_nad_b,
+):
+    update_nad_references(
+        vm=vm_for_nad_swap_test,
+        nad_name_by_net={_NAD_SWAP_SECONDARY_IFACE: bridge_nad_b.name},
+    )
+    yield vm_for_nad_swap_test
+
+
+@pytest.fixture(scope="class")
+def expected_vnic_info_after_swap(
+    post_nad_swap_vm,
+    bridge_nad_b,
+):
+    vm_interfaces = post_nad_swap_vm.instance.spec.template.spec.domain.devices.interfaces
+    secondary_interface = next(iface for iface in vm_interfaces if iface["name"] == _NAD_SWAP_SECONDARY_IFACE)
+    binding_info = binding_name_and_type_from_vm_or_vmi(vm_interface=secondary_interface)
+    return {
+        "vnic_name": _NAD_SWAP_SECONDARY_IFACE,
+        BINDING_NAME: binding_info[BINDING_NAME],
+        BINDING_TYPE: binding_info[BINDING_TYPE],
+        "network": bridge_nad_b.name,
+    }

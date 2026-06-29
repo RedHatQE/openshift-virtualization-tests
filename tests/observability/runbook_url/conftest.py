@@ -6,7 +6,11 @@ from ocp_resources.prometheus_rule import PrometheusRule
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from utilities.constants import KUBEMACPOOL_PROMETHEUS_RULE, TIMEOUT_10SEC, TIMEOUT_30SEC
+from utilities.constants.components import KUBEMACPOOL_PROMETHEUS_RULE
+from utilities.constants.timeouts import (
+    TIMEOUT_10SEC,
+    TIMEOUT_30SEC,
+)
 from utilities.jira import is_jira_open
 
 LOGGER = logging.getLogger(__name__)

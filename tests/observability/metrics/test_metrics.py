@@ -10,9 +10,7 @@ from tests.observability.metrics.utils import (
     compare_kubevirt_vmi_info_metric_with_vm_info,
 )
 from tests.observability.utils import validate_metrics_value
-from utilities.constants import (
-    KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS,
-)
+from utilities.constants.monitoring import KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
 

@@ -71,7 +71,7 @@ from timeout_sampler import TimeoutSampler
 
 import utilities.hco
 from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
-from libs.net.ip import filter_link_local_addresses, random_ipv4_address, random_ipv6_address
+from libs.net.ip import filter_link_local_addresses, random_cidr_addresses_by_family
 from libs.net.vmspec import lookup_iface_status
 from tests.utils import download_and_extract_tar
 from utilities.artifactory import get_artifactory_header, get_http_image_url, get_test_artifact_server_url
@@ -1043,7 +1043,7 @@ def mac_pool(admin_client, hco_namespace):
 
 @pytest.fixture(scope="session")
 def nodes_cpu_architecture():
-    return py_config["cpu_arch"]
+    return py_config.get("cpu_arch")
 
 
 @pytest.fixture(scope="session")
@@ -1495,7 +1495,7 @@ def cluster_info(
         f"\tOCS version: {ocs_current_version}\n"
         f"\tCNI type: {get_cluster_cni_type(admin_client=admin_client)}\n"
         f"\tWorkers type: {workers_type}\n"
-        f"\tCluster CPU Architecture: {nodes_cpu_architecture}\n"
+        f"\tCluster CPU Architecture: {py_config['cluster_arch']}\n"
         f"\tIPv4 cluster: {ipv4_supported_cluster()}\n"
         f"\tIPv6 cluster: {ipv6_supported_cluster()}\n"
         f"\tVirtctl version: \n\t{virtctl_client_version}\n\t{virtctl_server_version}\n"
@@ -1664,16 +1664,7 @@ def running_vm_upgrade_a(
 ):
     name = "vm-upgrade-a"
     cloud_init_data = cloud_init_network_data(
-        data={
-            "ethernets": {
-                "eth1": {
-                    "addresses": [
-                        f"{random_ipv4_address(net_seed=0, host_address=1)}/24",
-                        f"{random_ipv6_address(net_seed=0, host_address=1)}/64",
-                    ]
-                }
-            }
-        }
+        data={"ethernets": {"eth1": {"addresses": random_cidr_addresses_by_family(net_seed=0, host_address=1)}}}
     )
     with VirtualMachineForTests(
         name=name,
@@ -1708,16 +1699,7 @@ def running_vm_upgrade_b(
 ):
     name = "vm-upgrade-b"
     cloud_init_data = cloud_init_network_data(
-        data={
-            "ethernets": {
-                "eth1": {
-                    "addresses": [
-                        f"{random_ipv4_address(net_seed=0, host_address=2)}/24",
-                        f"{random_ipv6_address(net_seed=0, host_address=2)}/64",
-                    ]
-                }
-            }
-        }
+        data={"ethernets": {"eth1": {"addresses": random_cidr_addresses_by_family(net_seed=0, host_address=2)}}}
     )
     with VirtualMachineForTests(
         name=name,

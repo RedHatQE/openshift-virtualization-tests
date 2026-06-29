@@ -14,12 +14,12 @@ from tests.storage.hpp.utils import (
     VM_NAME,
     edit_hpp_with_node_selector,
 )
-from utilities.constants import NODE_STR
+from utilities.constants.aaq import NODE_STR
 from utilities.storage import check_disk_count_in_vm
 
 LOGGER = logging.getLogger(__name__)
 
-pytestmark = pytest.mark.usefixtures("skip_test_if_no_hpp_sc")
+pytestmark = pytest.mark.hpp
 
 
 @pytest.mark.destructive
