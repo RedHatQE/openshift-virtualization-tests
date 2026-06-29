@@ -688,6 +688,9 @@ def initial_vmi_sync_total_values(prometheus, vm_for_migration_metrics_test):
 @pytest.fixture(scope="class")
 def deleted_vmi_sync_total_vm(vm_for_migration_metrics_test):
     vm_for_migration_metrics_test.delete(wait=True)
+
+
+@pytest.fixture(scope="class")
 def vm_for_nad_swap_test(
     unprivileged_client,
     namespace,
