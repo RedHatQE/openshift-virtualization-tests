@@ -3,10 +3,7 @@ from __future__ import annotations
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 
-from utilities.constants import (
-    TIMEOUT_10SEC,
-    TIMEOUT_15SEC,
-)
+from utilities.constants.timeouts import TIMEOUT_10SEC, TIMEOUT_15SEC
 
 FILE_PATH_FOR_WINDOWS_BACKUP = "C:/oadp_file_before_backup.txt"
 

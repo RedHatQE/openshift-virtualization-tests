@@ -18,7 +18,7 @@ from tests.storage.storage_migration.utils import (
     verify_vm_storage_class_updated,
     verify_vms_boot_time_after_storage_migration,
 )
-from utilities.constants import TIMEOUT_60MIN
+from utilities.constants.timeouts import TIMEOUT_60MIN
 from utilities.storage import verify_file_in_windows_vm
 from utilities.virt import migrate_vm_and_verify
 

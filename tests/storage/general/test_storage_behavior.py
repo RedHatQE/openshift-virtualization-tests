@@ -8,7 +8,9 @@ import pytest
 
 from tests.storage.cdi_import.utils import wait_for_pvc_recreate
 from utilities import console
-from utilities.constants import OS_FLAVOR_FEDORA, TIMEOUT_1MIN, Images
+from utilities.constants import Images
+from utilities.constants.images import OS_FLAVOR_FEDORA
+from utilities.constants.timeouts import TIMEOUT_1MIN
 from utilities.infra import get_node_selector_dict
 from utilities.storage import create_dummy_first_consumer_pod, create_vm_from_dv, sc_volume_binding_mode_is_wffc
 

@@ -14,18 +14,12 @@ from utilities.artifactory import (
     get_artifactory_secret,
     get_test_artifact_server_url,
 )
-from utilities.constants import (
-    BACKUP_STORAGE_LOCATION,
-    CONTAINER_DISK_IMAGE_PATH_STR,
-    FILE_NAME_FOR_BACKUP,
-    OS_FLAVOR_RHEL,
-    OS_FLAVOR_WIN_CONTAINER_DISK,
-    TEXT_TO_TEST,
-    TIMEOUT_8MIN,
-    TIMEOUT_15MIN,
-    U1_LARGE,
-    Images,
-)
+from utilities.constants import Images
+from utilities.constants.images import OS_FLAVOR_RHEL, OS_FLAVOR_WIN_CONTAINER_DISK
+from utilities.constants.instance_types import U1_LARGE
+from utilities.constants.oadp import BACKUP_STORAGE_LOCATION, FILE_NAME_FOR_BACKUP, TEXT_TO_TEST
+from utilities.constants.os_matrix import CONTAINER_DISK_IMAGE_PATH_STR
+from utilities.constants.timeouts import TIMEOUT_8MIN, TIMEOUT_15MIN
 from utilities.infra import create_ns
 from utilities.oadp import (
     VeleroBackup,

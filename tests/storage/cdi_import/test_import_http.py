@@ -23,13 +23,9 @@ from tests.storage.utils import (
     get_file_url,
     wait_for_dv_condition_message,
 )
-from utilities.constants import (
-    QUARANTINED,
-    TIMEOUT_1MIN,
-    TIMEOUT_2MIN,
-    TIMEOUT_5MIN,
-    Images,
-)
+from utilities.constants import Images
+from utilities.constants.pytest import QUARANTINED
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_2MIN, TIMEOUT_5MIN
 from utilities.ssp import validate_os_info_vmi_vs_windows_os
 from utilities.storage import (
     ErrorMsg,

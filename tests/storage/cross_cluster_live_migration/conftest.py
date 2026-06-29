@@ -41,18 +41,12 @@ from utilities.artifactory import (
     get_artifactory_secret,
     get_test_artifact_server_url,
 )
-from utilities.constants import (
-    CONTAINER_DISK_IMAGE_PATH_STR,
-    OS_FLAVOR_RHEL,
-    OS_FLAVOR_WIN_CONTAINER_DISK,
-    RHEL10_PREFERENCE,
-    RHEL10_STR,
-    TIMEOUT_1MIN,
-    TIMEOUT_30SEC,
-    U1_LARGE,
-    U1_SMALL,
-    Images,
-)
+from utilities.constants import Images
+from utilities.constants.components import RHEL10_STR
+from utilities.constants.images import OS_FLAVOR_RHEL, OS_FLAVOR_WIN_CONTAINER_DISK
+from utilities.constants.instance_types import RHEL10_PREFERENCE, U1_LARGE, U1_SMALL
+from utilities.constants.os_matrix import CONTAINER_DISK_IMAGE_PATH_STR
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_30SEC
 from utilities.infra import create_ns, get_hyperconverged_resource
 from utilities.storage import (
     data_volume_template_with_source_ref_dict,

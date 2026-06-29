@@ -11,7 +11,7 @@ from tests.storage.storage_migration.constants import (
     MOUNT_HOTPLUGGED_DEVICE_PATH,
 )
 from tests.storage.utils import check_file_in_vm
-from utilities.constants import TIMEOUT_2MIN, TIMEOUT_5SEC, TIMEOUT_10MIN, TIMEOUT_10SEC
+from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5SEC, TIMEOUT_10MIN, TIMEOUT_10SEC
 from utilities.exceptions import StorageMigrationError
 from utilities.virt import VirtualMachineForTests, get_vm_boot_time
 

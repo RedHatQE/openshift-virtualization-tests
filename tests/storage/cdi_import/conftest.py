@@ -18,13 +18,11 @@ from tests.storage.utils import (
     create_pod_for_pvc,
     get_file_url,
 )
-from utilities.constants import (
-    LINUX_BRIDGE,
-    OS_FLAVOR_FEDORA,
-    REGISTRY_STR,
-    TIMEOUT_1MIN,
-    Images,
-)
+from utilities.constants import Images
+from utilities.constants.images import OS_FLAVOR_FEDORA
+from utilities.constants.networking import LINUX_BRIDGE
+from utilities.constants.storage import REGISTRY_STR
+from utilities.constants.timeouts import TIMEOUT_1MIN
 from utilities.infra import NON_EXIST_URL
 from utilities.network import network_device, network_nad
 from utilities.storage import create_dv, sc_volume_binding_mode_is_wffc

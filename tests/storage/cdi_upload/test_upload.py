@@ -18,13 +18,9 @@ from timeout_sampler import TimeoutSampler
 
 import tests.storage.utils as storage_utils
 import utilities.storage
-from utilities.constants import (
-    CDI_UPLOADPROXY,
-    TIMEOUT_1MIN,
-    TIMEOUT_3MIN,
-    TIMEOUT_5MIN,
-    Images,
-)
+from utilities.constants import Images
+from utilities.constants.components import CDI_UPLOADPROXY
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_3MIN, TIMEOUT_5MIN
 from utilities.storage import create_vm_from_dv, get_downloaded_artifact
 
 LOGGER = logging.getLogger(__name__)

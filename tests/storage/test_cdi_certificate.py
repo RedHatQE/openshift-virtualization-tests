@@ -16,15 +16,10 @@ from ocp_resources.secret import Secret
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutSampler
 
-from utilities.constants import (
-    CDI_SECRETS,
-    QUARANTINED,
-    TIMEOUT_1MIN,
-    TIMEOUT_3MIN,
-    TIMEOUT_5SEC,
-    TIMEOUT_10MIN,
-    Images,
-)
+from utilities.constants import Images
+from utilities.constants.pytest import QUARANTINED
+from utilities.constants.storage import CDI_SECRETS
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_3MIN, TIMEOUT_5SEC, TIMEOUT_10MIN
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.storage import (
     check_upload_virtctl_result,

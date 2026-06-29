@@ -10,7 +10,7 @@ from tests.storage.upgrade.utils import (
     create_snapshot_for_upgrade,
     create_vm_for_snapshot_upgrade_tests,
 )
-from utilities.constants import HOTPLUG_DISK_SERIAL, HOTPLUG_DISK_VIRTIO_BUS
+from utilities.constants.storage import HOTPLUG_DISK_SERIAL, HOTPLUG_DISK_VIRTIO_BUS
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.storage import create_dv, virtctl_volume
 from utilities.virt import (

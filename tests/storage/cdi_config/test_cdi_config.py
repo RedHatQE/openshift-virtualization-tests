@@ -6,7 +6,7 @@ from ocp_resources.route import Route
 from timeout_sampler import TimeoutSampler
 
 from tests.storage.utils import LOGGER
-from utilities.constants import CDI_UPLOADPROXY
+from utilities.constants.components import CDI_UPLOADPROXY
 from utilities.hco import ResourceEditorValidateHCOReconcile
 
 pytestmark = pytest.mark.post_upgrade

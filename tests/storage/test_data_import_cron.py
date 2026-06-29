@@ -15,15 +15,9 @@ from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.volume_snapshot import VolumeSnapshot
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from utilities.constants import (
-    BIND_IMMEDIATE_ANNOTATION,
-    OUTDATED,
-    TIMEOUT_1MIN,
-    TIMEOUT_3MIN,
-    TIMEOUT_5SEC,
-    WILDCARD_CRON_EXPRESSION,
-    Images,
-)
+from utilities.constants import Images
+from utilities.constants.storage import BIND_IMMEDIATE_ANNOTATION, OUTDATED, WILDCARD_CRON_EXPRESSION
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_3MIN, TIMEOUT_5SEC
 from utilities.storage import (
     wait_for_succeeded_dv,
     wait_for_volume_snapshot_ready_to_use,

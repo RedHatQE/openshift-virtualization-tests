@@ -43,20 +43,13 @@ from tests.storage.utils import (
 )
 from tests.utils import create_cirros_vm
 from utilities.artifactory import get_artifactory_config_map, get_artifactory_secret
-from utilities.constants import (
-    CDI_OPERATOR,
-    CDI_UPLOADPROXY,
-    CNV_TEST_SERVICE_ACCOUNT,
-    OS_FLAVOR_FEDORA,
-    OS_FLAVOR_RHEL,
-    RHEL10_PREFERENCE,
-    SECURITY_CONTEXT,
-    TIMEOUT_1MIN,
-    TIMEOUT_5SEC,
-    TIMEOUT_30MIN,
-    U1_SMALL,
-    Images,
-)
+from utilities.constants import Images
+from utilities.constants.cluster import CNV_TEST_SERVICE_ACCOUNT
+from utilities.constants.components import CDI_OPERATOR, CDI_UPLOADPROXY
+from utilities.constants.images import OS_FLAVOR_FEDORA, OS_FLAVOR_RHEL
+from utilities.constants.instance_types import RHEL10_PREFERENCE, U1_SMALL
+from utilities.constants.networking import SECURITY_CONTEXT
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_5SEC, TIMEOUT_30MIN
 from utilities.hco import (
     ResourceEditorValidateHCOReconcile,
     hco_cr_jsonpatch_annotations_dict,

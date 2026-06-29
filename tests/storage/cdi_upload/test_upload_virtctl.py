@@ -15,7 +15,10 @@ from pytest_testconfig import config as py_config
 from libs.net.cluster import is_ipv6_single_stack_cluster
 from tests.storage.cdi_upload.utils import get_storage_profile_minimum_supported_pvc_size
 from tests.storage.utils import assert_use_populator, create_windows_vm_validate_guest_agent_info
-from utilities.constants import CDI_UPLOADPROXY, QUARANTINED, TIMEOUT_1MIN, Images
+from utilities.constants import Images
+from utilities.constants.components import CDI_UPLOADPROXY
+from utilities.constants.pytest import QUARANTINED
+from utilities.constants.timeouts import TIMEOUT_1MIN
 from utilities.storage import (
     ErrorMsg,
     check_upload_virtctl_result,

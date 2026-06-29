@@ -1,7 +1,7 @@
 from ocp_resources.virtual_machine import VirtualMachine
 from timeout_sampler import retry
 
-from utilities.constants import TIMEOUT_2MIN, TIMEOUT_5SEC
+from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5SEC
 from utilities.virt import VirtualMachineForTests
 
 

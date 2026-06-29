@@ -7,7 +7,8 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 
 from tests.storage.memory_dump.utils import wait_for_memory_dump_status_completed
-from utilities.constants import TIMEOUT_2MIN, Images
+from utilities.constants import Images
+from utilities.constants.timeouts import TIMEOUT_2MIN
 from utilities.storage import PodWithPVC, get_containers_for_pods_with_pvc, virtctl_memory_dump
 from utilities.virt import running_vm, vm_instance_from_template
 

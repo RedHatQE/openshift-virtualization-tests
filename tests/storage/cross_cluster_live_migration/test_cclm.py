@@ -20,7 +20,7 @@ from tests.storage.cross_cluster_live_migration.utils import (
     wait_for_vms_to_be_stopped,
 )
 from tests.storage.utils import check_file_in_vm
-from utilities.constants import TIMEOUT_10MIN, TIMEOUT_50MIN
+from utilities.constants.timeouts import TIMEOUT_10MIN, TIMEOUT_50MIN
 
 if TYPE_CHECKING:
     from kubernetes.dynamic import DynamicClient

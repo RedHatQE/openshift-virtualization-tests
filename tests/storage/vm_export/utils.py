@@ -15,7 +15,7 @@ from ocp_resources.virtual_machine import VirtualMachine
 from pyhelper_utils.shell import run_command
 from pytest_testconfig import config as py_config
 
-from utilities.constants import TIMEOUT_1MIN
+from utilities.constants.timeouts import TIMEOUT_1MIN
 from utilities.storage import create_dv
 
 LOGGER = logging.getLogger(__name__)

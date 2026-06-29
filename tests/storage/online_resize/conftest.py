@@ -12,7 +12,9 @@ from tests.storage.online_resize.utils import (
     expand_pvc,
     wait_for_resize,
 )
-from utilities.constants import OS_FLAVOR_RHEL, Images, StorageClassNames
+from utilities.constants import Images
+from utilities.constants.images import OS_FLAVOR_RHEL
+from utilities.constants.storage import StorageClassNames
 from utilities.storage import create_dv, is_snapshot_supported_by_sc
 from utilities.virt import VirtualMachineForTests, running_vm
 
