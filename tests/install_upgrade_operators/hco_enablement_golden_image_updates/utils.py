@@ -6,9 +6,9 @@ from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.data_import_cron import DataImportCron
 
 from tests.install_upgrade_operators.constants import CUSTOM_DATASOURCE_NAME
-from utilities.constants import (
+from utilities.constants.hco import SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME
+from utilities.constants.storage import (
     OUTDATED,
-    SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
     WILDCARD_CRON_EXPRESSION,
 )
 

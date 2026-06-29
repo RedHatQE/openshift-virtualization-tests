@@ -29,11 +29,15 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 from tests.install_upgrade_operators.constants import WORKLOAD_UPDATE_STRATEGY_KEY_NAME, WORKLOADUPDATEMETHODS
 from tests.install_upgrade_operators.utils import wait_for_install_plan
 from tests.upgrade_params import EUS
-from utilities.constants import (
+from utilities.constants.cluster import (
     BASE_EXCEPTIONS_DICT,
-    FIRING_STATE,
-    HCO_CATALOG_SOURCE,
-    IMAGE_CRON_STR,
+    TSC_FREQUENCY,
+)
+from utilities.constants.components import HCO_CATALOG_SOURCE
+from utilities.constants.hco import IMAGE_CRON_STR
+from utilities.constants.monitoring import FIRING_STATE
+from utilities.constants.namespaces import NamespacesNames
+from utilities.constants.timeouts import (
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
     TIMEOUT_10SEC,
@@ -41,8 +45,6 @@ from utilities.constants import (
     TIMEOUT_30MIN,
     TIMEOUT_30SEC,
     TIMEOUT_180MIN,
-    TSC_FREQUENCY,
-    NamespacesNames,
 )
 from utilities.data_collector import write_to_file
 from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_conditions, wait_for_hco_version

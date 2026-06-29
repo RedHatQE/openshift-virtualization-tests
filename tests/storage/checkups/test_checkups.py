@@ -5,7 +5,7 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.job import Job
 
 from tests.storage.checkups.utils import assert_results_in_configmap
-from utilities.constants import QUARANTINED
+from utilities.constants.pytest import QUARANTINED
 
 MSG_MIGRATION_FAIL = "cannot migrate VMI"
 MSG_MIGRATION_SUCCESS = "migration completed"

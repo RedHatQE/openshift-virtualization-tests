@@ -24,14 +24,9 @@ from tests.storage.checkups.constants import (
 )
 from tests.storage.checkups.utils import update_storage_profile
 from tests.utils import create_cirros_vm, get_image_from_csv
-from utilities.constants import (
-    BIND_IMMEDIATE_ANNOTATION,
-    OUTDATED,
-    TIMEOUT_10MIN,
-    VALUE_STR,
-    WILDCARD_CRON_EXPRESSION,
-    StorageClassNames,
-)
+from utilities.constants.cluster import VALUE_STR
+from utilities.constants.storage import BIND_IMMEDIATE_ANNOTATION, OUTDATED, WILDCARD_CRON_EXPRESSION, StorageClassNames
+from utilities.constants.timeouts import TIMEOUT_10MIN
 from utilities.exceptions import StorageCheckupConditionTimeoutExpiredError
 from utilities.infra import create_ns, get_pods
 from utilities.storage import update_default_sc

@@ -30,8 +30,13 @@ def fedora_vm(
     )
 
 
-def fedora_image() -> str:
-    return container_image(base_image=constants.Images.Fedora.FEDORA_CONTAINER_IMAGE)
+def fedora_image(arch: str | None = None) -> str:
+    if arch:
+        images = getattr(constants.ArchImages, arch.upper())
+    else:
+        images = constants.Images
+
+    return container_image(base_image=images.Fedora.FEDORA_CONTAINER_IMAGE, arch=arch)
 
 
 def _fill_vm_spec_defaults(spec: VMSpec | None) -> VMSpec:
@@ -46,7 +51,7 @@ def _fill_vm_spec_defaults(spec: VMSpec | None) -> VMSpec:
     vmi_spec.domain.devices.disks = vmi_spec.domain.devices.disks or []
     vmi_spec.volumes = vmi_spec.volumes or []
 
-    disk, volume = containerdisk_storage(image=fedora_image())
+    disk, volume = containerdisk_storage(image=fedora_image(arch=vmi_spec.architecture))
     vmi_spec.domain.devices.disks.insert(0, disk)
     vmi_spec.volumes.insert(0, volume)
 

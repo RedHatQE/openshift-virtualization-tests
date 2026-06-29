@@ -7,7 +7,7 @@ from tests.install_upgrade_operators.must_gather.utils import (
     VALIDATE_UID_NAME,
     check_list_of_resources,
 )
-from utilities.constants import NamespacesNames
+from utilities.constants.namespaces import NamespacesNames
 
 pytestmark = [
     pytest.mark.sno,

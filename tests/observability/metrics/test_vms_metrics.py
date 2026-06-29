@@ -28,15 +28,17 @@ from tests.observability.metrics.utils import (
     validate_vnic_info,
 )
 from tests.observability.utils import validate_metrics_value
-from utilities.constants import (
+from utilities.constants.pytest import QUARANTINED
+from utilities.constants.storage import (
     CAPACITY,
-    MIGRATION_POLICY_VM_LABEL,
-    QUARANTINED,
+    USED,
+)
+from utilities.constants.timeouts import (
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
     TIMEOUT_30SEC,
-    USED,
 )
+from utilities.constants.virt import MIGRATION_POLICY_VM_LABEL
 from utilities.infra import get_node_selector_dict
 from utilities.monitoring import get_metrics_value
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
@@ -461,7 +463,9 @@ class TestVmVnicInfo:
             ),
         ],
     )
-    def test_metric_kubevirt_vm_vnic_info_after_nad_swap(self, query):
+    def test_metric_kubevirt_vm_vnic_info_after_nad_swap(
+        self, prometheus, post_nad_swap_vm, expected_vnic_info_after_swap, query
+    ):
         """
         Test that vnic_info metric updates the network label after a NAD swap.
 
@@ -474,13 +478,17 @@ class TestVmVnicInfo:
 
         Steps:
             1. Swap the VM secondary network reference from NAD-A to NAD-B
-            2. Query vnic_info metric for the secondary interface
+            2. Wait for the live migration triggered by the swap to complete
+            3. Query vnic_info metric for the secondary interface
 
         Expected:
             - vnic_info labels match the VM spec after NAD swap
         """
-
-    test_metric_kubevirt_vm_vnic_info_after_nad_swap.__test__ = False
+        validate_vnic_info(
+            prometheus=prometheus,
+            vnic_info_to_compare=expected_vnic_info_after_swap,
+            metric_name=query.format(vm_name=post_nad_swap_vm.name),
+        )
 
 
 class TestVmiPhaseTransitionFromDeletion:

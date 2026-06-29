@@ -17,7 +17,11 @@ from tests.install_upgrade_operators.cert_renewal.constants import (
     VIRT_TEMPLATE_VALIDATOR_CERTS,
 )
 from tests.install_upgrade_operators.constants import KUBEMACPOOL_SERVICE
-from utilities.constants import TIMEOUT_2MIN, TIMEOUT_10MIN, TIMEOUT_20SEC
+from utilities.constants.timeouts import (
+    TIMEOUT_2MIN,
+    TIMEOUT_10MIN,
+    TIMEOUT_20SEC,
+)
 
 LOGGER = logging.getLogger(__name__)
 

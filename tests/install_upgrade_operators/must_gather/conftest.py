@@ -21,7 +21,8 @@ from tests.install_upgrade_operators.must_gather.utils import (
     get_must_gather_dir,
 )
 from tests.utils import create_vms
-from utilities.constants import LINUX_BRIDGE, TIMEOUT_40MIN
+from utilities.constants.networking import LINUX_BRIDGE
+from utilities.constants.timeouts import TIMEOUT_40MIN
 from utilities.exceptions import MissingResourceException
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import (
