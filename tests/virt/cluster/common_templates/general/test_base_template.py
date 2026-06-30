@@ -16,7 +16,12 @@ from ocp_resources.template import Template
 from pytest_testconfig import config as py_config
 
 from tests.os_params import FEDORA_LATEST_LABELS
-from utilities.constants import DATA_SOURCE_NAME, DATA_SOURCE_NAMESPACE, HYPERV_FEATURES_LABELS_VM_YAML, Images
+from utilities.constants import Images
+from utilities.constants.hco import (
+    DATA_SOURCE_NAME,
+    DATA_SOURCE_NAMESPACE,
+)
+from utilities.constants.virt import HYPERV_FEATURES_LABELS_VM_YAML
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
 
