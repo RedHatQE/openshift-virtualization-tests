@@ -4,18 +4,30 @@ import shlex
 
 import bitmath
 import pytest
+from ocp_resources.daemonset import DaemonSet
 from ocp_resources.deployment import Deployment
 from ocp_resources.infrastructure import Infrastructure
 from ocp_resources.performance_profile import PerformanceProfile
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.utils import verify_cpumanager_workers, verify_hugepages_1gi, verify_rwx_default_storage
+from tests.utils import (
+    verify_cpumanager_workers,
+    verify_hugepages_1gi,
+    verify_rwx_default_storage,
+)
 from tests.virt.node.gpu.constants import (
     GPU_CARDS_MAP,
+    GPU_WORKLOAD_CONFIG_LABEL,
+    MDEV_NAME_STR,
+    NVIDIA_SANDBOX_VALIDATOR_DS,
+    NVIDIA_VGPU_DEVICE_MANAGER_DS,
     NVIDIA_VGPU_MANAGER_DS,
+    VGPU_CONFIG_LABEL,
 )
 from tests.virt.node.gpu.utils import (
-    wait_for_manager_pods_deployed,
+    apply_node_labels,
+    toggle_vgpu_deploy_labels,
+    wait_for_ds_ready,
 )
 from tests.virt.utils import (
     get_allocatable_memory_per_node,
@@ -26,9 +38,15 @@ from tests.virt.utils import (
     patch_hco_cr_with_mdev_permitted_hostdevices,
     update_hco_memory_overcommit,
 )
-from utilities.constants import AMD, INTEL, TIMEOUT_1MIN, TIMEOUT_5SEC, NamespacesNames
+from utilities.constants import (
+    AMD,
+    INTEL,
+    TIMEOUT_1MIN,
+    TIMEOUT_5SEC,
+    NamespacesNames,
+)
 from utilities.exceptions import ResourceValueError, UnsupportedGPUDeviceError
-from utilities.infra import ExecCommandOnPod, get_nodes_with_label, label_nodes
+from utilities.infra import ExecCommandOnPod, get_nodes_with_label, get_resources_by_name_prefix, label_nodes
 from utilities.pytest_utils import exit_pytest_execution
 from utilities.virt import get_nodes_gpu_info, vm_instance_from_template
 
@@ -219,14 +237,63 @@ def hco_cr_with_mdev_permitted_hostdevices_scope_session(hyperconverged_resource
 
 
 @pytest.fixture(scope="session")
-def gpu_nodes_labeled_with_vm_vgpu(nodes_with_supported_gpus):
-    yield from label_nodes(nodes=nodes_with_supported_gpus, labels={"nvidia.com/gpu.workload.config": "vm-vgpu"})
+def gpu_nodes_labeled_with_vgpu_config(nodes_with_supported_gpus, supported_gpu_device):
+    yield from label_nodes(
+        nodes=nodes_with_supported_gpus,
+        labels={VGPU_CONFIG_LABEL: supported_gpu_device[MDEV_NAME_STR].split()[-1]},
+    )
 
 
 @pytest.fixture(scope="session")
-def vgpu_ready_nodes(admin_client, gpu_nodes_labeled_with_vm_vgpu):
-    wait_for_manager_pods_deployed(admin_client=admin_client, ds_name=NVIDIA_VGPU_MANAGER_DS)
+def gpu_nodes_labeled_with_vm_vgpu(nodes_with_supported_gpus, gpu_nodes_labeled_with_vgpu_config):
+    yield from label_nodes(nodes=nodes_with_supported_gpus, labels={GPU_WORKLOAD_CONFIG_LABEL: "vm-vgpu"})
+
+
+@pytest.fixture(scope="session")
+def nvidia_vgpu_manager_ds(admin_client):
+    return get_resources_by_name_prefix(
+        prefix=NVIDIA_VGPU_MANAGER_DS,
+        namespace=NamespacesNames.NVIDIA_GPU_OPERATOR,
+        api_resource_name=DaemonSet,
+    )[0]
+
+
+@pytest.fixture(scope="session")
+def nvidia_sandbox_validator_ds(admin_client):
+    return DaemonSet(
+        client=admin_client,
+        namespace=NamespacesNames.NVIDIA_GPU_OPERATOR,
+        name=NVIDIA_SANDBOX_VALIDATOR_DS,
+    )
+
+
+@pytest.fixture(scope="session")
+def nvidia_vgpu_device_manager_ds(admin_client):
+    return DaemonSet(
+        client=admin_client,
+        namespace=NamespacesNames.NVIDIA_GPU_OPERATOR,
+        name=NVIDIA_VGPU_DEVICE_MANAGER_DS,
+    )
+
+
+@pytest.fixture(scope="session")
+def vgpu_ready_nodes(
+    gpu_nodes,
+    nodes_with_supported_gpus,
+    gpu_nodes_labeled_with_vm_vgpu,
+    nvidia_vgpu_manager_ds,
+    nvidia_sandbox_validator_ds,
+    nvidia_vgpu_device_manager_ds,
+):
+    wait_for_ds_ready(ds=nvidia_vgpu_manager_ds, expected=len(nodes_with_supported_gpus))
+    toggle_vgpu_deploy_labels(
+        gpu_nodes=gpu_nodes,
+        nodes_with_supported_gpus=nodes_with_supported_gpus,
+        sandbox_validator_ds=nvidia_sandbox_validator_ds,
+        vgpu_device_manager_ds=nvidia_vgpu_device_manager_ds,
+    )
     yield gpu_nodes_labeled_with_vm_vgpu
+    apply_node_labels(nodes=nodes_with_supported_gpus, labels={"nvidia.com/vgpu.config.state": None})
 
 
 @pytest.fixture(scope="session")
