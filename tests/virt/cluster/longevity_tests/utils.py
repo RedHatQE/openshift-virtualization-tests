@@ -24,7 +24,14 @@ from utilities.artifactory import (
     get_artifactory_config_map,
     get_artifactory_secret,
 )
-from utilities.constants import TCP_TIMEOUT_30SEC, TIMEOUT_5MIN, TIMEOUT_30MIN, TIMEOUT_40MIN, TIMEOUT_60MIN, WIN_10
+from utilities.constants.timeouts import (
+    TCP_TIMEOUT_30SEC,
+    TIMEOUT_5MIN,
+    TIMEOUT_30MIN,
+    TIMEOUT_40MIN,
+    TIMEOUT_60MIN,
+)
+from utilities.constants.virt import WIN_10
 from utilities.storage import get_test_artifact_server_url
 from utilities.virt import (
     VirtualMachineForTests,

@@ -12,7 +12,8 @@ from tests.virt.cluster.common_templates.custom_namespace.utils import (
     wait_for_edited_label_reconciliation,
     wait_for_template_by_name,
 )
-from utilities.constants import UNPRIVILEGED_USER, NamespacesNames
+from utilities.constants.namespaces import NamespacesNames
+from utilities.constants.pytest import UNPRIVILEGED_USER
 
 LOGGER = logging.getLogger(__name__)
 
