@@ -13,11 +13,8 @@ from tests.network.utils import (
     assert_ssh_alive,
     run_ssh_in_background,
 )
-from utilities.constants import (
-    LINUX_BRIDGE,
-    TIMEOUT_1MIN,
-    TIMEOUT_5SEC,
-)
+from utilities.constants.networking import LINUX_BRIDGE
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_5SEC
 from utilities.data_utils import name_prefix
 from utilities.infra import get_node_selector_dict, get_pod_by_name_prefix
 from utilities.network import (

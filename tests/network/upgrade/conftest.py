@@ -3,11 +3,8 @@ from ocp_resources.virtual_machine import VirtualMachine
 
 from libs.net.ip import random_ipv4_address
 from tests.network.upgrade.libupgrade import KMP_DISABLED_LABEL
-from utilities.constants import (
-    ES_NONE,
-    KMP_VM_ASSIGNMENT_LABEL,
-    LINUX_BRIDGE,
-)
+from utilities.constants.networking import KMP_VM_ASSIGNMENT_LABEL, LINUX_BRIDGE
+from utilities.constants.virt import ES_NONE
 from utilities.infra import create_ns, get_node_selector_dict
 from utilities.network import cloud_init, network_nad
 from utilities.virt import VirtualMachineForTests, fedora_vm_body

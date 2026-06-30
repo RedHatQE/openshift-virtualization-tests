@@ -1,4 +1,4 @@
-from utilities.constants import SSH_PORT_22
+from utilities.constants.networking import SSH_PORT_22
 
 SERVICE_IP_FAMILY_POLICY_SINGLE_STACK = "SingleStack"
 SERVICE_IP_FAMILY_POLICY_PREFER_DUAL_STACK = "PreferDualStack"

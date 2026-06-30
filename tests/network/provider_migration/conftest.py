@@ -27,7 +27,7 @@ from tests.network.provider_migration.libprovider import (
     extract_vm_primary_network_data,
 )
 from utilities.bitwarden import get_cnv_tests_secret_by_name
-from utilities.constants import OS_FLAVOR_FEDORA
+from utilities.constants.images import OS_FLAVOR_FEDORA
 
 CUDN_LABEL: Final[dict] = {"cudn": "mtv"}
 CUDN_SUBNET_IPV4: Final[str] = "192.168.100.0/24"

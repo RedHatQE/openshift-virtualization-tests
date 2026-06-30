@@ -14,12 +14,8 @@ from ocp_resources.pod import Pod
 from timeout_sampler import TimeoutExpiredError
 
 from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
-from utilities.constants import (
-    CLUSTER,
-    CLUSTER_NETWORK_ADDONS_OPERATOR,
-    VIRT_HANDLER,
-    NamespacesNames,
-)
+from utilities.constants.components import CLUSTER, CLUSTER_NETWORK_ADDONS_OPERATOR, VIRT_HANDLER
+from utilities.constants.namespaces import NamespacesNames
 from utilities.infra import (
     get_deployment_by_name,
     wait_for_pods_running,

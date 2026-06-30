@@ -8,13 +8,9 @@ from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from libs.net.vmspec import lookup_iface_status_ip
-from utilities.constants import (
-    IPV4_STR,
-    OS_FLAVOR_FEDORA,
-    TIMEOUT_1MIN,
-    TIMEOUT_2MIN,
-    TIMEOUT_10SEC,
-)
+from utilities.constants.images import OS_FLAVOR_FEDORA
+from utilities.constants.networking import IPV4_STR
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_2MIN, TIMEOUT_10SEC
 from utilities.network import (
     get_ip_from_vm_or_virt_handler_pod,
     ping,

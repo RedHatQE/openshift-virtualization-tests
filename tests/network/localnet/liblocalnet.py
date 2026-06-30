@@ -16,7 +16,8 @@ from libs.vm.vm import BaseVirtualMachine, add_volume_disk, cloudinitdisk_storag
 from tests.network.libs import cloudinit
 from tests.network.libs import cluster_user_defined_network as libcudn
 from tests.network.libs.label_selector import LabelSelector
-from utilities.constants import OVS_BRIDGE, WORKER_NODE_LABEL_KEY
+from utilities.constants.cluster import WORKER_NODE_LABEL_KEY
+from utilities.constants.networking import OVS_BRIDGE
 
 LOCALNET_BR_EX_NETWORK = "localnet-br-ex-network"
 LOCALNET_BR_EX_NETWORK_NO_VLAN = "localnet-br-ex-network-no-vlan"
