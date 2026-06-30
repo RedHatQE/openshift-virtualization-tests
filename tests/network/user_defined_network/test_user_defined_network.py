@@ -11,7 +11,9 @@ from libs.net.traffic_generator import VMTcpClient as TcpClient
 from libs.net.udn import UDN_BINDING_DEFAULT_PLUGIN_NAME
 from libs.net.vmspec import lookup_iface_status_ip, lookup_primary_network
 from tests.network.libs.vm_factory import udn_vm
-from utilities.constants import PUBLIC_DNS_SERVER_IP, QUARANTINED, TIMEOUT_1MIN
+from utilities.constants.networking import PUBLIC_DNS_SERVER_IP
+from utilities.constants.pytest import QUARANTINED
+from utilities.constants.timeouts import TIMEOUT_1MIN
 from utilities.virt import migrate_vm_and_verify
 
 if TYPE_CHECKING:

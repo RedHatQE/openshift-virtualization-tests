@@ -8,7 +8,7 @@ from libs.net.ip import filter_link_local_addresses
 from libs.net.vmspec import lookup_iface_status
 from tests.network.sriov.libsriov import MTU_9000
 from tests.network.utils import assert_no_ping
-from utilities.constants import QUARANTINED
+from utilities.constants.pytest import QUARANTINED
 from utilities.network import assert_ping_successful
 from utilities.virt import migrate_vm_and_verify
 

@@ -22,7 +22,7 @@ from tests.network.user_defined_network.ip_specification.libipspec import (
     ip_address_annotation,
     read_guest_interface_ipv4,
 )
-from utilities.constants import PUBLIC_DNS_SERVER_IP
+from utilities.constants.networking import PUBLIC_DNS_SERVER_IP
 from utilities.virt import migrate_vm_and_verify
 
 if TYPE_CHECKING:

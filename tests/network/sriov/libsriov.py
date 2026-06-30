@@ -2,7 +2,7 @@
 
 from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
 from libs.net.ip import random_ipv4_address, random_ipv6_address
-from utilities.constants import SRIOV
+from utilities.constants.networking import SRIOV
 from utilities.infra import get_node_selector_dict
 from utilities.network import compose_cloud_init_data_dict, sriov_network_dict
 from utilities.virt import VirtualMachineForTests, fedora_vm_body

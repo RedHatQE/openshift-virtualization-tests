@@ -3,7 +3,8 @@ from contextlib import contextmanager
 import pytest
 from timeout_sampler import TimeoutExpiredError
 
-from utilities.constants import LINUX_BRIDGE, TIMEOUT_2MIN, TIMEOUT_30SEC
+from utilities.constants.networking import LINUX_BRIDGE
+from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_30SEC
 from utilities.infra import get_node_selector_dict
 from utilities.network import network_device, network_nad
 from utilities.virt import VirtualMachineForTests, fedora_vm_body

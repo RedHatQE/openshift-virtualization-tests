@@ -9,13 +9,9 @@ from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutSampler
 
 from tests.network.sriov.libsriov import MTU_9000, VM_SRIOV_IFACE_NAME, sriov_cloud_init_data, sriov_vm, vm_sriov_mac
-from utilities.constants import (
-    CNV_SUPPLEMENTAL_TEMPLATES_URL,
-    NODE_HUGE_PAGES_1GI_KEY,
-    SRIOV,
-    TIMEOUT_10MIN,
-    TIMEOUT_20SEC,
-)
+from utilities.constants.networking import SRIOV
+from utilities.constants.timeouts import TIMEOUT_10MIN, TIMEOUT_20SEC
+from utilities.constants.virt import CNV_SUPPLEMENTAL_TEMPLATES_URL, NODE_HUGE_PAGES_1GI_KEY
 from utilities.infra import get_node_selector_dict
 from utilities.network import (
     network_nad,

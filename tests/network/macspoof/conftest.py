@@ -10,7 +10,8 @@ from timeout_sampler import TimeoutSampler
 
 from libs.net.ip import random_ipv4_address
 from libs.net.vmspec import lookup_iface_status_ip
-from utilities.constants import LINUX_BRIDGE, TIMEOUT_30SEC
+from utilities.constants.networking import LINUX_BRIDGE
+from utilities.constants.timeouts import TIMEOUT_30SEC
 from utilities.data_utils import name_prefix
 from utilities.infra import get_node_selector_dict
 from utilities.network import (

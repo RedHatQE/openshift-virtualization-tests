@@ -8,7 +8,8 @@ from timeout_sampler import TimeoutSampler
 from libs.net.vmspec import lookup_iface_status_ip
 from tests.network.l2_bridge.libl2bridge import wait_for_no_packet_loss_after_connection
 from tests.network.libs.dhcpd import DHCP_IP_RANGE_START
-from utilities.constants import LINUX_BRIDGE, OVS_BRIDGE, TIMEOUT_2MIN
+from utilities.constants.networking import LINUX_BRIDGE, OVS_BRIDGE
+from utilities.constants.timeouts import TIMEOUT_2MIN
 from utilities.network import assert_ping_successful
 
 pytestmark = [pytest.mark.ipv4, pytest.mark.usefixtures("hyperconverged_ovs_annotations_enabled_scope_session")]

@@ -4,7 +4,7 @@ import pytest
 
 from libs.net.traffic_generator import client_server_active_connection, is_tcp_connection
 from libs.net.vmspec import lookup_iface_status, lookup_iface_status_ip, lookup_primary_network
-from utilities.constants import PUBLIC_DNS_SERVER_IP
+from utilities.constants.networking import PUBLIC_DNS_SERVER_IP
 from utilities.virt import migrate_vm_and_verify
 
 SERVER_PORT: Final[int] = 1234

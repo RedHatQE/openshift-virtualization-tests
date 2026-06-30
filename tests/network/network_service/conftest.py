@@ -8,7 +8,7 @@ from tests.network.network_service.libservice import (
     SERVICE_IP_FAMILY_POLICY_SINGLE_STACK,
     basic_expose_command,
 )
-from utilities.constants import SSH_PORT_22
+from utilities.constants.networking import SSH_PORT_22
 from utilities.infra import get_node_selector_dict, run_virtctl_command
 from utilities.network import compose_cloud_init_data_dict
 from utilities.virt import VirtualMachineForTests, fedora_vm_body

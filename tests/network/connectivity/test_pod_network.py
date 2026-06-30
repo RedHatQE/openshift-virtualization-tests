@@ -4,7 +4,7 @@ VM to VM connectivity
 
 import pytest
 
-from utilities.constants import IPV4_STR, IPV6_STR
+from utilities.constants.networking import IPV4_STR, IPV6_STR
 from utilities.infra import get_node_selector_dict
 from utilities.network import (
     compose_cloud_init_data_dict,

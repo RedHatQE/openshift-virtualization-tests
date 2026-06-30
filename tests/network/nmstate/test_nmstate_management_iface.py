@@ -3,7 +3,7 @@ from ipaddress import ip_interface
 
 import pytest
 
-from utilities.constants import PUBLIC_DNS_SERVER_IP
+from utilities.constants.networking import PUBLIC_DNS_SERVER_IP
 from utilities.network import assert_ping_successful
 
 LOGGER = logging.getLogger(__name__)
