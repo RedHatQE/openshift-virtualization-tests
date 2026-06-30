@@ -82,6 +82,7 @@ from utilities.constants import (
     ARM_64,
     ARQ_QUOTA_HARD_SPEC,
     AUDIT_LOGS_PATH,
+    BIND_IMMEDIATE_ANNOTATION,
     CDI_KUBEVIRT_HYPERCONVERGED,
     CLUSTER,
     CNV_TEST_SERVICE_ACCOUNT,
@@ -2506,7 +2507,7 @@ def dvs_for_upgrade(
             cert_configmap=artifactory_config_map.name,
             url=rhel_latest_os_params["rhel_image_path"],
             size=rhel_latest_os_params["rhel_dv_size"],
-            bind_immediate_annotation=True,
+            annotations=BIND_IMMEDIATE_ANNOTATION,
             api_name="storage",
         )
         dv.create()

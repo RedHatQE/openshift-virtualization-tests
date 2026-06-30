@@ -70,7 +70,7 @@ def second_rhel_dv_for_online_resize(rhel_dv_for_online_resize, unprivileged_cli
         client=unprivileged_client,
         size=rhel_dv_for_online_resize.size,
         storage_class=rhel_dv_for_online_resize.storage_class,
-        source_pvc=rhel_dv_for_online_resize.name,
+        source_pvc_name=rhel_dv_for_online_resize.name,
     ) as rhel_dv:
         yield rhel_dv
 

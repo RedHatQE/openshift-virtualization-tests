@@ -27,6 +27,7 @@ from utilities.constants import Images
 from utilities.constants.hco import DATA_SOURCE_NAME
 from utilities.constants.images import DEFAULT_FEDORA_REGISTRY_URL
 from utilities.constants.pytest import QUARANTINED
+from utilities.constants.storage import BIND_IMMEDIATE_ANNOTATION
 from utilities.constants.timeouts import (
     TIMEOUT_5MIN,
     TIMEOUT_10MIN,
@@ -58,7 +59,7 @@ def dv_for_data_source(name, data_source, admin_client):
         cert_configmap=artifactory_config_map.name,
         size=Images.Cirros.DEFAULT_DV_SIZE,
         storage_class=py_config["default_storage_class"],
-        bind_immediate_annotation=True,
+        annotations=BIND_IMMEDIATE_ANNOTATION,
         api_name="storage",
     ) as dv:
         dv.wait_for_dv_success()

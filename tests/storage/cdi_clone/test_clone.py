@@ -85,7 +85,7 @@ def test_successful_clone_of_large_image(
         dv_name="dv-target",
         namespace=namespace.name,
         size=data_volume_multi_storage_scope_function.size,
-        source_pvc=data_volume_multi_storage_scope_function.name,
+        source_pvc_name=data_volume_multi_storage_scope_function.name,
         storage_class=data_volume_multi_storage_scope_function.storage_class,
         client=namespace.client,
     ) as cdv:
@@ -173,7 +173,7 @@ def test_successful_vm_from_cloned_dv_windows(
         dv_name="dv-target",
         namespace=data_volume_multi_storage_scope_function.namespace,
         size=data_volume_multi_storage_scope_function.size,
-        source_pvc=data_volume_multi_storage_scope_function.name,
+        source_pvc_name=data_volume_multi_storage_scope_function.name,
         storage_class=data_volume_multi_storage_scope_function.storage_class,
     ) as cdv:
         cdv.wait_for_dv_success(timeout=WINDOWS_CLONE_TIMEOUT)
@@ -220,7 +220,7 @@ def test_successful_snapshot_clone(
         dv_name="dv-target",
         namespace=namespace,
         size=data_volume_snapshot_capable_storage_scope_function.size,
-        source_pvc=data_volume_snapshot_capable_storage_scope_function.name,
+        source_pvc_name=data_volume_snapshot_capable_storage_scope_function.name,
         storage_class=storage_class,
     ) as cdv:
         cdv.wait_for_dv_success()

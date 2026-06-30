@@ -7,6 +7,7 @@ import logging
 
 import pytest
 from ocp_resources.datavolume import DataVolume
+from ocp_resources.resource import Resource
 from pytest_testconfig import py_config
 
 from tests.storage.cdi_import.utils import wait_dv_and_get_importer, wait_for_multus_network_status
@@ -64,6 +65,7 @@ def dv_non_exist_url(namespace, storage_class_name_scope_module):
     with create_dv(
         dv_name=f"cnv-876-{storage_class_name_scope_module}",
         namespace=namespace.name,
+        source="http",
         url=NON_EXIST_URL,
         size=DEFAULT_DV_SIZE,
         storage_class=storage_class_name_scope_module,
@@ -83,12 +85,13 @@ def dv_from_http_import(
     with create_dv(
         dv_name=f"{request.param.get('dv_name', 'http-dv')}-{storage_class_name_scope_module}",
         namespace=namespace.name,
+        source="http",
         url=get_file_url(
             url=images_internal_http_server[request.param.get("source", HTTP)],
             file_name=request.param["file_name"],
         ),
         content_type=request.param.get("content_type", DataVolume.ContentType.KUBEVIRT),
-        cert_configmap=request.param.get("configmap_name"),
+        cert_configmap_name=request.param.get("configmap_name"),
         size=request.param.get("size", DEFAULT_DV_SIZE),
         volume_mode=request.param.get("volume_mode"),
         storage_class=storage_class_name_scope_module,
@@ -216,7 +219,7 @@ def importer_pod_annotations(admin_client, namespace, linux_nad):
         url=QUAY_FEDORA_CONTAINER_IMAGE,
         size=Images.Fedora.DEFAULT_DV_SIZE,
         storage_class=py_config["default_storage_class"],
-        multus_annotation=linux_nad.name,
+        annotations={f"{Resource.ApiGroup.K8S_V1_CNI_CNCF_IO}/networks": linux_nad.name},
         client=namespace.client,
     ) as dv:
         importer_pod = wait_dv_and_get_importer(dv=dv, admin_client=admin_client)
