@@ -13,7 +13,13 @@ from tests.os_params import (
     WINDOWS_2019,
     WINDOWS_2019_OS,
 )
-from utilities.constants import LINUX_BRIDGE, TCP_TIMEOUT_30SEC, TIMEOUT_12MIN, VIRTIO, Images
+from utilities.constants import Images
+from utilities.constants.networking import LINUX_BRIDGE
+from utilities.constants.timeouts import (
+    TCP_TIMEOUT_30SEC,
+    TIMEOUT_12MIN,
+)
+from utilities.constants.virt import VIRTIO
 from utilities.network import network_device, network_nad
 from utilities.storage import get_storage_class_dict_from_matrix
 from utilities.virt import (

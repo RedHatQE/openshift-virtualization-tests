@@ -3,7 +3,7 @@ from kubernetes.dynamic.exceptions import ForbiddenError
 from ocp_resources.cluster_role import ClusterRole
 from ocp_resources.role_binding import RoleBinding
 
-from utilities.constants import UNPRIVILEGED_USER
+from utilities.constants.pytest import UNPRIVILEGED_USER
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, migrate_vm_and_verify, running_vm
 
 pytestmark = pytest.mark.rwx_default_storage
