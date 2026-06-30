@@ -14,7 +14,6 @@ from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.storage_profile import StorageProfile
 
 from tests.storage.utils import assert_disk_bus
-from tests.utils import create_windows2022_dv_from_registry, create_windows2022_vm_with_vtpm_from_registry
 from utilities.constants import Images
 from utilities.constants.storage import HOTPLUG_DISK_SCSI_BUS, HOTPLUG_DISK_SERIAL, HOTPLUG_DISK_VIRTIO_BUS
 from utilities.hco import ResourceEditorValidateHCOReconcile
