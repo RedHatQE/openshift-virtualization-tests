@@ -21,13 +21,13 @@ from utilities.artifactory import (
     get_http_image_url,
 )
 from utilities.console import Console
-from utilities.constants import (
-    LS_COMMAND,
-    OS_FLAVOR_RHEL,
+from utilities.constants import Images
+from utilities.constants.cluster import LS_COMMAND
+from utilities.constants.images import OS_FLAVOR_RHEL
+from utilities.constants.namespaces import NamespacesNames
+from utilities.constants.timeouts import (
     TIMEOUT_5MIN,
     TIMEOUT_20SEC,
-    Images,
-    NamespacesNames,
 )
 from utilities.infra import (
     get_pod_by_name_prefix,

@@ -20,16 +20,20 @@ from pytest_testconfig import config as py_config
 
 from utilities.architecture import get_cluster_architecture
 from utilities.bitwarden import get_cnv_tests_secret_by_name
-from utilities.constants import (
+from utilities.constants.architecture import (
     AMD_64,
+    MULTIARCH,
+    SUPPORTED_CPU_ARCHITECTURES,
+    SUPPORTED_MULTIARCH_OPTIONS,
+)
+from utilities.constants.cluster import (
     CNV_TEST_RUN_IN_PROGRESS,
     CNV_TEST_RUN_IN_PROGRESS_NS,
     CNV_TESTS_CONTAINER,
-    MULTIARCH,
     POD_SECURITY_NAMESPACE_LABELS,
-    SANITY_TESTS_FAILURE,
-    SUPPORTED_CPU_ARCHITECTURES,
-    SUPPORTED_MULTIARCH_OPTIONS,
+)
+from utilities.constants.pytest import SANITY_TESTS_FAILURE
+from utilities.constants.timeouts import (
     TIMEOUT_2MIN,
     TIMEOUT_5MIN,
 )

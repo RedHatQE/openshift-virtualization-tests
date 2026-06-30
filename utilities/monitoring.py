@@ -2,10 +2,12 @@ import logging
 
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from utilities.constants import (
+from utilities.constants.monitoring import (
     FIRING_STATE,
     KUBEVIRT_HYPERCONVERGED_OPERATOR_HEALTH_STATUS,
     OPERATOR_HEALTH_IMPACT_VALUES,
+)
+from utilities.constants.timeouts import (
     TIMEOUT_2MIN,
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,

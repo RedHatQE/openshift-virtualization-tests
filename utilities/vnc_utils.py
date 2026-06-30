@@ -1,7 +1,12 @@
 import pexpect
 from timeout_sampler import TimeoutSampler
 
-from utilities.constants import TIMEOUT_5MIN, TIMEOUT_5SEC, TIMEOUT_30SEC, VIRTCTL
+from utilities.constants.timeouts import (
+    TIMEOUT_5MIN,
+    TIMEOUT_5SEC,
+    TIMEOUT_30SEC,
+)
+from utilities.constants.virt import VIRTCTL
 from utilities.data_collector import get_data_collector_base_directory
 
 

@@ -6,7 +6,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from utilities.constants import AMD_64, ARM_64, CENTOS_STREAM10_PREFERENCE, RHEL10_PREFERENCE
+from utilities.constants.architecture import (
+    AMD_64,
+    ARM_64,
+)
+from utilities.constants.instance_types import (
+    CENTOS_STREAM10_PREFERENCE,
+    RHEL10_PREFERENCE,
+)
 from utilities.exceptions import OsDictNotFoundError
 from utilities.os_utils import (
     CENTOS_OS_MAPPING,

@@ -7,14 +7,16 @@ from unittest.mock import MagicMock, mock_open, patch
 import pytest
 
 import utilities.constants
-from utilities.constants import (
+from utilities.constants.architecture import (
     AMD_64,
     ARM_64,
-    CENTOS_STREAM9_PREFERENCE,
     MULTIARCH,
-    OS_FLAVOR_FEDORA,
-    RHEL9_PREFERENCE,
     S390X,
+)
+from utilities.constants.images import OS_FLAVOR_FEDORA
+from utilities.constants.instance_types import (
+    CENTOS_STREAM9_PREFERENCE,
+    RHEL9_PREFERENCE,
 )
 from utilities.exceptions import MissingEnvironmentVariableError, UnsupportedCPUArchitectureError
 

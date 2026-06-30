@@ -1,6 +1,9 @@
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 
-from utilities.constants import TIMEOUT_4MIN, TIMEOUT_5MIN
+from utilities.constants.timeouts import (
+    TIMEOUT_4MIN,
+    TIMEOUT_5MIN,
+)
 
 
 class VirtualMachineSnapshotWithDeadline(VirtualMachineSnapshot):

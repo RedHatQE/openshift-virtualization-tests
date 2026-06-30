@@ -15,7 +15,8 @@ from ocp_utilities.infra import assert_nodes_in_healthy_condition, assert_nodes_
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError
 
-from utilities.constants import IMAGE_CRON_STR, KUBELET_READY_CONDITION
+from utilities.constants.hco import IMAGE_CRON_STR
+from utilities.constants.monitoring import KUBELET_READY_CONDITION
 from utilities.exceptions import ClusterSanityError, StorageSanityError
 from utilities.hco import wait_for_hco_conditions
 from utilities.infra import LOGGER, wait_for_pods_running
