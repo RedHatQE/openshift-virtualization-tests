@@ -48,10 +48,12 @@ def imported_dv_in_progress_second_namespace(
     with create_dv(
         dv_name="imported-dv",
         namespace=namespace_for_backup2.name,
+        source="http",
         url=rhel9_http_image_url,
         size=Images.Rhel.DEFAULT_DV_SIZE,
         storage_class=storage_class_for_snapshot,
         client=namespace_for_backup2.client,
+        use_artifactory=True,
     ) as dv:
         yield dv
 
@@ -299,7 +301,7 @@ def cloned_rhel_dv(imported_dv_second_namespace):
         dv_name="cloned-dv",
         namespace=imported_dv_second_namespace.namespace,
         size=imported_dv_second_namespace.size,
-        source_pvc=imported_dv_second_namespace.name,
+        source_pvc_name=imported_dv_second_namespace.name,
         storage_class=imported_dv_second_namespace.storage_class,
         client=imported_dv_second_namespace.client,
     ) as cdv:

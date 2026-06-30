@@ -77,7 +77,7 @@ def import_image_to_dv(
             dv_name=dv_name,
             namespace=configmap.namespace,
             url=url,
-            cert_configmap=configmap.name,
+            cert_configmap_name=configmap.name,
             storage_class=py_config["default_storage_class"],
             client=client,
         ) as dv:

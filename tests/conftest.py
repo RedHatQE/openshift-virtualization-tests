@@ -132,7 +132,7 @@ from utilities.constants.pytest import (
     UNPRIVILEGED_PASSWORD,
     UNPRIVILEGED_USER,
 )
-from utilities.constants.storage import StorageClassNames
+from utilities.constants.storage import BIND_IMMEDIATE_ANNOTATION, StorageClassNames
 from utilities.constants.timeouts import (
     TIMEOUT_3MIN,
     TIMEOUT_4MIN,
@@ -2524,7 +2524,7 @@ def dvs_for_upgrade(
             cert_configmap=artifactory_config_map.name,
             url=rhel_latest_os_params["rhel_image_path"],
             size=rhel_latest_os_params["rhel_dv_size"],
-            bind_immediate_annotation=True,
+            annotations=BIND_IMMEDIATE_ANNOTATION,
             api_name="storage",
         )
         dv.create()
