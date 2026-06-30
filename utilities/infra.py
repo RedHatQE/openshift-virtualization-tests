@@ -681,6 +681,24 @@ def get_all_console_links(console_cli_downloads_spec_links):
     return all_urls
 
 
+@retry(
+    wait_timeout=TIMEOUT_2MIN,
+    sleep=TIMEOUT_10SEC,
+    exceptions_dict={
+        requests.exceptions.SSLError: [],
+        requests.exceptions.ConnectionError: [],
+        requests.exceptions.Timeout: [],
+    },
+)
+def _download_file(url: str, local_file_name: str) -> str:
+    urllib3.disable_warnings()  # TODO: remove this when we fix the SSL warning
+    response = requests.get(url=url, verify=False, timeout=TIMEOUT_30SEC)
+    response.raise_for_status()
+    with open(local_file_name, "wb") as file_downloaded:
+        file_downloaded.write(response.content)
+    return local_file_name
+
+
 def download_and_extract_file_from_cluster(tmpdir, url):
     """
     Download and extract archive file from the cluster
@@ -694,12 +712,8 @@ def download_and_extract_file_from_cluster(tmpdir, url):
     """
     zip_file_extension = ".zip"
     LOGGER.info(f"Downloading archive using: url={url}")
-    urllib3.disable_warnings()  # TODO: remove this when we fix the SSL warning
     local_file_name = os.path.join(tmpdir, url.split("/")[-1])
-    with requests.get(url, verify=False, stream=True) as created_request:
-        created_request.raise_for_status()
-        with open(local_file_name, "wb") as file_downloaded:
-            file_downloaded.writelines(created_request.iter_content(chunk_size=8192))
+    _download_file(url=url, local_file_name=local_file_name)
     LOGGER.info("Extract the downloaded archive.")
     if url.endswith(zip_file_extension):
         archive_file_object = zipfile.ZipFile(file=local_file_name)
