@@ -45,6 +45,7 @@ X86_64 = "x86_64"
 #  OS constants
 OS_FLAVOR_CIRROS = "cirros"
 OS_FLAVOR_WINDOWS = "win"
+OS_FLAVOR_WIN_CONTAINER_DISK = "win-container-disk"
 OS_FLAVOR_RHEL = "rhel"
 OS_FLAVOR_FEDORA = "fedora"
 
@@ -768,6 +769,7 @@ RHEL8_PREFERENCE = "rhel.8"
 RHEL9_PREFERENCE = "rhel.9"
 RHEL10_PREFERENCE = "rhel.10"
 U1_SMALL = "u1.small"
+U1_LARGE = "u1.large"
 PROMETHEUS_K8S = "prometheus-k8s"
 INSTANCE_TYPE_STR = "instance_type"
 U1_MEDIUM_STR = "u1.medium"
@@ -871,6 +873,10 @@ WIN_10 = "win10"
 WIN_11 = "win11"
 WIN_2K25 = "win2k25"
 WIN_2K22 = "win2k22"
+
+# Windows VirtualMachine preferences
+WINDOWS_11_PREFERENCE = "windows.11"
+WINDOWS_2K22_PREFERENCE = "windows.2k22"
 WIN_2K16 = "win2k16"
 WIN_2K19 = "win2k19"
 
