@@ -53,7 +53,7 @@ uv run pytest --tc-file=tests/global_config_multiarch.py --cpu-arch=amd64,arm64 
 
 ### Writing dedicated tests
 
-Multiarch-dedicated tests must be fully isolated from regular tests. Do **not** reuse or modify existing fixtures and functions — create new ones dedicated to multiarch tests.
+Multiarch-dedicated tests should be isolated from regular tests. Avoid modifying existing fixtures and functions — prefer creating dedicated ones for multiarch tests to reduce the risk of breaking regression suites.
 
 Mark the entire file or specific classes with the `multiarch` marker:
 
