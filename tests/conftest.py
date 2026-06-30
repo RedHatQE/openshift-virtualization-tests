@@ -1479,7 +1479,6 @@ def cluster_info(
     ocs_current_version,
     kubevirt_resource_scope_session,
     workers_type,
-    nodes_cpu_architecture,
 ):
     title = "\nCluster info:\n"
     virtctl_client_version, virtctl_server_version = None, None
@@ -1496,7 +1495,7 @@ def cluster_info(
         f"\tOCS version: {ocs_current_version}\n"
         f"\tCNI type: {get_cluster_cni_type(admin_client=admin_client)}\n"
         f"\tWorkers type: {workers_type}\n"
-        f"\tCluster CPU Architecture: {nodes_cpu_architecture or ', '.join(py_config['cluster_arch'])}\n"
+        f"\tCluster CPU Architecture: {', '.join(py_config['cluster_arch'])}\n"
         f"\tIPv4 cluster: {ipv4_supported_cluster()}\n"
         f"\tIPv6 cluster: {ipv6_supported_cluster()}\n"
         f"\tVirtctl version: \n\t{virtctl_client_version}\n\t{virtctl_server_version}\n"
