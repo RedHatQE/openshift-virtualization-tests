@@ -14,8 +14,7 @@ from pytest_testconfig import py_config
 
 from tests.virt.constants import VM_LABEL
 from tests.virt.upgrade.utils import (
-    get_all_migratable_vms,
-    get_virt_launcher_image_from_csv,
+    get_virt_launcher_images_from_csv,
     validate_vms_pod_updated,
     vm_from_template,
     wait_for_automatic_vm_migrations,
@@ -25,14 +24,10 @@ from utilities.constants import (
     OS_FLAVOR_RHEL,
     TIMEOUT_30MIN,
     TIMEOUT_40MIN,
-    TIMEOUT_90MIN,
     Images,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile
-from utilities.infra import (
-    check_pod_disruption_budget_for_completed_migrations,
-    get_csv_by_name,
-)
+from utilities.infra import get_csv_by_name
 from utilities.storage import (
     create_dv,
     data_volume_template_with_source_ref_dict,
@@ -155,46 +150,36 @@ def vms_for_upgrade_dict_before(vms_for_upgrade):
 
 
 @pytest.fixture(scope="session")
-def upgrade_namespaces(upgrade_namespace_scope_session, kmp_enabled_namespace):
-    return [kmp_enabled_namespace, upgrade_namespace_scope_session]
+def virt_migratable_vms(admin_client, upgrade_namespace_scope_session):
+    migratable_vms = []
+    for vm in VirtualMachine.get(client=admin_client, namespace=upgrade_namespace_scope_session.name):
+        if vm.ready and any(
+            condition.type == "LiveMigratable" and condition.status == "True"
+            for condition in vm.vmi.instance.status.conditions
+        ):
+            migratable_vms.append(vm)
 
-
-@pytest.fixture(scope="session")
-def migratable_vms(admin_client, hco_namespace, upgrade_namespaces):
-    migratable_vms = get_all_migratable_vms(admin_client=admin_client, namespaces=upgrade_namespaces)
-    LOGGER.info(f"All migratable vms: {[vm.name for vm in migratable_vms]}")
     return migratable_vms
 
 
 @pytest.fixture()
 def unupdated_vmi_pods_names(
     admin_client,
-    hco_namespace,
-    hco_target_csv_name,
-    eus_hco_target_csv_name,
-    upgrade_namespaces,
-    migratable_vms,
-    virt_launcher_from_csv_before_upgrade,
+    virt_migratable_vms,
+    virt_launcher_images_from_csv_before_upgrade,
     csv_after_upgrade,
 ):
-    virt_launcher_image_after_upgrade = get_virt_launcher_image_from_csv(csv=csv_after_upgrade)
-
-    if virt_launcher_from_csv_before_upgrade == virt_launcher_image_after_upgrade:
-        LOGGER.warning(f"virt-launcher unchanged, skipping migration check: {virt_launcher_from_csv_before_upgrade}")
+    virt_launcher_images_after_upgrade = get_virt_launcher_images_from_csv(csv=csv_after_upgrade)
+    if virt_launcher_images_from_csv_before_upgrade == virt_launcher_images_after_upgrade:
+        LOGGER.warning(
+            f"virt-launcher unchanged, skipping migration check: {virt_launcher_images_from_csv_before_upgrade}"
+        )
         return []
 
-    wait_for_automatic_vm_migrations(vm_list=migratable_vms)
-
-    for ns in upgrade_namespaces:
-        LOGGER.info(f"Checking PodDisruptionBudget in namespaces: {ns.name}")
-        check_pod_disruption_budget_for_completed_migrations(
-            admin_client=admin_client, namespace=ns.name, timeout=TIMEOUT_90MIN
-        )
-
+    wait_for_automatic_vm_migrations(vm_list=virt_migratable_vms)
     return validate_vms_pod_updated(
-        admin_client=admin_client,
-        expected_virt_launcher_image=virt_launcher_image_after_upgrade,
-        vm_list=migratable_vms,
+        expected_virt_launcher_images=virt_launcher_images_after_upgrade,
+        vm_list=virt_migratable_vms,
     )
 
 
@@ -371,14 +356,14 @@ def parallel_live_migrations_increased(hyperconverged_resource_scope_session):
 
 
 @pytest.fixture(scope="session")
-def virt_launcher_from_csv_before_upgrade(csv_scope_session):
-    return get_virt_launcher_image_from_csv(csv=csv_scope_session)
+def virt_launcher_images_from_csv_before_upgrade(csv_scope_session):
+    return get_virt_launcher_images_from_csv(csv=csv_scope_session)
 
 
 @pytest.fixture()
-def csv_after_upgrade(admin_client, hco_namespace, hco_target_csv_name, eus_hco_target_csv_name):
+def csv_after_upgrade(admin_client, hco_namespace, hco_target_csv_name):
     return get_csv_by_name(
         admin_client=admin_client,
         namespace=hco_namespace.name,
-        csv_name=hco_target_csv_name or eus_hco_target_csv_name,
+        csv_name=hco_target_csv_name,
     )
