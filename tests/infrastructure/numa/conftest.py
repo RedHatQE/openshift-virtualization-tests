@@ -9,7 +9,7 @@ from ocp_resources.virtual_machine_cluster_instancetype import (
     VirtualMachineClusterInstancetype,
 )
 
-from utilities.constants import DATA_SOURCE_NAME
+from utilities.constants.hco import DATA_SOURCE_NAME
 from utilities.storage import data_volume_template_with_source_ref_dict
 from utilities.virt import VirtualMachineForTests, migrate_vm_and_verify, running_vm
 

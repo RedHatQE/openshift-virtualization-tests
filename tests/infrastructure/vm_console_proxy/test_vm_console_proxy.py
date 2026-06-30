@@ -3,7 +3,7 @@ import logging
 import pytest
 
 from tests.infrastructure.vm_console_proxy.utils import assert_resource_existence_and_availability
-from utilities.constants import TIMEOUT_1MIN
+from utilities.constants.timeouts import TIMEOUT_1MIN
 from utilities.vnc_utils import VNCConnection
 
 LOGGER = logging.getLogger(__name__)

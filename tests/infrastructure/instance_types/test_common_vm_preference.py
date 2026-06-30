@@ -5,7 +5,8 @@ from ocp_resources.virtual_machine_cluster_preference import (
 
 from tests.infrastructure.instance_types.utils import assert_mismatch_vendor_label
 from tests.infrastructure.instance_types.vm_preference_list import VM_PREFERENCES_LIST
-from utilities.constants import VIRT_OPERATOR, Images
+from utilities.constants import Images
+from utilities.constants.components import VIRT_OPERATOR
 from utilities.virt import VirtualMachineForTests, running_vm
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]

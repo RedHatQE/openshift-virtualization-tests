@@ -1,7 +1,10 @@
 import pytest
 
 from tests.infrastructure.instance_types.supported_os.constants import TEST_CREATE_VM_TEST_NAME, TEST_START_VM_TEST_NAME
-from utilities.constants import PREFERENCE_STR, U1_MEDIUM_STR
+from utilities.constants.instance_types import (
+    PREFERENCE_STR,
+    U1_MEDIUM_STR,
+)
 from utilities.virt import (
     check_qemu_guest_agent_installed,
     running_vm,

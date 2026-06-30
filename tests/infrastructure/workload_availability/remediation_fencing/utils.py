@@ -10,7 +10,13 @@ from websocket import WebSocketConnectionClosedException
 from tests.infrastructure.workload_availability.remediation_fencing.constants import (
     NODE_ACTIONS_DICT,
 )
-from utilities.constants import TIMEOUT_1MIN, TIMEOUT_2MIN, TIMEOUT_5SEC, TIMEOUT_6MIN, TIMEOUT_9MIN
+from utilities.constants.timeouts import (
+    TIMEOUT_1MIN,
+    TIMEOUT_2MIN,
+    TIMEOUT_5SEC,
+    TIMEOUT_6MIN,
+    TIMEOUT_9MIN,
+)
 from utilities.infra import ExecCommandOnPod, wait_for_node_status
 from utilities.virt import wait_for_node_schedulable_status, wait_for_vmi_relocation_and_running
 

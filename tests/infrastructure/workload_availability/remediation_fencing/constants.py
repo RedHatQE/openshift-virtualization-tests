@@ -1,9 +1,7 @@
 from ocp_resources.resource import Resource
 
-from utilities.constants import (
-    TIMEOUT_10SEC,
-    WORKER_NODE_LABEL_KEY,
-)
+from utilities.constants.cluster import WORKER_NODE_LABEL_KEY
+from utilities.constants.timeouts import TIMEOUT_10SEC
 
 NODE_KUBELET_STOP = "node_kubelet_stop"
 NODE_SHUTDOWN = "node_shutdown"

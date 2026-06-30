@@ -15,16 +15,18 @@ from ocp_resources.resource import Resource
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from utilities.artifactory import get_http_image_url
-from utilities.constants import (
+from utilities.constants import Images
+from utilities.constants.timeouts import (
     TIMEOUT_1MIN,
     TIMEOUT_5SEC,
     TIMEOUT_10SEC,
     TIMEOUT_50MIN,
+)
+from utilities.constants.virt import (
     WIN_2K22,
     WIN_2K25,
     WIN_10,
     WIN_11,
-    Images,
 )
 
 LOGGER = logging.getLogger(__name__)

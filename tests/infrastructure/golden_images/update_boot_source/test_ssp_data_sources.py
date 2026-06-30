@@ -23,13 +23,13 @@ from utilities.artifactory import (
     get_artifactory_secret,
     get_http_image_url,
 )
-from utilities.constants import (
-    DATA_SOURCE_NAME,
-    DEFAULT_FEDORA_REGISTRY_URL,
-    QUARANTINED,
+from utilities.constants import Images
+from utilities.constants.hco import DATA_SOURCE_NAME
+from utilities.constants.images import DEFAULT_FEDORA_REGISTRY_URL
+from utilities.constants.pytest import QUARANTINED
+from utilities.constants.timeouts import (
     TIMEOUT_5MIN,
     TIMEOUT_10MIN,
-    Images,
 )
 from utilities.exceptions import ResourceValueError
 from utilities.ssp import wait_for_condition_message_value

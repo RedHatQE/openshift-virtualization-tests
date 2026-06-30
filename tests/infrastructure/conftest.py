@@ -12,7 +12,7 @@ from tests.infrastructure.utils import (
     verify_tekton_operator_installed,
 )
 from tests.utils import verify_cpumanager_workers, verify_hugepages_1gi, verify_rwx_default_storage
-from utilities.constants import DATA_SOURCE_NAME
+from utilities.constants.hco import DATA_SOURCE_NAME
 from utilities.exceptions import ResourceMissingFieldError, ResourceValueError
 from utilities.pytest_utils import exit_pytest_execution
 

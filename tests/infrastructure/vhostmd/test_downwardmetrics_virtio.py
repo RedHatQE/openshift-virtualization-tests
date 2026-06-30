@@ -19,7 +19,7 @@ from ocp_resources.virtual_machine_cluster_preference import (
 )
 from pyhelper_utils.shell import run_ssh_commands
 
-from utilities.constants import OS_FLAVOR_RHEL
+from utilities.constants.images import OS_FLAVOR_RHEL
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.virt import VirtualMachineForTests, wait_for_running_vm
 
