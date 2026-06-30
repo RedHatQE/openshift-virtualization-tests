@@ -3,6 +3,7 @@ from ocp_resources.cluster_role import ClusterRole
 from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.namespace import Namespace
+from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.role_binding import RoleBinding
 from pytest_testconfig import config as py_config
 
@@ -12,8 +13,10 @@ from utilities.artifactory import (
     get_artifactory_secret,
     get_test_artifact_server_url,
 )
-from utilities.constants import BIND_IMMEDIATE_ANNOTATION, REGISTRY_STR, TIMEOUT_40MIN, TIMEOUT_50MIN, WIN_2K22, Images
-from utilities.constants.namespaces import NamespacesNames
+from utilities.constants import Images
+from utilities.constants.storage import BIND_IMMEDIATE_ANNOTATION, REGISTRY_STR
+from utilities.constants.timeouts import TIMEOUT_10MIN, TIMEOUT_50MIN
+from utilities.constants.virt import WIN_2K22
 from utilities.os_utils import get_windows_container_disk_path
 from utilities.storage import (
     generate_data_source_dict,
@@ -23,7 +26,7 @@ from utilities.storage import (
 @pytest.fixture(scope="session")
 def validation_os_images_namespace(admin_client):
     validation_os_images_namespace = Namespace(
-        name=NamespacesNames.VALIDATION_OS_IMAGES,
+        name="validation-os-images",
         client=admin_client,
     )
     if validation_os_images_namespace.exists:
@@ -58,17 +61,34 @@ def windows_validation_os_images_data_volume_scope_session(
     admin_client,
     validation_os_images_role_binding,
 ):
-    """Fixture that imports a Windows image into the validation os images namespace. Yields existing DataVolume if it was already created"""
+    """
+    Fixture that imports a Windows image into the validation os images namespace. Yields existing DataVolume if it was already created
 
-    win_dv = DataVolume(
+    The DV is also used in self-validation and if we move the version, UI needs to follow.
+    """
+
+    win_pvc = PersistentVolumeClaim(
         name=WIN_2K22,
         namespace=validation_os_images_role_binding.namespace,
         client=validation_os_images_role_binding.client,
     )
-
-    if win_dv.exists:
-        yield win_dv
+    if win_pvc.exists:
+        if win_pvc.status != PersistentVolumeClaim.Status.BOUND:
+            raise RuntimeError(
+                f"PVC {win_pvc.name} in namespace {validation_os_images_role_binding.namespace} is in {win_pvc.status} state, expected {PersistentVolumeClaim.Status.BOUND}."
+            )
+        yield DataVolume(
+            name=WIN_2K22,
+            namespace=validation_os_images_role_binding.namespace,
+            client=validation_os_images_role_binding.client,
+        )
     else:
+        if py_config.get("conformance_tests"):
+            raise RuntimeError(
+                f"PVC {WIN_2K22} does not exist in namespace {validation_os_images_role_binding.namespace}. "
+                "Self-validation requires the Windows image to be pre-created."
+            )
+
         artifactory_secret = get_artifactory_secret(
             namespace=validation_os_images_role_binding.namespace, client=validation_os_images_role_binding.client
         )
@@ -120,6 +140,6 @@ def windows_validation_os_images_data_source_scope_session(
             win_data_source.wait_for_condition(
                 condition=win_data_source.Condition.READY,
                 status=win_data_source.Condition.Status.TRUE,
-                timeout=TIMEOUT_40MIN,
+                timeout=TIMEOUT_10MIN,
             )
             yield win_ds
