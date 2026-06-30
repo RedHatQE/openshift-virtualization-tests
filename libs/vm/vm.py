@@ -11,6 +11,7 @@ from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from pytest_testconfig import config as py_config
 
+from libs.net.vmspec import VMInterfaceSpecNotFoundError
 from libs.vm.spec import (
     Affinity,
     CloudInitNoCloud,
@@ -27,7 +28,6 @@ from libs.vm.spec import (
 from tests.network.libs import cloudinit
 from utilities import infra
 from utilities.constants import CLOUD_INIT_DISK_NAME
-from utilities.network import IfaceNotFound
 from utilities.virt import get_oc_image_info, vm_console_run_commands
 
 if TYPE_CHECKING:
@@ -89,13 +89,13 @@ class BaseVirtualMachine(VirtualMachine):
 
     def set_interface_state(self, network_name: str, state: str) -> None:
         if not self._spec.template.spec.domain.devices:
-            raise IfaceNotFound(name=network_name)
+            raise VMInterfaceSpecNotFoundError(f"Interface {network_name} not found in VM {self.name} spec")
         for interface in self._spec.template.spec.domain.devices.interfaces or []:
             if interface.name == network_name:
                 interface.state = state
                 break
         else:
-            raise IfaceNotFound(name=network_name)
+            raise VMInterfaceSpecNotFoundError(f"Interface {network_name} not found in VM {self.name} spec")
 
         devices = asdict(obj=self._spec.template.spec.domain.devices, dict_factory=self._filter_out_none_values)
         patches = {
@@ -227,12 +227,12 @@ class BaseVirtualMachine(VirtualMachine):
         return obj
 
 
-def container_image(base_image: str) -> str:
+def container_image(base_image: str, arch: str | None = None) -> str:
     pull_secret = infra.generate_openshift_pull_secret_file()
     image_info = get_oc_image_info(
         image=base_image,
         pull_secret=pull_secret,
-        architecture=py_config["cpu_arch"],
+        architecture=arch or py_config["cpu_arch"],
     )
     return f"{base_image}@{image_info['digest']}"
 

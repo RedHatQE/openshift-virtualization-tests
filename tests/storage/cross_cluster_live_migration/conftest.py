@@ -6,6 +6,7 @@ import tempfile
 import pytest
 import requests
 import yaml
+from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import NotFoundError
 from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
@@ -18,6 +19,7 @@ from ocp_resources.provider import Provider
 from ocp_resources.resource import get_client
 from ocp_resources.route import Route
 from ocp_resources.secret import Secret
+from ocp_resources.storage_class import StorageClass
 from ocp_resources.storage_map import StorageMap
 from ocp_resources.virtual_machine_cluster_instancetype import (
     VirtualMachineClusterInstancetype,
@@ -33,23 +35,18 @@ from tests.storage.cross_cluster_live_migration.utils import (
     configure_hco_live_migration_network,
     get_vm_boot_id_via_console,
 )
+from tests.storage.utils import get_storage_class_for_storage_migration
 from utilities.artifactory import (
     get_artifactory_config_map,
     get_artifactory_secret,
     get_test_artifact_server_url,
 )
-from utilities.constants import (
-    CONTAINER_DISK_IMAGE_PATH_STR,
-    OS_FLAVOR_RHEL,
-    OS_FLAVOR_WIN_CONTAINER_DISK,
-    RHEL10_PREFERENCE,
-    RHEL10_STR,
-    TIMEOUT_1MIN,
-    TIMEOUT_30SEC,
-    U1_LARGE,
-    U1_SMALL,
-    Images,
-)
+from utilities.constants import Images
+from utilities.constants.components import RHEL10_STR
+from utilities.constants.images import OS_FLAVOR_RHEL, OS_FLAVOR_WIN_CONTAINER_DISK
+from utilities.constants.instance_types import RHEL10_PREFERENCE, U1_LARGE, U1_SMALL
+from utilities.constants.os_matrix import CONTAINER_DISK_IMAGE_PATH_STR
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_30SEC
 from utilities.infra import create_ns, get_hyperconverged_resource
 from utilities.storage import (
     data_volume_template_with_source_ref_dict,
@@ -344,8 +341,39 @@ def local_cluster_mtv_provider_for_local_cluster(admin_client, mtv_namespace):
 
 
 @pytest.fixture(scope="module")
+def remote_cluster_storage_classes_names(remote_admin_client: DynamicClient) -> list[str]:
+    """Get list of all storage class names available in the remote cluster."""
+    return [sc.name for sc in list(StorageClass.get(client=remote_admin_client))]
+
+
+@pytest.fixture(scope="class")
+def remote_cluster_source_storage_class(
+    request: pytest.FixtureRequest, remote_cluster_storage_classes_names: list[str]
+) -> str:
+    """Storage class for creating VMs in the remote cluster before migration."""
+    return get_storage_class_for_storage_migration(
+        storage_class=request.param["source_storage_class"],
+        cluster_storage_classes_names=remote_cluster_storage_classes_names,
+    )
+
+
+@pytest.fixture(scope="class")
+def local_cluster_target_storage_class(request: pytest.FixtureRequest, cluster_storage_classes_names: list[str]) -> str:
+    """Storage class for migrated VMs in the local cluster."""
+    return get_storage_class_for_storage_migration(
+        storage_class=request.param["target_storage_class"],
+        cluster_storage_classes_names=cluster_storage_classes_names,
+    )
+
+
+@pytest.fixture(scope="class")
 def local_cluster_mtv_storage_map(
-    admin_client, local_cluster_mtv_provider_for_local_cluster, local_cluster_mtv_provider_for_remote_cluster
+    admin_client,
+    local_cluster_mtv_provider_for_local_cluster,
+    local_cluster_mtv_provider_for_remote_cluster,
+    unique_suffix,
+    remote_cluster_source_storage_class,
+    local_cluster_target_storage_class,
 ):
     """
     Create a StorageMap resource for MTV migration.
@@ -353,13 +381,13 @@ def local_cluster_mtv_storage_map(
     """
     mapping = [
         {
-            "source": {"name": py_config["default_storage_class"]},
-            "destination": {"storageClass": py_config["default_storage_class"]},
+            "source": {"name": remote_cluster_source_storage_class},
+            "destination": {"storageClass": local_cluster_target_storage_class},
         }
     ]
     with StorageMap(
         client=admin_client,
-        name="storage-map",
+        name=f"storage-map-{unique_suffix}",
         namespace=local_cluster_mtv_provider_for_local_cluster.namespace,
         source_provider_name=local_cluster_mtv_provider_for_remote_cluster.name,
         source_provider_namespace=local_cluster_mtv_provider_for_remote_cluster.namespace,
@@ -428,7 +456,10 @@ def remote_cluster_rhel10_data_source(remote_admin_client, remote_cluster_golden
 
 @pytest.fixture(scope="class")
 def vm_for_cclm_from_template_with_data_source(
-    remote_admin_client, remote_cluster_source_test_namespace, remote_cluster_rhel10_data_source
+    remote_admin_client,
+    remote_cluster_source_test_namespace,
+    remote_cluster_rhel10_data_source,
+    remote_cluster_source_storage_class,
 ):
     with VirtualMachineForTests(
         name="vm-from-template-and-data-source",
@@ -437,7 +468,7 @@ def vm_for_cclm_from_template_with_data_source(
         os_flavor=OS_FLAVOR_RHEL,
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=remote_cluster_rhel10_data_source,
-            storage_class=py_config["default_storage_class"],
+            storage_class=remote_cluster_source_storage_class,
         ),
         memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
     ) as vm:
@@ -447,7 +478,10 @@ def vm_for_cclm_from_template_with_data_source(
 
 @pytest.fixture(scope="class")
 def vm_for_cclm_with_instance_type(
-    remote_admin_client, remote_cluster_source_test_namespace, remote_cluster_rhel10_data_source
+    remote_admin_client,
+    remote_cluster_source_test_namespace,
+    remote_cluster_rhel10_data_source,
+    remote_cluster_source_storage_class,
 ):
     with VirtualMachineForTests(
         name="vm-with-instance-type",
@@ -458,7 +492,7 @@ def vm_for_cclm_with_instance_type(
         vm_preference=VirtualMachineClusterPreference(name=RHEL10_PREFERENCE, client=remote_admin_client),
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=remote_cluster_rhel10_data_source,
-            storage_class=py_config["default_storage_class"],
+            storage_class=remote_cluster_source_storage_class,
         ),
     ) as vm:
         vm.start()
@@ -489,6 +523,7 @@ def remote_cluster_artifactory_config_map_scope_class(remote_admin_client, remot
 def vm_for_cclm_windows_with_instance_type(
     remote_admin_client,
     remote_cluster_source_test_namespace,
+    remote_cluster_source_storage_class,
     remote_cluster_artifactory_secret_scope_class,
     remote_cluster_artifactory_config_map_scope_class,
 ):
@@ -499,7 +534,7 @@ def vm_for_cclm_windows_with_instance_type(
         api_name="storage",
         source="registry",
         size=Images.Windows.CONTAINER_DISK_DV_SIZE,
-        storage_class=py_config["default_storage_class"],
+        storage_class=remote_cluster_source_storage_class,
         url=f"{get_test_artifact_server_url(schema='registry')}/{WINDOWS_2022[CONTAINER_DISK_IMAGE_PATH_STR]}",
         secret=remote_cluster_artifactory_secret_scope_class,
         cert_configmap=remote_cluster_artifactory_config_map_scope_class.name,

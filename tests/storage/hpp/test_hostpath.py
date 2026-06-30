@@ -20,12 +20,8 @@ from ocp_resources.service import Service
 from ocp_resources.service_account import ServiceAccount
 from ocp_resources.service_monitor import ServiceMonitor
 
-from utilities.constants import (
-    HOSTPATH_PROVISIONER_OPERATOR,
-    HPP_POOL,
-    TIMEOUT_1MIN,
-    TIMEOUT_5MIN,
-)
+from utilities.constants.components import HOSTPATH_PROVISIONER_OPERATOR, HPP_POOL
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_5MIN
 from utilities.infra import get_pod_by_name_prefix
 
 LOGGER = logging.getLogger(__name__)
@@ -33,7 +29,7 @@ LOGGER = logging.getLogger(__name__)
 HOSTPATH_PROVISIONER_ADMIN = "hostpath-provisioner-admin"
 VOLUME_BINDING_MODE = "volumeBindingMode"
 
-pytestmark = pytest.mark.usefixtures("skip_test_if_no_hpp_sc")
+pytestmark = pytest.mark.hpp
 
 
 def skipped_hco_resources():

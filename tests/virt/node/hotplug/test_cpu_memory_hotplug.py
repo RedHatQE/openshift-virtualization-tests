@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 
 import pytest
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
@@ -11,7 +14,7 @@ from tests.utils import (
     hotplug_spec_vm,
     wait_for_guest_os_cpu_count,
 )
-from utilities.constants import (
+from utilities.constants.virt import (
     FIVE_GI_MEMORY,
     FOUR_CPU_SOCKETS,
     FOUR_GI_MEMORY,
@@ -24,6 +27,11 @@ from utilities.virt import (
     migrate_vm_and_verify,
     restart_vm_wait_for_running_vm,
 )
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from utilities.virt import VirtualMachineForTests
 
 pytestmark = [pytest.mark.rwx_default_storage, pytest.mark.data_collector_scope(scope="module")]
 
@@ -78,8 +86,9 @@ class TestCPUHotPlug:
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu"])
     @pytest.mark.polarion("CNV-10696")
-    def test_migrate_snapshot_hotplugged_vm(self, hotplug_vm_snapshot, hotplugged_vm):
-        migrate_vm_and_verify(vm=hotplugged_vm, check_ssh_connectivity=True)
+    @pytest.mark.usefixtures("hotplug_vm_snapshot")
+    def test_migrate_snapshot_hotplugged_vm(self, admin_client: DynamicClient, hotplugged_vm: VirtualMachineForTests):
+        migrate_vm_and_verify(vm=hotplugged_vm, client=admin_client, check_ssh_connectivity=True)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu"])
     @pytest.mark.polarion("CNV-10697")
@@ -134,8 +143,9 @@ class TestMemoryHotPlug:
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_memory"])
     @pytest.mark.polarion("CNV-10677")
-    def test_migrate_snapshot_hotplugged_vm(self, hotplug_vm_snapshot, hotplugged_vm):
-        migrate_vm_and_verify(vm=hotplugged_vm, check_ssh_connectivity=True)
+    @pytest.mark.usefixtures("hotplug_vm_snapshot")
+    def test_migrate_snapshot_hotplugged_vm(self, admin_client: DynamicClient, hotplugged_vm: VirtualMachineForTests):
+        migrate_vm_and_verify(vm=hotplugged_vm, client=admin_client, check_ssh_connectivity=True)
 
     @pytest.mark.parametrize(
         "hotplugged_sockets_memory_guest", [pytest.param({"memory_guest": FIVE_GI_MEMORY})], indirect=True

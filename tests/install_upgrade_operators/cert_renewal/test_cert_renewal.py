@@ -10,7 +10,7 @@ from tests.install_upgrade_operators.constants import (
     HCO_CR_CERT_CONFIG_DURATION_KEY,
     HCO_CR_CERT_CONFIG_RENEW_BEFORE_KEY,
 )
-from utilities.constants import QUARANTINED
+from utilities.constants.pytest import QUARANTINED
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.s390x]
 

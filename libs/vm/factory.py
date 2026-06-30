@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from kubernetes.dynamic import DynamicClient
+from pytest_testconfig import config as py_config
 
 from libs.vm.spec import CPU, Devices, Domain, Memory, Metadata, Template, VMISpec, VMSpec
 from libs.vm.vm import BaseVirtualMachine, container_image, containerdisk_storage
-from utilities.constants import OS_FLAVOR_FEDORA, Images
+from utilities import constants
+from utilities.constants import MULTIARCH, OS_FLAVOR_FEDORA
 
 
 def fedora_vm(
@@ -28,8 +30,13 @@ def fedora_vm(
     )
 
 
-def fedora_image() -> str:
-    return container_image(base_image=Images.Fedora.FEDORA_CONTAINER_IMAGE)
+def fedora_image(arch: str | None = None) -> str:
+    if arch:
+        images = getattr(constants.ArchImages, arch.upper())
+    else:
+        images = constants.Images
+
+    return container_image(base_image=images.Fedora.FEDORA_CONTAINER_IMAGE, arch=arch)
 
 
 def _fill_vm_spec_defaults(spec: VMSpec | None) -> VMSpec:
@@ -37,11 +44,14 @@ def _fill_vm_spec_defaults(spec: VMSpec | None) -> VMSpec:
 
     vmi_spec = spec.template.spec
 
+    if not vmi_spec.architecture and py_config.get("cluster_type") == MULTIARCH:
+        cpu_arch = py_config.get("cpu_arch")
+        vmi_spec.architecture = cpu_arch
     vmi_spec.domain.devices = vmi_spec.domain.devices or Devices(rng={})
     vmi_spec.domain.devices.disks = vmi_spec.domain.devices.disks or []
     vmi_spec.volumes = vmi_spec.volumes or []
 
-    disk, volume = containerdisk_storage(image=fedora_image())
+    disk, volume = containerdisk_storage(image=fedora_image(arch=vmi_spec.architecture))
     vmi_spec.domain.devices.disks.insert(0, disk)
     vmi_spec.volumes.insert(0, volume)
 

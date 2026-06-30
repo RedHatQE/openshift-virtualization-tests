@@ -16,14 +16,36 @@ Preconditions:
     - Running connectivity reference VM with a primary EVPN-enabled CUDN.
 """
 
+from __future__ import annotations
+
 import ipaddress
+from typing import TYPE_CHECKING
 
 import pytest
 
+from libs.net.ip import random_ipv4_address, random_ipv6_address
 from libs.net.traffic_generator import active_tcp_connections, is_tcp_connection
 from libs.net.vmspec import lookup_primary_network
-from tests.network.bgp.evpn.libevpn import assert_evpn_workloads_connectivity, evpn_workloads_active_connections
+from tests.network.bgp.evpn.libevpn import (
+    EVPN_CUDN_NET_SEED,
+    assert_evpn_workloads_connectivity,
+    deploy_evpn_l2_endpoint,
+    evpn_workloads_active_connections,
+    teardown_evpn_l2_endpoint,
+)
 from utilities.virt import migrate_vm_and_verify
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from libs.net.traffic_generator import TcpServer
+    from libs.vm.vm import BaseVirtualMachine
+    from tests.network.bgp.evpn.libevpn import EndpointTcpClient
+
+
+_L2_ENDPOINT_IPV4: str = f"{random_ipv4_address(net_seed=EVPN_CUDN_NET_SEED, host_address=249)}/24"
+_L2_ENDPOINT_IPV6: str = f"{random_ipv6_address(net_seed=EVPN_CUDN_NET_SEED, host_address=249)}/64"
+
 
 pytestmark = [
     pytest.mark.bgp,
@@ -76,9 +98,10 @@ def test_stretched_l2_connectivity_udn_vm_and_external_provider(external_l2_endp
 
 @pytest.mark.polarion("CNV-15229")
 def test_stretched_l2_connectivity_is_preserved_over_live_migration(
-    evpn_stretched_l2_active_connections,
-    vm_evpn_target,
-    subtests,
+    admin_client: DynamicClient,
+    evpn_stretched_l2_active_connections: list[tuple[EndpointTcpClient, TcpServer]],
+    vm_evpn_target: BaseVirtualMachine,
+    subtests: pytest.Subtests,
 ):
     """
     Preconditions:
@@ -92,7 +115,7 @@ def test_stretched_l2_connectivity_is_preserved_over_live_migration(
     Expected:
     - The initial TCP connection is preserved (no disconnection).
     """
-    migrate_vm_and_verify(vm=vm_evpn_target)
+    migrate_vm_and_verify(vm=vm_evpn_target, client=admin_client)
     for client, server in evpn_stretched_l2_active_connections:
         with subtests.test(f"IPv{ipaddress.ip_address(client.server_ip).version}"):
             assert is_tcp_connection(server=server, client=client)
@@ -119,9 +142,10 @@ def test_routed_l3_connectivity_udn_vm_and_external_provider(external_l3_endpoin
 
 @pytest.mark.polarion("CNV-15231")
 def test_routed_l3_connectivity_is_preserved_over_live_migration(
-    evpn_routed_l3_active_connections,
-    vm_evpn_target,
-    subtests,
+    admin_client: DynamicClient,
+    evpn_routed_l3_active_connections: list[tuple[EndpointTcpClient, TcpServer]],
+    vm_evpn_target: BaseVirtualMachine,
+    subtests: pytest.Subtests,
 ):
     """
     Preconditions:
@@ -135,7 +159,7 @@ def test_routed_l3_connectivity_is_preserved_over_live_migration(
     Expected:
     - The initial TCP connection is preserved (no disconnection).
     """
-    migrate_vm_and_verify(vm=vm_evpn_target)
+    migrate_vm_and_verify(vm=vm_evpn_target, client=admin_client)
     for client, server in evpn_routed_l3_active_connections:
         with subtests.test(f"IPv{ipaddress.ip_address(client.server_ip).version}"):
             assert is_tcp_connection(server=server, client=client)
@@ -175,7 +199,15 @@ def test_connectivity_after_udn_vm_cold_reboot(
 
 
 @pytest.mark.polarion("CNV-15233")
-def test_source_provider_migration():
+@pytest.mark.order("last")
+def test_source_provider_migration(
+    external_l3_endpoint,
+    cudn_evpn_layer2,
+    vm_source_provider,
+    vm_evpn_target,
+    frr_external_pod,
+    subtests,
+):
     """
     Scenario emulates a migration of an external workload (Source Provider) into the OCP cluster as a CUDN VM,
     while preserving its IP and MAC addresses, and maintaining connectivity.
@@ -184,6 +216,7 @@ def test_source_provider_migration():
     - External Source Provider L2 and L3 endpoints.
     - Running connectivity reference VM with a primary EVPN-enabled CUDN.
     - TCP connectivity exists between the connectivity reference VM and the external L2 and L3 endpoints.
+      Precondition is verified in preceding tests.
 
     Steps:
     1. Shut down/remove the external L2 endpoint.
@@ -193,6 +226,23 @@ def test_source_provider_migration():
     Expected:
     - New connections are established after new UDN VM deployment.
     """
+    mac_vrf_vni = cudn_evpn_layer2.instance.spec.network.evpn.macVRF.vni
 
+    teardown_evpn_l2_endpoint(pod=frr_external_pod.pod, vni=mac_vrf_vni)
 
-test_source_provider_migration.__test__ = False
+    vm_source_provider.start(wait=True)
+    vm_source_provider.wait_for_agent_connected()
+
+    new_l2_endpoint = deploy_evpn_l2_endpoint(
+        pod=frr_external_pod.pod,
+        vni=mac_vrf_vni,
+        endpoint_ips=[_L2_ENDPOINT_IPV4, _L2_ENDPOINT_IPV6],
+    )
+
+    assert_evpn_workloads_connectivity(
+        target_vm=vm_evpn_target,
+        ref_vm=vm_source_provider,
+        l2_endpoint=new_l2_endpoint,
+        l3_endpoint=external_l3_endpoint,
+        subtests=subtests,
+    )

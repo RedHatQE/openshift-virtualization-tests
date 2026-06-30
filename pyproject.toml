@@ -105,7 +105,7 @@ dependencies = [
   "pytest-progress>=1.3.0",
   "pytest-testconfig>=0.2.0",
   "python-benedict>=0.34.0",
-  "python-rrmngmnt>=0.1.32",
+  "python-rrmngmnt>=0.2.3",
   "python-utility-scripts>=1.0.1",
   "pyvmomi>=8.0.3.0.1",
   "pyyaml>=6.0.2",
@@ -118,7 +118,7 @@ dependencies = [
   "xmltodict>=0.14.2",
   "python-simple-logger>=2.0.13",
   "pytest-html>=4.1.1",
-  "openshift-python-wrapper>=11.0.131",
+  "openshift-python-wrapper>=11.0.132",
   "cachetools>=6.2.2",
   "dacite>=1.9.2",
   "python-dotenv>=1.2.1",
@@ -153,24 +153,6 @@ dev = [
 
 [tool.uv.sources]
 
-# Utilities Unit Testing Configuration
-[tool.pytest.ini_options]
-minversion = "9.0"
-testpaths = ["utilities/unittests"]
-python_files = "test_*.py"
-python_classes = "Test*"
-python_functions = "test_*"
-addopts = """
-    -ra
-    --strict-markers
-    --strict-config
-    --cov=utilities
-    --cov-branch
-    --cov-report=term-missing:skip-covered
-    --cov-report=html:utilities/htmlcov
-    --cov-report=xml:utilities/coverage.xml
-    --cov-fail-under=90
-"""
 
 # Coverage configuration for utilities unit tests
 [tool.coverage.run]

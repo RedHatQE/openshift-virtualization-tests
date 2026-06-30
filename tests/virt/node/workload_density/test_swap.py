@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import logging
 import shlex
+from typing import TYPE_CHECKING
 
 import pytest
 from ocp_resources.daemonset import DaemonSet
@@ -9,9 +12,17 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 from tests.utils import start_stress_on_vm
 from tests.virt.constants import REMOVE_NEWLINE
 from tests.virt.utils import build_node_affinity_dict
-from utilities.constants import TIMEOUT_5MIN, TIMEOUT_5SEC, TIMEOUT_20MIN, Images
+from utilities.constants import Images
+from utilities.constants.timeouts import (
+    TIMEOUT_5MIN,
+    TIMEOUT_5SEC,
+    TIMEOUT_20MIN,
+)
 from utilities.infra import ExecCommandOnPod
 from utilities.virt import VirtualMachineForTests, migrate_vm_and_verify, running_vm
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
 
 LOGGER = logging.getLogger(__name__)
 
@@ -186,10 +197,11 @@ class TestVMCanUseSwap:
 
     @pytest.mark.dependency(depends=["test_virt_launcher_pod_use_swap"])
     @pytest.mark.polarion("CNV-11259")
-    def test_migrate_vm_using_swap(
-        self,
-        node_with_max_memory_labeled_for_swap_test,
-        vm_for_swap_usage_test,
-        migration_policy_with_allow_auto_converge,
-    ):
-        migrate_vm_and_verify(vm=vm_for_swap_usage_test, check_ssh_connectivity=True, timeout=TIMEOUT_20MIN)
+    @pytest.mark.usefixtures(
+        "node_with_max_memory_labeled_for_swap_test",
+        "migration_policy_with_allow_auto_converge",
+    )
+    def test_migrate_vm_using_swap(self, admin_client: DynamicClient, vm_for_swap_usage_test: VirtualMachineForTests):
+        migrate_vm_and_verify(
+            vm=vm_for_swap_usage_test, client=admin_client, check_ssh_connectivity=True, timeout=TIMEOUT_20MIN
+        )

@@ -4,9 +4,12 @@ https://github.com/kubevirt/kubevirt/pull/1987
 https://libvirt.org/formatdomain.html#elementsInput
 """
 
+from __future__ import annotations
+
 import logging
 import re
 import shlex
+from typing import TYPE_CHECKING
 
 import pytest
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
@@ -15,8 +18,11 @@ from pyhelper_utils.shell import run_ssh_commands
 
 from tests.os_params import FEDORA_LATEST, RHEL_LATEST, RHEL_LATEST_LABELS
 from tests.virt.cluster.common_templates.utils import check_vm_xml_tablet_device, set_vm_tablet_device_dict
-from utilities.constants import VIRTIO
+from utilities.constants.virt import VIRTIO
 from utilities.virt import VirtualMachineForTestsFromTemplate, migrate_vm_and_verify
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
 
 LOGGER = logging.getLogger(__name__)
 
@@ -114,8 +120,10 @@ class TestRHELTabletDevice:
         ],
         indirect=True,
     )
-    def test_tablet_device_migrate_vm(self, tablet_device_vm):
-        migrate_vm_and_verify(vm=tablet_device_vm, check_ssh_connectivity=True)
+    def test_tablet_device_migrate_vm(
+        self, admin_client: DynamicClient, tablet_device_vm: VirtualMachineForTestsFromTemplate
+    ):
+        migrate_vm_and_verify(vm=tablet_device_vm, client=admin_client, check_ssh_connectivity=True)
 
 
 @pytest.mark.parametrize(

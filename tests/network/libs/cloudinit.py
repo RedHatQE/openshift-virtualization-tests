@@ -3,8 +3,8 @@ from typing import Any, Final
 
 import yaml
 
+from libs.net.apimachinery import dict_normalization_for_dataclass
 from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
-from tests.network.libs.apimachinery import dict_normalization_for_dataclass
 
 NETWORK_DATA: Final[str] = "networkData"
 

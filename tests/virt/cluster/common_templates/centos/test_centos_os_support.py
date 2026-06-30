@@ -2,7 +2,10 @@
 Common templates test CentOS support
 """
 
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -14,7 +17,7 @@ from tests.virt.cluster.common_templates.utils import (
     vm_os_version,
 )
 from utilities import console
-from utilities.constants import LINUX_STR
+from utilities.constants.instance_types import LINUX_STR
 from utilities.infra import validate_os_info_vmi_vs_linux_os
 from utilities.virt import (
     check_vm_xml_smbios,
@@ -26,6 +29,11 @@ from utilities.virt import (
     validate_virtctl_guest_agent_data_over_time,
     wait_for_console,
 )
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from utilities.virt import VirtualMachineForTests
 
 pytestmark = pytest.mark.data_collector_scope(scope="module")
 
@@ -128,9 +136,9 @@ class TestCommonTemplatesCentos:
     @pytest.mark.dependency(
         name=f"{TESTS_CLASS_NAME}::migrate_vm_and_verify", depends=[f"{TESTS_CLASS_NAME}::vm_expose_ssh"]
     )
-    def test_migrate_vm(self, admin_client, matrix_centos_os_vm_from_template):
+    def test_migrate_vm(self, admin_client: DynamicClient, matrix_centos_os_vm_from_template: VirtualMachineForTests):
         """Test SSH connectivity after migration"""
-        migrate_vm_and_verify(vm=matrix_centos_os_vm_from_template, check_ssh_connectivity=True)
+        migrate_vm_and_verify(vm=matrix_centos_os_vm_from_template, client=admin_client, check_ssh_connectivity=True)
         validate_libvirt_persistent_domain(vm=matrix_centos_os_vm_from_template, admin_client=admin_client)
 
     @pytest.mark.polarion("CNV-5904")

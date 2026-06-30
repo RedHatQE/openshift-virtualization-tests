@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 
 import pytest
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
@@ -7,7 +10,7 @@ from ocp_resources.template import Template
 
 from tests.virt.constants import MachineTypesNames
 from tests.virt.utils import get_data_volume_template_dict_with_default_storage_class, validate_machine_type
-from utilities.constants import (
+from utilities.constants.instance_types import (
     FLAVOR_STR,
     OS_STR,
     WORKLOAD_STR,
@@ -22,6 +25,9 @@ from utilities.virt import (
     running_vm,
     wait_for_updated_kv_value,
 )
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.data_collector_scope(scope="module")]
 LOGGER = logging.getLogger(__name__)
@@ -120,11 +126,16 @@ def restarted_vm(admin_client, vm_for_machine_type_test, machine_type_from_kubev
 
 
 @pytest.fixture()
-def migrated_vm(admin_client, vm_for_machine_type_test, machine_type_from_kubevirt_config):
+def migrated_vm(
+    admin_client: DynamicClient,
+    vm_for_machine_type_test: VirtualMachineForTests,
+    machine_type_from_kubevirt_config: str,
+) -> VirtualMachineForTests:
     validate_machine_type(
         vm=vm_for_machine_type_test, expected_machine_type=machine_type_from_kubevirt_config, admin_client=admin_client
     )
-    migrate_vm_and_verify(vm=vm_for_machine_type_test)
+    migrate_vm_and_verify(vm=vm_for_machine_type_test, client=admin_client)
+    return vm_for_machine_type_test
 
 
 @pytest.mark.polarion("CNV-3311")

@@ -15,7 +15,7 @@ SERVER_VM_LABEL: Final[tuple[str, str]] = (STUNTIME_LABEL_KEY, "server")
 CLIENT_VM_LABEL: Final[tuple[str, str]] = (STUNTIME_LABEL_KEY, "client")
 STUNTIME_THRESHOLD_SECONDS: Final[float] = 5.0
 STUNTIME_PING_LOG_PATH: Final[str] = "/tmp/stuntime-ping.log"
-PING_INTERVAL_SECONDS: Final[float] = 0.1
+PING_INTERVAL_SECONDS: Final[float] = 0.01
 DEFAULT_COMMAND_TIMEOUT_SECONDS: Final[int] = 10
 
 
@@ -28,7 +28,7 @@ class ContinuousPing:
 
     Example:
         >>> with ContinuousPing(source_vm=client_vm, destination_ip=server_ip) as ping:
-        ...     migrate_vm_and_verify(vm=client_vm)
+        ...     migrate_vm_and_verify(vm=client_vm, client=admin_client)
         ...     ping.stop()
         ...     transmitted, received, lost = ping.report()
     """
@@ -139,5 +139,5 @@ def _compute_stuntime(lost_packets: int) -> float:
     """
     # Add +1 to account for the gap from last successful reply before loss to first successful reply after recovery
     stuntime = 0.0 if lost_packets == 0 else (lost_packets + 1) * PING_INTERVAL_SECONDS
-    LOGGER.info(f"Stuntime: {stuntime:.1f}s (from {lost_packets} lost packets)")
+    LOGGER.info(f"Stuntime: {stuntime:.2f}s (from {lost_packets} lost packets)")
     return stuntime

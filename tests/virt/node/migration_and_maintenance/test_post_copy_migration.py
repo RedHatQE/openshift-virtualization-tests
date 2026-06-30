@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 
 import pytest
 from ocp_resources.migration_policy import MigrationPolicy
@@ -11,22 +14,29 @@ from tests.utils import (
 )
 from tests.virt.constants import VM_LABEL
 from tests.virt.utils import assert_migration_post_copy_mode
-from utilities.constants import (
-    REGEDIT_PROC_NAME,
-    SIX_CPU_SOCKETS,
-    SIX_GI_MEMORY,
+from utilities.constants.timeouts import (
     TIMEOUT_15MIN,
     TIMEOUT_30MIN,
 )
+from utilities.constants.virt import (
+    REGEDIT_PROC_NAME,
+    SIX_CPU_SOCKETS,
+    SIX_GI_MEMORY,
+)
 from utilities.virt import (
     check_migration_process_after_node_drain,
+    drain_node,
     fetch_pid_from_linux_vm,
     fetch_pid_from_windows_vm,
     migrate_vm_and_verify,
-    node_mgmt_console,
     start_and_fetch_processid_on_linux_vm,
     start_and_fetch_processid_on_windows_vm,
 )
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from utilities.virt import VirtualMachineForTests
 
 pytestmark = [
     pytest.mark.rwx_default_storage,
@@ -69,18 +79,25 @@ def vm_background_process_id(hotplugged_vm):
 
 
 @pytest.fixture()
-def migrated_hotplugged_vm(hotplugged_vm):
+def migrated_hotplugged_vm(
+    admin_client: DynamicClient, hotplugged_vm: VirtualMachineForTests
+) -> VirtualMachineForTests:
     migrate_vm_and_verify(
         vm=hotplugged_vm,
+        client=admin_client,
         timeout=TIMEOUT_30MIN if "windows" in hotplugged_vm.name else TIMEOUT_15MIN,
         check_ssh_connectivity=True,
     )
+    return hotplugged_vm
 
 
 @pytest.fixture()
-def drained_node_with_hotplugged_vm(admin_client, hotplugged_vm):
-    with node_mgmt_console(
-        admin_client=admin_client, node=hotplugged_vm.vmi.get_node(privileged_client=admin_client), node_mgmt="drain"
+def drained_node_with_hotplugged_vm(admin_client, hco_namespace, compact_cluster, hotplugged_vm):
+    with drain_node(
+        admin_client=admin_client,
+        node=hotplugged_vm.vmi.get_node(privileged_client=admin_client),
+        hco_namespace=hco_namespace,
+        compact_cluster=compact_cluster,
     ):
         check_migration_process_after_node_drain(client=admin_client, vm=hotplugged_vm, admin_client=admin_client)
     clean_up_migration_jobs(client=admin_client, vm=hotplugged_vm)

@@ -9,7 +9,8 @@ from ocp_resources.network_attachment_definition import NetworkAttachmentDefinit
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from utilities import console
-from utilities.constants import TIMEOUT_3MIN, TIMEOUT_5SEC, VIRT_HANDLER
+from utilities.constants.components import VIRT_HANDLER
+from utilities.constants.timeouts import TIMEOUT_3MIN, TIMEOUT_5SEC
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import get_daemonset_by_name
 from utilities.virt import VirtualMachineForTests, migrate_vm_and_verify, wait_for_virt_handler_pods_network_updated
@@ -74,11 +75,12 @@ def configure_hco_live_migration_network(
     )
 
 
-def verify_compute_live_migration_after_cclm(local_vms: list[VirtualMachineForTests]) -> None:
+def verify_compute_live_migration_after_cclm(client: DynamicClient, local_vms: list[VirtualMachineForTests]) -> None:
     """
     Verify compute live migration for VMs after Cross-Cluster Live Migration (CCLM).
 
     Args:
+        client: DynamicClient used to create migration resources.
         local_vms: List of VirtualMachineForTests objects in the local cluster
 
     Raises:
@@ -87,7 +89,7 @@ def verify_compute_live_migration_after_cclm(local_vms: list[VirtualMachineForTe
     vms_failed_migration = {}
     for vm in local_vms:
         try:
-            migrate_vm_and_verify(vm=vm, check_ssh_connectivity=True)
+            migrate_vm_and_verify(vm=vm, client=client, check_ssh_connectivity=True)
         except Exception as migration_exception:
             vms_failed_migration[vm.name] = migration_exception
     assert not vms_failed_migration, f"Failed VM migrations: {vms_failed_migration}"

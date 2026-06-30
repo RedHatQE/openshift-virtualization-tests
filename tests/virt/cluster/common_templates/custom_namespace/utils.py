@@ -5,7 +5,11 @@ from ocp_resources.resource import Resource, ResourceEditor
 from ocp_resources.template import Template
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from utilities.constants import TIMEOUT_1MIN, TIMEOUT_2MIN, TIMEOUT_3MIN
+from utilities.constants.timeouts import (
+    TIMEOUT_1MIN,
+    TIMEOUT_2MIN,
+    TIMEOUT_3MIN,
+)
 from utilities.hco import wait_for_hco_conditions
 from utilities.ssp import wait_for_ssp_conditions
 from utilities.virt import VirtualMachineForTestsFromTemplate, get_base_templates_list

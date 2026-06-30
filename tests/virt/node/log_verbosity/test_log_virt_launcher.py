@@ -1,4 +1,8 @@
+from __future__ import annotations
+
 import logging
+from collections.abc import Generator
+from typing import TYPE_CHECKING
 
 import pytest
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
@@ -6,13 +10,23 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 from tests.virt.node.log_verbosity.constants import (
     VIRT_LOG_VERBOSITY_LEVEL_6,
 )
-from utilities.constants import MIGRATION_POLICY_VM_LABEL, TIMEOUT_1MIN, TIMEOUT_5SEC
+from utilities.constants.timeouts import (
+    TIMEOUT_1MIN,
+    TIMEOUT_5SEC,
+)
+from utilities.constants.virt import MIGRATION_POLICY_VM_LABEL
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
     migrate_vm_and_verify,
     running_vm,
 )
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+    from ocp_resources.migration_policy import MigrationPolicy
+    from ocp_resources.pod import Pod
+    from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
 
 LOGGER = logging.getLogger(__name__)
 
@@ -87,8 +101,21 @@ def source_pod_log_verbosity_test(admin_client, vm_for_migration_progress_test):
 
 
 @pytest.fixture()
-def migrated_vm_with_policy(migration_policy_with_bandwidth, vm_for_migration_progress_test):
-    migrate_vm_and_verify(vm=vm_for_migration_progress_test, wait_for_migration_success=False)
+def migrated_vm_with_policy(
+    admin_client: DynamicClient,
+    migration_policy_with_bandwidth: MigrationPolicy,
+    source_pod_log_verbosity_test: Pod,
+    vm_for_migration_progress_test: VirtualMachineForTests,
+) -> Generator[VirtualMachineInstanceMigration]:
+    migration = migrate_vm_and_verify(
+        vm=vm_for_migration_progress_test,
+        client=admin_client,
+        wait_for_migration_success=False,
+    )
+    try:
+        yield migration
+    finally:
+        migration.clean_up()
 
 
 @pytest.mark.parametrize(
@@ -112,11 +139,10 @@ class TestProgressOfMigrationInVirtLauncher:
 
     @pytest.mark.rwx_default_storage
     @pytest.mark.polarion("CNV-9058")
-    def test_progress_of_vm_migration_in_virt_launcher_pod(
-        self,
-        updated_log_verbosity_config,
-        vm_for_migration_progress_test,
-        source_pod_log_verbosity_test,
-        migrated_vm_with_policy,
-    ):
+    @pytest.mark.usefixtures(
+        "migrated_vm_with_policy",
+        "updated_log_verbosity_config",
+        "vm_for_migration_progress_test",
+    )
+    def test_progress_of_vm_migration_in_virt_launcher_pod(self, source_pod_log_verbosity_test: Pod):
         wait_for_all_progress_keys_in_pod_log(pod=source_pod_log_verbosity_test)

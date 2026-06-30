@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 
 import pytest
 from ocp_resources.virtual_machine_restore import VirtualMachineRestore
@@ -12,7 +15,9 @@ from tests.upgrade_params import (
     SNAPSHOT_RESTORE_CREATE_AFTER_UPGRADE,
     STORAGE_NODE_ID_PREFIX,
 )
-from utilities.constants import DEPENDENCY_SCOPE_SESSION, HOTPLUG_DISK_VIRTIO_BUS, LS_COMMAND
+from utilities.constants.cluster import LS_COMMAND
+from utilities.constants.pytest import DEPENDENCY_SCOPE_SESSION
+from utilities.constants.storage import HOTPLUG_DISK_VIRTIO_BUS
 from utilities.storage import (
     assert_disk_serial,
     assert_hotplugvolume_nonexist,
@@ -20,6 +25,12 @@ from utilities.storage import (
     wait_for_vm_volume_ready,
 )
 from utilities.virt import migrate_vm_and_verify
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+    from ocp_resources.datavolume import DataVolume
+
+    from utilities.virt import VirtualMachineForTests
 
 LOGGER = logging.getLogger(__name__)
 
@@ -155,13 +166,12 @@ class TestUpgradeStorage:
         ],
         scope=DEPENDENCY_SCOPE_SESSION,
     )
+    @pytest.mark.usefixtures("hotplug_volume_upg", "fedora_vm_for_hotplug_upg_ssh_connectivity")
     def test_vm_with_hotplug_after_upgrade(
         self,
-        upgrade_namespace_scope_session,
-        blank_disk_dv_with_default_sc,
-        fedora_vm_for_hotplug_upg,
-        hotplug_volume_upg,
-        fedora_vm_for_hotplug_upg_ssh_connectivity,
+        admin_client: DynamicClient,
+        blank_disk_dv_with_default_sc: DataVolume,
+        fedora_vm_for_hotplug_upg: VirtualMachineForTests,
     ):
         wait_for_vm_volume_ready(vm=fedora_vm_for_hotplug_upg, volume_name=blank_disk_dv_with_default_sc.name)
         assert_disk_serial(vm=fedora_vm_for_hotplug_upg)
@@ -171,4 +181,4 @@ class TestUpgradeStorage:
             expected_bus=HOTPLUG_DISK_VIRTIO_BUS,
         )
         assert_hotplugvolume_nonexist(vm=fedora_vm_for_hotplug_upg)
-        migrate_vm_and_verify(vm=fedora_vm_for_hotplug_upg, check_ssh_connectivity=True)
+        migrate_vm_and_verify(vm=fedora_vm_for_hotplug_upg, client=admin_client, check_ssh_connectivity=True)

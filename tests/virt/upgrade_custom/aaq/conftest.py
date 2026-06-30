@@ -6,7 +6,7 @@ from ocp_resources.virtual_machine import VirtualMachine
 from tests.virt.constants import ACRQ_NAMESPACE_LABEL
 from tests.virt.upgrade_custom.aaq.constants import UPGRADE_QUOTA_FOR_ONE_VMI
 from tests.virt.utils import wait_for_virt_launcher_pod, wait_when_pod_in_gated_state
-from utilities.constants import AAQ_NAMESPACE_LABEL
+from utilities.constants.aaq import AAQ_NAMESPACE_LABEL
 from utilities.hco import enabled_aaq_in_hco
 from utilities.infra import (
     create_ns,

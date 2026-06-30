@@ -26,7 +26,11 @@ from tests.virt.utils import (
     get_boot_time_for_multiple_vms,
     get_non_terminated_pods,
 )
-from utilities.constants import TIMEOUT_5MIN, TIMEOUT_5SEC, NamespacesNames
+from utilities.constants.namespaces import NamespacesNames
+from utilities.constants.timeouts import (
+    TIMEOUT_5MIN,
+    TIMEOUT_5SEC,
+)
 from utilities.infra import wait_for_pods_deletion
 from utilities.virt import wait_for_migration_finished
 
@@ -37,7 +41,7 @@ LOCALHOST = "localhost"
 
 
 @pytest.fixture(scope="package")
-def descheduler_operator_reconciled():
+def descheduler_operator_reconciled(admin_client):
     """Restart descheduler-operator deployment to trigger reconciliation.
 
     Workaround for the issue when descheduler is installed before other OpenShift operators.
@@ -48,6 +52,7 @@ def descheduler_operator_reconciled():
     deployment = Deployment(
         name="descheduler-operator",
         namespace=NamespacesNames.OPENSHIFT_KUBE_DESCHEDULER_OPERATOR,
+        client=admin_client,
     )
     initial_replicas = deployment.instance.spec.replicas
     deployment.scale_replicas(replica_count=0)
@@ -258,6 +263,7 @@ def utilization_imbalance(
     with PodDisruptionBudget(
         name=utilization_imbalance_deployment_name,
         namespace=namespace.name,
+        client=admin_client,
         min_available=unallocated_pod_count,
         selector=evict_protected_pod_selector,
     ):

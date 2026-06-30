@@ -8,16 +8,10 @@ from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from pytest_testconfig import config as py_config
 
 from tests.storage.memory_dump.utils import wait_for_memory_dump_status_completed
-from tests.utils import create_windows2022_dv_template_from_registry, create_windows2022_vm_with_vtpm
-from utilities.constants import (
-    TIMEOUT_2MIN,
-    Images,
-)
-from utilities.storage import (
-    PodWithPVC,
-    get_containers_for_pods_with_pvc,
-    virtctl_memory_dump,
-)
+from utilities.constants import Images
+from utilities.constants.timeouts import TIMEOUT_2MIN
+from utilities.storage import PodWithPVC, get_containers_for_pods_with_pvc, virtctl_memory_dump
+from utilities.virt import running_vm, vm_instance_from_template
 
 
 @pytest.fixture()

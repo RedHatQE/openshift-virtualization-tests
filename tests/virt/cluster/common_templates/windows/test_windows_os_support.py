@@ -2,7 +2,10 @@
 Common templates test Windows OS support
 """
 
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -13,7 +16,8 @@ from tests.virt.cluster.common_templates.utils import (
     validate_user_info_virtctl_vs_windows_os,
 )
 from tests.virt.utils import validate_pause_unpause_windows_vm
-from utilities.constants import OS_FLAVOR_WINDOWS, QUARANTINED
+from utilities.constants.images import OS_FLAVOR_WINDOWS
+from utilities.constants.pytest import QUARANTINED
 from utilities.guest_support import assert_windows_efi, check_vm_xml_hyperv, check_windows_vm_hvinfo
 from utilities.ssp import validate_os_info_vmi_vs_windows_os
 from utilities.virt import (
@@ -24,6 +28,11 @@ from utilities.virt import (
     validate_virtctl_guest_agent_after_guest_reboot,
     validate_virtctl_guest_agent_data_over_time,
 )
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from utilities.virt import VirtualMachineForTests
 
 pytestmark = [
     pytest.mark.post_upgrade,
@@ -130,9 +139,9 @@ class TestCommonTemplatesWindows:
         name=f"{TESTS_CLASS_NAME}::migrate_vm_and_verify", depends=[f"{TESTS_CLASS_NAME}::start_vm"]
     )
     @pytest.mark.polarion("CNV-3335")
-    def test_migrate_vm(self, admin_client, matrix_windows_os_vm_from_template):
+    def test_migrate_vm(self, admin_client: DynamicClient, matrix_windows_os_vm_from_template: VirtualMachineForTests):
         """Test SSH connectivity after migration"""
-        migrate_vm_and_verify(vm=matrix_windows_os_vm_from_template, check_ssh_connectivity=True)
+        migrate_vm_and_verify(vm=matrix_windows_os_vm_from_template, client=admin_client, check_ssh_connectivity=True)
         validate_libvirt_persistent_domain(vm=matrix_windows_os_vm_from_template, admin_client=admin_client)
 
     @pytest.mark.polarion("CNV-5903")

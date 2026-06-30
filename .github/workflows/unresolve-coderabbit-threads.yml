@@ -1,10 +1,9 @@
-# description: Unresolve CodeRabbit review threads that were resolved by the PR author
-# without addressing them. Runs on every push to a PR.
+# description: Unresolve CodeRabbit review threads that were resolved without
+# being addressed. Runs on every push to a PR via pull_request_target.
 #
-# Logic: If a CodeRabbit review thread was resolved by someone other than
-# coderabbitai[bot], and the resolver's last reply does NOT contain a substantive
-# response (e.g., "fixed", "addressed", code snippet, or explanation), the thread
-# is unresolved so CodeRabbit can re-evaluate it.
+# Logic: When a PR is pushed, scan all resolved CodeRabbit review threads.
+# If a thread was resolved without a substantive PR-author reply or CodeRabbit
+# verification, unresolve it so CodeRabbit can re-evaluate.
 
 name: Unresolve unaddressed CodeRabbit threads
 
@@ -19,16 +18,17 @@ concurrency:
 permissions:
   # Required to unresolve review threads and add comments
   pull-requests: write
-  contents: read
 
 jobs:
   unresolve-threads:
+    name: Check resolved CodeRabbit threads
+    # Webhook payload uses REST-format logins where bots have [bot] suffix
     if: "!endsWith(github.event.pull_request.user.login, '[bot]')"
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
     steps:
-      - name: Unresolve prematurely resolved CodeRabbit threads
+      - name: Check and unresolve unaddressed threads
         env:
           GH_TOKEN: ${{ secrets.BOT3_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -37,8 +37,73 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Fetch resolved review threads with pagination
-          ALL_THREADS="[]"
+          # Bot identity constants — GraphQL returns login without [bot] suffix
+          # and uses __typename to distinguish bots from human users.
+          BOT_LOGIN="coderabbitai"
+          BOT_TYPE="Bot"
+
+          # --- Helper: check if a thread should be unresolved ---
+          check_and_unresolve_thread() {
+            local thread_data="$1"
+            local thread_id
+            thread_id=$(echo "$thread_data" | jq -r '.id')
+
+            # Check if the opening comment is from CodeRabbit — if not, skip
+            local opener_login opener_type
+            opener_login=$(echo "$thread_data" | jq -r '.opening_comment.nodes[0].author.login // ""')
+            opener_type=$(echo "$thread_data" | jq -r '.opening_comment.nodes[0].author.__typename // ""')
+            if [ "$opener_login" != "$BOT_LOGIN" ] || [ "$opener_type" != "$BOT_TYPE" ]; then
+              echo "Thread $thread_id not opened by CodeRabbit (opener: $opener_login, type: $opener_type). Skipping."
+              return
+            fi
+
+            # Check for a substantive reply from PR author (>= 15 chars) or CodeRabbit verification
+            local has_response
+            has_response=$(echo "$thread_data" | jq -r --arg pr_author "$PR_AUTHOR" --arg bot_login "$BOT_LOGIN" --arg bot_type "$BOT_TYPE" '
+              any(.recent_comments.nodes[];
+                (
+                  # PR author posted a substantive reply (>= 15 chars)
+                  (.author.login == $pr_author and ((.body // "") | length) >= 15)
+                  or
+                  # CodeRabbit verified the fix
+                  (.author.login == $bot_login and .author.__typename == $bot_type and ((.body // "") | test("\\b(addressed|verified|resolved)\\b|✅|concern is fully"; "i")))
+                )
+              )
+            ')
+
+            if [ "$has_response" = "true" ]; then
+              echo "Thread $thread_id has a substantive response. Keeping resolved."
+              return
+            fi
+
+            # No substantive reply — unresolve the thread
+            echo "Unresolving thread: $thread_id"
+            if gh api graphql -f query="
+              mutation {
+                unresolveReviewThread(input: {threadId: \"$thread_id\"}) {
+                  thread {
+                    id
+                    isResolved
+                  }
+                }
+              }
+            "; then
+              # Add a comment explaining why it was unresolved
+              gh api graphql -f query="
+                mutation {
+                  addPullRequestReviewThreadReply(input: {pullRequestReviewThreadId: \"$thread_id\", body: \"⚠️ This thread was automatically unresolved because it was resolved without a substantive response. Please address the review comment and explain how it was resolved before resolving this thread again.\"}) {
+                    comment {
+                      id
+                    }
+                  }
+                }
+              " || echo "  Warning: failed to add comment to $thread_id"
+            else
+              echo "  Warning: failed to unresolve $thread_id"
+            fi
+          }
+
+          echo "Scanning all resolved threads for PR #$PR_NUMBER"
           CURSOR=""
           while true; do
             if [ -n "$CURSOR" ]; then
@@ -58,6 +123,7 @@ jobs:
                           nodes {
                             author {
                               login
+                              __typename
                             }
                           }
                         }
@@ -65,6 +131,7 @@ jobs:
                           nodes {
                             author {
                               login
+                              __typename
                             }
                             body
                           }
@@ -80,9 +147,10 @@ jobs:
               }
             ' -f owner="${REPO%%/*}" -f repo="${REPO##*/}" -F pr="$PR_NUMBER" $AFTER_ARG)
 
-            # Append nodes to accumulated list
-            NODES=$(echo "$PAGE" | jq '.data.repository.pullRequest.reviewThreads.nodes')
-            ALL_THREADS=$(echo "$ALL_THREADS $NODES" | jq -s 'add')
+            # Process each resolved thread on this page
+            echo "$PAGE" | jq -c '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == true)' | while read -r thread; do
+              check_and_unresolve_thread "$thread"
+            done
 
             # Check for next page
             HAS_NEXT=$(echo "$PAGE" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage')
@@ -90,48 +158,6 @@ jobs:
               break
             fi
             CURSOR=$(echo "$PAGE" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.endCursor')
-          done
-
-          # Process each resolved thread
-          echo "$ALL_THREADS" | jq -r --arg pr_author "$PR_AUTHOR" '
-            .[]
-            | select(.isResolved == true)
-            | select(.opening_comment.nodes[0].author.login == "coderabbitai")
-            | select(
-                # No substantive PR-author reply exists in the recent window
-                (any(.recent_comments.nodes[];
-                  .author.login == $pr_author
-                  and ((.body // "") | length) >= 15
-                ) | not)
-              )
-            | .id
-          ' | while read -r thread_id; do
-            if [ -n "$thread_id" ]; then
-              echo "Unresolving thread: $thread_id"
-              if gh api graphql -f query="
-                mutation {
-                  unresolveReviewThread(input: {threadId: \"$thread_id\"}) {
-                    thread {
-                      id
-                      isResolved
-                    }
-                  }
-                }
-              "; then
-                # Add a comment to the thread explaining why it was unresolved
-                gh api graphql -f query="
-                  mutation {
-                    addPullRequestReviewThreadReply(input: {pullRequestReviewThreadId: \"$thread_id\", body: \"\u26a0\ufe0f This thread was automatically unresolved because it was resolved without a substantive response. Please address the review comment and explain how it was resolved before resolving this thread again.\"}) {
-                      comment {
-                        id
-                      }
-                    }
-                  }
-                " || echo "  Warning: failed to add comment to $thread_id"
-              else
-                echo "  Warning: failed to unresolve $thread_id"
-              fi
-            fi
           done
 
           echo "Done checking CodeRabbit threads."

@@ -2,7 +2,10 @@
 Online resize (PVC expanded while VM running)
 """
 
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 
 import pytest
 from ocp_resources.datavolume import DataVolume
@@ -16,9 +19,14 @@ from tests.storage.online_resize.utils import (
     vm_restore,
     wait_for_resize,
 )
-from utilities.constants import TIMEOUT_1MIN, TIMEOUT_4MIN, TIMEOUT_5SEC
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_4MIN, TIMEOUT_5SEC
 from utilities.storage import add_dv_to_vm, create_dv, vm_snapshot
 from utilities.virt import migrate_vm_and_verify, running_vm
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from utilities.virt import VirtualMachineForTests
 
 LOGGER = logging.getLogger(__name__)
 
@@ -163,11 +171,10 @@ def test_disk_expand_then_clone_success(
     indirect=True,
 )
 @pytest.mark.s390x
-def test_disk_expand_then_migrate(rhel_vm_after_expand, orig_cksum):
-    migrate_vm_and_verify(
-        vm=rhel_vm_after_expand,
-        check_ssh_connectivity=True,
-    )
+def test_disk_expand_then_migrate(
+    admin_client: DynamicClient, rhel_vm_after_expand: VirtualMachineForTests, orig_cksum: str
+):
+    migrate_vm_and_verify(vm=rhel_vm_after_expand, client=admin_client, check_ssh_connectivity=True)
     check_file_unchanged(orig_cksum=orig_cksum, vm=rhel_vm_after_expand)
 
 

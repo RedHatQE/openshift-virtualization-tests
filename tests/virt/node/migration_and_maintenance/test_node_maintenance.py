@@ -17,13 +17,15 @@ from tests.os_params import (
     WINDOWS_LATEST_LABELS,
 )
 from tests.virt.utils import running_sleep_in_linux
-from utilities.constants import OS_PROC_NAME, TIMEOUT_30SEC
+from utilities.constants.timeouts import TIMEOUT_30SEC
+from utilities.constants.virt import OS_PROC_NAME
 from utilities.virt import (
     VirtualMachineForTests,
     check_migration_process_after_node_drain,
+    cordon_node,
+    drain_node,
     fedora_vm_body,
     fetch_pid_from_windows_vm,
-    node_mgmt_console,
     running_vm,
     start_and_fetch_processid_on_windows_vm,
 )
@@ -38,19 +40,23 @@ pytestmark = [
 LOGGER = logging.getLogger(__name__)
 
 
-def drain_using_console(admin_client, source_node, vm):
+def drain_using_console(admin_client, hco_namespace, compact_cluster, source_node, vm):
     with running_sleep_in_linux(vm=vm):
-        with node_mgmt_console(admin_client=admin_client, node=source_node, node_mgmt="drain"):
+        with drain_node(
+            admin_client=admin_client, node=source_node, hco_namespace=hco_namespace, compact_cluster=compact_cluster
+        ):
             check_migration_process_after_node_drain(client=admin_client, vm=vm, admin_client=admin_client)
 
 
-def drain_using_console_windows(admin_client, source_node, vm):
+def drain_using_console_windows(admin_client, hco_namespace, compact_cluster, source_node, vm):
     process_name = OS_PROC_NAME["windows"]
     pre_migrate_processid = start_and_fetch_processid_on_windows_vm(
         vm=vm,
         process_name=process_name,
     )
-    with node_mgmt_console(admin_client=admin_client, node=source_node, node_mgmt="drain"):
+    with drain_node(
+        admin_client=admin_client, node=source_node, hco_namespace=hco_namespace, compact_cluster=compact_cluster
+    ):
         check_migration_process_after_node_drain(client=admin_client, vm=vm, admin_client=admin_client)
         post_migrate_processid = fetch_pid_from_windows_vm(vm=vm, process_name=process_name)
         assert post_migrate_processid == pre_migrate_processid, (
@@ -118,10 +124,18 @@ def migration_job_sampler(client, namespace):
 @pytest.mark.polarion("CNV-3006")
 def test_node_drain_using_console_fedora(
     admin_client,
+    hco_namespace,
+    compact_cluster,
     vm_container_disk_fedora,
 ):
     source_node = vm_container_disk_fedora.vmi.get_node(privileged_client=admin_client)
-    drain_using_console(admin_client=admin_client, source_node=source_node, vm=vm_container_disk_fedora)
+    drain_using_console(
+        admin_client=admin_client,
+        hco_namespace=hco_namespace,
+        compact_cluster=compact_cluster,
+        source_node=source_node,
+        vm=vm_container_disk_fedora,
+    )
 
 
 @pytest.mark.parametrize(
@@ -144,17 +158,25 @@ class TestNodeMaintenanceRHEL:
     def test_node_drain_using_console_rhel(
         self,
         admin_client,
+        hco_namespace,
+        compact_cluster,
         vm_for_test_from_template_scope_class,
     ):
         vm = vm_for_test_from_template_scope_class
         drain_using_console(
-            admin_client=admin_client, source_node=vm.vmi.get_node(privileged_client=admin_client), vm=vm
+            admin_client=admin_client,
+            hco_namespace=hco_namespace,
+            compact_cluster=compact_cluster,
+            source_node=vm.vmi.get_node(privileged_client=admin_client),
+            vm=vm,
         )
 
     @pytest.mark.polarion("CNV-4995")
     def test_migration_when_multiple_nodes_unschedulable_using_console_rhel(
         self,
         admin_client,
+        hco_namespace,
+        compact_cluster,
         schedulable_nodes,
         vm_for_test_from_template_scope_class,
     ):
@@ -177,9 +199,13 @@ class TestNodeMaintenanceRHEL:
             pod=virt_launcher_pod,
             schedulable_nodes=schedulable_nodes,
         )
-        with node_mgmt_console(admin_client=admin_client, node=cordon_nodes[0], node_mgmt="cordon"):
+        with cordon_node(admin_client=admin_client, node=cordon_nodes[0]):
             drain_using_console(
-                admin_client=admin_client, source_node=vm.vmi.get_node(privileged_client=admin_client), vm=vm
+                admin_client=admin_client,
+                hco_namespace=hco_namespace,
+                compact_cluster=compact_cluster,
+                source_node=vm.vmi.get_node(privileged_client=admin_client),
+                vm=vm,
             )
 
 
@@ -204,11 +230,17 @@ class TestNodeCordonAndDrain:
     def test_node_drain_template_windows(
         self,
         admin_client,
+        hco_namespace,
+        compact_cluster,
         vm_for_test_from_template_scope_class,
     ):
         vm = vm_for_test_from_template_scope_class
         drain_using_console_windows(
-            admin_client=admin_client, source_node=vm.vmi.get_node(privileged_client=admin_client), vm=vm
+            admin_client=admin_client,
+            hco_namespace=hco_namespace,
+            compact_cluster=compact_cluster,
+            source_node=vm.vmi.get_node(privileged_client=admin_client),
+            vm=vm,
         )
 
     @pytest.mark.polarion("CNV-4906")
@@ -218,11 +250,7 @@ class TestNodeCordonAndDrain:
         vm_for_test_from_template_scope_class,
     ):
         vm = vm_for_test_from_template_scope_class
-        with node_mgmt_console(
-            admin_client=admin_client,
-            node=vm.vmi.get_node(privileged_client=admin_client),
-            node_mgmt="cordon",
-        ):
+        with cordon_node(admin_client=admin_client, node=vm.vmi.get_node(privileged_client=admin_client)):
             with pytest.raises(TimeoutExpiredError):
                 migration_job_sampler(
                     client=admin_client,

@@ -12,7 +12,7 @@ from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError
 
 from tests.os_params import WINDOWS_LATEST, WINDOWS_LATEST_LABELS
-from utilities.constants import TIMEOUT_10SEC
+from utilities.constants.timeouts import TIMEOUT_10SEC
 from utilities.data_collector import collect_vnc_screenshot_for_vms
 from utilities.virt import running_vm, vm_instance_from_template
 

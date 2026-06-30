@@ -1,6 +1,7 @@
 from ocp_resources.resource import Resource
 
-from utilities.constants import (
+from utilities.constants.cluster import VERSION_LABEL_KEY
+from utilities.constants.components import (
     AAQ_OPERATOR,
     BRIDGE_MARKER,
     CDI_APISERVER,
@@ -54,7 +55,6 @@ from utilities.constants import (
     SSP_KUBEVIRT_HYPERCONVERGED,
     SSP_OPERATOR,
     UPLOAD_BOOT_SOURCE,
-    VERSION_LABEL_KEY,
     VIRT_API,
     VIRT_CONTROLLER,
     VIRT_EXPORTPROXY,
@@ -63,7 +63,7 @@ from utilities.constants import (
     VIRT_PLATFORM_AUTOPILOT,
     VIRT_SYNCHRONIZATION_CONTROLLER,
     VIRT_TEMPLATE_VALIDATOR,
-    VIRTCTL_CLIDOWNLOADS_KUBEVIRT_HYPERCONVERGED,
+    VIRTCTL_CLI_DOWNLOADS,
     VIRTIO_WIN,
     WINDOWS_BOOTSOURCE_PIPELINE,
 )
@@ -331,7 +331,7 @@ EXPECTED_RELATED_OBJECTS_LABELS_DICT_MAP = {
         VERSION_LABEL_KEY: None,
         PART_OF_LABEL_KEY: HYPERCONVERGED_CLUSTER,
     },
-    VIRTCTL_CLIDOWNLOADS_KUBEVIRT_HYPERCONVERGED: {
+    VIRTCTL_CLI_DOWNLOADS: {
         MANAGED_BY_LABEL_KEY: HCO_OPERATOR,
         COMPONENT_LABEL_KEY: COMPUTE_STR,
         VERSION_LABEL_KEY: None,

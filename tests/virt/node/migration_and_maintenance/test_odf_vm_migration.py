@@ -1,9 +1,18 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import pytest
 
 from tests.os_params import FEDORA_LATEST, FEDORA_LATEST_LABELS
-from utilities.constants import StorageClassNames
+from utilities.constants.storage import StorageClassNames
 from utilities.storage import data_volume_template_with_source_ref_dict
 from utilities.virt import migrate_vm_and_verify, vm_instance_from_template
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from utilities.virt import VirtualMachineForTests
 
 
 @pytest.fixture
@@ -51,5 +60,7 @@ def xfail_if_no_odf_cephfs_sc(cluster_storage_classes_names):
     indirect=True,
 )
 @pytest.mark.usefixtures("xfail_if_no_odf_cephfs_sc")
-def test_vm_with_odf_cephfs_storage_class_migrates(vm_with_cephfs_storage):
-    migrate_vm_and_verify(vm=vm_with_cephfs_storage)
+def test_vm_with_odf_cephfs_storage_class_migrates(
+    admin_client: DynamicClient, vm_with_cephfs_storage: VirtualMachineForTests
+):
+    migrate_vm_and_verify(vm=vm_with_cephfs_storage, client=admin_client)

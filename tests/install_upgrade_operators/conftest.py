@@ -27,7 +27,11 @@ from tests.install_upgrade_operators.utils import (
     get_resource_by_name,
     get_resource_from_module_name,
 )
-from utilities.constants import HOSTPATH_PROVISIONER_CSI, HPP_POOL, MULTIARCH
+from utilities.constants.architecture import MULTIARCH
+from utilities.constants.components import (
+    HOSTPATH_PROVISIONER_CSI,
+    HPP_POOL,
+)
 from utilities.hco import ResourceEditorValidateHCOReconcile, get_hco_version
 from utilities.infra import (
     get_daemonset_by_name,
@@ -281,11 +285,6 @@ def updated_resource(
 @pytest.fixture(scope="session")
 def jira_76659_open():
     return is_jira_open(jira_id="CNV-76659")
-
-
-@pytest.fixture(scope="session")
-def jira_86102_open():
-    return is_jira_open(jira_id="CNV-86102")
 
 
 @pytest.fixture()

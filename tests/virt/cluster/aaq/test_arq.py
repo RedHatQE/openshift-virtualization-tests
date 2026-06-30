@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 
 import pytest
 from ocp_resources.pod import Pod
@@ -10,7 +13,7 @@ from tests.virt.cluster.aaq.constants import (
 )
 from tests.virt.cluster.aaq.utils import restart_vm_wait_for_gated_state
 from tests.virt.utils import check_arq_status_values, wait_when_pod_in_gated_state
-from utilities.constants import (
+from utilities.constants.aaq import (
     LIMITS_CPU_STR,
     LIMITS_MEMORY_STR,
     POD_LIMITS_CPU,
@@ -26,6 +29,11 @@ from utilities.constants import (
     REQUESTS_MEMORY_VMI_STR,
 )
 from utilities.virt import migrate_vm_and_verify, wait_for_running_vm
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from utilities.virt import VirtualMachineForTests
 
 LOGGER = logging.getLogger(__name__)
 
@@ -113,8 +121,10 @@ class TestARQCanManageVMs:
 
     @pytest.mark.dependency(depends=[f"{TESTS_VM_CLASS_NAME}::vm_gated"])
     @pytest.mark.polarion("CNV-11282")
-    def test_arq_vm_migration_allowed_when_quota_reached(self, vm_for_aaq_test):
-        migrate_vm_and_verify(vm=vm_for_aaq_test)
+    def test_arq_vm_migration_allowed_when_quota_reached(
+        self, admin_client: DynamicClient, vm_for_aaq_test: VirtualMachineForTests
+    ):
+        migrate_vm_and_verify(vm=vm_for_aaq_test, client=admin_client)
 
     @pytest.mark.parametrize(
         "updated_arq_quota",

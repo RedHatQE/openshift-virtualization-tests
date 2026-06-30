@@ -4,7 +4,11 @@ import pytest
 from ocp_resources.resource import ResourceEditor
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from utilities.constants import CPU_MODEL_LABEL_PREFIX, TIMEOUT_5SEC, TIMEOUT_10MIN
+from utilities.constants.cluster import CPU_MODEL_LABEL_PREFIX
+from utilities.constants.timeouts import (
+    TIMEOUT_5SEC,
+    TIMEOUT_10MIN,
+)
 from utilities.exceptions import ResourceValueError, raise_multiple_exceptions
 
 LOGGER = logging.getLogger(__name__)
@@ -39,7 +43,7 @@ def worker1_supported_cpu_models_labels(worker_node1):
     return node_cpu_models_labels
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture()
 def labelled_worker_node1(worker1_supported_cpu_models_labels, worker_node1):
     updated_label = worker1_supported_cpu_models_labels[0]
     LOGGER.info(f"Updating node {worker_node1.name} label {updated_label}")

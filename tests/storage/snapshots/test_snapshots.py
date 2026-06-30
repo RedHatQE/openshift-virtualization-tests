@@ -23,7 +23,8 @@ from tests.storage.snapshots.utils import (
     start_windows_vm_after_restore,
 )
 from tests.storage.utils import assert_windows_directory_existence
-from utilities.constants import LS_COMMAND, TIMEOUT_1MIN, TIMEOUT_10SEC
+from utilities.constants.cluster import LS_COMMAND
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_10SEC
 from utilities.storage import run_command_on_vm_and_check_output
 from utilities.virt import restart_vm_wait_for_running_vm, running_vm
 
@@ -263,6 +264,49 @@ class TestRestoreSnapshots:
                     command=LS_COMMAND,
                     expected_result=expected_output_after_restore(1),
                 )
+
+    @pytest.mark.parametrize(
+        "rhel_vm_name, snapshot_with_content",
+        [
+            pytest.param(
+                {"vm_name": "vm-cnv-16212"},
+                {"number_of_snapshots": 1, "online_vm": False},
+                marks=pytest.mark.polarion("CNV-16212"),
+            ),
+        ],
+        indirect=True,
+    )
+    def test_restore_snapshot_with_predictable_names(
+        self,
+        vm_restore_with_predictable_names,
+        source_volume_name_for_predictable_name_restore,
+    ):
+        """
+        Test restore snapshot where the DV/PVC restored has a predictable name derived from the source vm name and
+        source volume name when `volumeRestorePolicy` is set to `PrefixTargetName`.
+
+        Preconditions:
+            - A VM snapshot (any).
+            - Volume restore policy is set to `PrefixTargetName`.
+
+        Steps:
+            1. Restore the snapshot.
+
+        Expected Results:
+            - The restored DV/PVC name matches the expected predictable name derived from the source vm name and source volume name.
+        """
+
+        restore_status = vm_restore_with_predictable_names.instance.status
+        expected_name = (
+            f"{vm_restore_with_predictable_names.vm_name}-{source_volume_name_for_predictable_name_restore}"[:63]
+        )
+
+        assert restore_status.restores[0].dataVolumeName == expected_name, (
+            f"Restored DV name is '{restore_status.restores[0].dataVolumeName}', expected '{expected_name}'"
+        )
+        assert restore_status.restores[0].persistentVolumeClaim == expected_name, (
+            f"Restored PVC name is '{restore_status.restores[0].persistentVolumeClaim}', expected '{expected_name}'"
+        )
 
 
 @pytest.mark.parametrize(

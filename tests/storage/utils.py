@@ -4,6 +4,7 @@ import shlex
 from collections.abc import Generator
 from contextlib import contextmanager
 
+import pytest
 import requests
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.cluster_role import ClusterRole
@@ -23,6 +24,7 @@ from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+from tests.storage.constants import NO_STORAGE_CLASS_FAILURE_MESSAGE
 from utilities import console
 from utilities.artifactory import (
     cleanup_artifactory_secret_and_config_map,
@@ -30,16 +32,10 @@ from utilities.artifactory import (
     get_artifactory_secret,
     get_http_image_url,
 )
-from utilities.constants import (
-    CDI_UPLOADPROXY,
-    LS_COMMAND,
-    TIMEOUT_2MIN,
-    TIMEOUT_5MIN,
-    TIMEOUT_5SEC,
-    TIMEOUT_20SEC,
-    TIMEOUT_30MIN,
-    Images,
-)
+from utilities.constants import Images
+from utilities.constants.cluster import LS_COMMAND
+from utilities.constants.components import CDI_UPLOADPROXY
+from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5MIN, TIMEOUT_5SEC, TIMEOUT_20SEC, TIMEOUT_30MIN
 from utilities.exceptions import DataVolumeConditionMessageNotFoundError
 from utilities.infra import (
     get_pod_by_name_prefix,
@@ -330,7 +326,7 @@ def assert_pvc_snapshot_clone_annotation(pvc, storage_class):
     clone_type_annotation_str = f"{Resource.ApiGroup.CDI_KUBEVIRT_IO}/cloneType"
     clone_type_annotation = pvc.instance["metadata"].get("annotations").get(clone_type_annotation_str)
     # For snapshot capable storage, 'csi-clone' may be set in the StorageProfile
-    expected_clone_type_annotation = StorageProfile(name=storage_class).instance.status.cloneStrategy
+    expected_clone_type_annotation = StorageProfile(name=storage_class, client=pvc.client).instance.status.cloneStrategy
     assert clone_type_annotation == expected_clone_type_annotation, (
         f"{clone_type_annotation_str}: {clone_type_annotation}, expected: '{expected_clone_type_annotation}'"
     )
@@ -388,29 +384,6 @@ def create_windows19_vm(dv_name, namespace, client, vm_name, cpu_model, storage_
     )
 
 
-def create_cirros_dv(
-    namespace,
-    name,
-    storage_class,
-    client,
-    access_modes=None,
-    volume_mode=None,
-    dv_size=Images.Cirros.DEFAULT_DV_SIZE,
-):
-    with create_dv(
-        dv_name=f"dv-{name}",
-        namespace=namespace,
-        url=get_http_image_url(image_directory=Images.Cirros.DIR, image_name=Images.Cirros.QCOW2_IMG),
-        size=dv_size,
-        storage_class=storage_class,
-        access_modes=access_modes,
-        volume_mode=volume_mode,
-        client=client,
-    ) as dv:
-        dv.wait_for_dv_success()
-        yield dv
-
-
 def check_snapshot_indication(snapshot, is_online):
     snapshot_indications = snapshot.instance.status.indications
     online = "Online"
@@ -451,7 +424,7 @@ def assert_num_files_in_pod(pod, expected_num_of_files):
 
 def assert_use_populator(pvc, storage_class, cluster_csi_drivers_names):
     expected_use_populator_value = (
-        StorageClass(name=storage_class).instance.get("provisioner") in cluster_csi_drivers_names
+        StorageClass(name=storage_class, client=pvc.client).instance.get("provisioner") in cluster_csi_drivers_names
     )
     assert pvc.use_populator == expected_use_populator_value
 
@@ -527,3 +500,26 @@ def check_file_in_vm(
         vm_console.expect(pattern=file_name, timeout=TIMEOUT_20SEC)
         vm_console.sendline(f"cat {file_name}")
         vm_console.expect(pattern=file_content, timeout=TIMEOUT_20SEC)
+
+
+def get_storage_class_for_storage_migration(storage_class: str, cluster_storage_classes_names: list[str]) -> str:
+    """Validate that the requested storage class exists in the cluster.
+
+    Args:
+        storage_class: Name of the storage class to validate.
+        cluster_storage_classes_names: List of available storage class names in the cluster.
+
+    Returns:
+        The validated storage class name if it exists.
+
+    Raises:
+        pytest.Failed: If the storage class is not found in the cluster.
+    """
+    if storage_class in cluster_storage_classes_names:
+        return storage_class
+
+    pytest.fail(
+        NO_STORAGE_CLASS_FAILURE_MESSAGE.format(
+            storage_class=storage_class, cluster_storage_classes_names=cluster_storage_classes_names
+        )
+    )
