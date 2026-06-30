@@ -22,9 +22,9 @@ from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 import utilities.infra
-from utilities.constants import (
-    BASE_EXCEPTIONS_DICT,
-    DEFAULT_RESOURCE_CONDITIONS,
+from utilities.constants.cluster import BASE_EXCEPTIONS_DICT
+from utilities.constants.hco import DEFAULT_RESOURCE_CONDITIONS
+from utilities.constants.timeouts import (
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,

@@ -18,19 +18,19 @@ from tests.chaos.utils import (
     terminate_process,
 )
 from utilities.artifactory import get_artifactory_config_map, get_artifactory_secret
-from utilities.constants import (
-    KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
-    OS_FLAVOR_RHEL,
-    PORT_80,
+from utilities.constants import Images
+from utilities.constants.components import KUBEMACPOOL_MAC_CONTROLLER_MANAGER
+from utilities.constants.images import OS_FLAVOR_RHEL
+from utilities.constants.instance_types import U1_SMALL
+from utilities.constants.namespaces import NamespacesNames
+from utilities.constants.networking import PORT_80
+from utilities.constants.timeouts import (
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
     TIMEOUT_10SEC,
     TIMEOUT_15MIN,
-    U1_SMALL,
-    Images,
-    NamespacesNames,
 )
 from utilities.infra import (
     ExecCommandOnPod,

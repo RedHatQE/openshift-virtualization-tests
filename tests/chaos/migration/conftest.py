@@ -8,7 +8,7 @@ from ocp_resources.resource import ResourceEditor
 from tests.chaos.constants import HOST_LABEL
 from tests.chaos.migration.utils import taint_node_for_migration
 from tests.chaos.utils import rebooting_node
-from utilities.constants import MIGRATION_POLICY_VM_LABEL
+from utilities.constants.virt import MIGRATION_POLICY_VM_LABEL
 
 LOGGER = logging.getLogger(__name__)
 

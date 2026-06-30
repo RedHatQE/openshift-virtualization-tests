@@ -5,11 +5,13 @@ from typing import TYPE_CHECKING
 from ocp_resources.resource import Resource
 from pytest_testconfig import config as py_config
 
-from utilities.constants import (
+from utilities.constants.cluster import (
     CPU_MODEL_LABEL_PREFIX,
+    KUBERNETES_ARCH_LABEL,
+)
+from utilities.constants.cpu_models import (
     EXCLUDED_CPU_MODELS,
     EXCLUDED_OLD_CPU_MODELS,
-    KUBERNETES_ARCH_LABEL,
 )
 
 if TYPE_CHECKING:

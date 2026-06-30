@@ -4,7 +4,10 @@ import shlex
 
 from pyhelper_utils.shell import run_command
 
-from utilities.constants import TIMEOUT_15MIN, TIMEOUT_20MIN
+from utilities.constants.timeouts import (
+    TIMEOUT_15MIN,
+    TIMEOUT_20MIN,
+)
 
 LOGGER = logging.getLogger(__name__)
 

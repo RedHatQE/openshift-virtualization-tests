@@ -15,20 +15,22 @@ from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 import utilities.infra
-from utilities.constants import (
+from utilities.constants.hco import (
     DEFAULT_HCO_CONDITIONS,
     ENABLE_COMMON_BOOT_IMAGE_IMPORT,
     EXPECTED_STATUS_CONDITIONS,
     HCO_SUBSCRIPTION,
     IMAGE_CRON_STR,
     SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
+)
+from utilities.constants.storage import StorageClassNames
+from utilities.constants.timeouts import (
     TIMEOUT_2MIN,
     TIMEOUT_4MIN,
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
     TIMEOUT_30MIN,
-    StorageClassNames,
 )
 from utilities.ssp import (
     wait_for_at_least_one_auto_update_data_import_cron,

@@ -20,10 +20,9 @@ from ocp_resources.virtual_machine_cluster_instancetype import (
 from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler, TimeoutWatch
 
-from utilities.constants import (
-    DEFAULT_HCO_CONDITIONS,
-    MIGRATION_POLICY_VM_LABEL,
-    PORT_80,
+from utilities.constants.hco import DEFAULT_HCO_CONDITIONS
+from utilities.constants.networking import PORT_80
+from utilities.constants.timeouts import (
     TIMEOUT_1MIN,
     TIMEOUT_2MIN,
     TIMEOUT_5MIN,
@@ -33,6 +32,7 @@ from utilities.constants import (
     TIMEOUT_30MIN,
     TIMEOUT_30SEC,
 )
+from utilities.constants.virt import MIGRATION_POLICY_VM_LABEL
 from utilities.data_collector import write_to_file
 from utilities.infra import (
     ExecCommandOnPod,

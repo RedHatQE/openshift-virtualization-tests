@@ -4,7 +4,11 @@ from ocp_resources.deployment import Deployment
 from ocp_resources.virtual_machine_restore import VirtualMachineRestore
 from pytest_testconfig import py_config
 
-from utilities.constants import TIMEOUT_5MIN, TIMEOUT_5SEC, NamespacesNames
+from utilities.constants.namespaces import NamespacesNames
+from utilities.constants.timeouts import (
+    TIMEOUT_5MIN,
+    TIMEOUT_5SEC,
+)
 
 pytestmark = [
     pytest.mark.chaos,

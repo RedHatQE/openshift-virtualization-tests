@@ -35,12 +35,15 @@ import utilities.infra
 import utilities.virt as virt_util
 from utilities import console
 from utilities.artifactory import get_test_artifact_server_url
-from utilities.constants import (
+from utilities.constants import Images
+from utilities.constants.components import HPP_POOL
+from utilities.constants.images import OS_FLAVOR_WINDOWS
+from utilities.constants.networking import POD_CONTAINER_SPEC
+from utilities.constants.storage import (
     CDI_LABEL,
     HOTPLUG_DISK_SERIAL,
-    HPP_POOL,
-    OS_FLAVOR_WINDOWS,
-    POD_CONTAINER_SPEC,
+)
+from utilities.constants.timeouts import (
     TIMEOUT_1MIN,
     TIMEOUT_1SEC,
     TIMEOUT_2MIN,
@@ -54,7 +57,6 @@ from utilities.constants import (
     TIMEOUT_30MIN,
     TIMEOUT_30SEC,
     TIMEOUT_60MIN,
-    Images,
 )
 from utilities.exceptions import UrlNotFoundError
 

@@ -25,11 +25,9 @@ utilities.infra = mock_infra
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.exceptions import ResourceTeardownError
 
-from utilities.constants import (
-    LS_COMMAND,
-    TIMEOUT_20SEC,
-    NamespacesNames,
-)
+from utilities.constants.cluster import LS_COMMAND
+from utilities.constants.namespaces import NamespacesNames
+from utilities.constants.timeouts import TIMEOUT_20SEC
 from utilities.oadp import (
     VeleroBackup,
     VeleroRestore,

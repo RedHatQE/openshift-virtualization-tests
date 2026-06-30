@@ -52,26 +52,34 @@ import utilities.data_utils
 import utilities.infra
 from libs.net.cluster import is_ipv6_single_stack_cluster
 from utilities.console import Console
-from utilities.constants import (
-    CLOUD_INIT_DISK_NAME,
-    CLOUD_INIT_NO_CLOUD,
-    CNV_VM_SSH_KEY_PATH,
+from utilities.constants import Images
+from utilities.constants.architecture import (
+    LINUX_AMD_64,
+    MULTIARCH,
+)
+from utilities.constants.components import (
+    VIRT_API,
+    VIRT_HANDLER,
+    VIRT_LAUNCHER,
+)
+from utilities.constants.hco import (
     DATA_SOURCE_NAME,
     DATA_SOURCE_NAMESPACE,
     DEFAULT_KUBEVIRT_CONDITIONS,
-    DV_DISK,
-    EVICTIONSTRATEGY,
-    IP_FAMILY_POLICY_PREFER_DUAL_STACK,
-    LINUX_AMD_64,
-    LINUX_STR,
-    MULTIARCH,
+)
+from utilities.constants.images import (
     OS_FLAVOR_ALPINE,
     OS_FLAVOR_CIRROS,
     OS_FLAVOR_FEDORA,
     OS_FLAVOR_WINDOWS,
-    OS_PROC_NAME,
-    ROOTDISK,
+    ArchImages,
+)
+from utilities.constants.instance_types import LINUX_STR
+from utilities.constants.networking import (
+    IP_FAMILY_POLICY_PREFER_DUAL_STACK,
     SSH_PORT_22,
+)
+from utilities.constants.timeouts import (
     TCP_TIMEOUT_30SEC,
     TIMEOUT_1MIN,
     TIMEOUT_1SEC,
@@ -87,12 +95,16 @@ from utilities.constants import (
     TIMEOUT_12MIN,
     TIMEOUT_25MIN,
     TIMEOUT_30MIN,
-    VIRT_API,
-    VIRT_HANDLER,
-    VIRT_LAUNCHER,
+)
+from utilities.constants.virt import (
+    CLOUD_INIT_DISK_NAME,
+    CLOUD_INIT_NO_CLOUD,
+    CNV_VM_SSH_KEY_PATH,
+    DV_DISK,
+    EVICTIONSTRATEGY,
+    OS_PROC_NAME,
+    ROOTDISK,
     VIRTCTL,
-    ArchImages,
-    Images,
 )
 from utilities.data_collector import collect_vnc_screenshot_for_vms
 from utilities.exceptions import MigrationStuckSchedulingError, ResourceValueError
