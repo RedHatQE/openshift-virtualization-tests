@@ -26,7 +26,7 @@ jobs:
           reactions: '+1'
 
       - name: Add retest-smoke label
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             await github.rest.issues.addLabels({
