@@ -4,7 +4,11 @@ import re
 import pytest
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from utilities.constants import OS_FLAVOR_RHEL, TIMEOUT_2MIN, TIMEOUT_5SEC
+from utilities.constants.images import OS_FLAVOR_RHEL
+from utilities.constants.timeouts import (
+    TIMEOUT_2MIN,
+    TIMEOUT_5SEC,
+)
 from utilities.virt import VirtualMachineForTests
 
 LOGGER = logging.getLogger(__name__)

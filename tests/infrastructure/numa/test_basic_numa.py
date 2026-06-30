@@ -7,7 +7,7 @@ from tests.utils import (
     get_numa_node_cpu_dict,
     get_vm_cpu_list,
 )
-from utilities.constants import NODE_HUGE_PAGES_1GI_KEY
+from utilities.constants.virt import NODE_HUGE_PAGES_1GI_KEY
 from utilities.virt import validate_libvirt_persistent_domain
 
 pytestmark = [pytest.mark.special_infra, pytest.mark.hugepages, pytest.mark.numa]

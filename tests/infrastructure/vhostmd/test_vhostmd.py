@@ -13,7 +13,12 @@ from pytest_testconfig import config as py_config
 
 from tests.os_params import RHEL_LATEST_LABELS
 from utilities.artifactory import get_artifactory_header
-from utilities.constants import S390X, TIMEOUT_3MIN, TIMEOUT_5SEC, TIMEOUT_30SEC
+from utilities.constants.architecture import S390X
+from utilities.constants.timeouts import (
+    TIMEOUT_3MIN,
+    TIMEOUT_5SEC,
+    TIMEOUT_30SEC,
+)
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import get_node_selector_dict, get_node_selector_name
 from utilities.virt import (

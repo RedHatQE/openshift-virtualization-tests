@@ -25,14 +25,16 @@ from tests.utils import (
     validate_dedicated_emulatorthread,
     validate_iothreads_emulatorthread_on_same_pcpu,
 )
-from utilities.constants import (
-    CNV_SUPPLEMENTAL_TEMPLATES_URL,
+from utilities.constants.cluster import TSC_FREQUENCY
+from utilities.constants.namespaces import NamespacesNames
+from utilities.constants.networking import (
     PUBLIC_DNS_SERVER_IP,
     SRIOV,
-    TSC_FREQUENCY,
+)
+from utilities.constants.storage import StorageClassNames
+from utilities.constants.virt import (
+    CNV_SUPPLEMENTAL_TEMPLATES_URL,
     VIRTIO,
-    NamespacesNames,
-    StorageClassNames,
 )
 from utilities.infra import ExecCommandOnPod
 from utilities.network import is_destination_pingable_from_vm, network_nad

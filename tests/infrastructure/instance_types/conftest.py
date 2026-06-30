@@ -22,13 +22,13 @@ from utilities.artifactory import (
     get_artifactory_secret,
     get_test_artifact_server_url,
 )
-from utilities.constants import (
-    CONTAINER_DISK_IMAGE_PATH_STR,
+from utilities.constants import Images
+from utilities.constants.images import (
     OS_FLAVOR_RHEL,
     OS_FLAVOR_WIN_CONTAINER_DISK,
-    TIMEOUT_15MIN,
-    Images,
 )
+from utilities.constants.os_matrix import CONTAINER_DISK_IMAGE_PATH_STR
+from utilities.constants.timeouts import TIMEOUT_15MIN
 from utilities.storage import (
     create_dummy_first_consumer_pod,
     data_volume_template_with_source_ref_dict,

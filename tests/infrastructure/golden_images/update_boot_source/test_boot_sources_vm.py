@@ -4,7 +4,7 @@ import pytest
 from ocp_resources.data_source import DataSource
 
 from tests.infrastructure.golden_images.utils import assert_os_version_mismatch_in_vm
-from utilities.constants import TIMEOUT_5SEC
+from utilities.constants.timeouts import TIMEOUT_5SEC
 from utilities.infra import validate_os_info_vmi_vs_linux_os
 from utilities.storage import data_volume_template_with_source_ref_dict
 from utilities.virt import VirtualMachineForTests, running_vm

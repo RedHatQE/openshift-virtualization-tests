@@ -6,7 +6,8 @@ from ocp_resources.data_source import DataSource
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.storage_class import StorageClass
 
-from utilities.constants import OS_FLAVOR_FEDORA, TIMEOUT_30SEC
+from utilities.constants.images import OS_FLAVOR_FEDORA
+from utilities.constants.timeouts import TIMEOUT_30SEC
 
 LOGGER = logging.getLogger(__name__)
 

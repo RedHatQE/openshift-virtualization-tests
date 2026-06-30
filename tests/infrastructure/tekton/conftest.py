@@ -24,14 +24,16 @@ from tests.infrastructure.tekton.utils import (
     yaml_files_in_dir,
 )
 from utilities.artifactory import get_artifactory_config_map, get_artifactory_secret
-from utilities.constants import (
-    OS_FLAVOR_FEDORA,
+from utilities.constants.images import OS_FLAVOR_FEDORA
+from utilities.constants.tekton import (
     TEKTON_AVAILABLE_PIPELINEREF,
     TEKTON_AVAILABLE_TASKS,
+    WINDOWS_EFI_INSTALLER_STR,
+)
+from utilities.constants.timeouts import (
     TIMEOUT_2MIN,
     TIMEOUT_10MIN,
     TIMEOUT_30SEC,
-    WINDOWS_EFI_INSTALLER_STR,
 )
 from utilities.data_utils import base64_encode_str
 from utilities.infra import (

@@ -9,7 +9,7 @@ from ocp_resources.machine_health_check import MachineHealthCheck
 from ocp_resources.template import Template
 from pytest_testconfig import config as py_config
 
-from utilities.constants import TIMEOUT_20MIN
+from utilities.constants.timeouts import TIMEOUT_20MIN
 from utilities.infra import ExecCommandOnPod, wait_for_node_status
 from utilities.virt import (
     VirtualMachineForTests,

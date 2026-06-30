@@ -5,7 +5,10 @@ from tests.infrastructure.instance_types.utils import (
     assert_kernel_lockdown_mode,
     assert_secure_boot_dmesg,
 )
-from utilities.constants import PREFERENCE_STR, U1_MEDIUM_STR
+from utilities.constants.instance_types import (
+    PREFERENCE_STR,
+    U1_MEDIUM_STR,
+)
 from utilities.infra import assert_secure_boot_mokutil_status
 from utilities.virt import (
     assert_linux_efi,

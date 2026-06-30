@@ -12,13 +12,13 @@ from ocp_resources.volume_snapshot import VolumeSnapshot
 from packaging.version import Version
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from utilities.constants import (
-    DEFAULT_FEDORA_REGISTRY_URL,
+from utilities.constants.images import DEFAULT_FEDORA_REGISTRY_URL
+from utilities.constants.storage import WILDCARD_CRON_EXPRESSION
+from utilities.constants.timeouts import (
     TIMEOUT_2MIN,
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
     TIMEOUT_30SEC,
-    WILDCARD_CRON_EXPRESSION,
 )
 from utilities.infra import generate_openshift_pull_secret_file
 from utilities.ssp import (
