@@ -17,7 +17,9 @@ from ocp_resources.route_advertisements import RouteAdvertisements
 from timeout_sampler import retry
 
 from libs.net.vmspec import IpNotFound
-from utilities.constants import DEFAULT_RESOURCE_CONDITIONS, NET_UTIL_CONTAINER_IMAGE, NamespacesNames
+from utilities.constants.hco import DEFAULT_RESOURCE_CONDITIONS
+from utilities.constants.namespaces import NamespacesNames
+from utilities.constants.networking import NET_UTIL_CONTAINER_IMAGE
 from utilities.infra import get_resources_by_name_prefix, wait_for_consistent_resource_conditions
 
 _EXTERNAL_FRR_IMAGE: Final[str] = "quay.io/frrouting/frr:10.6.0"

@@ -1,7 +1,7 @@
 import pytest
 
 from tests.network.connectivity.utils import create_running_vm, secondary_interfaces_cloud_init_data
-from utilities.constants import LINUX_BRIDGE, OVS_BRIDGE
+from utilities.constants.networking import LINUX_BRIDGE, OVS_BRIDGE
 from utilities.data_utils import name_prefix
 from utilities.infra import get_node_selector_dict
 from utilities.network import compose_cloud_init_data_dict, network_device, network_nad
@@ -13,18 +13,18 @@ def bridge_device_name(index_number):
 
 
 @pytest.fixture(scope="module")
-def vlan_id_1(vlan_index_number):
-    return next(vlan_index_number)
+def vlan_id_1(cluster_vlan_ids):
+    return next(cluster_vlan_ids)
 
 
 @pytest.fixture(scope="module")
-def vlan_id_2(vlan_index_number):
-    return next(vlan_index_number)
+def vlan_id_2(cluster_vlan_ids):
+    return next(cluster_vlan_ids)
 
 
 @pytest.fixture(scope="module")
-def vlan_id_3(vlan_index_number):
-    return next(vlan_index_number)
+def vlan_id_3(cluster_vlan_ids):
+    return next(cluster_vlan_ids)
 
 
 @pytest.fixture(scope="class")

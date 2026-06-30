@@ -2,7 +2,8 @@ import pytest
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.virtual_machine import VirtualMachine
 
-from utilities.constants import ARM_64, HCO_DEFAULT_CPU_MODEL_KEY
+from utilities.constants.architecture import ARM_64
+from utilities.constants.hco import HCO_DEFAULT_CPU_MODEL_KEY
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 

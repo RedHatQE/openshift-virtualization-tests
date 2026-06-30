@@ -8,13 +8,9 @@ from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from libs.net.vmspec import lookup_iface_status_ip
-from utilities.constants import (
-    IPV4_STR,
-    OS_FLAVOR_FEDORA,
-    TIMEOUT_1MIN,
-    TIMEOUT_2MIN,
-    TIMEOUT_10SEC,
-)
+from utilities.constants.images import OS_FLAVOR_FEDORA
+from utilities.constants.networking import IPV4_STR
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_2MIN, TIMEOUT_10SEC
 from utilities.network import (
     get_ip_from_vm_or_virt_handler_pod,
     ping,
@@ -255,11 +251,6 @@ def assert_nncp_successfully_configured(nncp):
     except TimeoutExpiredError:
         LOGGER.error(f"{nncp.name} is not {successfully_configured}, but rather {nncp.status}.")
         raise
-
-
-def get_vlan_index_number(vlans_list):
-    yield from vlans_list
-    raise ValueError(f"vlans list is exhausted. Current list size is {len(vlans_list)} and all vlans are in use.")
 
 
 def get_destination_ip_address(destination_vm):

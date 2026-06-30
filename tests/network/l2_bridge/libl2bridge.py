@@ -24,16 +24,10 @@ from tests.network.libs.cloudinit import primary_iface_cloud_init
 from tests.network.libs.connectivity import ARP_ISOLATION_SYSCTL_CMD
 from tests.network.utils import update_cloud_init_extra_user_data
 from utilities import console
-from utilities.constants import (
-    KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
-    LINUX_BRIDGE,
-    NODE_ROLE_KUBERNETES_IO,
-    NODE_TYPE_WORKER_LABEL,
-    SRIOV,
-    TIMEOUT_1MIN,
-    TIMEOUT_2MIN,
-    TIMEOUT_5SEC,
-)
+from utilities.constants.cluster import NODE_TYPE_WORKER_LABEL
+from utilities.constants.components import KUBEMACPOOL_MAC_CONTROLLER_MANAGER
+from utilities.constants.networking import LINUX_BRIDGE, SRIOV
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_2MIN, TIMEOUT_5SEC
 from utilities.infra import get_pod_by_name_prefix
 from utilities.network import (
     cloud_init_network_data,
@@ -44,8 +38,6 @@ from utilities.network import (
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, prepare_cloud_init_user_data
 
 LOGGER = logging.getLogger(__name__)
-
-RHCOS9_WORKER_LABEL: Final[str] = f"{NODE_ROLE_KUBERNETES_IO}/worker-rhcos9"
 
 LINUX_BRIDGE_IFACE_NAME_1: Final[str] = "linux-bridge-1"
 LINUX_BRIDGE_IFACE_NAME_2: Final[str] = "linux-bridge-2"

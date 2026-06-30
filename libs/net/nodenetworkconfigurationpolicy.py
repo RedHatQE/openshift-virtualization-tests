@@ -12,7 +12,7 @@ from ocp_resources.node_network_configuration_policy_latest import NodeNetworkCo
 from ocp_resources.resource import Resource, ResourceEditor
 from timeout_sampler import retry
 
-from tests.network.libs.apimachinery import dict_normalization_for_dataclass
+from libs.net.apimachinery import dict_normalization_for_dataclass
 
 WAIT_FOR_STATUS_TIMEOUT_SEC = 120
 WAIT_FOR_STATUS_INTERVAL_SEC = 5

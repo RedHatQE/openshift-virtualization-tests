@@ -35,7 +35,9 @@ from tests.network.utils import (
     ServiceMeshDeployments,
     ServiceMeshDeploymentService,
 )
-from utilities.constants import OS_FLAVOR_FEDORA, PORT_80, TIMEOUT_4MIN, TIMEOUT_10SEC
+from utilities.constants.images import OS_FLAVOR_FEDORA
+from utilities.constants.networking import PORT_80
+from utilities.constants.timeouts import TIMEOUT_4MIN, TIMEOUT_10SEC
 from utilities.infra import add_scc_to_service_account, create_ns, label_project, unique_name
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, vm_console_run_commands
 

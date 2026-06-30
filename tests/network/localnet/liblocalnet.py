@@ -7,6 +7,7 @@ from typing import Final
 
 from kubernetes.dynamic import DynamicClient
 
+from libs.net import nodenetworkconfigurationpolicy as libnncp
 from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
 from libs.vm.affinity import new_pod_anti_affinity
 from libs.vm.factory import base_vmspec, fedora_vm
@@ -14,9 +15,9 @@ from libs.vm.spec import Affinity, CloudInitNoCloud, Devices, Interface, Metadat
 from libs.vm.vm import BaseVirtualMachine, add_volume_disk, cloudinitdisk_storage
 from tests.network.libs import cloudinit
 from tests.network.libs import cluster_user_defined_network as libcudn
-from tests.network.libs import nodenetworkconfigurationpolicy as libnncp
 from tests.network.libs.label_selector import LabelSelector
-from utilities.constants import OVS_BRIDGE, WORKER_NODE_LABEL_KEY
+from utilities.constants.cluster import WORKER_NODE_LABEL_KEY
+from utilities.constants.networking import OVS_BRIDGE
 
 LOCALNET_BR_EX_NETWORK = "localnet-br-ex-network"
 LOCALNET_BR_EX_NETWORK_NO_VLAN = "localnet-br-ex-network-no-vlan"

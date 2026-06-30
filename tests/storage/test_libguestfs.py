@@ -1,3 +1,9 @@
+"""
+Test virtctl guestfs command with specific user.
+
+Jira: https://redhat.atlassian.net/browse/CNV-7487 # <skip-jira-utils-check>
+"""
+
 from subprocess import check_output
 
 import pexpect
@@ -5,7 +11,8 @@ import pytest
 from ocp_resources.pod import Pod
 from pytest_testconfig import config as py_config
 
-from utilities.constants import TIMEOUT_1MIN, UNPRIVILEGED_PASSWORD, UNPRIVILEGED_USER
+from utilities.constants.pytest import UNPRIVILEGED_PASSWORD, UNPRIVILEGED_USER
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_10MIN
 from utilities.infra import login_with_user_password
 from utilities.storage import create_dv, get_dv_size_from_datasource
 
@@ -23,10 +30,11 @@ def virtctl_libguestfs_by_user(
         {fs_group_flag}"
     )
     libguestfs_pod = Pod(
+        client=unprivileged_client,
         name=f"libguestfs-tools-{dv_created_by_specific_user.name}",
         namespace=dv_created_by_specific_user.namespace,
     )
-    libguestfs_pod.wait_for_status(status=Pod.Status.RUNNING, timeout=TIMEOUT_1MIN)
+    libguestfs_pod.wait_for_status(status=Pod.Status.RUNNING, timeout=TIMEOUT_10MIN)
     guestfs_proc.send("\n\n")
     guestfs_proc.expect(r"\$", timeout=TIMEOUT_1MIN)
     yield guestfs_proc

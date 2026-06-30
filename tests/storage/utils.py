@@ -32,16 +32,10 @@ from utilities.artifactory import (
     get_artifactory_secret,
     get_http_image_url,
 )
-from utilities.constants import (
-    CDI_UPLOADPROXY,
-    LS_COMMAND,
-    TIMEOUT_2MIN,
-    TIMEOUT_5MIN,
-    TIMEOUT_5SEC,
-    TIMEOUT_20SEC,
-    TIMEOUT_30MIN,
-    Images,
-)
+from utilities.constants import Images
+from utilities.constants.cluster import LS_COMMAND
+from utilities.constants.components import CDI_UPLOADPROXY
+from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5MIN, TIMEOUT_5SEC, TIMEOUT_20SEC, TIMEOUT_30MIN
 from utilities.exceptions import DataVolumeConditionMessageNotFoundError
 from utilities.infra import (
     get_pod_by_name_prefix,

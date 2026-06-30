@@ -17,7 +17,8 @@ from tests.os_params import (
     WINDOWS_LATEST_LABELS,
 )
 from tests.virt.utils import running_sleep_in_linux
-from utilities.constants import OS_PROC_NAME, TIMEOUT_30SEC
+from utilities.constants.timeouts import TIMEOUT_30SEC
+from utilities.constants.virt import OS_PROC_NAME
 from utilities.virt import (
     VirtualMachineForTests,
     check_migration_process_after_node_drain,

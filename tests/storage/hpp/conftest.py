@@ -13,7 +13,7 @@ from tests.storage.hpp.utils import (
     wait_for_desired_hpp_pods_running,
 )
 from tests.utils import create_cirros_vm
-from utilities.constants import TIMEOUT_5MIN
+from utilities.constants.timeouts import TIMEOUT_5MIN
 from utilities.hco import add_labels_to_nodes
 from utilities.infra import (
     get_node_selector_dict,

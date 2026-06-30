@@ -26,7 +26,11 @@ from tests.virt.utils import (
     get_boot_time_for_multiple_vms,
     get_non_terminated_pods,
 )
-from utilities.constants import TIMEOUT_5MIN, TIMEOUT_5SEC, NamespacesNames
+from utilities.constants.namespaces import NamespacesNames
+from utilities.constants.timeouts import (
+    TIMEOUT_5MIN,
+    TIMEOUT_5SEC,
+)
 from utilities.infra import wait_for_pods_deletion
 from utilities.virt import wait_for_migration_finished
 
