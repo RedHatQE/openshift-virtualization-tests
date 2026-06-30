@@ -14,7 +14,12 @@ Preconditions:
 import pytest
 
 from libs.net.ip import filter_link_local_addresses
-from libs.net.vmspec import lookup_iface_status, update_nad_references
+from libs.net.vmspec import (
+    lookup_iface_status,
+    patch_nad_references,
+    update_nad_references,
+    wait_for_vmi_condition_status,
+)
 from tests.network.l2_bridge.libl2bridge import LINUX_BRIDGE_IFACE_NAME_1, LINUX_BRIDGE_IFACE_NAME_2
 from tests.network.l2_bridge.nad_ref_change.lib_helpers import (
     GUEST_IFACE_1,
@@ -211,8 +216,16 @@ class TestRunningVMLinuxBridgeVlanChange:
                 )
 
 
+@pytest.mark.jira("CNV-87878", run=False)
+@pytest.mark.usefixtures("non_migratable_baseline_connectivity")
 @pytest.mark.polarion("CNV-15947")
-def test_non_migratable_vm_nad_change_not_applied():
+def test_non_migratable_vm_nad_change_not_applied(
+    subtests,
+    non_migratable_under_test_vm,
+    ref_vm,
+    bridge_nad_a,
+    bridge_nad_b,
+):
     """
     [NEGATIVE] Test that changing the NAD reference on a non-migratable VM does not
     silently succeed — the VM remains connected to the original network.
@@ -232,6 +245,29 @@ def test_non_migratable_vm_nad_change_not_applied():
         - Non-migratable under-test VM retains connectivity to the reference VM on NAD-VLAN-A
         - Non-migratable under-test VM has no connectivity to the reference VM on NAD-VLAN-B
     """
-
-
-test_non_migratable_vm_nad_change_not_applied.__test__ = False
+    patch_nad_references(
+        vm=non_migratable_under_test_vm, nad_name_by_net={LINUX_BRIDGE_IFACE_NAME_1: bridge_nad_b.name}
+    )
+    wait_for_vmi_condition_status(vm=non_migratable_under_test_vm, condition="RestartRequired")
+    for server_ip in filter_link_local_addresses(
+        ip_addresses=lookup_iface_status(vm=ref_vm, iface_name=LINUX_BRIDGE_IFACE_NAME_1).ipAddresses
+    ):
+        with subtests.test(msg=f"IPv{server_ip.version} on {bridge_nad_a.name}"):
+            assert_connectivity(
+                client_vm=non_migratable_under_test_vm,
+                server_vm=ref_vm,
+                server_ip=str(server_ip),
+                server_bind_dev=GUEST_IFACE_1,
+                client_bind_dev=GUEST_IFACE_1,
+            )
+    for server_ip in filter_link_local_addresses(
+        ip_addresses=lookup_iface_status(vm=ref_vm, iface_name=LINUX_BRIDGE_IFACE_NAME_2).ipAddresses
+    ):
+        with subtests.test(msg=f"IPv{server_ip.version} on {bridge_nad_b.name}"):
+            assert_no_connectivity(
+                client_vm=non_migratable_under_test_vm,
+                server_vm=ref_vm,
+                server_ip=str(server_ip),
+                server_bind_dev=GUEST_IFACE_2,
+                client_bind_dev=GUEST_IFACE_1,
+            )
