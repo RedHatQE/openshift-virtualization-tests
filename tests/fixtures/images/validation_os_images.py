@@ -57,30 +57,45 @@ def validation_os_images_role_binding(admin_client, validation_os_images_namespa
 def windows_validation_os_images_data_volume_scope_session(
     admin_client,
     validation_os_images_role_binding,
-    validation_os_images_namespace_artifactory_secret_and_configmap,
 ):
     """Fixture that imports a Windows image into the validation os images namespace. Yields existing DataVolume if it was already created"""
 
     win_dv = DataVolume(
         name=WIN_2K22,
         namespace=validation_os_images_role_binding.namespace,
-        storage_class=py_config["default_storage_class"],
-        source=REGISTRY_STR,
-        url=f"{get_test_artifact_server_url(schema='registry')}/{get_windows_container_disk_path(os_value=WIN_2K22)}",
-        size=Images.Windows.CONTAINER_DISK_DV_SIZE,
-        client=admin_client,
-        api_name="storage",
-        secret=validation_os_images_namespace_artifactory_secret_and_configmap["secret"],
-        cert_configmap=validation_os_images_namespace_artifactory_secret_and_configmap["config_map"].name,
-        annotations=BIND_IMMEDIATE_ANNOTATION,
+        client=validation_os_images_role_binding.client,
     )
 
     if win_dv.exists:
         yield win_dv
     else:
-        with win_dv as wdv:
-            wdv.wait_for_dv_success(timeout=TIMEOUT_50MIN)
-            yield wdv
+        artifactory_secret = get_artifactory_secret(
+            namespace=validation_os_images_role_binding.namespace, client=validation_os_images_role_binding.client
+        )
+        artifactory_config_map = get_artifactory_config_map(
+            namespace=validation_os_images_role_binding.namespace, client=validation_os_images_role_binding.client
+        )
+        try:
+            with DataVolume(
+                name=WIN_2K22,
+                namespace=validation_os_images_role_binding.namespace,
+                storage_class=py_config["default_storage_class"],
+                source=REGISTRY_STR,
+                url=f"{get_test_artifact_server_url(schema='registry')}/{get_windows_container_disk_path(os_value=WIN_2K22)}",
+                size=Images.Windows.CONTAINER_DISK_DV_SIZE,
+                client=admin_client,
+                api_name="storage",
+                secret=artifactory_secret,
+                cert_configmap=artifactory_config_map.name,
+                annotations=BIND_IMMEDIATE_ANNOTATION,
+            ) as wdv:
+                wdv.wait_for_dv_success(timeout=TIMEOUT_50MIN)
+                yield wdv
+        finally:
+            cleanup_artifactory_secret_and_config_map(
+                artifactory_secret=artifactory_secret,
+                artifactory_config_map=artifactory_config_map,
+            )
 
 
 @pytest.fixture(scope="session")
@@ -108,20 +123,3 @@ def windows_validation_os_images_data_source_scope_session(
                 timeout=TIMEOUT_40MIN,
             )
             yield win_ds
-
-
-@pytest.fixture(scope="session")
-def validation_os_images_namespace_artifactory_secret_and_configmap(validation_os_images_role_binding):
-    artifactory_secret = get_artifactory_secret(
-        namespace=validation_os_images_role_binding.namespace, client=validation_os_images_role_binding.client
-    )
-    artifactory_config_map = get_artifactory_config_map(
-        namespace=validation_os_images_role_binding.namespace, client=validation_os_images_role_binding.client
-    )
-    try:
-        yield {"secret": artifactory_secret, "config_map": artifactory_config_map}
-    finally:
-        cleanup_artifactory_secret_and_config_map(
-            artifactory_secret=artifactory_secret,
-            artifactory_config_map=artifactory_config_map,
-        )
