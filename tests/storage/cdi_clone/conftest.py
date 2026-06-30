@@ -3,8 +3,9 @@ from ocp_resources.datavolume import DataVolume
 
 from tests.storage.cdi_clone.constants import WINDOWS_CLONE_TIMEOUT
 from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE
-from utilities.constants import WIN_2K22, Images
+from utilities.constants import Images
 from utilities.constants.storage import REGISTRY_STR
+from utilities.constants.virt import WIN_2K22
 from utilities.storage import create_dv, data_volume
 
 
@@ -70,7 +71,6 @@ def cloned_windows_dv_multi_storage_scope_class(
     storage_class_name_scope_class,
     windows_validation_os_images_data_source_scope_session,
 ):
-    """Fixture that creates a cloned DataVolume from a Windows DataSource."""
     with create_dv(
         client=unprivileged_client,
         dv_name=f"dv-target-{WIN_2K22}-clone",

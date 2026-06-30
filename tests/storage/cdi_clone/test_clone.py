@@ -11,9 +11,10 @@ from tests.storage.utils import (
     assert_use_populator,
 )
 from tests.utils import create_windows2022_vm_using_existing_dv
-from utilities.constants import WIN_2K22, Images
+from utilities.constants import Images
 from utilities.constants.images import OS_FLAVOR_FEDORA, OS_FLAVOR_WINDOWS
 from utilities.constants.timeouts import TIMEOUT_1MIN
+from utilities.constants.virt import WIN_2K22
 from utilities.ssp import validate_os_info_vmi_vs_windows_os
 from utilities.storage import (
     check_disk_count_in_vm,
