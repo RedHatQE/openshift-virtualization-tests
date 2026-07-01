@@ -1,5 +1,13 @@
 """Unit tests for constants package."""
 
+from utilities.constants.aaq import (
+    AAQ_NAMESPACE_LABEL,
+    AAQ_VIRTUAL_RESOURCES,
+    AAQ_VMI_POD_USAGE,
+    ARQ_QUOTA_HARD_SPEC,
+    QUOTA_FOR_ONE_VMI,
+    QUOTA_FOR_POD,
+)
 from utilities.constants.architecture import (
     AMD_64,
     ARM_64,
@@ -42,10 +50,21 @@ from utilities.constants.networking import (
     LINUX_BRIDGE,
     OVS_BRIDGE,
 )
+from utilities.constants.oadp import (
+    BACKUP_STORAGE_LOCATION,
+    FILE_NAME_FOR_BACKUP,
+    TEXT_TO_TEST,
+)
 from utilities.constants.os_matrix import (
     DV_SIZE_STR,
     IMAGE_NAME_STR,
     OS_VERSION_STR,
+)
+from utilities.constants.tekton import (
+    TEKTON_AVAILABLE_PIPELINEREF,
+    TEKTON_AVAILABLE_TASKS,
+    WINDOWS_CUSTOMIZE_STR,
+    WINDOWS_EFI_INSTALLER_STR,
 )
 from utilities.constants.timeouts import (
     TCP_TIMEOUT_30SEC,
@@ -177,3 +196,37 @@ class TestConstants:
         assert IMAGE_NAME_STR == "image_name"
         assert OS_VERSION_STR == "os_version"
         assert DV_SIZE_STR == "dv_size"
+
+    def test_aaq_constants(self):
+        """Test Application-Aware Quota constants are defined."""
+        assert AAQ_VIRTUAL_RESOURCES == "VirtualResources"
+        assert AAQ_VMI_POD_USAGE == "VmiPodUsage"
+        assert AAQ_NAMESPACE_LABEL == {"application-aware-quota/enable-gating": ""}
+        assert QUOTA_FOR_POD["pods"] == "1"
+        assert QUOTA_FOR_ONE_VMI["requests.instances/vmi"] == "1"
+        assert ARQ_QUOTA_HARD_SPEC == {**QUOTA_FOR_POD, **QUOTA_FOR_ONE_VMI}
+
+    def test_oadp_constants(self):
+        """Test OADP backup test constants are defined."""
+        assert FILE_NAME_FOR_BACKUP == "file_before_backup.txt"
+        assert TEXT_TO_TEST == "text"
+        assert BACKUP_STORAGE_LOCATION == "dpa-1"
+
+    def test_tekton_constants(self):
+        """Test Tekton pipeline and task name constants are defined."""
+        assert WINDOWS_EFI_INSTALLER_STR == "windows-efi-installer"
+        assert WINDOWS_CUSTOMIZE_STR == "windows-customize"
+        assert TEKTON_AVAILABLE_PIPELINEREF == [
+            WINDOWS_EFI_INSTALLER_STR,
+            WINDOWS_CUSTOMIZE_STR,
+        ]
+        assert TEKTON_AVAILABLE_TASKS == [
+            "modify-data-object",
+            "create-vm-from-manifest",
+            "wait-for-vmi-status",
+            "cleanup-vm",
+            "disk-virt-sysprep",
+            "disk-virt-customize",
+            "modify-windows-iso-file",
+            "disk-uploader",
+        ]
