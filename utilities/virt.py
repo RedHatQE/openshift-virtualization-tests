@@ -45,7 +45,7 @@ from paramiko import ProxyCommandFailure
 from pyhelper_utils.shell import run_command, run_ssh_commands
 from pytest_testconfig import config as py_config
 from rrmngmnt import Host, ssh, user
-from timeout_sampler import TimeoutExpiredError, TimeoutSampler
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler, TimeoutWatch
 
 import utilities.cpu
 import utilities.data_utils
@@ -1669,6 +1669,7 @@ def wait_for_ssh_connectivity(
     vm: VirtualMachineForTests, timeout: int = TIMEOUT_2MIN, tcp_timeout: int = TIMEOUT_1MIN
 ) -> None:
     LOGGER.info(f"Wait for {vm.name} SSH connectivity.")
+    timeout_watch = TimeoutWatch(timeout=timeout)
 
     for sample in TimeoutSampler(
         wait_timeout=timeout,
@@ -1678,6 +1679,10 @@ def wait_for_ssh_connectivity(
         tcp_timeout=tcp_timeout,
     ):
         if sample:
+            LOGGER.info(
+                f"SSH connectivity to {vm.name} established after "
+                f"{timeout - timeout_watch.remaining_time():.1f}s."
+            )
             return
 
 
