@@ -8,9 +8,10 @@
 # All other constants must be imported from their submodule directly, e.g.:
 #   from utilities.constants.cluster import KUBERNETES_ARCH_LABEL
 #   from utilities.constants.timeouts import TIMEOUT_5MIN
+#   from utilities.constants.images import ArchImages
 from utilities.architecture import get_cluster_architecture as _get_cluster_architecture
-from utilities.constants.images import ArchImages
+from utilities.constants.images import ArchImages as _ArchImages
 
-__all__ = ["ArchImages", "Images"]
+__all__ = ["Images"]
 
-Images = getattr(ArchImages, next(iter(_get_cluster_architecture())).upper())
+Images = getattr(_ArchImages, next(iter(_get_cluster_architecture())).upper())

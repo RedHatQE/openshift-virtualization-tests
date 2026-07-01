@@ -34,7 +34,7 @@ from utilities.constants import Images
 ```
 
 - Do **not** use `from utilities.constants import X` for any name other than `Images`.
-- Do **not** add re-exports to `utilities/constants/__init__.py` (except `Images` and `ArchImages`).
+- Do **not** add re-exports to `utilities/constants/__init__.py` (except `Images`).
 
 ### Adding a new constant
 

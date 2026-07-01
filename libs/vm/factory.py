@@ -5,9 +5,9 @@ from pytest_testconfig import config as py_config
 
 from libs.vm.spec import CPU, Devices, Domain, Memory, Metadata, Template, VMISpec, VMSpec
 from libs.vm.vm import BaseVirtualMachine, container_image, containerdisk_storage
-from utilities import constants
+from utilities.constants import Images
 from utilities.constants.architecture import MULTIARCH
-from utilities.constants.images import OS_FLAVOR_FEDORA
+from utilities.constants.images import OS_FLAVOR_FEDORA, ArchImages
 
 
 def fedora_vm(
@@ -33,9 +33,9 @@ def fedora_vm(
 
 def fedora_image(arch: str | None = None) -> str:
     if arch:
-        images = getattr(constants.ArchImages, arch.upper())
+        images = getattr(ArchImages, arch.upper())
     else:
-        images = constants.Images
+        images = Images
 
     return container_image(base_image=images.Fedora.FEDORA_CONTAINER_IMAGE, arch=arch)
 
