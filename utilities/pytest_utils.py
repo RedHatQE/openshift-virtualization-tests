@@ -650,6 +650,28 @@ def update_cpu_arch_related_config(cpu_arch_option: str) -> None:
                 generate_instance_type_matrix_dicts(os_dict=py_config)
 
 
+def filter_multiarch_tests(items: list[pytest.Item], config: pytest.Config) -> list[pytest.Item]:
+    """Deselect multiarch-marked tests on homogeneous clusters.
+
+    On heterogeneous clusters (cluster_type=MULTIARCH), all tests pass through unchanged.
+    On homogeneous clusters, tests marked with 'multiarch' are deselected and reported
+    via pytest_deselected so they appear in the session summary.
+
+    Args:
+        items: Collected test items.
+        config: Pytest config object, used to report deselected items.
+
+    Returns:
+        Filtered list of test items with multiarch tests removed on homogeneous clusters.
+    """
+    if py_config.get("cluster_type") == MULTIARCH:
+        return items
+    discard_tests, items_to_return = remove_tests_from_list(items=items, filter_str="multiarch")
+    if discard_tests:
+        config.hook.pytest_deselected(items=discard_tests)
+    return items_to_return
+
+
 def assert_incremental_classes_fully_collected(items: list[pytest.Item]) -> None:
     """Verify that all tests defined in incremental classes were collected.
 
