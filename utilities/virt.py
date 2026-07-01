@@ -1680,8 +1680,7 @@ def wait_for_ssh_connectivity(
     ):
         if sample:
             LOGGER.info(
-                f"SSH connectivity to {vm.name} established after "
-                f"{timeout - timeout_watch.remaining_time():.1f}s."
+                f"SSH connectivity to {vm.name} established after {timeout - timeout_watch.remaining_time():.1f}s."
             )
             return
 
