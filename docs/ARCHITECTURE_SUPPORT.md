@@ -28,6 +28,9 @@ pytest -m s390x ...
 Note: to run on the default architecture `amd64`, there's no need to set any architecture-specific markers.
 
 ## Adding new images or new architecture support
+
+See [Code Organization — Constants](CODE_ORGANIZATION.md#constants-utilitiesconstants) for import rules and the constants module map.
+
 Images for different architectures are managed under [images.py](../utilities/constants/images.py) — `ArchImages`.
 The data structures are defined under [images.py](../libs/infra/images.py).
 
