@@ -1924,6 +1924,7 @@ def migrate_vm_and_verify(
     timeout: int = TIMEOUT_12MIN,
     wait_for_interfaces: bool = True,
     check_ssh_connectivity: bool = False,
+    ssh_timeout: int = TIMEOUT_3MIN,
     wait_for_migration_success: bool = True,
 ) -> VirtualMachineInstanceMigration | None:
     """Migrate VM and verify migration success.
@@ -1936,6 +1937,7 @@ def migrate_vm_and_verify(
         timeout (int, default=12 minutes): Maximum time to wait for the migration to finish.
         wait_for_interfaces (bool, default=True): Wait for VM network interfaces after migration completes.
         check_ssh_connectivity (bool, default=False): Verify SSH connectivity to the VM after migration completes.
+        ssh_timeout (int, default=3 minutes): Maximum time to wait for SSH connectivity after migration completes.
         wait_for_migration_success (bool, default=True):
             True = Full teardown will be applied.
             False = No teardown (responsibility on the programmer), and no
@@ -1963,6 +1965,7 @@ def migrate_vm_and_verify(
         node_before=node_before,
         wait_for_interfaces=wait_for_interfaces,
         check_ssh_connectivity=check_ssh_connectivity,
+        ssh_timeout=ssh_timeout,
     )
     return None
 
@@ -2031,6 +2034,7 @@ def verify_vm_migrated(
     node_before,
     wait_for_interfaces=True,
     check_ssh_connectivity=False,
+    ssh_timeout: int = TIMEOUT_3MIN,
 ):
     vmi_name = vm.vmi.name
     vmi_node_name = vm.vmi.node.name
@@ -2044,7 +2048,7 @@ def verify_vm_migrated(
             wait_for_vm_interfaces(vmi=vm.vmi)
 
         if check_ssh_connectivity:
-            wait_for_ssh_connectivity(vm=vm)
+            wait_for_ssh_connectivity(vm=vm, timeout=ssh_timeout)
     except TimeoutExpiredError:
         collect_vnc_screenshot_for_vms(vm=vm)
         raise
