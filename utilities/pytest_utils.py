@@ -634,10 +634,9 @@ def update_cpu_arch_related_config(cpu_arch_option: str) -> None:
 
         # TODO: remove this when utilities modules are refactored
         import utilities.constants as constants_module  # noqa: PLC0415
+        from utilities.constants.images import ArchImages  # noqa: PLC0415
 
-        # Due to the way the constants module is structured, there's no way to set correctly Images value there
-        # This is due to change when constants (and other utilities modules) are refactored
-        constants_module.Images = getattr(constants_module.ArchImages, arch.upper())
+        constants_module.Images = getattr(ArchImages, arch.upper())
 
         if py_config["cluster_type"] == MULTIARCH:
             generate_common_template_matrix_dicts(os_dict=py_config["os_matrix"][arch], cpu_arch=arch)

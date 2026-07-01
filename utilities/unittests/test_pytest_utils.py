@@ -1968,7 +1968,7 @@ class TestUpdateCpuArchRelatedConfig:
         mock_py_config = {"cluster_type": "amd64"}
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
-            patch("utilities.constants.ArchImages") as mock_arch_images,
+            patch("utilities.constants.images.ArchImages") as mock_arch_images,
             patch("utilities.constants.Images"),
         ):
             mock_arch_images.AMD64 = MagicMock()
@@ -1996,7 +1996,7 @@ class TestUpdateCpuArchRelatedConfig:
         mock_py_config = {"cluster_type": "arm64"}
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
-            patch("utilities.constants.ArchImages") as mock_arch_images,
+            patch("utilities.constants.images.ArchImages") as mock_arch_images,
             patch("utilities.constants.Images"),
         ):
             mock_arch_images.ARM64 = MagicMock()
@@ -2030,7 +2030,7 @@ class TestUpdateCpuArchRelatedConfig:
         }
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
-            patch("utilities.constants.ArchImages") as mock_arch_images,
+            patch("utilities.constants.images.ArchImages") as mock_arch_images,
             patch("utilities.constants.Images"),
         ):
             mock_arch_images.AMD64 = MagicMock()
@@ -2058,7 +2058,7 @@ class TestUpdateCpuArchRelatedConfig:
         mock_py_config = {"cluster_type": "s390x"}
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
-            patch("utilities.constants.ArchImages") as mock_arch_images,
+            patch("utilities.constants.images.ArchImages") as mock_arch_images,
             patch("utilities.constants.Images"),
         ):
             mock_s390x_images = MagicMock()
@@ -2088,7 +2088,7 @@ class TestUpdateCpuArchRelatedConfig:
         mock_py_config = {"cluster_type": "amd64"}
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
-            patch("utilities.constants.ArchImages") as mock_arch_images,
+            patch("utilities.constants.images.ArchImages") as mock_arch_images,
             patch("utilities.constants.Images"),
         ):
             mock_arm64_images = MagicMock()
@@ -2116,7 +2116,7 @@ class TestUpdateCpuArchRelatedConfig:
         mock_py_config = {"cluster_type": "amd64", "rhel_os_list": ["rhel-9-6"]}
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
-            patch("utilities.constants.ArchImages") as mock_arch_images,
+            patch("utilities.constants.images.ArchImages") as mock_arch_images,
             patch("utilities.constants.Images"),
         ):
             mock_arch_images.AMD64 = MagicMock()
@@ -2143,7 +2143,7 @@ class TestUpdateCpuArchRelatedConfig:
         mock_py_config = {"cluster_type": "arm64", "rhel_os_list": ["rhel-9-6"]}
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
-            patch("utilities.constants.ArchImages") as mock_arch_images,
+            patch("utilities.constants.images.ArchImages") as mock_arch_images,
             patch("utilities.constants.Images"),
         ):
             mock_arch_images.ARM64 = MagicMock()
@@ -2198,7 +2198,7 @@ class TestUpdateCpuArchRelatedConfig:
         }
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
-            patch("utilities.constants.ArchImages") as mock_arch_images,
+            patch("utilities.constants.images.ArchImages") as mock_arch_images,
             patch("utilities.constants.Images"),
         ):
             mock_arch_images.ARM64 = MagicMock()
