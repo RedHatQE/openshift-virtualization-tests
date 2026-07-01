@@ -143,9 +143,7 @@ class BaseVirtualMachine(VirtualMachine):
         template_affinity = asdict(obj=affinity) if affinity else None
         patches = {self: {"spec": {"template": {"spec": {"affinity": template_affinity}}}}}
         ResourceEditor(patches=patches).update()
-        expected_affinity = (
-            asdict(obj=affinity, dict_factory=self._filter_out_none_values) if affinity else None
-        )
+        expected_affinity = asdict(obj=affinity, dict_factory=self._filter_out_none_values) if affinity else None
         self._expected_vmi_affinity(expected_affinity=expected_affinity)
 
     @retry(wait_timeout=10, sleep=1)
