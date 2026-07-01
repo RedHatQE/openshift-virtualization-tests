@@ -43,6 +43,7 @@ from utilities.infra import (
 from utilities.ssp import validate_os_info_vmi_vs_windows_os
 from utilities.storage import (
     PodWithPVC,
+    construct_datavolume_source_dict,
     create_dv,
     get_containers_for_pods_with_pvc,
 )
@@ -360,13 +361,15 @@ def create_windows19_vm(dv_name, namespace, client, vm_name, cpu_model, storage_
         name=dv_name,
         namespace=namespace,
         storage_class=storage_class,
-        source="http",
-        url=get_http_image_url(image_directory=Images.Windows.UEFI_WIN_DIR, image_name=Images.Windows.WIN2k19_IMG),
+        source_dict=construct_datavolume_source_dict(
+            source="http",
+            url=get_http_image_url(image_directory=Images.Windows.UEFI_WIN_DIR, image_name=Images.Windows.WIN2k19_IMG),
+            secret_name=artifactory_secret.name,
+            cert_configmap_name=artifactory_config_map.name,
+        ),
         size=Images.Windows.DEFAULT_DV_SIZE,
         client=client,
         api_name="storage",
-        secret=artifactory_secret,
-        cert_configmap=artifactory_config_map.name,
     )
     dv.to_dict()
     with VirtualMachineForTestsFromTemplate(

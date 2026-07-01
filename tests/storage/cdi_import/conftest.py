@@ -26,7 +26,7 @@ from utilities.constants.storage import REGISTRY_STR
 from utilities.constants.timeouts import TIMEOUT_1MIN
 from utilities.infra import NON_EXIST_URL
 from utilities.network import network_device, network_nad
-from utilities.storage import create_dv, sc_volume_binding_mode_is_wffc
+from utilities.storage import construct_datavolume_source_dict, create_dv, sc_volume_binding_mode_is_wffc
 from utilities.virt import VirtualMachineForTests
 
 LOGGER = logging.getLogger(__name__)
@@ -122,7 +122,7 @@ def created_blank_dv_list(unprivileged_client, namespace, storage_class_name_sco
         for dv_index in range(number_of_dvs):
             dv = DataVolume(
                 client=unprivileged_client,
-                source="blank",
+                source_dict=construct_datavolume_source_dict(source="blank"),
                 name=f"dv-{dv_index}",
                 namespace=namespace.name,
                 size=Images.Fedora.DEFAULT_DV_SIZE,
@@ -176,10 +176,9 @@ def dvs_and_vms_from_public_registry(unprivileged_client, namespace, storage_cla
         for name in ("dv1", "dv2", "dv3"):
             dv = DataVolume(
                 client=unprivileged_client,
-                source=REGISTRY_STR,
+                source_dict=construct_datavolume_source_dict(source=REGISTRY_STR, url=QUAY_FEDORA_CONTAINER_IMAGE),
                 name=f"import-public-registry-quay-{name}",
                 namespace=namespace.name,
-                url=QUAY_FEDORA_CONTAINER_IMAGE,
                 size=Images.Fedora.DEFAULT_DV_SIZE,
                 storage_class=storage_class_name_scope_function,
                 api_name="storage",

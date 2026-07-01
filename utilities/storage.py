@@ -616,12 +616,14 @@ def data_volume_template_dict(
     dv = DataVolume(
         name=target_dv_name,
         namespace=target_dv_namespace,
-        source="pvc",
+        source_dict=construct_datavolume_source_dict(
+            source="pvc",
+            source_pvc_name=source_dv.name,
+            source_pvc_namespace=source_dv.namespace,
+        ),
         storage_class=storage_class or source_dv_pvc_spec.storageClassName,
         volume_mode=volume_mode or source_dv_pvc_spec.volumeMode,
         size=size or source_dv.size,
-        source_pvc=source_dv.name,
-        source_namespace=source_dv.namespace,
         api_name=source_dv.api_name,
     )
     dv.to_dict()
