@@ -5,28 +5,35 @@ import bitmath
 import pytest
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
+from pytest_testconfig import config as py_config
 
 from tests.storage.memory_dump.utils import wait_for_memory_dump_status_completed
 from utilities.constants import Images
 from utilities.constants.timeouts import TIMEOUT_2MIN
 from utilities.storage import PodWithPVC, get_containers_for_pods_with_pvc, virtctl_memory_dump
-from utilities.virt import running_vm, vm_instance_from_template
 
 
 @pytest.fixture()
-def windows_vm_for_memory_dump(
-    request,
+def windows_vm_with_vtpm_for_memory_dump(
     unprivileged_client,
     namespace,
-    golden_image_data_source_scope_function,
+    modern_cpu_for_migration,
 ):
-    with vm_instance_from_template(
-        request=request,
-        unprivileged_client=unprivileged_client,
-        namespace=namespace,
-        data_source=golden_image_data_source_scope_function,
-    ) as vm:
-        running_vm(vm=vm)
+    with (
+        create_windows2022_dv_template_from_registry(
+            dv_name="windows-2022-dv",
+            namespace=namespace.name,
+            client=unprivileged_client,
+            storage_class=py_config["default_storage_class"],
+        ) as dv_template,
+        create_windows2022_vm_with_vtpm(
+            vm_name="windows-2022-vm",
+            namespace=namespace.name,
+            client=unprivileged_client,
+            dv_template=dv_template,
+            cpu_model=modern_cpu_for_migration,
+        ) as vm,
+    ):
         yield vm
 
 
@@ -50,11 +57,11 @@ def pvc_for_windows_memory_dump(unprivileged_client, namespace, storage_class_wi
 
 
 @pytest.fixture()
-def windows_vm_memory_dump(namespace, windows_vm_for_memory_dump, pvc_for_windows_memory_dump):
+def windows_vm_memory_dump(namespace, windows_vm_with_vtpm_for_memory_dump, pvc_for_windows_memory_dump):
     status, out, err = virtctl_memory_dump(
         action="get",
         namespace=namespace.name,
-        vm_name=windows_vm_for_memory_dump.name,
+        vm_name=windows_vm_with_vtpm_for_memory_dump.name,
         claim_name=pvc_for_windows_memory_dump.name,
     )
     assert status, f"Failed to get memory dump, out: {out}, err: {err}."
@@ -62,12 +69,14 @@ def windows_vm_memory_dump(namespace, windows_vm_for_memory_dump, pvc_for_window
 
 
 @pytest.fixture()
-def windows_vm_memory_dump_completed(windows_vm_for_memory_dump):
-    wait_for_memory_dump_status_completed(vm=windows_vm_for_memory_dump)
+def windows_vm_memory_dump_completed(windows_vm_with_vtpm_for_memory_dump):
+    wait_for_memory_dump_status_completed(vm=windows_vm_with_vtpm_for_memory_dump)
 
 
 @pytest.fixture()
-def consumer_pod_for_verifying_windows_memory_dump(namespace, windows_vm_for_memory_dump, pvc_for_windows_memory_dump):
+def consumer_pod_for_verifying_windows_memory_dump(
+    namespace, windows_vm_with_vtpm_for_memory_dump, pvc_for_windows_memory_dump
+):
     with PodWithPVC(
         namespace=namespace.name,
         name="consumer-pod",
@@ -80,18 +89,18 @@ def consumer_pod_for_verifying_windows_memory_dump(namespace, windows_vm_for_mem
         pod.wait_for_status(status=pod.Status.RUNNING, timeout=TIMEOUT_2MIN)
 
         assert re.match(
-            rf"{windows_vm_for_memory_dump.name}-{pvc_for_windows_memory_dump.name}-\d*-\d*.memory.dump",
+            rf"{windows_vm_with_vtpm_for_memory_dump.name}-{pvc_for_windows_memory_dump.name}-\d*-\d*.memory.dump",
             pod.execute(command=shlex.split("bash -c 'ls -1 /pvc | grep dump'")),
             re.IGNORECASE,
         ), "Memory dump file doesn't exist"
 
 
 @pytest.fixture()
-def windows_vm_memory_dump_deletion(namespace, windows_vm_for_memory_dump):
+def windows_vm_memory_dump_deletion(namespace, windows_vm_with_vtpm_for_memory_dump):
     status, out, err = virtctl_memory_dump(
         action="remove",
         namespace=namespace.name,
-        vm_name=windows_vm_for_memory_dump.name,
+        vm_name=windows_vm_with_vtpm_for_memory_dump.name,
     )
     assert status, f"Failed to remove memory dump, out: {out}, err: {err}."
     yield
