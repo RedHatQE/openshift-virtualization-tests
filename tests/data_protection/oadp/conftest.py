@@ -305,6 +305,7 @@ def cloned_rhel_dv(imported_dv_second_namespace):
         namespace=imported_dv_second_namespace.namespace,
         size=imported_dv_second_namespace.size,
         source_pvc_name=imported_dv_second_namespace.name,
+        source_pvc_namespace=imported_dv_second_namespace.namespace,
         storage_class=imported_dv_second_namespace.storage_class,
         client=imported_dv_second_namespace.client,
     ) as cdv:

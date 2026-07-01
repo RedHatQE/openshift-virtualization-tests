@@ -139,7 +139,10 @@ def construct_datavolume_source_dict(
     elif source == "registry":
         source_spec = {"registry": {"url": url}}
     elif source == "pvc":
-        source_spec = {"pvc": {"name": source_pvc_name, "namespace": source_pvc_namespace}}
+        pvc_spec: dict[str, Any] = {"name": source_pvc_name}
+        if source_pvc_namespace:
+            pvc_spec["namespace"] = source_pvc_namespace
+        source_spec = {"pvc": pvc_spec}
     elif source == "blank":
         source_spec = {"blank": {}}
     elif source == "upload":
