@@ -34,6 +34,7 @@ EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES = {
     "InstancetypeReferencePolicy",
     "WithHostModelCPU",
     "HypervStrictCheck",
+    "PasstIPStackMigration",
 }
 EXPECTED_CDI_HARDCODED_FEATUREGATES = {
     "DataVolumeClaimAdoption",
