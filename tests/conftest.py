@@ -77,55 +77,73 @@ from tests.utils import download_and_extract_tar
 from utilities.artifactory import get_artifactory_header, get_http_image_url, get_test_artifact_server_url
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.cluster import cache_admin_client, get_oc_whoami_username
-from utilities.constants import (
+from utilities.constants import Images
+from utilities.constants.aaq import (
     AAQ_NAMESPACE_LABEL,
-    ARM_64,
     ARQ_QUOTA_HARD_SPEC,
+)
+from utilities.constants.architecture import (
+    ARM_64,
+    S390X,
+)
+from utilities.constants.cluster import (
     AUDIT_LOGS_PATH,
-    CDI_KUBEVIRT_HYPERCONVERGED,
-    CLUSTER,
     CNV_TEST_SERVICE_ACCOUNT,
-    CNV_VM_SSH_KEY_PATH,
-    ES_NONE,
-    EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS,
-    FEATURE_GATES,
-    HCO_SUBSCRIPTION,
-    HOTFIX_STR,
-    INSTANCE_TYPE_STR,
-    KMP_ENABLED_LABEL,
-    KMP_VM_ASSIGNMENT_LABEL,
     KUBECONFIG,
-    KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
-    KUBEMACPOOL_MAC_RANGE_CONFIG,
     KUBERNETES_ARCH_LABEL,
-    LINUX_BRIDGE,
-    MIGRATION_POLICY_VM_LABEL,
-    NODE_HUGE_PAGES_1GI_KEY,
     NODE_ROLE_KUBERNETES_IO,
     NODE_TYPE_WORKER_LABEL,
     OC_ADM_LOGS_COMMAND,
-    OS_FLAVOR_RHEL,
-    OVS_BRIDGE,
     POD_SECURITY_NAMESPACE_LABELS,
-    PREFERENCE_STR,
-    RHEL9_STR,
     RHSM_SECRET_NAME,
-    S390X,
+    UTILITY,
+    WORKER_NODE_LABEL_KEY,
+    WORKERS_TYPE,
+)
+from utilities.constants.components import (
+    CDI_KUBEVIRT_HYPERCONVERGED,
+    CLUSTER,
+    KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
+    RHEL9_STR,
+    VIRTCTL_CLI_DOWNLOADS,
+)
+from utilities.constants.hco import (
+    FEATURE_GATES,
+    HCO_SUBSCRIPTION,
+    HOTFIX_STR,
     SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
+    UpgradeStreams,
+)
+from utilities.constants.images import OS_FLAVOR_RHEL
+from utilities.constants.instance_types import (
+    EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS,
+    INSTANCE_TYPE_STR,
+    PREFERENCE_STR,
+)
+from utilities.constants.namespaces import NamespacesNames
+from utilities.constants.networking import (
+    KMP_ENABLED_LABEL,
+    KMP_VM_ASSIGNMENT_LABEL,
+    KUBEMACPOOL_MAC_RANGE_CONFIG,
+    LINUX_BRIDGE,
+    OVS_BRIDGE,
+)
+from utilities.constants.pytest import (
+    UNPRIVILEGED_PASSWORD,
+    UNPRIVILEGED_USER,
+)
+from utilities.constants.storage import StorageClassNames
+from utilities.constants.timeouts import (
     TIMEOUT_3MIN,
     TIMEOUT_4MIN,
     TIMEOUT_5MIN,
-    UNPRIVILEGED_PASSWORD,
-    UNPRIVILEGED_USER,
-    UTILITY,
-    VIRTCTL_CLI_DOWNLOADS,
+)
+from utilities.constants.virt import (
+    CNV_VM_SSH_KEY_PATH,
+    ES_NONE,
+    MIGRATION_POLICY_VM_LABEL,
+    NODE_HUGE_PAGES_1GI_KEY,
     VIRTIO,
-    WORKER_NODE_LABEL_KEY,
-    WORKERS_TYPE,
-    Images,
-    NamespacesNames,
-    StorageClassNames,
-    UpgradeStreams,
 )
 from utilities.cpu import (
     find_common_cpu_model_for_live_migration,

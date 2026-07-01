@@ -35,7 +35,7 @@ from utilities.artifactory import (
     get_test_artifact_server_url,
 )
 from utilities.constants import Images
-from utilities.constants.aaq import NODE_STR
+from utilities.constants.cluster import NODE_STR
 from utilities.constants.components import (
     VIRT_CONTROLLER,
     VIRT_HANDLER,

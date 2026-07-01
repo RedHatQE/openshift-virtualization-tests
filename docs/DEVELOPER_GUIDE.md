@@ -9,7 +9,7 @@ The project is structured as follows:
 - [utilities](../utilities): Base directory for utility functions
   - Each module contains a set of utility functions related to a specific topic, for example:
     - [infra](../utilities/infra.py): Infrastructure-related (cluster resources) utility functions
-    - [constants](../utilities/constants.py): Constants used in the project
+    - [constants](../utilities/constants/): Constants package — import from the relevant submodule (e.g. `from utilities.constants.timeouts import TIMEOUT_5MIN`).
 - [docs](../docs): Documentation
 - [py_config](../tests/global_config.py) contains tests-specific configuration which can be controlled from the command line.
 Please refer to [pytest-testconfig](https://github.com/wojole/pytest-testconfig) for more information.

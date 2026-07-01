@@ -6,7 +6,8 @@ from pytest_testconfig import config as py_config
 from libs.vm.spec import CPU, Devices, Domain, Memory, Metadata, Template, VMISpec, VMSpec
 from libs.vm.vm import BaseVirtualMachine, container_image, containerdisk_storage
 from utilities import constants
-from utilities.constants import MULTIARCH, OS_FLAVOR_FEDORA
+from utilities.constants.architecture import MULTIARCH
+from utilities.constants.images import OS_FLAVOR_FEDORA
 
 
 def fedora_vm(
