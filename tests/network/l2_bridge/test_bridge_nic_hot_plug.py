@@ -111,6 +111,7 @@ def hot_plugged_interface_with_address(running_vm_for_nic_hot_plug, index_number
         vm=running_vm_for_nic_hot_plug,
         ipv4_address=random_ipv4_address(net_seed=0, host_address=next(index_number)),
         vmi_interface=hot_plugged_interface.name,
+        guest_device_name=hot_plugged_interface.interfaceName,
     )
 
 
@@ -152,6 +153,7 @@ def hot_plugged_second_interface_with_address(
         vm=running_vm_with_secondary_and_hot_plugged_interfaces,
         ipv4_address=random_ipv4_address(net_seed=0, host_address=next(index_number)),
         vmi_interface=hot_plugged_interface_on_vm_created_with_secondary_interface.name,
+        guest_device_name=hot_plugged_interface_on_vm_created_with_secondary_interface.interfaceName,
     )
 
 
