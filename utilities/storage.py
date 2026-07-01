@@ -181,7 +181,45 @@ def create_dv(
     source_dict: dict[str, Any] | None = None,
     use_artifactory: bool = False,
 ) -> Generator[DataVolume]:
+    """
+    Create and manage a DataVolume with optional Artifactory resource lifecycle.
 
+    Context manager that constructs a DataVolume from either a pre-built ``source_dict``/``source_ref``
+    or by building one via ``construct_datavolume_source_dict`` from the ``source`` parameter.
+    When ``use_artifactory`` is True for http/registry sources, creates namespace-scoped
+    Artifactory Secret and ConfigMap resources that are cleaned up on exit.
+
+    Args:
+        dv_name: Name for the DataVolume resource.
+        namespace: Target Kubernetes namespace.
+        client: Kubernetes dynamic client.
+        storage_class: StorageClass name.
+        access_modes: PVC access mode (e.g. "ReadWriteOnce").
+        volume_mode: PVC volume mode ("Block" or "Filesystem").
+        url: Source URL for http/registry sources.
+        source: Source type ("http", "registry", "pvc", "blank", "upload").
+            Used to construct ``source_dict`` when neither ``source_dict`` nor ``source_ref`` is provided.
+        content_type: CDI content type (e.g. "kubevirt").
+        size: PVC size (default "5Gi").
+        secret_name: Pre-existing Secret name for source authentication.
+        cert_configmap_name: Pre-existing ConfigMap name for TLS certificates.
+        source_pvc_name: PVC name for clone sources.
+        source_pvc_namespace: Namespace of the source PVC for clone sources.
+        annotations: Annotations dict to apply to the DataVolume.
+        teardown: Whether to delete the DataVolume on context exit.
+        consume_wffc: Whether to create a dummy consumer pod for WaitForFirstConsumer storage classes.
+        preallocation: Whether to preallocate the target PVC.
+        api_name: CDI API group name (default "storage").
+        source_ref: Pre-built sourceRef dict for DataVolume.
+        source_dict: Pre-built source dict for DataVolume.
+        use_artifactory: Whether to create Artifactory Secret/ConfigMap for http/registry sources.
+
+    Yields:
+        DataVolume: The created DataVolume resource.
+
+    Raises:
+        ValueError: If ``source`` is not provided when ``source_dict`` and ``source_ref`` are both None.
+    """
     artifactory_secret = None
     artifactory_config_map = None
 
@@ -192,7 +230,7 @@ def create_dv(
 
             LOGGER.info("No 'source_dict' or 'source_ref' provided - will construct the 'source_dict'")
 
-            if source in ("http", "registry") and use_artifactory is True:
+            if source in ("http", "registry") and use_artifactory:
                 LOGGER.info(f"Creating artifactory resources for DV '{dv_name}' in namespace '{namespace}'")
                 LOGGER.info(f"DV source is '{source}' with url: {url}")
 
