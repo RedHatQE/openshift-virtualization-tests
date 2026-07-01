@@ -1952,6 +1952,7 @@ def migrate_vm_and_verify(
         wait_for_interfaces=wait_for_interfaces,
         check_ssh_connectivity=check_ssh_connectivity,
     )
+    LOGGER.info(f"VMI {vm.vmi.name} migrated from {node_before.name} to {vm.vmi.node.name}.")
     return None
 
 
