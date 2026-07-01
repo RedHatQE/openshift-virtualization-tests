@@ -123,6 +123,14 @@ class TestConstructDatavolumeSourceDictPvc:
         assert result == {"pvc": {"name": "my-pvc"}}
         assert "namespace" not in result["pvc"]
 
+    def test_pvc_source_with_empty_namespace(self):
+        result = construct_datavolume_source_dict(
+            source="pvc",
+            source_pvc_name="my-pvc",
+            source_pvc_namespace="",
+        )
+        assert result == {"pvc": {"name": "my-pvc", "namespace": ""}}
+
 
 class TestConstructDatavolumeSourceDictBlank:
     def test_blank_source(self):
