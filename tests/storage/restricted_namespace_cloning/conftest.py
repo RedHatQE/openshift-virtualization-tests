@@ -35,7 +35,7 @@ from utilities.constants.images import OS_FLAVOR_FEDORA
 from utilities.constants.pytest import UNPRIVILEGED_USER
 from utilities.constants.storage import PVC
 from utilities.infra import create_ns
-from utilities.storage import create_dv, get_dv_size_from_datasource
+from utilities.storage import construct_datavolume_source_dict, create_dv, get_dv_size_from_datasource
 from utilities.virt import VirtualMachineForTests, running_vm
 
 
@@ -98,10 +98,12 @@ def data_volume_clone_settings(destination_namespace, dv_cloned_from_datasource)
     dv = DataVolume(
         name=f"{TARGET_DV}-{storage_class}",
         namespace=destination_namespace.name,
-        source=PVC,
+        source_dict=construct_datavolume_source_dict(
+            source=PVC,
+            source_pvc_name=dv_cloned_from_datasource.name,
+            source_pvc_namespace=dv_cloned_from_datasource.namespace,
+        ),
         size=dv_cloned_from_datasource.size,
-        source_pvc=dv_cloned_from_datasource.name,
-        source_namespace=dv_cloned_from_datasource.namespace,
         storage_class=storage_class,
         api_name="storage",
     )

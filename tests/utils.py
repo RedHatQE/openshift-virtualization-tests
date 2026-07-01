@@ -68,6 +68,7 @@ from utilities.infra import (
     ExecCommandOnPod,
 )
 from utilities.os_utils import get_windows_container_disk_path
+from utilities.storage import construct_datavolume_source_dict
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
@@ -569,14 +570,16 @@ def create_cirros_vm(
     dv = DataVolume(
         name=dv_name,
         namespace=namespace,
-        source="http",
-        url=get_http_image_url(image_directory=Images.Cirros.DIR, image_name=Images.Cirros.QCOW2_IMG),
+        source_dict=construct_datavolume_source_dict(
+            source="http",
+            url=get_http_image_url(image_directory=Images.Cirros.DIR, image_name=Images.Cirros.QCOW2_IMG),
+            secret_name=artifactory_secret.name,
+            cert_configmap_name=artifactory_config_map.name,
+        ),
         storage_class=storage_class,
         size=Images.Cirros.DEFAULT_DV_SIZE,
         api_name="storage",
         volume_mode=volume_mode,
-        secret=artifactory_secret,
-        cert_configmap=artifactory_config_map.name,
     )
     dv.to_dict()
     dv_metadata = dv.res["metadata"]
@@ -736,13 +739,15 @@ def create_windows2022_dv_from_registry(
         name=dv_name,
         namespace=namespace,
         storage_class=storage_class,
-        source="registry",
-        url=f"{get_test_artifact_server_url(schema='registry')}/{get_windows_container_disk_path(os_value=WIN_2K22)}",
+        source_dict=construct_datavolume_source_dict(
+            source="registry",
+            url=f"{get_test_artifact_server_url(schema='registry')}/{get_windows_container_disk_path(os_value=WIN_2K22)}",
+            secret_name=artifactory_secret.name,
+            cert_configmap_name=artifactory_config_map.name,
+        ),
         size=Images.Windows.CONTAINER_DISK_DV_SIZE,
         client=client,
         api_name="storage",
-        secret=artifactory_secret,
-        cert_configmap=artifactory_config_map.name,
     )
     dv.to_dict()
 
