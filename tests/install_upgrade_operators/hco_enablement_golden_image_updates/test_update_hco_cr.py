@@ -1,4 +1,8 @@
+from __future__ import annotations
+
+from collections.abc import Generator
 from copy import deepcopy
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -15,6 +19,11 @@ from utilities.hco import (
     update_hco_templates_spec,
     wait_for_auto_boot_config_stabilization,
 )
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+    from ocp_resources.hyperconverged import HyperConverged
+    from ocp_resources.namespace import Namespace
 
 pytestmark = [pytest.mark.gating, pytest.mark.arm64, pytest.mark.s390x]
 
@@ -42,24 +51,29 @@ def validate_template_dict(template_dict, resource_string):
     )
 
 
-@pytest.fixture(scope="class")
-def updated_hco_cr_custom_template_scope_class(
-    admin_client,
-    hco_namespace,
-    hyperconverged_resource_scope_class,
-    golden_images_namespace,
-):
+@pytest.fixture
+def updated_hco_cr_custom_template_scope_function(
+    admin_client: DynamicClient,
+    hco_namespace: Namespace,
+    hyperconverged_resource_scope_function: HyperConverged,
+    golden_images_namespace: Namespace,
+) -> Generator[dict[str, Any]]:
+    """Apply custom DataImportCron template to HCO CR.
+
+    Yields:
+        The custom template dict applied to HCO CR.
+    """
     yield from update_hco_templates_spec(
         admin_client=admin_client,
         hco_namespace=hco_namespace,
-        hyperconverged_resource=hyperconverged_resource_scope_class,
+        hyperconverged_resource=hyperconverged_resource_scope_function,
         updated_template=CUSTOM_CRON_TEMPLATE,
         custom_datasource_name=CUSTOM_DATASOURCE_NAME,
         golden_images_namespace=golden_images_namespace,
     )
 
 
-@pytest.mark.usefixtures("updated_hco_cr_custom_template_scope_class")
+@pytest.mark.usefixtures("updated_hco_cr_custom_template_scope_function")
 class TestCustomTemplates:
     @pytest.mark.order(before="test_add_custom_data_import_cron_template_disable_spec")
     @pytest.mark.polarion("CNV-8707")
@@ -99,7 +113,7 @@ class TestCustomTemplates:
         self,
         admin_client,
         hco_namespace,
-        disabled_common_boot_image_import_hco_spec_scope_function,
+        disabled_common_boot_image_import_hco_spec_scope_class,
         hyperconverged_status_templates_scope_function,
         ssp_spec_templates_scope_function,
         image_stream_names,
