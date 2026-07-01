@@ -65,10 +65,10 @@ def pods_not_allowlisted_or_anyuid(cnv_pods):
     for pod in cnv_pods:
         annotations = pod.instance.metadata.annotations.get("openshift.io/scc")
         if (
-            annotations != "anyuid" or not pod.name.startswith(CLUSTER_NETWORK_ADDONS_OPERATOR)
-        ) and (
-            annotations != "privileged" or not pod.name.startswith(PASST_BINDING_CNI)
-        ) and annotations not in POD_SCC_ALLOWLIST:
+            (annotations != "anyuid" or not pod.name.startswith(CLUSTER_NETWORK_ADDONS_OPERATOR))
+            and (annotations != "privileged" or not pod.name.startswith(PASST_BINDING_CNI))
+            and annotations not in POD_SCC_ALLOWLIST
+        ):
             pod_names.append(pod.name)
     return pod_names
 
