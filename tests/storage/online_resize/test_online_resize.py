@@ -106,6 +106,7 @@ def test_disk_expand_then_clone_fail(
         size=RHEL_DV_SIZE,
         storage_class=rhel_dv_for_online_resize.storage_class,
         source_pvc_name=rhel_dv_for_online_resize.name,
+        source_pvc_namespace=rhel_dv_for_online_resize.namespace,
     ) as dv:
         for sample in TimeoutSampler(
             wait_timeout=TIMEOUT_1MIN,
@@ -151,6 +152,7 @@ def test_disk_expand_then_clone_success(
         size=rhel_dv_for_online_resize.pvc.instance.spec.resources.requests.storage,
         storage_class=rhel_dv_for_online_resize.storage_class,
         source_pvc_name=rhel_dv_for_online_resize.name,
+        source_pvc_namespace=rhel_dv_for_online_resize.namespace,
     ) as cdv:
         cdv.wait_for_condition(
             condition=DataVolume.Condition.Type.READY,
