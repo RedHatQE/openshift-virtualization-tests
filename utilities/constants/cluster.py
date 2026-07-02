@@ -1,7 +1,7 @@
 """Cluster infrastructure constants.
 
 Covers Kubernetes node labels (architecture, worker role, CPU model prefix, TSC
-frequency, version), pod security namespace labels, Kubernetes API verb strings,
+frequency, version), generic node dict keys (NODE_STR), pod security namespace labels, Kubernetes API verb strings,
 environment variables (KUBECONFIG, WORKERS_TYPE), CNV test run markers, service
 account names, the base network-exception dictionary, and audit-log command strings.
 
@@ -24,6 +24,7 @@ from urllib3.exceptions import (
 
 # Node / selector labels
 KUBERNETES_ARCH_LABEL = f"{Resource.ApiGroup.KUBERNETES_IO}/arch"
+NODE_STR = "node"
 NODE_TYPE_WORKER_LABEL = {"node-type": "worker"}
 NODE_ROLE_KUBERNETES_IO = "node-role.kubernetes.io"
 WORKER_NODE_LABEL_KEY = f"{NODE_ROLE_KUBERNETES_IO}/worker"

@@ -5,7 +5,10 @@ from typing import Any
 
 from ocp_resources.datavolume import DataVolume
 
-from utilities.constants import HPP_CAPABILITIES, StorageClassNames
+from utilities.constants.storage import (
+    HPP_CAPABILITIES,
+    StorageClassNames,
+)
 from utilities.storage import HppCsiStorageClass
 
 LOGGER = logging.getLogger(__name__)

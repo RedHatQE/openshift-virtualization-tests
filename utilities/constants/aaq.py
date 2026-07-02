@@ -6,7 +6,6 @@ specification dicts for VMI and pod resource requests/limits.
 
 AAQ_VIRTUAL_RESOURCES = "VirtualResources"
 AAQ_VMI_POD_USAGE = "VmiPodUsage"
-NODE_STR = "node"
 
 AAQ_NAMESPACE_LABEL = {"application-aware-quota/enable-gating": ""}
 VM_CPU_CORES = 2

@@ -3,7 +3,7 @@ from typing import Any
 from ocp_resources.datavolume import DataVolume
 from pytest_testconfig import load_python
 
-from utilities.constants import StorageClassNames
+from utilities.constants.storage import StorageClassNames
 
 global config
 global_config = load_python(py_file="tests/global_config.py", encoding="utf-8")

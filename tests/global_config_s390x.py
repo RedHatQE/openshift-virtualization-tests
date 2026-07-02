@@ -1,12 +1,12 @@
 from typing import Any
 
-from utilities.constants import (
+from utilities.constants.architecture import S390X
+from utilities.constants.images import OS_FLAVOR_FEDORA
+from utilities.constants.instance_types import (
     CENTOS_STREAM9_PREFERENCE,
     EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS,
-    OS_FLAVOR_FEDORA,
     PREFERENCE_STR,
     RHEL9_PREFERENCE,
-    S390X,
 )
 
 global config

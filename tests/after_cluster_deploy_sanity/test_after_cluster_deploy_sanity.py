@@ -11,7 +11,13 @@ from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_utilities.infra import assert_nodes_in_healthy_condition, assert_nodes_schedulable
 from timeout_sampler import TimeoutSampler
 
-from utilities.constants import KUBELET_READY_CONDITION, TIMEOUT_1MIN, TIMEOUT_5MIN, TIMEOUT_5SEC, TIMEOUT_10MIN
+from utilities.constants.monitoring import KUBELET_READY_CONDITION
+from utilities.constants.timeouts import (
+    TIMEOUT_1MIN,
+    TIMEOUT_5MIN,
+    TIMEOUT_5SEC,
+    TIMEOUT_10MIN,
+)
 from utilities.hco import get_installed_hco_csv, wait_for_hco_conditions
 from utilities.infra import wait_for_pods_running
 from utilities.operator import wait_for_cluster_operator_stabilize

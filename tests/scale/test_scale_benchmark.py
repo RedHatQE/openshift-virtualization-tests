@@ -31,14 +31,16 @@ from utilities.artifactory import (
     get_artifactory_config_map,
     get_artifactory_secret,
 )
-from utilities.constants import (
-    NODE_STR,
+from utilities.constants.cluster import NODE_STR
+from utilities.constants.images import (
     OS_FLAVOR_FEDORA,
     OS_FLAVOR_RHEL,
     OS_FLAVOR_WINDOWS,
+)
+from utilities.constants.storage import StorageClassNames
+from utilities.constants.timeouts import (
     TIMEOUT_1MIN,
     TIMEOUT_30MIN,
-    StorageClassNames,
 )
 from utilities.infra import (
     create_ns,

@@ -9,8 +9,9 @@ The project is structured as follows:
 - [utilities](../utilities): Base directory for utility functions
   - Each module contains a set of utility functions related to a specific topic, for example:
     - [infra](../utilities/infra.py): Infrastructure-related (cluster resources) utility functions
-    - [constants](../utilities/constants.py): Constants used in the project
-- [docs](../docs): Documentation
+    - [constants](../utilities/constants/): Shared constants package — see [Code Organization](CODE_ORGANIZATION.md#constants-utilitiesconstants)
+  - [tests/fixtures](../tests/fixtures/): Shared pytest fixture implementations — see [Code Organization](CODE_ORGANIZATION.md#fixtures-testsfixtures-and-conftestpy)
+- [docs](../docs): Documentation — including [Code Organization](CODE_ORGANIZATION.md) for constants, utilities, and fixtures
 - [py_config](../tests/global_config.py) contains tests-specific configuration which can be controlled from the command line.
 Please refer to [pytest-testconfig](https://github.com/wojole/pytest-testconfig) for more information.
 

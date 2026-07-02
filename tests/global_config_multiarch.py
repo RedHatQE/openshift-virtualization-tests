@@ -2,17 +2,19 @@ from typing import Any
 
 from ocp_resources.datavolume import DataVolume
 
-from utilities.constants import (
+from utilities.constants.architecture import (
     AMD_64,
     ARM_64,
+)
+from utilities.constants.images import OS_FLAVOR_FEDORA
+from utilities.constants.instance_types import (
     CENTOS_STREAM9_PREFERENCE,
     CENTOS_STREAM10_PREFERENCE,
-    OS_FLAVOR_FEDORA,
     RHEL8_PREFERENCE,
     RHEL9_PREFERENCE,
     RHEL10_PREFERENCE,
-    StorageClassNames,
 )
+from utilities.constants.storage import StorageClassNames
 
 global config
 

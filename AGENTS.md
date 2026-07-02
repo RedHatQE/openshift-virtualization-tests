@@ -51,12 +51,14 @@ Before writing ANY new code:
 
 ### Utility Module Placement
 
-When adding functions to `utilities/`, place them in the correct module:
+When adding functions to `utilities/`, place them in the correct module. See
+[Code Organization](docs/CODE_ORGANIZATION.md) for constants import rules and the fixtures package layout.
 
 - **`utilities/cluster.py`** — cluster-wide operations (oc commands, node operations, cluster state)
 - **`utilities/infra.py`** — infrastructure helpers (SSH, networking infrastructure, pod operations)
 - **`utilities/virt.py`** — VM lifecycle, VMI operations, migration helpers
 - **`utilities/storage.py`** — storage operations (PVC, DataVolume, StorageClass)
+- **`utilities/constants/<submodule>.py`** — shared constants; import from the submodule, not the package root (except `Images`)
 
 **NEVER** add functions to the wrong utility module — match the domain.
 
@@ -214,7 +216,7 @@ When reviewing quarantine PRs, verify the **quarantine mechanism matches the fai
 - **Tests belong under the feature they test** - do NOT create standalone directories for cross-cutting concerns. If a test measures VM downtime during migration over a specific network type, it belongs under that network type's directory (e.g., `tests/network/l2_bridge/`), not a separate top-level directory.
 - **Test file naming REQUIRED** - ALWAYS use `test_<functionality>.py` format
 - **Local helpers location** - place helper utils in `<feature_dir>/utils.py`
-- **Local fixtures location** - place in `<feature_dir>/conftest.py`
+- **Local fixtures location** - place in `<feature_dir>/conftest.py` for feature-local fixtures, or `tests/fixtures/<team>/` for shared fixtures (see [Code Organization](docs/CODE_ORGANIZATION.md#fixtures-testsfixtures-and-conftestpy))
 - **Move to shared location** - move to `utilities/` or `tests/conftest.py` ONLY when used by different team directories
 
 ### Internal API Stability
@@ -261,6 +263,7 @@ uv run tox -e utilities-unittests
 
 ## Related Documentation
 
+- [`docs/CODE_ORGANIZATION.md`](docs/CODE_ORGANIZATION.md) — Constants, utilities, and fixtures layout and import rules
 - [`docs/QUARANTINE_GUIDELINES.md`](QUARANTINE_GUIDELINES.md) — Test quarantine and de-quarantine procedures
 - [`docs/SOFTWARE_TEST_DESCRIPTION.md`](SOFTWARE_TEST_DESCRIPTION.md) — STD docstring format and requirements
 - [`docs/CODING_AND_STYLE_GUIDE.md`](docs/CODING_AND_STYLE_GUIDE.md) — Detailed coding and style conventions
