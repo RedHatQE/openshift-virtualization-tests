@@ -57,45 +57,46 @@ def validation_os_images_role_binding(admin_client, validation_os_images_namespa
 
 
 @pytest.fixture(scope="session")
-def windows_validation_os_images_data_volume_scope_session(
-    admin_client,
-    validation_os_images_role_binding,
-):
+def windows_validation_os_images_data_volume_scope_session(validation_os_images_role_binding, conformance_tests):
     """
     Fixture that imports a Windows image into the validation os images namespace. Yields existing DataVolume if it was already created
 
     The DV is also used in self-validation and if we move the version, UI needs to follow.
     """
 
-    artifactory_secret = get_artifactory_secret(
-        namespace=validation_os_images_role_binding.namespace, client=validation_os_images_role_binding.client
-    )
-    artifactory_config_map = get_artifactory_config_map(
-        namespace=validation_os_images_role_binding.namespace, client=validation_os_images_role_binding.client
-    )
-
     win_dv = DataVolume(
         name=WIN_2K22,
         namespace=validation_os_images_role_binding.namespace,
-        storage_class=py_config["default_storage_class"],
-        source=REGISTRY_STR,
-        url=f"{get_test_artifact_server_url(schema=REGISTRY_STR)}/{get_windows_container_disk_path(os_value=WIN_2K22)}",
-        size=Images.Windows.CONTAINER_DISK_DV_SIZE,
         client=validation_os_images_role_binding.client,
-        api_name="storage",
-        secret=artifactory_secret,
-        cert_configmap=artifactory_config_map.name,
-        annotations=BIND_IMMEDIATE_ANNOTATION,
     )
     if win_dv.exists:
         win_dv.wait_for_dv_success(timeout=TIMEOUT_1MINUTE)
         yield win_dv
     else:
-        assert not py_config.get("conformance_tests"), (
-            f"Windows image {WIN_2K22} does not exist in namespace {validation_os_images_role_binding.namespace}. Self-validation requires the Windows image to be pre-created."
+        assert not conformance_tests, (
+            f"Windows image {win_dv.name} does not exist in namespace {validation_os_images_role_binding.namespace}. Self-validation requires the Windows image to be pre-created."
         )
 
-        with win_dv as wdv:
+        artifactory_secret = get_artifactory_secret(
+            namespace=validation_os_images_role_binding.namespace, client=validation_os_images_role_binding.client
+        )
+        artifactory_config_map = get_artifactory_config_map(
+            namespace=validation_os_images_role_binding.namespace, client=validation_os_images_role_binding.client
+        )
+
+        with DataVolume(
+            name=win_dv.name,
+            namespace=win_dv.namespace,
+            client=win_dv.client,
+            storage_class=py_config["default_storage_class"],
+            source=REGISTRY_STR,
+            url=f"{get_test_artifact_server_url(schema=REGISTRY_STR)}/{get_windows_container_disk_path(os_value=WIN_2K22)}",
+            size=Images.Windows.CONTAINER_DISK_DV_SIZE,
+            api_name="storage",
+            secret=artifactory_secret,
+            cert_configmap=artifactory_config_map.name,
+            annotations=BIND_IMMEDIATE_ANNOTATION,
+        ) as wdv:
             wdv.wait_for_dv_success(timeout=TIMEOUT_50MIN)
             yield wdv
         cleanup_artifactory_secret_and_config_map(
@@ -115,7 +116,17 @@ def windows_validation_os_images_data_source_scope_session(
         client=admin_client,
         source=generate_data_source_dict(dv=windows_validation_os_images_data_volume_scope_session),
     )
-    if not win_data_source.exists:
+    if win_data_source.exists:
+        source_pvc = win_data_source.instance.spec.source.pvc
+        assert source_pvc.name == windows_validation_os_images_data_volume_scope_session.pvc.name, (
+            f"DataSource {win_data_source.name} source PVC name is {source_pvc.name}, "
+            f"expected {windows_validation_os_images_data_volume_scope_session.pvc.name}"
+        )
+        assert source_pvc.namespace == windows_validation_os_images_data_volume_scope_session.pvc.namespace, (
+            f"DataSource {win_data_source.name} source PVC namespace is {source_pvc.namespace}, "
+            f"expected {windows_validation_os_images_data_volume_scope_session.pvc.namespace}"
+        )
+    else:
         win_data_source.deploy()
 
     win_data_source.wait_for_condition(
