@@ -1,0 +1,76 @@
+# Reusable workflow to check if a PR requires approval.
+#
+# The webhook payload field (github.event.pull_request.author_association) is
+# unreliable under pull_request_target events — it can be absent or stale even
+# for org members. This workflow fetches the value via the REST API (pulls.get),
+# which always returns the correct association.
+#
+# Usage:
+#   jobs:
+#     check-approval:
+#       uses: ./.github/workflows/check-pr-approval.yml
+#
+#     my-job:
+#       needs: [check-approval]
+#       environment: ${{ needs.check-approval.outputs.needs_approval == 'true' && 'external-pr-tests' || '' }}
+
+name: Check PR Approval
+
+on:
+  workflow_call:
+    inputs:
+      trusted_associations:
+        description: JSON array of trusted author associations that skip approval
+        type: string
+        default: '["COLLABORATOR", "MEMBER", "OWNER"]'
+    outputs:
+      needs_approval:
+        description: Whether the PR needs environment approval (true/false)
+        value: ${{ jobs.check.outputs.needs_approval }}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      pull-requests: read
+    outputs:
+      needs_approval: ${{ steps.check.outputs.needs_approval }}
+    steps:
+      - name: Fetch author association via REST API
+        id: check
+        uses: actions/github-script@v9
+        env:
+          TRUSTED_ASSOCIATIONS: ${{ inputs.trusted_associations }}
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            if (!pr) {
+              core.warning(`No pull_request in event payload (event: ${context.eventName}) — called from a non-PR trigger?`);
+              core.setOutput('needs_approval', 'true');
+              return;
+            }
+
+            try {
+              const { data } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+              });
+
+              const trusted = JSON.parse(process.env.TRUSTED_ASSOCIATIONS);
+              if (!Array.isArray(trusted)) {
+                throw new Error('trusted_associations input must be a JSON array');
+              }
+
+              // head.repo is null when the fork has been deleted after the PR was opened
+              const isFork = !data.head.repo || data.head.repo.full_name !== `${context.repo.owner}/${context.repo.repo}`;
+              const isTrusted = trusted.includes(data.author_association);
+              const needsApproval = isFork && !isTrusted;
+
+              core.info(`author=${data.user.login} association=${data.author_association} fork=${isFork} trusted=${isTrusted} needs_approval=${needsApproval}`);
+              core.setOutput('needs_approval', String(needsApproval));
+            } catch (error) {
+              core.warning(`Failed to fetch PR author association: ${error.message}`);
+              core.setOutput('needs_approval', 'true');
+            }
