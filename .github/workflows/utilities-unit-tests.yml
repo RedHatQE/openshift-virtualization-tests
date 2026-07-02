@@ -11,12 +11,22 @@ on:
   workflow_dispatch:
 
 jobs:
+  check-approval:
+    # Fetch author_association via REST API; webhook payload is unreliable
+    # for pull_request_target events.
+    if: github.event_name == 'pull_request_target'
+    permissions:
+      pull-requests: read
+    uses: ./.github/workflows/check-pr-approval.yml
+
   utilities-unit-tests:
     name: Run Utilities Unit Tests
+    needs: [check-approval]
+    if: "!cancelled() && (needs.check-approval.result == 'success' || needs.check-approval.result == 'skipped')"
     runs-on: ubuntu-latest
     timeout-minutes: 15
     # Org members run automatically; outside contributors need maintainer approval
-    environment: ${{ (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name != github.repository && !contains(fromJSON('["COLLABORATOR","MEMBER","OWNER"]'), github.event.pull_request.author_association)) && 'external-pr-tests' || '' }}
+    environment: ${{ needs.check-approval.outputs.needs_approval == 'true' && 'external-pr-tests' || '' }}
     permissions:
       contents: read
       pull-requests: read

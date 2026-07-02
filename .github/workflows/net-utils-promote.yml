@@ -10,16 +10,28 @@ on:
       - 'containers/utility/Dockerfile'
 
 jobs:
+  check-approval:
+    # Fetch author_association via REST API; webhook payload is unreliable
+    # for pull_request_target events.
+    # Intentionally skipped when PR is not merged — promote-to-latest depends
+    # on this and will also be skipped.
+    if: github.event.pull_request.merged == true
+    permissions:
+      pull-requests: read
+    uses: ./.github/workflows/check-pr-approval.yml
+    with:
+      trusted_associations: '["COLLABORATOR", "MEMBER", "OWNER", "CONTRIBUTOR"]'
+
   promote-to-latest:
+    needs: [check-approval]
+    # This workflow only triggers on merged PRs; check-pr-approval fails closed
+    # (needs_approval='true' on error), so promotion requires an explicitly trusted author.
+    if: needs.check-approval.outputs.needs_approval == 'false'
     runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: write
 
-    # safe to use pull_request_target because we only run this for trusted collaborators
-    if: |
-      contains(fromJson('["OWNER","MEMBER","COLLABORATOR","CONTRIBUTOR"]'), github.event.pull_request.author_association) &&
-      github.event.pull_request.merged == true
     steps:
       - name: Install skopeo
         run: |
