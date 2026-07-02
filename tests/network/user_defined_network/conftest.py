@@ -10,8 +10,8 @@ from libs.vm import affinity
 from libs.vm.oper import run_vms
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs.vm_factory import udn_vm
-from utilities.infra import create_ns
 from utilities.constants.architecture import AMD_64, ARM_64
+from utilities.infra import create_ns
 
 
 @pytest.fixture(scope="module")
