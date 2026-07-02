@@ -200,7 +200,7 @@ def test_successful_vm_from_cloned_dv_windows(
         ),
         pytest.param(
             {
-                "dv_name": "dv-source-win",
+                "dv_name": f"dv-source-{OS_FLAVOR_WINDOWS}",
                 "image": f"{Images.Windows.DIR}/{Images.Windows.WIN11_IMG}",
                 "dv_size": Images.Windows.DEFAULT_DV_SIZE,
             },
@@ -227,7 +227,7 @@ def test_successful_snapshot_clone(
         storage_class=storage_class,
     ) as cdv:
         cdv.wait_for_dv_success()
-        if OS_FLAVOR_WINDOWS not in data_volume_snapshot_capable_storage_scope_function.url.split("/")[-1]:
+        if OS_FLAVOR_WINDOWS not in data_volume_snapshot_capable_storage_scope_function.name:
             with create_vm_from_dv(
                 client=unprivileged_client,
                 dv=cdv,
