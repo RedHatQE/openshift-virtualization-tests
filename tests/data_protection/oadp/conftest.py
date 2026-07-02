@@ -1,6 +1,7 @@
 import pytest
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.namespace import Namespace
+from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from pytest_testconfig import config as py_config
@@ -17,7 +18,12 @@ from utilities.artifactory import (
 from utilities.constants import Images
 from utilities.constants.images import OS_FLAVOR_RHEL, OS_FLAVOR_WIN_CONTAINER_DISK
 from utilities.constants.instance_types import U1_LARGE
-from utilities.constants.oadp import BACKUP_STORAGE_LOCATION, FILE_NAME_FOR_BACKUP, TEXT_TO_TEST
+from utilities.constants.oadp import (
+    BACKUP_STORAGE_LOCATION,
+    FILE_NAME_FOR_BACKUP,
+    SKIP_BACKUP_HOOKS_ANNOTATION,
+    TEXT_TO_TEST,
+)
 from utilities.constants.os_matrix import CONTAINER_DISK_IMAGE_PATH_STR
 from utilities.constants.timeouts import TIMEOUT_8MIN, TIMEOUT_15MIN
 from utilities.infra import create_ns
@@ -354,6 +360,55 @@ def velero_restore_second_namespace_with_datamover(
         included_namespaces=velero_backup_second_namespace_using_datamover.included_namespaces,
         name="datamover-restore-ns2",
         backup_name=velero_backup_second_namespace_using_datamover.name,
+        timeout=TIMEOUT_15MIN,
+    ) as restore:
+        yield restore
+
+
+@pytest.fixture()
+def rhel_vm_with_hooks_opt_out(
+    admin_client,
+    namespace_for_backup,
+    snapshot_storage_class_name_scope_module,
+):
+    """Running RHEL VM with kubevirt.io/skip-backup-hooks annotation set to 'true'."""
+    with VirtualMachineForTests(
+        name="vm-hooks-opt-out",
+        namespace=namespace_for_backup.name,
+        client=admin_client,
+        os_flavor=OS_FLAVOR_RHEL,
+        memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
+        run_strategy=VirtualMachine.RunStrategy.ALWAYS,
+        annotations={SKIP_BACKUP_HOOKS_ANNOTATION: "true"},
+    ) as vm:
+        running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
+        yield vm
+
+
+@pytest.fixture()
+def velero_backup_vm_with_hooks_opt_out(
+    admin_client,
+    rhel_vm_with_hooks_opt_out,
+    namespace_for_backup,
+):
+    """Velero backup of a namespace containing a VM with backup hooks opt-out."""
+    with VeleroBackup(
+        client=admin_client,
+        included_namespaces=[namespace_for_backup.name],
+        name="backup-hooks-opt-out",
+    ) as backup:
+        yield backup
+
+
+@pytest.fixture()
+def velero_restore_vm_with_hooks_opt_out(admin_client, velero_backup_vm_with_hooks_opt_out):
+    """Velero restore after deleting the namespace containing a VM with backup hooks opt-out."""
+    Namespace(name=velero_backup_vm_with_hooks_opt_out.included_namespaces[0]).delete(wait=True)
+    with VeleroRestore(
+        client=admin_client,
+        included_namespaces=velero_backup_vm_with_hooks_opt_out.included_namespaces,
+        name="restore-hooks-opt-out",
+        backup_name=velero_backup_vm_with_hooks_opt_out.name,
         timeout=TIMEOUT_15MIN,
     ) as restore:
         yield restore
