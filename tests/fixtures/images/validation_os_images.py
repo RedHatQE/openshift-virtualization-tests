@@ -3,6 +3,7 @@ from ocp_resources.cluster_role import ClusterRole
 from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.namespace import Namespace
+from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.role_binding import RoleBinding
 from ocp_resources.utils.constants import TIMEOUT_1MINUTE
 from pytest_testconfig import config as py_config
@@ -57,7 +58,21 @@ def validation_os_images_role_binding(admin_client, validation_os_images_namespa
 
 
 @pytest.fixture(scope="session")
-def windows_validation_os_images_data_volume_scope_session(validation_os_images_role_binding, conformance_tests):
+def windows_validation_os_images_pvc_scope_session(
+    validation_os_images_role_binding,
+):
+    win_pvc = PersistentVolumeClaim(
+        name=WIN_2K22,
+        namespace=validation_os_images_role_binding.namespace,
+        client=validation_os_images_role_binding.client,
+    )
+    yield win_pvc
+
+
+@pytest.fixture(scope="session")
+def windows_validation_os_images_data_volume_scope_session(
+    validation_os_images_role_binding, conformance_tests, windows_validation_os_images_pvc_scope_session
+):
     """
     Fixture that imports a Windows image into the validation os images namespace. Yields existing DataVolume if it was already created
 
@@ -72,6 +87,8 @@ def windows_validation_os_images_data_volume_scope_session(validation_os_images_
     if win_dv.exists:
         win_dv.wait_for_dv_success(timeout=TIMEOUT_1MINUTE)
         yield win_dv
+    elif windows_validation_os_images_pvc_scope_session.exists:
+        yield
     else:
         assert not conformance_tests, (
             f"Windows image {win_dv.name} does not exist in namespace {validation_os_images_role_binding.namespace}. Self-validation requires the Windows image to be pre-created."
@@ -107,24 +124,23 @@ def windows_validation_os_images_data_volume_scope_session(validation_os_images_
 
 @pytest.fixture(scope="session")
 def windows_validation_os_images_data_source_scope_session(
-    admin_client,
-    windows_validation_os_images_data_volume_scope_session,
+    admin_client, windows_validation_os_images_pvc_scope_session, windows_validation_os_images_data_volume_scope_session
 ):
     win_data_source = DataSource(
-        name=windows_validation_os_images_data_volume_scope_session.name,
-        namespace=windows_validation_os_images_data_volume_scope_session.namespace,
+        name=windows_validation_os_images_pvc_scope_session.name,
+        namespace=windows_validation_os_images_pvc_scope_session.namespace,
         client=admin_client,
-        source=generate_data_source_dict(dv=windows_validation_os_images_data_volume_scope_session),
+        source=generate_data_source_dict(dv=windows_validation_os_images_pvc_scope_session),
     )
     if win_data_source.exists:
         source_pvc = win_data_source.instance.spec.source.pvc
-        assert source_pvc.name == windows_validation_os_images_data_volume_scope_session.pvc.name, (
+        assert source_pvc.name == windows_validation_os_images_pvc_scope_session.name, (
             f"DataSource {win_data_source.name} source PVC name is {source_pvc.name}, "
-            f"expected {windows_validation_os_images_data_volume_scope_session.pvc.name}"
+            f"expected {windows_validation_os_images_pvc_scope_session.name}"
         )
-        assert source_pvc.namespace == windows_validation_os_images_data_volume_scope_session.pvc.namespace, (
+        assert source_pvc.namespace == windows_validation_os_images_pvc_scope_session.namespace, (
             f"DataSource {win_data_source.name} source PVC namespace is {source_pvc.namespace}, "
-            f"expected {windows_validation_os_images_data_volume_scope_session.pvc.namespace}"
+            f"expected {windows_validation_os_images_pvc_scope_session.namespace}"
         )
     else:
         win_data_source.deploy()

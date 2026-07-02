@@ -53,17 +53,9 @@ from utilities.constants.timeouts import (
     TIMEOUT_10SEC,
     TIMEOUT_15SEC,
     TIMEOUT_30MIN,
-<<<<<<< HEAD
-)
-from utilities.constants.virt import (
-    DISK_SERIAL,
-    NODE_HUGE_PAGES_1GI_KEY,
-    WIN_2K22,
-=======
     U1_LARGE,
     WINDOWS_2K22_PREFERENCE,
     Images,
->>>>>>> ecf9cc62 (Use DataSource sourceRef for Windows VM cloning with vTPM)
 )
 from utilities.data_collector import get_data_collector_dir, write_to_file
 from utilities.exceptions import ResourceValueError
@@ -71,11 +63,6 @@ from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import (
     ExecCommandOnPod,
 )
-<<<<<<< HEAD
-from utilities.os_utils import get_windows_container_disk_path
-from utilities.storage import construct_datavolume_source_dict
-=======
->>>>>>> ecf9cc62 (Use DataSource sourceRef for Windows VM cloning with vTPM)
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
@@ -721,58 +708,7 @@ def verify_rwx_default_storage(client: DynamicClient) -> None:
 
 
 @contextmanager
-<<<<<<< HEAD
-def create_windows2022_dv_from_registry(
-    dv_name: str,
-    namespace: str,
-    client: DynamicClient,
-    storage_class: str,
-) -> Generator[dict]:
-    """
-    Creates a Windows Server 2022 DataVolume from registry container disk.
-
-    Args:
-        dv_name: Name for the DataVolume
-        namespace: Kubernetes namespace
-        client: Kubernetes client
-        storage_class: Storage class name
-
-    Yields:
-        dict: DataVolume template dictionary with metadata and spec
-    """
-    artifactory_secret = get_artifactory_secret(namespace=namespace)
-    artifactory_config_map = get_artifactory_config_map(namespace=namespace)
-
-    dv = DataVolume(
-        name=dv_name,
-        namespace=namespace,
-        storage_class=storage_class,
-        source_dict=construct_datavolume_source_dict(
-            source="registry",
-            url=f"{get_test_artifact_server_url(schema='registry')}/{get_windows_container_disk_path(os_value=WIN_2K22)}",
-            secret_name=artifactory_secret.name,
-            cert_configmap_name=artifactory_config_map.name,
-        ),
-        size=Images.Windows.CONTAINER_DISK_DV_SIZE,
-        client=client,
-        api_name="storage",
-    )
-    dv.to_dict()
-
-    try:
-        yield {"metadata": dv.res["metadata"], "spec": dv.res["spec"]}
-    finally:
-        cleanup_artifactory_secret_and_config_map(
-            artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
-        )
-
-
-@contextmanager
-def create_windows2022_vm_with_vtpm_from_registry(
-    dv_dict: dict,
-=======
 def create_windows2022_vm_using_existing_dv(
->>>>>>> ecf9cc62 (Use DataSource sourceRef for Windows VM cloning with vTPM)
     namespace: str,
     client: DynamicClient,
     vm_name: str,
