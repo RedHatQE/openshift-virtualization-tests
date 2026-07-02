@@ -2,7 +2,6 @@ name: "Component Builder Publish"
 permissions:
   contents: read
 env:
-  FEDORA_VERSION: 43
   REMOTE_REPOSITORY: "quay.io/openshift-cnv/qe-cnv-tests-fedora-staging"
 on:
   push:
@@ -25,44 +24,27 @@ jobs:
     outputs:
       # JSON object consumed by build-images via fromJson(), e.g.
       # {"include":[{"arch":"amd64","url_arch":"x86_64",...}, ...]}
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      matrix: ${{ steps.component-builder-config.outputs.matrix }}
+      fedora_version: ${{ steps.component-builder-config.outputs.fedora_version }}
+      fedora_image_base: ${{ steps.component-builder-config.outputs.fedora_image_base }}
+      fedora_checksum_base: ${{ steps.component-builder-config.outputs.fedora_checksum_base }}
       # Space-separated string consumed by create-manifest, e.g.
       # "amd64 arm64 s390x"
-      architectures: ${{ steps.set-matrix.outputs.architectures }}
+      architectures: ${{ steps.component-builder-config.outputs.architectures }}
     steps:
-      - name: Set architecture matrix and list
-        id: set-matrix
+      - name: Check out code
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Read component builder config
+        id: component-builder-config
         run: |
-          matrix=$(cat <<'EOF'
-          {
-            "include": [
-              {
-                "arch": "amd64",
-                "url_arch": "x86_64",
-                "qemu_package": "qemu-system-x86",
-                "fedora_url": "https://download.fedoraproject.org/pub/fedora/linux/releases/43/Cloud/x86_64/images"
-              },
-              {
-                "arch": "arm64",
-                "url_arch": "aarch64",
-                "qemu_package": "qemu-system-aarch64",
-                "fedora_url": "https://download.fedoraproject.org/pub/fedora/linux/releases/43/Cloud/aarch64/images"
-              },
-              {
-                "arch": "s390x",
-                "url_arch": "s390x",
-                "qemu_package": "qemu-system-s390x",
-                "fedora_url": "https://download.fedoraproject.org/pub/fedora-secondary/releases/43/Cloud/s390x/images"
-              }
-            ]
-          }
-          EOF
-          )
-          # Compact to a single line for the output
-          echo "matrix=$(echo "${matrix}" | jq -c .)" >> "${GITHUB_OUTPUT}"
-          # Derive the space-separated arch list directly from the same JSON
-          archs=$(echo "${matrix}" | jq -r '[.include[].arch] | join(" ")')
-          echo "architectures=${archs}" >> "${GITHUB_OUTPUT}"
+          echo "matrix=$(jq -c '.matrix' .github/component-builder-config.json)" >> "${GITHUB_OUTPUT}"
+          echo "fedora_version=$(jq -r '.fedora_version' .github/component-builder-config.json)" >> "${GITHUB_OUTPUT}"
+          echo "fedora_image_base=$(jq -r '.fedora_image_base' .github/component-builder-config.json)" >> "${GITHUB_OUTPUT}"
+          echo "fedora_checksum_base=$(jq -r '.fedora_checksum_base' .github/component-builder-config.json)" >> "${GITHUB_OUTPUT}"
+          echo "architectures=$(jq -r '[.matrix.include[].arch] | join(" ")' .github/component-builder-config.json)" >> "${GITHUB_OUTPUT}"
 
   build-images:
     runs-on: ubuntu-latest
@@ -72,7 +54,9 @@ jobs:
     strategy:
       matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
     env:
-      FEDORA_IMAGE_BASE: Fedora-Cloud-Base-Generic-43-1.6
+      FEDORA_VERSION: ${{ needs.prepare.outputs.fedora_version }}
+      FEDORA_IMAGE_BASE: ${{ needs.prepare.outputs.fedora_image_base }}
+      FEDORA_CHECKSUM_BASE: ${{ needs.prepare.outputs.fedora_checksum_base }}
       CPU_ARCH: ${{ matrix.arch }}
       FULL_EMULATION: "true"
       DEBIAN_FRONTEND: noninteractive
@@ -83,10 +67,12 @@ jobs:
           persist-credentials: false
 
       - name: Install dependencies for VM build
+        env:
+          QEMU_PACKAGE: ${{ matrix.qemu_package }}
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            ${{ matrix.qemu_package }} \
+            "$QEMU_PACKAGE" \
             libvirt-daemon-system \
             virtinst cloud-image-utils \
             libguestfs-tools
@@ -97,9 +83,28 @@ jobs:
 
       - name: Fetch base Fedora image
         working-directory: ./containers/fedora
+        env:
+          FEDORA_URL: ${{ matrix.fedora_url }}
+          URL_ARCH: ${{ matrix.url_arch }}
+        run: |
+          fedora_image="${FEDORA_IMAGE_BASE}.${URL_ARCH}.qcow2"
+          wget -q "${FEDORA_URL}/${fedora_image}"
+          fedora_checksum="${FEDORA_CHECKSUM_BASE}-${URL_ARCH}-CHECKSUM"
+          wget -q "${FEDORA_URL}/${fedora_checksum}" -O CHECKSUM
+
+      - name: Verify Fedora image checksum
+        working-directory: ./containers/fedora
         run: |
           FEDORA_IMAGE="${FEDORA_IMAGE_BASE}.${{ matrix.url_arch }}.qcow2"
-          wget -q "${{ matrix.fedora_url }}/${FEDORA_IMAGE}"
+          # Extract the SHA256 line for the exact artifact and verify it.
+          # The Fedora CHECKSUM file uses the format: SHA256 (filename) = <digest>
+          # sha256sum expects: <digest>  <filename>
+          grep "SHA256 (${FEDORA_IMAGE})" CHECKSUM \
+            | sed 's/SHA256 (\(.*\)) = \(.*\)/\2  \1/' \
+            | sha256sum --check --status \
+            || { echo "ERROR: SHA256 digest mismatch for ${FEDORA_IMAGE}"; exit 1; }
+          echo "Checksum verified for ${FEDORA_IMAGE}"
+          rm CHECKSUM
 
       - name: Install uv
         uses: astral-sh/setup-uv@v8.2.0
@@ -127,7 +132,7 @@ jobs:
         env:
           QUAY_USER: ${{ secrets.QUAY_USER }}
           QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
-        run: podman login -u "$QUAY_USER" -p "$QUAY_TOKEN" quay.io
+        run: printf '%s' "$QUAY_TOKEN" | podman login -u "$QUAY_USER" --password-stdin quay.io
 
       - name: Tag & Push image to staging
         env:
@@ -157,7 +162,7 @@ jobs:
 
       - name: Create and push manifest
         env:
-          FEDORA_VERSION: ${{ env.FEDORA_VERSION }}
+          FEDORA_VERSION: ${{ needs.prepare.outputs.fedora_version }}
           REMOTE_REPOSITORY: ${{ env.REMOTE_REPOSITORY }}
         run: |
           remote_tag="${FEDORA_VERSION}-dev"
@@ -167,5 +172,5 @@ jobs:
             ARCH_IMAGES="${ARCH_IMAGES} ${REMOTE_REPOSITORY}:${FEDORA_VERSION}-${arch}"
           done
           # Create and push the multi-arch manifest
-          podman manifest create --log-level=debug "${REMOTE_REPOSITORY}":"${remote_tag}" ${ARCH_IMAGES}
+          podman manifest create "${REMOTE_REPOSITORY}":"${remote_tag}" ${ARCH_IMAGES}
           podman manifest push "${REMOTE_REPOSITORY}":"${remote_tag}" --all --format=v2s2
