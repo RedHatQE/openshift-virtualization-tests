@@ -14,6 +14,7 @@ from tests.virt.node.gpu.utils import (
     restart_and_check_gpu_exists,
 )
 from tests.virt.utils import (
+    get_data_volume_template_dict_with_default_storage_class,
     get_gpu_device_name_from_windows_vm,
     validate_pause_unpause_windows_vm,
     verify_gpu_device_exists_in_vm,
@@ -42,7 +43,7 @@ TESTS_CLASS_NAME = "TestVGPUWindowsGPUSSpec"
 def gpu_vmc(
     unprivileged_client,
     namespace,
-    golden_image_data_volume_template_for_test_scope_class,
+    golden_image_data_source_for_test_scope_class,
     supported_gpu_device,
     gpu_vma,
 ):
@@ -54,7 +55,9 @@ def gpu_vmc(
         namespace=namespace.name,
         client=unprivileged_client,
         labels=Template.generate_template_labels(**WINDOWS_10_TEMPLATE_LABELS),
-        data_volume_template=golden_image_data_volume_template_for_test_scope_class,
+        data_volume_template=get_data_volume_template_dict_with_default_storage_class(
+            data_source=golden_image_data_source_for_test_scope_class,
+        ),
         node_selector=gpu_vma.node_selector,
         gpu_name=supported_gpu_device[VGPU_DEVICE_NAME_STR],
         cloned_dv_size=DV_SIZE,

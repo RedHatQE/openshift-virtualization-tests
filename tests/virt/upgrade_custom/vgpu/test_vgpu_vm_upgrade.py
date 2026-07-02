@@ -20,7 +20,7 @@ pytestmark = [
     pytest.mark.ocp_upgrade,
     pytest.mark.special_infra,
     pytest.mark.usefixtures(
-        "non_existent_mdev_bus_nodes",
+        "non_existent_mdev_bus_nodes_session_scope",
         "hco_cr_with_mdev_permitted_hostdevices_scope_session",
         "vgpu_on_nodes",
     ),

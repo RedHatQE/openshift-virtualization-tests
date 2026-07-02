@@ -20,6 +20,7 @@ from tests.virt.node.gpu.utils import (
 )
 from tests.virt.utils import (
     build_node_affinity_dict,
+    get_data_volume_template_dict_with_default_storage_class,
     get_num_gpu_devices_in_rhel_vm,
     running_sleep_in_linux,
     verify_gpu_device_exists_in_vm,
@@ -48,7 +49,7 @@ TESTS_CLASS_NAME = "TestVGPURHELGPUSSpec"
 def gpu_vmb(
     unprivileged_client,
     namespace,
-    golden_image_data_volume_template_for_test_scope_class,
+    golden_image_data_source_for_test_scope_class,
     supported_gpu_device,
     gpu_vma,
 ):
@@ -60,7 +61,9 @@ def gpu_vmb(
         namespace=namespace.name,
         client=unprivileged_client,
         labels=Template.generate_template_labels(**RHEL_LATEST_LABELS),
-        data_volume_template=golden_image_data_volume_template_for_test_scope_class,
+        data_volume_template=get_data_volume_template_dict_with_default_storage_class(
+            data_source=golden_image_data_source_for_test_scope_class,
+        ),
         vm_affinity=gpu_vma.vm_affinity,
         gpu_name=supported_gpu_device[VGPU_DEVICE_NAME_STR],
     ) as vm:
@@ -73,7 +76,7 @@ def node_mdevtype_gpu_vm(
     request,
     unprivileged_client,
     namespace,
-    golden_image_data_volume_template_for_test_scope_class,
+    golden_image_data_source_for_test_scope_class,
     nodes_with_supported_gpus,
     supported_gpu_device,
 ):
@@ -88,7 +91,9 @@ def node_mdevtype_gpu_vm(
         request=request,
         namespace=namespace,
         unprivileged_client=unprivileged_client,
-        data_volume_template=golden_image_data_volume_template_for_test_scope_class,
+        data_volume_template=get_data_volume_template_dict_with_default_storage_class(
+            data_source=golden_image_data_source_for_test_scope_class,
+        ),
         vm_affinity=build_node_affinity_dict(values=[[*nodes_with_supported_gpus][1].name]),
         gpu_name=supported_gpu_device[VGPU_GRID_NAME_STR],
     ) as vm:
