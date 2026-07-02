@@ -61,12 +61,16 @@ Only add comments when necessary. For example, when using complex regex.
 - Tests are to be placed in `test_<functionality>.py` file; this is where the actual tests are written.
   `<functionality_name>` describes the functionality tested in this test file.
 - If helper utils are needed, they should be placed in the test's subdirectory.
-- If specific fixtures are needed, they should be placed in a `conftest.py` file under the test's subdirectory.
+- If specific fixtures are needed, they should be placed in a `conftest.py` file under the test's subdirectory, or in [`tests/fixtures/`](../tests/fixtures/) when shared across teams — see [Code Organization](CODE_ORGANIZATION.md#fixtures-testsfixtures-and-conftestpy).
 
 ## conftest
-- Top level [conftest.py](../conftest.py) contains pytest native fixtures.
+
+See [Code Organization](CODE_ORGANIZATION.md#fixtures-testsfixtures-and-conftestpy) for the full fixture layout.
+
+- Top level [conftest.py](../conftest.py) contains pytest hooks and `pytest_plugins` registration.
 - General tests [conftest.py](../tests/conftest.py) contains fixtures that are used in multiple tests by multiple teams.
-- If needed, create new `conftest.py` files in the relevant directories.
+- Shared fixture implementations belong in [`tests/fixtures/<team>/<topic>.py`](../tests/fixtures/) and are registered via `pytest_plugins` in the root `conftest.py`.
+- If needed, create new `conftest.py` files in the relevant directories for feature-local fixtures only.
 
 
 ## Fixtures

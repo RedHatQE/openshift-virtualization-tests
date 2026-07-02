@@ -32,13 +32,13 @@ import utilities.cluster
 import utilities.infra  # noqa
 from libs.storage.config import StorageClassConfig
 from utilities.bitwarden import get_cnv_tests_secret_by_name
-from utilities.constants import (
-    AMD_64,
+from utilities.constants.architecture import AMD_64
+from utilities.constants.namespaces import NamespacesNames
+from utilities.constants.pytest import (
     QUARANTINED,
     SETUP_ERROR,
-    TIMEOUT_5MIN,
-    NamespacesNames,
 )
+from utilities.constants.timeouts import TIMEOUT_5MIN
 from utilities.data_collector import (
     collect_default_cnv_must_gather_with_vm_gather,
     get_data_collector_dir,

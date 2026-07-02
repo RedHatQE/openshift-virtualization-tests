@@ -193,7 +193,7 @@ def generate_os_matrix_dict(
     if not os_base_class:
         raise ValueError(
             f"Unsupported OS: {os_name}. "
-            "Make sure it is supported under `utilities.constants.ArchImages` class for cluster architecture."
+            "Make sure it is supported under `utilities.constants.images.ArchImages` for cluster architecture."
         )
 
     latest_os_release = getattr(os_base_class, "LATEST_RELEASE_STR", None)

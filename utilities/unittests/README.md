@@ -142,7 +142,7 @@ def test_with_external_mock(self, mock_external):
 - artifactory.py
 - bitwarden.py
 - console.py
-- constants.py
+- constants/ (package)
 - cpu.py
 - data_collector.py
 - data_utils.py

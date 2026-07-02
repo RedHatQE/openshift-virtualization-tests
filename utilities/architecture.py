@@ -23,7 +23,7 @@ def get_cluster_architecture() -> set[str]:
     """
     # Lazy import to avoid circular dependency
     # TODO: remove when/if utilities modules are refactored
-    from utilities.constants import KUBERNETES_ARCH_LABEL  # noqa: PLC0415
+    from utilities.constants.cluster import KUBERNETES_ARCH_LABEL  # noqa: PLC0415
 
     # Needed for CI
     if arch := os.environ.get("OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH"):

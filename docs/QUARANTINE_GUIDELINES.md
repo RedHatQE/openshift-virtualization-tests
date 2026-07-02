@@ -92,7 +92,7 @@ Apply pytest's `xfail` marker with `run=False`, for example:
 
 ```python
 import pytest
-from utilities.constants import QUARANTINED
+from utilities.constants.pytest import QUARANTINED
 
 
 @pytest.mark.xfail(

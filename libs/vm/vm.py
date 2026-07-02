@@ -27,7 +27,7 @@ from libs.vm.spec import (
 )
 from tests.network.libs import cloudinit
 from utilities import infra
-from utilities.constants import CLOUD_INIT_DISK_NAME
+from utilities.constants.virt import CLOUD_INIT_DISK_NAME
 from utilities.virt import get_oc_image_info, vm_console_run_commands
 
 if TYPE_CHECKING:

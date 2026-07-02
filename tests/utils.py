@@ -34,12 +34,17 @@ from utilities.artifactory import (
     get_http_image_url,
     get_test_artifact_server_url,
 )
-from utilities.constants import (
-    DISK_SERIAL,
-    NODE_HUGE_PAGES_1GI_KEY,
+from utilities.constants import Images
+from utilities.constants.cluster import RHSM_SECRET_NAME
+from utilities.constants.images import (
     OS_FLAVOR_WIN_CONTAINER_DISK,
     OS_FLAVOR_WINDOWS,
-    RHSM_SECRET_NAME,
+)
+from utilities.constants.instance_types import (
+    U1_LARGE,
+    WINDOWS_2K22_PREFERENCE,
+)
+from utilities.constants.timeouts import (
     TCP_TIMEOUT_30SEC,
     TIMEOUT_1MIN,
     TIMEOUT_1SEC,
@@ -50,10 +55,11 @@ from utilities.constants import (
     TIMEOUT_10SEC,
     TIMEOUT_15SEC,
     TIMEOUT_30MIN,
-    U1_LARGE,
+)
+from utilities.constants.virt import (
+    DISK_SERIAL,
+    NODE_HUGE_PAGES_1GI_KEY,
     WIN_2K22,
-    WINDOWS_2K22_PREFERENCE,
-    Images,
 )
 from utilities.data_collector import get_data_collector_dir, write_to_file
 from utilities.exceptions import ResourceValueError

@@ -2874,7 +2874,7 @@ class TestImportContinuationSafety:
     def test_import_continuation_line_is_safe(self, tmp_path: Path) -> None:
         """Import continuation lines do not trigger conservative fallback."""
         source = (
-            "from utilities.constants import (\n"
+            "from utilities.constants.timeouts import (\n"
             "    TIMEOUT_1MIN,\n"
             "    TIMEOUT_2MIN,\n"
             ")\n"
@@ -2886,7 +2886,7 @@ class TestImportContinuationSafety:
             "--- a/utilities/example.py\n"
             "+++ b/utilities/example.py\n"
             "@@ -1,3 +1,4 @@\n"
-            " from utilities.constants import (\n"
+            " from utilities.constants.timeouts import (\n"
             "     TIMEOUT_1MIN,\n"
             "+    TIMEOUT_2MIN,\n"
             " )\n"
