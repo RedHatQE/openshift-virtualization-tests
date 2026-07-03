@@ -1016,8 +1016,9 @@ class VirtualMachineForTests(VirtualMachine):
                 sc_name = self.vm_preference.instance.spec.get("volumes", {}).get("preferredStorageClassName")
                 if sc_name:
                     return sc_name
-            else:
-                return get_default_storage_class(client=self.client).name
+            default_sc = get_default_storage_class(client=self.client).name
+            LOGGER.info(f"Using default storage class: {default_sc} for access mode field")
+            return default_sc
 
         api_name = "pvc" if self.data_volume_template and self.data_volume_template["spec"].get("pvc") else "storage"
         return (

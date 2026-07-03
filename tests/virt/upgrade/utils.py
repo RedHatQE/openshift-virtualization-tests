@@ -4,7 +4,6 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 import pytest
-from kubernetes.dynamic import DynamicClient
 from ocp_resources.template import Template
 from ocp_resources.virtual_machine import VirtualMachine
 
@@ -34,7 +33,7 @@ LOGGER = logging.getLogger(__name__)
 TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 
-def get_virt_launcher_images_from_csv(csv: ClusterServiceVersion) -> set[str]:
+def get_virt_launcher_images_from_csv(csv: "ClusterServiceVersion") -> set[str]:
     if images := {item["image"] for item in csv.instance.spec.relatedImages if VIRT_LAUNCHER in item["name"]}:
         return images
     raise ValueError(f"Image digest for {VIRT_LAUNCHER} not found")
@@ -81,11 +80,11 @@ def get_src_pvc_default_name(template):
 
 
 def get_workload_update_migrations_list(
-    namespaces: list[str], admin_client: DynamicClient
+    namespaces: list[str],
 ) -> list[VirtualMachineInstanceMigration]:
     workload_migrations: dict[str, VirtualMachineInstanceMigration] = {}
     for namespace in namespaces:
-        for migration_job in list(VirtualMachineInstanceMigration.get(client=admin_client, namespace=namespace)):
+        for migration_job in list(VirtualMachineInstanceMigration.get(namespace=namespace)):
             if migration_job.name.startswith("kubevirt-workload-update"):
                 job_instance = migration_job.instance
                 vmi_name = job_instance.spec.vmiName
@@ -106,8 +105,8 @@ def get_workload_update_migrations_list(
     return list(workload_migrations.values())
 
 
-def vms_auto_migration_with_status_success(namespaces: list[str], admin_client: DynamicClient) -> list[str]:
-    workload_migrations = get_workload_update_migrations_list(namespaces=namespaces, admin_client=admin_client)
+def vms_auto_migration_with_status_success(namespaces: list[str]) -> list[str]:
+    workload_migrations = get_workload_update_migrations_list(namespaces=namespaces)
     return [
         migration_job.spec.vmiName
         for migration_job in workload_migrations
@@ -115,7 +114,7 @@ def vms_auto_migration_with_status_success(namespaces: list[str], admin_client: 
     ]
 
 
-def wait_for_automatic_vm_migrations(vm_list: list[VirtualMachine], admin_client: DynamicClient) -> bool:
+def wait_for_automatic_vm_migrations(vm_list: list[VirtualMachine]) -> bool:
     vm_names = [vm.name for vm in vm_list]
     vm_namespaces = list({vm.namespace for vm in vm_list})
     LOGGER.info(f"Checking VMIMs for vms: {vm_names}")
@@ -125,7 +124,6 @@ def wait_for_automatic_vm_migrations(vm_list: list[VirtualMachine], admin_client
         sleep=TIMEOUT_10SEC,
         func=vms_auto_migration_with_status_success,
         namespaces=vm_namespaces,
-        admin_client=admin_client,
     )
 
     sample = None
