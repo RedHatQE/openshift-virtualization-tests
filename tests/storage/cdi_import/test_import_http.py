@@ -25,30 +25,10 @@ from tests.storage.utils import (
     get_file_url,
     wait_for_dv_condition_message,
 )
-from utilities.constants import (
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    OS_FLAVOR_WINDOWS,
-=======
->>>>>>> 401353c8 (use template)
-    QUARANTINED,
-    TIMEOUT_1MIN,
-    TIMEOUT_5MIN,
-    TIMEOUT_60MIN,
-    U1_LARGE,
-<<<<<<< HEAD
-    WINDOWS_2K22_PREFERENCE,
->>>>>>> 21c67484 (increase timeout and remove unused code)
-=======
-    WINDOWS_2K19_PREFERENCE,
->>>>>>> 401353c8 (use template)
-    Images,
-)
-from utilities.constants.images import OS_FLAVOR_WINDOWS
+from utilities.constants import Images
 from utilities.constants.instance_types import U1_LARGE, WINDOWS_2K22_PREFERENCE
 from utilities.constants.pytest import QUARANTINED
-from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_2MIN, TIMEOUT_5MIN, TIMEOUT_40MIN
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_2MIN, TIMEOUT_5MIN, TIMEOUT_60MIN
 from utilities.ssp import validate_os_info_vmi_vs_windows_os
 from utilities.storage import (
     ErrorMsg,
@@ -351,9 +331,9 @@ def test_blank_disk_import_validate_status(data_volume_multi_storage_scope_funct
     [
         pytest.param(
             {
-                "dv_name": "dv-win-19",
+                "dv_name": "dv-win-22",
                 "source": HTTP,
-                "image": f"{Images.Windows.UEFI_WIN_DIR}/{Images.Windows.WIN2k19_IMG}",
+                "image": f"{Images.Windows.DIR}/{Images.Windows.WIN2022_IMG}",
                 "dv_size": Images.Windows.DEFAULT_DV_SIZE,
             },
             marks=pytest.mark.polarion("CNV-3637"),
@@ -368,21 +348,22 @@ def test_successful_vm_from_imported_dv_windows(
     data_volume_multi_storage_scope_function,
     modern_cpu_for_migration,
 ):
-    win2019_os_dict = get_windows_os_dict(windows_version="win-2019")
+    win2022_os_dict = get_windows_os_dict(windows_version="win-2022")
     with VirtualMachineForTestsFromTemplate(
-        name="win2019-vm",
+        name="win2022-vm",
         namespace=namespace.name,
         client=unprivileged_client,
-        labels=Template.generate_template_labels(**win2019_os_dict["template_labels"]),
+        labels=Template.generate_template_labels(**win2022_os_dict["template_labels"]),
         existing_data_volume=data_volume_multi_storage_scope_function,
         vm_instance_type=VirtualMachineClusterInstancetype(name=U1_LARGE, client=unprivileged_client),
-        vm_preference=VirtualMachineClusterPreference(name=WINDOWS_2K19_PREFERENCE, client=unprivileged_client),
+        vm_preference=VirtualMachineClusterPreference(name=WINDOWS_2K22_PREFERENCE, client=unprivileged_client),
         data_volume_template={
             "metadata": data_volume_multi_storage_scope_function.res["metadata"],
             "spec": data_volume_multi_storage_scope_function.res["spec"],
         },
         cpu_model=modern_cpu_for_migration,
+        tpm_params={"persistent": True},
     ) as vm:
         running_vm(vm=vm)
-        wait_for_windows_vm(vm=vm, version="2019", timeout=WINDOWS_VM_TIMEOUT)
+        wait_for_windows_vm(vm=vm, version="2022", timeout=WINDOWS_VM_TIMEOUT)
         validate_os_info_vmi_vs_windows_os(vm=vm)
