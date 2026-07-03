@@ -369,7 +369,6 @@ def velero_restore_second_namespace_with_datamover(
 def rhel_vm_with_hooks_opt_out(
     admin_client,
     namespace_for_backup,
-    snapshot_storage_class_name_scope_module,
 ):
     """Running RHEL VM with kubevirt.io/skip-backup-hooks annotation set to 'true'."""
     with VirtualMachineForTests(
@@ -391,7 +390,6 @@ def velero_backup_vm_with_hooks_opt_out(
     rhel_vm_with_hooks_opt_out,
     namespace_for_backup,
 ):
-    """Velero backup of a namespace containing a VM with backup hooks opt-out."""
     with VeleroBackup(
         client=admin_client,
         included_namespaces=[namespace_for_backup.name],

@@ -30,6 +30,7 @@ class TestVeleroBackupHookOptOut:
     """
 
     @pytest.mark.polarion("CNV-16267")
+    @pytest.mark.s390x
     def test_backup_paused_vm_hooks_disabled(
         self,
         admin_client,
@@ -64,6 +65,7 @@ class TestVeleroBackupHookOptOut:
         )
 
     @pytest.mark.polarion("CNV-16268")
+    @pytest.mark.s390x
     @pytest.mark.usefixtures("velero_restore_vm_with_hooks_opt_out")
     def test_full_backup_restore_hooks_disabled(
         self,
@@ -88,6 +90,7 @@ class TestVeleroBackupHookOptOut:
         wait_for_running_vm(
             vm=rhel_vm_with_hooks_opt_out,
             wait_until_running_timeout=TIMEOUT_15MIN,
+            wait_for_interfaces=False,
             check_ssh_connectivity=False,
         )
         backup_logs = get_velero_backup_logs(
