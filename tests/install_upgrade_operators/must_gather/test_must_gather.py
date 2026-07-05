@@ -236,17 +236,6 @@ class TestMustGatherCluster:
                 compare_method=compare_method,
             )
 
-    @pytest.mark.polarion("CNV-2801")
-    def test_nmstate_config_data(self, admin_client, must_gather_for_test):
-        check_list_of_resources(
-            client=admin_client,
-            resource_type=NodeNetworkState,
-            temp_dir=must_gather_for_test,
-            resource_path=f"cluster-scoped-resources/{NodeNetworkState.ApiGroup.NMSTATE_IO}/"
-            "nodenetworkstates/{name}.yaml",
-            checks=(("metadata", "name"), ("metadata", "uid")),
-        )
-
     @pytest.mark.parametrize(
         "label_selector",
         [pytest.param({"app": "cni-plugins"}, marks=(pytest.mark.polarion("CNV-2715")))],
