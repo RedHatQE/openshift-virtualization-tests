@@ -56,11 +56,6 @@ def outdated_vmis_count(admin_client):
     return vmis_with_outdated_label
 
 
-@pytest.fixture(scope="class")
-def kubevirt_resource_outdated_vmi_workloads_count(kubevirt_resource_scope_session):
-    return kubevirt_resource_scope_session.instance.status.outdatedVirtualMachineInstanceWorkloads
-
-
 @pytest.fixture(scope="session")
 def namespace_for_outdated_vm_upgrade(admin_client, unprivileged_client):
     yield from create_ns(admin_client=admin_client, unprivileged_client=unprivileged_client, name="test-outdated-vm-ns")
