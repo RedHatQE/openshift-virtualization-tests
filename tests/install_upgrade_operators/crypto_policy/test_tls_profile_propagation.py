@@ -13,7 +13,6 @@ from tests.install_upgrade_operators.crypto_policy.constants import (
     TLS_VERSION_1_3,
 )
 from tests.install_upgrade_operators.crypto_policy.utils import check_service_accepts_tls_version
-from utilities.constants.components import HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD
 
 LOGGER = logging.getLogger(__name__)
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.tier3]
@@ -45,8 +44,6 @@ def test_modern_profile_propagates_to_cnv_services(
     for service in cnv_services_with_template:
         service_name = service.name
         with subtests.test(msg=service_name):
-            if service_name == HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD:
-                pytest.xfail(f"CNV-82351: {service_name} — plaintext HTTP behind TLS route, TLS planned for 5.0")
             accepts_tls12 = check_service_accepts_tls_version(
                 utility_pods=workers_utility_pods,
                 node=worker_node1,

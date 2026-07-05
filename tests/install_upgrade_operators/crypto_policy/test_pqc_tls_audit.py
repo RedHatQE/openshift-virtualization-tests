@@ -8,8 +8,6 @@ import logging
 
 import pytest
 
-from utilities.constants.components import HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD
-
 LOGGER = logging.getLogger(__name__)
 pytestmark = pytest.mark.post_upgrade
 
@@ -39,8 +37,6 @@ def test_cnv_services_pqc_key_exchange(subtests, fips_enabled_cluster, pqc_statu
     """
     for service_name, accepted in pqc_status_by_service.items():
         with subtests.test(msg=service_name):
-            if service_name == HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD:
-                pytest.xfail(f"CNV-82351: {service_name} — plaintext HTTP behind TLS route, TLS planned for 5.0")
             assert accepted is not None, f"Service {service_name} is unreachable"
             if fips_enabled_cluster:
                 runtime = services_tls_runtime.get(service_name, "go")
