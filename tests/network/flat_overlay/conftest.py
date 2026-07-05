@@ -20,10 +20,12 @@ from tests.network.flat_overlay.utils import (
     get_vm_connection_reply,
     get_vm_kubevirt_domain_label,
     is_port_number_available,
+    restart_ovnkube_node_daemonset,
     start_nc_response_on_vm,
 )
 from utilities.constants import DEFAULT_RESOURCE_CONDITIONS, FLAT_OVERLAY_STR
 from utilities.infra import create_ns, wait_for_consistent_resource_conditions
+from utilities.jira import is_jira_open
 from utilities.network import assert_ping_successful, network_nad
 from utilities.virt import migrate_vm_and_verify
 
@@ -55,6 +57,8 @@ def multi_network_policy_enabled(admin_client, network_operator):
             resource_name="network",
             expected_conditions=DEFAULT_RESOURCE_CONDITIONS,
         )
+        if is_jira_open(jira_id="OCPBUGS-92080"):
+            restart_ovnkube_node_daemonset()
         yield
     wait_for_consistent_resource_conditions(
         dynamic_client=admin_client,
