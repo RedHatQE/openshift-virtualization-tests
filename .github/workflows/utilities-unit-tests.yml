@@ -18,6 +18,8 @@ jobs:
     permissions:
       pull-requests: read
     uses: ./.github/workflows/check-pr-approval.yml
+    secrets:
+      ORG_READ_TOKEN: ${{ secrets.ORG_READ_TOKEN }}
 
   utilities-unit-tests:
     name: Run Utilities Unit Tests
