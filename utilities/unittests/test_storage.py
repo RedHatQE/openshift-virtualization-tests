@@ -14,7 +14,6 @@ if "utilities.storage" in sys.modules:
 import utilities.storage
 
 importlib.reload(utilities.storage)
-utilities.storage = utilities.storage  # type: ignore[attr-defined]
 
 from utilities.storage import construct_datavolume_source_dict
 
