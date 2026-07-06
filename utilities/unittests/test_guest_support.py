@@ -3,21 +3,12 @@
 """Unit tests for guest_support module"""
 
 import json
-import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
 from timeout_sampler import TimeoutExpiredError
 
-# Need to mock circular imports for guest_support
-import utilities
-
-mock_virt = MagicMock()
-sys.modules["utilities.virt"] = mock_virt
-utilities.virt = mock_virt
-
-# Import after setting up mocks to avoid circular dependency
-from utilities.guest_support import (  # noqa: E402
+from utilities.guest_support import (
     assert_windows_efi,
     check_vm_xml_hyperv,
     check_windows_vm_hvinfo,

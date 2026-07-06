@@ -9,26 +9,11 @@ import pytest
 from kubernetes.dynamic.exceptions import NotFoundError
 from timeout_sampler import TimeoutExpiredError
 
-# Need to mock additional circular imports for ssp
-import utilities
-
-mock_virt = MagicMock()
-mock_storage = MagicMock()
-mock_infra = MagicMock()
-sys.modules["utilities.virt"] = mock_virt
-sys.modules["utilities.storage"] = mock_storage
-sys.modules["utilities.infra"] = mock_infra
-utilities.virt = mock_virt
-utilities.storage = mock_storage
-utilities.infra = mock_infra
-
-# Clear any mock of utilities.ssp from other test modules (e.g., test_hco.py)
-# to ensure we can import the real module for testing
+# conftest.py mocks utilities.ssp, but we need the real module for these tests
 if "utilities.ssp" in sys.modules:
     del sys.modules["utilities.ssp"]
 
-# Import after setting up mocks to avoid circular dependency
-from utilities.ssp import (  # noqa: E402
+from utilities.ssp import (
     cluster_instance_type_for_hot_plug,
     create_custom_template_from_url,
     get_cim_instance_json,

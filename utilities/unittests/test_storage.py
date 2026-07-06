@@ -1,6 +1,5 @@
 """Unit tests for construct_datavolume_source_dict in utilities/storage.py"""
 
-import importlib
 import sys
 from unittest.mock import patch
 
@@ -10,10 +9,6 @@ import pytest
 # Clear the mock and reimport the real module to test actual behavior.
 if "utilities.storage" in sys.modules:
     del sys.modules["utilities.storage"]
-
-import utilities.storage
-
-importlib.reload(utilities.storage)
 
 from utilities.storage import construct_datavolume_source_dict
 
