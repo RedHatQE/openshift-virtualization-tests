@@ -406,6 +406,7 @@ DEPENDENCY_SCOPE_SESSION = "session"
 
 # hco spec
 ENABLE_COMMON_BOOT_IMAGE_IMPORT = "enableCommonBootImageImport"
+DISABLE_MDEV_CONFIGURATION = "disableMDevConfiguration"
 
 # Common templates constants
 DATA_SOURCE_NAME = "DATA_SOURCE_NAME"
