@@ -657,6 +657,7 @@ def data_volume_template_dict(
     dv = DataVolume(
         name=target_dv_name,
         namespace=target_dv_namespace,
+        client=source_dv.client,
         source_dict=construct_datavolume_source_dict(
             source="pvc",
             source_pvc_name=source_dv.name,
@@ -675,6 +676,7 @@ def data_volume_template_with_source_ref_dict(data_source, storage_class=None):
     dv = DataVolume(
         name=utilities.infra.unique_name(name=data_source.name),
         namespace=data_source.namespace,
+        client=data_source.client,
         size=get_dv_size_from_datasource(data_source=data_source),
         storage_class=storage_class,
         api_name="storage",
