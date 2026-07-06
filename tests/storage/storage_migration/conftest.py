@@ -37,6 +37,7 @@ from utilities.constants import (
 )
 from utilities.infra import create_ns
 from utilities.storage import (
+    construct_datavolume_source_dict,
     create_dv,
     data_volume_template_with_source_ref_dict,
     virtctl_volume,
@@ -175,13 +176,15 @@ def vm_for_storage_class_migration_from_template_with_dv(
     dv = DataVolume(
         name="dv-rhel-imported",
         namespace=namespace.name,
-        source="http",
-        url=rhel_latest_os_params["rhel_image_path"],
+        source_dict=construct_datavolume_source_dict(
+            source="http",
+            url=rhel_latest_os_params["rhel_image_path"],
+            secret_name=artifactory_secret_scope_module.name,
+            cert_configmap_name=artifactory_config_map_scope_module.name,
+        ),
         size=Images.Rhel.DEFAULT_DV_SIZE,
         storage_class=source_storage_class,
         api_name="storage",
-        secret=artifactory_secret_scope_module,
-        cert_configmap=artifactory_config_map_scope_module.name,
     )
     dv.to_dict()
     with VirtualMachineForTests(
@@ -371,14 +374,16 @@ def windows_vm_with_vtpm_for_storage_migration(
         name="windows-11-dv",
         namespace=namespace.name,
         storage_class=source_storage_class,
-        source="http",
-        # Using WSL image to avoid the issue of the Windows VM not being able to boot
-        url=get_http_image_url(image_directory=Images.Windows.DIR, image_name=Images.Windows.WIN11_WSL2_IMG),
+        source_dict=construct_datavolume_source_dict(
+            source="http",
+            # Using WSL image to avoid the issue of the Windows VM not being able to boot
+            url=get_http_image_url(image_directory=Images.Windows.DIR, image_name=Images.Windows.WIN11_WSL2_IMG),
+            secret_name=artifactory_secret_scope_module.name,
+            cert_configmap_name=artifactory_config_map_scope_module.name,
+        ),
         size=Images.Windows.DEFAULT_DV_SIZE,
         client=unprivileged_client,
         api_name="storage",
-        secret=artifactory_secret_scope_module,
-        cert_configmap=artifactory_config_map_scope_module.name,
     )
     dv.to_dict()
     with VirtualMachineForTests(

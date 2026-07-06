@@ -105,6 +105,7 @@ from utilities.constants import (
     OC_ADM_LOGS_COMMAND,
     OS_FLAVOR_RHEL,
     OVS_BRIDGE,
+    BIND_IMMEDIATE_ANNOTATION,
     POD_SECURITY_NAMESPACE_LABELS,
     PREFERENCE_STR,
     RHEL9_STR,
@@ -181,6 +182,7 @@ from utilities.pytest_utils import exit_pytest_execution
 from utilities.sanity import cluster_sanity
 from utilities.ssp import get_data_import_crons, get_ssp_resource
 from utilities.storage import (
+    construct_datavolume_source_dict,
     create_or_update_data_source,
     data_volume,
     get_default_storage_class,
@@ -2483,13 +2485,15 @@ def dvs_for_upgrade(
             client=admin_client,
             name=f"dv-for-product-upgrade-{storage_class}",
             namespace=golden_images_namespace_name,
-            source="http",
+            source_dict=construct_datavolume_source_dict(
+                source="http",
+                url=rhel_latest_os_params["rhel_image_path"],
+                secret_name=artifactory_secret.name,
+                cert_configmap_name=artifactory_config_map.name,
+            ),
             storage_class=storage_class,
-            secret=artifactory_secret,
-            cert_configmap=artifactory_config_map.name,
-            url=rhel_latest_os_params["rhel_image_path"],
             size=rhel_latest_os_params["rhel_dv_size"],
-            bind_immediate_annotation=True,
+            annotations=BIND_IMMEDIATE_ANNOTATION,
             api_name="storage",
         )
         dv.create()

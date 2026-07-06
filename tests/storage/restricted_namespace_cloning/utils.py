@@ -31,8 +31,8 @@ def create_dv_negative(
     namespace: str,
     storage_class: str,
     size: str,
-    source_pvc: str,
-    source_namespace: str,
+    source_pvc_name: str,
+    source_pvc_namespace: str,
     unprivileged_client: DynamicClient,
 ) -> None:
     with pytest.raises(
@@ -44,8 +44,8 @@ def create_dv_negative(
             namespace=namespace,
             source=PVC,
             size=size,
-            source_pvc=source_pvc,
-            source_namespace=source_namespace,
+            source_pvc_name=source_pvc_name,
+            source_pvc_namespace=source_pvc_namespace,
             client=unprivileged_client,
             storage_class=storage_class,
         ):

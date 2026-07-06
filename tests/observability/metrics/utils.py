@@ -54,6 +54,7 @@ from utilities.constants import (
     Images,
 )
 from utilities.monitoring import get_metrics_value
+from utilities.storage import construct_datavolume_source_dict
 from utilities.virt import VirtualMachineForTests, running_vm
 
 LOGGER = logging.getLogger(__name__)
@@ -657,12 +658,14 @@ def create_windows11_wsl2_vm(
         name=dv_name,
         namespace=namespace,
         api_name="storage",
-        source=REGISTRY_STR,
+        source_dict=construct_datavolume_source_dict(
+            source=REGISTRY_STR,
+            url=f"{get_test_artifact_server_url(schema=REGISTRY_STR)}/docker-local/windows-qe/win_11:virtio",
+            secret_name=artifactory_secret.name,
+            cert_configmap_name=artifactory_config_map.name,
+        ),
         size=Images.Windows.CONTAINER_DISK_DV_SIZE,
         storage_class=storage_class,
-        url=f"{get_test_artifact_server_url(schema=REGISTRY_STR)}/docker-local/windows-qe/win_11:virtio",
-        secret=artifactory_secret,
-        cert_configmap=artifactory_config_map.name,
     )
     dv.to_dict()
     base_preference = VirtualMachineClusterPreference(client=client, name=windows_preference_name)

@@ -157,8 +157,8 @@ def test_regular_user_cant_clone_dv_in_ns(
             namespace=golden_images_namespace,
             source=PVC,
             size=golden_image_data_volume_scope_module.size,
-            source_pvc=golden_image_data_volume_scope_module.pvc.name,
-            source_namespace=golden_images_namespace,
+            source_pvc_name=golden_image_data_volume_scope_module.pvc.name,
+            source_pvc_namespace=golden_images_namespace,
             client=unprivileged_client,
             storage_class=storage_class,
         ):

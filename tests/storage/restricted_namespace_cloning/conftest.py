@@ -32,7 +32,7 @@ from tests.storage.utils import (
 )
 from utilities.constants import OS_FLAVOR_FEDORA, PVC, UNPRIVILEGED_USER, Images
 from utilities.infra import create_ns
-from utilities.storage import create_dv, get_dv_size_from_datasource
+from utilities.storage import construct_datavolume_source_dict, create_dv, get_dv_size_from_datasource
 from utilities.virt import VirtualMachineForTests, running_vm
 
 
@@ -95,10 +95,12 @@ def data_volume_clone_settings(destination_namespace, dv_cloned_from_datasource)
     dv = DataVolume(
         name=f"{TARGET_DV}-{storage_class}",
         namespace=destination_namespace.name,
-        source=PVC,
+        source_dict=construct_datavolume_source_dict(
+            source=PVC,
+            source_pvc_name=dv_cloned_from_datasource.name,
+            source_pvc_namespace=dv_cloned_from_datasource.namespace,
+        ),
         size=dv_cloned_from_datasource.size,
-        source_pvc=dv_cloned_from_datasource.name,
-        source_namespace=dv_cloned_from_datasource.namespace,
         storage_class=storage_class,
         api_name="storage",
     )
@@ -281,8 +283,8 @@ def dv_cloned_by_unprivileged_user_in_the_same_namespace(
         namespace=namespace,
         source=PVC,
         size=dv_cloned_from_datasource.size,
-        source_pvc=dv_cloned_from_datasource.pvc.name,
-        source_namespace=namespace,
+        source_pvc_name=dv_cloned_from_datasource.pvc.name,
+        source_pvc_namespace=namespace,
         client=unprivileged_client,
         storage_class=storage_class_name_scope_module,
     ) as cdv:
@@ -304,8 +306,8 @@ def dv_destination_cloned_from_pvc(
         namespace=destination_namespace.name,
         source=PVC,
         size=dv_cloned_from_datasource.size,
-        source_pvc=dv_cloned_from_datasource.pvc.name,
-        source_namespace=dv_cloned_from_datasource.namespace,
+        source_pvc_name=dv_cloned_from_datasource.pvc.name,
+        source_pvc_namespace=dv_cloned_from_datasource.namespace,
         client=unprivileged_client,
         storage_class=storage_class_name_scope_module,
     ) as cdv:

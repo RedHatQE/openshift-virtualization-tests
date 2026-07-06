@@ -52,6 +52,7 @@ from utilities.constants import (
 )
 from utilities.infra import create_ns, get_hyperconverged_resource
 from utilities.storage import (
+    construct_datavolume_source_dict,
     data_volume_template_with_source_ref_dict,
     write_file,
 )
@@ -497,12 +498,14 @@ def vm_for_cclm_windows_with_instance_type(
         name="dv-windows",
         namespace=remote_cluster_source_test_namespace.name,
         api_name="storage",
-        source="registry",
+        source_dict=construct_datavolume_source_dict(
+            source="registry",
+            url=f"{get_test_artifact_server_url(schema='registry')}/{WINDOWS_2022[CONTAINER_DISK_IMAGE_PATH_STR]}",
+            secret_name=remote_cluster_artifactory_secret_scope_class.name,
+            cert_configmap_name=remote_cluster_artifactory_config_map_scope_class.name,
+        ),
         size=Images.Windows.CONTAINER_DISK_DV_SIZE,
         storage_class=py_config["default_storage_class"],
-        url=f"{get_test_artifact_server_url(schema='registry')}/{WINDOWS_2022[CONTAINER_DISK_IMAGE_PATH_STR]}",
-        secret=remote_cluster_artifactory_secret_scope_class,
-        cert_configmap=remote_cluster_artifactory_config_map_scope_class.name,
     )
     dv.to_dict()
     dv.res["metadata"].pop("namespace", None)

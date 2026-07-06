@@ -23,7 +23,7 @@ from utilities.artifactory import (
     get_artifactory_secret,
 )
 from utilities.constants import TCP_TIMEOUT_30SEC, TIMEOUT_5MIN, TIMEOUT_30MIN, TIMEOUT_40MIN, TIMEOUT_60MIN, WIN_10
-from utilities.storage import get_test_artifact_server_url
+from utilities.storage import construct_datavolume_source_dict, get_test_artifact_server_url
 from utilities.virt import (
     VirtualMachineForTests,
     VirtualMachineForTestsFromTemplate,
@@ -347,13 +347,15 @@ def create_multi_dvs(namespace, client, dv_params):
             name=dv_name,
             client=client,
             namespace=namespace_name,
-            source="http",
+            source_dict=construct_datavolume_source_dict(
+                source="http",
+                url=f"{get_test_artifact_server_url()}{dv[dv_name].get('image_path')}",
+                secret_name=artifactory_secret.name,
+                cert_configmap_name=artifactory_config_map.name,
+            ),
             size=dv[dv_name].get("dv_size"),
             storage_class=dv[dv_name].get("storage_class"),
-            url=f"{get_test_artifact_server_url()}{dv[dv_name].get('image_path')}",
             api_name="storage",
-            secret=artifactory_secret,
-            cert_configmap=artifactory_config_map.name,
         )
 
     yield from deploy_and_wait_for_dvs(dv_dict=dvs)
