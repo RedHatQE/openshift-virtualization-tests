@@ -16,6 +16,7 @@ from utilities.constants.images import (
     DEFAULT_FEDORA_REGISTRY_URL,
     OS_FLAVOR_FEDORA,
 )
+from utilities.constants.storage import BIND_IMMEDIATE_ANNOTATION
 from utilities.constants.timeouts import (
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
@@ -23,6 +24,7 @@ from utilities.constants.timeouts import (
 from utilities.infra import (
     validate_os_info_vmi_vs_linux_os,
 )
+from utilities.storage import construct_datavolume_source_dict
 from utilities.virt import VirtualMachineForTestsFromTemplate, running_vm
 
 LOGGER = logging.getLogger(__name__)
@@ -119,11 +121,10 @@ def imported_fedora_dv(admin_client, golden_images_namespace, fedora_data_source
         name=fedora_data_source.name,
         namespace=golden_images_namespace.name,
         api_name="storage",
-        source="registry",
+        source_dict=construct_datavolume_source_dict(source="registry", url=DEFAULT_FEDORA_REGISTRY_URL),
         size=Images.Fedora.DEFAULT_DV_SIZE,
         storage_class=py_config["default_storage_class"],
-        url=DEFAULT_FEDORA_REGISTRY_URL,
-        bind_immediate_annotation=True,
+        annotations=BIND_IMMEDIATE_ANNOTATION,
     ) as dv:
         dv.wait_for_dv_success()
         yield dv

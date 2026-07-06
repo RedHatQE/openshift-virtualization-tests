@@ -27,12 +27,14 @@ from utilities.constants import Images
 from utilities.constants.hco import DATA_SOURCE_NAME
 from utilities.constants.images import DEFAULT_FEDORA_REGISTRY_URL
 from utilities.constants.pytest import QUARANTINED
+from utilities.constants.storage import BIND_IMMEDIATE_ANNOTATION
 from utilities.constants.timeouts import (
     TIMEOUT_5MIN,
     TIMEOUT_10MIN,
 )
 from utilities.exceptions import ResourceValueError
 from utilities.ssp import wait_for_condition_message_value
+from utilities.storage import construct_datavolume_source_dict
 
 LOGGER = logging.getLogger(__name__)
 
@@ -51,14 +53,16 @@ def dv_for_data_source(name, data_source, admin_client):
         client=admin_client,
         name=name,
         namespace=data_source.namespace,
-        # underlying OS is not relevant
-        url=get_http_image_url(image_directory=Images.Cirros.DIR, image_name=Images.Cirros.QCOW2_IMG),
-        source="http",
-        secret=artifactory_secret,
-        cert_configmap=artifactory_config_map.name,
+        source_dict=construct_datavolume_source_dict(
+            # underlying OS is not relevant
+            source="http",
+            url=get_http_image_url(image_directory=Images.Cirros.DIR, image_name=Images.Cirros.QCOW2_IMG),
+            secret_name=artifactory_secret.name,
+            cert_configmap_name=artifactory_config_map.name,
+        ),
         size=Images.Cirros.DEFAULT_DV_SIZE,
         storage_class=py_config["default_storage_class"],
-        bind_immediate_annotation=True,
+        annotations=BIND_IMMEDIATE_ANNOTATION,
         api_name="storage",
     ) as dv:
         dv.wait_for_dv_success()
