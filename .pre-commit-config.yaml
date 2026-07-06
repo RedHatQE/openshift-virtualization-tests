@@ -65,7 +65,7 @@ repos:
         stages: [commit-msg]
 
   - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: "0.37.3"
+    rev: "0.37.4"
     hooks:
       - id: check-jsonschema
         name: Validate .coderabbit.yaml against schema
