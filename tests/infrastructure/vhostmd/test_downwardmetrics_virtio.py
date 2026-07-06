@@ -31,7 +31,7 @@ EXPECTED_METRICS = {
     ("VirtualizationVendor", "string", "host"),
     ("VirtProductInfo", "string", "host"),
     ("TotalCPUTime", "real64", "vm"),
-    ("ResourceProcessorLimit", "uint64", "vm"),
+    ("ResourceProcessorLimit", "int64", "vm"),
     ("PhysicalMemoryAllocatedToVirtualSystem", "uint64", "vm"),
     ("ResourceMemoryLimit", "uint64", "vm"),
     ("NumberOfPhysicalCPUs", "int64", "host"),
