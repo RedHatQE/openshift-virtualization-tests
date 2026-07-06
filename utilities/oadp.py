@@ -33,6 +33,7 @@ from utilities.infra import (
     get_pod_by_name_prefix,
     unique_name,
 )
+from utilities.storage import construct_datavolume_source_dict
 from utilities.virt import VirtualMachineForTests, running_vm
 
 LOGGER = logging.getLogger(__name__)
@@ -159,17 +160,19 @@ def create_rhel_vm(
         dv = DataVolume(
             name=dv_name,
             namespace=namespace,
-            source="http",
-            url=get_http_image_url(
-                image_directory=Images.Rhel.DIR,
-                image_name=rhel_image,
+            source_dict=construct_datavolume_source_dict(
+                source="http",
+                url=get_http_image_url(
+                    image_directory=Images.Rhel.DIR,
+                    image_name=rhel_image,
+                ),
+                secret_name=artifactory_secret.name,
+                cert_configmap_name=artifactory_config_map.name,
             ),
             storage_class=storage_class,
             size=Images.Rhel.DEFAULT_DV_SIZE,
             api_name="storage",
             volume_mode=volume_mode,
-            secret=artifactory_secret,
-            cert_configmap=artifactory_config_map.name,
         )
         dv.to_dict()
         dv_metadata = dv.res["metadata"]

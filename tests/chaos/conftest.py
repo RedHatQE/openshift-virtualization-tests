@@ -43,6 +43,7 @@ from utilities.infra import (
     utility_daemonset_for_custom_tests,
     wait_for_node_status,
 )
+from utilities.storage import construct_datavolume_source_dict
 from utilities.virt import VirtualMachineForTests, running_vm
 
 LOGGER = logging.getLogger(__name__)
@@ -93,16 +94,18 @@ def chaos_dv_rhel9(
     artifactory_config_map_chaos_namespace_scope_module,
 ):
     yield DataVolume(
-        source="http",
+        source_dict=construct_datavolume_source_dict(
+            source="http",
+            url=rhel9_http_image_url,
+            secret_name=artifactory_secret_chaos_namespace_scope_module.name,
+            cert_configmap_name=artifactory_config_map_chaos_namespace_scope_module.name,
+        ),
         name="chaos-dv",
         api_name="storage",
         namespace=chaos_namespace.name,
-        url=rhel9_http_image_url,
         size=Images.Rhel.DEFAULT_DV_SIZE,
         storage_class=request.param["storage_class"],
         client=admin_client,
-        secret=artifactory_secret_chaos_namespace_scope_module,
-        cert_configmap=artifactory_config_map_chaos_namespace_scope_module.name,
     )
 
 

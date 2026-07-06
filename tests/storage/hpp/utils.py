@@ -108,10 +108,12 @@ def cirros_dv_on_hpp(dv_name, storage_class, namespace):
     with create_dv(
         dv_name=dv_name,
         namespace=namespace.name,
+        source="http",
         url=get_http_image_url(image_directory=Images.Cirros.DIR, image_name=Images.Cirros.QCOW2_IMG),
         size=Images.Cirros.DEFAULT_DV_SIZE,
         storage_class=storage_class,
         client=namespace.client,
+        use_artifactory=True,
     ) as dv:
         yield dv
 

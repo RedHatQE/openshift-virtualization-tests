@@ -85,7 +85,8 @@ def test_successful_clone_of_large_image(
         dv_name="dv-target",
         namespace=namespace.name,
         size=data_volume_multi_storage_scope_function.size,
-        source_pvc=data_volume_multi_storage_scope_function.name,
+        source_pvc_name=data_volume_multi_storage_scope_function.name,
+        source_pvc_namespace=data_volume_multi_storage_scope_function.namespace,
         storage_class=data_volume_multi_storage_scope_function.storage_class,
         client=namespace.client,
     ) as cdv:
@@ -173,7 +174,8 @@ def test_successful_vm_from_cloned_dv_windows(
         dv_name="dv-target",
         namespace=data_volume_multi_storage_scope_function.namespace,
         size=data_volume_multi_storage_scope_function.size,
-        source_pvc=data_volume_multi_storage_scope_function.name,
+        source_pvc_name=data_volume_multi_storage_scope_function.name,
+        source_pvc_namespace=data_volume_multi_storage_scope_function.namespace,
         storage_class=data_volume_multi_storage_scope_function.storage_class,
     ) as cdv:
         cdv.wait_for_dv_success(timeout=WINDOWS_CLONE_TIMEOUT)
@@ -198,7 +200,7 @@ def test_successful_vm_from_cloned_dv_windows(
         ),
         pytest.param(
             {
-                "dv_name": "dv-source-win",
+                "dv_name": f"dv-source-{OS_FLAVOR_WINDOWS}",
                 "image": f"{Images.Windows.DIR}/{Images.Windows.WIN11_IMG}",
                 "dv_size": Images.Windows.DEFAULT_DV_SIZE,
             },
@@ -220,11 +222,12 @@ def test_successful_snapshot_clone(
         dv_name="dv-target",
         namespace=namespace,
         size=data_volume_snapshot_capable_storage_scope_function.size,
-        source_pvc=data_volume_snapshot_capable_storage_scope_function.name,
+        source_pvc_name=data_volume_snapshot_capable_storage_scope_function.name,
+        source_pvc_namespace=data_volume_snapshot_capable_storage_scope_function.namespace,
         storage_class=storage_class,
     ) as cdv:
         cdv.wait_for_dv_success()
-        if OS_FLAVOR_WINDOWS not in data_volume_snapshot_capable_storage_scope_function.url.split("/")[-1]:
+        if OS_FLAVOR_WINDOWS not in data_volume_snapshot_capable_storage_scope_function.name:
             with create_vm_from_dv(
                 client=unprivileged_client,
                 dv=cdv,
