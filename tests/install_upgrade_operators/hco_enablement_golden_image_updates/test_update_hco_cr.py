@@ -10,7 +10,6 @@ from tests.install_upgrade_operators.hco_enablement_golden_image_updates.utils i
     get_template_dict_by_name,
     get_templates_by_type_from_hco_status,
 )
-from utilities.constants.pytest import QUARANTINED
 from utilities.hco import (
     update_hco_templates_spec,
     wait_for_auto_boot_config_stabilization,
@@ -88,18 +87,13 @@ class TestCustomTemplates:
             ssp_spec_templates_scope_function=ssp_spec_templates_scope_function,
         )
 
-    @pytest.mark.xfail(
-        reason=f"{QUARANTINED}: Teardown AssertionError in verify_boot_sources_reimported after re-enabling"
-        " enableCommonBootImageImport spec, CNV-88015",
-        run=False,
-    )
     @pytest.mark.dependency(name="test_add_custom_data_import_cron_template_disable_spec")
     @pytest.mark.polarion("CNV-7914")
+    @pytest.mark.usefixtures("disabled_boot_image_import_excluding_custom_datasource")
     def test_add_custom_data_import_cron_template_disable_spec(
         self,
         admin_client,
         hco_namespace,
-        disabled_common_boot_image_import_hco_spec_scope_function,
         hyperconverged_status_templates_scope_function,
         ssp_spec_templates_scope_function,
         image_stream_names,
