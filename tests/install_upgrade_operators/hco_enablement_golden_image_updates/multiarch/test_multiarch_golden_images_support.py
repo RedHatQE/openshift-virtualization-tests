@@ -16,7 +16,7 @@ Markers:
 
 import pytest
 
-__test__ = False
+pytestmark = [pytest.mark.multiarch]
 
 
 class TestDisabledMultiarchGoldenImagesSupport:
@@ -28,6 +28,8 @@ class TestDisabledMultiarchGoldenImagesSupport:
     Preconditions:
         - "enableMultiArchBootImageImport" feature gate disabled in HCO CR
     """
+
+    __test__ = False
 
     @pytest.mark.polarion("CNV-15977")
     def test_only_architecture_agnostic_golden_image_resources_exist(self):
