@@ -15,7 +15,6 @@ pytestmark = pytest.mark.post_upgrade
 @pytest.mark.polarion("CNV-5512")
 @pytest.mark.gating
 @pytest.mark.sno
-@pytest.mark.s390x
 def test_preallocation_dv(registry_dv_with_preallocation):
     """
     Test that preallocation of the kubevirt disk is enabled via an API in the DataVolume spec
@@ -56,7 +55,6 @@ def test_preallocation_globally_dv_spec_with_preallocation_false(
 @pytest.mark.polarion("CNV-5737")
 @pytest.mark.gating
 @pytest.mark.sno
-@pytest.mark.s390x
 def test_preallocation_for_blank_dv(blank_dv_with_preallocation):
     """
     Test that preallocation for blank disk should be supported
