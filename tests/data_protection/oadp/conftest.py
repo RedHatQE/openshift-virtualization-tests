@@ -35,6 +35,7 @@ from utilities.oadp import (
 )
 from utilities.storage import (
     check_upload_virtctl_result,
+    construct_datavolume_source_dict,
     create_dv,
     create_vm_from_dv,
     get_downloaded_artifact,
@@ -54,10 +55,12 @@ def imported_dv_in_progress_second_namespace(
     with create_dv(
         dv_name="imported-dv",
         namespace=namespace_for_backup2.name,
+        source="http",
         url=rhel9_http_image_url,
         size=Images.Rhel.DEFAULT_DV_SIZE,
         storage_class=storage_class_for_snapshot,
         client=namespace_for_backup2.client,
+        use_artifactory=True,
     ) as dv:
         yield dv
 
@@ -171,16 +174,18 @@ def windows_vm_with_data_volume_template(
             name="oadp-windows-dv",
             namespace=namespace_for_backup.name,
             storage_class=snapshot_storage_class_name_scope_module,
-            source="registry",
-            url=(
-                f"{get_test_artifact_server_url(schema='registry')}/"
-                f"{py_config['latest_windows_os_dict'][CONTAINER_DISK_IMAGE_PATH_STR]}"
+            source_dict=construct_datavolume_source_dict(
+                source="registry",
+                url=(
+                    f"{get_test_artifact_server_url(schema='registry')}/"
+                    f"{py_config['latest_windows_os_dict'][CONTAINER_DISK_IMAGE_PATH_STR]}"
+                ),
+                secret_name=artifactory_secret.name,
+                cert_configmap_name=artifactory_config_map.name,
             ),
             size=Images.Windows.CONTAINER_DISK_DV_SIZE,
             client=admin_client,
             api_name="storage",
-            secret=artifactory_secret,
-            cert_configmap=artifactory_config_map.name,
         )
         dv.to_dict()
 
@@ -305,7 +310,8 @@ def cloned_rhel_dv(imported_dv_second_namespace):
         dv_name="cloned-dv",
         namespace=imported_dv_second_namespace.namespace,
         size=imported_dv_second_namespace.size,
-        source_pvc=imported_dv_second_namespace.name,
+        source_pvc_name=imported_dv_second_namespace.name,
+        source_pvc_namespace=imported_dv_second_namespace.namespace,
         storage_class=imported_dv_second_namespace.storage_class,
         client=imported_dv_second_namespace.client,
     ) as cdv:

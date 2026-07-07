@@ -31,20 +31,22 @@ from utilities.artifactory import (
     get_artifactory_config_map,
     get_artifactory_secret,
 )
-from utilities.constants import (
-    NODE_STR,
+from utilities.constants.cluster import NODE_STR
+from utilities.constants.images import (
     OS_FLAVOR_FEDORA,
     OS_FLAVOR_RHEL,
     OS_FLAVOR_WINDOWS,
+)
+from utilities.constants.storage import StorageClassNames
+from utilities.constants.timeouts import (
     TIMEOUT_1MIN,
     TIMEOUT_30MIN,
-    StorageClassNames,
 )
 from utilities.infra import (
     create_ns,
 )
 from utilities.must_gather import run_must_gather
-from utilities.storage import generate_data_source_dict, get_test_artifact_server_url
+from utilities.storage import construct_datavolume_source_dict, generate_data_source_dict, get_test_artifact_server_url
 from utilities.virt import (
     VirtualMachineForTestsFromTemplate,
     verify_vm_migrated,
@@ -272,12 +274,14 @@ def golden_images_scale_dvs(request, keep_resources, admin_client, golden_images
                 namespace=golden_images_namespace.name,
                 storage_class=SCALE_STORAGE_TYPES[storage_type],
                 api_name="storage",
-                url=f"{get_test_artifact_server_url()}{dv_info['url']}",
+                source_dict=construct_datavolume_source_dict(
+                    source="http",
+                    url=f"{get_test_artifact_server_url()}{dv_info['url']}",
+                    secret_name=artifactory_secret.name,
+                    cert_configmap_name=artifactory_config_map.name,
+                ),
                 size=dv_info["size"],
                 client=admin_client,
-                source="http",
-                secret=artifactory_secret,
-                cert_configmap=artifactory_config_map.name,
             )
             golden_images_scale_dv.deploy()
             dvs_list.append(golden_images_scale_dv)
