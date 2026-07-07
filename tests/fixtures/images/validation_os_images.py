@@ -160,18 +160,12 @@ def windows_validation_os_images_data_source_scope_session(
         yield win_data_source
         return
 
-    with win_data_source as wds:
-        ResourceEditor(
-            patches={
-                wds: {
-                    "spec": {
-                        "source": generate_data_source_dict(
-                            dv=windows_validation_os_images_persistent_volume_claim_scope_session
-                        )
-                    }
-                }
-            }
-        ).update()
+    with DataSource(
+        name=windows_validation_os_images_persistent_volume_claim_scope_session.name,
+        namespace=windows_validation_os_images_persistent_volume_claim_scope_session.namespace,
+        client=admin_client,
+        source=generate_data_source_dict(dv=windows_validation_os_images_persistent_volume_claim_scope_session),
+    ) as wds:
         wds.wait_for_condition(
             condition=wds.Condition.READY,
             status=wds.Condition.Status.TRUE,
