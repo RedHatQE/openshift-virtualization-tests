@@ -342,7 +342,6 @@ def test_blank_disk_import_validate_status(data_volume_multi_storage_scope_funct
     indirect=True,
 )
 def test_successful_vm_from_imported_dv_windows(
-    admin_client,
     unprivileged_client,
     namespace,
     data_volume_multi_storage_scope_function,
