@@ -11,7 +11,8 @@ from tests.storage.upgrade.constants import (
     UPGRADE_SECOND_FILE_CONTENT,
     UPGRADE_SECOND_FILE_NAME,
 )
-from utilities.constants import OS_FLAVOR_RHEL, RHEL10_PREFERENCE, U1_SMALL
+from utilities.constants.images import OS_FLAVOR_RHEL
+from utilities.constants.instance_types import RHEL10_PREFERENCE, U1_SMALL
 from utilities.storage import data_volume_template_with_source_ref_dict, write_file_via_ssh
 from utilities.virt import VirtualMachineForTests, running_vm
 
