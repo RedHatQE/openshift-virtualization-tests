@@ -56,6 +56,7 @@ from utilities.pytest_utils import (
     deploy_run_in_progress_config_map,
     deploy_run_in_progress_namespace,
     filter_hpp_tests,
+    filter_multiarch_tests,
     get_artifactory_server_url,
     get_base_matrix_name,
     get_cnv_version_explorer_url,
@@ -643,6 +644,7 @@ def pytest_collection_modifyitems(session, config, items):
         config.hook.pytest_deselected(items=discard)
     items[:] = filter_deprecated_api_tests(items=items, config=config)
     items[:] = filter_sno_only_tests(items=items, config=config)
+    items[:] = filter_multiarch_tests(items=items, config=config)
     items[:] = filter_hpp_tests(items=items, config=config)
     items[:] = mark_nmstate_dependent_tests(items=items)
 

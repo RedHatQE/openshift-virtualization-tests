@@ -18,6 +18,7 @@ from timeout_sampler import TimeoutSampler
 
 import tests.storage.utils as storage_utils
 import utilities.storage
+from tests.os_params import RHEL_LATEST
 from utilities.constants import Images
 from utilities.constants.components import CDI_UPLOADPROXY
 from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_3MIN, TIMEOUT_5MIN
@@ -322,8 +323,8 @@ def test_successful_concurrent_uploads(
     [
         pytest.param(
             {
-                "image_path": py_config["latest_rhel_os_dict"]["image_path"],
-                "image_file": py_config["latest_rhel_os_dict"]["image_name"],
+                "image_path": RHEL_LATEST.get("image_path"),
+                "image_file": RHEL_LATEST.get("image_name"),
             },
             {
                 "dv_name": "cnv-4511",

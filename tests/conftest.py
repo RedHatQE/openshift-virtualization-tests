@@ -475,13 +475,12 @@ def nodes(admin_client):
 
 
 @pytest.fixture(scope="session")
-def schedulable_nodes(nodes):
+def schedulable_nodes(nodes, nodes_cpu_architecture):
     """Get nodes marked as schedulable by kubevirt.
 
     For multi-arch testing - filter nodes by the architecture being tested.
     """
     schedulable_label = "kubevirt.io/schedulable"
-    cpu_arch = py_config.get("cpu_arch")
     schedulable = [
         node
         for node in nodes
@@ -490,10 +489,12 @@ def schedulable_nodes(nodes):
         and not node.instance.spec.unschedulable
         and not kubernetes_taint_exists(node)
         and node.kubelet_ready
-        and (not cpu_arch or node.labels.get(KUBERNETES_ARCH_LABEL) == cpu_arch)
+        and (not nodes_cpu_architecture or node.labels.get(KUBERNETES_ARCH_LABEL) == nodes_cpu_architecture)
     ]
 
-    LOGGER.info(f"Schedulable nodes: {[node.name for node in schedulable]}, node architecture: {cpu_arch or 'all'}")
+    LOGGER.info(
+        f"Schedulable nodes: {[node.name for node in schedulable]}, node architecture: {nodes_cpu_architecture or 'all'}"
+    )
     yield schedulable
 
 
@@ -1497,7 +1498,6 @@ def cluster_info(
     ocs_current_version,
     kubevirt_resource_scope_session,
     workers_type,
-    nodes_cpu_architecture,
 ):
     title = "\nCluster info:\n"
     virtctl_client_version, virtctl_server_version = None, None
@@ -1514,7 +1514,7 @@ def cluster_info(
         f"\tOCS version: {ocs_current_version}\n"
         f"\tCNI type: {get_cluster_cni_type(admin_client=admin_client)}\n"
         f"\tWorkers type: {workers_type}\n"
-        f"\tCluster CPU Architecture: {py_config['cluster_arch']}\n"
+        f"\tCluster CPU Architecture: {', '.join(py_config['cluster_arch'])}\n"
         f"\tIPv4 cluster: {ipv4_supported_cluster()}\n"
         f"\tIPv6 cluster: {ipv6_supported_cluster()}\n"
         f"\tVirtctl version: \n\t{virtctl_client_version}\n\t{virtctl_server_version}\n"

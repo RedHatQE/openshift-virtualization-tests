@@ -36,6 +36,12 @@ class TestGetClusterArchitecture:
             result = get_cluster_architecture()
             assert result == {"amd64"}
 
+    def test_get_cluster_architecture_from_env_multiarch(self):
+        """Test getting architecture from environment variable - comma-separated multiarch"""
+        with patch.dict(in_dict=os.environ, values={"OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH": "amd64,arm64"}):
+            result = get_cluster_architecture()
+            assert result == {"amd64", "arm64"}
+
     @patch("utilities.architecture.cache_admin_client")
     @patch("utilities.architecture.Node")
     def test_get_cluster_architecture_from_nodes_amd64(self, mock_node_class, mock_cache_client):
