@@ -317,14 +317,11 @@ class TestMustGatherCluster:
                 checks=VALIDATE_UID_NAME,
             )
 
-    @pytest.mark.dependency(name="test_no_new_cnv_crds")
     @pytest.mark.polarion("CNV-8508")
     def test_no_new_cnv_crds(self, kubevirt_crd_names):
         new_crds = [crd for crd in kubevirt_crd_names if crd not in ALL_CNV_CRDS]
         assert not new_crds, f"Following crds are new: {new_crds}."
 
-    # Depends on test_no_new_cnv_crds: if unknown CRDs exist, this test validates an incomplete set
-    @pytest.mark.dependency(depends=["test_no_new_cnv_crds"])
     @pytest.mark.polarion("CNV-2724")
     def test_crd_resources(self, admin_client, must_gather_for_test, kubevirt_crd_by_type):
         crd_name = kubevirt_crd_by_type.name
