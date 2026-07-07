@@ -234,7 +234,8 @@ def test_cloner_pods_cdi_label(
         dv_name="dv-target",
         namespace=data_volume_without_snapshot_capability_scope_function.namespace,
         size=data_volume_without_snapshot_capability_scope_function.size,
-        source_pvc=data_volume_without_snapshot_capability_scope_function.name,
+        source_pvc_name=data_volume_without_snapshot_capability_scope_function.name,
+        source_pvc_namespace=data_volume_without_snapshot_capability_scope_function.namespace,
         storage_class=data_volume_without_snapshot_capability_scope_function.storage_class,
     ) as cdv:
         cdv.wait_for_status(status=DataVolume.Status.CLONE_IN_PROGRESS, timeout=TIMEOUT_10MIN)

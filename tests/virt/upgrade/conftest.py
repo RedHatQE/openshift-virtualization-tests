@@ -257,11 +257,13 @@ def windows_vm(
         client=admin_client,
         dv_name=latest_windows_dict["os_version"],
         namespace=py_config["golden_images_namespace"],
+        source="http",
         url=f"{get_test_artifact_server_url()}{latest_windows_dict['image_path']}",
         storage_class=py_config["default_storage_class"],
         access_modes=py_config["default_access_mode"],
         volume_mode=py_config["default_volume_mode"],
         size=latest_windows_dict["dv_size"],
+        use_artifactory=True,
     ) as dv:
         dv.wait_for_dv_success(timeout=TIMEOUT_30MIN)
         with DataSource(

@@ -2,27 +2,12 @@
 
 """Unit tests for oadp module"""
 
-# flake8: noqa: E402
-import sys
 from re import escape
 from shlex import quote
 from unittest.mock import MagicMock, patch
 
 import pexpect
 import pytest
-
-# Need to mock circular imports for oadp
-import utilities
-
-# mock must be before importing oadp to prevent circular import
-mock_virt = MagicMock()
-mock_infra = MagicMock()
-sys.modules["utilities.virt"] = mock_virt
-sys.modules["utilities.infra"] = mock_infra
-utilities.virt = mock_virt
-utilities.infra = mock_infra
-
-# Import after setting up mocks to avoid circular dependency
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.exceptions import ResourceTeardownError
 

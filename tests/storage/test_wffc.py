@@ -19,6 +19,7 @@ from utilities.storage import (
     add_dv_to_vm,
     check_disk_count_in_vm,
     check_upload_virtctl_result,
+    construct_datavolume_source_dict,
     create_dv,
     create_vm_from_dv,
     data_volume_template_with_source_ref_dict,
@@ -63,7 +64,7 @@ def blank_dv_template_wffc_scope_function(request, namespace, wffc_storage_class
     blank_dv_template = DataVolume(
         name=f"dv-{request.param['dv_name']}",
         namespace=namespace.name,
-        source="blank",
+        source_dict=construct_datavolume_source_dict(source="blank"),
         size=DEFAULT_BLANK_DV_SIZE,
         storage_class=wffc_storage_class_name_scope_module,
         api_name="storage",

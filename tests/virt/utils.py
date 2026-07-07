@@ -458,10 +458,12 @@ def get_or_create_golden_image_data_source(
         with create_dv(
             dv_name=data_source_name,
             namespace=golden_images_namespace.name,
+            source="http",
             storage_class=py_config["default_storage_class"],
             url=f"{get_test_artifact_server_url()}{os_dict['image_path']}",
             size=os_dict["dv_size"],
             client=admin_client,
+            use_artifactory=True,
         ) as dv:
             dv.wait_for_dv_success(timeout=TIMEOUT_30MIN)
             yield from create_or_update_data_source(admin_client=admin_client, dv=dv)

@@ -35,6 +35,7 @@ import utilities.virt as virt_util
 from utilities import console
 from utilities.artifactory import get_test_artifact_server_url
 from utilities.constants import (
+    BIND_IMMEDIATE_ANNOTATION,
     CDI_LABEL,
     HOTPLUG_DISK_SERIAL,
     HPP_POOL,
@@ -105,76 +106,177 @@ def create_dummy_first_consumer_pod(volume_mode=DataVolume.VolumeMode.FILE, dv=N
         )
 
 
+def construct_datavolume_source_dict(
+    source: str,
+    url: str | None = None,
+    secret_name: str | None = None,
+    cert_configmap_name: str | None = None,
+    source_pvc_name: str | None = None,
+    source_pvc_namespace: str | None = None,
+) -> dict[str, Any]:
+    """
+    Build a DataVolume source_dict.
+
+    Args:
+        source: Source type ("http", "registry", "pvc", "blank", "upload").
+        url: URL for http/registry sources.
+        secret_name: Optional Secret name for authentication (http/registry sources).
+        cert_configmap_name: Optional ConfigMap name for TLS certificates (http/registry sources).
+        source_pvc_name: PVC name for pvc source type.
+        source_pvc_namespace: Namespace of the source PVC.
+
+    Returns:
+        dict[str, Any]: The constructed source_dict for DataVolume.
+    """
+    if source == "http":
+        if not utilities.infra.url_excluded_from_validation(url):
+            validate_file_exists_in_url(url=url)
+        source_spec: dict[str, Any] = {"http": {"url": url}}
+    elif source == "registry":
+        source_spec = {"registry": {"url": url}}
+    elif source == "pvc":
+        pvc_spec: dict[str, Any] = {"name": source_pvc_name}
+        if source_pvc_namespace is not None:
+            pvc_spec["namespace"] = source_pvc_namespace
+        source_spec = {"pvc": pvc_spec}
+    elif source == "blank":
+        source_spec = {"blank": {}}
+    elif source == "upload":
+        source_spec = {"upload": {}}
+    else:
+        raise ValueError(f"Unsupported source type: {source}")
+
+    if source in ("http", "registry"):
+        if secret_name:
+            source_spec[source]["secretRef"] = secret_name
+        if cert_configmap_name:
+            source_spec[source]["certConfigMap"] = cert_configmap_name
+
+    return source_spec
+
+
 @contextmanager
 def create_dv(
-    dv_name,
-    namespace,
-    storage_class,
-    client,
-    volume_mode=None,
-    url=None,
-    source="http",
-    content_type=None,
-    size="5Gi",
-    secret=None,
-    cert_configmap=None,
-    hostpath_node=None,
-    access_modes=None,
-    source_pvc=None,
-    source_namespace=None,
-    multus_annotation=None,
-    teardown=True,
-    consume_wffc=True,
-    bind_immediate=None,
-    preallocation=None,
-    api_name="storage",
-    source_ref=None,
-):
+    dv_name: str,
+    namespace: str,
+    client: DynamicClient,
+    storage_class: str | None = None,
+    access_modes: str | None = None,
+    volume_mode: str | None = None,
+    url: str | None = None,
+    source: str | None = None,
+    content_type: str | None = None,
+    size: str = "5Gi",
+    secret_name: str | None = None,
+    cert_configmap_name: str | None = None,
+    source_pvc_name: str | None = None,
+    source_pvc_namespace: str | None = None,
+    annotations: dict[str, str] | None = None,
+    teardown: bool = True,
+    consume_wffc: bool = True,
+    preallocation: bool | None = None,
+    api_name: str = "storage",
+    source_ref: dict[str, Any] | None = None,
+    source_dict: dict[str, Any] | None = None,
+    use_artifactory: bool = False,
+) -> Generator[DataVolume]:
+    """
+    Create and manage a DataVolume with optional Artifactory resource lifecycle.
+
+    Context manager that constructs a DataVolume from either a pre-built ``source_dict``/``source_ref``
+    or by building one via ``construct_datavolume_source_dict`` from the ``source`` parameter.
+    When ``use_artifactory`` is True for http/registry sources, creates namespace-scoped
+    Artifactory Secret and ConfigMap resources that are cleaned up on exit.
+
+    Args:
+        dv_name: Name for the DataVolume resource.
+        namespace: Target Kubernetes namespace.
+        client: Kubernetes dynamic client.
+        storage_class: StorageClass name.
+        access_modes: PVC access mode (e.g. "ReadWriteOnce").
+        volume_mode: PVC volume mode ("Block" or "Filesystem").
+        url: Source URL for http/registry sources.
+        source: Source type ("http", "registry", "pvc", "blank", "upload").
+            Used to construct ``source_dict`` when neither ``source_dict`` nor ``source_ref`` is provided.
+        content_type: CDI content type (e.g. "kubevirt").
+        size: PVC size (default "5Gi").
+        secret_name: Pre-existing Secret name for source authentication.
+        cert_configmap_name: Pre-existing ConfigMap name for TLS certificates.
+        source_pvc_name: PVC name for clone sources.
+        source_pvc_namespace: Namespace of the source PVC for clone sources.
+        annotations: Annotations dict to apply to the DataVolume.
+        teardown: Whether to delete the DataVolume on context exit.
+        consume_wffc: Whether to create a dummy consumer pod for WaitForFirstConsumer storage classes.
+        preallocation: Whether to preallocate the target PVC.
+        api_name: CDI API group name (default "storage").
+        source_ref: Pre-built sourceRef dict for DataVolume.
+        source_dict: Pre-built source dict for DataVolume.
+        use_artifactory: Whether to create Artifactory Secret/ConfigMap for http/registry sources.
+
+    Yields:
+        DataVolume: The created DataVolume resource.
+
+    Raises:
+        ValueError: If ``source`` is not provided when ``source_dict`` and ``source_ref`` are both None.
+    """
     artifactory_secret = None
-    cert_created = None
+    artifactory_config_map = None
 
-    if source_ref:
-        source = None
-    if source in ("http", "https"):
-        if not utilities.infra.url_excluded_from_validation(url):
-            # Make sure URL exists
-            validate_file_exists_in_url(url=url)
-        if not secret:
-            secret = utilities.artifactory.get_artifactory_secret(namespace=namespace)
-            artifactory_secret = secret
-        if not cert_configmap:
-            cert_created = utilities.artifactory.get_artifactory_config_map(namespace=namespace)
-            cert_configmap = cert_created.name
+    try:
+        if source_dict is None and source_ref is None:
+            if not source:
+                raise ValueError("'source' is required when 'source_dict' and 'source_ref' are not provided")
 
-    with DataVolume(
-        source=source,
-        name=dv_name,
-        namespace=namespace,
-        url=url,
-        content_type=content_type,
-        size=size,
-        storage_class=storage_class,
-        cert_configmap=cert_configmap,
-        volume_mode=volume_mode,
-        hostpath_node=hostpath_node,
-        access_modes=access_modes,
-        secret=secret,
-        client=client,
-        source_pvc=source_pvc,
-        source_namespace=source_namespace,
-        bind_immediate_annotation=bind_immediate,
-        multus_annotation=multus_annotation,
-        teardown=teardown,
-        preallocation=preallocation,
-        api_name=api_name,
-        source_ref=source_ref,
-    ) as dv:
-        if sc_volume_binding_mode_is_wffc(sc=storage_class, client=client) and consume_wffc:
-            create_dummy_first_consumer_pod(dv=dv)
-        yield dv
-    utilities.artifactory.cleanup_artifactory_secret_and_config_map(
-        artifactory_secret=artifactory_secret, artifactory_config_map=cert_created
-    )
+            LOGGER.info("No 'source_dict' or 'source_ref' provided - will construct the 'source_dict'")
+
+            if source in ("http", "registry") and use_artifactory:
+                LOGGER.info(f"Creating artifactory resources for DV '{dv_name}' in namespace '{namespace}'")
+                LOGGER.info(f"DV source is '{source}' with url: {url}")
+
+                if not secret_name:
+                    artifactory_secret = utilities.artifactory.get_artifactory_secret(
+                        namespace=namespace, client=client
+                    )
+                    secret_name = artifactory_secret.name
+                if not cert_configmap_name:
+                    artifactory_config_map = utilities.artifactory.get_artifactory_config_map(
+                        namespace=namespace, client=client
+                    )
+                    cert_configmap_name = artifactory_config_map.name
+
+            source_dict = construct_datavolume_source_dict(
+                source=source,
+                url=url,
+                secret_name=secret_name,
+                cert_configmap_name=cert_configmap_name,
+                source_pvc_name=source_pvc_name,
+                source_pvc_namespace=source_pvc_namespace,
+            )
+
+        with DataVolume(
+            name=dv_name,
+            namespace=namespace,
+            client=client,
+            content_type=content_type,
+            size=size,
+            storage_class=storage_class,
+            access_modes=access_modes,
+            volume_mode=volume_mode,
+            annotations=annotations,
+            teardown=teardown,
+            preallocation=preallocation,
+            api_name=api_name,
+            source_ref=source_ref,
+            source_dict=source_dict,
+        ) as dv:
+            if storage_class and sc_volume_binding_mode_is_wffc(sc=storage_class, client=client) and consume_wffc:
+                create_dummy_first_consumer_pod(dv=dv)
+            yield dv
+
+    finally:
+        utilities.artifactory.cleanup_artifactory_secret_and_config_map(
+            artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
+        )
 
 
 def data_volume(
@@ -256,13 +358,14 @@ def data_volume(
         "access_modes": params_dict.get("access_modes"),
         "volume_mode": params_dict.get("volume_mode"),
         "consume_wffc": consume_wffc,
-        "bind_immediate": bind_immediate,
+        "annotations": BIND_IMMEDIATE_ANNOTATION if bind_immediate else None,
         "preallocation": params_dict.get("preallocation", None),
         "url": url,
         "client": client,
+        "use_artifactory": source == "http",
     }
-    if params_dict.get("cert_configmap"):
-        dv_kwargs["cert_configmap"] = params_dict.get("cert_configmap")
+    if params_dict.get("cert_configmap_name"):
+        dv_kwargs["cert_configmap_name"] = params_dict["cert_configmap_name"]
     # Create dv
     with create_dv(**{k: v for k, v in dv_kwargs.items() if v is not None}) as dv:
         if params_dict.get("wait", True):
@@ -551,12 +654,14 @@ def data_volume_template_dict(
     dv = DataVolume(
         name=target_dv_name,
         namespace=target_dv_namespace,
-        source="pvc",
+        source_dict=construct_datavolume_source_dict(
+            source="pvc",
+            source_pvc_name=source_dv.name,
+            source_pvc_namespace=source_dv.namespace,
+        ),
         storage_class=storage_class or source_dv_pvc_spec.storageClassName,
         volume_mode=volume_mode or source_dv_pvc_spec.volumeMode,
         size=size or source_dv.size,
-        source_pvc=source_dv.name,
-        source_namespace=source_dv.namespace,
         api_name=source_dv.api_name,
     )
     dv.to_dict()

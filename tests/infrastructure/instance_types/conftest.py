@@ -27,6 +27,7 @@ from utilities.constants import (
     Images,
 )
 from utilities.storage import (
+    construct_datavolume_source_dict,
     create_dummy_first_consumer_pod,
     data_volume_template_with_source_ref_dict,
     generate_data_source_dict,
@@ -124,13 +125,17 @@ def latest_windows_data_volume(
         name="latest-windows",
         namespace=namespace.name,
         api_name="storage",
-        source="registry",
+        source_dict=construct_datavolume_source_dict(
+            source="registry",
+            url=(
+                f"{get_test_artifact_server_url(schema='registry')}/"
+                f"{py_config['latest_windows_os_dict'][CONTAINER_DISK_IMAGE_PATH_STR]}"
+            ),
+            secret_name=secret.name,
+            cert_configmap_name=cert.name,
+        ),
         size=Images.Windows.CONTAINER_DISK_DV_SIZE,
         storage_class=default_sc.name,
-        url=f"{get_test_artifact_server_url(schema='registry')}/"
-        f"{py_config['latest_windows_os_dict'][CONTAINER_DISK_IMAGE_PATH_STR]}",
-        secret=secret,
-        cert_configmap=cert.name,
     ) as win_dv:
         if sc_volume_binding_mode_is_wffc(sc=default_sc.name, client=win_dv.client):
             create_dummy_first_consumer_pod(pvc=win_dv.pvc)

@@ -4,42 +4,17 @@
 
 import json
 import sys
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from timeout_sampler import TimeoutExpiredError
 
-# Add utilities to Python path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-# Mock circular imports at module level to avoid circular dependencies
 # conftest.py mocks utilities.hco, but we need the real module for these tests
-import utilities
-
-# First, set up mocks for hco.py's dependencies
-# hco -> ssp -> storage -> virt -> console -> data_collector
-mock_virt = MagicMock()
-mock_storage = MagicMock()
-mock_ssp = MagicMock()
-# SSP needs these attributes for hco.py imports
-mock_ssp.wait_for_ssp = MagicMock()
-mock_ssp.validate_os_info_vmi_vs_windows_os = MagicMock()
-
-sys.modules["utilities.virt"] = mock_virt
-sys.modules["utilities.storage"] = mock_storage
-sys.modules["utilities.ssp"] = mock_ssp
-utilities.virt = mock_virt
-utilities.storage = mock_storage
-utilities.ssp = mock_ssp
-
-# Remove the mock for utilities.hco from conftest.py so we can import the real module
 if "utilities.hco" in sys.modules:
     del sys.modules["utilities.hco"]
 
-# Import after setting up mocks to avoid circular dependency
-from utilities.hco import (  # noqa: E402
+from utilities.hco import (
     CDI,
     DEFAULT_HCO_PROGRESSING_CONDITIONS,
     HCO_JSONPATCH_ANNOTATION_COMPONENT_DICT,

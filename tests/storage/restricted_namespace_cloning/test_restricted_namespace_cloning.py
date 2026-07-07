@@ -141,8 +141,8 @@ def test_user_permissions_negative(
         namespace=destination_namespace.name,
         storage_class=storage_class_name_scope_module,
         size=dv_cloned_from_datasource.size,
-        source_pvc=dv_cloned_from_datasource.pvc.name,
-        source_namespace=dv_cloned_from_datasource.namespace,
+        source_pvc_name=dv_cloned_from_datasource.pvc.name,
+        source_pvc_namespace=dv_cloned_from_datasource.namespace,
         unprivileged_client=unprivileged_client,
     )
 
@@ -170,8 +170,8 @@ def test_unprivileged_user_clone_same_namespace_negative(
         namespace=namespace.name,
         storage_class=storage_class_name_scope_module,
         size=dv_cloned_from_datasource.size,
-        source_pvc=dv_cloned_from_datasource.pvc.name,
-        source_namespace=dv_cloned_from_datasource.namespace,
+        source_pvc_name=dv_cloned_from_datasource.pvc.name,
+        source_pvc_namespace=dv_cloned_from_datasource.namespace,
         unprivileged_client=unprivileged_client,
     )
 
@@ -202,7 +202,7 @@ def test_user_permissions_only_for_dst_ns_negative(
         namespace=destination_namespace.name,
         storage_class=storage_class_name_scope_module,
         size=dv_cloned_from_datasource.size,
-        source_pvc=dv_cloned_from_datasource.pvc.name,
-        source_namespace=dv_cloned_from_datasource.namespace,
+        source_pvc_name=dv_cloned_from_datasource.pvc.name,
+        source_pvc_namespace=dv_cloned_from_datasource.namespace,
         unprivileged_client=unprivileged_client,
     )
