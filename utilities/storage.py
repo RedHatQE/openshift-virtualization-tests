@@ -2,7 +2,7 @@ import logging
 import math
 import os
 import shlex
-from collections.abc import Generator
+from collections.abc import Collection, Generator
 from contextlib import contextmanager
 from typing import Any
 
@@ -1225,9 +1225,12 @@ def get_data_sources_managed_by_data_import_cron(client: DynamicClient, namespac
 
 
 def verify_boot_sources_reimported(
-    admin_client: DynamicClient, namespace: str, consecutive_checks_count: int = 6
+    admin_client: DynamicClient,
+    namespace: str,
+    consecutive_checks_count: int = 6,
+    exclude_data_source_names: Collection[str] | None = None,
 ) -> bool:
-    """Verify all DataImportCron-managed DataSources reach Ready=True.
+    """Verify DataImportCron-managed DataSources reach Ready=True.
 
     Checks DataSources sequentially each with its own timeout. Stops on the first
     DataSource that does not become ready.
@@ -1236,12 +1239,18 @@ def verify_boot_sources_reimported(
         admin_client: Cluster admin client.
         namespace: Namespace containing the DataImportCron-managed DataSources.
         consecutive_checks_count: Consecutive Ready=True polls required for stability.
+        exclude_data_source_names: DataSources whose name is in this collection
+            are skipped (e.g. custom DIC templates without valid sources).
+            When None, all DIC-managed DataSources are verified.
 
     Returns:
-        True if all DataSources reached Ready=True otherwise false
+        True if all non-excluded DIC-managed DataSources reached Ready=True, otherwise False
     """
     try:
         for data_source in get_data_sources_managed_by_data_import_cron(client=admin_client, namespace=namespace):
+            if exclude_data_source_names is not None and data_source.name in exclude_data_source_names:
+                LOGGER.info(f"Skipping DataSource {data_source.name}: excluded from verification")
+                continue
             LOGGER.info(f"Waiting for DataSource {data_source.name} consistent ready status")
             utilities.infra.wait_for_consistent_resource_conditions(
                 dynamic_client=admin_client,
