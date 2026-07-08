@@ -747,10 +747,10 @@ class VirtualMachineForTests(VirtualMachine):
                     "Setting memory.guest bigger then requests.memory! (This might cause unpredictable issues!)"
                 )
 
-        if self.memory_guest:
+        if self.memory_guest and not self.vm_instance_type and not self.vm_instance_type_infer:
             template_spec.setdefault("domain", {}).setdefault("memory", {})["guest"] = str(self.memory_guest)
 
-        if self.memory_max_guest:
+        if self.memory_max_guest and not self.vm_instance_type and not self.vm_instance_type_infer:
             template_spec.setdefault("domain", {}).setdefault("memory", {})["maxGuest"] = self.memory_max_guest
 
         if self.memory_requests:
@@ -1375,11 +1375,6 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
     def to_dict(self):
         self.set_login_params()
         self.body = self.process_template()
-        if self.vm_instance_type:
-            domain = self.body.get("spec", {}).get("template", {}).get("spec", {}).get("domain", {})
-            domain.pop("cpu", None)
-            domain.pop("memory", None)
-            self.body.get("metadata", {}).get("annotations", {}).pop("vm.kubevirt.io/validations", None)
         super().to_dict()
 
         if self.vm_dict:
