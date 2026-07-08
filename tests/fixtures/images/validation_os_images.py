@@ -4,7 +4,6 @@ from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.namespace import Namespace
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
-from ocp_resources.resource import ResourceEditor
 from ocp_resources.role_binding import RoleBinding
 from ocp_resources.utils.constants import TIMEOUT_1MINUTE
 from pytest_testconfig import config as py_config
@@ -160,12 +159,10 @@ def windows_validation_os_images_data_source_scope_session(
         yield win_data_source
         return
 
-    with DataSource(
-        name=windows_validation_os_images_persistent_volume_claim_scope_session.name,
-        namespace=windows_validation_os_images_persistent_volume_claim_scope_session.namespace,
-        client=admin_client,
-        source=generate_data_source_dict(dv=windows_validation_os_images_persistent_volume_claim_scope_session),
-    ) as wds:
+    win_data_source.source = generate_data_source_dict(
+        dv=windows_validation_os_images_persistent_volume_claim_scope_session
+    )
+    with win_data_source as wds:
         wds.wait_for_condition(
             condition=wds.Condition.READY,
             status=wds.Condition.Status.TRUE,

@@ -60,42 +60,6 @@ def create_vm_from_clone_dv_template(
         running_vm(vm=vm)
 
 
-<<<<<<< HEAD
-@pytest.mark.tier3
-@pytest.mark.parametrize(
-    "data_volume_multi_storage_scope_function",
-    [
-        pytest.param(
-            {
-                "dv_name": "dv-source",
-                "image": f"{Images.Windows.DIR}/{Images.Windows.WIN11_IMG}",
-                "dv_size": Images.Windows.DEFAULT_DV_SIZE,
-            },
-            marks=(pytest.mark.polarion("CNV-1892")),
-        ),
-    ],
-    indirect=True,
-)
-@pytest.mark.s390x
-def test_successful_clone_of_large_image(
-    namespace,
-    data_volume_multi_storage_scope_function,
-):
-    with create_dv(
-        source="pvc",
-        dv_name="dv-target",
-        namespace=namespace.name,
-        size=data_volume_multi_storage_scope_function.size,
-        source_pvc_name=data_volume_multi_storage_scope_function.name,
-        source_pvc_namespace=data_volume_multi_storage_scope_function.namespace,
-        storage_class=data_volume_multi_storage_scope_function.storage_class,
-        client=namespace.client,
-    ) as cdv:
-        cdv.wait_for_dv_success(timeout=WINDOWS_CLONE_TIMEOUT)
-
-
-=======
->>>>>>> ecf9cc62 (Use DataSource sourceRef for Windows VM cloning with vTPM)
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2148")
 @pytest.mark.gating()
@@ -144,51 +108,6 @@ def test_successful_vm_restart_with_cloned_dv(
 
 
 @pytest.mark.tier3
-<<<<<<< HEAD
-@pytest.mark.parametrize(
-    ("data_volume_multi_storage_scope_function", "vm_params"),
-    [
-        pytest.param(
-            {
-                "dv_name": "dv-source",
-                "source": "http",
-                "image": f"{Images.Windows.DIR}/{Images.Windows.WIN11_IMG}",
-                "dv_size": Images.Windows.DEFAULT_DV_SIZE,
-            },
-            {
-                "vm_name": f"vm-win-{WINDOWS_11.get('os_version')}",
-                "template_labels": WINDOWS_11_TEMPLATE_LABELS,
-                "os_version": WINDOWS_11.get("os_version"),
-                "ssh": True,
-            },
-            marks=pytest.mark.polarion("CNV-3638"),
-        ),
-    ],
-    indirect=["data_volume_multi_storage_scope_function"],
-)
-def test_successful_vm_from_cloned_dv_windows(
-    unprivileged_client,
-    data_volume_multi_storage_scope_function,
-    vm_params,
-    namespace,
-):
-    with create_dv(
-        client=unprivileged_client,
-        source="pvc",
-        dv_name="dv-target",
-        namespace=data_volume_multi_storage_scope_function.namespace,
-        size=data_volume_multi_storage_scope_function.size,
-        source_pvc_name=data_volume_multi_storage_scope_function.name,
-        source_pvc_namespace=data_volume_multi_storage_scope_function.namespace,
-        storage_class=data_volume_multi_storage_scope_function.storage_class,
-    ) as cdv:
-        cdv.wait_for_dv_success(timeout=WINDOWS_CLONE_TIMEOUT)
-        create_windows_vm_validate_guest_agent_info(
-            dv=cdv,
-            namespace=namespace,
-            unprivileged_client=unprivileged_client,
-            vm_params=vm_params,
-=======
 @pytest.mark.incremental
 class TestWindowsClonedDv:
     """
@@ -215,7 +134,6 @@ class TestWindowsClonedDv:
         """
         assert cloned_windows_dv_multi_storage_scope_class.status == DataVolume.Status.SUCCEEDED, (
             f"Cloned DV status is {cloned_windows_dv_multi_storage_scope_class.status}, expected {DataVolume.Status.SUCCEEDED}"
->>>>>>> ecf9cc62 (Use DataSource sourceRef for Windows VM cloning with vTPM)
         )
 
     @pytest.mark.polarion("CNV-3638")
@@ -263,13 +181,8 @@ class TestWindowsClonedDv:
         ),
         pytest.param(
             {
-<<<<<<< HEAD
-                "dv_name": f"dv-source-{OS_FLAVOR_WINDOWS}",
-                "image": f"{Images.Windows.DIR}/{Images.Windows.WIN11_IMG}",
-=======
                 "dv_name": "dv-source-win",
                 "image": f"{Images.Windows.DIR}/{Images.Windows.WIN2022_IMG}",
->>>>>>> ecf9cc62 (Use DataSource sourceRef for Windows VM cloning with vTPM)
                 "dv_size": Images.Windows.DEFAULT_DV_SIZE,
             },
             marks=(pytest.mark.polarion("CNV-3552"), pytest.mark.tier3()),

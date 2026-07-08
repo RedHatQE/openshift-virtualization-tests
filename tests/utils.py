@@ -53,20 +53,15 @@ from utilities.constants.timeouts import (
     TIMEOUT_10SEC,
     TIMEOUT_15SEC,
     TIMEOUT_30MIN,
-    U1_LARGE,
-    WINDOWS_2K22_PREFERENCE,
-    Images,
 )
+from utilities.constants.virt import DISK_SERIAL, NODE_HUGE_PAGES_1GI_KEY
 from utilities.data_collector import get_data_collector_dir, write_to_file
 from utilities.exceptions import ResourceValueError
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import (
     ExecCommandOnPod,
 )
-<<<<<<< HEAD
-=======
 from utilities.storage import construct_datavolume_source_dict
->>>>>>> 336fc5e7 ([pre-commit.ci] auto fixes from pre-commit.com hooks)
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
