@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Generator, Iterator
 
 import pytest
@@ -9,6 +10,8 @@ from libs.net.netattachdef import CNIPluginBridgeConfig, NetConfig, NetworkAttac
 from utilities.constants.cluster import WORKER_NODE_LABEL_KEY
 from utilities.constants.networking import LINUX_BRIDGE
 
+LOGGER = logging.getLogger(__name__)
+
 
 @pytest.fixture(scope="package")
 def bridge_nncp(
@@ -16,7 +19,7 @@ def bridge_nncp(
     admin_client: DynamicClient,
     hosts_common_available_ports: list[str],
 ) -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
-    with libnncp.NodeNetworkConfigurationPolicy(
+    nncp = libnncp.NodeNetworkConfigurationPolicy(
         client=admin_client,
         name="l2-bridge-test-nncp",
         desired_state=libnncp.DesiredState(
@@ -33,9 +36,18 @@ def bridge_nncp(
             ]
         ),
         node_selector={WORKER_NODE_LABEL_KEY: ""},
-    ) as nncp_br:
-        nncp_br.wait_for_status_success()
-        yield nncp_br
+    )
+
+    if nncp.exists:
+        LOGGER.info(f"Reusing existing NNCP {nncp.name}")
+        nncp.wait_for_status_success()
+        yield nncp
+        nncp.clean_up()
+
+    else:
+        with nncp as nncp_br:
+            nncp_br.wait_for_status_success()
+            yield nncp_br
 
 
 @pytest.fixture(scope="module")
