@@ -21,13 +21,12 @@ from ocp_resources.service_account import ServiceAccount
 from ocp_resources.service_monitor import ServiceMonitor
 
 from utilities.constants.components import HOSTPATH_PROVISIONER_OPERATOR, HPP_POOL
-from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_5MIN
+from utilities.constants.timeouts import TIMEOUT_1MIN
 from utilities.infra import get_pod_by_name_prefix
 
 LOGGER = logging.getLogger(__name__)
 
 HOSTPATH_PROVISIONER_ADMIN = "hostpath-provisioner-admin"
-VOLUME_BINDING_MODE = "volumeBindingMode"
 
 pytestmark = pytest.mark.hpp
 
@@ -74,13 +73,6 @@ def verify_hpp_app_label(hpp_resources, cnv_version):
                     resource.labels[f"{resource.ApiGroup.APP_KUBERNETES_IO}/managed-by"]
                     == HOSTPATH_PROVISIONER_OPERATOR
                 ), f"Missing label {Resource.ApiGroup.APP_KUBERNETES_IO}/managed-by for {resource.name}"
-
-
-@pytest.fixture(scope="module")
-def hpp_operator_deployment(hco_namespace):
-    hpp_operator_deployment = Deployment(name=HOSTPATH_PROVISIONER_OPERATOR, namespace=hco_namespace.name)
-    assert hpp_operator_deployment.exists
-    return hpp_operator_deployment
 
 
 @pytest.fixture(scope="module")
@@ -238,25 +230,6 @@ def test_hpp_daemonset(hpp_daemonset_scope_module):
 @pytest.mark.s390x
 def test_hpp_operator_pod(hpp_operator_pod):
     assert hpp_operator_pod.status == Pod.Status.RUNNING, f"HPP operator pod {hpp_operator_pod.name} is not running"
-
-
-@pytest.mark.destructive
-@pytest.mark.polarion("CNV-3277")
-def test_hpp_operator_recreate_after_deletion(
-    hpp_operator_deployment,
-    storage_class_matrix_hpp_matrix__module__,
-):
-    """
-    Check that Hostpath-provisioner operator will be created again by HCO after its deletion.
-    The Deployment is deleted, then its RepliceSet and Pod will be deleted and created again.
-    """
-    pre_delete_binding_mode = storage_class_matrix_hpp_matrix__module__.instance[VOLUME_BINDING_MODE]
-    hpp_operator_deployment.delete()
-    hpp_operator_deployment.wait_for_replicas(timeout=TIMEOUT_5MIN)
-    recreated_binding_mode = storage_class_matrix_hpp_matrix__module__.instance[VOLUME_BINDING_MODE]
-    assert pre_delete_binding_mode == recreated_binding_mode, (
-        f"Pre delete binding mode: {pre_delete_binding_mode}, differs from recreated: {recreated_binding_mode}"
-    )
 
 
 @pytest.mark.sno

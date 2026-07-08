@@ -1,16 +1,11 @@
 import pytest
 from ocp_resources.persistent_volume import PersistentVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
-from ocp_resources.resource import ResourceEditor
 
 from tests.storage.hpp.utils import (
     DV_NAME,
     HPP_KEY,
-    HPP_NODE_PLACEMENT_DICT,
-    TYPE,
     VM_NAME,
-    update_node_taint,
-    wait_for_desired_hpp_pods_running,
 )
 from tests.utils import create_cirros_vm
 from utilities.constants.timeouts import TIMEOUT_5MIN
@@ -87,32 +82,6 @@ def update_node_labels(worker_node1):
     yield
     for worker_resource in worker_resources:
         worker_resource.restore()
-
-
-@pytest.fixture()
-def updated_hpp_with_node_placement(
-    worker_node2,
-    worker_node3,
-    hostpath_provisioner_scope_module,
-    request,
-    hpp_daemonset_scope_session,
-    schedulable_nodes,
-):
-    node_placement_type = request.param[TYPE]
-    with ResourceEditor(
-        patches={hostpath_provisioner_scope_module: HPP_NODE_PLACEMENT_DICT[node_placement_type]}
-    ) as updated_resource:
-        if node_placement_type == "tolerations":
-            with update_node_taint(node=worker_node2), update_node_taint(node=worker_node3):
-                # Wait for 1 hpp pod to be running, and for others to be deleted
-                wait_for_desired_hpp_pods_running(hpp_daemonset=hpp_daemonset_scope_session, number_of_pods=1)
-                yield updated_resource
-        else:
-            # Wait for 1 hpp pod to be running, and for others to be deleted
-            wait_for_desired_hpp_pods_running(hpp_daemonset=hpp_daemonset_scope_session, number_of_pods=1)
-            yield updated_resource
-    # Wait for hpp pods to be restored
-    wait_for_desired_hpp_pods_running(hpp_daemonset=hpp_daemonset_scope_session, number_of_pods=len(schedulable_nodes))
 
 
 @pytest.fixture()
