@@ -3,6 +3,7 @@ from collections.abc import Generator
 import pytest
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.user_defined_network import Layer2UserDefinedNetwork
+from utilities.constants.architecture import AMD_64, ARM_64
 
 from libs.net.ip import random_ipv4_address
 from libs.net.udn import UDN_BINDING_DEFAULT_PLUGIN_NAME
@@ -10,7 +11,6 @@ from libs.vm import affinity
 from libs.vm.oper import run_vms
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs.vm_factory import udn_vm
-from utilities.constants.architecture import AMD_64, ARM_64
 from utilities.infra import create_ns
 
 
