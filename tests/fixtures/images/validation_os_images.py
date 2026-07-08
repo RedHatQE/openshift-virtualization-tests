@@ -159,7 +159,7 @@ def windows_validation_os_images_data_source_scope_session(
         yield win_data_source
         return
 
-    win_data_source.source = generate_data_source_dict(
+    win_data_source._source = generate_data_source_dict(
         dv=windows_validation_os_images_persistent_volume_claim_scope_session
     )
     with win_data_source as wds:
