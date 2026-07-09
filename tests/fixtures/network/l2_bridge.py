@@ -10,7 +10,7 @@ from utilities.constants.cluster import WORKER_NODE_LABEL_KEY
 from utilities.constants.networking import LINUX_BRIDGE
 
 
-@pytest.fixture(scope="package")
+@pytest.fixture(scope="module")
 def bridge_nncp(
     nmstate_dependent_placeholder: None,
     admin_client: DynamicClient,
