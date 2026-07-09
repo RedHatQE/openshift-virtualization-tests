@@ -355,8 +355,6 @@ def create_windows19_vm(dv_name, namespace, client, vm_name, cpu_model, storage_
     )
 
 
-
-
 def check_snapshot_indication(snapshot, is_online):
     snapshot_indications = snapshot.instance.status.indications
     online = "Online"
