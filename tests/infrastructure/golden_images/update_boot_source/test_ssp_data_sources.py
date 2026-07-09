@@ -17,13 +17,6 @@ from tests.infrastructure.golden_images.constants import (
     PVC_NOT_FOUND_ERROR,
 )
 from tests.utils import get_parameters_from_template
-from utilities.artifactory import (
-    cleanup_artifactory_secret_and_config_map,
-    get_artifactory_config_map,
-    get_artifactory_secret,
-    get_http_image_url,
-)
-from utilities.constants import Images
 from utilities.constants.hco import DATA_SOURCE_NAME
 from utilities.constants.images import DEFAULT_FEDORA_REGISTRY_URL
 from utilities.constants.pytest import QUARANTINED
@@ -34,7 +27,7 @@ from utilities.constants.timeouts import (
 )
 from utilities.exceptions import ResourceValueError
 from utilities.ssp import wait_for_condition_message_value
-from utilities.storage import construct_datavolume_source_dict
+from utilities.storage import get_dv_size_from_datasource
 
 LOGGER = logging.getLogger(__name__)
 
@@ -46,34 +39,27 @@ pytestmark = pytest.mark.post_upgrade
 
 
 @contextmanager
-def dv_for_data_source(name, data_source, admin_client):
-    artifactory_secret = get_artifactory_secret(namespace=data_source.namespace)
-    artifactory_config_map = get_artifactory_config_map(namespace=data_source.namespace)
+def dv_for_data_source(name, data_source_under_test, clone_source_data_source, admin_client):
     with DataVolume(
         client=admin_client,
         name=name,
-        namespace=data_source.namespace,
-        source_dict=construct_datavolume_source_dict(
-            # underlying OS is not relevant
-            source="http",
-            url=get_http_image_url(image_directory=Images.Cirros.DIR, image_name=Images.Cirros.QCOW2_IMG),
-            secret_name=artifactory_secret.name,
-            cert_configmap_name=artifactory_config_map.name,
-        ),
-        size=Images.Cirros.DEFAULT_DV_SIZE,
+        namespace=data_source_under_test.namespace,
+        source_ref={
+            "kind": clone_source_data_source.kind,
+            "name": clone_source_data_source.name,
+            "namespace": clone_source_data_source.namespace,
+        },
+        size=get_dv_size_from_datasource(data_source=clone_source_data_source),
         storage_class=py_config["default_storage_class"],
         annotations=BIND_IMMEDIATE_ANNOTATION,
         api_name="storage",
     ) as dv:
         dv.wait_for_dv_success()
         wait_for_condition_message_value(
-            resource=data_source,
+            resource=data_source_under_test,
             expected_message=DATA_SOURCE_READY_FOR_CONSUMPTION_MESSAGE,
         )
         yield dv
-    cleanup_artifactory_secret_and_config_map(
-        artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
-    )
 
 
 def opt_in_status_str(opt_in):
@@ -317,12 +303,15 @@ def opted_out_data_source_scope_class(
 
 
 @pytest.fixture()
-def uploaded_dv_for_dangling_data_source_scope_function(admin_client, data_source_by_name_scope_function):
+def uploaded_dv_for_dangling_data_source_scope_function(
+    admin_client, data_source_by_name_scope_function, fedora_data_source
+):
     expected_pvc_name = data_source_by_name_scope_function.instance.spec.source.pvc.name
     LOGGER.info(f"Create DV {expected_pvc_name} for DataSource {data_source_by_name_scope_function.name}")
     with dv_for_data_source(
         name=expected_pvc_name,
-        data_source=data_source_by_name_scope_function,
+        data_source_under_test=data_source_by_name_scope_function,
+        clone_source_data_source=fedora_data_source,
         admin_client=admin_client,
     ) as dv:
         yield dv
@@ -330,11 +319,12 @@ def uploaded_dv_for_dangling_data_source_scope_function(admin_client, data_sourc
 
 @pytest.fixture()
 def created_dv_for_data_import_cron_managed_data_source_scope_function(
-    admin_client, golden_images_namespace, data_source_by_name_scope_function
+    admin_client, data_source_by_name_scope_function, fedora_data_source
 ):
     with dv_for_data_source(
         name=data_source_by_name_scope_function.instance.spec.source.pvc.name,
-        data_source=data_source_by_name_scope_function,
+        data_source_under_test=data_source_by_name_scope_function,
+        clone_source_data_source=fedora_data_source,
         admin_client=admin_client,
     ) as dv:
         yield dv
@@ -342,11 +332,12 @@ def created_dv_for_data_import_cron_managed_data_source_scope_function(
 
 @pytest.fixture(scope="class")
 def created_dv_for_data_import_cron_managed_data_source_scope_class(
-    admin_client, golden_images_namespace, data_source_by_name_scope_class
+    admin_client, data_source_by_name_scope_class, fedora_data_source
 ):
     with dv_for_data_source(
         name=data_source_by_name_scope_class.instance.spec.source.pvc.name,
-        data_source=data_source_by_name_scope_class,
+        data_source_under_test=data_source_by_name_scope_class,
+        clone_source_data_source=fedora_data_source,
         admin_client=admin_client,
     ) as dv:
         yield dv
