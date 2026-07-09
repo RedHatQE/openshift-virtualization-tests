@@ -15,7 +15,7 @@ from libs.net.netattachdef import (
     NetConfig,
     NetworkAttachmentDefinition,
 )
-from libs.net.vmspec import wait_for_ifaces_status
+from libs.vm.oper import run_vm
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.l2_bridge.bandwidth.lib_helpers import (
     BANDWIDTH_RATE_BPS,
@@ -74,9 +74,7 @@ def server_vm(
         secondary_iface_name=BANDWIDTH_SECONDARY_IFACE_NAME,
         secondary_iface_addresses=addresses,
     ) as vm:
-        vm.start(wait=True)
-        vm.wait_for_agent_connected()
-        wait_for_ifaces_status(
+        run_vm(
             vm=vm,
             ip_addresses_by_spec_net_name={
                 BANDWIDTH_SECONDARY_IFACE_NAME: [
@@ -106,9 +104,7 @@ def client_vm(
         secondary_iface_name=BANDWIDTH_SECONDARY_IFACE_NAME,
         secondary_iface_addresses=addresses,
     ) as vm:
-        vm.start(wait=True)
-        vm.wait_for_agent_connected()
-        wait_for_ifaces_status(
+        run_vm(
             vm=vm,
             ip_addresses_by_spec_net_name={
                 BANDWIDTH_SECONDARY_IFACE_NAME: [

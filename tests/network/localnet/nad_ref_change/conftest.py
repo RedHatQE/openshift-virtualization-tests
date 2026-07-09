@@ -6,7 +6,8 @@ from kubernetes.dynamic import DynamicClient
 from ocp_resources.namespace import Namespace
 
 from libs.net.ip import filter_link_local_addresses, random_cidr_addresses_by_family
-from libs.net.vmspec import lookup_iface_status, wait_for_ifaces_status
+from libs.net.vmspec import lookup_iface_status
+from libs.vm.oper import run_vm
 from libs.vm.spec import Interface, Multus, Network
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs import cloudinit
@@ -73,9 +74,7 @@ def ref_vm_localnet(
         ),
         runcmd=ARP_ISOLATION_SYSCTL_CMD,
     ) as vm:
-        vm.start(wait=True)
-        vm.wait_for_agent_connected()
-        wait_for_ifaces_status(
+        run_vm(
             vm=vm,
             ip_addresses_by_spec_net_name={
                 IFACE_A_NAME: [addr.split("/")[0] for addr in iface_a_ips],
@@ -102,9 +101,7 @@ def under_test_vm_localnet(
             ethernets={GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(addresses=iface_a_ips)},
         ),
     ) as vm:
-        vm.start(wait=True)
-        vm.wait_for_agent_connected()
-        wait_for_ifaces_status(
+        run_vm(
             vm=vm,
             ip_addresses_by_spec_net_name={
                 IFACE_A_NAME: [addr.split("/")[0] for addr in iface_a_ips],
