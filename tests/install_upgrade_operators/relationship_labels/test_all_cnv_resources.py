@@ -30,6 +30,7 @@ ALLOWLIST_STRING_LIST = [
     "kubevirt-ipam-controller-webhook-service",
     "istio-ca-root-cert",
     "istio-ca-crl",
+    "virt-network-resources-injector-secret",  # TODO: file product bug for missing relationship labels
 ]
 PRINT_COMMAND = '{printf "%s%s",sep,$0;sep=","}'
 AWK_COMMAND = f"awk '{PRINT_COMMAND}'"

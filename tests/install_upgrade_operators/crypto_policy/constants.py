@@ -9,6 +9,10 @@ from ocp_resources.network_addons_config import NetworkAddonsConfig
 from ocp_resources.ssp import SSP
 
 from tests.install_upgrade_operators.constants import KEY_PATH_SEPARATOR
+from utilities.constants.components import (
+    VIRT_TEMPLATE_APISERVER,
+    VIRT_TEMPLATE_CONTROLLER,
+)
 from utilities.constants.hco import (
     TLS_CUSTOM_POLICY,
     TLS_OLD_POLICY,
@@ -132,8 +136,8 @@ TLS_VERSION_1_2 = "1.2"
 TLS_VERSION_1_3 = "1.3"
 
 VIRT_TEMPLATE_DEPLOYMENT_NAMES = [
-    "virt-template-apiserver",
-    "virt-template-controller",
+    VIRT_TEMPLATE_APISERVER,
+    VIRT_TEMPLATE_CONTROLLER,
 ]
 
 PQC_GROUP_SECP256R1_MLKEM768 = "SecP256r1MLKEM768"
