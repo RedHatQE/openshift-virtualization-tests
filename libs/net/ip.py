@@ -3,7 +3,7 @@ import random
 from functools import cache
 from typing import Final
 
-from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
+from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster, supported_cluster_ip_versions
 
 _MAX_NUM_OF_RANDOM_OCTETS_PER_SESSION: Final[int] = 16
 _MAX_NUM_OF_RANDOM_HEXTETS_PER_SESSION: Final[int] = 16
@@ -137,6 +137,20 @@ def filter_link_local_addresses(ip_addresses: list[str]) -> list[ipaddress.IPv4A
         List of IP address objects with link-local addresses removed.
     """
     return [ip for addr in ip_addresses if not (ip := ipaddress.ip_interface(address=addr).ip).is_link_local]
+
+
+def filter_cluster_unsupported_addresses(
+    ip_addresses: list[ipaddress.IPv4Address | ipaddress.IPv6Address],
+) -> list[ipaddress.IPv4Address | ipaddress.IPv6Address]:
+    """Filter out IP addresses whose family is not supported by the cluster.
+
+    Args:
+        ip_addresses: List of IP address objects to filter.
+
+    Returns:
+        List containing only addresses whose IP version is supported by the cluster.
+    """
+    return [ip for ip in ip_addresses if ip.version in supported_cluster_ip_versions()]
 
 
 def ip_header_size(ip: ipaddress.IPv4Address | ipaddress.IPv6Address | str) -> int:
