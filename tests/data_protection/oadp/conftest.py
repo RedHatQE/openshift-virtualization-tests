@@ -1,7 +1,6 @@
 import pytest
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.namespace import Namespace
-from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from pytest_testconfig import config as py_config
@@ -375,18 +374,22 @@ def velero_restore_second_namespace_with_datamover(
 def rhel_vm_with_hooks_opt_out(
     admin_client,
     namespace_for_backup,
+    snapshot_storage_class_name_scope_module,
 ):
     """Running RHEL VM with kubevirt.io/skip-backup-hooks annotation set to 'true'."""
-    with VirtualMachineForTests(
-        name="vm-hooks-opt-out",
+    with create_rhel_vm(
+        storage_class=snapshot_storage_class_name_scope_module,
         namespace=namespace_for_backup.name,
+        dv_name="dv-hooks-opt-out",
+        vm_name="vm-hooks-opt-out",
+        rhel_image=Images.Rhel.LATEST_RELEASE_STR,
         client=admin_client,
-        os_flavor=OS_FLAVOR_RHEL,
-        memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
-        run_strategy=VirtualMachine.RunStrategy.ALWAYS,
+        wait_running=True,
         annotations={SKIP_BACKUP_HOOKS_ANNOTATION: "true"},
     ) as vm:
-        running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
+        assert vm.instance.metadata.annotations.get(SKIP_BACKUP_HOOKS_ANNOTATION) == "true", (
+            f"VM {vm.name} missing {SKIP_BACKUP_HOOKS_ANNOTATION} annotation"
+        )
         yield vm
 
 

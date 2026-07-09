@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import shlex
 
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.datavolume import DataVolume
@@ -42,4 +43,4 @@ def get_velero_backup_logs(backup_name: str, client: DynamicClient) -> str:
     """
     LOGGER.info(f"Retrieving Velero backup logs for backup: {backup_name}")
     velero_pod = get_pod_by_name_prefix(client=client, pod_prefix="velero", namespace=NamespacesNames.ADP_NAMESPACE)
-    return velero_pod.execute(command=["./velero", "backup", "logs", backup_name])
+    return velero_pod.execute(command=shlex.split(f"./velero backup logs {backup_name}"))

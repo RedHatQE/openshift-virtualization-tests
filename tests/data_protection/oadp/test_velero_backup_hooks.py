@@ -18,8 +18,6 @@ LOGGER = logging.getLogger(__name__)
 
 HOOK_LOG_PATTERN = "freeze"
 
-pytestmark = pytest.mark.usefixtures("skip_if_no_storage_class_for_snapshot")
-
 
 class TestVeleroBackupHookOptOut:
     """
@@ -58,8 +56,9 @@ class TestVeleroBackupHookOptOut:
             included_namespaces=[namespace_for_backup.name],
         ) as backup:
             LOGGER.info(f"Backup {backup.name} completed for paused VM with opt-out annotation")
+            backup_logs = get_velero_backup_logs(backup_name=backup.name, client=admin_client)
 
-        backup_logs = get_velero_backup_logs(backup_name=backup.name, client=admin_client)
+        assert backup_logs, f"No logs retrieved for backup {backup.name}"
         assert HOOK_LOG_PATTERN not in backup_logs.lower(), (
             f"Backup {backup.name} logs contain hook entries but hooks should be disabled"
         )
@@ -97,6 +96,7 @@ class TestVeleroBackupHookOptOut:
             backup_name=velero_backup_vm_with_hooks_opt_out.name,
             client=admin_client,
         )
+        assert backup_logs, f"No logs retrieved for backup {velero_backup_vm_with_hooks_opt_out.name}"
         assert HOOK_LOG_PATTERN not in backup_logs.lower(), (
             f"Backup {velero_backup_vm_with_hooks_opt_out.name} logs contain hook entries but hooks should be disabled"
         )
