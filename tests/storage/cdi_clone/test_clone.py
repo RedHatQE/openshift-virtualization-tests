@@ -18,7 +18,7 @@ from utilities.storage import (
     check_disk_count_in_vm,
     create_dv,
     create_vm_from_dv,
-    data_volume_template_dict,
+    data_volume_template_dict_with_pvc_source,
     get_dv_size_from_datasource,
     overhead_size_for_dv,
     sc_volume_binding_mode_is_wffc,
@@ -48,7 +48,7 @@ def create_vm_from_clone_dv_template(
         os_flavor=OS_FLAVOR_FEDORA,
         client=client,
         memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
-        data_volume_template=data_volume_template_dict(
+        data_volume_template=data_volume_template_dict_with_pvc_source(
             target_dv_name=dv_name,
             target_dv_namespace=namespace_name,
             source_dv=source_dv,

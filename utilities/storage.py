@@ -645,14 +645,14 @@ class PodWithPVC(Pod):
         )
 
 
-def data_volume_template_dict(
-    target_dv_name,
-    target_dv_namespace,
-    source_dv,
-    volume_mode=None,
-    size=None,
-    storage_class=None,
-):
+def data_volume_template_dict_with_pvc_source(
+    target_dv_name: str,
+    target_dv_namespace: str,
+    source_dv: DataVolume,
+    volume_mode: str | None = None,
+    size: str | None = None,
+    storage_class: str | None = None,
+) -> dict[str, Any]:
     source_dv_pvc_spec = source_dv.pvc.instance.spec
     dv = DataVolume(
         name=target_dv_name,
