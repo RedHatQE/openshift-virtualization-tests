@@ -116,6 +116,28 @@ def _restore_incremental_chain(
     _convert_qcow2_to_raw(source_qcow2=merged_qcow2, target_file=target_file)
 
 
+def _assert_target_written(*, target_file: str) -> None:
+    """Fail if the restore target was not written.
+
+    Block devices are always present as device nodes; for those targets the
+    convert step itself is the write. Filesystem targets must be a non-empty file.
+    """
+    target_path = Path(target_file)
+    if target_path.is_block_device():
+        size_result = subprocess.run(
+            ["blockdev", "--getsize64", target_file],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        target_size = int(size_result.stdout.strip())
+        if target_size <= 0:
+            raise RuntimeError(f"Block restore target {target_file} has size {target_size}")
+        return
+    if not target_path.is_file() or target_path.stat().st_size == 0:
+        raise RuntimeError(f"Filesystem restore target {target_file} is missing or empty")
+
+
 def main() -> None:
     """Restore push-mode qcow2 backup data to a raw boot disk file."""
     params = _load_params()
@@ -134,6 +156,7 @@ def main() -> None:
             volume_work_dir=volume_work_dir,
             target_file=target_file,
         )
+    _assert_target_written(target_file=target_file)
     print(f"Push restore complete: wrote {target_file}", flush=True)
 
 

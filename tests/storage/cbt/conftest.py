@@ -24,6 +24,7 @@ from tests.storage.cbt.utils import (
     CBT_INCREMENTAL_TEST_DATA,
     CBT_INCREMENTAL_TEST_DATA_FILE,
     CBT_TEST_DATA,
+    capture_restore_spec_and_delete_vm,
     cbt_pvc_size_with_headroom,
     cbt_resource_id,
     cbt_storage_class_suffix,
@@ -32,7 +33,6 @@ from tests.storage.cbt.utils import (
     pull_collect_params_for_backup,
     restore_vm_from_pull_client_backup,
     restore_vm_from_push_backup,
-    vm_restore_spec,
 )
 from utilities.constants import (
     OS_FLAVOR_RHEL,
@@ -261,11 +261,9 @@ def restored_vm_from_full_backup_push_mode(
     VM restored from full backup and started with the original VM name.
 
     Returns:
-        VirtualMachine: Running restored VM
+        VirtualMachineForTests: Running restored VM
     """
-    restore_spec = vm_restore_spec(vm=vm_with_cbt_label)
-    vm_with_cbt_label.delete(wait=True)
-    vm_with_cbt_label.teardown = False
+    restore_spec = capture_restore_spec_and_delete_vm(vm=vm_with_cbt_label)
     included_volume = included_boot_volume(backup=completed_full_backup_push_mode)
     restored_vm = restore_vm_from_push_backup(
         restored_vm_name=vm_with_cbt_label.name,
@@ -275,7 +273,6 @@ def restored_vm_from_full_backup_push_mode(
         size=vm_boot_disk_size,
         backup_pvc_name=backup_pvc.name,
         boot_volume_name=included_volume["volumeName"],
-        os_flavor=OS_FLAVOR_RHEL,
         **vm_boot_pvc_spec,
         **restore_spec,
     )
@@ -340,11 +337,9 @@ def restored_vm_from_incremental_backup_push_mode(
     VM restored from incremental backup (push mode) and started with the original VM name.
 
     Returns:
-        VirtualMachine: Running restored VM
+        VirtualMachineForTests: Running restored VM
     """
-    restore_spec = vm_restore_spec(vm=vm_with_cbt_label)
-    vm_with_cbt_label.delete(wait=True)
-    vm_with_cbt_label.teardown = False
+    restore_spec = capture_restore_spec_and_delete_vm(vm=vm_with_cbt_label)
     included_volume = included_boot_volume(backup=completed_incremental_backup_push_mode)
     restored_vm = restore_vm_from_push_backup(
         restored_vm_name=vm_with_cbt_label.name,
@@ -354,7 +349,6 @@ def restored_vm_from_incremental_backup_push_mode(
         size=vm_boot_disk_size,
         backup_pvc_name=backup_pvc.name,
         boot_volume_name=included_volume["volumeName"],
-        os_flavor=OS_FLAVOR_RHEL,
         **vm_boot_pvc_spec,
         **restore_spec,
     )
@@ -512,11 +506,12 @@ def restored_vm_from_full_backup_pull_mode(
     VM restored from collected pull-mode client storage and started with the original VM name.
 
     Returns:
-        VirtualMachine: Running restored VM
+        VirtualMachineForTests: Running restored VM
     """
-    restore_spec = vm_restore_spec(vm=vm_with_cbt_label)
-    vm_with_cbt_label.delete(wait=True)
-    vm_with_cbt_label.teardown = False
+    # Collect stores raw files under the backup status volumeName; capture it before
+    # the original VM is deleted so restore can scope to that directory.
+    boot_volume_name = vm_with_cbt_label.instance.spec.template.spec.volumes[0]["name"]
+    restore_spec = capture_restore_spec_and_delete_vm(vm=vm_with_cbt_label)
     restored_vm = restore_vm_from_pull_client_backup(
         restored_vm_name=vm_with_cbt_label.name,
         namespace=namespace.name,
@@ -524,7 +519,7 @@ def restored_vm_from_full_backup_pull_mode(
         storage_class=storage_class_name_scope_module,
         size=vm_boot_disk_size,
         client_backup_pvc_name=collected_full_backup_pull_mode,
-        os_flavor=OS_FLAVOR_RHEL,
+        boot_volume_name=boot_volume_name,
         **vm_boot_pvc_spec,
         **restore_spec,
     )
@@ -604,11 +599,12 @@ def restored_vm_from_incremental_backup_pull_mode(
     VM restored from collected incremental pull-mode client storage and started with the original VM name.
 
     Returns:
-        VirtualMachine: Running restored VM
+        VirtualMachineForTests: Running restored VM
     """
-    restore_spec = vm_restore_spec(vm=vm_with_cbt_label)
-    vm_with_cbt_label.delete(wait=True)
-    vm_with_cbt_label.teardown = False
+    # Collect stores raw files under the backup status volumeName; capture it before
+    # the original VM is deleted so restore can scope to that directory.
+    boot_volume_name = vm_with_cbt_label.instance.spec.template.spec.volumes[0]["name"]
+    restore_spec = capture_restore_spec_and_delete_vm(vm=vm_with_cbt_label)
     restored_vm = restore_vm_from_pull_client_backup(
         restored_vm_name=vm_with_cbt_label.name,
         namespace=namespace.name,
@@ -616,7 +612,7 @@ def restored_vm_from_incremental_backup_pull_mode(
         storage_class=storage_class_name_scope_module,
         size=vm_boot_disk_size,
         client_backup_pvc_name=collected_incremental_backup_pull_mode,
-        os_flavor=OS_FLAVOR_RHEL,
+        boot_volume_name=boot_volume_name,
         **vm_boot_pvc_spec,
         **restore_spec,
     )
