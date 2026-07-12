@@ -4,6 +4,7 @@ Automation for Hot Plug
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import shlex
 from typing import TYPE_CHECKING
@@ -13,6 +14,7 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.storage_profile import StorageProfile
 
+from tests.storage.constants import BLANK_DV_SIZE, NUM_HOTPLUG_DISKS
 from tests.storage.utils import assert_disk_bus
 from tests.utils import create_windows2022_dv_from_registry, create_windows2022_vm_with_vtpm_from_registry
 from utilities.constants.storage import HOTPLUG_DISK_SCSI_BUS, HOTPLUG_DISK_SERIAL, HOTPLUG_DISK_VIRTIO_BUS
@@ -21,13 +23,14 @@ from utilities.storage import (
     assert_disk_serial,
     assert_hotplugvolume_nonexist,
     create_dv,
+    data_volume_template_with_source_ref_dict,
     virtctl_volume,
     wait_for_vm_volume_ready,
 )
 from utilities.virt import (
     VirtualMachineForTests,
-    fedora_vm_body,
     migrate_vm_and_verify,
+    restart_vm_wait_for_running_vm,
     running_vm,
 )
 
@@ -35,6 +38,8 @@ if TYPE_CHECKING:
     from kubernetes.dynamic import DynamicClient
 
 LOGGER = logging.getLogger(__name__)
+
+TESTS_CLASS_NAME_SERIAL_PERSIST = "TestHotPlugWithSerialPersist"
 
 pytestmark = [
     pytest.mark.usefixtures("enabled_feature_gate_for_declarative_hotplug_volumes"),
@@ -132,14 +137,23 @@ def param_substring_scope_class(storage_class_name_scope_class):
 
 
 @pytest.fixture(scope="class")
-def fedora_vm_for_hotplug_scope_class(unprivileged_client, namespace, param_substring_scope_class, cpu_for_migration):
-    name = f"fedora-hotplug-{param_substring_scope_class}"
-
+def fedora_vm_for_hotplug_scope_class(
+    unprivileged_client,
+    namespace,
+    fedora_data_source_scope_module,
+    storage_class_name_scope_class,
+    cpu_for_migration,
+):
     with VirtualMachineForTests(
-        client=unprivileged_client,
-        name=name,
+        name="fedora-hotplug-vm",
         namespace=namespace.name,
-        body=fedora_vm_body(name=name),
+        client=unprivileged_client,
+        vm_instance_type_infer=True,
+        vm_preference_infer=True,
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=fedora_data_source_scope_module,
+            storage_class=storage_class_name_scope_class,
+        ),
         cpu_model=cpu_for_migration,
     ) as vm:
         running_vm(vm=vm)
@@ -155,11 +169,58 @@ def blank_disk_dv_multi_storage_scope_class(
         source="blank",
         dv_name=f"blank-dv-{param_substring_scope_class}",
         namespace=namespace.name,
-        size="1Gi",
+        size=BLANK_DV_SIZE,
         storage_class=storage_class_name_scope_class,
         consume_wffc=False,
     ) as dv:
         yield dv
+
+
+@pytest.fixture(scope="class")
+def blank_dvs_for_hotplug_scope_class(unprivileged_client, namespace, storage_class_name_scope_class):
+    with contextlib.ExitStack() as stack:
+        dvs = []
+        for idx in range(NUM_HOTPLUG_DISKS):
+            dv = stack.enter_context(
+                cm=create_dv(
+                    source="blank",
+                    dv_name=f"blank-dv-hotplug-{idx}",
+                    client=unprivileged_client,
+                    namespace=namespace.name,
+                    size=BLANK_DV_SIZE,
+                    storage_class=storage_class_name_scope_class,
+                    consume_wffc=False,
+                )
+            )
+            dvs.append(dv)
+        yield dvs
+
+
+@pytest.fixture(scope="class")
+def vm_with_hotplugged_disks_scope_class(
+    blank_dvs_for_hotplug_scope_class,
+    fedora_vm_for_hotplug_scope_class,
+):
+    with contextlib.ExitStack() as stack:
+        for idx, dv in enumerate(blank_dvs_for_hotplug_scope_class):
+            params = {"persist": True}
+            if idx == 0:
+                params["serial"] = HOTPLUG_DISK_SERIAL
+            status, out, err = stack.enter_context(
+                cm=virtctl_volume(
+                    action="add",
+                    namespace=fedora_vm_for_hotplug_scope_class.namespace,
+                    vm_name=fedora_vm_for_hotplug_scope_class.name,
+                    volume_name=dv.name,
+                    **params,
+                )
+            )
+            assert status, f"Failed to add volume {dv.name} to VM, out: {out}, err: {err}."
+            wait_for_vm_volume_ready(
+                vm=fedora_vm_for_hotplug_scope_class,
+                volume_name=dv.name,
+            )
+        yield fedora_vm_for_hotplug_scope_class
 
 
 @pytest.mark.parametrize(
@@ -211,45 +272,53 @@ class TestHotPlugWithPersist:
             )
 
 
-@pytest.mark.parametrize(
-    "hotplug_volume_scope_class",
-    [
-        pytest.param({"persist": True, "serial": HOTPLUG_DISK_SERIAL}),
-    ],
-    indirect=True,
-)
 @pytest.mark.conformance
 @pytest.mark.gating
-@pytest.mark.usefixtures("hotplug_volume_scope_class")
 class TestHotPlugWithSerialPersist:
     @pytest.mark.sno
     @pytest.mark.polarion("CNV-6425")
-    @pytest.mark.dependency(name="test_hotplug_volume_with_persist")
+    @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME_SERIAL_PERSIST}::test_hotplug_volume_with_serial_and_persist")
     @pytest.mark.s390x
     def test_hotplug_volume_with_serial_and_persist(
         self,
-        blank_disk_dv_multi_storage_scope_class,
-        fedora_vm_for_hotplug_scope_class,
+        vm_with_hotplugged_disks_scope_class: VirtualMachineForTests,
     ):
-        wait_for_vm_volume_ready(
-            vm=fedora_vm_for_hotplug_scope_class, volume_name=blank_disk_dv_multi_storage_scope_class.name
-        )
-        assert_disk_serial(vm=fedora_vm_for_hotplug_scope_class)
-        assert_hotplugvolume_nonexist(vm=fedora_vm_for_hotplug_scope_class)
+        assert_disk_serial(vm=vm_with_hotplugged_disks_scope_class)
+        assert_hotplugvolume_nonexist(vm=vm_with_hotplugged_disks_scope_class)
 
+    # Migration requires hotplugged disks to be persisted and validated by the preceding test.
+    @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME_SERIAL_PERSIST}::test_hotplug_volume_with_serial_and_persist"])
     @pytest.mark.polarion("CNV-6425b")
-    @pytest.mark.dependency(depends=["test_hotplug_volume_with_persist"])
     @pytest.mark.s390x
     def test_hotplug_volume_with_serial_and_persist_migrate(
         self,
         admin_client: DynamicClient,
-        blank_disk_dv_multi_storage_scope_class: DataVolume,
-        fedora_vm_for_hotplug_scope_class: VirtualMachineForTests,
+        blank_dvs_for_hotplug_scope_class: list[DataVolume],
+        vm_with_hotplugged_disks_scope_class: VirtualMachineForTests,
     ):
-        if is_dv_migratable(dv=blank_disk_dv_multi_storage_scope_class):
-            migrate_vm_and_verify(
-                vm=fedora_vm_for_hotplug_scope_class, client=admin_client, check_ssh_connectivity=True
-            )
+        if not all(is_dv_migratable(dv=dv) for dv in blank_dvs_for_hotplug_scope_class):
+            LOGGER.info("Skipping migration: not all hotplugged DVs have RWX access mode")
+            return
+
+        migrate_vm_and_verify(
+            vm=vm_with_hotplugged_disks_scope_class,
+            client=admin_client,
+            check_ssh_connectivity=True,
+        )
+
+    # Reboot requires persisted disks from the first test to verify they survive restart.
+    @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME_SERIAL_PERSIST}::test_hotplug_volume_with_serial_and_persist"])
+    @pytest.mark.polarion("CNV-6425c")
+    @pytest.mark.s390x
+    def test_hotplug_persist_survives_reboot(
+        self,
+        vm_with_hotplugged_disks_scope_class: VirtualMachineForTests,
+        blank_dvs_for_hotplug_scope_class: list[DataVolume],
+    ):
+        restart_vm_wait_for_running_vm(vm=vm_with_hotplugged_disks_scope_class, check_ssh_connectivity=True)
+        for dv in blank_dvs_for_hotplug_scope_class:
+            wait_for_vm_volume_ready(vm=vm_with_hotplugged_disks_scope_class, volume_name=dv.name)
+        assert_disk_serial(vm=vm_with_hotplugged_disks_scope_class)
 
 
 @pytest.mark.parametrize(

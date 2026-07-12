@@ -9,6 +9,7 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 
+from tests.storage.constants import BLANK_DV_SIZE
 from utilities.constants import Images
 from utilities.constants.images import OS_FLAVOR_RHEL
 from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_30SEC
@@ -32,7 +33,6 @@ LOGGER = logging.getLogger(__name__)
 
 
 WFFC_DV_NAME = "wffc-dv-name"
-DEFAULT_BLANK_DV_SIZE = "1Gi"
 
 
 @pytest.fixture(scope="module")
@@ -48,7 +48,7 @@ def blank_dv_wffc_scope_function(request, unprivileged_client, namespace, wffc_s
         source="blank",
         dv_name=f"dv-{request.param['dv_name']}",
         namespace=namespace.name,
-        size=DEFAULT_BLANK_DV_SIZE,
+        size=BLANK_DV_SIZE,
         storage_class=wffc_storage_class_name_scope_module,
         consume_wffc=False,
         client=unprivileged_client,
@@ -62,7 +62,7 @@ def blank_dv_template_wffc_scope_function(request, namespace, wffc_storage_class
         name=f"dv-{request.param['dv_name']}",
         namespace=namespace.name,
         source_dict=construct_datavolume_source_dict(source="blank"),
-        size=DEFAULT_BLANK_DV_SIZE,
+        size=BLANK_DV_SIZE,
         storage_class=wffc_storage_class_name_scope_module,
         api_name="storage",
     )
