@@ -69,7 +69,7 @@ from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutSampler
 
 import utilities.hco
-from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
+from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster, supported_cluster_ip_versions
 from libs.net.ip import filter_link_local_addresses, random_cidr_addresses_by_family
 from libs.net.vmspec import lookup_iface_status
 from tests.utils import download_and_extract_tar
@@ -1662,9 +1662,7 @@ def running_vm_upgrade_a(
         eviction_strategy=ES_NONE,
     ) as vm:
         running_vm(vm=vm, wait_for_cloud_init=True)
-        ip_families = [
-            family for family, enabled in ((4, ipv4_supported_cluster()), (6, ipv6_supported_cluster())) if enabled
-        ]
+        ip_families = supported_cluster_ip_versions()
         lookup_iface_status(
             vm=vm,
             iface_name=upgrade_bridge_marker_nad.name,
@@ -1697,9 +1695,7 @@ def running_vm_upgrade_b(
         eviction_strategy=ES_NONE,
     ) as vm:
         running_vm(vm=vm, wait_for_cloud_init=True)
-        ip_families = [
-            family for family, enabled in ((4, ipv4_supported_cluster()), (6, ipv6_supported_cluster())) if enabled
-        ]
+        ip_families = supported_cluster_ip_versions()
         lookup_iface_status(
             vm=vm,
             iface_name=upgrade_bridge_marker_nad.name,
