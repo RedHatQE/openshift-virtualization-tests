@@ -1,3 +1,4 @@
+import logging
 import shlex
 
 from ocp_resources.multi_namespace_virtual_machine_storage_migration import MultiNamespaceVirtualMachineStorageMigration
@@ -11,9 +12,13 @@ from tests.storage.storage_migration.constants import (
     MOUNT_HOTPLUGGED_DEVICE_PATH,
 )
 from tests.storage.utils import check_file_in_vm
+from utilities.constants.images import OS_FLAVOR_WINDOWS
 from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5SEC, TIMEOUT_10MIN, TIMEOUT_10SEC
+from utilities.data_collector import get_data_collector_dir, write_to_file
 from utilities.exceptions import StorageMigrationError
 from utilities.virt import VirtualMachineForTests, get_vm_boot_time
+
+LOGGER = logging.getLogger(__name__)
 
 
 def verify_vms_boot_time_after_storage_migration(
@@ -34,7 +39,38 @@ def verify_vms_boot_time_after_storage_migration(
         current_boot_time = get_vm_boot_time(vm=vm)
         if initial_boot_time[vm.name] != current_boot_time:
             rebooted_vms[vm.name] = {"initial": initial_boot_time[vm.name], "current": current_boot_time}
+            collect_reboot_diagnostic_events(vm=vm)
     assert not rebooted_vms, f"Boot time changed for VMs:\n {rebooted_vms}"
+
+
+def collect_reboot_diagnostic_events(vm: VirtualMachineForTests) -> None:
+    """Collect event log entries related to reboot/shutdown."""
+    base_dir = get_data_collector_dir()
+
+    if OS_FLAVOR_WINDOWS == vm.os_flavor:
+        # Event IDs: 6005=boot, 6006=clean shutdown, 6008=unexpected shutdown,
+        # 6009=OS version at boot, 1074=shutdown initiated, 41=Kernel-Power unexpected reboot
+        cmd = shlex.split(
+            'powershell.exe -command "'
+            "Get-WinEvent -FilterHashtable @{LogName='System'; Id=6005,6006,6008,6009,1074,41} "
+            '-MaxEvents 50 | Format-List"'
+        )
+    else:
+        cmd = shlex.split(
+            "bash -c '"
+            "last reboot; echo ---; "
+            "journalctl -b -1 -o short-precise --no-pager "
+            '| grep -iE "shutdown|reboot|restart|power|kill" | tail -n 30'
+            "'"
+        )
+
+    output = run_ssh_commands(host=vm.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN)[0]
+    write_to_file(
+        base_directory=base_dir,
+        file_name=f"{vm.name}_reboot_events.txt",
+        content=output,
+    )
+    LOGGER.info(f"Collected reboot diagnostic events for VM {vm.name}")
 
 
 def verify_vm_storage_class_updated(vm: VirtualMachineForTests, target_storage_class: str) -> None:
