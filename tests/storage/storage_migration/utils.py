@@ -44,10 +44,19 @@ def verify_vms_boot_time_after_storage_migration(
 
 
 def collect_reboot_diagnostic_events(vm: VirtualMachineForTests) -> None:
-    """Collect event log entries related to reboot/shutdown."""
+    """
+    Collect event log entries related to reboot/shutdown.
+
+    Args:
+        vm: VM to collect diagnostic events from.
+
+    Side effects:
+        Writes SSH command output to ``{vm.name}_reboot_events.txt``
+        under the data-collector directory.
+    """
     base_dir = get_data_collector_dir()
 
-    if OS_FLAVOR_WINDOWS == vm.os_flavor:
+    if vm.os_flavor == OS_FLAVOR_WINDOWS:
         # Event IDs: 6005=boot, 6006=clean shutdown, 6008=unexpected shutdown,
         # 6009=OS version at boot, 1074=shutdown initiated, 41=Kernel-Power unexpected reboot
         cmd = shlex.split(
@@ -64,12 +73,17 @@ def collect_reboot_diagnostic_events(vm: VirtualMachineForTests) -> None:
             "'"
         )
 
-    output = run_ssh_commands(host=vm.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN)[0]
-    write_to_file(
-        base_directory=base_dir,
-        file_name=f"{vm.name}_reboot_events.txt",
-        content=output,
-    )
+    try:
+        output = run_ssh_commands(host=vm.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN)[0]
+        write_to_file(
+            base_directory=base_dir,
+            file_name=f"{vm.name}_reboot_events.txt",
+            content=output,
+        )
+    except Exception as exc:
+        LOGGER.error(f"Failed to collect reboot diagnostic events for VM {vm.name}: {exc}")
+        return
+
     LOGGER.info(f"Collected reboot diagnostic events for VM {vm.name}")
 
 
