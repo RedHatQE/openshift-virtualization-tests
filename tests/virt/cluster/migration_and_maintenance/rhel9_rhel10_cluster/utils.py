@@ -2,12 +2,17 @@ from typing import Any, Final
 
 from ocp_resources.resource import ResourceEditor
 
-from tests.virt.utils import build_node_affinity_dict
 from utilities.constants.cluster import RHCOS9_WORKER_LABEL
 from utilities.constants.virt import REGEDIT_PROC_NAME
 from utilities.virt import VirtualMachineForTests, fetch_pid_from_linux_vm, fetch_pid_from_windows_vm
 
-RHCOS9_AFFINITY: Final[dict[str, Any]] = build_node_affinity_dict(values=[""], key=RHCOS9_WORKER_LABEL)
+RHCOS9_AFFINITY: Final[dict[str, Any]] = {
+    "nodeAffinity": {
+        "requiredDuringSchedulingIgnoredDuringExecution": {
+            "nodeSelectorTerms": [{"matchExpressions": [{"key": RHCOS9_WORKER_LABEL, "operator": "Exists"}]}]
+        }
+    }
+}
 RHCOS10_AFFINITY: Final[dict[str, Any]] = {
     "nodeAffinity": {
         "requiredDuringSchedulingIgnoredDuringExecution": {
@@ -15,6 +20,18 @@ RHCOS10_AFFINITY: Final[dict[str, Any]] = {
         }
     }
 }
+
+
+def is_windows_vm(vm: VirtualMachineForTests) -> bool:
+    """Return True if the VM is a Windows VM based on its name.
+
+    Args:
+        vm (VirtualMachineForTests): The VM to check.
+
+    Returns:
+        bool: True if the VM name contains "windows", False otherwise.
+    """
+    return "windows" in vm.name
 
 
 def set_vm_affinity(vm: VirtualMachineForTests, affinity: dict[str, Any]) -> None:
@@ -37,7 +54,7 @@ def assert_vm_did_not_restart(vm: VirtualMachineForTests, pre_migrate_pid: int) 
         vm (VirtualMachineForTests): The VM to inspect.
         pre_migrate_pid (int): PID recorded before migration via vm_background_process_id fixture.
     """
-    if "windows" in vm.name:
+    if is_windows_vm(vm=vm):
         post_pid = fetch_pid_from_windows_vm(vm=vm, process_name=REGEDIT_PROC_NAME)
     else:
         post_pid = fetch_pid_from_linux_vm(vm=vm, process_name="ping")

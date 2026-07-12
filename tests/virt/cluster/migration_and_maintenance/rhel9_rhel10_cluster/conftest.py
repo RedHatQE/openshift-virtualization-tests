@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
+from tests.virt.cluster.migration_and_maintenance.rhel9_rhel10_cluster.utils import is_windows_vm
 from utilities.constants.virt import REGEDIT_PROC_NAME
 from utilities.virt import (
     VirtualMachineForTests,
@@ -19,7 +20,7 @@ if TYPE_CHECKING:
     from ocp_resources.namespace import Namespace
 
 
-@pytest.fixture
+@pytest.fixture()
 def dual_stream_migration_vm(
     request: pytest.FixtureRequest,
     unprivileged_client: DynamicClient,
@@ -38,8 +39,8 @@ def dual_stream_migration_vm(
         yield vm
 
 
-@pytest.fixture
+@pytest.fixture()
 def vm_background_process_id(dual_stream_migration_vm: VirtualMachineForTests) -> int:
-    if "windows" in dual_stream_migration_vm.name:
+    if is_windows_vm(vm=dual_stream_migration_vm):
         return start_and_fetch_processid_on_windows_vm(vm=dual_stream_migration_vm, process_name=REGEDIT_PROC_NAME)
     return start_and_fetch_processid_on_linux_vm(vm=dual_stream_migration_vm, process_name="ping", args="localhost")
