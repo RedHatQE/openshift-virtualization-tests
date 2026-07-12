@@ -16,8 +16,9 @@ from utilities.constants.timeouts import TIMEOUT_2MIN
 
 HOTPLUG_MEMORY_SIZE: Final[str] = "3Gi"
 
+pytestmark = [pytest.mark.special_infra, pytest.mark.sriov]
 
-@pytest.mark.sriov
+
 @pytest.mark.usefixtures("sriov_ref_vm")
 @pytest.mark.incremental
 class TestSriovMemoryHotplug:
