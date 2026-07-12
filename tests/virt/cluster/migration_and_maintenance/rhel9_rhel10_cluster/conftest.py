@@ -5,13 +5,8 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from tests.virt.cluster.migration_and_maintenance.rhel9_rhel10_cluster.utils import is_windows_vm
-from utilities.constants.virt import REGEDIT_PROC_NAME
 from utilities.virt import (
-    VirtualMachineForTests,
     VirtualMachineForTestsFromTemplate,
-    start_and_fetch_processid_on_linux_vm,
-    start_and_fetch_processid_on_windows_vm,
     vm_instance_from_template,
 )
 
@@ -37,10 +32,3 @@ def dual_stream_migration_vm(
         vm_affinity=request.param.get("vm_affinity"),
     ) as vm:
         yield vm
-
-
-@pytest.fixture()
-def vm_background_process_id(dual_stream_migration_vm: VirtualMachineForTests) -> int:
-    if is_windows_vm(vm=dual_stream_migration_vm):
-        return start_and_fetch_processid_on_windows_vm(vm=dual_stream_migration_vm, process_name=REGEDIT_PROC_NAME)
-    return start_and_fetch_processid_on_linux_vm(vm=dual_stream_migration_vm, process_name="ping", args="localhost")

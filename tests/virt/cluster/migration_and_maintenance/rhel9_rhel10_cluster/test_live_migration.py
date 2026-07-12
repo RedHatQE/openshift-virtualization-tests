@@ -15,11 +15,11 @@ from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS, WINDOWS_LATEST, WIN
 from tests.virt.cluster.migration_and_maintenance.rhel9_rhel10_cluster.utils import (
     RHCOS9_AFFINITY,
     RHCOS10_AFFINITY,
-    assert_vm_did_not_restart,
     set_vm_affinity,
 )
+from tests.virt.utils import verify_guest_boot_time
 from utilities.constants.cluster import RHCOS9_WORKER_LABEL
-from utilities.virt import VirtualMachineForTests, migrate_vm_and_verify
+from utilities.virt import VirtualMachineForTests, get_vm_boot_time, migrate_vm_and_verify
 
 if TYPE_CHECKING:
     from kubernetes.dynamic import DynamicClient
@@ -59,7 +59,6 @@ pytestmark = [
 def test_vm_migrates_from_rhcos10_to_rhcos9_node(
     admin_client: DynamicClient,
     dual_stream_migration_vm: VirtualMachineForTests,
-    vm_background_process_id: int,
 ) -> None:
     """
     Test that live migration from an RHCOS 10 worker node to an RHCOS 9 worker node
@@ -69,19 +68,22 @@ def test_vm_migrates_from_rhcos10_to_rhcos9_node(
         - Under-test VM running on an RHCOS 10 worker node
 
     Steps:
-        1. Record guest session continuity indicator
+        1. Record VM boot time
         2. Live migrate the under-test VM to an RHCOS 9 worker node
 
     Expected:
         - Live migration completes successfully and the VM is running on an RHCOS 9 worker node
         - The VM did not restart during migration
     """
+    boot_time = get_vm_boot_time(vm=dual_stream_migration_vm)
     set_vm_affinity(vm=dual_stream_migration_vm, affinity=RHCOS9_AFFINITY)
     migrate_vm_and_verify(vm=dual_stream_migration_vm, client=admin_client, check_ssh_connectivity=True)
     assert RHCOS9_WORKER_LABEL in dual_stream_migration_vm.vmi.get_node(privileged_client=admin_client).labels.keys(), (
         f"VM {dual_stream_migration_vm.name} is not running on an RHCOS 9 node after migration"
     )
-    assert_vm_did_not_restart(vm=dual_stream_migration_vm, pre_migrate_pid=vm_background_process_id)
+    verify_guest_boot_time(
+        vm_list=[dual_stream_migration_vm], initial_boot_time={dual_stream_migration_vm.name: boot_time}
+    )
 
 
 @pytest.mark.parametrize(
@@ -113,7 +115,6 @@ def test_vm_migrates_from_rhcos10_to_rhcos9_node(
 def test_vm_migrates_from_rhcos9_to_rhcos10_node(
     admin_client: DynamicClient,
     dual_stream_migration_vm: VirtualMachineForTests,
-    vm_background_process_id: int,
 ) -> None:
     """
     Test that live migration from an RHCOS 9 worker node to an RHCOS 10 worker node
@@ -123,16 +124,19 @@ def test_vm_migrates_from_rhcos9_to_rhcos10_node(
         - Under-test VM running on an RHCOS 9 worker node
 
     Steps:
-        1. Record guest session continuity indicator
+        1. Record VM boot time
         2. Live migrate the under-test VM to an RHCOS 10 worker node
 
     Expected:
         - Live migration completes successfully and the VM is running on an RHCOS 10 worker node
         - The VM did not restart during migration
     """
+    boot_time = get_vm_boot_time(vm=dual_stream_migration_vm)
     set_vm_affinity(vm=dual_stream_migration_vm, affinity=RHCOS10_AFFINITY)
     migrate_vm_and_verify(vm=dual_stream_migration_vm, client=admin_client, check_ssh_connectivity=True)
     assert (
         RHCOS9_WORKER_LABEL not in dual_stream_migration_vm.vmi.get_node(privileged_client=admin_client).labels.keys()
     ), f"VM {dual_stream_migration_vm.name} is not running on an RHCOS 10 node after migration"
-    assert_vm_did_not_restart(vm=dual_stream_migration_vm, pre_migrate_pid=vm_background_process_id)
+    verify_guest_boot_time(
+        vm_list=[dual_stream_migration_vm], initial_boot_time={dual_stream_migration_vm.name: boot_time}
+    )
