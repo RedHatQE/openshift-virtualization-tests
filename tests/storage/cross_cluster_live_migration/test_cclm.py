@@ -4,6 +4,10 @@ Cross-cluster live migration tests.
 Jira: https://redhat.atlassian.net/browse/CNV-50823 # <skip-jira-utils-check>
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import pytest
 from pytest_testconfig import config as py_config
 
@@ -17,6 +21,11 @@ from tests.storage.cross_cluster_live_migration.utils import (
 )
 from tests.storage.utils import check_file_in_vm
 from utilities.constants import TIMEOUT_10MIN, TIMEOUT_50MIN
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from utilities.virt import VirtualMachineForTests
 
 TESTS_CLASS_NAME_SEVERAL_VMS = "TestCCLMSeveralVMs"
 TESTS_CLASS_NAME_WINDOWS_VM = "TestCCLMWindowsWithVTPM"
