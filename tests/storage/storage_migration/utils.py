@@ -81,11 +81,9 @@ def collect_reboot_diagnostic_events(vm: VirtualMachineForTests) -> None:
             file_name=f"{vm.name}_reboot_events.txt",
             content=output,
         )
+        LOGGER.info(f"Collected reboot diagnostic events for VM {vm.name}")
     except Exception as exc:
         LOGGER.error(f"Failed to collect reboot diagnostic events for VM {vm.name}: {exc}")
-        return
-
-    LOGGER.info(f"Collected reboot diagnostic events for VM {vm.name}")
 
 
 def verify_vm_storage_class_updated(vm: VirtualMachineForTests, target_storage_class: str) -> None:
