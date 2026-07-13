@@ -10,7 +10,6 @@ import logging
 import pytest
 
 from tests.data_protection.oadp.utils import get_velero_backup_logs
-from utilities.constants.timeouts import TIMEOUT_15MIN
 from utilities.oadp import VeleroBackup
 from utilities.virt import wait_for_running_vm
 
@@ -86,12 +85,7 @@ class TestVeleroBackupHookOptOut:
         Expected:
             - VM is restored and running after backup/restore cycle without hook execution
         """
-        wait_for_running_vm(
-            vm=rhel_vm_with_hooks_opt_out,
-            wait_until_running_timeout=TIMEOUT_15MIN,
-            wait_for_interfaces=False,
-            check_ssh_connectivity=False,
-        )
+        wait_for_running_vm(vm=rhel_vm_with_hooks_opt_out)
         backup_logs = get_velero_backup_logs(
             backup_name=velero_backup_vm_with_hooks_opt_out.name,
             client=admin_client,

@@ -149,27 +149,7 @@ def create_rhel_vm(
     client: DynamicClient,
     wait_running: bool = True,
     volume_mode: str | None = None,
-    annotations: dict[str, str] | None = None,
 ) -> Generator[VirtualMachineForTests]:
-    """Create a RHEL VM with a DataVolume boot disk from artifactory.
-
-    Creates artifactory credentials, builds a DataVolume from the specified RHEL image,
-    and yields a running VirtualMachineForTests. Cleans up artifactory credentials on exit.
-
-    Args:
-        storage_class: Storage class for the DataVolume.
-        namespace: Target namespace for the VM.
-        dv_name: Name for the DataVolume.
-        vm_name: Name for the VirtualMachine.
-        rhel_image: RHEL image filename (e.g., Images.Rhel.RHEL9_3_IMG).
-        client: OpenShift dynamic client.
-        wait_running: Whether to wait for the VM to reach running state.
-        volume_mode: Volume mode for the DataVolume (e.g., "Block", "Filesystem").
-        annotations: Annotations to add to the VM metadata.
-
-    Yields:
-        VirtualMachineForTests: The created VM.
-    """
     artifactory_secret = None
     artifactory_config_map = None
 
@@ -204,7 +184,6 @@ def create_rhel_vm(
             memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
             data_volume_template={"metadata": dv_metadata, "spec": dv.res["spec"]},
             run_strategy=VirtualMachine.RunStrategy.ALWAYS,
-            annotations=annotations,
         ) as vm:
             if wait_running:
                 running_vm(vm=vm)
