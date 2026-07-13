@@ -15,7 +15,6 @@ from ocp_resources.storage_profile import StorageProfile
 
 from tests.storage.utils import assert_disk_bus
 from tests.utils import create_windows2022_vm_with_data_volume_template
-from utilities.constants import Images
 from utilities.constants.storage import HOTPLUG_DISK_SCSI_BUS, HOTPLUG_DISK_SERIAL, HOTPLUG_DISK_VIRTIO_BUS
 from utilities.constants.virt import WIN_2K22
 from utilities.hco import ResourceEditorValidateHCOReconcile
