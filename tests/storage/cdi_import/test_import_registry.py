@@ -181,6 +181,7 @@ def test_public_registry_data_volume_archive(unprivileged_client, namespace, sto
             return
 
 
+@pytest.mark.jira("CNV-92373", run=False)
 @pytest.mark.polarion("CNV-5509")
 @pytest.mark.s390x
 def test_importer_pod_annotation(importer_pod_annotations, linux_nad):
