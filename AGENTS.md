@@ -90,6 +90,8 @@ New feature tests MUST follow the STD-first workflow:
 ### Coverage Tracking
 
 - **STP link REQUIRED** — every new feature test file MUST include an STP link in the module, class, or test docstring
+- **STP scenario coverage REQUIRED** — when an STD or test references an STP, every test scenario defined in that STP MUST have a corresponding STD/test declaration in the same file or PR, unless the scenario is intentionally excluded. Intentional exclusions MUST be documented in the PR description with justification and a follow-up Jira link per excluded scenario. Partial STP coverage without documented exclusions blocks merge.
+- **STD alignment with STP** — STD docstring `Preconditions:`, `Steps:`, and `Expected:` sections MUST align with the STP scenario description for the scenario being covered.
 - **RFE/Jira link REQUIRED when no STP exists** — if there is no STP, the module, class, or test docstring MUST include a link to the RFE or Jira epic (not support cases) for coverage tracking
 
 ### Test Requirements
@@ -99,6 +101,11 @@ New feature tests MUST follow the STD-first workflow:
   - **`tier2` is implicit** — added automatically to all tests that don't have an exclusion marker (see `EXCLUDE_MARKER_FROM_TIER2_MARKER` in `conftest.py` for the full list). Do NOT add `@pytest.mark.tier2` explicitly.
   - **Team markers are implicit** — `network`, `storage`, `virt`, `iuo`, `observability`, `infrastructure`, `data_protection`, and `chaos` are added automatically based on the test's directory location. Do NOT add them explicitly.
   - **`gating` marker** — marks tier2 tests that are part of the gating job. Apply when a test should block release promotion.
+  - **`special_infra` marker REQUIRED for special hardware/configuration** — new tests that require non-standard cluster capabilities MUST include `@pytest.mark.special_infra` at module (`pytestmark`), class, or test level, in addition to the specific requirement marker. See `pytest.ini` marker definitions. This applies when the test uses any of:
+    - **Hardware requirements** (`pytest.ini`): `gpu`, `sriov`, `bgp`, `ibm_bare_metal`
+    - **Configuration requirements** (`pytest.ini`): `dpdk`, `swap`, `cpu_manager`, `numa`, `hugepages`, `jumbo_frame`, `rwx_default_storage`, `descheduler`
+    - **Resource requirements** (`pytest.ini`): `high_resource_vm`
+    - **Exempt** (do NOT require `special_infra`): `single_nic` (runs on minimal-NIC clusters), `remote_cluster`, `mixed_os_nodes`, `cclm`, and operator-only markers (`hpp`, `mtv`, `tekton`, `service_mesh`, `nmstate`)
 - **Each test verifies ONE aspect only** - single purpose, easy to understand
 - **Tests MUST be independent** - use `pytest-dependency` ONLY when test B requires side effects from test A (e.g., cluster-wide configuration).
   For resource dependencies, use shared fixtures instead. **When using `@pytest.mark.dependency`, a comment explaining WHY the dependency exists is REQUIRED.**
