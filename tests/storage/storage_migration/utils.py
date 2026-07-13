@@ -68,8 +68,9 @@ def collect_reboot_diagnostic_events(vm: VirtualMachineForTests) -> None:
         cmd = shlex.split(
             "bash -c '"
             "last reboot; echo ---; "
-            "journalctl -b -1 -o short-precise --no-pager "
-            '| grep -iE "shutdown|reboot|restart|power|kill" | tail -n 30'
+            "journalctl --list-boots --no-pager; echo ---; "
+            "journalctl --no-pager -o short-precise "
+            '| grep -iE "shutdown|reboot|restart|power|kill" | tail -n 100'
             "'"
         )
 
