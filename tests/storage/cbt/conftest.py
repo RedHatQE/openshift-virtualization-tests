@@ -24,20 +24,15 @@ from tests.storage.cbt.utils import (
     CBT_INCREMENTAL_TEST_DATA,
     CBT_INCREMENTAL_TEST_DATA_FILE,
     CBT_TEST_DATA,
-    capture_restore_spec_and_delete_vm,
     cbt_pvc_size_with_headroom,
-    cbt_resource_id,
     cbt_storage_class_suffix,
-    collect_pull_mode_backup_to_pvc,
-    included_boot_volume,
-    pull_collect_params_for_backup,
-    restore_vm_from_pull_client_backup,
-    restore_vm_from_push_backup,
+    create_and_collect_pull_mode_backup,
+    restore_and_start_vm_from_pull_client_backup,
+    restore_and_start_vm_from_push_backup,
 )
 from utilities.constants import (
     OS_FLAVOR_RHEL,
     RHEL9_PREFERENCE,
-    TIMEOUT_5MIN,
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
     U1_SMALL,
@@ -238,7 +233,7 @@ def completed_full_backup_push_mode(
         source=backup_tracker_source,
     ) as backup:
         backup.wait_for_condition(
-            condition="Done",
+            condition="Complete",
             status=VirtualMachineBackup.Condition.Status.TRUE,
             timeout=TIMEOUT_10MIN,
             sleep_time=TIMEOUT_5SEC,
@@ -263,24 +258,16 @@ def restored_vm_from_full_backup_push_mode(
     Returns:
         VirtualMachineForTests: Running restored VM
     """
-    restore_spec = capture_restore_spec_and_delete_vm(vm=vm_with_cbt_label)
-    included_volume = included_boot_volume(backup=completed_full_backup_push_mode)
-    restored_vm = restore_vm_from_push_backup(
-        restored_vm_name=vm_with_cbt_label.name,
+    yield from restore_and_start_vm_from_push_backup(
+        vm=vm_with_cbt_label,
+        backup=completed_full_backup_push_mode,
         namespace=namespace.name,
         client=unprivileged_client,
         storage_class=storage_class_name_scope_module,
         size=vm_boot_disk_size,
         backup_pvc_name=backup_pvc.name,
-        boot_volume_name=included_volume["volumeName"],
         **vm_boot_pvc_spec,
-        **restore_spec,
     )
-    running_vm(vm=restored_vm, ssh_timeout=TIMEOUT_5MIN)
-    try:
-        yield restored_vm
-    finally:
-        restored_vm.delete(wait=True)
 
 
 @pytest.fixture()
@@ -314,7 +301,7 @@ def completed_incremental_backup_push_mode(
         source=backup_tracker_source,
     ) as backup:
         backup.wait_for_condition(
-            condition="Done",
+            condition="Complete",
             status=VirtualMachineBackup.Condition.Status.TRUE,
             timeout=TIMEOUT_10MIN,
             sleep_time=TIMEOUT_5SEC,
@@ -339,24 +326,16 @@ def restored_vm_from_incremental_backup_push_mode(
     Returns:
         VirtualMachineForTests: Running restored VM
     """
-    restore_spec = capture_restore_spec_and_delete_vm(vm=vm_with_cbt_label)
-    included_volume = included_boot_volume(backup=completed_incremental_backup_push_mode)
-    restored_vm = restore_vm_from_push_backup(
-        restored_vm_name=vm_with_cbt_label.name,
+    yield from restore_and_start_vm_from_push_backup(
+        vm=vm_with_cbt_label,
+        backup=completed_incremental_backup_push_mode,
         namespace=namespace.name,
         client=unprivileged_client,
         storage_class=storage_class_name_scope_module,
         size=vm_boot_disk_size,
         backup_pvc_name=backup_pvc.name,
-        boot_volume_name=included_volume["volumeName"],
         **vm_boot_pvc_spec,
-        **restore_spec,
     )
-    running_vm(vm=restored_vm, ssh_timeout=TIMEOUT_5MIN)
-    try:
-        yield restored_vm
-    finally:
-        restored_vm.delete(wait=True)
 
 
 # Pull mode fixtures
@@ -461,34 +440,18 @@ def collected_full_backup_pull_mode(
     Returns:
         str: Name of the client PVC containing offline pull backup data
     """
-    with VirtualMachineBackup(
+    create_and_collect_pull_mode_backup(
         name=f"full-pull-{cbt_storage_class_suffix(storage_class_name=storage_class_name_scope_module)}",
         namespace=namespace.name,
         client=unprivileged_client,
-        mode=VirtualMachineBackup.Mode.PULL,
-        token_secret_ref=pull_mode_token_secret.name,
-        pvc_name=pull_backup_staging_pvc.name,
+        token_secret_name=pull_mode_token_secret.name,
+        export_token=base64.b64decode(pull_mode_token_secret.instance.data["token"]).decode("utf-8"),
+        staging_pvc_name=pull_backup_staging_pvc.name,
+        client_backup_pvc_name=pull_client_backup_pvc.name,
+        backup_tracker_source=backup_tracker_source,
         force_full_backup=True,
-        source=backup_tracker_source,
-    ) as backup:
-        backup.wait_for_condition(
-            condition="ExportReady",
-            status=VirtualMachineBackup.Condition.Status.TRUE,
-            timeout=TIMEOUT_10MIN,
-            sleep_time=TIMEOUT_5SEC,
-        )
-        collect_pull_mode_backup_to_pvc(
-            backup=backup,
-            client_backup_pvc_name=pull_client_backup_pvc.name,
-            namespace=namespace.name,
-            client=unprivileged_client,
-            collect_pod_name=f"cbt-pull-collect-{cbt_resource_id(name=f'{backup.name}-collect')}",
-            collect_params=pull_collect_params_for_backup(
-                backup=backup,
-                export_token=base64.b64decode(pull_mode_token_secret.instance.data["token"]).decode("utf-8"),
-                boot_disk_size=vm_boot_disk_size,
-            ),
-        )
+        boot_disk_size=vm_boot_disk_size,
+    )
     yield pull_client_backup_pvc.name
 
 
@@ -508,26 +471,15 @@ def restored_vm_from_full_backup_pull_mode(
     Returns:
         VirtualMachineForTests: Running restored VM
     """
-    # Collect stores raw files under the backup status volumeName; capture it before
-    # the original VM is deleted so restore can scope to that directory.
-    boot_volume_name = vm_with_cbt_label.instance.spec.template.spec.volumes[0]["name"]
-    restore_spec = capture_restore_spec_and_delete_vm(vm=vm_with_cbt_label)
-    restored_vm = restore_vm_from_pull_client_backup(
-        restored_vm_name=vm_with_cbt_label.name,
+    yield from restore_and_start_vm_from_pull_client_backup(
+        vm=vm_with_cbt_label,
+        client_backup_pvc_name=collected_full_backup_pull_mode,
         namespace=namespace.name,
         client=unprivileged_client,
         storage_class=storage_class_name_scope_module,
         size=vm_boot_disk_size,
-        client_backup_pvc_name=collected_full_backup_pull_mode,
-        boot_volume_name=boot_volume_name,
         **vm_boot_pvc_spec,
-        **restore_spec,
     )
-    running_vm(vm=restored_vm, ssh_timeout=TIMEOUT_5MIN)
-    try:
-        yield restored_vm
-    finally:
-        restored_vm.delete(wait=True)
 
 
 @pytest.fixture()
@@ -554,34 +506,18 @@ def collected_incremental_backup_pull_mode(
         filename=CBT_INCREMENTAL_TEST_DATA_FILE,
         content=CBT_INCREMENTAL_TEST_DATA,
     )
-    with VirtualMachineBackup(
-        mode=VirtualMachineBackup.Mode.PULL,
+    create_and_collect_pull_mode_backup(
         name=f"incr-pull-{cbt_storage_class_suffix(storage_class_name=storage_class_name_scope_module)}",
         namespace=namespace.name,
         client=unprivileged_client,
-        token_secret_ref=pull_mode_token_secret.name,
-        pvc_name=pull_backup_staging_pvc.name,
+        token_secret_name=pull_mode_token_secret.name,
+        export_token=base64.b64decode(pull_mode_token_secret.instance.data["token"]).decode("utf-8"),
+        staging_pvc_name=pull_backup_staging_pvc.name,
+        client_backup_pvc_name=pull_client_backup_pvc.name,
+        backup_tracker_source=backup_tracker_source,
         force_full_backup=False,
-        source=backup_tracker_source,
-    ) as backup:
-        backup.wait_for_condition(
-            condition="ExportReady",
-            status=VirtualMachineBackup.Condition.Status.TRUE,
-            timeout=TIMEOUT_10MIN,
-            sleep_time=TIMEOUT_5SEC,
-        )
-        collect_pull_mode_backup_to_pvc(
-            backup=backup,
-            client_backup_pvc_name=pull_client_backup_pvc.name,
-            namespace=namespace.name,
-            client=unprivileged_client,
-            collect_pod_name=f"cbt-pull-collect-{cbt_resource_id(name=f'{backup.name}-collect')}",
-            collect_params=pull_collect_params_for_backup(
-                backup=backup,
-                export_token=base64.b64decode(pull_mode_token_secret.instance.data["token"]).decode("utf-8"),
-                boot_disk_size=vm_boot_disk_size,
-            ),
-        )
+        boot_disk_size=vm_boot_disk_size,
+    )
     yield collected_full_backup_pull_mode
 
 
@@ -601,23 +537,12 @@ def restored_vm_from_incremental_backup_pull_mode(
     Returns:
         VirtualMachineForTests: Running restored VM
     """
-    # Collect stores raw files under the backup status volumeName; capture it before
-    # the original VM is deleted so restore can scope to that directory.
-    boot_volume_name = vm_with_cbt_label.instance.spec.template.spec.volumes[0]["name"]
-    restore_spec = capture_restore_spec_and_delete_vm(vm=vm_with_cbt_label)
-    restored_vm = restore_vm_from_pull_client_backup(
-        restored_vm_name=vm_with_cbt_label.name,
+    yield from restore_and_start_vm_from_pull_client_backup(
+        vm=vm_with_cbt_label,
+        client_backup_pvc_name=collected_incremental_backup_pull_mode,
         namespace=namespace.name,
         client=unprivileged_client,
         storage_class=storage_class_name_scope_module,
         size=vm_boot_disk_size,
-        client_backup_pvc_name=collected_incremental_backup_pull_mode,
-        boot_volume_name=boot_volume_name,
         **vm_boot_pvc_spec,
-        **restore_spec,
     )
-    running_vm(vm=restored_vm, ssh_timeout=TIMEOUT_5MIN)
-    try:
-        yield restored_vm
-    finally:
-        restored_vm.delete(wait=True)

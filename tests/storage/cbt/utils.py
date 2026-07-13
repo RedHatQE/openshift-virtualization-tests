@@ -9,6 +9,7 @@ import json
 import logging
 import re
 import shlex
+from collections.abc import Generator
 from pathlib import Path
 from typing import Any
 
@@ -32,10 +33,12 @@ from utilities.constants import (
     NET_UTIL_CONTAINER_IMAGE,
     POD_CONTAINER_SPEC,
     TIMEOUT_2MIN,
+    TIMEOUT_5MIN,
     TIMEOUT_5SEC,
+    TIMEOUT_10MIN,
     TIMEOUT_30MIN,
 )
-from utilities.virt import VirtualMachineForTests
+from utilities.virt import VirtualMachineForTests, running_vm
 
 LOGGER = logging.getLogger(__name__)
 
@@ -238,37 +241,29 @@ def cbt_storage_class_suffix(storage_class_name: str) -> str:
     return hashlib.sha256(storage_class_name.encode()).hexdigest()[:8]
 
 
-def assert_restored_vm_has_boot_test_data(vm: VirtualMachineForTests) -> None:
-    """Assert the restored VM contains the original boot-disk test data."""
-    actual = "".join(
+def _read_guest_file(vm: VirtualMachineForTests, filename: str) -> str:
+    """Return the contents of a file from the guest over SSH."""
+    return "".join(
         run_ssh_commands(
             host=vm.ssh_exec,
-            commands=shlex.split(f"sudo cat {CBT_BOOT_DISK_TEST_DATA_FILE}"),
+            commands=shlex.split(f"sudo cat {filename}"),
             wait_timeout=TIMEOUT_2MIN,
             sleep=TIMEOUT_5SEC,
         )
     ).strip()
-    assert actual == CBT_TEST_DATA, f"Boot-disk test data mismatch on VM {vm.name}"
+
+
+def assert_restored_vm_has_boot_test_data(vm: VirtualMachineForTests) -> None:
+    """Assert the restored VM contains the original boot-disk test data."""
+    assert _read_guest_file(vm=vm, filename=CBT_BOOT_DISK_TEST_DATA_FILE) == CBT_TEST_DATA, (
+        f"Boot-disk test data mismatch on VM {vm.name}"
+    )
 
 
 def assert_restored_vm_has_boot_and_incremental_test_data(vm: VirtualMachineForTests) -> None:
     """Assert the restored VM contains both full-backup and incremental test data."""
-    boot_data = "".join(
-        run_ssh_commands(
-            host=vm.ssh_exec,
-            commands=shlex.split(f"sudo cat {CBT_BOOT_DISK_TEST_DATA_FILE}"),
-            wait_timeout=TIMEOUT_2MIN,
-            sleep=TIMEOUT_5SEC,
-        )
-    ).strip()
-    incremental_data = "".join(
-        run_ssh_commands(
-            host=vm.ssh_exec,
-            commands=shlex.split(f"sudo cat {CBT_INCREMENTAL_TEST_DATA_FILE}"),
-            wait_timeout=TIMEOUT_2MIN,
-            sleep=TIMEOUT_5SEC,
-        )
-    ).strip()
+    boot_data = _read_guest_file(vm=vm, filename=CBT_BOOT_DISK_TEST_DATA_FILE)
+    incremental_data = _read_guest_file(vm=vm, filename=CBT_INCREMENTAL_TEST_DATA_FILE)
     assert (boot_data, incremental_data) == (CBT_TEST_DATA, CBT_INCREMENTAL_TEST_DATA), (
         f"Test data mismatch on VM {vm.name}: boot={boot_data!r}, incremental={incremental_data!r}"
     )
@@ -372,6 +367,53 @@ def collect_pull_mode_backup_to_pvc(
     backup.delete(wait=True)
     backup.teardown = False
     return client_backup_pvc_name
+
+
+def create_and_collect_pull_mode_backup(
+    *,
+    name: str,
+    namespace: str,
+    client: DynamicClient,
+    token_secret_name: str,
+    export_token: str,
+    staging_pvc_name: str,
+    client_backup_pvc_name: str,
+    backup_tracker_source: dict[str, str],
+    force_full_backup: bool,
+    boot_disk_size: str,
+) -> None:
+    """Create a pull-mode backup, wait until export is ready, and collect it offline."""
+    with VirtualMachineBackup(
+        name=name,
+        namespace=namespace,
+        client=client,
+        mode=VirtualMachineBackup.Mode.PULL,
+        token_secret_ref=token_secret_name,
+        pvc_name=staging_pvc_name,
+        force_full_backup=force_full_backup,
+        source=backup_tracker_source,
+    ) as backup:
+        # Pull readiness is Progressing=True with reason ExportReady; there is no
+        # condition type named ExportReady.
+        backup.wait_for_condition(
+            condition="Progressing",
+            status=VirtualMachineBackup.Condition.Status.TRUE,
+            reason="ExportReady",
+            timeout=TIMEOUT_10MIN,
+            sleep_time=TIMEOUT_5SEC,
+        )
+        collect_pull_mode_backup_to_pvc(
+            backup=backup,
+            client_backup_pvc_name=client_backup_pvc_name,
+            namespace=namespace,
+            client=client,
+            collect_pod_name=f"cbt-pull-collect-{cbt_resource_id(name=f'{backup.name}-collect')}",
+            collect_params=pull_collect_params_for_backup(
+                backup=backup,
+                export_token=export_token,
+                boot_disk_size=boot_disk_size,
+            ),
+        )
 
 
 def restore_vm_from_push_backup(
@@ -558,6 +600,83 @@ def restore_vm_from_pull_client_backup(
             vm_preference_name=vm_preference_name,
             vm_instance_type_name=vm_instance_type_name,
         )
+
+
+def restore_and_start_vm_from_push_backup(
+    *,
+    vm: VirtualMachineForTests,
+    backup: VirtualMachineBackup,
+    namespace: str,
+    client: DynamicClient,
+    storage_class: str,
+    size: str,
+    volume_mode: str,
+    access_mode: str,
+    backup_pvc_name: str,
+    ssh_timeout: int = TIMEOUT_5MIN,
+) -> Generator[VirtualMachineForTests]:
+    """Delete the source VM, restore from a push backup, start it, then clean up."""
+    restored_vm_name = vm.name
+    if restored_vm_name is None:
+        raise RuntimeError("Cannot restore: source VM has no name")
+    restore_spec = capture_restore_spec_and_delete_vm(vm=vm)
+    included_volume = included_boot_volume(backup=backup)
+    restored_vm = restore_vm_from_push_backup(
+        restored_vm_name=restored_vm_name,
+        namespace=namespace,
+        client=client,
+        storage_class=storage_class,
+        size=size,
+        volume_mode=volume_mode,
+        access_mode=access_mode,
+        backup_pvc_name=backup_pvc_name,
+        boot_volume_name=included_volume["volumeName"],
+        **restore_spec,
+    )
+    running_vm(vm=restored_vm, ssh_timeout=ssh_timeout)
+    try:
+        yield restored_vm
+    finally:
+        restored_vm.delete(wait=True)
+
+
+def restore_and_start_vm_from_pull_client_backup(
+    *,
+    vm: VirtualMachineForTests,
+    client_backup_pvc_name: str,
+    namespace: str,
+    client: DynamicClient,
+    storage_class: str,
+    size: str,
+    volume_mode: str,
+    access_mode: str,
+    ssh_timeout: int = TIMEOUT_5MIN,
+) -> Generator[VirtualMachineForTests]:
+    """Delete the source VM, restore from pull client storage, start it, then clean up."""
+    restored_vm_name = vm.name
+    if restored_vm_name is None:
+        raise RuntimeError("Cannot restore: source VM has no name")
+    # Collect stores raw files under the backup status volumeName; capture it before
+    # the original VM is deleted so restore can scope to that directory.
+    boot_volume_name = vm.instance.spec.template.spec.volumes[0]["name"]
+    restore_spec = capture_restore_spec_and_delete_vm(vm=vm)
+    restored_vm = restore_vm_from_pull_client_backup(
+        restored_vm_name=restored_vm_name,
+        namespace=namespace,
+        client=client,
+        storage_class=storage_class,
+        size=size,
+        volume_mode=volume_mode,
+        access_mode=access_mode,
+        client_backup_pvc_name=client_backup_pvc_name,
+        boot_volume_name=boot_volume_name,
+        **restore_spec,
+    )
+    running_vm(vm=restored_vm, ssh_timeout=ssh_timeout)
+    try:
+        yield restored_vm
+    finally:
+        restored_vm.delete(wait=True)
 
 
 def _run_python_runner_pod(
