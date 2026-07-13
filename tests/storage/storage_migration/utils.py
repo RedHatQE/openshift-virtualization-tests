@@ -3,6 +3,7 @@ import shlex
 
 from ocp_resources.multi_namespace_virtual_machine_storage_migration import MultiNamespaceVirtualMachineStorageMigration
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
+from pyhelper_utils.exceptions import CommandExecFailed
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
@@ -82,7 +83,7 @@ def collect_reboot_diagnostic_events(vm: VirtualMachineForTests) -> None:
             content=output,
         )
         LOGGER.info(f"Collected reboot diagnostic events for VM {vm.name}")
-    except Exception as exc:
+    except (CommandExecFailed, TimeoutExpiredError, IndexError, OSError) as exc:
         LOGGER.error(f"Failed to collect reboot diagnostic events for VM {vm.name}: {exc}")
 
 
