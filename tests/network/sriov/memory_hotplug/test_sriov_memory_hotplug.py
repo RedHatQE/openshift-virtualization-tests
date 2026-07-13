@@ -7,10 +7,10 @@ Jira: https://redhat.atlassian.net/browse/CNV-69778 # <skip-jira-utils-check>
 from typing import Final
 
 import pytest
+from tests.network.libs.connectivity import poll_tcp_connectivity
 
 from libs.net.ip import filter_link_local_addresses
 from libs.net.vmspec import lookup_iface_status
-from tests.network.libs.connectivity import poll_tcp_connectivity
 from tests.network.sriov.memory_hotplug.lib_helpers import hotplug_memory_and_wait
 from utilities.constants import TIMEOUT_2MIN
 
