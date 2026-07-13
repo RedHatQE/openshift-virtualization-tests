@@ -1,3 +1,5 @@
+import shlex
+
 import pytest
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.namespace import Namespace
@@ -392,7 +394,7 @@ def rhel_vm_with_hooks_opt_out(
         ),
         annotations={SKIP_BACKUP_HOOKS_ANNOTATION: "true"},
     ) as vm:
-        running_vm(vm=vm)
+        running_vm(vm=vm, wait_for_cloud_init=True)
         assert vm.instance.metadata.annotations.get(SKIP_BACKUP_HOOKS_ANNOTATION) == "true", (
             f"VM {vm.name} missing {SKIP_BACKUP_HOOKS_ANNOTATION} annotation"
         )
@@ -405,6 +407,8 @@ def velero_backup_vm_with_hooks_opt_out(
     rhel_vm_with_hooks_opt_out,
     namespace_for_backup,
 ):
+    # Flush filesystem buffers before backup since skip-backup-hooks skips fsfreeze
+    rhel_vm_with_hooks_opt_out.ssh_exec.run_command(command=shlex.split("sudo sync"))
     with VeleroBackup(
         client=admin_client,
         included_namespaces=[namespace_for_backup.name],
