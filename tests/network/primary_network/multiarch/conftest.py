@@ -3,10 +3,10 @@ from collections.abc import Generator
 import pytest
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.namespace import Namespace
+from utilities.constants.architecture import AMD_64, ARM_64
 
 from libs.vm.factory import base_vmspec, fedora_vm
 from libs.vm.vm import BaseVirtualMachine
-from utilities.constants.architecture import AMD_64, ARM_64
 
 
 @pytest.fixture(scope="class")
