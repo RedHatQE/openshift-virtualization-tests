@@ -13,8 +13,6 @@ The retentionPolicy field can be configured at:
 
 STP Reference:
 https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_cleanup.md
-
-Test Tier: Tier 2 (all tests in this module)
 """
 
 import pytest
@@ -28,6 +26,11 @@ class TestStorageMigrationRetentionPolicy:
 
     STP Traceability: CNV-73509 (P0, P1)
 
+    Parametrize:
+        - migration_mode:
+            - online (VM running during migration)
+            - offline (VM stopped during migration)
+
     Preconditions:
       - VM with source PVC/DataVolume
     """
@@ -37,7 +40,7 @@ class TestStorageMigrationRetentionPolicy:
         """
         Test that default behavior is keepSource when retentionPolicy is not specified.
 
-        STP Requirement: Default cleanup behavior (P1)
+        STP Requirement: Default cleanup policy (P1)
 
         Preconditions:
             - VM with source PVC/DataVolume
@@ -49,9 +52,7 @@ class TestStorageMigrationRetentionPolicy:
             4. Check if source PVC/DataVolume exists
 
         Expected:
-            - Migration completes successfully
             - Source PVC/DataVolume is kept (default keepSource behavior)
-            - VM is running on new storage
         """
 
     @pytest.mark.polarion("CNV-16298")
@@ -71,9 +72,7 @@ class TestStorageMigrationRetentionPolicy:
             4. Check if source PVC/DataVolume exists
 
         Expected:
-            - Migration completes successfully
             - Source PVC/DataVolume is deleted
-            - VM is running on new storage
         """
 
     @pytest.mark.polarion("CNV-16299")
@@ -93,9 +92,7 @@ class TestStorageMigrationRetentionPolicy:
             4. Check if source PVC/DataVolume exists
 
         Expected:
-            - Migration completes successfully
-            - Source PVC/DataVolume is deleted (plan-level policy)
-            - VM is running on new storage
+            - Source PVC/DataVolume is deleted
         """
 
     @pytest.mark.polarion("CNV-16301")
@@ -115,9 +112,7 @@ class TestStorageMigrationRetentionPolicy:
             4. Check if source PVC/DataVolume exists
 
         Expected:
-            - Migration completes successfully
-            - Source PVC/DataVolume is kept (namespace-level policy)
-            - VM is running on new storage
+            - Source PVC/DataVolume is kept
         """
 
     @pytest.mark.polarion("CNV-16302")
@@ -137,9 +132,7 @@ class TestStorageMigrationRetentionPolicy:
             4. Check if source PVC/DataVolume exists
 
         Expected:
-            - Migration completes successfully
-            - Source PVC/DataVolume is kept (plan-level policy)
-            - VM is running on new storage
+            - Source PVC/DataVolume is kept
         """
 
 
@@ -148,6 +141,11 @@ class TestSingleNamespaceStorageMigrationRetentionPolicy:
     Test retentionPolicy functionality for VirtualMachineStorageMigrationPlan (single namespace).
 
     STP Traceability: CNV-73509 (P0)
+
+    Parametrize:
+        - migration_mode:
+            - online (VM running during migration)
+            - offline (VM stopped during migration)
 
     Preconditions:
       - VM with source PVC/DataVolume
@@ -170,9 +168,7 @@ class TestSingleNamespaceStorageMigrationRetentionPolicy:
             4. Check if source PVC/DataVolume exists
 
         Expected:
-            - Migration completes successfully
-            - Source PVC/DataVolume is kept (plan-level policy)
-            - VM is running on new storage
+            - Source PVC/DataVolume is kept
         """
 
     @pytest.mark.polarion("CNV-16304")
@@ -192,9 +188,7 @@ class TestSingleNamespaceStorageMigrationRetentionPolicy:
             4. Check if source PVC/DataVolume exists
 
         Expected:
-            - Migration completes successfully
-            - Source PVC/DataVolume is deleted (plan-level policy)
-            - VM is running on new storage
+            - Source PVC/DataVolume is deleted
         """
 
 
@@ -205,13 +199,19 @@ class TestStorageMigrationCombinedRetentionPolicy:
     STP Traceability: CNV-73509 (P0)
     Note: Namespace-level policy overrides plan-level policy for that namespace.
 
+    Parametrize:
+        - migration_mode:
+            - online (both VMs running during migration)
+            - offline (both VMs stopped during migration)
+            - online+offline (one VM running, one VM stopped during migration)
+
     Preconditions:
       - Two VMs with source PVCs/DataVolumes in separate namespaces
 
     """
 
     @pytest.mark.polarion("CNV-16305")
-    def test_combined_namespace_and_spec_level_retention_policy(self):
+    def test_namespace_delete_overrides_plan_keep(self):
         """
         Test combination of namespace-level and plan-level retentionPolicy.
 
@@ -228,13 +228,12 @@ class TestStorageMigrationCombinedRetentionPolicy:
             4. Check if source PVCs exist in both namespaces
 
         Expected:
-            - All migrations complete successfully
-            - Source PVCs in namespaces with namespace-level policy are deleted
-            - Source PVCs in other namespaces are kept (plan-level policy)
+            - Source PVCs in namespace with namespace-level deleteSource policy are deleted
+            - Source PVCs in namespace without namespace-level policy are kept (plan-level keepSource)
         """
 
     @pytest.mark.polarion("CNV-16306")
-    def test_combined_namespace_keep_spec_delete(self):
+    def test_namespace_keep_overrides_plan_delete(self):
         """
         Test combination: namespace-level keepSource + plan-level deleteSource.
 
@@ -251,13 +250,12 @@ class TestStorageMigrationCombinedRetentionPolicy:
             4. Check if source PVCs exist in both namespaces
 
         Expected:
-            - All migrations complete successfully
-            - Source PVCs in namespaces with namespace-level policy are kept (namespace overrides plan)
-            - Source PVCs in other namespaces are deleted (plan-level policy)
+            - Source PVCs in namespace with namespace-level keepSource policy are kept (namespace overrides plan)
+            - Source PVCs in namespace without namespace-level policy are deleted (plan-level deleteSource)
         """
 
     @pytest.mark.polarion("CNV-16307")
-    def test_combined_both_delete(self):
+    def test_namespace_and_plan_level_delete_source_retention_policy(self):
         """
         Test combination: namespace-level deleteSource + plan-level deleteSource.
 
@@ -274,12 +272,11 @@ class TestStorageMigrationCombinedRetentionPolicy:
             4. Check if source PVCs exist in both namespaces
 
         Expected:
-            - All migrations complete successfully
             - All source PVCs are deleted
         """
 
     @pytest.mark.polarion("CNV-16308")
-    def test_combined_both_keep(self):
+    def test_namespace_and_plan_level_keep_source_retention_policy(self):
         """
         Test combination: namespace-level keepSource + plan-level keepSource.
 
@@ -296,14 +293,13 @@ class TestStorageMigrationCombinedRetentionPolicy:
             4. Check if source PVCs exist in both namespaces
 
         Expected:
-            - All migrations complete successfully
             - All source PVCs are kept
         """
 
 
 class TestStorageMigrationFailureRetentionPolicy:
     """
-    Test retentionPolicy behavior when migration fails.
+    [NEGATIVE] Test retentionPolicy behavior when migration fails.
     Source volumes should be retained regardless of retentionPolicy setting.
 
     STP Traceability: CNV-73509 (P2)
@@ -315,7 +311,7 @@ class TestStorageMigrationFailureRetentionPolicy:
     @pytest.mark.polarion("CNV-16309")
     def test_failed_migration_with_delete_source_policy(self):
         """
-        Test that source PVC/DataVolume is retained when migration fails with retentionPolicy=deleteSource. [NEGATIVE]
+        Test that source PVC/DataVolume is retained when migration fails with retentionPolicy=deleteSource.
 
         STP Requirement: Source volumes preserved on migration failure (P2)
 
@@ -330,15 +326,13 @@ class TestStorageMigrationFailureRetentionPolicy:
             5. Verify VM volume references
 
         Expected:
-            - Migration fails as expected
-            - Source PVC/DataVolume is retained (safety mechanism)
-            - VM continues running on original storage
+            - Source PVC/DataVolume is retained despite deleteSource policy
         """
 
     @pytest.mark.polarion("CNV-16310")
     def test_failed_migration_with_keep_source_policy(self):
         """
-        Test that source PVC/DataVolume is retained when migration fails with retentionPolicy=keepSource. [NEGATIVE]
+        Test that source PVC/DataVolume is retained when migration fails with retentionPolicy=keepSource.
 
         STP Requirement: Source volumes preserved on migration failure (P2)
 
@@ -353,15 +347,13 @@ class TestStorageMigrationFailureRetentionPolicy:
             5. Verify VM volume references
 
         Expected:
-            - Migration fails as expected
-            - Source PVC/DataVolume is retained (as per policy)
-            - VM continues running on original storage
+            - Source PVC/DataVolume is retained
         """
 
     @pytest.mark.polarion("CNV-16311")
     def test_failed_multi_namespace_migration_with_delete_source_policy(self):
         """
-        Test that source PVCs are retained when MultiNamespace migration fails with retentionPolicy=deleteSource. [NEGATIVE]
+        Test that source PVCs are retained when MultiNamespace migration fails with retentionPolicy=deleteSource.
 
         STP Requirement: Source volumes preserved on migration failure (P2)
 
@@ -376,7 +368,5 @@ class TestStorageMigrationFailureRetentionPolicy:
             5. Verify VM volume references
 
         Expected:
-            - Migration fails as expected
-            - All source PVCs/DataVolumes are retained (safety mechanism)
-            - VMs continue running on original storage
+            - All source PVCs/DataVolumes are retained despite deleteSource policies
         """
