@@ -698,6 +698,8 @@ def update_cpu_arch_related_config(cpu_arch_option: str) -> None:
         if py_config["cluster_type"] == MULTIARCH:
             generate_common_template_matrix_dicts(os_dict=py_config["os_matrix"][arch], cpu_arch=arch)
             generate_instance_type_matrix_dicts(os_dict=py_config["os_matrix"][arch], cpu_arch=arch)
+            py_config["data_import_cron_matrix"] = py_config["os_matrix"][arch]["data_import_cron_matrix"]
+            py_config["auto_update_data_source_matrix"] = py_config["os_matrix"][arch]["auto_update_data_source_matrix"]
         else:
             generate_common_template_matrix_dicts(os_dict=py_config)
             if py_config["cluster_type"] != AMD_64:
