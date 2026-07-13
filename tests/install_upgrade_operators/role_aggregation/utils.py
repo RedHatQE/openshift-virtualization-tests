@@ -88,19 +88,6 @@ def vm_list_is_forbidden(client: DynamicClient, namespace_name: str) -> bool:
         return True
 
 
-def vm_list_is_accessible(client: DynamicClient, namespace_name: str) -> bool:
-    """Check if listing VirtualMachines succeeds without ForbiddenError.
-
-    Args:
-        client: DynamicClient to test access with.
-        namespace_name: Namespace to list VMs in.
-
-    Returns:
-        True if listing succeeds, False if ForbiddenError is raised.
-    """
-    return not vm_list_is_forbidden(client=client, namespace_name=namespace_name)
-
-
 def wait_for_vm_list_access(client: DynamicClient, namespace_name: str) -> None:
     """Wait for an unprivileged user to be able to list VirtualMachines.
 
@@ -112,11 +99,11 @@ def wait_for_vm_list_access(client: DynamicClient, namespace_name: str) -> None:
     for sample in TimeoutSampler(
         wait_timeout=TIMEOUT_1MIN,
         sleep=2,
-        func=vm_list_is_accessible,
+        func=vm_list_is_forbidden,
         client=client,
         namespace_name=namespace_name,
     ):
-        if sample:
+        if not sample:
             break
 
 

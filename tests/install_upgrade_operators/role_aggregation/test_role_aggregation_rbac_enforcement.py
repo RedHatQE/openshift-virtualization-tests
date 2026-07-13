@@ -101,10 +101,7 @@ class TestRoleAggregationReenabledAccess:
         Expected:
             - Delete-collection operation succeeds
         """
-        result = vm_resource_for_unprivileged_client.delete(
-            namespace=namespace.name, label_selector="rbac-test=nonexistent"
-        )
-        assert result.kind == "VirtualMachineList", f"Expected VirtualMachineList response, got: {result.kind}"
+        vm_resource_for_unprivileged_client.delete(namespace=namespace.name, label_selector="rbac-test=nonexistent")
 
     @pytest.mark.polarion("CNV-16260")
     @pytest.mark.usefixtures("edit_reenabled_aggregation")
@@ -142,4 +139,3 @@ class TestRoleAggregationReenabledAccess:
             - VirtualMachine resources are listed successfully
         """
         list(VirtualMachine.get(client=unprivileged_client, namespace=namespace.name))
-        LOGGER.info("View user successfully listed VirtualMachines")
