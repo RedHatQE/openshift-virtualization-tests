@@ -5,8 +5,13 @@ from kubernetes.dynamic import DynamicClient
 from ocp_resources.namespace import Namespace
 
 import tests.network.libs.nodenetworkconfigurationpolicy as libnncp
-from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
-from libs.net.ip import filter_link_local_addresses, random_ipv4_address, random_ipv6_address
+from libs.net.cluster import supported_cluster_ip_versions
+from libs.net.ip import (
+    filter_cluster_unsupported_addresses,
+    filter_link_local_addresses,
+    random_ipv4_address,
+    random_ipv6_address,
+)
 from libs.net.traffic_generator import TcpServer, VMTcpClient, active_tcp_connections
 from libs.net.vmspec import lookup_iface_status
 from libs.vm.oper import run_vms
@@ -212,15 +217,18 @@ def localnet_running_vms(
     vm_localnet_2: BaseVirtualMachine,
 ) -> tuple[BaseVirtualMachine, BaseVirtualMachine]:
     vm1, vm2 = run_vms(vms=(vm_localnet_1, vm_localnet_2))
-    ip_families = [
-        ip_family for ip_family, enabled in ((4, ipv4_supported_cluster()), (6, ipv6_supported_cluster())) if enabled
-    ]
+    ip_families = supported_cluster_ip_versions()
     for vm in (vm1, vm2):
         lookup_iface_status(
             vm=vm,
             iface_name=LOCALNET_BR_EX_INTERFACE,
             predicate=lambda interface: (
-                len(filter_link_local_addresses(ip_addresses=interface.get("ipAddresses", []))) == len(ip_families)
+                len(
+                    filter_cluster_unsupported_addresses(
+                        ip_addresses=filter_link_local_addresses(ip_addresses=interface.get("ipAddresses", []))
+                    )
+                )
+                == len(ip_families)
             ),
         )
     return vm1, vm2
@@ -357,15 +365,18 @@ def ovs_bridge_localnet_running_vms(
     vm_ovs_bridge_localnet_2: BaseVirtualMachine,
 ) -> Generator[tuple[BaseVirtualMachine, BaseVirtualMachine]]:
     vm1, vm2 = run_vms(vms=(vm_ovs_bridge_localnet_1, vm_ovs_bridge_localnet_2))
-    ip_families = [
-        ip_family for ip_family, enabled in ((4, ipv4_supported_cluster()), (6, ipv6_supported_cluster())) if enabled
-    ]
+    ip_families = supported_cluster_ip_versions()
     for vm in (vm1, vm2):
         lookup_iface_status(
             vm=vm,
             iface_name=LOCALNET_OVS_BRIDGE_INTERFACE,
             predicate=lambda interface: (
-                len(filter_link_local_addresses(ip_addresses=interface.get("ipAddresses", []))) == len(ip_families)
+                len(
+                    filter_cluster_unsupported_addresses(
+                        ip_addresses=filter_link_local_addresses(ip_addresses=interface.get("ipAddresses", []))
+                    )
+                )
+                == len(ip_families)
             ),
         )
     yield vm1, vm2
