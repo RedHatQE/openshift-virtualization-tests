@@ -68,6 +68,7 @@ def validation_os_images_role_binding(admin_client, validation_os_images_namespa
     with role_binding as rb:
         yield rb
 
+
 @pytest.fixture(scope="session")
 def windows_validation_os_images_data_volume_scope_session(
     validation_os_images_role_binding,
@@ -148,10 +149,7 @@ def windows_validation_os_images_data_source_scope_session(
         yield win_data_source
         return
 
-
-    win_data_source._source = generate_data_source_dict(
-        dv=windows_validation_os_images_data_volume_scope_session
-    )
+    win_data_source._source = generate_data_source_dict(dv=windows_validation_os_images_data_volume_scope_session)
     with win_data_source as wds:
         wds.wait_for_condition(
             condition=wds.Condition.READY,
