@@ -1,6 +1,5 @@
 import shlex
 
-import pytest
 from ocp_resources.multi_namespace_virtual_machine_storage_migration import MultiNamespaceVirtualMachineStorageMigration
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from pyhelper_utils.shell import run_ssh_commands
@@ -10,7 +9,6 @@ from tests.storage.storage_migration.constants import (
     CONTENT,
     FILE_BEFORE_STORAGE_MIGRATION,
     MOUNT_HOTPLUGGED_DEVICE_PATH,
-    NO_STORAGE_CLASS_FAILURE_MESSAGE,
 )
 from tests.storage.utils import check_file_in_vm
 from utilities.constants import TIMEOUT_2MIN, TIMEOUT_5SEC, TIMEOUT_10MIN, TIMEOUT_10SEC
@@ -74,17 +72,6 @@ def verify_storage_migration_succeeded(
             file_content=CONTENT,
         )
         verify_vm_storage_class_updated(vm=vm, target_storage_class=target_storage_class)
-
-
-def get_storage_class_for_storage_migration(storage_class: str, cluster_storage_classes_names: list[str]) -> str:
-    if storage_class in cluster_storage_classes_names:
-        return storage_class
-    else:
-        pytest.fail(
-            NO_STORAGE_CLASS_FAILURE_MESSAGE.format(
-                storage_class=storage_class, cluster_storage_classes_names=cluster_storage_classes_names
-            )
-        )
 
 
 def verify_file_in_hotplugged_disk(vm: VirtualMachineForTests, file_name: str, file_content: str) -> None:
