@@ -12,6 +12,7 @@ WORKLOADUPDATEMETHODS = "workloadUpdateMethods"
 KEY_PATH_SEPARATOR = "->"
 TEMPLATE_VALIDATOR = "templateValidator"
 DEVELOPER_CONFIGURATION = "developerConfiguration"
+MEDIATED_DEVICES_CONFIGURATION = "mediatedDevicesConfiguration"
 # featuregates:
 DEPLOY_KUBE_SECONDARY_DNS = "deployKubeSecondaryDNS"
 ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT = "enableMultiArchBootImageImport"
