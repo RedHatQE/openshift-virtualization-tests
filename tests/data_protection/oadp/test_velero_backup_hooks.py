@@ -85,7 +85,14 @@ class TestVeleroBackupHookOptOut:
         Expected:
             - VM is restored and running after backup/restore cycle without hook execution
         """
-        wait_for_running_vm(vm=rhel_vm_with_hooks_opt_out)
+        # Skip guest agent and SSH checks: the skip-backup-hooks annotation skips fsfreeze,
+        # producing crash-consistent snapshots that can leave the restored filesystem inconsistent
+        # (e.g. corrupted XFS metadata, 0-byte files). VMI Running status is sufficient here.
+        wait_for_running_vm(
+            vm=rhel_vm_with_hooks_opt_out,
+            wait_for_interfaces=False,
+            check_ssh_connectivity=False,
+        )
         backup_logs = get_velero_backup_logs(
             backup_name=velero_backup_vm_with_hooks_opt_out.name,
             client=admin_client,

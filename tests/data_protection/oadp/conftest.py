@@ -1,5 +1,3 @@
-import shlex
-
 import pytest
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.namespace import Namespace
@@ -407,8 +405,6 @@ def velero_backup_vm_with_hooks_opt_out(
     rhel_vm_with_hooks_opt_out,
     namespace_for_backup,
 ):
-    # Flush filesystem buffers before backup since skip-backup-hooks skips fsfreeze
-    rhel_vm_with_hooks_opt_out.ssh_exec.run_command(command=shlex.split("sudo sync"))
     with VeleroBackup(
         client=admin_client,
         included_namespaces=[namespace_for_backup.name],
@@ -420,7 +416,8 @@ def velero_backup_vm_with_hooks_opt_out(
 @pytest.fixture()
 def velero_restore_vm_with_hooks_opt_out(admin_client, velero_backup_vm_with_hooks_opt_out):
     """Velero restore after deleting the namespace containing a VM with backup hooks opt-out."""
-    Namespace(name=velero_backup_vm_with_hooks_opt_out.included_namespaces[0], client=admin_client).delete(wait=True)
+    restored_ns_name = velero_backup_vm_with_hooks_opt_out.included_namespaces[0]
+    Namespace(name=restored_ns_name, client=admin_client).delete(wait=True)
     with VeleroRestore(
         client=admin_client,
         included_namespaces=velero_backup_vm_with_hooks_opt_out.included_namespaces,
@@ -429,3 +426,6 @@ def velero_restore_vm_with_hooks_opt_out(admin_client, velero_backup_vm_with_hoo
         timeout=TIMEOUT_15MIN,
     ) as restore:
         yield restore
+    # Delete the restored namespace early to prevent later fixtures from racing
+    # against Velero-restored resources with CSI finalizers during their own teardown.
+    Namespace(name=restored_ns_name, client=admin_client).delete(wait=True)
