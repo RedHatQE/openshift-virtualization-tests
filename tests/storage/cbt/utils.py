@@ -75,14 +75,9 @@ def cbt_pvc_size_with_headroom(
     return f"{source_gib * backup_copies + headroom_gib}Gi"
 
 
-def _short_hash(value: str, length: int) -> str:
-    """Return a short stable hex digest of value."""
-    return hashlib.sha256(value.encode()).hexdigest()[:length]
-
-
 def cbt_resource_id(name: str) -> str:
     """Return a short stable identifier for CBT pods and PVCs."""
-    return _short_hash(value=name, length=10)
+    return hashlib.sha256(name.encode()).hexdigest()[:10]
 
 
 def included_boot_volume(backup: VirtualMachineBackup) -> dict[str, Any]:
@@ -161,7 +156,7 @@ def pull_collect_params_for_backup(
 
 def cbt_storage_class_suffix(storage_class_name: str) -> str:
     """Return a short stable suffix for CBT resource names derived from a storage class."""
-    return _short_hash(value=storage_class_name, length=8)
+    return hashlib.sha256(storage_class_name.encode()).hexdigest()[:8]
 
 
 def _read_guest_file(vm: VirtualMachineForTests, filename: str) -> str:
