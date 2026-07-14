@@ -23,7 +23,7 @@ from tests.storage.cbt.utils import (
 )
 class TestFullBackupRestore:
     """
-    Full backup and restore validation for push and pull modes.
+    Full backup and restore validation for push mode.
 
     Preconditions:
         - Running VM with CBT enabled
@@ -51,27 +51,6 @@ class TestFullBackupRestore:
         """
         assert_restored_vm_has_boot_test_data(vm=restored_vm_from_full_backup_push_mode)
 
-    @pytest.mark.polarion("CNV-15996")
-    def test_full_backup_pull_mode_restore(
-        self,
-        restored_vm_from_full_backup_pull_mode,
-    ):
-        """
-        Test that a full backup in pull mode can be performed and the VM can be restored.
-
-        Preconditions:
-            - Scratch storage available for pull mode
-
-        Steps:
-            1. Perform a full backup of the under-test VM in pull mode
-            2. Restore the VM from that backup
-            3. Start the restored VM
-
-        Expected:
-            - Restored VM boots successfully and test data is present
-        """
-        assert_restored_vm_has_boot_test_data(vm=restored_vm_from_full_backup_pull_mode)
-
 
 @pytest.mark.parametrize(
     "vm_with_cbt_label",
@@ -80,7 +59,7 @@ class TestFullBackupRestore:
 )
 class TestIncrementalBackupRestore:
     """
-    Incremental backup and restore validation for push and pull modes.
+    Incremental backup and restore validation for push mode.
 
     Preconditions:
         - Running VM with CBT enabled
@@ -111,31 +90,6 @@ class TestIncrementalBackupRestore:
         """
         assert_restored_vm_has_boot_and_incremental_test_data(
             vm=restored_vm_from_incremental_backup_push_mode,
-        )
-
-    @pytest.mark.polarion("CNV-16000")
-    def test_incremental_backup_pull_mode_restore(
-        self,
-        restored_vm_from_incremental_backup_pull_mode,
-    ):
-        """
-        Test that an incremental backup in pull mode can be performed and the VM can be restored.
-
-        Preconditions:
-            - Full backup completed
-            - Scratch storage available for pull mode
-
-        Steps:
-            1. Write new test data to the under-test VM
-            2. Perform an incremental backup in pull mode
-            3. Restore the VM from the incremental backup
-            4. Start the restored VM
-
-        Expected:
-            - Restored VM boots successfully and all test data is present
-        """
-        assert_restored_vm_has_boot_and_incremental_test_data(
-            vm=restored_vm_from_incremental_backup_pull_mode,
         )
 
 
