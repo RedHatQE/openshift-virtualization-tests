@@ -13,7 +13,7 @@ import pytest
 from libs.net.vmspec import lookup_iface_status
 from libs.vm.affinity import new_node_affinity
 from tests.network.libs.connectivity import build_ping_command
-from tests.network.libs.nodes import RHCOS9_WORKER_LABEL
+from utilities.constants.cluster import RHCOS9_WORKER_LABEL
 from utilities.virt import migrate_vm_and_verify
 
 

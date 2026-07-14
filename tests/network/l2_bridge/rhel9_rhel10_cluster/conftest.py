@@ -14,7 +14,7 @@ from libs.vm.affinity import new_node_affinity
 from libs.vm.oper import run_vms
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.l2_bridge.libl2bridge import secondary_network_vm
-from tests.network.libs.nodes import RHCOS9_WORKER_LABEL
+from utilities.constants.cluster import RHCOS9_WORKER_LABEL
 
 LINUX_BRIDGE_NETWORK_NAME: Final[str] = "linux-bridge-1"
 

@@ -17,12 +17,12 @@ from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs import cloudinit
 from tests.network.libs import cluster_user_defined_network as libcudn
 from tests.network.libs.cloudinit import EthernetDevice
-from tests.network.libs.nodes import RHCOS9_WORKER_LABEL
 from tests.network.localnet.liblocalnet import (
     GUEST_2ND_IFACE_NAME,
     LOCALNET_BR_EX_INTERFACE,
     localnet_vm,
 )
+from utilities.constants.cluster import RHCOS9_WORKER_LABEL
 
 _SERVER_HOST_ADDRESS: Final[int] = 1
 _CLIENT_HOST_ADDRESS: Final[int] = 2

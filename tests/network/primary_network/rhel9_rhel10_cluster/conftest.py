@@ -8,8 +8,8 @@ from libs.net.vmspec import lookup_iface_status
 from libs.vm.affinity import new_node_affinity
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs.connectivity import build_ping_command
-from tests.network.libs.nodes import RHCOS9_WORKER_LABEL
 from tests.network.primary_network.rhel9_rhel10_cluster.lib_helpers import primary_network_vm
+from utilities.constants.cluster import RHCOS9_WORKER_LABEL
 
 
 @pytest.fixture()
