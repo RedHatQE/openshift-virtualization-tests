@@ -76,7 +76,7 @@ def cbt_pvc_size_with_headroom(
 
 
 def cbt_resource_id(name: str) -> str:
-    """Return a short stable identifier for CBT pods and PVCs."""
+    """Return a short stable identifier for CBT resource names."""
     return hashlib.sha256(name.encode()).hexdigest()[:10]
 
 
@@ -152,11 +152,6 @@ def pull_collect_params_for_backup(
         "pull_full_backup_min_collected_bytes": PULL_FULL_BACKUP_MIN_COLLECTED_BYTES,
         "checkpoint_timestamp_pattern": CHECKPOINT_TIMESTAMP_PATTERN.pattern,
     }
-
-
-def cbt_storage_class_suffix(storage_class_name: str) -> str:
-    """Return a short stable suffix for CBT resource names derived from a storage class."""
-    return hashlib.sha256(storage_class_name.encode()).hexdigest()[:8]
 
 
 def _read_guest_file(vm: VirtualMachineForTests, filename: str) -> str:
