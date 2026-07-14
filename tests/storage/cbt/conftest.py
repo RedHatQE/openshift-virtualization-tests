@@ -30,13 +30,9 @@ from tests.storage.cbt.utils import (
     restore_and_start_vm_from_pull_client_backup,
     restore_and_start_vm_from_push_backup,
 )
-from utilities.constants import (
-    OS_FLAVOR_RHEL,
-    RHEL9_PREFERENCE,
-    TIMEOUT_5SEC,
-    TIMEOUT_10MIN,
-    U1_SMALL,
-)
+from utilities.constants.images import OS_FLAVOR_RHEL
+from utilities.constants.instance_types import RHEL9_PREFERENCE, U1_SMALL
+from utilities.constants.timeouts import TIMEOUT_5SEC, TIMEOUT_10MIN
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.storage import (
     data_volume_template_with_source_ref_dict,
