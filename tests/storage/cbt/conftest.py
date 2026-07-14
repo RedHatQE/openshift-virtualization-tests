@@ -24,7 +24,7 @@ from tests.storage.cbt.utils import (
     CBT_INCREMENTAL_TEST_DATA_FILE,
     CBT_TEST_DATA,
     cbt_pvc_size_with_headroom,
-    cbt_storage_class_suffix,
+    cbt_resource_id,
     create_and_collect_pull_mode_backup,
     restore_and_start_vm_from_pull_client_backup,
 )
@@ -84,7 +84,7 @@ def vm_with_cbt_label(
         VirtualMachine: Running VM with CBT enabled and test data written
     """
     with VirtualMachineForTests(
-        name=f"{request.param['name']}-{cbt_storage_class_suffix(storage_class_name=storage_class_name_scope_module)}",
+        name=f"{request.param['name']}-{cbt_resource_id(name=storage_class_name_scope_module)}",
         namespace=namespace.name,
         client=unprivileged_client,
         vm_instance_type=VirtualMachineClusterInstancetype(client=unprivileged_client, name=U1_SMALL),
@@ -195,7 +195,7 @@ def pull_backup_staging_pvc(
         PersistentVolumeClaim: Staging PVC for the pull-mode export
     """
     with PersistentVolumeClaim(
-        name=f"cbt-staging-{cbt_storage_class_suffix(storage_class_name=storage_class_name_scope_module)}",
+        name=f"cbt-staging-{cbt_resource_id(name=storage_class_name_scope_module)}",
         namespace=namespace.name,
         client=unprivileged_client,
         accessmodes=PersistentVolumeClaim.AccessMode.RWO,
@@ -222,7 +222,7 @@ def pull_mode_token_secret(
         Secret: Pull-mode token secret
     """
     with Secret(
-        name=f"cbt-pull-token-{cbt_storage_class_suffix(storage_class_name=storage_class_name_scope_module)}",
+        name=f"cbt-pull-token-{cbt_resource_id(name=storage_class_name_scope_module)}",
         namespace=namespace.name,
         client=unprivileged_client,
         string_data={"token": secrets.token_urlsafe(nbytes=16)},
@@ -248,7 +248,7 @@ def pull_client_backup_pvc(
         PersistentVolumeClaim: Client-side backup storage PVC
     """
     with PersistentVolumeClaim(
-        name=f"cbt-pull-client-{cbt_storage_class_suffix(storage_class_name=storage_class_name_scope_module)}",
+        name=f"cbt-pull-client-{cbt_resource_id(name=storage_class_name_scope_module)}",
         namespace=namespace.name,
         client=unprivileged_client,
         accessmodes=PersistentVolumeClaim.AccessMode.RWO,
@@ -277,7 +277,7 @@ def collected_full_backup_pull_mode(
         str: Name of the client PVC containing offline pull backup data
     """
     create_and_collect_pull_mode_backup(
-        name=f"full-pull-{cbt_storage_class_suffix(storage_class_name=storage_class_name_scope_module)}",
+        name=f"full-pull-{cbt_resource_id(name=storage_class_name_scope_module)}",
         namespace=namespace.name,
         client=unprivileged_client,
         token_secret_name=pull_mode_token_secret.name,
@@ -343,7 +343,7 @@ def collected_incremental_backup_pull_mode(
         content=CBT_INCREMENTAL_TEST_DATA,
     )
     create_and_collect_pull_mode_backup(
-        name=f"incr-pull-{cbt_storage_class_suffix(storage_class_name=storage_class_name_scope_module)}",
+        name=f"incr-pull-{cbt_resource_id(name=storage_class_name_scope_module)}",
         namespace=namespace.name,
         client=unprivileged_client,
         token_secret_name=pull_mode_token_secret.name,
