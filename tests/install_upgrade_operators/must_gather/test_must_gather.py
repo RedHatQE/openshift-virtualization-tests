@@ -252,7 +252,7 @@ class TestMustGatherCluster:
             ),
             pytest.param(
                 ["ip", "a"],
-                "ip.txt",
+                "ip_addr",
                 "not_empty",
                 marks=(pytest.mark.polarion("CNV-2732"),),
                 id="test_nodes_ip_data",
