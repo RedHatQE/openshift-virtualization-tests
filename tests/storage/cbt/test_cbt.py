@@ -23,12 +23,31 @@ from tests.storage.cbt.utils import (
 )
 class TestFullBackupRestore:
     """
-    Full backup and restore validation for pull mode.
+    Full backup and restore validation for push and pull modes.
 
     Preconditions:
         - Running VM with CBT enabled
         - Test data written to VM
     """
+
+    @pytest.mark.polarion("CNV-15997")
+    def test_full_backup_push_mode_restore(self):
+        """
+        Test that a VM can be backed up (push mode) and restored from a full backup.
+
+        Preconditions:
+            - Backup storage available for push mode
+
+        Steps:
+            1. Perform a full backup of the under-test VM in push mode
+            2. Restore the VM from that backup
+            3. Start the restored VM
+
+        Expected:
+            - Restored VM boots successfully and test data is present
+        """
+
+    test_full_backup_push_mode_restore.__test__ = False  # STD placeholder - not yet implemented
 
     @pytest.mark.polarion("CNV-15996")
     def test_full_backup_pull_mode_restore(
@@ -59,13 +78,34 @@ class TestFullBackupRestore:
 )
 class TestIncrementalBackupRestore:
     """
-    Incremental backup and restore validation for pull mode.
+    Incremental backup and restore validation for push and pull modes.
 
     Preconditions:
         - Running VM with CBT enabled
         - Full backup completed
         - Test data written to VM
     """
+
+    @pytest.mark.polarion("CNV-15998")
+    def test_incremental_backup_push_mode_restore(self):
+        """
+        Test that a VM can be backed up (push mode) and restored from an incremental backup.
+
+        Preconditions:
+            - Full backup completed
+            - Backup storage available for push mode
+
+        Steps:
+            1. Write new test data to the under-test VM
+            2. Perform an incremental backup in push mode
+            3. Restore the VM from the incremental backup
+            4. Start the restored VM
+
+        Expected:
+            - Restored VM boots successfully and all test data is present
+        """
+
+    test_incremental_backup_push_mode_restore.__test__ = False  # STD placeholder - not yet implemented
 
     @pytest.mark.polarion("CNV-16000")
     def test_incremental_backup_pull_mode_restore(
