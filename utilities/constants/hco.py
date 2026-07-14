@@ -117,7 +117,4 @@ ALL_CNV_CRDS = [
     f"multinamespacevirtualmachinestoragemigrations.{Resource.ApiGroup.MIGRATIONS_KUBEVIRT_IO}",
     f"virtualmachinestoragemigrationplans.{Resource.ApiGroup.MIGRATIONS_KUBEVIRT_IO}",
     f"virtualmachinestoragemigrations.{Resource.ApiGroup.MIGRATIONS_KUBEVIRT_IO}",
-    "plugins.plugin.kubevirt.io",
-    f"virtualmachinetemplaterequests.{Resource.ApiGroup.TEMPLATE_KUBEVIRT_IO}",
-    f"virtualmachinetemplates.{Resource.ApiGroup.TEMPLATE_KUBEVIRT_IO}",
 ]

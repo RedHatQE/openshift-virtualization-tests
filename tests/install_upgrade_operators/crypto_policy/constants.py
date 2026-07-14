@@ -9,10 +9,6 @@ from ocp_resources.network_addons_config import NetworkAddonsConfig
 from ocp_resources.ssp import SSP
 
 from tests.install_upgrade_operators.constants import KEY_PATH_SEPARATOR
-from utilities.constants.components import (
-    VIRT_TEMPLATE_APISERVER,
-    VIRT_TEMPLATE_CONTROLLER,
-)
 from utilities.constants.hco import (
     TLS_CUSTOM_POLICY,
     TLS_OLD_POLICY,
@@ -134,11 +130,6 @@ MIN_TLS_VERSIONS = {
 TLS_MODERN_PROFILE = {TLS_MODERN_POLICY: {}, "type": "Modern"}
 TLS_VERSION_1_2 = "1.2"
 TLS_VERSION_1_3 = "1.3"
-
-VIRT_TEMPLATE_DEPLOYMENT_NAMES = [
-    VIRT_TEMPLATE_APISERVER,
-    VIRT_TEMPLATE_CONTROLLER,
-]
 
 PQC_GROUP_SECP256R1_MLKEM768 = "SecP256r1MLKEM768"
 PQC_GROUP_SECP384R1_MLKEM1024 = "SecP384r1MLKEM1024"
