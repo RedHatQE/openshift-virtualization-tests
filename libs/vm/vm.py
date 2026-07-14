@@ -12,7 +12,20 @@ from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine import VirtualMachine, VirtualMachineInstance
 from pytest_testconfig import config as py_config
 
-from libs.vm.spec import CloudInitNoCloud, ContainerDisk, Devices, Disk, Metadata, SpecDisk, VMISpec, VMSpec, Volume
+from libs.vm.spec import (
+    Affinity,
+    CloudInitNoCloud,
+    ContainerDisk,
+    Devices,
+    Disk,
+    Memory,
+    Metadata,
+    Network,
+    SpecDisk,
+    VMISpec,
+    VMSpec,
+    Volume,
+)
 from tests.network.libs import cloudinit
 from utilities import infra
 from utilities.constants import CLOUD_INIT_DISK_NAME
@@ -102,6 +115,53 @@ class BaseVirtualMachine(VirtualMachine):
             self: {"spec": {"template": {"metadata": {"annotations": self._spec.template.metadata.annotations}}}}
         }
         ResourceEditor(patches=patches).update()
+
+    def set_networks(self, networks: list[Network]) -> None:
+        """Replace all secondary networks in the VM spec with a single atomic patch.
+
+        Updates the in-memory spec first so the object stays consistent with the cluster
+        without requiring a re-fetch after the patch.
+
+        Args:
+            networks: Full list of Network entries to apply (including the pod network).
+        """
+        self._spec.template.spec.networks = networks
+        serialized = [asdict(obj=net, dict_factory=self._filter_out_none_values) for net in networks]
+        ResourceEditor(patches={self: {"spec": {"template": {"spec": {"networks": serialized}}}}}).update()
+
+    def set_guest_memory(self, memory_guest: str) -> None:
+        """Set the guest memory and update the VM spec on the cluster.
+
+        On a running VM this triggers an automatic live migration.
+
+        Args:
+            memory_guest: New guest memory value (e.g. "5Gi").
+        """
+        if self._spec.template.spec.domain.memory:
+            self._spec.template.spec.domain.memory.guest = memory_guest
+        else:
+            self._spec.template.spec.domain.memory = Memory(guest=memory_guest)
+        ResourceEditor(
+            patches={self: {"spec": {"template": {"spec": {"domain": {"memory": {"guest": memory_guest}}}}}}}
+        ).update()
+
+    def set_template_affinity(self, affinity: Affinity | None) -> None:
+        """Replace the VM template affinity.
+
+        Serializes without dict_factory so that None-valued fields (e.g. podAffinity: None)
+        are preserved as null in the merge patch, ensuring the old affinity type is removed.
+
+        Args:
+            affinity: Affinity object to set, or None to clear.
+        """
+        self._spec.template.spec.affinity = affinity
+        template_affinity = asdict(obj=affinity) if affinity else None
+        patches = {self: {"spec": {"template": {"spec": {"affinity": template_affinity}}}}}
+        ResourceEditor(patches=patches).update()
+
+    @property
+    def template_spec(self) -> VMISpec:
+        return self._spec.template.spec
 
     @property
     def cloud_init_network_data(self) -> cloudinit.NetworkData:
