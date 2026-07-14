@@ -1,6 +1,11 @@
+import datetime
 import logging
+from typing import TYPE_CHECKING
 
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
+
+if TYPE_CHECKING:
+    from ocp_utilities.monitoring import Prometheus
 
 from utilities.constants.monitoring import (
     FIRING_STATE,
@@ -175,6 +180,43 @@ def get_metrics_value(prometheus, metrics_name):
         return metric_values_list[1]
     LOGGER.warning(f"For Query {metrics_name}, empty results found.")
     return 0
+
+
+def validate_metrics_value(
+    prometheus: Prometheus, metric_name: str, expected_value: str | int, timeout: int = TIMEOUT_5MIN
+) -> None:
+    """Wait until the metric matches the expected value.
+
+    Args:
+        prometheus: Prometheus instance.
+        metric_name: Name of the metric to query.
+        expected_value: Expected value to match. Use str for emitted values (e.g. "0"),
+            int 0 for absent/not-emitted metrics (get_metrics_value returns int 0 when absent).
+        timeout: Maximum wait time in seconds.
+
+    Raises:
+        TimeoutExpiredError: If the metric does not match within timeout.
+    """
+    samples = TimeoutSampler(
+        wait_timeout=timeout,
+        sleep=TIMEOUT_5SEC,
+        func=get_metrics_value,
+        prometheus=prometheus,
+        metrics_name=metric_name,
+    )
+    sample = None
+    comparison_values_log = {}
+    try:
+        for sample in samples:
+            comparison_values_log[datetime.datetime.now()] = (
+                f"metric: {metric_name} value is: {sample}, the expected value is {expected_value}"
+            )
+            if sample == expected_value:
+                LOGGER.info(f"Metrics value matches the expected value: {expected_value}")
+                return
+    except TimeoutExpiredError:
+        LOGGER.error(f"Metrics value: {sample}, expected: {expected_value}, comparison log: {comparison_values_log}")
+        raise
 
 
 def wait_for_gauge_metrics_value(prometheus, query, expected_value, timeout=TIMEOUT_5MIN):

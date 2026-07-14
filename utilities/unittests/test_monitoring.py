@@ -13,6 +13,7 @@ from utilities.monitoring import (
     get_metrics_value,
     validate_alert_cnv_labels,
     validate_alerts,
+    validate_metrics_value,
     wait_for_alert,
     wait_for_firing_alert_clean_up,
     wait_for_gauge_metrics_value,
@@ -349,6 +350,52 @@ class TestGetMetricsValue:
         result = get_metrics_value(mock_prometheus, "test_metric")
 
         assert result == 0
+
+
+class TestValidateMetricsValue:
+    """Test cases for validate_metrics_value function"""
+
+    @patch("utilities.monitoring.TimeoutSampler")
+    def test_matches_emitted_string_value(self, mock_sampler_cls):
+        """Test matching when metric is emitted with a string value."""
+        mock_sampler_cls.return_value = iter(["0"])
+        validate_metrics_value(prometheus=MagicMock(), metric_name="test_metric", expected_value="0")
+
+    @patch("utilities.monitoring.TimeoutSampler")
+    def test_matches_absent_metric_with_int_zero(self, mock_sampler_cls):
+        """Test matching absent metric (int 0) with expected_value=0."""
+        mock_sampler_cls.return_value = iter([0])
+        validate_metrics_value(prometheus=MagicMock(), metric_name="test_metric", expected_value=0)
+
+    @patch("utilities.monitoring.TimeoutSampler")
+    def test_absent_metric_does_not_match_string_zero(self, mock_sampler_cls):
+        """Test that absent metric (int 0) does NOT match expected_value='0'."""
+
+        def raise_after_samples(*args, **kwargs):
+            def _iter():
+                yield 0
+                raise TimeoutExpiredError("Timeout")
+
+            return _iter()
+
+        mock_sampler_cls.side_effect = raise_after_samples
+        with pytest.raises(TimeoutExpiredError):
+            validate_metrics_value(prometheus=MagicMock(), metric_name="test_metric", expected_value="0")
+
+    @patch("utilities.monitoring.TimeoutSampler")
+    def test_timeout_when_value_does_not_match(self, mock_sampler_cls):
+        """Test timeout when metric value never matches expected."""
+
+        def raise_after_samples(*args, **kwargs):
+            def _iter():
+                yield "5"
+                raise TimeoutExpiredError("Timeout")
+
+            return _iter()
+
+        mock_sampler_cls.side_effect = raise_after_samples
+        with pytest.raises(TimeoutExpiredError):
+            validate_metrics_value(prometheus=MagicMock(), metric_name="test_metric", expected_value="0")
 
 
 class TestWaitForGaugeMetricsValue:
