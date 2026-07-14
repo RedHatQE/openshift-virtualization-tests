@@ -25,13 +25,12 @@ RESOURCE_NAMESPACE_STR = "resource_namespace"
 KEY_NAME_STR = "key_name"
 EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES = {
     "CPUManager",
-    "Snapshot",
-    "HostDevices",
-    "KubevirtSeccompProfile",
-    "HypervStrictCheck",
-    "VideoConfig",
-    "HotplugVolumes",
     "DecentralizedLiveMigration",
+    "DeclarativeHotplugVolumes",
+    "HostDevices",
+    "HypervStrictCheck",
+    "KubevirtSeccompProfile",
+    "Snapshot",
 }
 S390X_SPECIFIC_KUBEVIRT_FEATUREGATES = {"SecureExecution"}
 EXPECTED_CDI_HARDCODED_FEATUREGATES = {
@@ -46,8 +45,7 @@ HCO_DEFAULT_FEATUREGATES = {
     "downwardMetrics": FG_DISABLED,
     ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT: FG_DISABLED,
     "decentralizedLiveMigration": FG_ENABLED,
-    "declarativeHotplugVolumes": FG_DISABLED,
-    "videoConfig": FG_ENABLED,
+    "declarativeHotplugVolumes": FG_ENABLED,
     "objectGraph": FG_DISABLED,
     "incrementalBackup": FG_DISABLED,
     "containerPathVolumes": FG_DISABLED,

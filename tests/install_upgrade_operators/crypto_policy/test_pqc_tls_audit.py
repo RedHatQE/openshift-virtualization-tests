@@ -19,7 +19,6 @@ def test_cnv_services_pqc_key_exchange(subtests, fips_enabled_cluster, pqc_statu
 
     Preconditions:
         - AAQ enabled
-        - Template feature gate enabled with virt-template deployments ready
         - NetworkPolicy allowing test access to console-plugin pods
         - Worker node OpenSSL supports PQC groups
         - All CNV services with a clusterIP discovered
