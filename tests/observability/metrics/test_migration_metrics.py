@@ -13,7 +13,7 @@ from tests.observability.metrics.utils import (
     timestamp_to_seconds,
     wait_for_non_empty_metrics_value,
 )
-from tests.observability.utils import validate_metrics_value
+from utilities.monitoring import validate_metrics_value
 
 LOGGER = logging.getLogger(__name__)
 
