@@ -19,7 +19,7 @@ from tests.virt.upgrade.utils import (
     vm_from_template,
     wait_for_automatic_vm_migrations,
 )
-from tests.virt.utils import get_boot_time_for_multiple_vms
+from tests.virt.utils import get_boot_time_for_multiple_vms, get_pci_fingerprint
 from utilities.artifactory import get_test_artifact_server_url
 from utilities.constants import Images
 from utilities.constants.images import OS_FLAVOR_RHEL
@@ -319,6 +319,11 @@ def virt_migratable_vms_names(virt_migratable_vms):
     vm_names = [vm.name for vm in virt_migratable_vms]
     LOGGER.info(f"All migratable vms: {vm_names}")
     return vm_names
+
+
+@pytest.fixture(scope="session")
+def pci_fingerprints_before_upgrade(vms_for_upgrade):
+    return {vm.name: get_pci_fingerprint(vm=vm) for vm in vms_for_upgrade}
 
 
 @pytest.fixture(scope="session")
