@@ -1,8 +1,4 @@
-"""
-CBT (Changed Block Tracking) test fixtures.
-
-Fixtures for setting up VMs, backups, and restores for CBT testing.
-"""
+"""CBT backup/restore fixtures."""
 
 import base64
 import secrets
