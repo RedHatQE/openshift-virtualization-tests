@@ -6,7 +6,7 @@ from ocp_resources.namespace import Namespace
 
 from libs.vm.factory import base_vmspec, fedora_vm
 from libs.vm.vm import BaseVirtualMachine
-from utilities.constants.architecture import AMD_64, ARM_64
+from utilities.constants import AMD_64, ARM_64
 
 
 @pytest.fixture(scope="class")
