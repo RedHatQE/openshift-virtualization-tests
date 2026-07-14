@@ -28,7 +28,6 @@ from timeout_sampler import TimeoutExpiredError
 
 from tests.storage.cbt.pull_collect_runner import PULL_COLLECT_PARAMS_ENV
 from tests.storage.cbt.pull_restore_runner import PULL_RESTORE_PARAMS_ENV
-from tests.storage.cbt.push_restore_runner import PUSH_RESTORE_PARAMS_ENV
 from utilities.constants.networking import NET_UTIL_CONTAINER_IMAGE, POD_CONTAINER_SPEC
 from utilities.constants.timeouts import (
     TIMEOUT_2MIN,
@@ -52,8 +51,6 @@ BOOT_VOLUME_MOUNT_KEY = "target-boot"
 BOOT_VOLUME_MOUNT_PATH = "/target-vol-0"
 BOOT_VOLUME_DEVICE_PATH = "/dev/target-boot"
 BACKUP_PVC_VOLUME_KEY = "backup-src"
-RESTORE_WORK_VOLUME_KEY = "restore-work"
-RESTORE_WORK_MOUNT_PATH = "/work"
 CHECKPOINT_TIMESTAMP_PATTERN = re.compile(r"(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})")
 
 PULL_CA_CERT_PATH = "/tmp/backup-ca.crt"
@@ -204,16 +201,6 @@ def pull_collect_params_for_backup(
         raw_file=raw_file,
         force_full_backup=bool(backup.instance.spec.get("forceFullBackup", False)),
     )
-
-
-def build_push_restore_params(*, volume_name: str, target_file: str) -> dict[str, Any]:
-    """Build JSON-serializable parameters for the push restore runner pod."""
-    return {
-        "backup_dir": BACKUP_DIR,
-        "volume_work_dir": f"{RESTORE_WORK_MOUNT_PATH}/{volume_name}",
-        "target_file": target_file,
-        "checkpoint_timestamp_pattern": CHECKPOINT_TIMESTAMP_PATTERN.pattern,
-    }
 
 
 def build_pull_restore_params(
@@ -431,7 +418,6 @@ def _restore_vm_from_backup_pvc(
     runner_params: dict[str, Any],
     pod_name_suffix: str,
     pod_role: str,
-    include_restore_work_volume: bool = False,
 ) -> VirtualMachineForTests:
     """Create a boot PVC, run a restore runner against backup storage, deploy the VM."""
     restore_id = cbt_resource_id(name=restored_vm_name)
@@ -458,10 +444,6 @@ def _restore_vm_from_backup_pvc(
             *boot_volumes,
             {"name": BACKUP_PVC_VOLUME_KEY, "persistentVolumeClaim": {"claimName": backup_pvc_name}},
         ]
-        if include_restore_work_volume:
-            volume_mounts.append({"name": RESTORE_WORK_VOLUME_KEY, "mountPath": RESTORE_WORK_MOUNT_PATH})
-            volumes.append({"name": RESTORE_WORK_VOLUME_KEY, "emptyDir": {}})
-
         _run_python_runner_pod(
             pod_name=f"cbt-rstr-{restore_id}-{pod_name_suffix}",
             namespace=namespace,
@@ -485,46 +467,6 @@ def _restore_vm_from_backup_pvc(
             vm_preference_name=vm_preference_name,
             vm_instance_type_name=vm_instance_type_name,
         )
-
-
-def restore_vm_from_push_backup(
-    *,
-    restored_vm_name: str,
-    namespace: str,
-    client: DynamicClient,
-    storage_class: str,
-    size: str,
-    volume_mode: str,
-    access_mode: str,
-    backup_pvc_name: str,
-    boot_volume_name: str,
-    os_flavor: str,
-    vm_preference_name: str,
-    vm_instance_type_name: str,
-) -> VirtualMachineForTests:
-    """Restore boot disk from the QCOW2 chain on a push-mode backup PVC."""
-    target_file = _restore_target_path(volume_mode=volume_mode)
-    return _restore_vm_from_backup_pvc(
-        restored_vm_name=restored_vm_name,
-        namespace=namespace,
-        client=client,
-        storage_class=storage_class,
-        size=size,
-        volume_mode=volume_mode,
-        access_mode=access_mode,
-        backup_pvc_name=backup_pvc_name,
-        boot_volume_name=boot_volume_name,
-        os_flavor=os_flavor,
-        vm_preference_name=vm_preference_name,
-        vm_instance_type_name=vm_instance_type_name,
-        runner_script_filename="push_restore_runner.py",
-        container_name="cbt-push-restore",
-        params_env_name=PUSH_RESTORE_PARAMS_ENV,
-        runner_params=build_push_restore_params(volume_name=boot_volume_name, target_file=target_file),
-        pod_name_suffix="push",
-        pod_role="push restore",
-        include_restore_work_volume=True,
-    )
 
 
 def restore_vm_from_pull_client_backup(
@@ -606,35 +548,6 @@ def _restore_and_start_vm(
         yield restored_vm
     finally:
         restored_vm.delete(wait=True)
-
-
-def restore_and_start_vm_from_push_backup(
-    *,
-    vm: VirtualMachineForTests,
-    backup: VirtualMachineBackup,
-    namespace: str,
-    client: DynamicClient,
-    storage_class: str,
-    size: str,
-    volume_mode: str,
-    access_mode: str,
-    backup_pvc_name: str,
-    ssh_timeout: int = TIMEOUT_5MIN,
-) -> Generator[VirtualMachineForTests]:
-    """Delete the source VM, restore from a push backup, start it, then clean up."""
-    yield from _restore_and_start_vm(
-        vm=vm,
-        namespace=namespace,
-        client=client,
-        storage_class=storage_class,
-        size=size,
-        volume_mode=volume_mode,
-        access_mode=access_mode,
-        boot_volume_name=included_boot_volume(backup=backup)["volumeName"],
-        restore_vm_func=restore_vm_from_push_backup,
-        restore_backup_kwargs={"backup_pvc_name": backup_pvc_name},
-        ssh_timeout=ssh_timeout,
-    )
 
 
 def restore_and_start_vm_from_pull_client_backup(
