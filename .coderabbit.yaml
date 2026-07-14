@@ -30,6 +30,30 @@ reviews:
         These rules apply only to feature/integration tests under `tests/`.
         DO still enforce: code quality, type hints, naming conventions, and all other coding standards.
 
+    - path: "tests/**"
+      instructions: |
+        ## STP traceability — inline comments required
+        When an `STP:` link is present and linked-repo analysis finds missing or misaligned
+        scenarios, you MUST post an INLINE review comment on the `STP:` line (or the module
+        docstring when the STP line is unchanged) containing:
+        - **STP coverage: X/Y scenarios**
+        - A table of each STP scenario → covered / missing / misaligned
+        - CRITICAL severity for missing P0 scenarios without documented exclusion in the PR
+          description (justification + follow-up Jira link per scenario)
+        Do NOT report STP coverage gaps only in PR conversation chat.
+
+        ## special_infra marker enforcement
+        Newly added tests that use hardware or special-configuration markers from `pytest.ini`
+        MUST also declare `@pytest.mark.special_infra` at module (`pytestmark`), class, or test
+        level. Flag missing `special_infra` as HIGH.
+
+        Triggering markers (require `special_infra`): `gpu`, `sriov`, `bgp`, `ibm_bare_metal`,
+        `dpdk`, `swap`, `cpu_manager`, `numa`, `hugepages`, `jumbo_frame`, `rwx_default_storage`,
+        `descheduler`, `high_resource_vm`.
+
+        Exempt (do NOT require `special_infra`): `single_nic`, `remote_cluster`, `mixed_os_nodes`,
+        `cclm`, and operator-only markers (`hpp`, `mtv`, `tekton`, `service_mesh`, `nmstate`).
+
     - path: "**"
       instructions: |
         ## PR Template Validation
@@ -131,6 +155,22 @@ reviews:
           Flag a missing `# <skip-jira-utils-check>` on a `Jira:` line as HIGH severity.
 
           Pass if no new test files and no new test functions are added in this PR.
+
+      - name: "STP scenario coverage"
+        mode: error
+        instructions: |
+          Apply when this PR adds or modifies `test_*.py` under `tests/` that reference an
+          `STP:` URL in a module, class, or test docstring. SKIP `utilities/unittests/`.
+
+          Using linked repo `RedHatQE/openshift-virtualization-tests-design-docs`, read the
+          referenced STP and compare its test scenarios to STD/test declarations in the PR diff.
+
+          PASS if every STP scenario has a corresponding STD/test declaration in the PR (or
+          existing file), OR the PR description documents intentional exclusion with a
+          follow-up Jira link per excluded scenario.
+
+          FAIL with a table: scenario summary | STP tier/priority | status (covered/missing).
+          List every missing scenario explicitly.
 
   # Auto-review configuration
   auto_review:
