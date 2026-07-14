@@ -9,7 +9,7 @@ from tests.storage.storage_migration.constants import (
     WINDOWS_FILE_WITH_PATH,
 )
 from tests.storage.storage_migration.utils import (
-    verify_file_in_hotplugged_disk,
+    verify_files_in_hotplugged_disks,
     verify_storage_migration_succeeded,
     verify_vm_storage_class_updated,
     verify_vms_boot_time_after_storage_migration,
@@ -145,12 +145,13 @@ class TestStorageClassMigrationBtoA:
     [
         pytest.param(
             {"source_storage_class": py_config[STORAGE_CLASS_A]},
-            {"vms_fixtures": ["vm_for_storage_class_migration_with_hotplugged_volume"]},
+            {"vms_fixtures": ["vm_for_storage_class_migration_with_hotplugged_volumes"]},
             id="mig_volume_hotplug_source_a_target_b",
         )
     ],
     indirect=True,
 )
+@pytest.mark.conformance
 class TestStorageClassMigrationWithVolumeHotplug:
     @pytest.mark.dependency(
         name=f"{TESTS_CLASS_NAME_VOLUME_HOTPLUG}::test_vm_storage_class_migration_with_hotplugged_volume"
@@ -167,11 +168,11 @@ class TestStorageClassMigrationWithVolumeHotplug:
         ],
         indirect=True,
     )
+    @pytest.mark.usefixtures("written_files_to_mounted_hotplugged_disks")
     def test_vm_storage_class_migration_with_hotplugged_volume(
         self,
         source_storage_class,
         target_storage_class,
-        written_file_to_the_mounted_hotplugged_disk,
         written_file_to_vms_before_migration,
         online_vms_for_storage_class_migration,
         vms_boot_time_before_storage_migration,
@@ -189,12 +190,11 @@ class TestStorageClassMigrationWithVolumeHotplug:
     @pytest.mark.dependency(
         depends=[f"{TESTS_CLASS_NAME_VOLUME_HOTPLUG}::test_vm_storage_class_migration_with_hotplugged_volume"]
     )
+    @pytest.mark.usefixtures("vms_for_storage_class_migration")
     @pytest.mark.polarion("CNV-12002")
-    def test_hotplugged_volume_data_after_storage_migration(
-        self, vms_for_storage_class_migration, written_file_to_the_mounted_hotplugged_disk
-    ):
-        verify_file_in_hotplugged_disk(
-            vm=written_file_to_the_mounted_hotplugged_disk,
+    def test_hotplugged_volume_data_after_storage_migration(self, written_files_to_mounted_hotplugged_disks):
+        verify_files_in_hotplugged_disks(
+            vm=written_files_to_mounted_hotplugged_disks,
             file_name=FILE_BEFORE_STORAGE_MIGRATION,
             file_content=CONTENT,
         )
