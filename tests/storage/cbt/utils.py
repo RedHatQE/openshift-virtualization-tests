@@ -9,7 +9,7 @@ import json
 import logging
 import re
 import shlex
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from pathlib import Path
 from typing import Any
 
@@ -29,9 +29,8 @@ from timeout_sampler import TimeoutExpiredError
 from tests.storage.cbt.pull_collect_runner import PULL_COLLECT_PARAMS_ENV
 from tests.storage.cbt.pull_restore_runner import PULL_RESTORE_PARAMS_ENV
 from tests.storage.cbt.push_restore_runner import PUSH_RESTORE_PARAMS_ENV
-from utilities.constants import (
-    NET_UTIL_CONTAINER_IMAGE,
-    POD_CONTAINER_SPEC,
+from utilities.constants.networking import NET_UTIL_CONTAINER_IMAGE, POD_CONTAINER_SPEC
+from utilities.constants.timeouts import (
     TIMEOUT_2MIN,
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
@@ -79,17 +78,18 @@ def cbt_pvc_size_with_headroom(
     return f"{source_gib * backup_copies + headroom_gib}Gi"
 
 
+def _short_hash(value: str, length: int) -> str:
+    """Return a short stable hex digest of value."""
+    return hashlib.sha256(value.encode()).hexdigest()[:length]
+
+
 def cbt_resource_id(name: str) -> str:
     """Return a short stable identifier for CBT pods and PVCs."""
-    return hashlib.sha256(name.encode()).hexdigest()[:10]
+    return _short_hash(value=name, length=10)
 
 
 def vm_restore_spec(vm: VirtualMachineForTests) -> dict[str, str]:
-    """Return restore identity fields from the VM before deletion.
-
-    Captures instancetype, preference, and os_flavor in one place so callers can
-    safely delete the original VM immediately afterward.
-    """
+    """Return restore identity fields from the VM before deletion."""
     return {
         "vm_instance_type_name": vm.instance.spec["instancetype"]["name"],
         "vm_preference_name": vm.instance.spec["preference"]["name"],
@@ -98,11 +98,7 @@ def vm_restore_spec(vm: VirtualMachineForTests) -> dict[str, str]:
 
 
 def capture_restore_spec_and_delete_vm(vm: VirtualMachineForTests) -> dict[str, str]:
-    """Capture restore identity fields, then delete the original VM.
-
-    Returns:
-        dict[str, str]: Fields suitable for spreading into restore helpers
-    """
+    """Capture restore identity fields, then delete the original VM."""
     restore_spec = vm_restore_spec(vm=vm)
     vm.delete(wait=True)
     vm.teardown = False
@@ -238,7 +234,7 @@ def build_pull_restore_params(
 
 def cbt_storage_class_suffix(storage_class_name: str) -> str:
     """Return a short stable suffix for CBT resource names derived from a storage class."""
-    return hashlib.sha256(storage_class_name.encode()).hexdigest()[:8]
+    return _short_hash(value=storage_class_name, length=8)
 
 
 def _read_guest_file(vm: VirtualMachineForTests, filename: str) -> str:
@@ -262,10 +258,9 @@ def assert_restored_vm_has_boot_test_data(vm: VirtualMachineForTests) -> None:
 
 def assert_restored_vm_has_boot_and_incremental_test_data(vm: VirtualMachineForTests) -> None:
     """Assert the restored VM contains both full-backup and incremental test data."""
-    boot_data = _read_guest_file(vm=vm, filename=CBT_BOOT_DISK_TEST_DATA_FILE)
-    incremental_data = _read_guest_file(vm=vm, filename=CBT_INCREMENTAL_TEST_DATA_FILE)
-    assert (boot_data, incremental_data) == (CBT_TEST_DATA, CBT_INCREMENTAL_TEST_DATA), (
-        f"Test data mismatch on VM {vm.name}: boot={boot_data!r}, incremental={incremental_data!r}"
+    assert_restored_vm_has_boot_test_data(vm=vm)
+    assert _read_guest_file(vm=vm, filename=CBT_INCREMENTAL_TEST_DATA_FILE) == CBT_INCREMENTAL_TEST_DATA, (
+        f"Incremental test data mismatch on VM {vm.name}"
     )
 
 
@@ -416,6 +411,82 @@ def create_and_collect_pull_mode_backup(
         )
 
 
+def _restore_vm_from_backup_pvc(
+    *,
+    restored_vm_name: str,
+    namespace: str,
+    client: DynamicClient,
+    storage_class: str,
+    size: str,
+    volume_mode: str,
+    access_mode: str,
+    backup_pvc_name: str,
+    boot_volume_name: str,
+    os_flavor: str,
+    vm_preference_name: str,
+    vm_instance_type_name: str,
+    runner_script_filename: str,
+    container_name: str,
+    params_env_name: str,
+    runner_params: dict[str, Any],
+    pod_name_suffix: str,
+    pod_role: str,
+    include_restore_work_volume: bool = False,
+) -> VirtualMachineForTests:
+    """Create a boot PVC, run a restore runner against backup storage, deploy the VM."""
+    restore_id = cbt_resource_id(name=restored_vm_name)
+    LOGGER.info(f"CBT {pod_role} {restored_vm_name}: boot_volume_name={boot_volume_name}")
+
+    with PersistentVolumeClaim(
+        name=f"cbt-rst-{restore_id}-boot",
+        namespace=namespace,
+        client=client,
+        accessmodes=access_mode,
+        size=size,
+        storage_class=storage_class,
+        volume_mode=volume_mode,
+        teardown=False,
+    ) as boot_pvc:
+        boot_volume_mounts, boot_volume_devices, boot_volumes = _boot_volume_pod_volumes(
+            boot_pvc_name=boot_pvc.name, volume_mode=volume_mode
+        )
+        volume_mounts = [
+            *boot_volume_mounts,
+            {"name": BACKUP_PVC_VOLUME_KEY, "mountPath": BACKUP_DIR, "readOnly": True},
+        ]
+        volumes = [
+            *boot_volumes,
+            {"name": BACKUP_PVC_VOLUME_KEY, "persistentVolumeClaim": {"claimName": backup_pvc_name}},
+        ]
+        if include_restore_work_volume:
+            volume_mounts.append({"name": RESTORE_WORK_VOLUME_KEY, "mountPath": RESTORE_WORK_MOUNT_PATH})
+            volumes.append({"name": RESTORE_WORK_VOLUME_KEY, "emptyDir": {}})
+
+        _run_python_runner_pod(
+            pod_name=f"cbt-rstr-{restore_id}-{pod_name_suffix}",
+            namespace=namespace,
+            client=client,
+            runner_script_filename=runner_script_filename,
+            container_name=container_name,
+            params_env_name=params_env_name,
+            runner_params=runner_params,
+            volume_mounts=volume_mounts,
+            volume_devices=boot_volume_devices or None,
+            volumes=volumes,
+            wait_timeout=TIMEOUT_30MIN,
+            pod_role=pod_role,
+        )
+        return _deploy_restored_vm_from_pvc(
+            restored_vm_name=restored_vm_name,
+            namespace=namespace,
+            client=client,
+            boot_pvc=boot_pvc,
+            os_flavor=os_flavor,
+            vm_preference_name=vm_preference_name,
+            vm_instance_type_name=vm_instance_type_name,
+        )
+
+
 def restore_vm_from_push_backup(
     *,
     restored_vm_name: str,
@@ -431,83 +502,29 @@ def restore_vm_from_push_backup(
     vm_preference_name: str,
     vm_instance_type_name: str,
 ) -> VirtualMachineForTests:
-    """
-    Restore boot disk from QCOW2 incremental chain on push-mode backup PVC.
-
-    Uses qemu-img rebase + convert per VEP restore process. The backup PVC contains
-    QCOW2 files (full + incrementals) that are rebased in chronological order and
-    converted to a raw disk image.
-
-    Args:
-        restored_vm_name: Name for the restored VM
-        namespace: Target namespace
-        client: Client for VM, PVC, and restore processor pod creation
-        storage_class: Storage class for restored disk PVC
-        size: Boot disk PVC size
-        volume_mode: Boot disk PVC volume mode (mirrors the original VM's disk)
-        access_mode: Boot disk PVC access mode (mirrors the original VM's disk)
-        backup_pvc_name: Push-mode backup PVC containing QCOW2 files
-        boot_volume_name: Original boot volume name from backup metadata
-        os_flavor: OS flavor for the restored VM
-        vm_preference_name: Cluster preference name for the restored VM
-        vm_instance_type_name: Cluster instancetype name for the restored VM
-
-    Returns:
-        VirtualMachineForTests: Deployed restored VM (not started)
-    """
-    restore_id = cbt_resource_id(name=restored_vm_name)
-    LOGGER.info(f"CBT push restore {restored_vm_name}: boot_volume_name={boot_volume_name}")
-
-    with PersistentVolumeClaim(
-        name=f"cbt-rst-{restore_id}-boot",
+    """Restore boot disk from the QCOW2 chain on a push-mode backup PVC."""
+    target_file = _restore_target_path(volume_mode=volume_mode)
+    return _restore_vm_from_backup_pvc(
+        restored_vm_name=restored_vm_name,
         namespace=namespace,
         client=client,
-        accessmodes=access_mode,
-        size=size,
         storage_class=storage_class,
+        size=size,
         volume_mode=volume_mode,
-        teardown=False,
-    ) as boot_pvc:
-        boot_volume_mounts, boot_volume_devices, boot_volumes = _boot_volume_pod_volumes(
-            boot_pvc_name=boot_pvc.name, volume_mode=volume_mode
-        )
-        target_file = _restore_target_path(volume_mode=volume_mode)
-        volume_mounts = [
-            *boot_volume_mounts,
-            {"name": BACKUP_PVC_VOLUME_KEY, "mountPath": BACKUP_DIR, "readOnly": True},
-            {"name": RESTORE_WORK_VOLUME_KEY, "mountPath": RESTORE_WORK_MOUNT_PATH},
-        ]
-        volumes = [
-            *boot_volumes,
-            {"name": BACKUP_PVC_VOLUME_KEY, "persistentVolumeClaim": {"claimName": backup_pvc_name}},
-            {"name": RESTORE_WORK_VOLUME_KEY, "emptyDir": {}},
-        ]
-        _run_python_runner_pod(
-            pod_name=f"cbt-rstr-{restore_id}-push",
-            namespace=namespace,
-            client=client,
-            runner_script_filename="push_restore_runner.py",
-            container_name="cbt-push-restore",
-            params_env_name=PUSH_RESTORE_PARAMS_ENV,
-            runner_params=build_push_restore_params(
-                volume_name=boot_volume_name,
-                target_file=target_file,
-            ),
-            volume_mounts=volume_mounts,
-            volume_devices=boot_volume_devices or None,
-            volumes=volumes,
-            wait_timeout=TIMEOUT_30MIN,
-            pod_role="push restore",
-        )
-        return _deploy_restored_vm_from_pvc(
-            restored_vm_name=restored_vm_name,
-            namespace=namespace,
-            client=client,
-            boot_pvc=boot_pvc,
-            os_flavor=os_flavor,
-            vm_preference_name=vm_preference_name,
-            vm_instance_type_name=vm_instance_type_name,
-        )
+        access_mode=access_mode,
+        backup_pvc_name=backup_pvc_name,
+        boot_volume_name=boot_volume_name,
+        os_flavor=os_flavor,
+        vm_preference_name=vm_preference_name,
+        vm_instance_type_name=vm_instance_type_name,
+        runner_script_filename="push_restore_runner.py",
+        container_name="cbt-push-restore",
+        params_env_name=PUSH_RESTORE_PARAMS_ENV,
+        runner_params=build_push_restore_params(volume_name=boot_volume_name, target_file=target_file),
+        pod_name_suffix="push",
+        pod_role="push restore",
+        include_restore_work_volume=True,
+    )
 
 
 def restore_vm_from_pull_client_backup(
@@ -525,81 +542,70 @@ def restore_vm_from_pull_client_backup(
     vm_preference_name: str,
     vm_instance_type_name: str,
 ) -> VirtualMachineForTests:
-    """
-    Restore boot disk from raw snapshot on pull-mode client backup PVC.
-
-    Pull clients store complete raw snapshots; no rebasing needed. When multiple
-    snapshots exist, restores from the latest checkpoint for the boot volume only.
-
-    Args:
-        restored_vm_name: Name for the restored VM
-        namespace: Target namespace
-        client: Client for VM, PVC, and restore processor pod creation
-        storage_class: Storage class for restored disk PVC
-        size: Boot disk PVC size
-        volume_mode: Boot disk PVC volume mode (mirrors the original VM's disk)
-        access_mode: Boot disk PVC access mode (mirrors the original VM's disk)
-        client_backup_pvc_name: Pull-mode client backup PVC containing raw snapshots
-        boot_volume_name: Original boot volume name used under client backup storage
-        os_flavor: OS flavor for the restored VM
-        vm_preference_name: Cluster preference name for the restored VM
-        vm_instance_type_name: Cluster instancetype name for the restored VM
-
-    Returns:
-        VirtualMachineForTests: Deployed restored VM (not started)
-    """
-    restore_id = cbt_resource_id(name=restored_vm_name)
-    LOGGER.info(f"CBT pull client restore {restored_vm_name}: boot_volume_name={boot_volume_name}")
-
-    with PersistentVolumeClaim(
-        name=f"cbt-rst-{restore_id}-boot",
+    """Restore boot disk from the latest raw snapshot on pull-mode client storage."""
+    target_file = _restore_target_path(volume_mode=volume_mode)
+    return _restore_vm_from_backup_pvc(
+        restored_vm_name=restored_vm_name,
         namespace=namespace,
         client=client,
-        accessmodes=access_mode,
-        size=size,
         storage_class=storage_class,
+        size=size,
         volume_mode=volume_mode,
-        teardown=False,
-    ) as boot_pvc:
-        boot_volume_mounts, boot_volume_devices, boot_volumes = _boot_volume_pod_volumes(
-            boot_pvc_name=boot_pvc.name, volume_mode=volume_mode
-        )
-        target_file = _restore_target_path(volume_mode=volume_mode)
-        volume_mounts = [
-            *boot_volume_mounts,
-            {"name": BACKUP_PVC_VOLUME_KEY, "mountPath": BACKUP_DIR, "readOnly": True},
-        ]
-        volumes = [
-            *boot_volumes,
-            {"name": BACKUP_PVC_VOLUME_KEY, "persistentVolumeClaim": {"claimName": client_backup_pvc_name}},
-        ]
-        _run_python_runner_pod(
-            pod_name=f"cbt-rstr-{restore_id}-client",
-            namespace=namespace,
-            client=client,
-            runner_script_filename="pull_restore_runner.py",
-            container_name="cbt-pull-restore",
-            params_env_name=PULL_RESTORE_PARAMS_ENV,
-            runner_params=build_pull_restore_params(
-                volume_name=boot_volume_name,
-                target_file=target_file,
-                volume_mode=volume_mode,
-            ),
-            volume_mounts=volume_mounts,
-            volume_devices=boot_volume_devices or None,
-            volumes=volumes,
-            wait_timeout=TIMEOUT_30MIN,
-            pod_role="pull client restore",
-        )
-        return _deploy_restored_vm_from_pvc(
-            restored_vm_name=restored_vm_name,
-            namespace=namespace,
-            client=client,
-            boot_pvc=boot_pvc,
-            os_flavor=os_flavor,
-            vm_preference_name=vm_preference_name,
-            vm_instance_type_name=vm_instance_type_name,
-        )
+        access_mode=access_mode,
+        backup_pvc_name=client_backup_pvc_name,
+        boot_volume_name=boot_volume_name,
+        os_flavor=os_flavor,
+        vm_preference_name=vm_preference_name,
+        vm_instance_type_name=vm_instance_type_name,
+        runner_script_filename="pull_restore_runner.py",
+        container_name="cbt-pull-restore",
+        params_env_name=PULL_RESTORE_PARAMS_ENV,
+        runner_params=build_pull_restore_params(
+            volume_name=boot_volume_name,
+            target_file=target_file,
+            volume_mode=volume_mode,
+        ),
+        pod_name_suffix="client",
+        pod_role="pull client restore",
+    )
+
+
+def _restore_and_start_vm(
+    *,
+    vm: VirtualMachineForTests,
+    namespace: str,
+    client: DynamicClient,
+    storage_class: str,
+    size: str,
+    volume_mode: str,
+    access_mode: str,
+    boot_volume_name: str,
+    restore_vm_func: Callable[..., VirtualMachineForTests],
+    restore_backup_kwargs: dict[str, str],
+    ssh_timeout: int = TIMEOUT_5MIN,
+) -> Generator[VirtualMachineForTests]:
+    """Delete the source VM, restore from backup storage, start it, then clean up."""
+    restored_vm_name = vm.name
+    if restored_vm_name is None:
+        raise RuntimeError("Cannot restore: source VM has no name")
+    restore_spec = capture_restore_spec_and_delete_vm(vm=vm)
+    restored_vm = restore_vm_func(
+        restored_vm_name=restored_vm_name,
+        namespace=namespace,
+        client=client,
+        storage_class=storage_class,
+        size=size,
+        volume_mode=volume_mode,
+        access_mode=access_mode,
+        boot_volume_name=boot_volume_name,
+        **restore_backup_kwargs,
+        **restore_spec,
+    )
+    running_vm(vm=restored_vm, ssh_timeout=ssh_timeout)
+    try:
+        yield restored_vm
+    finally:
+        restored_vm.delete(wait=True)
 
 
 def restore_and_start_vm_from_push_backup(
@@ -616,28 +622,19 @@ def restore_and_start_vm_from_push_backup(
     ssh_timeout: int = TIMEOUT_5MIN,
 ) -> Generator[VirtualMachineForTests]:
     """Delete the source VM, restore from a push backup, start it, then clean up."""
-    restored_vm_name = vm.name
-    if restored_vm_name is None:
-        raise RuntimeError("Cannot restore: source VM has no name")
-    restore_spec = capture_restore_spec_and_delete_vm(vm=vm)
-    included_volume = included_boot_volume(backup=backup)
-    restored_vm = restore_vm_from_push_backup(
-        restored_vm_name=restored_vm_name,
+    yield from _restore_and_start_vm(
+        vm=vm,
         namespace=namespace,
         client=client,
         storage_class=storage_class,
         size=size,
         volume_mode=volume_mode,
         access_mode=access_mode,
-        backup_pvc_name=backup_pvc_name,
-        boot_volume_name=included_volume["volumeName"],
-        **restore_spec,
+        boot_volume_name=included_boot_volume(backup=backup)["volumeName"],
+        restore_vm_func=restore_vm_from_push_backup,
+        restore_backup_kwargs={"backup_pvc_name": backup_pvc_name},
+        ssh_timeout=ssh_timeout,
     )
-    running_vm(vm=restored_vm, ssh_timeout=ssh_timeout)
-    try:
-        yield restored_vm
-    finally:
-        restored_vm.delete(wait=True)
 
 
 def restore_and_start_vm_from_pull_client_backup(
@@ -653,30 +650,22 @@ def restore_and_start_vm_from_pull_client_backup(
     ssh_timeout: int = TIMEOUT_5MIN,
 ) -> Generator[VirtualMachineForTests]:
     """Delete the source VM, restore from pull client storage, start it, then clean up."""
-    restored_vm_name = vm.name
-    if restored_vm_name is None:
-        raise RuntimeError("Cannot restore: source VM has no name")
     # Collect stores raw files under the backup status volumeName; capture it before
     # the original VM is deleted so restore can scope to that directory.
     boot_volume_name = vm.instance.spec.template.spec.volumes[0]["name"]
-    restore_spec = capture_restore_spec_and_delete_vm(vm=vm)
-    restored_vm = restore_vm_from_pull_client_backup(
-        restored_vm_name=restored_vm_name,
+    yield from _restore_and_start_vm(
+        vm=vm,
         namespace=namespace,
         client=client,
         storage_class=storage_class,
         size=size,
         volume_mode=volume_mode,
         access_mode=access_mode,
-        client_backup_pvc_name=client_backup_pvc_name,
         boot_volume_name=boot_volume_name,
-        **restore_spec,
+        restore_vm_func=restore_vm_from_pull_client_backup,
+        restore_backup_kwargs={"client_backup_pvc_name": client_backup_pvc_name},
+        ssh_timeout=ssh_timeout,
     )
-    running_vm(vm=restored_vm, ssh_timeout=ssh_timeout)
-    try:
-        yield restored_vm
-    finally:
-        restored_vm.delete(wait=True)
 
 
 def _run_python_runner_pod(
