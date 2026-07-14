@@ -1,4 +1,6 @@
 import contextlib
+import ipaddress
+import json
 import logging
 import re
 import time
@@ -6,11 +8,14 @@ from ipaddress import ip_interface
 from typing import Final
 
 from kubernetes.dynamic import DynamicClient
+from kubernetes.dynamic.resource import ResourceField
 from ocp_resources.resource import ResourceEditor
+from ocp_resources.virtual_machine import VirtualMachine
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from libs.net.ip import random_ipv4_address
 from libs.net.vmspec import (
+    IpNotFound,
     VMInterfaceStatusNotFoundError,
     lookup_iface_status,
     lookup_iface_status_ip,
@@ -29,13 +34,14 @@ from utilities.constants.components import KUBEMACPOOL_MAC_CONTROLLER_MANAGER
 from utilities.constants.networking import LINUX_BRIDGE, SRIOV
 from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_2MIN, TIMEOUT_5SEC
 from utilities.infra import get_pod_by_name_prefix
+from utilities.jira import is_jira_open
 from utilities.network import (
     cloud_init_network_data,
     compose_cloud_init_data_dict,
     network_device,
     ping,
 )
-from utilities.virt import VirtualMachineForTests, fedora_vm_body, prepare_cloud_init_user_data
+from utilities.virt import VirtualMachineForTests, fedora_vm_body, prepare_cloud_init_user_data, vm_console_run_commands
 
 LOGGER = logging.getLogger(__name__)
 
@@ -139,12 +145,19 @@ def hot_plug_interface(
 
     update_hot_plug_config_in_vm(vm=vm, interfaces=interfaces, networks=networks)
 
-    return lookup_iface_status(
-        vm=vm,
-        iface_name=hot_plugged_interface_name,
-        predicate=lambda interface: "guest-agent" in interface["infoSource"],
-        timeout=TIMEOUT_2MIN,
-    )
+    try:
+        return lookup_iface_status(
+            vm=vm,
+            iface_name=hot_plugged_interface_name,
+            predicate=lambda interface: "guest-agent" in interface["infoSource"],
+            timeout=TIMEOUT_2MIN,
+        )
+    except VMInterfaceStatusNotFoundError:
+        if is_jira_open(jira_id="CNV-77961"):
+            fallback_iface = _iface_console_fallback(vm=vm, interface_name=hot_plugged_interface_name)
+            if fallback_iface:
+                return fallback_iface
+        raise
 
 
 def hot_unplug_interface(vm, hot_plugged_interface_name):
@@ -202,8 +215,10 @@ def create_bridge_interface_for_hot_plug(
         yield br
 
 
-def set_secondary_static_ip_address(vm, ipv4_address, vmi_interface):
-    guest_vm_interface = get_guest_vm_interface_name_by_vmi_interface_name(
+def set_secondary_static_ip_address(
+    vm: VirtualMachineForTests, ipv4_address: str, vmi_interface: str, guest_device_name: str | None = None
+) -> None:
+    guest_vm_interface = guest_device_name or get_guest_vm_interface_name_by_vmi_interface_name(
         vm=vm,
         vm_interface_name=vmi_interface,
     )
@@ -215,7 +230,17 @@ def set_secondary_static_ip_address(vm, ipv4_address, vmi_interface):
     # Verify the IP address was set successfully.
     # The function fails on timeout if the interface or its address are not found,
     # so there's no need to check its return code.
-    hot_plugged_interface_ip = lookup_iface_status_ip(vm=vm, iface_name=vmi_interface, ip_family=4)
+    try:
+        hot_plugged_interface_ip = lookup_iface_status_ip(vm=vm, iface_name=vmi_interface, ip_family=4)
+    except IpNotFound:
+        if is_jira_open(jira_id="CNV-77961"):
+            hot_plugged_interface_ip = _read_guest_ipv4(vm=vm, interface_name=guest_vm_interface)
+            LOGGER.warning(
+                f"CNV-77961: Verified IP {hot_plugged_interface_ip} on {guest_vm_interface} via console "
+                f"(guest-agent not reporting on VM {vm.name})."
+            )
+        else:
+            raise
     LOGGER.info(f"{vm.name}/{vmi_interface} set with IP address {hot_plugged_interface_ip}")
 
 
@@ -237,6 +262,7 @@ def hot_plug_interface_and_set_address(
         vm=vm,
         ipv4_address=ipv4_address,
         vmi_interface=iface.name,
+        guest_device_name=iface.interfaceName,
     )
 
     return iface
@@ -245,9 +271,86 @@ def hot_plug_interface_and_set_address(
 def get_guest_vm_interface_name_by_vmi_interface_name(vm, vm_interface_name):
     vmi_interfaces = vm.vmi.interfaces
     for interface in vmi_interfaces:
-        if interface["name"] == vm_interface_name:
+        if interface["name"] == vm_interface_name and interface.get("interfaceName"):
             return interface["interfaceName"]
+
+    if is_jira_open(jira_id="CNV-77961"):
+        fallback = _iface_console_fallback(vm=vm, interface_name=vm_interface_name)
+        if fallback:
+            return fallback.interfaceName
     raise VMInterfaceStatusNotFoundError(f"Interface {vm_interface_name} not found in VM {vm.name} status")
+
+
+def _iface_console_fallback(vm: VirtualMachine, interface_name: str) -> ResourceField | None:
+    """Look up a hot-plugged interface via console when guest-agent is dead (CNV-77961).
+
+    Args:
+        vm: The virtual machine to query.
+        interface_name: The spec-level interface name.
+
+    Returns:
+        A ResourceField with interface data gathered from the guest, or None.
+    """
+    # VMI spec interfaces are set by virt-controller seconds after the hot-plug request;
+    # by the time we get here, lookup_iface_status has already waited 2 min for guest-agent.
+    vmi_iface = _lookup_vmi_interface(vmi=vm.vmi, interface_name=interface_name)
+    if not vmi_iface:
+        return None
+    LOGGER.warning(
+        f"CNV-77961: Guest agent did not report interface {interface_name} on VM {vm.name}, "
+        f"falling back to console lookup by MAC {vmi_iface['macAddress']}."
+    )
+    fallback = _lookup_guest_interface_by_mac(vm=vm, expected_mac=vmi_iface["macAddress"], iface_name=interface_name)
+    LOGGER.info(f"Console fallback found interface {fallback.interfaceName} for {interface_name} on VM {vm.name}.")
+    return fallback
+
+
+def _lookup_guest_interface_by_mac(
+    vm: VirtualMachine,
+    expected_mac: str,
+    iface_name: str,
+) -> ResourceField:
+    """Find an interface inside the VM guest OS by its MAC address.
+
+    Used as a fallback when guest-agent fails to report the interface (CNV-77961).
+
+    Args:
+        vm: The virtual machine to query.
+        expected_mac: The MAC address to search for.
+        iface_name: The spec-level interface name to set on the returned object.
+
+    Returns:
+        A ResourceField with name and interfaceName fields.
+
+    Raises:
+        VMInterfaceStatusNotFoundError: If no interface with the expected MAC is found.
+    """
+    cmd = "ip -j addr show"
+    output = vm_console_run_commands(vm=vm, commands=[cmd], timeout=30)
+    guest_interfaces = json.loads(output[cmd][1])
+    visible_ifaces = [{"ifname": iface.get("ifname"), "address": iface.get("address")} for iface in guest_interfaces]
+    LOGGER.info(f"CNV-77961: looking for MAC {expected_mac} in guest {vm.name}, visible interfaces: {visible_ifaces}")
+    for guest_iface in guest_interfaces:
+        if guest_iface.get("address", "").lower() == expected_mac.lower():
+            return ResourceField(
+                params={
+                    "name": iface_name,
+                    "interfaceName": guest_iface["ifname"],
+                }
+            )
+
+    raise VMInterfaceStatusNotFoundError(f"No interface with MAC {expected_mac} found inside VM {vm.name}")
+
+
+def _read_guest_ipv4(vm: VirtualMachine, interface_name: str) -> ipaddress.IPv4Address:
+    cmd = f"ip -j -4 addr show {interface_name}"
+    output = vm_console_run_commands(vm=vm, commands=[cmd], timeout=30)
+    iface_info = json.loads(output[cmd][1])
+    if iface_info and "addr_info" in iface_info[0]:
+        for addr in iface_info[0]["addr_info"]:
+            if addr["family"] == "inet":
+                return ipaddress.IPv4Address(address=addr["local"])
+    raise IpNotFound(f"No IPv4 address found on {interface_name} in VM {vm.name}")
 
 
 @contextlib.contextmanager

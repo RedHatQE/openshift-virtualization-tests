@@ -25,6 +25,7 @@ from utilities.network import (
     assert_ping_successful,
     network_nad,
 )
+from utilities.virt import vm_console_run_commands
 
 pytestmark = pytest.mark.usefixtures("label_schedulable_nodes")
 
@@ -65,6 +66,12 @@ def hot_plugged_interface(
     running_vm_for_nic_hot_plug,
     network_attachment_definition_for_hot_plug,
 ):
+    # TEMP: kill guest agent to trigger CNV-77961 fallback path
+    vm_console_run_commands(
+        vm=running_vm_for_nic_hot_plug,
+        commands=["sudo systemctl mask --now qemu-guest-agent"],
+        timeout=30,
+    )
     return hot_plug_interface(
         vm=running_vm_for_nic_hot_plug,
         hot_plugged_interface_name=f"{HOT_PLUG_STR}-iface",
@@ -111,6 +118,8 @@ def hot_plugged_interface_with_address(running_vm_for_nic_hot_plug, index_number
         vm=running_vm_for_nic_hot_plug,
         ipv4_address=random_ipv4_address(net_seed=0, host_address=next(index_number)),
         vmi_interface=hot_plugged_interface.name,
+        # FORCE W/A path 3: omit guest_device_name to trigger
+        # get_guest_vm_interface_name_by_vmi_interface_name console fallback
     )
 
 
@@ -135,6 +144,12 @@ def hot_plugged_interface_on_vm_created_with_secondary_interface(
     running_vm_with_secondary_and_hot_plugged_interfaces,
     network_attachment_definition_for_hot_plug,
 ):
+    # TEMP: kill guest agent to trigger CNV-77961 fallback path
+    vm_console_run_commands(
+        vm=running_vm_with_secondary_and_hot_plugged_interfaces,
+        commands=["sudo systemctl mask --now qemu-guest-agent"],
+        timeout=30,
+    )
     return hot_plug_interface(
         vm=running_vm_with_secondary_and_hot_plugged_interfaces,
         hot_plugged_interface_name=f"{HOT_PLUG_STR}-additional-iface",
@@ -152,6 +167,8 @@ def hot_plugged_second_interface_with_address(
         vm=running_vm_with_secondary_and_hot_plugged_interfaces,
         ipv4_address=random_ipv4_address(net_seed=0, host_address=next(index_number)),
         vmi_interface=hot_plugged_interface_on_vm_created_with_secondary_interface.name,
+        # FORCE W/A path 3: omit guest_device_name to trigger
+        # get_guest_vm_interface_name_by_vmi_interface_name console fallback
     )
 
 
@@ -208,11 +225,22 @@ def hot_plugged_jumbo_interface_with_address(
     network_attachment_definition_for_jumbo_hot_plug,
     index_number,
 ):
+    # FORCE W/A all paths: kill guest agent to trigger CNV-77961 fallback path
+    vm_console_run_commands(
+        vm=running_vm_for_jumbo_nic_hot_plug,
+        commands=["sudo systemctl mask --now qemu-guest-agent"],
+        timeout=30,
+    )
     return hot_plug_interface_and_set_address(
         vm=running_vm_for_jumbo_nic_hot_plug,
         hot_plugged_interface_name=f"{HOT_PLUG_STR}-jumbo-iface",
         net_attach_def_name=network_attachment_definition_for_jumbo_hot_plug.name,
         ipv4_address=random_ipv4_address(net_seed=0, host_address=next(index_number)),
+    )
+    vm_console_run_commands(
+        vm=running_vm_for_jumbo_nic_hot_plug,
+        commands=["sudo systemctl unmask qemu-guest-agent", "sudo systemctl start qemu-guest-agent"],
+        timeout=30,
     )
 
 
