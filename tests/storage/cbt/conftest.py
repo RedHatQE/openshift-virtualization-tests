@@ -9,6 +9,7 @@ from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.secret import Secret
 from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.virtual_machine import VirtualMachine
+from ocp_resources.virtual_machine_backup import VirtualMachineBackup
 from ocp_resources.virtual_machine_backup_tracker import VirtualMachineBackupTracker
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
@@ -23,9 +24,11 @@ from tests.storage.cbt.utils import (
     cbt_resource_id,
     create_and_collect_pull_mode_backup,
     restore_and_start_vm_from_pull_client_backup,
+    restore_and_start_vm_from_push_backup,
 )
 from utilities.constants.images import OS_FLAVOR_RHEL
 from utilities.constants.instance_types import RHEL9_PREFERENCE, U1_SMALL
+from utilities.constants.timeouts import TIMEOUT_5SEC, TIMEOUT_10MIN
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.storage import (
     data_volume_template_with_source_ref_dict,
@@ -168,6 +171,163 @@ def vm_boot_pvc_spec(admin_client, storage_class_name_scope_module):
         "volume_mode": profile.first_claim_property_set_volume_mode(),
         "access_mode": profile.first_claim_property_set_access_modes()[0],
     }
+
+
+# Push mode fixtures
+
+
+@pytest.fixture()
+def backup_pvc(
+    unprivileged_client,
+    namespace,
+    vm_boot_disk_size,
+    storage_class_name_scope_module,
+):
+    """
+    PVC for storing backup output (push mode).
+
+    Returns:
+        PersistentVolumeClaim: PVC for backup storage
+    """
+    with PersistentVolumeClaim(
+        name=f"cbt-backup-{cbt_storage_class_suffix(storage_class_name=storage_class_name_scope_module)}",
+        namespace=namespace.name,
+        client=unprivileged_client,
+        accessmodes=PersistentVolumeClaim.AccessMode.RWO,
+        size=cbt_pvc_size_with_headroom(source_disk_size=vm_boot_disk_size),
+        storage_class=storage_class_name_scope_module,
+        volume_mode=PersistentVolumeClaim.VolumeMode.FILE,
+    ) as pvc:
+        yield pvc
+
+
+@pytest.fixture()
+def completed_full_backup_push_mode(
+    unprivileged_client,
+    namespace,
+    backup_pvc,
+    backup_tracker_source,
+    storage_class_name_scope_module,
+):
+    """
+    Full backup in push mode, completed.
+
+    Returns:
+        VirtualMachineBackup: Completed backup
+    """
+    with VirtualMachineBackup(
+        name=f"full-push-{cbt_storage_class_suffix(storage_class_name=storage_class_name_scope_module)}",
+        namespace=namespace.name,
+        client=unprivileged_client,
+        mode=VirtualMachineBackup.Mode.PUSH,
+        pvc_name=backup_pvc.name,
+        force_full_backup=True,
+        source=backup_tracker_source,
+    ) as backup:
+        backup.wait_for_condition(
+            condition="Complete",
+            status=VirtualMachineBackup.Condition.Status.TRUE,
+            timeout=TIMEOUT_10MIN,
+            sleep_time=TIMEOUT_5SEC,
+        )
+        yield backup
+
+
+@pytest.fixture()
+def restored_vm_from_full_backup_push_mode(
+    unprivileged_client,
+    namespace,
+    completed_full_backup_push_mode,
+    vm_with_cbt_label,
+    vm_boot_disk_size,
+    vm_boot_pvc_spec,
+    backup_pvc,
+    storage_class_name_scope_module,
+):
+    """
+    VM restored from full backup and started with the original VM name.
+
+    Returns:
+        VirtualMachineForTests: Running restored VM
+    """
+    yield from restore_and_start_vm_from_push_backup(
+        vm=vm_with_cbt_label,
+        backup=completed_full_backup_push_mode,
+        namespace=namespace.name,
+        client=unprivileged_client,
+        storage_class=storage_class_name_scope_module,
+        size=vm_boot_disk_size,
+        backup_pvc_name=backup_pvc.name,
+        **vm_boot_pvc_spec,
+    )
+
+
+@pytest.fixture()
+def completed_incremental_backup_push_mode(
+    unprivileged_client,
+    namespace,
+    backup_pvc,
+    vm_with_cbt_label,
+    completed_full_backup_push_mode,
+    backup_tracker_source,
+    storage_class_name_scope_module,
+):
+    """
+    Incremental backup in push mode, completed.
+
+    Returns:
+        VirtualMachineBackup: Completed incremental backup
+    """
+    write_file_via_ssh(
+        vm=vm_with_cbt_label,
+        filename=CBT_INCREMENTAL_TEST_DATA_FILE,
+        content=CBT_INCREMENTAL_TEST_DATA,
+    )
+    with VirtualMachineBackup(
+        mode=VirtualMachineBackup.Mode.PUSH,
+        name=f"incr-push-{cbt_storage_class_suffix(storage_class_name=storage_class_name_scope_module)}",
+        namespace=namespace.name,
+        client=unprivileged_client,
+        pvc_name=backup_pvc.name,
+        force_full_backup=False,
+        source=backup_tracker_source,
+    ) as backup:
+        backup.wait_for_condition(
+            condition="Complete",
+            status=VirtualMachineBackup.Condition.Status.TRUE,
+            timeout=TIMEOUT_10MIN,
+            sleep_time=TIMEOUT_5SEC,
+        )
+        yield backup
+
+
+@pytest.fixture()
+def restored_vm_from_incremental_backup_push_mode(
+    unprivileged_client,
+    namespace,
+    completed_incremental_backup_push_mode,
+    vm_with_cbt_label,
+    vm_boot_disk_size,
+    vm_boot_pvc_spec,
+    backup_pvc,
+    storage_class_name_scope_module,
+):
+    """
+    VM restored from incremental backup (push mode) and started with the original VM name.
+
+    Returns:
+        VirtualMachineForTests: Running restored VM
+    """
+    yield from restore_and_start_vm_from_push_backup(
+        vm=vm_with_cbt_label,
+        backup=completed_incremental_backup_push_mode,
+        namespace=namespace.name,
+        client=unprivileged_client,
+        storage_class=storage_class_name_scope_module,
+        size=vm_boot_disk_size,
+        backup_pvc_name=backup_pvc.name,
+        **vm_boot_pvc_spec,
+    )
 
 
 # Pull mode fixtures

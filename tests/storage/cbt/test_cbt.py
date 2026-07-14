@@ -32,7 +32,10 @@ class TestFullBackupRestore:
     """
 
     @pytest.mark.polarion("CNV-15997")
-    def test_full_backup_push_mode_restore(self):
+    def test_full_backup_push_mode_restore(
+        self,
+        restored_vm_from_full_backup_push_mode,
+    ):
         """
         Test that a VM can be backed up (push mode) and restored from a full backup.
 
@@ -50,8 +53,7 @@ class TestFullBackupRestore:
         Expected:
             - Restored VM boots successfully and test data is present
         """
-
-    test_full_backup_push_mode_restore.__test__ = False  # STD placeholder - not yet implemented
+        assert_restored_vm_has_boot_test_data(vm=restored_vm_from_full_backup_push_mode)
 
     @pytest.mark.polarion("CNV-15996")
     def test_full_backup_pull_mode_restore(
@@ -94,7 +96,10 @@ class TestIncrementalBackupRestore:
     """
 
     @pytest.mark.polarion("CNV-15998")
-    def test_incremental_backup_push_mode_restore(self):
+    def test_incremental_backup_push_mode_restore(
+        self,
+        restored_vm_from_incremental_backup_push_mode,
+    ):
         """
         Test that a VM can be backed up (push mode) and restored from an incremental backup.
 
@@ -112,8 +117,9 @@ class TestIncrementalBackupRestore:
         Expected:
             - Restored VM boots successfully and all test data is present
         """
-
-    test_incremental_backup_push_mode_restore.__test__ = False  # STD placeholder - not yet implemented
+        assert_restored_vm_has_boot_and_incremental_test_data(
+            vm=restored_vm_from_incremental_backup_push_mode,
+        )
 
     @pytest.mark.polarion("CNV-16000")
     def test_incremental_backup_pull_mode_restore(
