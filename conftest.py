@@ -56,6 +56,7 @@ from utilities.pytest_utils import (
     deploy_run_in_progress_config_map,
     deploy_run_in_progress_namespace,
     filter_hpp_tests,
+    filter_post_test_alerts_tests,
     get_artifactory_server_url,
     get_base_matrix_name,
     get_cnv_version_explorer_url,
@@ -563,20 +564,6 @@ def filter_deprecated_api_tests(items: list[Item], config: Config) -> list[Item]
         or config.getoption("--upgrade_custom")
     ):
         discard_tests, items_to_return = remove_tests_from_list(items=items, filter_str="deprecated_api")
-        config.hook.pytest_deselected(items=discard_tests)
-        return items_to_return
-    return items
-
-
-def filter_post_test_alerts_tests(items: list[Item], config: Config) -> list[Item]:
-    # filter out post test alerts tests, if explicitly asked or if running upgrade/install tests
-    if (
-        config.getoption("--skip-post-test-alerts")
-        or config.getoption("--install")
-        or config.getoption("--upgrade")
-        or config.getoption("--upgrade_custom")
-    ):
-        discard_tests, items_to_return = remove_tests_from_list(items=items, filter_str="post_test_alerts")
         config.hook.pytest_deselected(items=discard_tests)
         return items_to_return
     return items
