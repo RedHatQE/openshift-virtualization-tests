@@ -109,7 +109,8 @@ reviews:
 
   # Targeted pre-merge checks - only run on changed files
   # path_filters: markdown files are reviewed (AGENTS.md, docs/*.md contain coding standards)
-  path_filters: []
+  path_filters:
+    - "!docs/site/**"
 
   # Abort review if PR is closed
   abort_on_close: true

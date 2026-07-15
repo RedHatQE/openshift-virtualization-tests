@@ -18,7 +18,7 @@ from utilities.monitoring import validate_metrics_value
 def test_vmi_creation_metric(prometheus, running_vm):
     validate_metrics_value(
         prometheus=prometheus,
-        metric_name=f'kubevirt_vmi_phase_count{{phase="running", name="{running_vm.name}"}}',
+        metric_name=f"kubevirt_vmi_phase_count{{phase='running', name='{running_vm.name}'}}",
         expected_value="1",
         timeout=120
     )
@@ -44,7 +44,7 @@ def test_vm_network_metric(prometheus, running_vm):
     # Wait for the metric to reflect the change
     validate_metrics_value(
         prometheus=prometheus,
-        metric_name=f'kubevirt_vmi_phase_transition_time_from_deletion_seconds_count{{name="{running_vm.name}"}}',
+        metric_name=f"kubevirt_vmi_phase_transition_time_from_deletion_seconds_count{{name='{running_vm.name}'}}",
         expected_value="1",
     )
 ```
