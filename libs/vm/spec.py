@@ -48,6 +48,7 @@ class CPU:
 @dataclass
 class Memory:
     guest: str
+    maxGuest: str | None = None  # noqa: N815
 
 
 @dataclass
@@ -76,6 +77,7 @@ class Interface:
     sriov: dict[Any, Any] | None = None
     binding: NetBinding | None = None
     state: str | None = None
+    macAddress: str | None = None  # noqa: N815
 
 
 @dataclass
