@@ -77,6 +77,7 @@ from utilities.pytest_utils import (
 pytest_plugins = [
     "tests.fixtures.network.l2_bridge",
     "tests.fixtures.network.cluster",
+    "tests.fixtures.images.validation_os_images",
     "tests.fixtures.network.multiarch",
 ]
 
