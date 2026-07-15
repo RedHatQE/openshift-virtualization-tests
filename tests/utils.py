@@ -19,6 +19,8 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine import VirtualMachine
+from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
+from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
@@ -59,6 +61,7 @@ from utilities.virt import (
     wait_for_migration_finished,
     wait_for_ssh_connectivity,
     wait_for_updated_kv_value,
+    wait_for_windows_vm,
 )
 
 NUM_TEST_VMS = 3
@@ -694,18 +697,18 @@ def create_windows2022_dv_from_registry(
 
 
 @contextmanager
-def create_windows2022_vm_with_vtpm_from_registry(
-    dv_dict: dict,
+def create_windows2022_vm_using_existing_dv(
     namespace: str,
     client: DynamicClient,
     vm_name: str,
-    cpu_model: str | None,
+    cpu_model: str | None = None,
+    existing_data_volume: DataVolume | None = None,
 ) -> Generator[VirtualMachineForTests]:
     """
-    Creates a Windows Server 2022 VM with vTPM from registry container disk.
+    Creates a Windows Server 2022 VM with vTPM using existing DataVolume.
 
     Args:
-        dv_dict: DataVolume template dictionary with metadata and spec
+        existing_data_volume: DataVolume to use for the VM's data volume
         namespace: Kubernetes namespace
         client: Kubernetes client
         vm_name: Name for the VirtualMachine
@@ -714,10 +717,6 @@ def create_windows2022_vm_with_vtpm_from_registry(
     Yields:
         VirtualMachineForTests: Running Windows 2022 VM with vTPM
     """
-    from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
-    from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
-
-    from utilities.virt import wait_for_windows_vm
 
     with VirtualMachineForTests(
         name=vm_name,
@@ -726,7 +725,44 @@ def create_windows2022_vm_with_vtpm_from_registry(
         os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK,
         vm_instance_type=VirtualMachineClusterInstancetype(name=U1_LARGE, client=client),
         vm_preference=VirtualMachineClusterPreference(name=WINDOWS_2K22_PREFERENCE, client=client),
-        data_volume_template=dv_dict,
+        data_volume=existing_data_volume,
+        cpu_model=cpu_model,
+    ) as vm:
+        running_vm(vm=vm)
+        wait_for_windows_vm(vm=vm, version="2022")
+        yield vm
+
+
+@contextmanager
+def create_windows2022_vm_with_data_volume_template(
+    namespace: str,
+    client: DynamicClient,
+    vm_name: str,
+    cpu_model: str | None = None,
+    dv_template: dict | None = None,
+) -> Generator[VirtualMachineForTests]:
+    """
+    Creates a Windows Server 2022 VM with vTPM with dv template.
+
+    Args:
+        dv_template: DataVolume template dictionary with metadata and spec
+        namespace: Kubernetes namespace
+        client: Kubernetes client
+        vm_name: Name for the VirtualMachine
+        cpu_model: CPU model specification (can be None)
+
+    Yields:
+        VirtualMachineForTests: Running Windows 2022 VM with vTPM
+    """
+
+    with VirtualMachineForTests(
+        name=vm_name,
+        namespace=namespace,
+        client=client,
+        os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK,
+        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_LARGE, client=client),
+        vm_preference=VirtualMachineClusterPreference(name=WINDOWS_2K22_PREFERENCE, client=client),
+        data_volume_template=dv_template,
         cpu_model=cpu_model,
     ) as vm:
         running_vm(vm=vm)

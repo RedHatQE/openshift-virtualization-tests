@@ -3,7 +3,7 @@ import math
 import os
 import shlex
 from contextlib import contextmanager
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import cachetools.func
 import kubernetes
@@ -102,6 +102,55 @@ def create_dummy_first_consumer_pod(volume_mode=DataVolume.VolumeMode.FILE, dv=N
             f"Created dummy pod {pod.name} to be the first consumer of the PVC, "
             "this triggers the start of CDI worker pods in case the PVC is backed by DV"
         )
+
+
+def construct_datavolume_source_dict(
+    source: str,
+    url: str | None = None,
+    secret_name: str | None = None,
+    cert_configmap_name: str | None = None,
+    source_pvc_name: str | None = None,
+    source_pvc_namespace: str | None = None,
+) -> dict[str, Any]:
+    """
+    Build a DataVolume source_dict.
+
+    Args:
+        source: Source type ("http", "registry", "pvc", "blank", "upload").
+        url: URL for http/registry sources.
+        secret_name: Optional Secret name for authentication (http/registry sources).
+        cert_configmap_name: Optional ConfigMap name for TLS certificates (http/registry sources).
+        source_pvc_name: PVC name for pvc source type.
+        source_pvc_namespace: Namespace of the source PVC.
+
+    Returns:
+        dict[str, Any]: The constructed source_dict for DataVolume.
+    """
+    if source == "http":
+        if not utilities.infra.url_excluded_from_validation(url):
+            validate_file_exists_in_url(url=url)
+        source_spec: dict[str, Any] = {"http": {"url": url}}
+    elif source == "registry":
+        source_spec = {"registry": {"url": url}}
+    elif source == "pvc":
+        pvc_spec: dict[str, Any] = {"name": source_pvc_name}
+        if source_pvc_namespace is not None:
+            pvc_spec["namespace"] = source_pvc_namespace
+        source_spec = {"pvc": pvc_spec}
+    elif source == "blank":
+        source_spec = {"blank": {}}
+    elif source == "upload":
+        source_spec = {"upload": {}}
+    else:
+        raise ValueError(f"Unsupported source type: {source}")
+
+    if source in ("http", "registry"):
+        if secret_name:
+            source_spec[source]["secretRef"] = secret_name
+        if cert_configmap_name:
+            source_spec[source]["certConfigMap"] = cert_configmap_name
+
+    return source_spec
 
 
 @contextmanager
