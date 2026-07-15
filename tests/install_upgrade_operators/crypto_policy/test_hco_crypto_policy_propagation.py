@@ -12,7 +12,7 @@ from tests.install_upgrade_operators.crypto_policy.utils import (
     assert_crypto_policy_propagated_to_components,
     set_hco_crypto_policy,
 )
-from utilities.constants import TLS_SECURITY_PROFILE
+from utilities.constants.hco import TLS_SECURITY_PROFILE
 
 LOGGER = logging.getLogger(__name__)
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.s390x]

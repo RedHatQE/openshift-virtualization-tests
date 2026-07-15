@@ -10,15 +10,15 @@ from utilities.artifactory import (
     get_artifactory_config_map,
     get_artifactory_secret,
 )
-from utilities.constants import (
+from utilities.constants import Images
+from utilities.constants.hco import DATA_SOURCE_NAME
+from utilities.constants.images import OS_FLAVOR_WIN_CONTAINER_DISK
+from utilities.constants.instance_types import RHEL8_PREFERENCE
+from utilities.constants.os_matrix import (
     CONTAINER_DISK_IMAGE_PATH_STR,
-    DATA_SOURCE_NAME,
     DATA_SOURCE_STR,
-    OS_FLAVOR_WIN_CONTAINER_DISK,
-    RHEL8_PREFERENCE,
-    Images,
 )
-from utilities.storage import get_test_artifact_server_url
+from utilities.storage import construct_datavolume_source_dict, get_test_artifact_server_url
 from utilities.virt import VirtualMachineForTests
 
 
@@ -103,12 +103,14 @@ def windows_data_volume_template(
         name=f"{os_matrix_key}-dv",
         namespace=namespace.name,
         api_name="storage",
-        source="registry",
+        source_dict=construct_datavolume_source_dict(
+            source="registry",
+            url=f"{get_test_artifact_server_url(schema='registry')}/{os_params[CONTAINER_DISK_IMAGE_PATH_STR]}",
+            secret_name=secret.name,
+            cert_configmap_name=cert.name,
+        ),
         size=Images.Windows.CONTAINER_DISK_DV_SIZE,
         storage_class=py_config["default_storage_class"],
-        url=f"{get_test_artifact_server_url(schema='registry')}/{os_params[CONTAINER_DISK_IMAGE_PATH_STR]}",
-        secret=secret,
-        cert_configmap=cert.name,
     )
     win_dv.to_dict()
     yield win_dv

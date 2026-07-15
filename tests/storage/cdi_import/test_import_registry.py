@@ -8,7 +8,10 @@ from ocp_resources.resource import Resource
 
 from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE
 from tests.storage.utils import wait_for_dv_condition_message
-from utilities.constants import OS_FLAVOR_FEDORA, REGISTRY_STR, TIMEOUT_5MIN, Images
+from utilities.constants import Images
+from utilities.constants.images import OS_FLAVOR_FEDORA
+from utilities.constants.storage import REGISTRY_STR
+from utilities.constants.timeouts import TIMEOUT_5MIN
 from utilities.storage import ErrorMsg, check_disk_count_in_vm, create_dv, create_vm_from_dv
 from utilities.virt import running_vm
 
@@ -178,6 +181,7 @@ def test_public_registry_data_volume_archive(unprivileged_client, namespace, sto
             return
 
 
+@pytest.mark.jira("CNV-92373", run=False)
 @pytest.mark.polarion("CNV-5509")
 @pytest.mark.s390x
 def test_importer_pod_annotation(importer_pod_annotations, linux_nad):

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from ocp_resources.resource import NamespacedResource
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from utilities.constants import TIMEOUT_2MIN
+from utilities.constants.timeouts import TIMEOUT_2MIN
 
 if TYPE_CHECKING:
     from ocp_resources.cdi_config import CDIConfig

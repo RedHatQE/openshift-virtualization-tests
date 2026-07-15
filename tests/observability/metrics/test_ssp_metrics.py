@@ -7,12 +7,12 @@ from tests.observability.metrics.utils import (
     validate_metric_value_with_round_down,
     validate_metric_value_within_range,
 )
-from tests.observability.utils import validate_metrics_value
-from utilities.constants import (
+from utilities.constants.components import (
     SSP_OPERATOR,
     VIRT_TEMPLATE_VALIDATOR,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile
+from utilities.monitoring import validate_metrics_value
 from utilities.virt import VirtualMachineForTests
 
 KUBEVIRT_SSP_OPERATOR_UP = "kubevirt_ssp_operator_up"

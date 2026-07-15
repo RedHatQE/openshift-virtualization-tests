@@ -1,7 +1,7 @@
 import pytest
 from ocp_resources.resource import Resource
 
-from utilities.constants import PVC
+from utilities.constants.storage import PVC
 
 pytestmark = [pytest.mark.tier3, pytest.mark.special_infra, pytest.mark.tekton]
 

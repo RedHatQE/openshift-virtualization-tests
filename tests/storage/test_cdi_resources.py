@@ -18,18 +18,17 @@ from ocp_resources.service_account import ServiceAccount
 
 from tests.storage.utils import import_image_to_dv, upload_image_to_dv
 from utilities.artifactory import get_test_artifact_server_url
-from utilities.constants import (
-    CDI_APISERVER,
+from utilities.constants import Images
+from utilities.constants.components import CDI_APISERVER, CDI_OPERATOR
+from utilities.constants.storage import (
     CDI_CONFIGMAPS,
     CDI_LABEL,
-    CDI_OPERATOR,
     CDI_SECRETS,
     CDI_UPLOAD,
     CDI_UPLOAD_TMP_PVC,
     SOURCE_POD,
-    TIMEOUT_10MIN,
-    Images,
 )
+from utilities.constants.timeouts import TIMEOUT_10MIN
 from utilities.storage import (
     create_dv,
     data_volume,
@@ -234,7 +233,8 @@ def test_cloner_pods_cdi_label(
         dv_name="dv-target",
         namespace=data_volume_without_snapshot_capability_scope_function.namespace,
         size=data_volume_without_snapshot_capability_scope_function.size,
-        source_pvc=data_volume_without_snapshot_capability_scope_function.name,
+        source_pvc_name=data_volume_without_snapshot_capability_scope_function.name,
+        source_pvc_namespace=data_volume_without_snapshot_capability_scope_function.namespace,
         storage_class=data_volume_without_snapshot_capability_scope_function.storage_class,
     ) as cdv:
         cdv.wait_for_status(status=DataVolume.Status.CLONE_IN_PROGRESS, timeout=TIMEOUT_10MIN)

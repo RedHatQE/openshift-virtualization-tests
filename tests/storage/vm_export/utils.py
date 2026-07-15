@@ -15,7 +15,8 @@ from ocp_resources.virtual_machine import VirtualMachine
 from pyhelper_utils.shell import run_command
 from pytest_testconfig import config as py_config
 
-from utilities.constants import TIMEOUT_1MIN
+from utilities.constants.storage import BIND_IMMEDIATE_ANNOTATION
+from utilities.constants.timeouts import TIMEOUT_1MIN
 from utilities.storage import create_dv
 
 LOGGER = logging.getLogger(__name__)
@@ -57,7 +58,7 @@ def create_blank_dv_by_specific_user(
         size="1Gi",
         storage_class=py_config["default_storage_class"],
         consume_wffc=False,
-        bind_immediate=True,
+        annotations=BIND_IMMEDIATE_ANNOTATION,
         client=client,
     ) as dv:
         dv.wait_for_dv_success(timeout=TIMEOUT_1MIN)

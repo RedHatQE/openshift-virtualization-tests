@@ -12,7 +12,10 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.os_params import WINDOWS_11, WINDOWS_2022
 from tests.utils import update_hco_with_persistent_storage_config
-from utilities.constants import TIMEOUT_2MIN, TIMEOUT_40MIN
+from utilities.constants.timeouts import (
+    TIMEOUT_2MIN,
+    TIMEOUT_40MIN,
+)
 from utilities.virt import (
     VirtualMachineForTestsFromTemplate,
     get_windows_os_dict,

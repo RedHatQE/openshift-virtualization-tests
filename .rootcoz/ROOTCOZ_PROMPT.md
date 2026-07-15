@@ -221,6 +221,14 @@ Pattern guidance:
 - **SSH connectivity failure:** Read the test code to determine how SSH is used.
   Wrong credentials, missing `virtctl` binary, no retry logic, or missing
   `wait_for_ssh_connectivity()` before running commands is `CODE ISSUE`.
+  **CRITICAL: Also check boolean parameters in VM startup helpers.** If the test
+  calls `running_vm(vm=vm, wait_for_interfaces=False)` or similar helpers with
+  wait/readiness parameters set to `False`, the test is explicitly skipping
+  precondition checks — this means the test does NOT wait for the guest agent to
+  report network interfaces before attempting SSH. A VM that is still booting when
+  SSH is attempted is a test setup problem (`CODE ISSUE`), not a product defect,
+  even if the VM boot appears slow in artifacts. Read the `running_vm()` function
+  signature to understand what each boolean parameter controls.
   VM network misconfiguration after migration or snapshot restore where the test
   correctly waits and retries is `PRODUCT BUG`. Cluster network outage is `INFRASTRUCTURE`.
 - **DataVolume/CDI failure:** Wrong source URL, bad storage class reference, or
@@ -504,10 +512,46 @@ Required steps for EVERY failure:
 3. **Read the fixtures.** Check the `conftest.py` in the same directory to understand
    the setup and teardown logic.
 4. **Read the helper functions.** If the test calls utility functions, read them too.
-5. **Trace the failure path.** Follow the stack trace through the source code to find
+5. **Inspect wait and readiness parameters.** For every helper call that starts a VM,
+   waits for a condition, or establishes connectivity, check the boolean parameters
+   and timeout values. Read the helper function's signature and docstring to understand
+   what each parameter controls. Pay special attention to parameters like
+   `wait_for_interfaces`, `wait_for_cloud_init`, `wait_for_ssh`, and similar flags —
+   when set to `False`, they skip readiness checks that may be required for the test
+   to succeed. A test that skips waiting for a precondition and then fails because that
+   precondition was not met is a `CODE ISSUE`, regardless of how the symptom appears
+   in artifacts.
+6. **Trace the failure path.** Follow the stack trace through the source code to find
    exactly where and why the failure occurred.
 
 Only AFTER reading the code should you classify the failure.
+
+### MANDATORY: Eliminate CODE ISSUE Before Declaring PRODUCT BUG (Timeout/Connectivity Failures)
+
+**For any failure involving a timeout, connectivity error, or SSH error**, you MUST
+explicitly argue why the failure is NOT a `CODE ISSUE` before classifying as
+`PRODUCT BUG`. This step is mandatory because artifact-level symptoms (slow VM boot,
+SSH banner errors, timeout expiry) look identical whether the root cause is a product
+defect or a test that skipped necessary wait steps.
+
+Required elimination checklist (include in your `details`):
+
+1. **List every wait/readiness call in the test path.** Trace from the test function
+   through all helpers and fixtures. For each VM startup or readiness helper, list
+   the call with its parameters. Example:
+   `running_vm(vm=vm, wait_for_interfaces=False)` — skips interface readiness.
+2. **Verify each wait parameter is correct.** If any `wait_for_*` parameter is `False`,
+   explain why skipping that wait is safe for this test scenario. If you cannot justify
+   it, classify as `CODE ISSUE`.
+3. **Verify timeout values are sufficient.** Compare the test's timeout against the
+   expected duration of the operation. If the test allows 120s but the operation
+   (boot + network + SSH) typically needs longer, classify as `CODE ISSUE`.
+4. **State your counter-argument.** Write one sentence explaining the strongest
+   argument for `CODE ISSUE` and why you are rejecting it. If you cannot articulate
+   a counter-argument, reconsider your classification.
+
+If you skip this checklist for a timeout/connectivity failure, your analysis is
+incomplete and may be rejected.
 
 ### MANDATORY: Verify Product Behavior Before Declaring PRODUCT BUG
 

@@ -1,7 +1,7 @@
 import pytest
 
 from tests.network.connectivity.utils import create_running_vm, secondary_interfaces_cloud_init_data
-from utilities.constants import LINUX_BRIDGE, OVS_BRIDGE
+from utilities.constants.networking import LINUX_BRIDGE, OVS_BRIDGE
 from utilities.data_utils import name_prefix
 from utilities.infra import get_node_selector_dict
 from utilities.network import compose_cloud_init_data_dict, network_device, network_nad

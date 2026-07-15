@@ -1,3 +1,5 @@
+from utilities.constants.hco import DISABLE_MDEV_CONFIGURATION
+
 SECTION_TITLE = "section_title"
 FILE_SUFFIX = "file_suffix"
 HCO_CR_CERT_CONFIG_CA_KEY = "ca"
@@ -10,9 +12,9 @@ WORKLOADUPDATEMETHODS = "workloadUpdateMethods"
 KEY_PATH_SEPARATOR = "->"
 TEMPLATE_VALIDATOR = "templateValidator"
 DEVELOPER_CONFIGURATION = "developerConfiguration"
+MEDIATED_DEVICES_CONFIGURATION = "mediatedDevicesConfiguration"
 # featuregates:
 DEPLOY_KUBE_SECONDARY_DNS = "deployKubeSecondaryDNS"
-DISABLE_MDEV_CONFIGURATION = "disableMDevConfiguration"
 ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT = "enableMultiArchBootImageImport"
 PERSISTENT_RESERVATION = "persistentReservation"
 FG_DISABLED = False

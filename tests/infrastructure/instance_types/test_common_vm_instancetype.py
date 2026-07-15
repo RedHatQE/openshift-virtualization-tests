@@ -7,7 +7,8 @@ from tests.infrastructure.instance_types.constants import WINDOWS_DEDICATED_CPU_
 from tests.infrastructure.instance_types.utils import (
     assert_mismatch_vendor_label,
 )
-from utilities.constants import VIRT_OPERATOR, Images
+from utilities.constants import Images
+from utilities.constants.components import VIRT_OPERATOR
 from utilities.ssp import wait_for_condition_message_value
 from utilities.virt import VirtualMachineForTests, running_vm
 

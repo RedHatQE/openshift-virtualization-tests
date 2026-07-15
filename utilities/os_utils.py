@@ -5,27 +5,31 @@ from typing import Any
 
 from ocp_resources.template import Template
 
-from utilities.constants import (
+from utilities.constants import Images
+from utilities.constants.hco import DATA_SOURCE_NAME
+from utilities.constants.images import ArchImages
+from utilities.constants.instance_types import (
+    FLAVOR_STR,
+    OS_STR,
+    PREFERENCE_STR,
+    WORKLOAD_STR,
+)
+from utilities.constants.os_matrix import (
     CONTAINER_DISK_IMAGE_PATH_STR,
-    DATA_SOURCE_NAME,
     DATA_SOURCE_STR,
     DV_SIZE_STR,
-    FLAVOR_STR,
     IMAGE_NAME_STR,
     IMAGE_PATH_STR,
     LATEST_RELEASE_STR,
-    OS_STR,
     OS_VERSION_STR,
-    PREFERENCE_STR,
     TEMPLATE_LABELS_STR,
+)
+from utilities.constants.virt import (
     WIN_2K19,
     WIN_2K22,
     WIN_2K25,
     WIN_10,
     WIN_11,
-    WORKLOAD_STR,
-    ArchImages,
-    Images,
 )
 from utilities.exceptions import OsDictNotFoundError
 
@@ -189,7 +193,7 @@ def generate_os_matrix_dict(
     if not os_base_class:
         raise ValueError(
             f"Unsupported OS: {os_name}. "
-            "Make sure it is supported under `utilities.constants.ArchImages` class for cluster architecture."
+            "Make sure it is supported under `utilities.constants.images.ArchImages` for cluster architecture."
         )
 
     latest_os_release = getattr(os_base_class, "LATEST_RELEASE_STR", None)

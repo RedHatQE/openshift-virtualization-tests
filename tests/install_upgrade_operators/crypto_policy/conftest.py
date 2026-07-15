@@ -40,15 +40,16 @@ from tests.install_upgrade_operators.crypto_policy.utils import (
     get_services_pqc_status,
     update_apiserver_crypto_policy,
 )
-from utilities.constants import (
+from utilities.constants.components import (
     CDI_KUBEVIRT_HYPERCONVERGED,
     CLUSTER,
+    HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD,
     KUBEVIRT_HCO_NAME,
     MIGCONTROLLER_KUBEVIRT_HYPERCONVERGED,
     SSP_KUBEVIRT_HYPERCONVERGED,
-    TIMEOUT_60MIN,
-    TLS_SECURITY_PROFILE,
 )
+from utilities.constants.hco import TLS_SECURITY_PROFILE
+from utilities.constants.timeouts import TIMEOUT_60MIN
 from utilities.exceptions import MissingResourceException
 from utilities.hco import enabled_aaq_in_hco, update_hco_annotations, wait_for_hco_conditions
 from utilities.infra import ExecCommandOnPod
@@ -171,6 +172,7 @@ def cnv_services_with_template(enabled_template_feature_gate, hco_namespace, adm
         service
         for service in Service.get(namespace=hco_namespace.name, client=admin_client)
         if service.instance.spec.clusterIP not in (None, "", "None")
+        and service.name != HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD
     ]
     assert services_list, f"No services found in {hco_namespace.name}"
     service_names = [svc.name for svc in services_list]

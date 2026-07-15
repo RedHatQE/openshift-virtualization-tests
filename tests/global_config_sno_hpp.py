@@ -2,7 +2,12 @@ from typing import Any
 
 import pytest_testconfig
 
-from utilities.constants import ALL_CNV_DAEMONSETS, ALL_CNV_DEPLOYMENTS, ALL_CNV_PODS, HPP_CAPABILITIES
+from utilities.constants.components import (
+    ALL_CNV_DAEMONSETS,
+    ALL_CNV_DEPLOYMENTS,
+    ALL_CNV_PODS,
+)
+from utilities.constants.storage import HPP_CAPABILITIES
 from utilities.storage import HppCsiStorageClass
 
 global config

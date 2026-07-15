@@ -21,13 +21,13 @@ from tests.virt.upgrade.utils import (
 )
 from tests.virt.utils import get_boot_time_for_multiple_vms
 from utilities.artifactory import get_test_artifact_server_url
-from utilities.constants import (
-    ES_LIVE_MIGRATE_IF_POSSIBLE,
-    OS_FLAVOR_RHEL,
+from utilities.constants import Images
+from utilities.constants.images import OS_FLAVOR_RHEL
+from utilities.constants.timeouts import (
     TIMEOUT_30MIN,
     TIMEOUT_40MIN,
-    Images,
 )
+from utilities.constants.virt import ES_LIVE_MIGRATE_IF_POSSIBLE
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import create_ns, get_csv_by_name
 from utilities.storage import (
@@ -258,11 +258,13 @@ def windows_vm(
         client=admin_client,
         dv_name=latest_windows_dict["os_version"],
         namespace=py_config["golden_images_namespace"],
+        source="http",
         url=f"{get_test_artifact_server_url()}{latest_windows_dict['image_path']}",
         storage_class=py_config["default_storage_class"],
         access_modes=py_config["default_access_mode"],
         volume_mode=py_config["default_volume_mode"],
         size=latest_windows_dict["dv_size"],
+        use_artifactory=True,
     ) as dv:
         dv.wait_for_dv_success(timeout=TIMEOUT_30MIN)
         with DataSource(

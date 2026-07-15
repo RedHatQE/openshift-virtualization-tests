@@ -7,15 +7,16 @@ from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from pytest_testconfig import config as py_config
 
 from tests.os_params import RHEL_LATEST
-from utilities.constants import PVC, TIMEOUT_20MIN
+from utilities.constants.storage import PVC
+from utilities.constants.timeouts import TIMEOUT_20MIN
 from utilities.storage import ErrorMsg, create_dv, get_dv_size_from_datasource
 
 pytestmark = pytest.mark.post_upgrade
 
 
 LOGGER = logging.getLogger(__name__)
-LATEST_RHEL_IMAGE = RHEL_LATEST["image_path"]
-RHEL_IMAGE_SIZE = RHEL_LATEST["dv_size"]
+LATEST_RHEL_IMAGE = RHEL_LATEST.get("image_path")
+RHEL_IMAGE_SIZE = RHEL_LATEST.get("dv_size")
 
 
 DV_PARAM = {
@@ -157,8 +158,8 @@ def test_regular_user_cant_clone_dv_in_ns(
             namespace=golden_images_namespace,
             source=PVC,
             size=golden_image_data_volume_scope_module.size,
-            source_pvc=golden_image_data_volume_scope_module.pvc.name,
-            source_namespace=golden_images_namespace,
+            source_pvc_name=golden_image_data_volume_scope_module.pvc.name,
+            source_pvc_namespace=golden_images_namespace,
             client=unprivileged_client,
             storage_class=storage_class,
         ):

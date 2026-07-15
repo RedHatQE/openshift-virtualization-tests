@@ -27,16 +27,18 @@ from tests.install_upgrade_operators.must_gather.utils import (
     compare_resource_contents,
     compare_webhook_svc_contents,
 )
-from utilities.constants import (
-    ALL_CNV_CRDS,
+from utilities.constants.components import (
     BRIDGE_MARKER,
     CLUSTER_NETWORK_ADDONS_OPERATOR,
     KUBE_CNI_LINUX_BRIDGE_PLUGIN,
     KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
-    KUBEMACPOOL_MAC_RANGE_CONFIG,
-    VM_CRD,
-    NamespacesNames,
 )
+from utilities.constants.hco import (
+    ALL_CNV_CRDS,
+    VM_CRD,
+)
+from utilities.constants.namespaces import NamespacesNames
+from utilities.constants.networking import KUBEMACPOOL_MAC_RANGE_CONFIG
 from utilities.must_gather import get_must_gather_output_file
 
 pytestmark = [

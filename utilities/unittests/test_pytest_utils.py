@@ -7,14 +7,16 @@ from unittest.mock import MagicMock, mock_open, patch
 import pytest
 
 import utilities.constants
-from utilities.constants import (
+from utilities.constants.architecture import (
     AMD_64,
     ARM_64,
-    CENTOS_STREAM9_PREFERENCE,
     MULTIARCH,
-    OS_FLAVOR_FEDORA,
-    RHEL9_PREFERENCE,
     S390X,
+)
+from utilities.constants.images import OS_FLAVOR_FEDORA
+from utilities.constants.instance_types import (
+    CENTOS_STREAM9_PREFERENCE,
+    RHEL9_PREFERENCE,
 )
 from utilities.exceptions import MissingEnvironmentVariableError, UnsupportedCPUArchitectureError
 
@@ -26,6 +28,7 @@ from utilities.pytest_utils import (
     deploy_run_in_progress_namespace,
     exit_pytest_execution,
     filter_hpp_tests,
+    filter_multiarch_tests,
     generate_common_template_matrix_dicts,
     generate_instance_type_matrix_dicts,
     get_artifactory_server_url,
@@ -1966,7 +1969,7 @@ class TestUpdateCpuArchRelatedConfig:
         mock_py_config = {"cluster_type": "amd64"}
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
-            patch("utilities.constants.ArchImages") as mock_arch_images,
+            patch("utilities.constants.images.ArchImages") as mock_arch_images,
             patch("utilities.constants.Images"),
         ):
             mock_arch_images.AMD64 = MagicMock()
@@ -1994,7 +1997,7 @@ class TestUpdateCpuArchRelatedConfig:
         mock_py_config = {"cluster_type": "arm64"}
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
-            patch("utilities.constants.ArchImages") as mock_arch_images,
+            patch("utilities.constants.images.ArchImages") as mock_arch_images,
             patch("utilities.constants.Images"),
         ):
             mock_arch_images.ARM64 = MagicMock()
@@ -2028,7 +2031,7 @@ class TestUpdateCpuArchRelatedConfig:
         }
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
-            patch("utilities.constants.ArchImages") as mock_arch_images,
+            patch("utilities.constants.images.ArchImages") as mock_arch_images,
             patch("utilities.constants.Images"),
         ):
             mock_arch_images.AMD64 = MagicMock()
@@ -2056,7 +2059,7 @@ class TestUpdateCpuArchRelatedConfig:
         mock_py_config = {"cluster_type": "s390x"}
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
-            patch("utilities.constants.ArchImages") as mock_arch_images,
+            patch("utilities.constants.images.ArchImages") as mock_arch_images,
             patch("utilities.constants.Images"),
         ):
             mock_s390x_images = MagicMock()
@@ -2086,7 +2089,7 @@ class TestUpdateCpuArchRelatedConfig:
         mock_py_config = {"cluster_type": "amd64"}
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
-            patch("utilities.constants.ArchImages") as mock_arch_images,
+            patch("utilities.constants.images.ArchImages") as mock_arch_images,
             patch("utilities.constants.Images"),
         ):
             mock_arm64_images = MagicMock()
@@ -2114,7 +2117,7 @@ class TestUpdateCpuArchRelatedConfig:
         mock_py_config = {"cluster_type": "amd64", "rhel_os_list": ["rhel-9-6"]}
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
-            patch("utilities.constants.ArchImages") as mock_arch_images,
+            patch("utilities.constants.images.ArchImages") as mock_arch_images,
             patch("utilities.constants.Images"),
         ):
             mock_arch_images.AMD64 = MagicMock()
@@ -2141,7 +2144,7 @@ class TestUpdateCpuArchRelatedConfig:
         mock_py_config = {"cluster_type": "arm64", "rhel_os_list": ["rhel-9-6"]}
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
-            patch("utilities.constants.ArchImages") as mock_arch_images,
+            patch("utilities.constants.images.ArchImages") as mock_arch_images,
             patch("utilities.constants.Images"),
         ):
             mock_arch_images.ARM64 = MagicMock()
@@ -2196,7 +2199,7 @@ class TestUpdateCpuArchRelatedConfig:
         }
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
-            patch("utilities.constants.ArchImages") as mock_arch_images,
+            patch("utilities.constants.images.ArchImages") as mock_arch_images,
             patch("utilities.constants.Images"),
         ):
             mock_arch_images.ARM64 = MagicMock()
@@ -2488,3 +2491,48 @@ class TestFilterHppTests:
 
         assert result == []
         config.hook.pytest_deselected.assert_called_once_with(items=[item_hpp])
+
+
+class TestFilterMultiarchTests:
+    """Test cases for filter_multiarch_tests function."""
+
+    @patch("utilities.pytest_utils.py_config", {"cluster_type": MULTIARCH})
+    def test_returns_all_items_on_multiarch_cluster(self):
+        """All tests pass through on heterogeneous (multiarch) clusters."""
+        item_multiarch = MagicMock()
+        item_multiarch.keywords = {"multiarch": True}
+        item_other = MagicMock()
+        item_other.keywords = {"storage": True}
+        items = [item_multiarch, item_other]
+        config = MagicMock()
+
+        result = filter_multiarch_tests(items=items, config=config)
+
+        assert result == items
+        config.hook.pytest_deselected.assert_not_called()
+
+    @patch("utilities.pytest_utils.py_config", {"cluster_type": AMD_64})
+    def test_removes_multiarch_tests_on_homogeneous_cluster(self):
+        """Multiarch-marked tests are deselected on homogeneous clusters."""
+        item_multiarch = MagicMock()
+        item_multiarch.keywords = {"multiarch": True}
+        item_other = MagicMock()
+        item_other.keywords = {"storage": True}
+        config = MagicMock()
+
+        result = filter_multiarch_tests(items=[item_multiarch, item_other], config=config)
+
+        assert result == [item_other]
+        config.hook.pytest_deselected.assert_called_once_with(items=[item_multiarch])
+
+    @patch("utilities.pytest_utils.py_config", {"cluster_type": AMD_64})
+    def test_no_deselection_when_no_multiarch_tests(self):
+        """No deselection occurs when no tests have the multiarch marker."""
+        item_other = MagicMock()
+        item_other.keywords = {"storage": True}
+        config = MagicMock()
+
+        result = filter_multiarch_tests(items=[item_other], config=config)
+
+        assert result == [item_other]
+        config.hook.pytest_deselected.assert_not_called()

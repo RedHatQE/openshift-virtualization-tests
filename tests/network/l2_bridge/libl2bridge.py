@@ -6,6 +6,7 @@ from ipaddress import ip_interface
 from typing import Final
 
 from kubernetes.dynamic import DynamicClient
+from kubernetes.dynamic.client import ResourceField
 from ocp_resources.resource import ResourceEditor
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
@@ -24,15 +25,10 @@ from tests.network.libs.cloudinit import primary_iface_cloud_init
 from tests.network.libs.connectivity import ARP_ISOLATION_SYSCTL_CMD
 from tests.network.utils import update_cloud_init_extra_user_data
 from utilities import console
-from utilities.constants import (
-    KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
-    LINUX_BRIDGE,
-    NODE_TYPE_WORKER_LABEL,
-    SRIOV,
-    TIMEOUT_1MIN,
-    TIMEOUT_2MIN,
-    TIMEOUT_5SEC,
-)
+from utilities.constants.cluster import NODE_TYPE_WORKER_LABEL
+from utilities.constants.components import KUBEMACPOOL_MAC_CONTROLLER_MANAGER
+from utilities.constants.networking import LINUX_BRIDGE, SRIOV
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_2MIN, TIMEOUT_5SEC
 from utilities.infra import get_pod_by_name_prefix
 from utilities.network import (
     cloud_init_network_data,
@@ -207,12 +203,12 @@ def create_bridge_interface_for_hot_plug(
         yield br
 
 
-def set_secondary_static_ip_address(vm, ipv4_address, vmi_interface):
-    guest_vm_interface = get_guest_vm_interface_name_by_vmi_interface_name(
-        vm=vm,
-        vm_interface_name=vmi_interface,
+def set_secondary_static_ip_address(
+    vm: VirtualMachineForTests, ipv4_address: str, vmi_interface: ResourceField
+) -> None:
+    console_command = (
+        f"sudo ip addr add {ipv4_address}/{IPV4_ADDRESS_SUBNET_PREFIX_LENGTH} dev {vmi_interface.interfaceName}"
     )
-    console_command = f"sudo ip addr add {ipv4_address}/{IPV4_ADDRESS_SUBNET_PREFIX_LENGTH} dev {guest_vm_interface}"
     LOGGER.info(f"Sending command to {vm.name} console: '{console_command}'")
     with console.Console(vm=vm) as vm_console:
         vm_console.sendline(console_command)
@@ -220,8 +216,8 @@ def set_secondary_static_ip_address(vm, ipv4_address, vmi_interface):
     # Verify the IP address was set successfully.
     # The function fails on timeout if the interface or its address are not found,
     # so there's no need to check its return code.
-    hot_plugged_interface_ip = lookup_iface_status_ip(vm=vm, iface_name=vmi_interface, ip_family=4)
-    LOGGER.info(f"{vm.name}/{vmi_interface} set with IP address {hot_plugged_interface_ip}")
+    hot_plugged_interface_ip = lookup_iface_status_ip(vm=vm, iface_name=vmi_interface.name, ip_family=4)
+    LOGGER.info(f"{vm.name}/{vmi_interface.name} set with IP address {hot_plugged_interface_ip}")
 
 
 def hot_plug_interface_and_set_address(
@@ -241,18 +237,10 @@ def hot_plug_interface_and_set_address(
     set_secondary_static_ip_address(
         vm=vm,
         ipv4_address=ipv4_address,
-        vmi_interface=iface.name,
+        vmi_interface=iface,
     )
 
     return iface
-
-
-def get_guest_vm_interface_name_by_vmi_interface_name(vm, vm_interface_name):
-    vmi_interfaces = vm.vmi.interfaces
-    for interface in vmi_interfaces:
-        if interface["name"] == vm_interface_name:
-            return interface["interfaceName"]
-    raise VMInterfaceStatusNotFoundError(f"Interface {vm_interface_name} not found in VM {vm.name} status")
 
 
 @contextlib.contextmanager

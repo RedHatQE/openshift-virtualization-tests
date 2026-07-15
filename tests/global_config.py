@@ -7,42 +7,56 @@ from ocp_resources.virtual_machine import VirtualMachine
 
 from utilities.architecture import get_cluster_architecture
 from utilities.artifactory import BASE_ARTIFACTORY_LOCATION
-from utilities.constants import (
+from utilities.constants import Images
+from utilities.constants.aaq import (
     AAQ_VIRTUAL_RESOURCES,
     AAQ_VMI_POD_USAGE,
-    ALL_CNV_CRDS,
+)
+from utilities.constants.architecture import MULTIARCH
+from utilities.constants.components import (
     ALL_CNV_DAEMONSETS,
     ALL_CNV_DEPLOYMENTS,
     ALL_CNV_PODS,
     ALL_HCO_RELATED_OBJECTS,
-    BREW_REGISTRY_SOURCE,
-    CENTOS_STREAM9_PREFERENCE,
-    CENTOS_STREAM10_PREFERENCE,
     CNV_OPERATORS,
     CNV_PROMETHEUS_RULES,
     HCO_CATALOG_SOURCE,
-    HPP_CAPABILITIES,
-    LINUX_BRIDGE,
-    MONITORING_METRICS,
-    MULTIARCH,
-    OS_FLAVOR_FEDORA,
-    OVS_BRIDGE,
+    VM_CONSOLE_PROXY_CLUSTER_RESOURCES,
+    VM_CONSOLE_PROXY_NAMESPACE_RESOURCES,
+)
+from utilities.constants.hco import (
+    ALL_CNV_CRDS,
     PRODUCTION_CATALOG_SOURCE,
+    TLS_CUSTOM_POLICY,
+    TLS_OLD_POLICY,
+)
+from utilities.constants.images import OS_FLAVOR_FEDORA
+from utilities.constants.instance_types import (
+    CENTOS_STREAM9_PREFERENCE,
+    CENTOS_STREAM10_PREFERENCE,
     RHEL8_PREFERENCE,
     RHEL9_PREFERENCE,
     RHEL10_PREFERENCE,
+    U1_MEDIUM_STR,
+)
+from utilities.constants.monitoring import MONITORING_METRICS
+from utilities.constants.namespaces import NamespacesNames
+from utilities.constants.networking import (
+    LINUX_BRIDGE,
+    OVS_BRIDGE,
+)
+from utilities.constants.storage import (
+    BREW_REGISTRY_SOURCE,
+    HPP_CAPABILITIES,
+    StorageClassNames,
+)
+from utilities.constants.tekton import (
     TEKTON_AVAILABLE_PIPELINEREF,
     TEKTON_AVAILABLE_TASKS,
+)
+from utilities.constants.timeouts import (
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
-    TLS_CUSTOM_POLICY,
-    TLS_OLD_POLICY,
-    U1_MEDIUM_STR,
-    VM_CONSOLE_PROXY_CLUSTER_RESOURCES,
-    VM_CONSOLE_PROXY_NAMESPACE_RESOURCES,
-    Images,
-    NamespacesNames,
-    StorageClassNames,
 )
 from utilities.storage import HppCsiStorageClass
 

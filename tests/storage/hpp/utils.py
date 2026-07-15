@@ -14,14 +14,9 @@ from ocp_resources.resource import ResourceEditor
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from utilities.artifactory import get_http_image_url
-from utilities.constants import (
-    HOSTPATH_PROVISIONER_CSI,
-    HOSTPATH_PROVISIONER_OPERATOR,
-    HPP_POOL,
-    TIMEOUT_1MIN,
-    TIMEOUT_2MIN,
-    Images,
-)
+from utilities.constants import Images
+from utilities.constants.components import HOSTPATH_PROVISIONER_CSI, HOSTPATH_PROVISIONER_OPERATOR, HPP_POOL
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_2MIN
 from utilities.infra import (
     ExecCommandOnPod,
     get_resources_by_name_prefix,
@@ -113,10 +108,12 @@ def cirros_dv_on_hpp(dv_name, storage_class, namespace):
     with create_dv(
         dv_name=dv_name,
         namespace=namespace.name,
+        source="http",
         url=get_http_image_url(image_directory=Images.Cirros.DIR, image_name=Images.Cirros.QCOW2_IMG),
         size=Images.Cirros.DEFAULT_DV_SIZE,
         storage_class=storage_class,
         client=namespace.client,
+        use_artifactory=True,
     ) as dv:
         yield dv
 

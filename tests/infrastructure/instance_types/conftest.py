@@ -22,14 +22,15 @@ from utilities.artifactory import (
     get_artifactory_secret,
     get_test_artifact_server_url,
 )
-from utilities.constants import (
-    CONTAINER_DISK_IMAGE_PATH_STR,
+from utilities.constants import Images
+from utilities.constants.images import (
     OS_FLAVOR_RHEL,
     OS_FLAVOR_WIN_CONTAINER_DISK,
-    TIMEOUT_15MIN,
-    Images,
 )
+from utilities.constants.os_matrix import CONTAINER_DISK_IMAGE_PATH_STR
+from utilities.constants.timeouts import TIMEOUT_15MIN
 from utilities.storage import (
+    construct_datavolume_source_dict,
     create_dummy_first_consumer_pod,
     data_volume_template_with_source_ref_dict,
     generate_data_source_dict,
@@ -158,13 +159,17 @@ def latest_windows_data_volume(
         name="latest-windows",
         namespace=windows_test_images_namespace_role_binding.namespace,
         api_name="storage",
-        source="registry",
+        source_dict=construct_datavolume_source_dict(
+            source="registry",
+            url=(
+                f"{get_test_artifact_server_url(schema='registry')}/"
+                f"{py_config['latest_windows_os_dict'][CONTAINER_DISK_IMAGE_PATH_STR]}"
+            ),
+            secret_name=windows_namespace_artifactory_secret_and_configmap["secret"].name,
+            cert_configmap_name=windows_namespace_artifactory_secret_and_configmap["config_map"].name,
+        ),
         size=Images.Windows.CONTAINER_DISK_DV_SIZE,
         storage_class=default_sc.name,
-        url=f"{get_test_artifact_server_url(schema='registry')}/"
-        f"{py_config['latest_windows_os_dict'][CONTAINER_DISK_IMAGE_PATH_STR]}",
-        secret=windows_namespace_artifactory_secret_and_configmap["secret"],
-        cert_configmap=windows_namespace_artifactory_secret_and_configmap["config_map"].name,
     )
     if windows_data_volume.exists:
         yield windows_data_volume

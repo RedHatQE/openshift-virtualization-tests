@@ -23,13 +23,9 @@ from tests.storage.utils import (
     get_file_url,
     wait_for_dv_condition_message,
 )
-from utilities.constants import (
-    QUARANTINED,
-    TIMEOUT_1MIN,
-    TIMEOUT_2MIN,
-    TIMEOUT_5MIN,
-    Images,
-)
+from utilities.constants import Images
+from utilities.constants.pytest import QUARANTINED
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_2MIN, TIMEOUT_5MIN
 from utilities.ssp import validate_os_info_vmi_vs_windows_os
 from utilities.storage import (
     ErrorMsg,
@@ -79,6 +75,7 @@ def test_empty_url(namespace, storage_class_name_scope_module, unprivileged_clie
             client=unprivileged_client,
             dv_name=f"cnv-674-{storage_class_name_scope_module}",
             namespace=namespace.name,
+            source="http",
             url="",
             size=DEFAULT_DV_SIZE,
             storage_class=storage_class_name_scope_module,
@@ -183,10 +180,11 @@ def test_successful_import_basic_auth(
         client=admin_client,
         dv_name="import-http-dv",
         namespace=namespace.name,
+        source="http",
         url=get_file_url(url=images_internal_http_server["http_auth"], file_name=file_name),
         content_type=content_type,
         size=DEFAULT_DV_SIZE,
-        secret=internal_http_secret,
+        secret_name=internal_http_secret.name,
         storage_class=storage_class_name_scope_module,
     ) as dv:
         dv.wait_for_dv_success()
@@ -269,7 +267,7 @@ def test_certconfigmap_incorrect_cert(
                 "source": HTTP,
                 "image": ALPINE_QCOW2_IMG,
                 "dv_size": DEFAULT_DV_SIZE,
-                "cert_configmap": "wrong_name",
+                "cert_configmap_name": "wrong_name",
                 "wait": False,
             },
             marks=pytest.mark.polarion("CNV-2815"),

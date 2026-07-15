@@ -17,6 +17,7 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_VM_DISK_ALLOCATED_SIZE_BYTES,
     KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_COUNT_SUCCEEDED,
     KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
+    KUBEVIRT_VMI_SYNC_TOTAL,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
     SUM_KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_BUCKET_SUCCEEDED,
 )
@@ -24,21 +25,25 @@ from tests.observability.metrics.utils import (
     compare_metric_file_system_values_with_vm_file_system_values,
     get_pvc_size_bytes,
     timestamp_to_seconds,
+    validate_metric_value_cleared,
     validate_metric_value_greater_than_initial_value,
+    validate_vmi_sync_total_after_migration,
+    validate_vmi_sync_total_reported_and_positive,
     validate_vnic_info,
 )
-from tests.observability.utils import validate_metrics_value
-from utilities.constants import (
+from utilities.constants.pytest import QUARANTINED
+from utilities.constants.storage import (
     CAPACITY,
-    MIGRATION_POLICY_VM_LABEL,
-    QUARANTINED,
+    USED,
+)
+from utilities.constants.timeouts import (
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
     TIMEOUT_30SEC,
-    USED,
 )
+from utilities.constants.virt import MIGRATION_POLICY_VM_LABEL
 from utilities.infra import get_node_selector_dict
-from utilities.monitoring import get_metrics_value
+from utilities.monitoring import get_metrics_value, validate_metrics_value
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 LOGGER = logging.getLogger(__name__)
@@ -461,7 +466,9 @@ class TestVmVnicInfo:
             ),
         ],
     )
-    def test_metric_kubevirt_vm_vnic_info_after_nad_swap(self, query):
+    def test_metric_kubevirt_vm_vnic_info_after_nad_swap(
+        self, prometheus, post_nad_swap_vm, expected_vnic_info_after_swap, query
+    ):
         """
         Test that vnic_info metric updates the network label after a NAD swap.
 
@@ -474,13 +481,17 @@ class TestVmVnicInfo:
 
         Steps:
             1. Swap the VM secondary network reference from NAD-A to NAD-B
-            2. Query vnic_info metric for the secondary interface
+            2. Wait for the live migration triggered by the swap to complete
+            3. Query vnic_info metric for the secondary interface
 
         Expected:
             - vnic_info labels match the VM spec after NAD swap
         """
-
-    test_metric_kubevirt_vm_vnic_info_after_nad_swap.__test__ = False
+        validate_vnic_info(
+            prometheus=prometheus,
+            vnic_info_to_compare=expected_vnic_info_after_swap,
+            metric_name=query.format(vm_name=post_nad_swap_vm.name),
+        )
 
 
 class TestVmiPhaseTransitionFromDeletion:
@@ -558,10 +569,8 @@ class TestVmiSyncTotal:
         - Prometheus access configured
     """
 
-    __test__ = False
-
     @pytest.mark.polarion("CNV-16271")
-    def test_kubevirt_vmi_sync_total(self):
+    def test_kubevirt_vmi_sync_total(self, prometheus, vm_for_migration_metrics_test):
         """
         Test that kubevirt_vmi_sync_total metric is reported by both
         virt-controller and virt-handler after a VM starts.
@@ -574,9 +583,16 @@ class TestVmiSyncTotal:
             - Two metric entries are returned — one from virt-controller
               and one from virt-handler — each with a value greater than 0
         """
+        validate_vmi_sync_total_reported_and_positive(
+            prometheus=prometheus,
+            metric_query=KUBEVIRT_VMI_SYNC_TOTAL.format(vm_name=vm_for_migration_metrics_test.name),
+        )
 
     @pytest.mark.polarion("CNV-16272")
-    def test_kubevirt_vmi_sync_total_increases_after_migration(self):
+    @pytest.mark.usefixtures("migration_succeeded_scope_class")
+    def test_kubevirt_vmi_sync_total_increases_after_migration(
+        self, prometheus, initial_vmi_sync_total_values, vm_for_migration_metrics_test
+    ):
         """
         Test that kubevirt_vmi_sync_total metric value increases after
         a VM live migration.
@@ -594,9 +610,15 @@ class TestVmiSyncTotal:
             - Metric values from both virt-controller and virt-handler
               are greater than the values recorded before migration
         """
+        validate_vmi_sync_total_after_migration(
+            prometheus=prometheus,
+            metric_query=KUBEVIRT_VMI_SYNC_TOTAL.format(vm_name=vm_for_migration_metrics_test.name),
+            initial_values=initial_vmi_sync_total_values,
+        )
 
     @pytest.mark.polarion("CNV-16273")
-    def test_kubevirt_vmi_sync_total_cleared_after_vm_deletion(self):
+    @pytest.mark.usefixtures("deleted_vmi_sync_total_vm")
+    def test_kubevirt_vmi_sync_total_cleared_after_vm_deletion(self, prometheus, vm_for_migration_metrics_test):
         """
         Test that kubevirt_vmi_sync_total metric entry is removed
         after the VM is deleted.
@@ -612,3 +634,7 @@ class TestVmiSyncTotal:
         Expected:
             - Metric value is None
         """
+        validate_metric_value_cleared(
+            prometheus=prometheus,
+            metric_name=KUBEVIRT_VMI_SYNC_TOTAL.format(vm_name=vm_for_migration_metrics_test.name),
+        )

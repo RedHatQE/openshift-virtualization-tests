@@ -11,18 +11,14 @@ from tests.storage.utils import (
     assert_use_populator,
     create_windows_vm_validate_guest_agent_info,
 )
-from utilities.constants import (
-    OS_FLAVOR_FEDORA,
-    OS_FLAVOR_WINDOWS,
-    TIMEOUT_1MIN,
-    TIMEOUT_40MIN,
-    Images,
-)
+from utilities.constants import Images
+from utilities.constants.images import OS_FLAVOR_FEDORA, OS_FLAVOR_WINDOWS
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_40MIN
 from utilities.storage import (
     check_disk_count_in_vm,
     create_dv,
     create_vm_from_dv,
-    data_volume_template_dict,
+    data_volume_template_dict_with_pvc_source,
     get_dv_size_from_datasource,
     overhead_size_for_dv,
     sc_volume_binding_mode_is_wffc,
@@ -52,7 +48,7 @@ def create_vm_from_clone_dv_template(
         os_flavor=OS_FLAVOR_FEDORA,
         client=client,
         memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
-        data_volume_template=data_volume_template_dict(
+        data_volume_template=data_volume_template_dict_with_pvc_source(
             target_dv_name=dv_name,
             target_dv_namespace=namespace_name,
             source_dv=source_dv,
@@ -89,7 +85,8 @@ def test_successful_clone_of_large_image(
         dv_name="dv-target",
         namespace=namespace.name,
         size=data_volume_multi_storage_scope_function.size,
-        source_pvc=data_volume_multi_storage_scope_function.name,
+        source_pvc_name=data_volume_multi_storage_scope_function.name,
+        source_pvc_namespace=data_volume_multi_storage_scope_function.namespace,
         storage_class=data_volume_multi_storage_scope_function.storage_class,
         client=namespace.client,
     ) as cdv:
@@ -177,7 +174,8 @@ def test_successful_vm_from_cloned_dv_windows(
         dv_name="dv-target",
         namespace=data_volume_multi_storage_scope_function.namespace,
         size=data_volume_multi_storage_scope_function.size,
-        source_pvc=data_volume_multi_storage_scope_function.name,
+        source_pvc_name=data_volume_multi_storage_scope_function.name,
+        source_pvc_namespace=data_volume_multi_storage_scope_function.namespace,
         storage_class=data_volume_multi_storage_scope_function.storage_class,
     ) as cdv:
         cdv.wait_for_dv_success(timeout=WINDOWS_CLONE_TIMEOUT)
@@ -202,7 +200,7 @@ def test_successful_vm_from_cloned_dv_windows(
         ),
         pytest.param(
             {
-                "dv_name": "dv-source-win",
+                "dv_name": f"dv-source-{OS_FLAVOR_WINDOWS}",
                 "image": f"{Images.Windows.DIR}/{Images.Windows.WIN11_IMG}",
                 "dv_size": Images.Windows.DEFAULT_DV_SIZE,
             },
@@ -224,11 +222,12 @@ def test_successful_snapshot_clone(
         dv_name="dv-target",
         namespace=namespace,
         size=data_volume_snapshot_capable_storage_scope_function.size,
-        source_pvc=data_volume_snapshot_capable_storage_scope_function.name,
+        source_pvc_name=data_volume_snapshot_capable_storage_scope_function.name,
+        source_pvc_namespace=data_volume_snapshot_capable_storage_scope_function.namespace,
         storage_class=storage_class,
     ) as cdv:
         cdv.wait_for_dv_success()
-        if OS_FLAVOR_WINDOWS not in data_volume_snapshot_capable_storage_scope_function.url.split("/")[-1]:
+        if OS_FLAVOR_WINDOWS not in data_volume_snapshot_capable_storage_scope_function.name:
             with create_vm_from_dv(
                 client=unprivileged_client,
                 dv=cdv,

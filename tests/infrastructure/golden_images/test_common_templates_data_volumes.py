@@ -3,7 +3,8 @@ from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClu
 from pytest_testconfig import config as py_config
 
 from tests.os_params import FEDORA_LATEST, FEDORA_LATEST_LABELS, FEDORA_LATEST_OS
-from utilities.constants import U1_SMALL, Images
+from utilities.constants import Images
+from utilities.constants.instance_types import U1_SMALL
 from utilities.storage import data_volume_template_with_source_ref_dict
 from utilities.virt import VirtualMachineForTests, running_vm
 

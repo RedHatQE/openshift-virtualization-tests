@@ -19,7 +19,7 @@ from tests.storage.online_resize.utils import (
     vm_restore,
     wait_for_resize,
 )
-from utilities.constants import TIMEOUT_1MIN, TIMEOUT_4MIN, TIMEOUT_5SEC
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_4MIN, TIMEOUT_5SEC
 from utilities.storage import add_dv_to_vm, create_dv, vm_snapshot
 from utilities.virt import migrate_vm_and_verify, running_vm
 
@@ -105,7 +105,8 @@ def test_disk_expand_then_clone_fail(
         client=unprivileged_client,
         size=RHEL_DV_SIZE,
         storage_class=rhel_dv_for_online_resize.storage_class,
-        source_pvc=rhel_dv_for_online_resize.name,
+        source_pvc_name=rhel_dv_for_online_resize.name,
+        source_pvc_namespace=rhel_dv_for_online_resize.namespace,
     ) as dv:
         for sample in TimeoutSampler(
             wait_timeout=TIMEOUT_1MIN,
@@ -150,7 +151,8 @@ def test_disk_expand_then_clone_success(
         client=unprivileged_client,
         size=rhel_dv_for_online_resize.pvc.instance.spec.resources.requests.storage,
         storage_class=rhel_dv_for_online_resize.storage_class,
-        source_pvc=rhel_dv_for_online_resize.name,
+        source_pvc_name=rhel_dv_for_online_resize.name,
+        source_pvc_namespace=rhel_dv_for_online_resize.namespace,
     ) as cdv:
         cdv.wait_for_condition(
             condition=DataVolume.Condition.Type.READY,

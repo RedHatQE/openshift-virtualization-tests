@@ -19,7 +19,8 @@ from tests.network.l2_bridge.libl2bridge import (
     set_secondary_static_ip_address,
     wait_for_interface_hot_plug_completion,
 )
-from utilities.constants import FLAT_OVERLAY_STR, QUARANTINED, SRIOV
+from utilities.constants.networking import FLAT_OVERLAY_STR, SRIOV
+from utilities.constants.pytest import QUARANTINED
 from utilities.network import (
     assert_ping_successful,
     network_nad,
@@ -109,7 +110,7 @@ def hot_plugged_interface_with_address(running_vm_for_nic_hot_plug, index_number
     set_secondary_static_ip_address(
         vm=running_vm_for_nic_hot_plug,
         ipv4_address=random_ipv4_address(net_seed=0, host_address=next(index_number)),
-        vmi_interface=hot_plugged_interface.name,
+        vmi_interface=hot_plugged_interface,
     )
 
 
@@ -150,7 +151,7 @@ def hot_plugged_second_interface_with_address(
     set_secondary_static_ip_address(
         vm=running_vm_with_secondary_and_hot_plugged_interfaces,
         ipv4_address=random_ipv4_address(net_seed=0, host_address=next(index_number)),
-        vmi_interface=hot_plugged_interface_on_vm_created_with_secondary_interface.name,
+        vmi_interface=hot_plugged_interface_on_vm_created_with_secondary_interface,
     )
 
 

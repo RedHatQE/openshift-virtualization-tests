@@ -26,12 +26,12 @@ if TYPE_CHECKING:
 import utilities.infra
 import utilities.storage
 import utilities.virt
-from utilities.constants import (
-    DEFAULT_RESOURCE_CONDITIONS,
-    EIGHT_CPU_SOCKETS,
-    FOUR_GI_MEMORY,
+from utilities.constants.components import (
     SSP_KUBEVIRT_HYPERCONVERGED,
     SSP_OPERATOR,
+)
+from utilities.constants.hco import DEFAULT_RESOURCE_CONDITIONS
+from utilities.constants.timeouts import (
     TCP_TIMEOUT_30SEC,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
@@ -39,6 +39,10 @@ from utilities.constants import (
     TIMEOUT_5SEC,
     TIMEOUT_6MIN,
     TIMEOUT_10SEC,
+)
+from utilities.constants.virt import (
+    EIGHT_CPU_SOCKETS,
+    FOUR_GI_MEMORY,
 )
 
 LOGGER = logging.getLogger(__name__)

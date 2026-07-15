@@ -34,11 +34,19 @@ from utilities.artifactory import (
     get_artifactory_secret,
     get_test_artifact_server_url,
 )
-from utilities.constants import (
+from utilities.constants import Images
+from utilities.constants.cluster import NODE_STR
+from utilities.constants.components import (
+    VIRT_CONTROLLER,
+    VIRT_HANDLER,
+)
+from utilities.constants.images import OS_FLAVOR_WINDOWS
+from utilities.constants.storage import (
     CAPACITY,
-    NODE_STR,
-    OS_FLAVOR_WINDOWS,
     REGISTRY_STR,
+    USED,
+)
+from utilities.constants.timeouts import (
     TIMEOUT_1MIN,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
@@ -50,11 +58,9 @@ from utilities.constants import (
     TIMEOUT_20SEC,
     TIMEOUT_30SEC,
     TIMEOUT_40MIN,
-    USED,
-    VIRT_HANDLER,
-    Images,
 )
 from utilities.monitoring import get_metrics_value
+from utilities.storage import construct_datavolume_source_dict
 from utilities.virt import VirtualMachineForTests, running_vm
 
 LOGGER = logging.getLogger(__name__)
@@ -595,21 +601,21 @@ def validate_vnic_info(prometheus: Prometheus, vnic_info_to_compare: dict[str, s
         func=prometheus.query,
         query=metric_name,
     )
-    sample = None
+    mismatch_vnic_info = None
     try:
         for sample in samples:
             if sample and (result := sample.get("data", {}).get("result")):
                 vnic_info_metric_result = result[0].get("metric")
-                break
+                mismatch_vnic_info = {}
+                for info, expected_value in vnic_info_to_compare.items():
+                    actual_value = vnic_info_metric_result.get(info)
+                    if actual_value != expected_value:
+                        mismatch_vnic_info[info] = {f"Expected: {expected_value}", f"Actual: {actual_value}"}
+                if not mismatch_vnic_info:
+                    return
     except TimeoutExpiredError:
-        LOGGER.error(f"Metric value of: {metric_name} is: {sample}, should not be empty.")
+        LOGGER.error(f"There is a mismatch between expected and actual results:\n {mismatch_vnic_info}")
         raise
-    mismatch_vnic_info = {}
-    for info, expected_value in vnic_info_to_compare.items():
-        actual_value = vnic_info_metric_result.get(info)
-        if actual_value != expected_value:
-            mismatch_vnic_info[info] = {f"Expected: {expected_value}", f"Actual: {actual_value}"}
-    assert not mismatch_vnic_info, f"There is a mismatch between expected and actual results:\n {mismatch_vnic_info}"
 
 
 def get_metric_labels_non_empty_value(prometheus: Prometheus, metric_name: str) -> dict[str, str]:
@@ -656,12 +662,14 @@ def create_windows11_wsl2_vm(
         name=dv_name,
         namespace=namespace,
         api_name="storage",
-        source=REGISTRY_STR,
+        source_dict=construct_datavolume_source_dict(
+            source=REGISTRY_STR,
+            url=f"{get_test_artifact_server_url(schema=REGISTRY_STR)}/docker-local/windows-qe/win_11:virtio",
+            secret_name=artifactory_secret.name,
+            cert_configmap_name=artifactory_config_map.name,
+        ),
         size=Images.Windows.CONTAINER_DISK_DV_SIZE,
         storage_class=storage_class,
-        url=f"{get_test_artifact_server_url(schema=REGISTRY_STR)}/docker-local/windows-qe/win_11:virtio",
-        secret=artifactory_secret,
-        cert_configmap=artifactory_config_map.name,
     )
     dv.to_dict()
     base_preference = VirtualMachineClusterPreference(client=client, name=windows_preference_name)
@@ -813,3 +821,115 @@ def validate_values_from_kube_application_aware_resourcequota_metric(
             return metric_sample
 
     raise TimeoutError("Timed out waiting for Prometheus metrics to match expected values.")
+
+
+def validate_vmi_sync_total_reported_and_positive(
+    prometheus: Prometheus,
+    metric_query: str,
+) -> list[dict[str, str]]:
+    """Polls until kubevirt_vmi_sync_total has positive values from both virt-controller and virt-handler.
+
+    Args:
+        prometheus: Prometheus client instance.
+        metric_query: PromQL query for kubevirt_vmi_sync_total.
+
+    Returns:
+        List of Prometheus result dicts from the first passing sample.
+
+    Raises:
+        TimeoutExpiredError: If the metric does not stabilize within TIMEOUT_4MIN.
+    """
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_4MIN,
+        sleep=TIMEOUT_15SEC,
+        func=prometheus.query_sampler,
+        query=metric_query,
+    )
+    sample = None
+    try:
+        for sample in samples:
+            if not sample or len(sample) < 2:
+                continue
+            pods = {result["metric"]["pod"] for result in sample}
+            has_controller = any(pod.startswith(VIRT_CONTROLLER) for pod in pods)
+            has_handler = any(pod.startswith(VIRT_HANDLER) for pod in pods)
+            all_positive = all(float(result["value"][1]) > 0 for result in sample)
+            if has_controller and has_handler and all_positive:
+                return sample
+    except TimeoutExpiredError:
+        LOGGER.error(f"Expected entries from both virt-controller and virt-handler, got: {sample}")
+        raise
+    return []
+
+
+def validate_vmi_sync_total_after_migration(
+    prometheus: Prometheus,
+    metric_query: str,
+    initial_values: dict[str, float],
+) -> None:
+    """Polls until virt-controller values increase and a new virt-handler pod reports a positive value.
+
+    Args:
+        prometheus: Prometheus client instance.
+        metric_query: PromQL query for kubevirt_vmi_sync_total.
+        initial_values: Pod-to-value mapping captured before migration.
+
+    Raises:
+        TimeoutExpiredError: If the expected post-migration pattern is not observed within TIMEOUT_4MIN.
+    """
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_4MIN,
+        sleep=TIMEOUT_15SEC,
+        func=prometheus.query_sampler,
+        query=metric_query,
+    )
+    current_values = None
+    try:
+        for sample in samples:
+            if sample:
+                current_values = {result["metric"]["pod"]: float(result["value"][1]) for result in sample}
+                controller_same_and_increased = all(
+                    pod in current_values and current_values[pod] > value
+                    for pod, value in initial_values.items()
+                    if pod.startswith(VIRT_CONTROLLER)
+                )
+                new_handler_with_value = any(
+                    pod.startswith(VIRT_HANDLER) and pod not in initial_values and value > 0
+                    for pod, value in current_values.items()
+                )
+                if controller_same_and_increased and new_handler_with_value:
+                    return
+    except TimeoutExpiredError:
+        LOGGER.error(f"Post-migration validation failed. Initial: {initial_values}, current: {current_values}")
+        raise
+
+
+def validate_metric_value_cleared(
+    prometheus: Prometheus,
+    metric_name: str,
+    timeout: int = TIMEOUT_4MIN,
+) -> None:
+    """Polls until the metric returns no samples or all values are zero.
+
+    Args:
+        prometheus: Prometheus client instance.
+        metric_name: PromQL query for the metric to check.
+        timeout: Maximum wait time in seconds.
+
+    Raises:
+        TimeoutExpiredError: If the metric still has non-zero values after timeout.
+    """
+    samples = TimeoutSampler(
+        wait_timeout=timeout,
+        sleep=TIMEOUT_15SEC,
+        func=prometheus.query_sampler,
+        query=metric_name,
+    )
+    sample = None
+    try:
+        for sample in samples:
+            if not sample or all(result["value"][1] == "0" for result in sample):
+                return
+    except TimeoutExpiredError:
+        LOGGER.error(f"Metric {metric_name} still has non-zero values: {sample}")
+        raise

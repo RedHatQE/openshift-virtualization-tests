@@ -5,7 +5,12 @@ from kubernetes.dynamic import DynamicClient
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutSampler
 
-from utilities.constants import HYPERV_FEATURES_LABELS_DOM_XML, TCP_TIMEOUT_30SEC, TIMEOUT_15SEC, TIMEOUT_90SEC
+from utilities.constants.timeouts import (
+    TCP_TIMEOUT_30SEC,
+    TIMEOUT_15SEC,
+    TIMEOUT_90SEC,
+)
+from utilities.constants.virt import HYPERV_FEATURES_LABELS_DOM_XML
 from utilities.virt import VirtualMachineForTests
 
 

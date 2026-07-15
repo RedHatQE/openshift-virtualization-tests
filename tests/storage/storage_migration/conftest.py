@@ -1,3 +1,4 @@
+import contextlib
 import shlex
 
 import pytest
@@ -14,8 +15,9 @@ from pyhelper_utils.shell import run_ssh_commands
 from tests.storage.storage_migration.constants import (
     CONTENT,
     FILE_BEFORE_STORAGE_MIGRATION,
-    HOTPLUGGED_DEVICE,
-    MOUNT_HOTPLUGGED_DEVICE_PATH,
+    HOTPLUGGED_DEVICES,
+    MOUNT_HOTPLUGGED_DEVICE_PATHS,
+    NUM_HOTPLUG_DISKS,
     WINDOWS_FILE_WITH_PATH,
     WINDOWS_TEST_DIRECTORY_PATH,
 )
@@ -25,17 +27,13 @@ from tests.storage.storage_migration.utils import (
 )
 from tests.storage.utils import create_windows_directory, get_storage_class_for_storage_migration
 from utilities.artifactory import get_http_image_url
-from utilities.constants import (
-    OS_FLAVOR_FEDORA,
-    OS_FLAVOR_RHEL,
-    OS_FLAVOR_WINDOWS,
-    TIMEOUT_2MIN,
-    TIMEOUT_5SEC,
-    U1_SMALL,
-    Images,
-)
+from utilities.constants import Images
+from utilities.constants.images import OS_FLAVOR_FEDORA, OS_FLAVOR_RHEL, OS_FLAVOR_WINDOWS
+from utilities.constants.instance_types import U1_SMALL
+from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5SEC
 from utilities.infra import create_ns
 from utilities.storage import (
+    construct_datavolume_source_dict,
     create_dv,
     data_volume_template_with_source_ref_dict,
     virtctl_volume,
@@ -45,7 +43,6 @@ from utilities.storage import (
 )
 from utilities.virt import (
     VirtualMachineForTests,
-    fedora_vm_body,
     get_vm_boot_time,
     running_vm,
     vm_instance_from_template,
@@ -174,13 +171,15 @@ def vm_for_storage_class_migration_from_template_with_dv(
     dv = DataVolume(
         name="dv-rhel-imported",
         namespace=namespace.name,
-        source="http",
-        url=rhel_latest_os_params["rhel_image_path"],
+        source_dict=construct_datavolume_source_dict(
+            source="http",
+            url=rhel_latest_os_params["rhel_image_path"],
+            secret_name=artifactory_secret_scope_module.name,
+            cert_configmap_name=artifactory_config_map_scope_module.name,
+        ),
         size=Images.Rhel.DEFAULT_DV_SIZE,
         storage_class=source_storage_class,
         api_name="storage",
-        secret=artifactory_secret_scope_module,
-        cert_configmap=artifactory_config_map_scope_module.name,
     )
     dv.to_dict()
     with VirtualMachineForTests(
@@ -278,83 +277,97 @@ def deleted_old_dvs_of_stopped_vms(unprivileged_client, namespace):
 
 
 @pytest.fixture(scope="class")
-def blank_disk_dv_for_storage_migration(unprivileged_client, namespace, source_storage_class):
-    with create_dv(
-        source="blank",
-        dv_name="blank-dv-for-hotplug",
-        client=unprivileged_client,
-        namespace=namespace.name,
-        size=DEFAULT_DV_SIZE,
-        storage_class=source_storage_class,
-        consume_wffc=False,
-    ) as dv:
-        yield dv
+def blank_disk_dvs_for_storage_migration(unprivileged_client, namespace, source_storage_class):
+    with contextlib.ExitStack() as stack:
+        dvs = []
+        for idx in range(NUM_HOTPLUG_DISKS):
+            dv = stack.enter_context(
+                cm=create_dv(
+                    source="blank",
+                    dv_name=f"blank-dv-for-hotplug-{idx}",
+                    client=unprivileged_client,
+                    namespace=namespace.name,
+                    size=DEFAULT_DV_SIZE,
+                    storage_class=source_storage_class,
+                    consume_wffc=False,
+                )
+            )
+            dvs.append(dv)
+        yield dvs
 
 
 @pytest.fixture(scope="class")
-def fedora_vm_for_hotplug_and_storage_migration(unprivileged_client, namespace, cpu_for_migration):
-    name = "fedora-volume-hotplug-vm"
+def fedora_vm_for_hotplug_and_storage_migration(
+    unprivileged_client, namespace, fedora_data_source_scope_module, source_storage_class, cpu_for_migration
+):
     with VirtualMachineForTests(
-        name=name,
+        name="fedora-volume-hotplug-vm",
         namespace=namespace.name,
-        body=fedora_vm_body(name=name),
-        cpu_model=cpu_for_migration,
         client=unprivileged_client,
+        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL, client=unprivileged_client),
+        vm_preference=VirtualMachineClusterPreference(name=OS_FLAVOR_FEDORA, client=unprivileged_client),
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=fedora_data_source_scope_module,
+            storage_class=source_storage_class,
+        ),
+        cpu_model=cpu_for_migration,
     ) as vm:
         running_vm(vm=vm)
         yield vm
 
 
 @pytest.fixture(scope="class")
-def vm_for_storage_class_migration_with_hotplugged_volume(
-    namespace, blank_disk_dv_for_storage_migration, fedora_vm_for_hotplug_and_storage_migration
+def vm_for_storage_class_migration_with_hotplugged_volumes(
+    namespace, blank_disk_dvs_for_storage_migration, fedora_vm_for_hotplug_and_storage_migration
 ):
-    with virtctl_volume(
-        action="add",
-        namespace=namespace.name,
-        vm_name=fedora_vm_for_hotplug_and_storage_migration.name,
-        volume_name=blank_disk_dv_for_storage_migration.name,
-        persist=True,
-    ) as res:
-        status, out, err = res
-        assert status, f"Failed to add volume to VM, out: {out}, err: {err}."
-        wait_for_vm_volume_ready(
-            vm=fedora_vm_for_hotplug_and_storage_migration,
-            volume_name=blank_disk_dv_for_storage_migration.name,
-        )
+    with contextlib.ExitStack() as stack:
+        for dv in blank_disk_dvs_for_storage_migration:
+            status, out, err = stack.enter_context(
+                cm=virtctl_volume(
+                    action="add",
+                    namespace=namespace.name,
+                    vm_name=fedora_vm_for_hotplug_and_storage_migration.name,
+                    volume_name=dv.name,
+                    persist=True,
+                )
+            )
+            assert status, f"Failed to add volume {dv.name} to VM, out: {out}, err: {err}."
+            wait_for_vm_volume_ready(
+                vm=fedora_vm_for_hotplug_and_storage_migration,
+                volume_name=dv.name,
+            )
         yield fedora_vm_for_hotplug_and_storage_migration
 
 
 @pytest.fixture(scope="class")
-def vm_with_mounted_hotplugged_disk(vm_for_storage_class_migration_with_hotplugged_volume):
-    # Mount the disk to the VM
-    run_ssh_commands(
-        host=vm_for_storage_class_migration_with_hotplugged_volume.ssh_exec,
-        commands=[
-            shlex.split(cmd)
-            for cmd in [
-                f"sudo mkfs.ext4 {HOTPLUGGED_DEVICE}",
-                f"sudo mkdir {MOUNT_HOTPLUGGED_DEVICE_PATH}",
-                f"sudo mount {HOTPLUGGED_DEVICE} {MOUNT_HOTPLUGGED_DEVICE_PATH}",
-            ]
-        ],
-        wait_timeout=TIMEOUT_2MIN,
-        sleep=TIMEOUT_5SEC,
-    )
-    yield vm_for_storage_class_migration_with_hotplugged_volume
+def vm_with_mounted_hotplugged_disks(vm_for_storage_class_migration_with_hotplugged_volumes):
+    for device, mount_path in zip(HOTPLUGGED_DEVICES, MOUNT_HOTPLUGGED_DEVICE_PATHS, strict=True):
+        run_ssh_commands(
+            host=vm_for_storage_class_migration_with_hotplugged_volumes.ssh_exec,
+            commands=[
+                shlex.split(cmd)
+                for cmd in [
+                    f"sudo mkfs.ext4 {device}",
+                    f"sudo mkdir -p {mount_path}",
+                    f"sudo mount {device} {mount_path}",
+                ]
+            ],
+            wait_timeout=TIMEOUT_2MIN,
+            sleep=TIMEOUT_5SEC,
+        )
+    yield vm_for_storage_class_migration_with_hotplugged_volumes
 
 
 @pytest.fixture(scope="class")
-def written_file_to_the_mounted_hotplugged_disk(vm_with_mounted_hotplugged_disk):
-    run_ssh_commands(
-        host=vm_with_mounted_hotplugged_disk.ssh_exec,
-        commands=shlex.split(
-            f"echo '{CONTENT}' | sudo tee {MOUNT_HOTPLUGGED_DEVICE_PATH}/{FILE_BEFORE_STORAGE_MIGRATION}"
-        ),
-        wait_timeout=TIMEOUT_2MIN,
-        sleep=TIMEOUT_5SEC,
-    )
-    yield vm_with_mounted_hotplugged_disk
+def written_files_to_mounted_hotplugged_disks(vm_with_mounted_hotplugged_disks):
+    for mount_path in MOUNT_HOTPLUGGED_DEVICE_PATHS:
+        run_ssh_commands(
+            host=vm_with_mounted_hotplugged_disks.ssh_exec,
+            commands=shlex.split(f"echo '{CONTENT}' | sudo tee {mount_path}/{FILE_BEFORE_STORAGE_MIGRATION}"),
+            wait_timeout=TIMEOUT_2MIN,
+            sleep=TIMEOUT_5SEC,
+        )
+    yield vm_with_mounted_hotplugged_disks
 
 
 @pytest.fixture(scope="class")
@@ -370,14 +383,16 @@ def windows_vm_with_vtpm_for_storage_migration(
         name="windows-11-dv",
         namespace=namespace.name,
         storage_class=source_storage_class,
-        source="http",
-        # Using WSL image to avoid the issue of the Windows VM not being able to boot
-        url=get_http_image_url(image_directory=Images.Windows.DIR, image_name=Images.Windows.WIN11_WSL2_IMG),
+        source_dict=construct_datavolume_source_dict(
+            source="http",
+            # Using WSL image to avoid the issue of the Windows VM not being able to boot
+            url=get_http_image_url(image_directory=Images.Windows.DIR, image_name=Images.Windows.WIN11_WSL2_IMG),
+            secret_name=artifactory_secret_scope_module.name,
+            cert_configmap_name=artifactory_config_map_scope_module.name,
+        ),
         size=Images.Windows.DEFAULT_DV_SIZE,
         client=unprivileged_client,
         api_name="storage",
-        secret=artifactory_secret_scope_module,
-        cert_configmap=artifactory_config_map_scope_module.name,
     )
     dv.to_dict()
     with VirtualMachineForTests(

@@ -18,10 +18,12 @@ from tests.virt.cluster.vm_cloning.utils import (
     assert_target_vm_has_new_pvc_disks,
     check_if_files_present_after_cloning,
 )
-from utilities.constants import RHEL_WITH_INSTANCETYPE_AND_PREFERENCE, Images
+from utilities.constants import Images
+from utilities.constants.instance_types import RHEL_WITH_INSTANCETYPE_AND_PREFERENCE
 from utilities.storage import (
     add_dv_to_vm,
     check_disk_count_in_vm,
+    construct_datavolume_source_dict,
 )
 from utilities.virt import (
     VirtualMachineForCloning,
@@ -53,7 +55,7 @@ def dummy_dv_dict_for_vm_cloning(client, namespace):
         name="dummy-dv-for-clone",
         client=client,
         namespace=namespace.name,
-        source="blank",
+        source_dict=construct_datavolume_source_dict(source="blank"),
         size="10Gi",
         storage_class=py_config["default_storage_class"],
         api_name="storage",

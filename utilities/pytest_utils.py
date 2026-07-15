@@ -22,16 +22,20 @@ from pytest_testconfig import config as py_config
 
 from utilities.architecture import get_cluster_architecture
 from utilities.bitwarden import get_cnv_tests_secret_by_name
-from utilities.constants import (
+from utilities.constants.architecture import (
     AMD_64,
+    MULTIARCH,
+    SUPPORTED_CPU_ARCHITECTURES,
+    SUPPORTED_MULTIARCH_OPTIONS,
+)
+from utilities.constants.cluster import (
     CNV_TEST_RUN_IN_PROGRESS,
     CNV_TEST_RUN_IN_PROGRESS_NS,
     CNV_TESTS_CONTAINER,
-    MULTIARCH,
     POD_SECURITY_NAMESPACE_LABELS,
-    SANITY_TESTS_FAILURE,
-    SUPPORTED_CPU_ARCHITECTURES,
-    SUPPORTED_MULTIARCH_OPTIONS,
+)
+from utilities.constants.pytest import SANITY_TESTS_FAILURE
+from utilities.constants.timeouts import (
     TIMEOUT_2MIN,
     TIMEOUT_5MIN,
 )
@@ -632,10 +636,9 @@ def update_cpu_arch_related_config(cpu_arch_option: str) -> None:
 
         # TODO: remove this when utilities modules are refactored
         import utilities.constants as constants_module  # noqa: PLC0415
+        from utilities.constants.images import ArchImages  # noqa: PLC0415
 
-        # Due to the way the constants module is structured, there's no way to set correctly Images value there
-        # This is due to change when constants (and other utilities modules) are refactored
-        constants_module.Images = getattr(constants_module.ArchImages, arch.upper())
+        constants_module.Images = getattr(ArchImages, arch.upper())
 
         if py_config["cluster_type"] == MULTIARCH:
             generate_common_template_matrix_dicts(os_dict=py_config["os_matrix"][arch], cpu_arch=arch)
@@ -646,6 +649,28 @@ def update_cpu_arch_related_config(cpu_arch_option: str) -> None:
                 generate_instance_type_matrix_dicts(os_dict=py_config, cpu_arch=arch)
             else:
                 generate_instance_type_matrix_dicts(os_dict=py_config)
+
+
+def filter_multiarch_tests(items: list[pytest.Item], config: pytest.Config) -> list[pytest.Item]:
+    """Deselect multiarch-marked tests on homogeneous clusters.
+
+    On heterogeneous clusters (cluster_type=MULTIARCH), all tests pass through unchanged.
+    On homogeneous clusters, tests marked with 'multiarch' are deselected and reported
+    via pytest_deselected so they appear in the session summary.
+
+    Args:
+        items: Collected test items.
+        config: Pytest config object, used to report deselected items.
+
+    Returns:
+        Filtered list of test items with multiarch tests removed on homogeneous clusters.
+    """
+    if py_config.get("cluster_type") == MULTIARCH:
+        return items
+    discard_tests, items_to_return = remove_tests_from_list(items=items, filter_str="multiarch")
+    if discard_tests:
+        config.hook.pytest_deselected(items=discard_tests)
+    return items_to_return
 
 
 def assert_incremental_classes_fully_collected(items: list[pytest.Item]) -> None:

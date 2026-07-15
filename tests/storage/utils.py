@@ -32,16 +32,10 @@ from utilities.artifactory import (
     get_artifactory_secret,
     get_http_image_url,
 )
-from utilities.constants import (
-    CDI_UPLOADPROXY,
-    LS_COMMAND,
-    TIMEOUT_2MIN,
-    TIMEOUT_5MIN,
-    TIMEOUT_5SEC,
-    TIMEOUT_20SEC,
-    TIMEOUT_30MIN,
-    Images,
-)
+from utilities.constants import Images
+from utilities.constants.cluster import LS_COMMAND
+from utilities.constants.components import CDI_UPLOADPROXY
+from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5MIN, TIMEOUT_5SEC, TIMEOUT_20SEC, TIMEOUT_30MIN
 from utilities.exceptions import DataVolumeConditionMessageNotFoundError
 from utilities.infra import (
     get_pod_by_name_prefix,
@@ -49,6 +43,7 @@ from utilities.infra import (
 from utilities.ssp import validate_os_info_vmi_vs_windows_os
 from utilities.storage import (
     PodWithPVC,
+    construct_datavolume_source_dict,
     create_dv,
     get_containers_for_pods_with_pvc,
 )
@@ -83,7 +78,7 @@ def import_image_to_dv(
             dv_name=dv_name,
             namespace=configmap.namespace,
             url=url,
-            cert_configmap=configmap.name,
+            cert_configmap_name=configmap.name,
             storage_class=py_config["default_storage_class"],
             client=client,
         ) as dv:
@@ -366,13 +361,15 @@ def create_windows19_vm(dv_name, namespace, client, vm_name, cpu_model, storage_
         name=dv_name,
         namespace=namespace,
         storage_class=storage_class,
-        source="http",
-        url=get_http_image_url(image_directory=Images.Windows.UEFI_WIN_DIR, image_name=Images.Windows.WIN2k19_IMG),
+        source_dict=construct_datavolume_source_dict(
+            source="http",
+            url=get_http_image_url(image_directory=Images.Windows.UEFI_WIN_DIR, image_name=Images.Windows.WIN2k19_IMG),
+            secret_name=artifactory_secret.name,
+            cert_configmap_name=artifactory_config_map.name,
+        ),
         size=Images.Windows.DEFAULT_DV_SIZE,
         client=client,
         api_name="storage",
-        secret=artifactory_secret,
-        cert_configmap=artifactory_config_map.name,
     )
     dv.to_dict()
     with VirtualMachineForTestsFromTemplate(

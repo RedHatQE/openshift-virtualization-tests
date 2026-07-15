@@ -22,7 +22,8 @@ from tests.virt.upgrade.utils import (
     verify_vms_ssh_connectivity,
 )
 from tests.virt.utils import assert_migration_post_copy_mode, verify_guest_boot_time
-from utilities.constants import DATA_SOURCE_NAME, DEPENDENCY_SCOPE_SESSION
+from utilities.constants.hco import DATA_SOURCE_NAME
+from utilities.constants.pytest import DEPENDENCY_SCOPE_SESSION
 from utilities.exceptions import ResourceValueError
 from utilities.virt import migrate_vm_and_verify, vm_console_run_commands
 

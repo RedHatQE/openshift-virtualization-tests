@@ -25,11 +25,10 @@ from tests.virt.node.gpu.constants import (
     VGPU_PRETTY_NAME_STR,
 )
 from utilities.artifactory import get_test_artifact_server_url
-from utilities.constants import (
-    DATA_SOURCE_STR,
-    DEFAULT_HCO_CONDITIONS,
-    OS_FLAVOR_WINDOWS,
-    OS_PROC_NAME,
+from utilities.constants.hco import DEFAULT_HCO_CONDITIONS
+from utilities.constants.images import OS_FLAVOR_WINDOWS
+from utilities.constants.os_matrix import DATA_SOURCE_STR
+from utilities.constants.timeouts import (
     TCP_TIMEOUT_30SEC,
     TIMEOUT_1SEC,
     TIMEOUT_2MIN,
@@ -37,6 +36,7 @@ from utilities.constants import (
     TIMEOUT_30MIN,
     TIMEOUT_30SEC,
 )
+from utilities.constants.virt import OS_PROC_NAME
 from utilities.hco import (
     ResourceEditorValidateHCOReconcile,
     is_hco_tainted,
@@ -459,10 +459,12 @@ def get_or_create_golden_image_data_source(
         with create_dv(
             dv_name=data_source_name,
             namespace=golden_images_namespace.name,
+            source="http",
             storage_class=py_config["default_storage_class"],
             url=f"{get_test_artifact_server_url()}{os_dict['image_path']}",
             size=os_dict["dv_size"],
             client=admin_client,
+            use_artifactory=True,
         ) as dv:
             dv.wait_for_dv_success(timeout=TIMEOUT_30MIN)
             yield from create_or_update_data_source(admin_client=admin_client, dv=dv)

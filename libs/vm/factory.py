@@ -5,8 +5,9 @@ from pytest_testconfig import config as py_config
 
 from libs.vm.spec import CPU, Devices, Domain, Memory, Metadata, Template, VMISpec, VMSpec
 from libs.vm.vm import BaseVirtualMachine, container_image, containerdisk_storage
-from utilities import constants
-from utilities.constants import MULTIARCH, OS_FLAVOR_FEDORA
+from utilities import constants as constants_module
+from utilities.constants.architecture import MULTIARCH
+from utilities.constants.images import OS_FLAVOR_FEDORA, ArchImages
 
 
 def fedora_vm(
@@ -30,8 +31,10 @@ def fedora_vm(
     )
 
 
-def fedora_image() -> str:
-    return container_image(base_image=constants.Images.Fedora.FEDORA_CONTAINER_IMAGE)
+def fedora_image(arch: str | None = None) -> str:
+    images = getattr(ArchImages, arch.upper()) if arch else constants_module.Images
+
+    return container_image(base_image=images.Fedora.FEDORA_CONTAINER_IMAGE, arch=arch)
 
 
 def _fill_vm_spec_defaults(spec: VMSpec | None) -> VMSpec:
@@ -46,7 +49,7 @@ def _fill_vm_spec_defaults(spec: VMSpec | None) -> VMSpec:
     vmi_spec.domain.devices.disks = vmi_spec.domain.devices.disks or []
     vmi_spec.volumes = vmi_spec.volumes or []
 
-    disk, volume = containerdisk_storage(image=fedora_image())
+    disk, volume = containerdisk_storage(image=fedora_image(arch=vmi_spec.architecture))
     vmi_spec.domain.devices.disks.insert(0, disk)
     vmi_spec.volumes.insert(0, volume)
 

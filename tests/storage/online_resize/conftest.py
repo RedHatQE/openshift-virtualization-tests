@@ -12,7 +12,9 @@ from tests.storage.online_resize.utils import (
     expand_pvc,
     wait_for_resize,
 )
-from utilities.constants import OS_FLAVOR_RHEL, Images, StorageClassNames
+from utilities.constants import Images
+from utilities.constants.images import OS_FLAVOR_RHEL
+from utilities.constants.storage import StorageClassNames
 from utilities.storage import create_dv, is_snapshot_supported_by_sc
 from utilities.virt import VirtualMachineForTests, running_vm
 
@@ -68,7 +70,8 @@ def second_rhel_dv_for_online_resize(rhel_dv_for_online_resize, unprivileged_cli
         client=unprivileged_client,
         size=rhel_dv_for_online_resize.size,
         storage_class=rhel_dv_for_online_resize.storage_class,
-        source_pvc=rhel_dv_for_online_resize.name,
+        source_pvc_name=rhel_dv_for_online_resize.name,
+        source_pvc_namespace=rhel_dv_for_online_resize.namespace,
     ) as rhel_dv:
         yield rhel_dv
 

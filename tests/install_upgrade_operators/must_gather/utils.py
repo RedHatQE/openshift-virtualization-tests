@@ -13,7 +13,8 @@ from ocp_resources.resource import Resource
 from ocp_resources.service import Service
 
 from tests.install_upgrade_operators.relationship_labels.constants import PART_OF_LABEL_KEY
-from utilities.constants import HCO_PART_OF_LABEL_VALUE, NamespacesNames
+from utilities.constants.components import HCO_PART_OF_LABEL_VALUE
+from utilities.constants.namespaces import NamespacesNames
 from utilities.data_collector import get_data_collector_base_directory
 from utilities.exceptions import ResourceMismatch
 
@@ -236,7 +237,14 @@ def check_logs(cnv_must_gather, running_hco_containers, namespace, label_selecto
             # Skip comparison of empty/large files. Large files could be ratated, and hence not equal.
             if log_size > 10000 or log_size == 0:
                 continue
-            pod_log = pod.log(previous=is_previous, container=container_name, timestamps=True)
+            try:
+                pod_log = pod.log(previous=is_previous, container=container_name, timestamps=True)
+            except UnicodeDecodeError:
+                LOGGER.warning(
+                    f"Skipping log comparison for {pod.name}/{container_name} "
+                    f"(previous={is_previous}): pod log contains non-UTF-8 data"
+                )
+                continue
             log_file = pod_logfile(
                 pod_name=pod.name,
                 container_name=container_name,
