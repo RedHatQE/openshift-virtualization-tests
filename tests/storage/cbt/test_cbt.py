@@ -252,6 +252,7 @@ class TestMultipleDiskBackup:
         """
 
 
+@pytest.mark.special_infra
 @pytest.mark.rwx_default_storage
 class TestBackupAfterLiveMigration:
     """
