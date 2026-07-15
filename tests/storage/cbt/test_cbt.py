@@ -5,7 +5,8 @@ STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob
 
 Preconditions:
     - incrementalBackup feature gate enabled
-    - CBT virtual machine label selectors configured in HyperConverged
+    - CBT label selectors configured
+    - Test namespace opted in to CBT
 """
 
 import pytest
@@ -36,12 +37,15 @@ class TestFullBackupRestore:
         Test that a VM can be backed up (push mode) and restored from a full backup.
 
         Preconditions:
-            - Backup storage available for push mode
+            - Backup PVC available
 
         Steps:
-            1. Perform a full backup of the under-test VM in push mode
-            2. Restore the VM from that backup
-            3. Start the restored VM
+            1. Create a backup tracker for the VM
+            2. Perform a full backup in push mode
+            3. Wait for backup to complete
+            4. Delete the original VM
+            5. Restore VM from the full backup
+            6. Start the restored VM
 
         Expected:
             - Restored VM boots successfully and test data is present
@@ -58,12 +62,15 @@ class TestFullBackupRestore:
         Test that a full backup in pull mode can be performed and the VM can be restored.
 
         Preconditions:
-            - Scratch storage available for pull mode
+            - Scratch PVC available for pull mode
 
         Steps:
-            1. Perform a full backup of the under-test VM in pull mode
-            2. Restore the VM from that backup
-            3. Start the restored VM
+            1. Create a backup tracker for the VM
+            2. Perform a full backup in pull mode
+            3. Wait for backup to complete
+            4. Delete the original VM
+            5. Restore VM from the backup
+            6. Start the restored VM
 
         Expected:
             - Restored VM boots successfully and test data is present
@@ -92,14 +99,15 @@ class TestIncrementalBackupRestore:
         Test that a VM can be backed up (push mode) and restored from an incremental backup.
 
         Preconditions:
-            - Full backup completed
-            - Backup storage available for push mode
+            - Backup PVC available
 
         Steps:
-            1. Write new test data to the under-test VM
+            1. Write new test data to VM
             2. Perform an incremental backup in push mode
-            3. Restore the VM from the incremental backup
-            4. Start the restored VM
+            3. Wait for backup to complete
+            4. Delete the original VM
+            5. Restore VM from the incremental backup
+            6. Start the restored VM
 
         Expected:
             - Restored VM boots successfully and all test data is present
@@ -116,14 +124,15 @@ class TestIncrementalBackupRestore:
         Test that an incremental backup in pull mode can be performed and the VM can be restored.
 
         Preconditions:
-            - Full backup completed
-            - Scratch storage available for pull mode
+            - Scratch PVC available for pull mode
 
         Steps:
-            1. Write new test data to the under-test VM
+            1. Write new test data to VM
             2. Perform an incremental backup in pull mode
-            3. Restore the VM from the incremental backup
-            4. Start the restored VM
+            3. Wait for backup to complete
+            4. Delete the original VM
+            5. Restore VM from the incremental backup
+            6. Start the restored VM
 
         Expected:
             - Restored VM boots successfully and all test data is present
