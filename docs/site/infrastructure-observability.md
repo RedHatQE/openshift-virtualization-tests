@@ -82,7 +82,7 @@ from tests.utils import assert_numa_cpu_allocation, get_vm_cpu_list, get_numa_no
 # Ensure this test only runs on clusters with NUMA and HugePages
 pytestmark = [pytest.mark.special_infra, pytest.mark.hugepages, pytest.mark.numa]
 
-@pytest.mark.polarion("CNV-12367")
+@pytest.mark.polarion("EXAMPLE-12367")
 def test_numa_cpu_allocation(admin_client, created_vm_cx1_instancetype):
     # Validates CPUs are pinned correctly on NUMA nodes
     assert_numa_cpu_allocation(

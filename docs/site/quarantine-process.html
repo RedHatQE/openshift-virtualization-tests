@@ -267,7 +267,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">utilities.constants.pytest</span><span class="w"> </span><span class="kn">import</span> <span class="n">QUARANTINED</span>
 
 <span class="nd">@pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">xfail</span><span class="p">(</span>
-    <span class="n">reason</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">QUARANTINED</span><span class="si">}</span><span class="s2">: VM goes into running state unexpectedly, CNV-12345&quot;</span><span class="p">,</span>
+    <span class="n">reason</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">QUARANTINED</span><span class="si">}</span><span class="s2">: VM goes into running state unexpectedly, EXAMPLE-12345&quot;</span><span class="p">,</span>
     <span class="n">run</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">test_vm_lifecycle</span><span class="p">():</span>
@@ -278,7 +278,7 @@
 <p>Disable a test conditionally when an actual product defect causes the failure:</p>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">pytest</span>
 
-<span class="nd">@pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">jira</span><span class="p">(</span><span class="s2">&quot;CNV-54321&quot;</span><span class="p">,</span> <span class="n">run</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">jira</span><span class="p">(</span><span class="s2">&quot;EXAMPLE-54321&quot;</span><span class="p">,</span> <span class="n">run</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">test_new_feature</span><span class="p">():</span>
     <span class="o">...</span>
 </code></pre></div>

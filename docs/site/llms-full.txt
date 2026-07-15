@@ -684,7 +684,7 @@ from tests.utils import assert_numa_cpu_allocation, get_vm_cpu_list, get_numa_no
 # Ensure this test only runs on clusters with NUMA and HugePages
 pytestmark = [pytest.mark.special_infra, pytest.mark.hugepages, pytest.mark.numa]
 
-@pytest.mark.polarion("CNV-12367")
+@pytest.mark.polarion("EXAMPLE-12367")
 def test_numa_cpu_allocation(admin_client, created_vm_cx1_instancetype):
     # Validates CPUs are pinned correctly on NUMA nodes
     assert_numa_cpu_allocation(
@@ -1356,7 +1356,7 @@ def vm_to_restart(unprivileged_client, namespace):
         running_vm(vm=vm)
         yield vm
 
-@pytest.mark.polarion("CNV-1497")
+@pytest.mark.polarion("EXAMPLE-1497")
 def test_vm_restart(vm_to_restart):
     """
     Test VM restart operations.
@@ -1394,7 +1394,7 @@ Follow these steps to implement a new feature test successfully:
 Begin by defining the test function and attaching its required tracking IDs and markers. The docstring MUST contain `Preconditions:`, `Steps:`, and `Expected:` blocks matching your STP.
 
 ```python
-@pytest.mark.polarion("CNV-1234")
+@pytest.mark.polarion("EXAMPLE-1234")
 def test_new_feature_validation(my_feature_fixture):
     """
     Verify the new feature behaves correctly.
@@ -1463,7 +1463,7 @@ For platform-specific differences, see [Multi-Architecture Support](multi-archit
 When your test identifies a genuine product defect, do not disable the test entirely. Attach a conditional marker tying it to the issue tracker.
 
 ```python
-@pytest.mark.jira("CNV-99999", run=False)
+@pytest.mark.jira("EXAMPLE-99999", run=False)
 def test_known_bug(my_fixture):
     pass
 ```
@@ -1507,7 +1507,7 @@ import pytest
 from utilities.constants.pytest import QUARANTINED
 
 @pytest.mark.xfail(
-    reason=f"{QUARANTINED}: VM goes into running state unexpectedly, CNV-12345",
+    reason=f"{QUARANTINED}: VM goes into running state unexpectedly, EXAMPLE-12345",
     run=False,
 )
 def test_vm_lifecycle():
@@ -1521,7 +1521,7 @@ Disable a test conditionally when an actual product defect causes the failure:
 ```python
 import pytest
 
-@pytest.mark.jira("CNV-54321", run=False)
+@pytest.mark.jira("EXAMPLE-54321", run=False)
 def test_new_feature():
     ...
 ```

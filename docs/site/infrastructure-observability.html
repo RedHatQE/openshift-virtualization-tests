@@ -322,7 +322,7 @@
 <span class="c1"># Ensure this test only runs on clusters with NUMA and HugePages</span>
 <span class="n">pytestmark</span> <span class="o">=</span> <span class="p">[</span><span class="n">pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">special_infra</span><span class="p">,</span> <span class="n">pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">hugepages</span><span class="p">,</span> <span class="n">pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">numa</span><span class="p">]</span>
 
-<span class="nd">@pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">polarion</span><span class="p">(</span><span class="s2">&quot;CNV-12367&quot;</span><span class="p">)</span>
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">polarion</span><span class="p">(</span><span class="s2">&quot;EXAMPLE-12367&quot;</span><span class="p">)</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">test_numa_cpu_allocation</span><span class="p">(</span><span class="n">admin_client</span><span class="p">,</span> <span class="n">created_vm_cx1_instancetype</span><span class="p">):</span>
     <span class="c1"># Validates CPUs are pinned correctly on NUMA nodes</span>
     <span class="n">assert_numa_cpu_allocation</span><span class="p">(</span>

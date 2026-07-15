@@ -37,7 +37,7 @@ def vm_to_restart(unprivileged_client, namespace):
         running_vm(vm=vm)
         yield vm
 
-@pytest.mark.polarion("CNV-1497")
+@pytest.mark.polarion("EXAMPLE-1497")
 def test_vm_restart(vm_to_restart):
     """
     Test VM restart operations.
@@ -75,7 +75,7 @@ Follow these steps to implement a new feature test successfully:
 Begin by defining the test function and attaching its required tracking IDs and markers. The docstring MUST contain `Preconditions:`, `Steps:`, and `Expected:` blocks matching your STP.
 
 ```python
-@pytest.mark.polarion("CNV-1234")
+@pytest.mark.polarion("EXAMPLE-1234")
 def test_new_feature_validation(my_feature_fixture):
     """
     Verify the new feature behaves correctly.
@@ -144,7 +144,7 @@ For platform-specific differences, see [Multi-Architecture Support](multi-archit
 When your test identifies a genuine product defect, do not disable the test entirely. Attach a conditional marker tying it to the issue tracker.
 
 ```python
-@pytest.mark.jira("CNV-99999", run=False)
+@pytest.mark.jira("EXAMPLE-99999", run=False)
 def test_known_bug(my_fixture):
     pass
 ```

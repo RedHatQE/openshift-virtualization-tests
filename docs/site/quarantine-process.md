@@ -19,7 +19,7 @@ import pytest
 from utilities.constants.pytest import QUARANTINED
 
 @pytest.mark.xfail(
-    reason=f"{QUARANTINED}: VM goes into running state unexpectedly, CNV-12345",
+    reason=f"{QUARANTINED}: VM goes into running state unexpectedly, EXAMPLE-12345",
     run=False,
 )
 def test_vm_lifecycle():
@@ -33,7 +33,7 @@ Disable a test conditionally when an actual product defect causes the failure:
 ```python
 import pytest
 
-@pytest.mark.jira("CNV-54321", run=False)
+@pytest.mark.jira("EXAMPLE-54321", run=False)
 def test_new_feature():
     ...
 ```

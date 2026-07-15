@@ -286,7 +286,7 @@
         <span class="n">running_vm</span><span class="p">(</span><span class="n">vm</span><span class="o">=</span><span class="n">vm</span><span class="p">)</span>
         <span class="k">yield</span> <span class="n">vm</span>
 
-<span class="nd">@pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">polarion</span><span class="p">(</span><span class="s2">&quot;CNV-1497&quot;</span><span class="p">)</span>
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">polarion</span><span class="p">(</span><span class="s2">&quot;EXAMPLE-1497&quot;</span><span class="p">)</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">test_vm_restart</span><span class="p">(</span><span class="n">vm_to_restart</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Test VM restart operations.</span>
@@ -320,7 +320,7 @@
 <p>Follow these steps to implement a new feature test successfully:</p>
 <h3 id="1-write-the-test-signature-and-docstring">1. Write the Test Signature and Docstring</h3>
 <p>Begin by defining the test function and attaching its required tracking IDs and markers. The docstring MUST contain <code>Preconditions:</code>, <code>Steps:</code>, and <code>Expected:</code> blocks matching your STP.</p>
-<div class="highlight"><pre><span></span><code><span class="nd">@pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">polarion</span><span class="p">(</span><span class="s2">&quot;CNV-1234&quot;</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><span class="nd">@pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">polarion</span><span class="p">(</span><span class="s2">&quot;EXAMPLE-1234&quot;</span><span class="p">)</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">test_new_feature_validation</span><span class="p">(</span><span class="n">my_feature_fixture</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Verify the new feature behaves correctly.</span>
@@ -379,7 +379,7 @@
 <p>For platform-specific differences, see <a href="multi-architecture-testing.html">Multi-Architecture Support</a>.</p>
 <h3 id="adding-temporary-exclusions">Adding Temporary Exclusions</h3>
 <p>When your test identifies a genuine product defect, do not disable the test entirely. Attach a conditional marker tying it to the issue tracker.</p>
-<div class="highlight"><pre><span></span><code><span class="nd">@pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">jira</span><span class="p">(</span><span class="s2">&quot;CNV-99999&quot;</span><span class="p">,</span> <span class="n">run</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><span class="nd">@pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">jira</span><span class="p">(</span><span class="s2">&quot;EXAMPLE-99999&quot;</span><span class="p">,</span> <span class="n">run</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">test_known_bug</span><span class="p">(</span><span class="n">my_fixture</span><span class="p">):</span>
     <span class="k">pass</span>
 </code></pre></div>
