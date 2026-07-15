@@ -11,13 +11,14 @@ from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.storage_profile import StorageProfile
 
 from tests.storage.utils import assert_disk_bus
-from tests.utils import create_windows2022_dv_from_registry, create_windows2022_vm_with_vtpm_from_registry
-from utilities.constants import HOTPLUG_DISK_SCSI_BUS, HOTPLUG_DISK_SERIAL, HOTPLUG_DISK_VIRTIO_BUS
+from tests.utils import create_windows2022_vm_with_data_volume_template
+from utilities.constants import HOTPLUG_DISK_SCSI_BUS, HOTPLUG_DISK_SERIAL, HOTPLUG_DISK_VIRTIO_BUS, WIN_2K22
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.storage import (
     assert_disk_serial,
     assert_hotplugvolume_nonexist,
     create_dv,
+    data_volume_template_with_source_ref_dict,
     virtctl_volume,
     wait_for_vm_volume_ready,
 )
@@ -56,12 +57,12 @@ def enabled_feature_gate_for_declarative_hotplug_volumes(
 
 @pytest.fixture(scope="class")
 def hotplug_volume_windows_scope_class(
-    request, namespace, vm_instance_from_template_multi_storage_scope_class, blank_disk_dv_multi_storage_scope_class
+    request, namespace, vm_instance_multi_storage_scope_class, blank_disk_dv_multi_storage_scope_class
 ):
     with virtctl_volume(
         action="add",
         namespace=namespace.name,
-        vm_name=vm_instance_from_template_multi_storage_scope_class.name,
+        vm_name=vm_instance_multi_storage_scope_class.name,
         volume_name=blank_disk_dv_multi_storage_scope_class.name,
         **request.param,
     ) as res:
@@ -71,34 +72,22 @@ def hotplug_volume_windows_scope_class(
 
 
 @pytest.fixture(scope="class")
-def windows_dv_from_registry_scope_class(
-    unprivileged_client,
-    namespace,
-    storage_class_matrix__class__,
-):
-    """Creates a Windows 2022 DataVolume from registry container disk."""
-    with create_windows2022_dv_from_registry(
-        dv_name="dv-windows-2022-hotplug",
-        namespace=namespace.name,
-        client=unprivileged_client,
-        storage_class=next(iter(storage_class_matrix__class__)),
-    ) as dv_dict:
-        yield dv_dict
-
-
-@pytest.fixture(scope="class")
-def vm_instance_from_template_multi_storage_scope_class(
+def vm_instance_multi_storage_scope_class(
     unprivileged_client,
     namespace,
     modern_cpu_for_migration,
-    windows_dv_from_registry_scope_class,
+    windows_validation_os_images_data_source_scope_session,
+    storage_class_name_scope_class,
 ):
-    """Creates a Windows 2022 VM with vTPM from registry container disk."""
-    with create_windows2022_vm_with_vtpm_from_registry(
-        dv_dict=windows_dv_from_registry_scope_class,
+    """Creates a Windows 2022 VM with vTPM from the session-scoped Windows DataSource."""
+    with create_windows2022_vm_with_data_volume_template(
+        dv_template=data_volume_template_with_source_ref_dict(
+            data_source=windows_validation_os_images_data_source_scope_session,
+            storage_class=storage_class_name_scope_class,
+        ),
         namespace=namespace.name,
         client=unprivileged_client,
-        vm_name="vm-win-2022-hotplug",
+        vm_name=f"vm-{WIN_2K22}-hotplug",
         cpu_model=modern_cpu_for_migration,
     ) as vm:
         yield vm
@@ -257,28 +246,29 @@ class TestHotPlugWindows:
     def test_windows_hotplug(
         self,
         blank_disk_dv_multi_storage_scope_class,
-        vm_instance_from_template_multi_storage_scope_class,
+        vm_instance_multi_storage_scope_class,
     ):
         wait_for_vm_volume_ready(
-            vm=vm_instance_from_template_multi_storage_scope_class,
+            vm=vm_instance_multi_storage_scope_class,
             volume_name=blank_disk_dv_multi_storage_scope_class.name,
         )
         assert_disk_serial(
             command=shlex.split("wmic diskdrive get SerialNumber"),
-            vm=vm_instance_from_template_multi_storage_scope_class,
+            vm=vm_instance_multi_storage_scope_class,
         )
-        assert_hotplugvolume_nonexist(vm=vm_instance_from_template_multi_storage_scope_class)
+        assert_hotplugvolume_nonexist(vm=vm_instance_multi_storage_scope_class)
 
     @pytest.mark.polarion("CNV-11391")
     @pytest.mark.dependency(depends=["test_windows_hotplug"])
     def test_windows_hotplug_migrate(
         self,
-        unprivileged_client,
+        admin_client,
         blank_disk_dv_multi_storage_scope_class,
-        vm_instance_from_template_multi_storage_scope_class,
+        vm_instance_multi_storage_scope_class,
     ):
         if is_dv_migratable(dv=blank_disk_dv_multi_storage_scope_class):
             migrate_vm_and_verify(
-                vm=vm_instance_from_template_multi_storage_scope_class,
+                vm=vm_instance_multi_storage_scope_class,
+                client=admin_client,
                 check_ssh_connectivity=True,
             )
