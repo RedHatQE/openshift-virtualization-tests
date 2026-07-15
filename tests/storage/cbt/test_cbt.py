@@ -3,6 +3,25 @@ CBT (Changed Block Tracking) backup and restore validation
 
 STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
+STP scenario coverage map (STD/test declarations in this file):
+    - Enable/disable CBT on a VM → TestCbtEnableDisable
+    - Full backup push mode → TestFullBackupRestore.test_full_backup_push_mode_restore
+    - Incremental backup (changed blocks) → TestIncrementalBackupRestore
+    - Feature gate enabled CBT ops → module/class preconditions + cbt_hco_configured
+    - Windows full/incremental → TestWindowsVMFullBackup, TestWindowsVMIncrementalBackup
+    - Force full backup after previous backups → TestForceFullBackup
+    - Backup storage full / insufficient → TestBackupErrorHandling
+    - Backups on different storage types → TestBackupAcrossStorageTypes
+    - Pull mode backup → TestFullBackupRestore.test_full_backup_pull_mode_restore,
+      TestIncrementalBackupRestore.test_incremental_backup_pull_mode_restore
+    - Pull-mode client-certificate security → TestPullModeBackupSecurity
+    - Concurrent backups → TestConcurrentBackups
+    - Restart / failure recovery → TestBackupRecoveryAfterRestartOrFailure
+    - Hotplugged disks → TestHotplugBackup
+    - Incremental after live migration → TestBackupAfterLiveMigration
+    - Migration preserves checkpoints → TestMigrationPreservesCheckpoints
+    - Backup and migration mutually exclusive → TestBackupMigrationMutualExclusivity
+
 Preconditions:
     - incrementalBackup feature gate enabled
     - CBT label selectors configured
