@@ -2580,13 +2580,13 @@ wheels = [
 
 [[package]]
 name = "timeout-sampler"
-version = "1.1.0"
+version = "1.1.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pytest" },
     { name = "python-simple-logger" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c2/ae/2335027792a73ae262de3b6a22e9d37f02e90326b44420931cf785abc68b/timeout_sampler-1.1.0.tar.gz", hash = "sha256:707f8890578fef3549943c0554e55661c9a0d17244c7345cc8c509d6eb58c253", size = 154727, upload-time = "2026-07-02T15:16:01.124Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/df/76/36d7b0653dbfec2c5443912b11052e1304026065c22f5045055ef736a7b1/timeout_sampler-1.1.2.tar.gz", hash = "sha256:02f727b625f65a4b6e606809b7739cf8d8c948910dc80ccc5257aac67e05cca8", size = 198651, upload-time = "2026-07-21T10:08:19.037Z" }
 
 [[package]]
 name = "traitlets"
