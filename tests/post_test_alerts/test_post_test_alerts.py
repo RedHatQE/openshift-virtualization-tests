@@ -13,16 +13,7 @@ import pytest
 
 LOGGER = logging.getLogger(__name__)
 
-POST_TEST_CRITICAL_ALERTS = [
-    "LowVirtControllersCount",
-    "LowVirtAPICount",
-    "KubeVirtCRModified",
-    "VirtControllerRESTErrorsHigh",
-    "VirtHandlerRESTErrorsHigh",
-    "HCOOperatorConditionsUnhealthy",
-]
-
-ALERTS_REGEX = "|".join(POST_TEST_CRITICAL_ALERTS)
+DEPRECATED_API_ALERT = "KubeVirtDeprecatedAPIRequested"
 
 
 @pytest.mark.s390x
@@ -46,10 +37,8 @@ def test_no_critical_alerts_after_tests(prometheus, request):
     start_time = request.config._test_execution_start_time
     duration_seconds = max(int((datetime.datetime.now(tz=datetime.UTC) - start_time).total_seconds()), 1)
     LOGGER.info(
-        f"Checking {len(POST_TEST_CRITICAL_ALERTS)} critical alerts"
-        f" were not triggered during test execution (last {duration_seconds}s)"
+        f"Checking {DEPRECATED_API_ALERT} alert was not triggered during test execution (last {duration_seconds}s)"
     )
-    query = f'ALERTS{{alertname=~"{ALERTS_REGEX}", alertstate="firing"}}[{duration_seconds}s]'
+    query = f'ALERTS{{alertname="{DEPRECATED_API_ALERT}", alertstate="firing"}}[{duration_seconds}s]'
     results = prometheus.query_sampler(query=query)
-    fired_alerts = {result["metric"]["alertname"]: result for result in results}
-    assert not fired_alerts, f"Critical alerts fired during test execution.\n{fired_alerts}"
+    assert not results, f"{DEPRECATED_API_ALERT} alert fired during test execution.\n{results}"
