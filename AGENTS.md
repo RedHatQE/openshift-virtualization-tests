@@ -229,6 +229,14 @@ When reviewing quarantine PRs, verify the **quarantine mechanism matches the fai
 
 Internal tooling and automation scripts live in `scripts/`. Each tool has its own subdirectory with an entry point, utilities, and tests. Scripts are NOT part of the test suite — they are standalone CLI tools for CI/CD integration and reporting.
 
+### Generated Documentation
+
+`docs/site/` contains an auto-generated documentation site (produced by [docsfy](https://github.com/myk-org/docsfy)).
+
+- ❌ **NEVER modify files under `docs/site/`** — they are auto-generated and overwritten on each regeneration
+- ❌ **NEVER include `docs/site/` changes in PRs** — reject any PR that modifies generated docs
+- ✅ To update, generate docs manually with docsfy and commit directly to `main` (not via PR)
+
 ### Constants Module Placement
 
 Project constants live in `utilities/constants/` as domain-specific modules.
@@ -295,6 +303,16 @@ uv run tox -e utilities-unittests
 ```
 
 **No exceptions.** Fix all failures before committing. Do not use `--no-verify` to bypass hooks.
+
+### AI Documentation Reference
+
+When working on code or reviewing changes, consult `docs/site/llms.txt` for a structured index of project documentation.
+To understand a specific domain, read the corresponding `.md` file from `docs/site/` listed in the index.
+Per-domain documentation may also live under the relevant `tests/<domain>/` directory (e.g., `tests/network/README.md`).
+
+- **Quick orientation** — read `docs/site/llms.txt` for the full docs index
+- **Deep dive** — read specific `docs/site/<topic>.md` files relevant to the task
+- ❌ **Do NOT** load `docs/site/llms-full.txt` into context — read individual topic files instead
 
 ## Related Documentation
 
