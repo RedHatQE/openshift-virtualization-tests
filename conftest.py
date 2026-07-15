@@ -63,6 +63,13 @@ from utilities.pytest_utils import (
     stop_if_run_in_progress,
 )
 
+pytest_plugins = [
+    "tests.fixtures.network.l2_bridge",
+    "tests.fixtures.network.cluster",
+    "tests.fixtures.images.validation_os_images",
+    "tests.fixtures.network.multiarch",
+]
+
 LOGGER = logging.getLogger(__name__)
 BASIC_LOGGER = logging.getLogger("basic")
 

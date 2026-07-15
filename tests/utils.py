@@ -19,6 +19,8 @@ from ocp_resources.node import Node
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.virtual_machine import VirtualMachine
+from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
+from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
 from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
@@ -45,6 +47,9 @@ from utilities.constants import (
     TIMEOUT_15SEC,
     TIMEOUT_30MIN,
     Images,
+    OS_FLAVOR_WIN_CONTAINER_DISK,
+    U1_LARGE,
+    WINDOWS_2K22_PREFERENCE,
 )
 from utilities.data_collector import get_data_collector_dir, write_to_file
 from utilities.exceptions import ResourceValueError
@@ -685,3 +690,52 @@ def verify_rwx_default_storage(client: DynamicClient) -> None:
             f"Default storage class '{storage_class}' doesn't support RWX mode "
             f"(required: RWX, found: {found_mode or 'none'})"
         )
+
+
+
+@contextmanager
+def create_windows2022_vm_using_existing_dv(
+    namespace: str,
+    client: DynamicClient,
+    vm_name: str,
+    cpu_model: str | None = None,
+    existing_data_volume: DataVolume | None = None,
+) -> Generator[VirtualMachineForTests, None, None]:
+    """Creates a Windows Server 2022 VM with vTPM using existing DataVolume."""
+    with VirtualMachineForTests(
+        name=vm_name,
+        namespace=namespace,
+        client=client,
+        os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK,
+        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_LARGE, client=client),
+        vm_preference=VirtualMachineClusterPreference(name=WINDOWS_2K22_PREFERENCE, client=client),
+        data_volume=existing_data_volume,
+        cpu_model=cpu_model,
+    ) as vm:
+        running_vm(vm=vm)
+        wait_for_windows_vm(vm=vm, version="2022")
+        yield vm
+
+
+@contextmanager
+def create_windows2022_vm_with_data_volume_template(
+    namespace: str,
+    client: DynamicClient,
+    vm_name: str,
+    cpu_model: str | None = None,
+    dv_template: dict | None = None,
+) -> Generator[VirtualMachineForTests, None, None]:
+    """Creates a Windows Server 2022 VM with vTPM with dv template."""
+    with VirtualMachineForTests(
+        name=vm_name,
+        namespace=namespace,
+        client=client,
+        os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK,
+        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_LARGE, client=client),
+        vm_preference=VirtualMachineClusterPreference(name=WINDOWS_2K22_PREFERENCE, client=client),
+        data_volume_template=dv_template,
+        cpu_model=cpu_model,
+    ) as vm:
+        running_vm(vm=vm)
+        wait_for_windows_vm(vm=vm, version="2022")
+        yield vm

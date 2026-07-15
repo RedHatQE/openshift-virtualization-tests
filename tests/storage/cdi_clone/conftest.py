@@ -2,8 +2,8 @@ import pytest
 from ocp_resources.datavolume import DataVolume
 
 from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE
-from utilities.constants import REGISTRY_STR, Images
-from utilities.storage import create_dv, data_volume
+from utilities.constants import Images, REGISTRY_STR, TIMEOUT_40MIN, WIN_2K22
+from utilities.storage import create_dv, data_volume, get_dv_size_from_datasource
 
 
 @pytest.fixture()
@@ -59,3 +59,26 @@ def fedora_dv_with_block_volume_mode(
     ) as dv:
         dv.wait_for_dv_success()
         yield dv
+
+
+@pytest.fixture(scope="class")
+def cloned_windows_dv_multi_storage_scope_class(
+    unprivileged_client,
+    namespace,
+    storage_class_name_scope_class,
+    windows_validation_os_images_data_source_scope_session,
+):
+    with create_dv(
+        client=unprivileged_client,
+        dv_name=f"dv-target-{WIN_2K22}-clone",
+        namespace=namespace.name,
+        size=get_dv_size_from_datasource(windows_validation_os_images_data_source_scope_session),
+        storage_class=storage_class_name_scope_class,
+        source_ref={
+            "kind": windows_validation_os_images_data_source_scope_session.kind,
+            "name": windows_validation_os_images_data_source_scope_session.name,
+            "namespace": windows_validation_os_images_data_source_scope_session.namespace,
+        },
+    ) as cdv:
+        cdv.wait_for_dv_success(timeout=TIMEOUT_40MIN)
+        yield cdv
