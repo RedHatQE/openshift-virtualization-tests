@@ -104,9 +104,3 @@ Tests must be independent. Use shared fixtures to provide resources. Only use `@
 *   See [Resource Lifecycle & Validation](resource-lifecycle.html) for guidelines on managing OpenShift resources within your fixtures.
 *   See [Implementing New Tests](implementing-tests.html) to learn how to inject these fixtures into functional test cases.
 *   See [Configuration & Global Contexts](configuration-constants.html) to understand how fixtures leverage global parameters across different cloud and architecture topologies.
-
-## Related Pages
-
-- [Resource Lifecycle & Validation](resource-lifecycle.html)
-- [Configuration & Global Contexts](configuration-constants.html)
-- [Implementing New Tests](implementing-tests.html)

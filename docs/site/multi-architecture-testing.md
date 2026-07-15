@@ -88,9 +88,5 @@ As a test writer, your interaction with multi-architecture support revolves prim
 - See [Running and Filtering Tests](running-tests.html) for detailed command-line arguments and test execution workflows.
 - See [Configuration & Global Contexts](configuration-constants.html) for understanding how `--tc-file=tests/global_config.py` impacts architecture discovery.
 - See [Pytest Fixture Strategy](fixture-strategy.html) for rules regarding fixture implementation and scope mapping.
-
-## Related Pages
-
-- [Running and Filtering Tests](running-tests.html)
 - [Scale & Upgrades Testing](scale-upgrades.html)
 - [Infrastructure & Observability](infrastructure-observability.html)

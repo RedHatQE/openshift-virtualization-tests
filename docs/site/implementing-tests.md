@@ -91,7 +91,7 @@ Keep tests focused on verifying one aspect. Use existing utility libraries from 
 
 * Use `LOGGER.info` to record phase transitions.
 * Use `LOGGER.warning` for missing optional configurations.
-* Use `LOGGER.error` to catch and wrap specific exceptions with full context.
+* Use `LOGGER.error` inside exception handlers to record full context (what failed, expected vs actual, resource state) before re-raising.
 
 ### 4. Assert Expected Outcomes
 Replace custom boolean logic with straightforward `assert` statements. Include a clear error message on failure to describe what went wrong.
