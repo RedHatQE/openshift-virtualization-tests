@@ -352,9 +352,11 @@ def restore_and_start_vm_from_pull_client_backup(
             running_vm(vm=restored_vm, ssh_timeout=ssh_timeout)
             yield restored_vm
         finally:
-            if restored_vm is not None:
-                restored_vm.delete(wait=True)
-            boot_pvc.delete(wait=True)
+            try:
+                if restored_vm is not None:
+                    restored_vm.delete(wait=True)
+            finally:
+                boot_pvc.delete(wait=True)
 
 
 def _run_python_runner_pod(

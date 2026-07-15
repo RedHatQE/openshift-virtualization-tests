@@ -154,6 +154,7 @@ def _download_chunk(
         f"&offset={chunk_offset}&length={chunk_length}"
     )
     bash_command = (
+        "set -o pipefail; "
         f"curl -s -L --fail --cacert {shlex.quote(str(params['pull_ca_cert_path']))} "
         f"{shlex.quote(download_url)} | "
         f"dd of={shlex.quote(target_file)} oflag=seek_bytes seek={chunk_offset} "
@@ -189,7 +190,9 @@ def main() -> None:
 
     existing_raw_files = _list_client_backup_raw_files(params=params)
     if not params["force_full_backup"] and existing_raw_files:
-        base_raw_file = existing_raw_files[0]
+        # List is ascending by checkpoint timestamp; seed from the newest prior raw so
+        # incremental extents (since the previous checkpoint) overlay the right base.
+        base_raw_file = existing_raw_files[-1]
         print(
             f"Pull incremental collect: seeding {raw_file} from {base_raw_file}",
             flush=True,
