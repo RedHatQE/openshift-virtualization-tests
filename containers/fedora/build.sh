@@ -30,14 +30,32 @@ case "$CPU_ARCH" in
     "amd64")
         CPU_ARCH_CODE="x86_64"
         VIRT_TYPE="kvm"
+        BOOT_OPTS=""
 	;;
     "arm64")
         CPU_ARCH_CODE="aarch64"
         VIRT_TYPE="qemu"
-	;;
+        # aarch64 requires UEFI and a writable per-VM NVRAM vars file.
+        # Without the vars file libvirt cannot configure ACPI on aarch64.
+        AARCH64_VARS="/tmp/aavmf-vars-${NAME}.fd"
+        for vars_path in \
+            "/usr/share/edk2/aarch64/vars-template-pflash.qcow2" \
+            "/usr/share/AAVMF/AAVMF_VARS.fd"; do
+            if [ -f "${vars_path}" ]; then
+                cp "${vars_path}" "${AARCH64_VARS}"
+                break
+            fi
+        done
+        if [ ! -f "${AARCH64_VARS}" ]; then
+            echo "ERROR: No aarch64 UEFI vars template found. Install qemu-efi-aarch64."
+            exit 1
+        fi
+        BOOT_OPTS="--boot uefi,nvram=${AARCH64_VARS}"
+ ;;
     "s390x")
         CPU_ARCH_CODE="s390x"
         VIRT_TYPE="qemu"
+        BOOT_OPTS=""
 	;;
     *)
         echo "Use the value amd64, s390x or arm64 for CPU_ARCH env variable"
@@ -94,6 +112,7 @@ CONSOLE_LOG="/tmp/console-${NAME}.log"
 touch "${CONSOLE_LOG}"
 chmod 666 "${CONSOLE_LOG}"
 echo "Run the VM (ctrl+] to exit)"
+# shellcheck disable=SC2086
 virt-install \
   --memory 2048 \
   --vcpus 2 \
@@ -107,6 +126,7 @@ virt-install \
   --network default \
   --noautoconsole \
   --serial file,path="${CONSOLE_LOG}" \
+  $BOOT_OPTS \
   --import
 
 # Stream the guest serial console log to stdout so CI logs show what is happening inside the VM.
@@ -133,9 +153,9 @@ while true; do
     WAIT_SECONDS=$((WAIT_SECONDS + PERIOD_SECONDS))
 done
 echo "VM shut down after ${WAIT_SECONDS} seconds"
-# Stop the console tailer and clean up the log file
+# Stop the console tailer and clean up temp files
 kill "${CONSOLE_PID}" 2>/dev/null || true
-rm -f "${CONSOLE_LOG}"
+rm -f "${CONSOLE_LOG}" "${AARCH64_VARS:-}"
 
 # Prepare VM image
 virt-sysprep -d "${NAME}" --operations machine-id,bash-history,logfiles,tmp-files,net-hostname,net-hwaddr
