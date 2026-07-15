@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scale &amp; Upgrades Testing - openshift-virtualization-tests</title>
+    <meta name="description" content="Validate OpenShift Virtualization deployments comprehensively with a standardized, strictly-typed test framework.">
+    <link rel="stylesheet" href="assets/style.css">
+    <script>try{var t=localStorage.getItem('theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark')}catch(e){}</script>
+    <link rel="alternate" type="text/plain" title="LLM Documentation Index" href="llms.txt">
+    <link rel="alternate" type="text/plain" title="LLM Full Documentation" href="llms-full.txt">
+</head>
+<body>
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <a href="index.html" class="sidebar-logo">openshift-virtualization-tests</a>
+            <p class="sidebar-tagline">Validate OpenShift Virtualization deployments comprehensively with a standardized, strictly-typed test framework.</p>
+        </div>
+
+        <div class="sidebar-search">
+            <input type="text" id="search-input" placeholder="Search... (⌘K)" autocomplete="off" readonly>
+            <div id="search-results" class="search-results"></div>
+        </div>
+
+        <nav class="sidebar-nav">
+
+            <div class="nav-group">
+                <h3 class="nav-group-title">Getting Started</h3>
+                <ul class="nav-group-pages">
+
+                    <li>
+                        <a href="quickstart.html"
+                           class="nav-link">
+                            Quickstart &amp; Setup
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="running-tests.html"
+                           class="nav-link">
+                            Running and Filtering Tests
+                        </a>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="nav-group">
+                <h3 class="nav-group-title">Test Domains</h3>
+                <ul class="nav-group-pages">
+
+                    <li>
+                        <a href="virt-tests.html"
+                           class="nav-link">
+                            Virtualization Tests
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="network-tests.html"
+                           class="nav-link">
+                            Networking Tests
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="storage-tests.html"
+                           class="nav-link">
+                            Storage Tests
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="infrastructure-observability.html"
+                           class="nav-link">
+                            Infrastructure &amp; Observability
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="operations-chaos.html"
+                           class="nav-link">
+                            Operations &amp; Chaos
+                        </a>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="nav-group">
+                <h3 class="nav-group-title">Framework &amp; Patterns</h3>
+                <ul class="nav-group-pages">
+
+                    <li>
+                        <a href="fixture-strategy.html"
+                           class="nav-link">
+                            Pytest Fixture Strategy
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="resource-lifecycle.html"
+                           class="nav-link">
+                            Resource Lifecycle &amp; Validation
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="configuration-constants.html"
+                           class="nav-link">
+                            Configuration &amp; Global Contexts
+                        </a>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="nav-group">
+                <h3 class="nav-group-title">Writing Tests</h3>
+                <ul class="nav-group-pages">
+
+                    <li>
+                        <a href="test-design-workflow.html"
+                           class="nav-link">
+                            Test Design Workflow (STP/STD)
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="implementing-tests.html"
+                           class="nav-link">
+                            Implementing New Tests
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="quarantine-process.html"
+                           class="nav-link">
+                            Test Quarantine Process
+                        </a>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="nav-group">
+                <h3 class="nav-group-title">Utilities Reference</h3>
+                <ul class="nav-group-pages">
+
+                    <li>
+                        <a href="utilities-reference.html"
+                           class="nav-link">
+                            Project Utilities
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="external-wrappers.html"
+                           class="nav-link">
+                            External Ecosystem Wrappers
+                        </a>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="nav-group">
+                <h3 class="nav-group-title">Development Workflow</h3>
+                <ul class="nav-group-pages">
+
+                    <li>
+                        <a href="code-quality.html"
+                           class="nav-link">
+                            Code Quality &amp; Pre-commits
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="pr-discipline.html"
+                           class="nav-link">
+                            Pull Request Discipline
+                        </a>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="nav-group">
+                <h3 class="nav-group-title">Advanced Topics</h3>
+                <ul class="nav-group-pages">
+
+                    <li>
+                        <a href="multi-architecture-testing.html"
+                           class="nav-link">
+                            Multi-Architecture Support
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="scale-upgrades.html"
+                           class="nav-link active" aria-current="page">
+                            Scale &amp; Upgrades Testing
+                        </a>
+                    </li>
+
+                </ul>
+            </div>
+
+        </nav>
+    </aside>
+
+    <div class="main-wrapper">
+        <header class="top-bar">
+            <div class="top-bar-left">
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar" aria-expanded="false">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </button>
+                <a href="index.html" class="top-bar-title">openshift-virtualization-tests</a>
+            </div>
+            <div class="top-bar-spacer"></div>
+            <div class="top-bar-right">
+                <button class="top-bar-search-btn" id="search-trigger" aria-label="Search">
+                    <kbd>&#8984;K</kbd> Search
+                </button>
+                <a href="https://github.com/myk-org/docsfy" target="_blank" rel="noopener" class="docsfy-badge" title="Generated with docsfy">
+                    ⚡ docs<span class="brand-accent">fy</span>
+                </a>
+
+                <a href="https://github.com/RedHatQE/openshift-virtualization-tests" target="_blank" rel="noopener noreferrer" class="top-bar-github" id="github-link" data-repo-url="https://github.com/RedHatQE/openshift-virtualization-tests">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                    <span class="github-stars" id="github-stars" title="GitHub stars"></span>
+                </a>
+
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                    </svg>
+                    <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <main class="content">
+
+            <article class="article">
+                <div class="article-body">
+                    <!-- SECURITY: |safe is intentional. Content is AI-generated markdown
+                         converted to HTML server-side by the markdown library, not
+                         user-supplied input. XSS risk is minimal and accepted since
+                         the AI generates the content, not end users. -->
+                    <h1 id="scale-upgrades-testing">Scale &amp; Upgrades Testing</h1>
+<p>Scale and Upgrade testing ensures that OpenShift Virtualization handles extreme limits, massive concurrency, and complex operator lifecycle changes without dropping workloads. For contributors, working in the <code>tests/scale/</code> and <code>tests/install_upgrade_operators/</code> directories requires a significant mindset shift. </p>
+<p>Instead of simple "arrange-act-assert" flows, test developers must carefully choreograph massive cluster state changes, prevent sudden API server exhaustion through staggered batching, sequence operator transitions via strict fixture chains, and prioritize forensic evidence gathering over aggressive teardowns when failures occur.</p>
+<h2 id="the-big-picture">The Big Picture</h2>
+<p>Testing massive scale and product upgrades relies on structured data flow and fixture dependency graphs. </p>
+<h3 id="scale-testing-architecture-flow">Scale Testing Architecture Flow</h3>
+<ol>
+<li><strong>Parameter Ingestion</strong>: Configuration is driven externally (e.g., <code>tests/scale/scale_params.yaml</code>), defining OS flavors, storage variants, and batch sizes.</li>
+<li><strong>Golden Image Pre-provisioning</strong>: To prevent storage backend DDoS, <code>DataVolume</code> clones are deployed at the class level and shared.</li>
+<li><strong>Batched Execution</strong>: VMs are spawned and powered on in defined batches with calculated sleep intervals to throttle API server load.</li>
+<li><strong>Asynchronous Polling</strong>: Instead of asserting each VM's state sequentially, global samplers evaluate the entire cluster configuration asynchronously.</li>
+<li><strong>Fail-Open Debugging</strong>: When massive workloads crash the cluster, default teardowns are suspended to preserve logs for forensic analysis.</li>
+</ol>
+<h3 id="operator-upgrade-pipeline-flow">Operator Upgrade Pipeline Flow</h3>
+<p>The upgrade test framework treats the upgrade process as a pipeline, mapped entirely onto <code>pytest</code> fixtures.</p>
+<ol>
+<li><strong>Pre-Upgrade Baseline</strong>: Captures active Machine Config Pools (MCP) and firing Prometheus alerts before touching the cluster.</li>
+<li><strong>Catalog and Subscription Setup</strong>: Bypasses default OperatorHub sources, applies custom Konflux Image Digest Mirror Sets (IDMS), and updates the HyperConverged Operator (HCO) catalog source.</li>
+<li><strong>Trigger Upgrades</strong>: Mutates the subscription channels for CNV or OpenShift to force a new InstallPlan.</li>
+<li><strong>Replacement Monitoring</strong>: Actively watches ClusterServiceVersion (CSV) progress, <code>OperatorCondition</code> status (<code>Upgradeable=True</code>), and operator Pod replacement.</li>
+<li><strong>Post-Upgrade Validation</strong>: Ensures VMs migrated successfully and the system stabilized.</li>
+</ol>
+<h2 id="key-concepts">Key Concepts</h2>
+<h3 id="managing-massive-state-safely">Managing Massive State Safely</h3>
+<p>Scale testing relies on specific utilities and scoping to prevent resource exhaustion and ensure debuggability.</p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Scope</th>
+<th>Purpose &amp; Location</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>failure_finalizer</code></td>
+<td>Function</td>
+<td>N/A</td>
+<td>Aborts normal teardown on scale failure, collects <code>must-gather</code> logs, and leaves resources intact. (<code>tests/scale/test_scale_benchmark.py</code>)</td>
+</tr>
+<tr>
+<td><code>scale_vms</code></td>
+<td>Fixture</td>
+<td><code>class</code></td>
+<td>Translates YAML scale parameters into structured batches of <code>VirtualMachineForTestsFromTemplate</code> objects. (<code>tests/scale/test_scale_benchmark.py</code>)</td>
+</tr>
+<tr>
+<td><code>all_vms_running</code></td>
+<td>Function</td>
+<td>N/A</td>
+<td>Evaluates an entire array of VM objects simultaneously to check if all achieved <code>RUNNING</code> status. (<code>tests/scale/test_scale_benchmark.py</code>)</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Warning:</strong> Never use standard sequential assertions (<code>for vm in vms: assert vm.ready()</code>) in scale testing. Always use collective <code>TimeoutSampler</code> evaluations to prevent timeout cascades.</p>
+</blockquote>
+<h3 id="fixture-driven-upgrade-routines">Fixture-Driven Upgrade Routines</h3>
+<p>Operator upgrades in <code>tests/install_upgrade_operators/product_upgrade/conftest.py</code> rely on sequential fixture execution to safely mutate cluster state.</p>
+<table>
+<thead>
+<tr>
+<th>Fixture Name</th>
+<th>Scope</th>
+<th>Lifecycle Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cnv_upgrade</code></td>
+<td><code>session</code></td>
+<td>Global feature flag that determines whether CNV upgrade tests should run.</td>
+</tr>
+<tr>
+<td><code>updated_custom_hco_catalog_source_image</code></td>
+<td><code>function</code></td>
+<td>Mutates the HCO catalog source with the targeted upgrade test image.</td>
+</tr>
+<tr>
+<td><code>approved_cnv_upgrade_install_plan</code></td>
+<td><code>function</code></td>
+<td>Approves the newly generated <code>InstallPlan</code> to initiate the upgrade.</td>
+</tr>
+<tr>
+<td><code>upgraded_cnv</code></td>
+<td><code>function</code></td>
+<td>The final execution barrier: waits for CSV <code>SUCCEEDED</code> state, <code>Upgradeable</code> condition, and pod replacements.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="longevity-and-upgrade-storms">Longevity and Upgrade Storms</h3>
+<p>Tests under <code>tests/virt/cluster/longevity_tests/</code> monitor long-running operator resilience. For example, <code>test_multi_vm_upgrade_and_reboot.py</code> executes "upgrade storms" — forcing bulk Windows VMs to run internal Windows/WSL2 updates and trigger massive uncoordinated reboots, validating that the underlying CNV operator and storage layers remain stable under sustained stress.</p>
+<h2 id="how-it-affects-the-user">How it Affects the User</h2>
+<p>When writing or modifying tests in these domains, adhere to the following behavioral patterns:</p>
+<ul>
+<li><strong>Embrace the <code>keep_resources</code> parameter</strong>: Scale tests must respect external configuration dictating whether to wipe the cluster. Use <code>fail-open</code> logic (like <code>failure_finalizer</code>) so failures don't destroy hours of state provisioning.</li>
+<li><strong>Map upgrade steps to fixtures, not test logic</strong>: The core test method (e.g., <code>test_cnv_upgrade_process</code> in <code>tests/install_upgrade_operators/product_upgrade/test_upgrade.py</code>) should be nearly empty. All heavy lifting, pre-flight checks, and waiting routines must be defined in the requested fixtures.</li>
+<li><strong>Utilize Pytest Dependencies</strong>: Use <code>@pytest.mark.dependency()</code> to string together execution phases. </li>
+<li>Example: <code>test_mass_vm_live_migration</code> relies on the success of <code>test_scale_vms_running_stability</code>. If the VMs fail to run, the migration test automatically skips.</li>
+<li><strong>Know your markers</strong>:</li>
+<li><code>@pytest.mark.scale</code> isolates volume testing to prevent triggering inside standard CI gating.</li>
+<li><code>@pytest.mark.longevity</code> flags tests that will consume significant time.</li>
+<li><code>@pytest.mark.gating</code> applied alongside <code>@pytest.mark.cnv_upgrade</code> ensures product upgrades block release pipelines if broken.</li>
+</ul>
+<h2 id="related-pages">Related Pages</h2>
+<ul>
+<li>See <a href="resource-lifecycle.html">Resource Lifecycle &amp; Validation</a> for detailed patterns on using <code>TimeoutSampler</code> to avoid defensive programming and strict timeouts.</li>
+<li>See <a href="fixture-strategy.html">Pytest Fixture Strategy</a> for rules regarding standard fixture scopes (<code>session</code> vs <code>class</code>) and noun-based naming.</li>
+<li>See <a href="operations-chaos.html">Operations &amp; Chaos</a> for adjacent tests regarding node disruption and disaster recovery.</li>
+<li>See <a href="configuration-constants.html">Configuration &amp; Global Contexts</a> to understand how <code>global_config.py</code> interacts with external YAML files for test configurations.</li>
+</ul>
+<h2 id="related-pages_1">Related Pages</h2>
+<ul>
+<li><a href="multi-architecture-testing.html">Multi-Architecture Support</a></li>
+<li><a href="operations-chaos.html">Operations &amp; Chaos</a></li>
+<li><a href="infrastructure-observability.html">Infrastructure &amp; Observability</a></li>
+</ul>
+                </div>
+            </article>
+            <nav class="page-nav">
+
+                <a href="multi-architecture-testing.html" class="page-nav-link page-nav-prev">
+                    <span class="page-nav-label">Previous</span>
+                    <span class="page-nav-title">Multi-Architecture Support</span>
+                </a>
+
+
+                <div></div>
+
+            </nav>
+
+            <aside class="toc-sidebar">
+                <div class="toc-container">
+                    <h3>On this page</h3>
+                    <div class="toc">
+<ul>
+<li><a href="#the-big-picture">The Big Picture</a><ul>
+<li><a href="#scale-testing-architecture-flow">Scale Testing Architecture Flow</a></li>
+<li><a href="#operator-upgrade-pipeline-flow">Operator Upgrade Pipeline Flow</a></li>
+</ul>
+</li>
+<li><a href="#key-concepts">Key Concepts</a><ul>
+<li><a href="#managing-massive-state-safely">Managing Massive State Safely</a></li>
+<li><a href="#fixture-driven-upgrade-routines">Fixture-Driven Upgrade Routines</a></li>
+<li><a href="#longevity-and-upgrade-storms">Longevity and Upgrade Storms</a></li>
+</ul>
+</li>
+<li><a href="#how-it-affects-the-user">How it Affects the User</a></li>
+<li><a href="#related-pages">Related Pages</a></li>
+<li><a href="#related-pages_1">Related Pages</a></li>
+</ul>
+</div>
+
+                </div>
+            </aside>
+
+
+        </main>
+
+        <footer class="page-footer">
+
+            <span class="footer-version">Generated from version 5.0</span>
+            <span class="footer-sep">&middot;</span>
+
+            Generated with <a href="https://github.com/myk-org/docsfy" target="_blank" rel="noopener">docs<span class="brand-accent">fy</span></a>
+            <span class="footer-sep">&middot;</span>
+            <span class="footer-llm">LLM-friendly: <a href="llms.txt">llms.txt</a> &middot; <a href="llms-full.txt">llms-full.txt</a></span>
+        </footer>
+    </div>
+
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <script src="assets/theme.js"></script>
+    <script src="assets/search.js"></script>
+    <script src="assets/copy.js"></script>
+    <script src="assets/callouts.js"></script>
+    <script src="assets/scrollspy.js"></script>
+    <script src="assets/codelabels.js"></script>
+    <script src="assets/github.js"></script>
+    <script>
+(function() {
+    var toggle = document.getElementById('sidebar-toggle');
+    var sidebar = document.getElementById('sidebar');
+    var overlay = document.getElementById('sidebar-overlay');
+    if (toggle && sidebar) {
+        toggle.addEventListener('click', function() {
+            sidebar.classList.toggle('open');
+            if (overlay) overlay.classList.toggle('open');
+            var expanded = sidebar.classList.contains('open');
+            toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        });
+    }
+    if (overlay) {
+        overlay.addEventListener('click', function() {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('open');
+            if (toggle) toggle.setAttribute('aria-expanded', 'false');
+        });
+    }
+})();
+</script>
+<script>
+(function() {
+    var sidebar = document.querySelector('.sidebar-nav') || document.querySelector('.sidebar');
+    if (!sidebar) return;
+
+    // Restore scroll position
+    var saved = sessionStorage.getItem('sidebar-scroll');
+    if (saved) sidebar.scrollTop = parseInt(saved, 10);
+
+    // Save scroll position before navigating
+    sidebar.addEventListener('scroll', function() {
+        sessionStorage.setItem('sidebar-scroll', sidebar.scrollTop.toString());
+    });
+
+    // Also scroll active link into view if no saved position
+    if (!saved) {
+        var active = sidebar.querySelector('.nav-link.active');
+        if (active) {
+            active.scrollIntoView({ block: 'center', behavior: 'instant' });
+        }
+    }
+})();
+</script>
+</body>
+</html>
