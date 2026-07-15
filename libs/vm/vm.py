@@ -16,7 +16,6 @@ from libs.vm.spec import (
     Affinity,
     CloudInitNoCloud,
     ContainerDisk,
-    Devices,
     Disk,
     Memory,
     Metadata,
