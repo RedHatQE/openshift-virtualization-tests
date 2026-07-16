@@ -27,6 +27,7 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_COUNT_SUCCEEDED,
     KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
     KUBEVIRT_VMI_STATUS_ADDRESSES,
+    KUBEVIRT_VMI_SYNC_TOTAL,
     KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI,
     SUM_KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_BUCKET_SUCCEEDED,
 )
@@ -40,9 +41,9 @@ from tests.observability.metrics.utils import (
     get_vmi_guest_os_kernel_release_info_metric_from_vm,
     metric_result_output_dict_by_mountpoint,
     network_packets_received,
+    validate_vmi_sync_total_reported_and_positive,
     vnic_info_from_vm_or_vmi,
 )
-from tests.observability.utils import validate_metrics_value
 from tests.utils import create_vms, start_stress_on_vm
 from utilities import console
 from utilities.constants import Images
@@ -84,7 +85,7 @@ from utilities.infra import (
     get_pod_by_name_prefix,
     unique_name,
 )
-from utilities.monitoring import get_metrics_value
+from utilities.monitoring import get_metrics_value, validate_metrics_value
 from utilities.network import assert_ping_successful, get_ip_from_vm_or_virt_handler_pod, ping
 from utilities.ssp import verify_ssp_pod_is_running
 from utilities.storage import (
@@ -674,6 +675,18 @@ def expected_cpu_affinity_metric_value(admin_client, vm_with_cpu_spec):
 
     # return multiplication for multi-CPU VMs
     return str(cpu_count_from_vm_node * cpu_count_from_vm)
+
+
+@pytest.fixture(scope="class")
+def initial_vmi_sync_total_values(prometheus, vm_for_migration_metrics_test):
+    metric_query = KUBEVIRT_VMI_SYNC_TOTAL.format(vm_name=vm_for_migration_metrics_test.name)
+    results = validate_vmi_sync_total_reported_and_positive(prometheus=prometheus, metric_query=metric_query)
+    return {result["metric"]["pod"]: float(result["value"][1]) for result in results}
+
+
+@pytest.fixture(scope="class")
+def deleted_vmi_sync_total_vm(vm_for_migration_metrics_test):
+    vm_for_migration_metrics_test.delete(wait=True)
 
 
 @pytest.fixture(scope="class")

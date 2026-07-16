@@ -13,8 +13,6 @@ import pytest
 from ocp_resources import resource
 from pytest_testconfig import config as py_config
 
-import utilities
-
 os.environ["OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH"] = "amd64"
 
 # Add utilities to Python path for imports
@@ -34,6 +32,7 @@ resource.get_client = _mock_get_client  # type: ignore[assignment]
 # Note: utilities.hco is mocked here but test_hco.py will clear it and import real module
 mock_hco = MagicMock()
 mock_infra = MagicMock()
+mock_virt = MagicMock()
 mock_data_collector = MagicMock()
 mock_data_collector.get_data_collector_base_directory = MagicMock(return_value="/tmp/data")
 mock_data_collector.get_data_collector_base = MagicMock(return_value="/tmp/data/")
@@ -44,12 +43,16 @@ mock_jira.JIRA = MagicMock()
 
 sys.modules["utilities.hco"] = mock_hco
 sys.modules["utilities.infra"] = mock_infra
+sys.modules["utilities.virt"] = mock_virt
 sys.modules["utilities.data_collector"] = mock_data_collector
 sys.modules["jira"] = mock_jira
+
+import utilities
 
 # Also set them as attributes of the utilities module for tests that need them
 utilities.hco = mock_hco  # type: ignore[attr-defined]
 utilities.infra = mock_infra  # type: ignore[attr-defined]
+utilities.virt = mock_virt  # type: ignore[attr-defined]
 utilities.data_collector = mock_data_collector  # type: ignore[attr-defined]
 
 

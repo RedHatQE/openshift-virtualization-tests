@@ -51,14 +51,12 @@ Before writing ANY new code:
 
 ### Utility Module Placement
 
-When adding functions to `utilities/`, place them in the correct module:
+When adding functions to `utilities/`, place them in the module that matches the domain.
+Each module is named after its domain (e.g., `network.py` for networking, `storage.py` for storage).
 
-- **`utilities/cluster.py`** — cluster-wide operations (oc commands, node operations, cluster state)
-- **`utilities/infra.py`** — infrastructure helpers (SSH, networking infrastructure, pod operations)
-- **`utilities/virt.py`** — VM lifecycle, VMI operations, migration helpers
-- **`utilities/storage.py`** — storage operations (PVC, DataVolume, StorageClass)
-
-**NEVER** add functions to the wrong utility module — match the domain.
+- Browse `utilities/` for existing modules before creating a new one
+- If no matching module exists, create one named after the domain
+- **NEVER** add functions to the wrong utility module — match the domain
 
 ### Acceptable Defensive Checks (Exceptions Only)
 
@@ -92,14 +90,22 @@ New feature tests MUST follow the STD-first workflow:
 ### Coverage Tracking
 
 - **STP link REQUIRED** — every new feature test file MUST include an STP link in the module, class, or test docstring
+- **STP scenario coverage REQUIRED** — when an STD or test references an STP, every test scenario defined in that STP MUST have a corresponding STD/test declaration in the same file or PR, unless the scenario is intentionally excluded. Intentional exclusions MUST be documented in the PR description with justification and a follow-up Jira link per excluded scenario. Partial STP coverage without documented exclusions blocks merge.
+- **STD alignment with STP** — STD docstring `Preconditions:`, `Steps:`, and `Expected:` sections MUST align with the STP scenario description for the scenario being covered.
 - **RFE/Jira link REQUIRED when no STP exists** — if there is no STP, the module, class, or test docstring MUST include a link to the RFE or Jira epic (not support cases) for coverage tracking
 
 ### Test Requirements
 
 - **All new tests MUST have markers** - check pytest.ini for available markers, NEVER commit unmarked tests
-  - **Tier marker semantics**: tier1 = operator/infrastructure tests, tier2 = customer use case tests, tier3 = complex/hardware/platform-specific/time-consuming tests. Assign the correct tier based on what the test validates, not its complexity.
-  - **`tier2` is implicit** — added automatically to all tests that don't have an exclusion marker. Do NOT add `@pytest.mark.tier2` explicitly.
+  - **Tier marker semantics**: tier2 = customer use case tests (default), tier3 = complex/hardware/platform-specific/time-consuming tests. Assign the correct tier based on what the test validates, not its complexity.
+  - **`tier2` is implicit** — added automatically to all tests that don't have an exclusion marker (see `EXCLUDE_MARKER_FROM_TIER2_MARKER` in `conftest.py` for the full list). Do NOT add `@pytest.mark.tier2` explicitly.
   - **Team markers are implicit** — `network`, `storage`, `virt`, `iuo`, `observability`, `infrastructure`, `data_protection`, and `chaos` are added automatically based on the test's directory location. Do NOT add them explicitly.
+  - **`gating` marker** — marks tier2 tests that are part of the gating job. Apply when a test should block release promotion.
+  - **`special_infra` marker REQUIRED for special hardware/configuration** — new tests that require non-standard cluster capabilities MUST include `@pytest.mark.special_infra` at module (`pytestmark`), class, or test level, in addition to the specific requirement marker. See `pytest.ini` marker definitions. This applies when the test uses any of:
+    - **Hardware requirements** (`pytest.ini`): `gpu`, `sriov`, `bgp`, `ibm_bare_metal`
+    - **Configuration requirements** (`pytest.ini`): `dpdk`, `swap`, `cpu_manager`, `numa`, `hugepages`, `jumbo_frame`, `rwx_default_storage`, `descheduler`
+    - **Resource requirements** (`pytest.ini`): `high_resource_vm`
+    - **Exempt** (do NOT require `special_infra`): `single_nic` (runs on minimal-NIC clusters), `remote_cluster`, `mixed_os_nodes`, `cclm`, and operator-only markers (`hpp`, `mtv`, `tekton`, `service_mesh`, `nmstate`)
 - **Each test verifies ONE aspect only** - single purpose, easy to understand
 - **Tests MUST be independent** - use `pytest-dependency` ONLY when test B requires side effects from test A (e.g., cluster-wide configuration).
   For resource dependencies, use shared fixtures instead. **When using `@pytest.mark.dependency`, a comment explaining WHY the dependency exists is REQUIRED.**
@@ -143,6 +149,8 @@ When reviewing quarantine PRs, verify the **quarantine mechanism matches the fai
 - `@pytest.mark.xfail` quarantine is **unconditional** — requires a manual de-quarantine PR to remove
 
 **Review signal:** If the quarantine reason describes a **confirmed** product behavior that is broken (e.g., "feature X is not functioning in Y"), it is a product bug — use `@pytest.mark.jira`. If the root cause is unclear, under investigation, or relates to test/automation/environment issues (e.g., "test times out due to framework issue", "intermittent failure under investigation"), use `@pytest.mark.xfail` quarantine.
+
+- **`quarantined` marker is auto-added** — tests with `@pytest.mark.xfail(reason=f"{QUARANTINED}: ...", run=False)` automatically receive the `quarantined` marker at collection time. Do NOT add `@pytest.mark.quarantined` explicitly.
 
 ### Fixture Guidelines (CRITICAL)
 
@@ -217,6 +225,43 @@ When reviewing quarantine PRs, verify the **quarantine mechanism matches the fai
 - **Local fixtures location** - place in `<feature_dir>/conftest.py`
 - **Move to shared location** - move to `utilities/` or `tests/conftest.py` ONLY when used by different team directories
 
+### Scripts Directory
+
+Internal tooling and automation scripts live in `scripts/`. Each tool has its own subdirectory with an entry point, utilities, and tests. Scripts are NOT part of the test suite — they are standalone CLI tools for CI/CD integration and reporting.
+
+### Generated Documentation
+
+`docs/site/` contains an auto-generated documentation site (produced by [docsfy](https://github.com/myk-org/docsfy)).
+
+- ❌ **NEVER modify files under `docs/site/`** — they are auto-generated and overwritten on each regeneration
+- ❌ **NEVER include `docs/site/` changes in PRs** — reject any PR that modifies generated docs
+- ✅ To update, generate docs manually with docsfy and commit directly to `main` (not via PR)
+
+### Constants Module Placement
+
+Project constants live in `utilities/constants/` as domain-specific modules.
+Each module groups constants by domain (e.g., `cluster.py`, `virt.py`, `storage.py`).
+
+- Place new constants in the module matching their domain
+- If no matching module exists, create one with a module docstring describing its scope and listing what does NOT belong (with a pointer to the correct module)
+- The `__init__.py` re-exports all names for backward compatibility — new code should import directly from the submodule (e.g., `from utilities.constants.virt import X`)
+
+### conftest.py Architecture
+
+**Root `conftest.py`** (project root):
+- Contains pytest hooks (`pytest_collection_modifyitems`, `pytest_runtest_makereport`, etc.) and global configuration
+- **Do NOT add new hooks or complex logic directly** — extract into pytest plugins (registered via `pyproject.toml` entry points)
+- **No fixtures** — root conftest is for hooks and plugin registration only
+
+**`tests/conftest.py`**:
+- Contains shared test fixtures used across multiple team directories
+- **New shared fixtures should go in `tests/fixtures/`** as domain-specific modules (e.g., `tests/fixtures/network/`) and be imported via `tests/conftest.py`
+- **Fixture-only** — no helper functions, no utility code (place those in `utilities/`)
+
+**Feature-level `conftest.py`** (e.g., `tests/network/l2_bridge/conftest.py`):
+- Contains fixtures specific to that feature directory
+- Move to `tests/conftest.py` or `tests/fixtures/` only when used across team directories
+
 ### Internal API Stability
 
 This is a test suite - internal APIs have NO backward compatibility requirements:
@@ -241,7 +286,7 @@ This is a test suite - internal APIs have NO backward compatibility requirements
 
 ## Essential Commands
 
-### Before commiting Verification (MANDATORY)
+### Before Committing Verification (MANDATORY)
 
 Before committing, these checks MUST pass:
 
@@ -259,10 +304,24 @@ uv run tox -e utilities-unittests
 
 **No exceptions.** Fix all failures before committing. Do not use `--no-verify` to bypass hooks.
 
+### AI Documentation Reference
+
+When working on code or reviewing changes, consult `docs/site/llms.txt` for a structured index of project documentation.
+To understand a specific domain, read the corresponding `.md` file from `docs/site/` listed in the index.
+Per-domain documentation may also live under the relevant `tests/<domain>/` directory (e.g., `tests/network/README.md`).
+
+- **Quick orientation** — read `docs/site/llms.txt` for the full docs index
+- **Deep dive** — read specific `docs/site/<topic>.md` files relevant to the task
+- ❌ **Do NOT** load `docs/site/llms-full.txt` into context — read individual topic files instead
+
 ## Related Documentation
 
-- [`docs/QUARANTINE_GUIDELINES.md`](QUARANTINE_GUIDELINES.md) — Test quarantine and de-quarantine procedures
-- [`docs/SOFTWARE_TEST_DESCRIPTION.md`](SOFTWARE_TEST_DESCRIPTION.md) — STD docstring format and requirements
+- [`docs/CODE_ORGANIZATION.md`](docs/CODE_ORGANIZATION.md) — Constants, utilities, and fixtures layout and import rules
+- [`docs/QUARANTINE_GUIDELINES.md`](docs/QUARANTINE_GUIDELINES.md) — Test quarantine and de-quarantine procedures
+- [`docs/SOFTWARE_TEST_DESCRIPTION.md`](docs/SOFTWARE_TEST_DESCRIPTION.md) — STD docstring format and requirements
 - [`docs/CODING_AND_STYLE_GUIDE.md`](docs/CODING_AND_STYLE_GUIDE.md) — Detailed coding and style conventions
 - [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) — Contribution guidelines
 - [`tests/network/README.md`](tests/network/README.md) — Network domain knowledge: terminology, naming conventions and functionality.
+- [`docs/AI_CONTRIBUTION_POLICY.md`](docs/AI_CONTRIBUTION_POLICY.md) — AI contribution disclosure requirements
+- [`docs/MAINTAINER_GUIDELINES.md`](docs/MAINTAINER_GUIDELINES.md) — Maintainer/approver progression guidelines
+- [`docs/ARCHITECTURE_SUPPORT.md`](docs/ARCHITECTURE_SUPPORT.md) — Multi-architecture support documentation

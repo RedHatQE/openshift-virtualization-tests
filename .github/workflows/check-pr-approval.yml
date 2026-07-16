@@ -1,0 +1,116 @@
+# Reusable workflow to check if a PR requires approval.
+#
+# The webhook payload field (github.event.pull_request.author_association) is
+# unreliable under pull_request_target events — it can be absent or stale even
+# for org members. This workflow fetches the value via the REST API (pulls.get),
+# which always returns the correct association.
+#
+# Caveat: GITHUB_TOKEN is repo-scoped and cannot check org membership.
+# pulls.get returns CONTRIBUTOR (not MEMBER) for org members who submit
+# PRs from forks. When the association is not in the trusted list AND
+# the PR is a fork, we fall back to an explicit org membership check
+# using ORG_READ_TOKEN (a fine-grained PAT with Organization: Members read).
+#
+# Usage:
+#   jobs:
+#     check-approval:
+#       uses: ./.github/workflows/check-pr-approval.yml
+#       secrets:
+#         ORG_READ_TOKEN: ${{ secrets.ORG_READ_TOKEN }}
+#
+#     my-job:
+#       needs: [check-approval]
+#       environment: ${{ needs.check-approval.outputs.needs_approval == 'true' && 'external-pr-tests' || '' }}
+
+name: Check PR Approval
+
+on:
+  workflow_call:
+    inputs:
+      trusted_associations:
+        description: JSON array of trusted author associations that skip approval
+        type: string
+        default: '["COLLABORATOR", "MEMBER", "OWNER"]'
+    secrets:
+      ORG_READ_TOKEN:
+        description: Fine-grained PAT with Organization Members read permission for org membership checks
+        required: false
+    outputs:
+      needs_approval:
+        description: Whether the PR needs environment approval (true/false)
+        value: ${{ jobs.check.outputs.needs_approval }}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      pull-requests: read
+    outputs:
+      needs_approval: ${{ steps.check.outputs.needs_approval }}
+    steps:
+      - name: Fetch author association via REST API
+        id: check
+        uses: actions/github-script@v9
+        env:
+          TRUSTED_ASSOCIATIONS: ${{ inputs.trusted_associations }}
+          ORG_READ_TOKEN: ${{ secrets.ORG_READ_TOKEN }}
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            if (!pr) {
+              core.warning(`No pull_request in event payload (event: ${context.eventName}) — called from a non-PR trigger?`);
+              core.setOutput('needs_approval', 'true');
+              return;
+            }
+
+            try {
+              const { data } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+              });
+
+              const trusted = JSON.parse(process.env.TRUSTED_ASSOCIATIONS);
+              if (!Array.isArray(trusted)) {
+                throw new Error('trusted_associations input must be a JSON array');
+              }
+
+              // head.repo is null when the fork has been deleted after the PR was opened
+              const isFork = !data.head.repo || data.head.repo.full_name !== `${context.repo.owner}/${context.repo.repo}`;
+              let isTrusted = trusted.includes(data.author_association);
+
+              // GITHUB_TOKEN is repo-scoped, so pulls.get returns CONTRIBUTOR
+              // instead of MEMBER for org members who submit from forks.
+              // Fall back to an explicit org membership check.
+              if (!isTrusted && isFork) {
+                const orgToken = process.env.ORG_READ_TOKEN;
+                if (orgToken) {
+                  try {
+                    const orgOctokit = getOctokit(orgToken);
+                    await orgOctokit.rest.orgs.checkMembershipForUser({
+                      org: context.repo.owner,
+                      username: data.user.login,
+                    });
+                    isTrusted = true;
+                    core.info(`Org membership confirmed for ${data.user.login}`);
+                  } catch (err) {
+                    if (err.status === 404 || err.status === 302) {
+                      core.info(`User ${data.user.login} is not an org member (status=${err.status})`);
+                    } else {
+                      core.warning(`Org membership check failed for ${data.user.login}: ${err.message} (status=${err.status})`);
+                    }
+                  }
+                } else {
+                  core.warning('ORG_READ_TOKEN not configured — cannot verify org membership for fork PRs');
+                }
+              }
+
+              const needsApproval = isFork && !isTrusted;
+
+              core.info(`author=${data.user.login} association=${data.author_association} fork=${isFork} trusted=${isTrusted} needs_approval=${needsApproval}`);
+              core.setOutput('needs_approval', String(needsApproval));
+            } catch (error) {
+              core.warning(`Failed to fetch PR author association: ${error.message}`);
+              core.setOutput('needs_approval', 'true');
+            }

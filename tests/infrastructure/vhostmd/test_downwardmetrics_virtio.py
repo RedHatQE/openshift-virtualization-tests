@@ -19,7 +19,7 @@ from ocp_resources.virtual_machine_cluster_preference import (
 )
 from pyhelper_utils.shell import run_ssh_commands
 
-from utilities.constants import OS_FLAVOR_RHEL
+from utilities.constants.images import OS_FLAVOR_RHEL
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.virt import VirtualMachineForTests, wait_for_running_vm
 
@@ -31,7 +31,7 @@ EXPECTED_METRICS = {
     ("VirtualizationVendor", "string", "host"),
     ("VirtProductInfo", "string", "host"),
     ("TotalCPUTime", "real64", "vm"),
-    ("ResourceProcessorLimit", "uint64", "vm"),
+    ("ResourceProcessorLimit", "int64", "vm"),
     ("PhysicalMemoryAllocatedToVirtualSystem", "uint64", "vm"),
     ("ResourceMemoryLimit", "uint64", "vm"),
     ("NumberOfPhysicalCPUs", "int64", "host"),

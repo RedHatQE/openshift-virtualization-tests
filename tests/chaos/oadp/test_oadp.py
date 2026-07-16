@@ -3,7 +3,7 @@ import logging
 import pytest
 
 from tests.os_params import RHEL_LATEST
-from utilities.constants import TIMEOUT_10MIN
+from utilities.constants.timeouts import TIMEOUT_10MIN
 
 LOGGER = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ LOGGER = logging.getLogger(__name__)
         pytest.param(
             {
                 "vm_name": "vm-node-reboot-12011",
-                "rhel_image": RHEL_LATEST["image_name"],
+                "rhel_image": RHEL_LATEST.get("image_name"),
             },
             marks=pytest.mark.polarion("CNV-12011"),
         ),
@@ -49,7 +49,7 @@ def test_reboot_vm_node_during_backup(
         pytest.param(
             {
                 "vm_name": "vm-node-drain-12020",
-                "rhel_image": RHEL_LATEST["image_name"],
+                "rhel_image": RHEL_LATEST.get("image_name"),
             },
             marks=pytest.mark.polarion("CNV-12020"),
         ),

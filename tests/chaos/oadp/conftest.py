@@ -7,14 +7,16 @@ from ocp_resources.deployment import Deployment
 from timeout_sampler import TimeoutSampler
 
 from tests.chaos.utils import create_pod_deleting_thread, pod_deleting_process_recover
-from utilities.constants import (
+from utilities.constants import Images
+from utilities.constants.oadp import (
     BACKUP_STORAGE_LOCATION,
     FILE_NAME_FOR_BACKUP,
     TEXT_TO_TEST,
+)
+from utilities.constants.timeouts import (
     TIMEOUT_1MIN,
     TIMEOUT_3MIN,
     TIMEOUT_10MIN,
-    Images,
 )
 from utilities.infra import ExecCommandOnPod, wait_for_node_status
 from utilities.oadp import VeleroBackup, create_rhel_vm

@@ -18,6 +18,7 @@ from libs.vm.spec import (
     ContainerDisk,
     Devices,
     Disk,
+    Memory,
     Metadata,
     Network,
     SpecDisk,
@@ -27,7 +28,7 @@ from libs.vm.spec import (
 )
 from tests.network.libs import cloudinit
 from utilities import infra
-from utilities.constants import CLOUD_INIT_DISK_NAME
+from utilities.constants.virt import CLOUD_INIT_DISK_NAME
 from utilities.virt import get_oc_image_info, vm_console_run_commands
 
 if TYPE_CHECKING:
@@ -128,6 +129,22 @@ class BaseVirtualMachine(VirtualMachine):
         self._spec.template.spec.networks = networks
         serialized = [asdict(obj=net, dict_factory=self._filter_out_none_values) for net in networks]
         ResourceEditor(patches={self: {"spec": {"template": {"spec": {"networks": serialized}}}}}).update()
+
+    def set_guest_memory(self, memory_guest: str) -> None:
+        """Set the guest memory and update the VM spec on the cluster.
+
+        On a running VM this triggers an automatic live migration.
+
+        Args:
+            memory_guest: New guest memory value (e.g. "5Gi").
+        """
+        if self._spec.template.spec.domain.memory:
+            self._spec.template.spec.domain.memory.guest = memory_guest
+        else:
+            self._spec.template.spec.domain.memory = Memory(guest=memory_guest)
+        ResourceEditor(
+            patches={self: {"spec": {"template": {"spec": {"domain": {"memory": {"guest": memory_guest}}}}}}}
+        ).update()
 
     def set_template_affinity(self, affinity: Affinity | None) -> None:
         """Replace the VM template affinity.

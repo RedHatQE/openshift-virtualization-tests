@@ -21,13 +21,8 @@ from tests.network.utils import (
     assert_ssh_alive,
     run_ssh_in_background,
 )
-from utilities.constants import (
-    IP_FAMILY_POLICY_PREFER_DUAL_STACK,
-    IPV6_STR,
-    LINUX_BRIDGE,
-    TIMEOUT_1MIN,
-    TIMEOUT_2MIN,
-)
+from utilities.constants.networking import IP_FAMILY_POLICY_PREFER_DUAL_STACK, IPV6_STR, LINUX_BRIDGE
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_2MIN
 from utilities.infra import get_node_selector_dict
 from utilities.network import (
     assert_ping_successful,

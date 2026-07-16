@@ -70,62 +70,80 @@ from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutSampler
 
 import utilities.hco
-from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
+from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster, supported_cluster_ip_versions
 from libs.net.ip import filter_link_local_addresses, random_cidr_addresses_by_family
 from libs.net.vmspec import lookup_iface_status
 from tests.utils import download_and_extract_tar
 from utilities.artifactory import get_artifactory_header, get_http_image_url, get_test_artifact_server_url
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.cluster import cache_admin_client, get_oc_whoami_username
-from utilities.constants import (
+from utilities.constants import Images
+from utilities.constants.aaq import (
     AAQ_NAMESPACE_LABEL,
-    ARM_64,
     ARQ_QUOTA_HARD_SPEC,
+)
+from utilities.constants.architecture import (
+    ARM_64,
+    S390X,
+)
+from utilities.constants.cluster import (
     AUDIT_LOGS_PATH,
-    CDI_KUBEVIRT_HYPERCONVERGED,
-    CLUSTER,
     CNV_TEST_SERVICE_ACCOUNT,
-    CNV_VM_SSH_KEY_PATH,
-    ES_NONE,
-    EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS,
-    FEATURE_GATES,
-    HCO_SUBSCRIPTION,
-    HOTFIX_STR,
-    INSTANCE_TYPE_STR,
-    KMP_ENABLED_LABEL,
-    KMP_VM_ASSIGNMENT_LABEL,
     KUBECONFIG,
-    KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
-    KUBEMACPOOL_MAC_RANGE_CONFIG,
     KUBERNETES_ARCH_LABEL,
-    LINUX_BRIDGE,
-    MIGRATION_POLICY_VM_LABEL,
-    NODE_HUGE_PAGES_1GI_KEY,
     NODE_ROLE_KUBERNETES_IO,
     NODE_TYPE_WORKER_LABEL,
     OC_ADM_LOGS_COMMAND,
-    OS_FLAVOR_RHEL,
-    OVS_BRIDGE,
     POD_SECURITY_NAMESPACE_LABELS,
-    PREFERENCE_STR,
-    RHEL9_STR,
     RHSM_SECRET_NAME,
-    S390X,
+    UTILITY,
+    WORKER_NODE_LABEL_KEY,
+    WORKERS_TYPE,
+)
+from utilities.constants.components import (
+    CDI_KUBEVIRT_HYPERCONVERGED,
+    CLUSTER,
+    KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
+    RHEL9_STR,
+    VIRTCTL_CLI_DOWNLOADS,
+)
+from utilities.constants.hco import (
+    FEATURE_GATES,
+    HCO_SUBSCRIPTION,
+    HOTFIX_STR,
     SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
+    UpgradeStreams,
+)
+from utilities.constants.images import OS_FLAVOR_RHEL
+from utilities.constants.instance_types import (
+    EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS,
+    INSTANCE_TYPE_STR,
+    PREFERENCE_STR,
+)
+from utilities.constants.namespaces import NamespacesNames
+from utilities.constants.networking import (
+    KMP_ENABLED_LABEL,
+    KMP_VM_ASSIGNMENT_LABEL,
+    KUBEMACPOOL_MAC_RANGE_CONFIG,
+    LINUX_BRIDGE,
+    OVS_BRIDGE,
+)
+from utilities.constants.pytest import (
+    UNPRIVILEGED_PASSWORD,
+    UNPRIVILEGED_USER,
+)
+from utilities.constants.storage import BIND_IMMEDIATE_ANNOTATION, StorageClassNames
+from utilities.constants.timeouts import (
     TIMEOUT_3MIN,
     TIMEOUT_4MIN,
     TIMEOUT_5MIN,
-    UNPRIVILEGED_PASSWORD,
-    UNPRIVILEGED_USER,
-    UTILITY,
-    VIRTCTL_CLI_DOWNLOADS,
+)
+from utilities.constants.virt import (
+    CNV_VM_SSH_KEY_PATH,
+    ES_NONE,
+    MIGRATION_POLICY_VM_LABEL,
+    NODE_HUGE_PAGES_1GI_KEY,
     VIRTIO,
-    WORKER_NODE_LABEL_KEY,
-    WORKERS_TYPE,
-    Images,
-    NamespacesNames,
-    StorageClassNames,
-    UpgradeStreams,
 )
 from utilities.cpu import (
     find_common_cpu_model_for_live_migration,
@@ -182,6 +200,7 @@ from utilities.pytest_utils import exit_pytest_execution
 from utilities.sanity import cluster_sanity
 from utilities.ssp import get_data_import_crons, get_ssp_resource
 from utilities.storage import (
+    construct_datavolume_source_dict,
     create_or_update_data_source,
     data_volume,
     get_default_storage_class,
@@ -456,13 +475,12 @@ def nodes(admin_client):
 
 
 @pytest.fixture(scope="session")
-def schedulable_nodes(nodes):
+def schedulable_nodes(nodes, nodes_cpu_architecture):
     """Get nodes marked as schedulable by kubevirt.
 
     For multi-arch testing - filter nodes by the architecture being tested.
     """
     schedulable_label = "kubevirt.io/schedulable"
-    cpu_arch = py_config.get("cpu_arch")
     schedulable = [
         node
         for node in nodes
@@ -471,10 +489,12 @@ def schedulable_nodes(nodes):
         and not node.instance.spec.unschedulable
         and not kubernetes_taint_exists(node)
         and node.kubelet_ready
-        and (not cpu_arch or node.labels.get(KUBERNETES_ARCH_LABEL) == cpu_arch)
+        and (not nodes_cpu_architecture or node.labels.get(KUBERNETES_ARCH_LABEL) == nodes_cpu_architecture)
     ]
 
-    LOGGER.info(f"Schedulable nodes: {[node.name for node in schedulable]}, node architecture: {cpu_arch or 'all'}")
+    LOGGER.info(
+        f"Schedulable nodes: {[node.name for node in schedulable]}, node architecture: {nodes_cpu_architecture or 'all'}"
+    )
     yield schedulable
 
 
@@ -1478,7 +1498,6 @@ def cluster_info(
     ocs_current_version,
     kubevirt_resource_scope_session,
     workers_type,
-    nodes_cpu_architecture,
 ):
     title = "\nCluster info:\n"
     virtctl_client_version, virtctl_server_version = None, None
@@ -1495,7 +1514,7 @@ def cluster_info(
         f"\tOCS version: {ocs_current_version}\n"
         f"\tCNI type: {get_cluster_cni_type(admin_client=admin_client)}\n"
         f"\tWorkers type: {workers_type}\n"
-        f"\tCluster CPU Architecture: {py_config['cluster_arch']}\n"
+        f"\tCluster CPU Architecture: {', '.join(py_config['cluster_arch'])}\n"
         f"\tIPv4 cluster: {ipv4_supported_cluster()}\n"
         f"\tIPv6 cluster: {ipv6_supported_cluster()}\n"
         f"\tVirtctl version: \n\t{virtctl_client_version}\n\t{virtctl_server_version}\n"
@@ -1677,9 +1696,7 @@ def running_vm_upgrade_a(
         eviction_strategy=ES_NONE,
     ) as vm:
         running_vm(vm=vm, wait_for_cloud_init=True)
-        ip_families = [
-            family for family, enabled in ((4, ipv4_supported_cluster()), (6, ipv6_supported_cluster())) if enabled
-        ]
+        ip_families = supported_cluster_ip_versions()
         lookup_iface_status(
             vm=vm,
             iface_name=upgrade_bridge_marker_nad.name,
@@ -1712,9 +1729,7 @@ def running_vm_upgrade_b(
         eviction_strategy=ES_NONE,
     ) as vm:
         running_vm(vm=vm, wait_for_cloud_init=True)
-        ip_families = [
-            family for family, enabled in ((4, ipv4_supported_cluster()), (6, ipv6_supported_cluster())) if enabled
-        ]
+        ip_families = supported_cluster_ip_versions()
         lookup_iface_status(
             vm=vm,
             iface_name=upgrade_bridge_marker_nad.name,
@@ -2500,13 +2515,15 @@ def dvs_for_upgrade(
             client=admin_client,
             name=f"dv-for-product-upgrade-{storage_class}",
             namespace=golden_images_namespace_name,
-            source="http",
+            source_dict=construct_datavolume_source_dict(
+                source="http",
+                url=rhel_latest_os_params["rhel_image_path"],
+                secret_name=artifactory_secret.name,
+                cert_configmap_name=artifactory_config_map.name,
+            ),
             storage_class=storage_class,
-            secret=artifactory_secret,
-            cert_configmap=artifactory_config_map.name,
-            url=rhel_latest_os_params["rhel_image_path"],
             size=rhel_latest_os_params["rhel_dv_size"],
-            bind_immediate_annotation=True,
+            annotations=BIND_IMMEDIATE_ANNOTATION,
             api_name="storage",
         )
         dv.create()

@@ -229,7 +229,8 @@ def test_import_clone_after_certs_renewal(
         dv_name="dv-target",
         namespace=namespace.name,
         size=data_volume_multi_storage_scope_module.size,
-        source_pvc=data_volume_multi_storage_scope_module.name,
+        source_pvc_name=data_volume_multi_storage_scope_module.name,
+        source_pvc_namespace=data_volume_multi_storage_scope_module.namespace,
         storage_class=data_volume_multi_storage_scope_module.storage_class,
     ) as cdv:
         cdv.wait_for_dv_success(timeout=TIMEOUT_3MIN)

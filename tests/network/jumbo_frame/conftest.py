@@ -8,7 +8,8 @@ from tests.network.jumbo_frame.utils import (
     cloud_init_data_for_secondary_traffic,
     create_vm_for_jumbo_test,
 )
-from utilities.constants import LINUX_BRIDGE, WORKER_NODE_LABEL_KEY
+from utilities.constants.cluster import WORKER_NODE_LABEL_KEY
+from utilities.constants.networking import LINUX_BRIDGE
 from utilities.infra import get_node_selector_dict
 from utilities.network import network_device, network_nad
 

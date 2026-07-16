@@ -4,7 +4,7 @@ import pexpect
 import pytest
 
 from utilities import console
-from utilities.constants import TIMEOUT_1MIN, TIMEOUT_3MIN
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_3MIN
 from utilities.virt import VirtualMachineForTests
 
 LOGGER = logging.getLogger(__name__)

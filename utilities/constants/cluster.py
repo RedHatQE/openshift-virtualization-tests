@@ -1,7 +1,7 @@
 """Cluster infrastructure constants.
 
 Covers Kubernetes node labels (architecture, worker role, CPU model prefix, TSC
-frequency, version), pod security namespace labels, Kubernetes API verb strings,
+frequency, version), generic node dict keys (NODE_STR), pod security namespace labels, Kubernetes API verb strings,
 environment variables (KUBECONFIG, WORKERS_TYPE), CNV test run markers, service
 account names, the base network-exception dictionary, and audit-log command strings.
 
@@ -12,6 +12,8 @@ Not here:
 - Networking pod specs → ``networking.py``
 - Pytest/test-runner strings → ``pytest.py``
 """
+
+from typing import Final
 
 from kubernetes.dynamic.exceptions import InternalServerError
 from ocp_resources.resource import Resource
@@ -24,9 +26,11 @@ from urllib3.exceptions import (
 
 # Node / selector labels
 KUBERNETES_ARCH_LABEL = f"{Resource.ApiGroup.KUBERNETES_IO}/arch"
+NODE_STR = "node"
 NODE_TYPE_WORKER_LABEL = {"node-type": "worker"}
 NODE_ROLE_KUBERNETES_IO = "node-role.kubernetes.io"
 WORKER_NODE_LABEL_KEY = f"{NODE_ROLE_KUBERNETES_IO}/worker"
+RHCOS9_WORKER_LABEL: Final[str] = f"{NODE_ROLE_KUBERNETES_IO}/worker-rhcos9"
 VERSION_LABEL_KEY = f"{Resource.ApiGroup.APP_KUBERNETES_IO}/version"
 CPU_MODEL_LABEL_PREFIX = f"cpu-model.node.{Resource.ApiGroup.KUBEVIRT_IO}"
 TSC_FREQUENCY = "tsc-frequency"

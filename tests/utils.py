@@ -27,19 +27,22 @@ from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 
 from utilities.artifactory import (
-    cleanup_artifactory_secret_and_config_map,
     get_artifactory_config_map,
     get_artifactory_header,
     get_artifactory_secret,
     get_http_image_url,
-    get_test_artifact_server_url,
 )
-from utilities.constants import (
-    DISK_SERIAL,
-    NODE_HUGE_PAGES_1GI_KEY,
+from utilities.constants import Images
+from utilities.constants.cluster import RHSM_SECRET_NAME
+from utilities.constants.images import (
     OS_FLAVOR_WIN_CONTAINER_DISK,
     OS_FLAVOR_WINDOWS,
-    RHSM_SECRET_NAME,
+)
+from utilities.constants.instance_types import (
+    U1_LARGE,
+    WINDOWS_2K22_PREFERENCE,
+)
+from utilities.constants.timeouts import (
     TCP_TIMEOUT_30SEC,
     TIMEOUT_1MIN,
     TIMEOUT_1SEC,
@@ -50,18 +53,15 @@ from utilities.constants import (
     TIMEOUT_10SEC,
     TIMEOUT_15SEC,
     TIMEOUT_30MIN,
-    U1_LARGE,
-    WIN_2K22,
-    WINDOWS_2K22_PREFERENCE,
-    Images,
 )
+from utilities.constants.virt import DISK_SERIAL, NODE_HUGE_PAGES_1GI_KEY
 from utilities.data_collector import get_data_collector_dir, write_to_file
 from utilities.exceptions import ResourceValueError
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import (
     ExecCommandOnPod,
 )
-from utilities.os_utils import get_windows_container_disk_path
+from utilities.storage import construct_datavolume_source_dict
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
@@ -563,14 +563,16 @@ def create_cirros_vm(
     dv = DataVolume(
         name=dv_name,
         namespace=namespace,
-        source="http",
-        url=get_http_image_url(image_directory=Images.Cirros.DIR, image_name=Images.Cirros.QCOW2_IMG),
+        source_dict=construct_datavolume_source_dict(
+            source="http",
+            url=get_http_image_url(image_directory=Images.Cirros.DIR, image_name=Images.Cirros.QCOW2_IMG),
+            secret_name=artifactory_secret.name,
+            cert_configmap_name=artifactory_config_map.name,
+        ),
         storage_class=storage_class,
         size=Images.Cirros.DEFAULT_DV_SIZE,
         api_name="storage",
         volume_mode=volume_mode,
-        secret=artifactory_secret,
-        cert_configmap=artifactory_config_map.name,
     )
     dv.to_dict()
     dv_metadata = dv.res["metadata"]
@@ -705,59 +707,52 @@ def verify_rwx_default_storage(client: DynamicClient) -> None:
 
 
 @contextmanager
-def create_windows2022_dv_template_from_registry(
-    dv_name: str,
-    namespace: str,
-    client: DynamicClient,
-    storage_class: str,
-) -> Generator[dict]:
-    """
-    Creates a Windows Server 2022 DataVolume template from registry container disk.
-
-    Args:
-        dv_name: Name for the DataVolume
-        namespace: Kubernetes namespace
-        client: Kubernetes client
-        storage_class: Storage class name
-
-    Yields:
-        dict: DataVolume template dictionary with metadata and spec
-    """
-    artifactory_secret = get_artifactory_secret(namespace=namespace)
-    artifactory_config_map = get_artifactory_config_map(namespace=namespace)
-
-    dv = DataVolume(
-        name=dv_name,
-        namespace=namespace,
-        storage_class=storage_class,
-        source="registry",
-        url=f"{get_test_artifact_server_url(schema='registry')}/{get_windows_container_disk_path(os_value=WIN_2K22)}",
-        size=Images.Windows.CONTAINER_DISK_DV_SIZE,
-        client=client,
-        api_name="storage",
-        secret=artifactory_secret,
-        cert_configmap=artifactory_config_map.name,
-    )
-    dv.to_dict()
-
-    try:
-        yield {"metadata": dv.res["metadata"], "spec": dv.res["spec"]}
-    finally:
-        cleanup_artifactory_secret_and_config_map(
-            artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
-        )
-
-
-@contextmanager
-def create_windows2022_vm_with_vtpm(
-    dv_template: dict,
+def create_windows2022_vm_using_existing_dv(
     namespace: str,
     client: DynamicClient,
     vm_name: str,
-    cpu_model: str | None,
+    cpu_model: str | None = None,
+    existing_data_volume: DataVolume | None = None,
 ) -> Generator[VirtualMachineForTests]:
     """
-    Creates a Windows Server 2022 VM with vTPM from registry container disk.
+    Creates a Windows Server 2022 VM with vTPM using existing DataVolume.
+
+    Args:
+        existing_data_volume: DataVolume to use for the VM's data volume
+        namespace: Kubernetes namespace
+        client: Kubernetes client
+        vm_name: Name for the VirtualMachine
+        cpu_model: CPU model specification (can be None)
+
+    Yields:
+        VirtualMachineForTests: Running Windows 2022 VM with vTPM
+    """
+
+    with VirtualMachineForTests(
+        name=vm_name,
+        namespace=namespace,
+        client=client,
+        os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK,
+        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_LARGE, client=client),
+        vm_preference=VirtualMachineClusterPreference(name=WINDOWS_2K22_PREFERENCE, client=client),
+        data_volume=existing_data_volume,
+        cpu_model=cpu_model,
+    ) as vm:
+        running_vm(vm=vm)
+        wait_for_windows_vm(vm=vm, version="2022")
+        yield vm
+
+
+@contextmanager
+def create_windows2022_vm_with_data_volume_template(
+    namespace: str,
+    client: DynamicClient,
+    vm_name: str,
+    cpu_model: str | None = None,
+    dv_template: dict | None = None,
+) -> Generator[VirtualMachineForTests]:
+    """
+    Creates a Windows Server 2022 VM with vTPM with dv template.
 
     Args:
         dv_template: DataVolume template dictionary with metadata and spec
@@ -769,6 +764,7 @@ def create_windows2022_vm_with_vtpm(
     Yields:
         VirtualMachineForTests: Running Windows 2022 VM with vTPM
     """
+
     with VirtualMachineForTests(
         name=vm_name,
         namespace=namespace,

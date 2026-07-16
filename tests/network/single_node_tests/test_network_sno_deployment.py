@@ -4,7 +4,7 @@ import pytest
 from ocp_resources.daemonset import DaemonSet
 from ocp_resources.deployment import Deployment
 
-from utilities.constants import CLUSTER_NETWORK_ADDONS_OPERATOR
+from utilities.constants.components import CLUSTER_NETWORK_ADDONS_OPERATOR
 
 EXPECTED_CNAO_COMP_NAMES = [
     "multus",

@@ -10,6 +10,7 @@ from ocp_resources.virtual_machine import VirtualMachine
 class VMSpec:
     template: Template
     runStrategy: str = VirtualMachine.RunStrategy.HALTED  # noqa: N815
+    dataVolumeTemplates: list[dict[str, Any]] | None = None  # noqa: N815
 
 
 @dataclass
@@ -49,6 +50,7 @@ class CPU:
 @dataclass
 class Memory:
     guest: str
+    maxGuest: str | None = None  # noqa: N815
 
 
 @dataclass
@@ -156,6 +158,12 @@ class Volume:
     name: str
     containerDisk: ContainerDisk | None = None  # noqa: N815
     cloudInitNoCloud: CloudInitNoCloud | None = None  # noqa: N815
+    dataVolume: DataVolumeRef | None = None  # noqa: N815
+
+
+@dataclass
+class DataVolumeRef:
+    name: str
 
 
 @dataclass

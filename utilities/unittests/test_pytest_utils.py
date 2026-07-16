@@ -7,25 +7,30 @@ from unittest.mock import MagicMock, mock_open, patch
 import pytest
 
 import utilities.constants
-from utilities.constants import (
-    AMD_64,
-    ARM_64,
-    CENTOS_STREAM9_PREFERENCE,
-    MULTIARCH,
-    OS_FLAVOR_FEDORA,
-    RHEL9_PREFERENCE,
-    S390X,
-)
-from utilities.exceptions import MissingEnvironmentVariableError, UnsupportedCPUArchitectureError
 
 # Circular dependencies are already mocked in conftest.py
+from utilities import pytest_utils
+from utilities.constants.architecture import (
+    AMD_64,
+    ARM_64,
+    MULTIARCH,
+    S390X,
+)
+from utilities.constants.images import OS_FLAVOR_FEDORA
+from utilities.constants.instance_types import (
+    CENTOS_STREAM9_PREFERENCE,
+    RHEL9_PREFERENCE,
+)
+from utilities.exceptions import MissingEnvironmentVariableError, UnsupportedCPUArchitectureError
 from utilities.pytest_utils import (
+    _validate_storage_class_options,
     assert_incremental_classes_fully_collected,
     config_default_storage_class,
     deploy_run_in_progress_config_map,
     deploy_run_in_progress_namespace,
     exit_pytest_execution,
     filter_hpp_tests,
+    filter_multiarch_tests,
     generate_common_template_matrix_dicts,
     generate_instance_type_matrix_dicts,
     get_artifactory_server_url,
@@ -267,6 +272,10 @@ class TestConfigDefaultStorageClass:
                 {"new-sc": {"volume_mode": "Filesystem", "access_mode": "ReadWriteOnce"}},
                 {"original-sc": {"volume_mode": "Block", "access_mode": "ReadWriteMany"}},
             ],
+            "system_storage_class_matrix": [
+                {"new-sc": {"volume_mode": "Filesystem", "access_mode": "ReadWriteOnce"}},
+                {"original-sc": {"volume_mode": "Block", "access_mode": "ReadWriteMany"}},
+            ],
         },
     )
     def test_config_default_storage_class_cmd_override(self):
@@ -290,6 +299,10 @@ class TestConfigDefaultStorageClass:
         {
             "default_storage_class": "original-sc",
             "storage_class_matrix": [
+                {"first-sc": {"volume_mode": "Filesystem", "access_mode": "ReadWriteOnce"}},
+                {"second-sc": {"volume_mode": "Block", "access_mode": "ReadWriteMany"}},
+            ],
+            "system_storage_class_matrix": [
                 {"first-sc": {"volume_mode": "Filesystem", "access_mode": "ReadWriteOnce"}},
                 {"second-sc": {"volume_mode": "Block", "access_mode": "ReadWriteMany"}},
             ],
@@ -319,6 +332,10 @@ class TestConfigDefaultStorageClass:
                 {"first-sc": {"volume_mode": "Filesystem", "access_mode": "ReadWriteOnce"}},
                 {"original-sc": {"volume_mode": "Block", "access_mode": "ReadWriteMany"}},
             ],
+            "system_storage_class_matrix": [
+                {"first-sc": {"volume_mode": "Filesystem", "access_mode": "ReadWriteOnce"}},
+                {"original-sc": {"volume_mode": "Block", "access_mode": "ReadWriteMany"}},
+            ],
         },
     )
     def test_config_default_storage_class_matrix_contains_default(self):
@@ -336,7 +353,13 @@ class TestConfigDefaultStorageClass:
         # Should keep original-sc since it's in the matrix
         assert py_config["default_storage_class"] == "original-sc"
 
-    @patch("utilities.pytest_utils.py_config", {"default_storage_class": "original-sc"})
+    @patch(
+        "utilities.pytest_utils.py_config",
+        {
+            "default_storage_class": "original-sc",
+            "system_storage_class_matrix": [],
+        },
+    )
     def test_config_default_storage_class_no_changes(self):
         """Test no changes when no overrides provided"""
         mock_session = MagicMock()
@@ -351,6 +374,263 @@ class TestConfigDefaultStorageClass:
 
         # Should remain unchanged
         assert py_config["default_storage_class"] == "original-sc"
+
+    @patch(
+        "utilities.pytest_utils.py_config",
+        {
+            "default_storage_class": "original-sc",
+            "system_storage_class_matrix": [
+                {"existing-sc-1": {"volume_mode": "Filesystem", "access_mode": "ReadWriteOnce"}},
+                {"existing-sc-2": {"volume_mode": "Block", "access_mode": "ReadWriteMany"}},
+            ],
+        },
+    )
+    @patch("utilities.pytest_utils.write_to_file")
+    @patch("utilities.pytest_utils.get_data_collector_base_directory", return_value="/tmp")
+    @patch("utilities.pytest_utils.pytest.exit", side_effect=SystemExit(4))
+    def test_config_default_storage_class_not_found_raises_error(
+        self, mock_pytest_exit, mock_get_base_dir, mock_write_to_file
+    ):
+        """Test clean exit when requested default storage class is not in system matrix"""
+        mock_session = MagicMock()
+        mock_session.config.getoption.side_effect = lambda name: {
+            "default_storage_class": "nonexistent-sc",
+            "storage_class_matrix": None,
+        }.get(name)
+
+        with pytest.raises(SystemExit):
+            config_default_storage_class(mock_session)
+
+        mock_pytest_exit.assert_called_once()
+        assert mock_pytest_exit.call_args[1]["returncode"] == 4
+        assert "nonexistent-sc" in mock_pytest_exit.call_args[1]["reason"]
+        mock_write_to_file.assert_called_once()
+
+    @patch(
+        "utilities.pytest_utils.py_config",
+        {
+            "default_storage_class": "original-sc",
+            "system_storage_class_matrix": [
+                {"existing-sc-1": {"volume_mode": "Filesystem", "access_mode": "ReadWriteOnce"}},
+                {"existing-sc-2": {"volume_mode": "Block", "access_mode": "ReadWriteMany"}},
+            ],
+        },
+    )
+    @patch("utilities.pytest_utils.write_to_file")
+    @patch("utilities.pytest_utils.get_data_collector_base_directory", return_value="/tmp")
+    @patch("utilities.pytest_utils.pytest.exit", side_effect=SystemExit(4))
+    def test_config_default_storage_class_invalid_matrix_values_raises_error(
+        self, mock_pytest_exit, mock_get_base_dir, mock_write_to_file
+    ):
+        """Test clean exit when --storage-class-matrix contains invalid storage class names"""
+        mock_session = MagicMock()
+        mock_session.config.getoption.side_effect = lambda name: {
+            "default_storage_class": None,
+            "storage_class_matrix": "nonexistent-sc,existing-sc-1",
+        }.get(name)
+
+        with pytest.raises(SystemExit):
+            config_default_storage_class(mock_session)
+
+        mock_pytest_exit.assert_called_once()
+        assert mock_pytest_exit.call_args[1]["returncode"] == 4
+        assert "nonexistent-sc" in mock_pytest_exit.call_args[1]["reason"]
+        mock_write_to_file.assert_called_once()
+
+    @patch(
+        "utilities.pytest_utils.py_config",
+        {
+            "default_storage_class": "original-sc",
+            "system_storage_class_matrix": [
+                {"sc-1": {"volume_mode": "Filesystem", "access_mode": "ReadWriteOnce"}},
+                {"sc-2": {"volume_mode": "Block", "access_mode": "ReadWriteMany"}},
+            ],
+        },
+    )
+    @patch("utilities.pytest_utils.write_to_file")
+    @patch("utilities.pytest_utils.get_data_collector_base_directory", return_value="/tmp")
+    @patch("utilities.pytest_utils.pytest.exit", side_effect=SystemExit(4))
+    def test_config_default_storage_class_not_in_matrix_raises_error(
+        self, mock_pytest_exit, mock_get_base_dir, mock_write_to_file
+    ):
+        """Test clean exit when --default-storage-class is not in --storage-class-matrix"""
+        mock_session = MagicMock()
+        mock_session.config.getoption.side_effect = lambda name: {
+            "default_storage_class": "sc-1",
+            "storage_class_matrix": "sc-2",
+        }.get(name)
+
+        with pytest.raises(SystemExit):
+            config_default_storage_class(mock_session)
+
+        mock_pytest_exit.assert_called_once()
+        assert mock_pytest_exit.call_args[1]["returncode"] == 4
+        assert "sc-1" in mock_pytest_exit.call_args[1]["reason"]
+        mock_write_to_file.assert_called_once()
+
+    @patch(
+        "utilities.pytest_utils.py_config",
+        {
+            "default_storage_class": "original-sc",
+            "system_storage_class_matrix": [
+                {"sc-1": {"volume_mode": "Filesystem", "access_mode": "ReadWriteOnce"}},
+                {"sc-2": {"volume_mode": "Block", "access_mode": "ReadWriteMany"}},
+            ],
+        },
+    )
+    def test_config_default_storage_class_both_options_valid(self):
+        """Test correct update when both --default-storage-class and --storage-class-matrix are valid"""
+        mock_session = MagicMock()
+        mock_session.config.getoption.side_effect = lambda name: {
+            "default_storage_class": "sc-1",
+            "storage_class_matrix": "sc-1,sc-2",
+        }.get(name)
+
+        config_default_storage_class(mock_session)
+
+        assert pytest_utils.py_config["default_storage_class"] == "sc-1"
+        assert pytest_utils.py_config["default_volume_mode"] == "Filesystem"
+        assert pytest_utils.py_config["default_access_mode"] == "ReadWriteOnce"
+
+    @patch(
+        "utilities.pytest_utils.py_config",
+        {
+            "default_storage_class": "original-sc",
+            "system_storage_class_matrix": [
+                {"original-sc": {"volume_mode": "Block", "access_mode": "ReadWriteMany"}},
+            ],
+        },
+    )
+    def test_config_default_storage_class_same_as_global(self):
+        """Test no update when --default-storage-class matches global default"""
+        mock_session = MagicMock()
+        mock_session.config.getoption.side_effect = lambda name: {
+            "default_storage_class": "original-sc",
+            "storage_class_matrix": None,
+        }.get(name)
+
+        config_default_storage_class(mock_session)
+
+        assert pytest_utils.py_config["default_storage_class"] == "original-sc"
+
+
+class TestValidateStorageClassOptions:
+    """Test cases for _validate_storage_class_options function"""
+
+    @patch(
+        "utilities.pytest_utils.py_config",
+        {"system_storage_class_matrix": [{"sc-1": {}}, {"sc-2": {}}, {"sc-3": {}}]},
+    )
+    def test_valid_matrix_and_default(self):
+        """Test no error when all values are valid"""
+        _validate_storage_class_options(
+            cmd_default_storage_class="sc-1",
+            cmdline_storage_class_matrix=["sc-1", "sc-2"],
+        )
+
+    @patch(
+        "utilities.pytest_utils.py_config",
+        {"system_storage_class_matrix": [{"sc-1": {}}, {"sc-2": {}}]},
+    )
+    def test_valid_matrix_no_default(self):
+        """Test no error when matrix is valid and no default is specified"""
+        _validate_storage_class_options(
+            cmd_default_storage_class=None,
+            cmdline_storage_class_matrix=["sc-1", "sc-2"],
+        )
+
+    @patch(
+        "utilities.pytest_utils.py_config",
+        {"system_storage_class_matrix": [{"sc-1": {}}]},
+    )
+    def test_no_options(self):
+        """Test no error when no options are specified"""
+        _validate_storage_class_options(
+            cmd_default_storage_class=None,
+            cmdline_storage_class_matrix=None,
+        )
+
+    @patch(
+        "utilities.pytest_utils.py_config",
+        {"system_storage_class_matrix": [{"sc-1": {}}, {"sc-2": {}}]},
+    )
+    def test_invalid_matrix_value(self):
+        """Test ValueError for invalid storage class in matrix"""
+        with pytest.raises(ValueError, match=r"from --storage-class-matrix not found"):
+            _validate_storage_class_options(
+                cmd_default_storage_class=None,
+                cmdline_storage_class_matrix=["bad-sc"],
+            )
+
+    @patch(
+        "utilities.pytest_utils.py_config",
+        {"system_storage_class_matrix": [{"sc-1": {}}, {"sc-2": {}}]},
+    )
+    def test_invalid_default_sc(self):
+        """Test ValueError for default SC not in system matrix"""
+        with pytest.raises(ValueError, match=r"Default storage class 'bad-sc' not found"):
+            _validate_storage_class_options(
+                cmd_default_storage_class="bad-sc",
+                cmdline_storage_class_matrix=None,
+            )
+
+    @patch(
+        "utilities.pytest_utils.py_config",
+        {"system_storage_class_matrix": [{"sc-1": {}}, {"sc-2": {}}]},
+    )
+    def test_valid_default_no_matrix(self):
+        """Test no error when default SC is valid and no matrix is specified"""
+        _validate_storage_class_options(
+            cmd_default_storage_class="sc-1",
+            cmdline_storage_class_matrix=None,
+        )
+
+    @patch(
+        "utilities.pytest_utils.py_config",
+        {"system_storage_class_matrix": [{"sc-1": {}}]},
+    )
+    def test_multiple_invalid_matrix_values(self):
+        """Test all invalid storage class names are reported"""
+        with pytest.raises(ValueError, match=r"\['bad-sc-1', 'bad-sc-2'\]"):
+            _validate_storage_class_options(
+                cmd_default_storage_class=None,
+                cmdline_storage_class_matrix=["bad-sc-1", "bad-sc-2"],
+            )
+
+    @patch(
+        "utilities.pytest_utils.py_config",
+        {"system_storage_class_matrix": [{"sc-1": {}}]},
+    )
+    def test_invalid_matrix_checked_before_default_not_in_matrix(self):
+        """Test matrix validation runs before default-in-matrix check"""
+        with pytest.raises(ValueError, match=r"from --storage-class-matrix not found"):
+            _validate_storage_class_options(
+                cmd_default_storage_class="sc-1",
+                cmdline_storage_class_matrix=["bad-sc"],
+            )
+
+    @patch(
+        "utilities.pytest_utils.py_config",
+        {"system_storage_class_matrix": [{"sc-1": {}}, {"sc-2": {}}, {"sc-3": {}}]},
+    )
+    def test_default_sc_not_in_matrix(self):
+        """Test ValueError when default SC exists on system but not in the provided matrix"""
+        with pytest.raises(ValueError, match=r"not in --storage-class-matrix"):
+            _validate_storage_class_options(
+                cmd_default_storage_class="sc-1",
+                cmdline_storage_class_matrix=["sc-2", "sc-3"],
+            )
+
+    @patch(
+        "utilities.pytest_utils.py_config",
+        {"system_storage_class_matrix": [{"sc-1": {}}, {"sc-2": {}}]},
+    )
+    def test_valid_matrix_skips_system_check_for_default(self):
+        """Test that when matrix is valid, default SC is only checked against matrix not system"""
+        _validate_storage_class_options(
+            cmd_default_storage_class="sc-1",
+            cmdline_storage_class_matrix=["sc-1"],
+        )
 
 
 class TestSeparator:
@@ -1966,7 +2246,7 @@ class TestUpdateCpuArchRelatedConfig:
         mock_py_config = {"cluster_type": "amd64"}
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
-            patch("utilities.constants.ArchImages") as mock_arch_images,
+            patch("utilities.constants.images.ArchImages") as mock_arch_images,
             patch("utilities.constants.Images"),
         ):
             mock_arch_images.AMD64 = MagicMock()
@@ -1994,7 +2274,7 @@ class TestUpdateCpuArchRelatedConfig:
         mock_py_config = {"cluster_type": "arm64"}
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
-            patch("utilities.constants.ArchImages") as mock_arch_images,
+            patch("utilities.constants.images.ArchImages") as mock_arch_images,
             patch("utilities.constants.Images"),
         ):
             mock_arch_images.ARM64 = MagicMock()
@@ -2028,7 +2308,7 @@ class TestUpdateCpuArchRelatedConfig:
         }
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
-            patch("utilities.constants.ArchImages") as mock_arch_images,
+            patch("utilities.constants.images.ArchImages") as mock_arch_images,
             patch("utilities.constants.Images"),
         ):
             mock_arch_images.AMD64 = MagicMock()
@@ -2056,7 +2336,7 @@ class TestUpdateCpuArchRelatedConfig:
         mock_py_config = {"cluster_type": "s390x"}
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
-            patch("utilities.constants.ArchImages") as mock_arch_images,
+            patch("utilities.constants.images.ArchImages") as mock_arch_images,
             patch("utilities.constants.Images"),
         ):
             mock_s390x_images = MagicMock()
@@ -2086,7 +2366,7 @@ class TestUpdateCpuArchRelatedConfig:
         mock_py_config = {"cluster_type": "amd64"}
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
-            patch("utilities.constants.ArchImages") as mock_arch_images,
+            patch("utilities.constants.images.ArchImages") as mock_arch_images,
             patch("utilities.constants.Images"),
         ):
             mock_arm64_images = MagicMock()
@@ -2114,7 +2394,7 @@ class TestUpdateCpuArchRelatedConfig:
         mock_py_config = {"cluster_type": "amd64", "rhel_os_list": ["rhel-9-6"]}
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
-            patch("utilities.constants.ArchImages") as mock_arch_images,
+            patch("utilities.constants.images.ArchImages") as mock_arch_images,
             patch("utilities.constants.Images"),
         ):
             mock_arch_images.AMD64 = MagicMock()
@@ -2141,7 +2421,7 @@ class TestUpdateCpuArchRelatedConfig:
         mock_py_config = {"cluster_type": "arm64", "rhel_os_list": ["rhel-9-6"]}
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
-            patch("utilities.constants.ArchImages") as mock_arch_images,
+            patch("utilities.constants.images.ArchImages") as mock_arch_images,
             patch("utilities.constants.Images"),
         ):
             mock_arch_images.ARM64 = MagicMock()
@@ -2196,7 +2476,7 @@ class TestUpdateCpuArchRelatedConfig:
         }
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
-            patch("utilities.constants.ArchImages") as mock_arch_images,
+            patch("utilities.constants.images.ArchImages") as mock_arch_images,
             patch("utilities.constants.Images"),
         ):
             mock_arch_images.ARM64 = MagicMock()
@@ -2488,3 +2768,48 @@ class TestFilterHppTests:
 
         assert result == []
         config.hook.pytest_deselected.assert_called_once_with(items=[item_hpp])
+
+
+class TestFilterMultiarchTests:
+    """Test cases for filter_multiarch_tests function."""
+
+    @patch("utilities.pytest_utils.py_config", {"cluster_type": MULTIARCH})
+    def test_returns_all_items_on_multiarch_cluster(self):
+        """All tests pass through on heterogeneous (multiarch) clusters."""
+        item_multiarch = MagicMock()
+        item_multiarch.keywords = {"multiarch": True}
+        item_other = MagicMock()
+        item_other.keywords = {"storage": True}
+        items = [item_multiarch, item_other]
+        config = MagicMock()
+
+        result = filter_multiarch_tests(items=items, config=config)
+
+        assert result == items
+        config.hook.pytest_deselected.assert_not_called()
+
+    @patch("utilities.pytest_utils.py_config", {"cluster_type": AMD_64})
+    def test_removes_multiarch_tests_on_homogeneous_cluster(self):
+        """Multiarch-marked tests are deselected on homogeneous clusters."""
+        item_multiarch = MagicMock()
+        item_multiarch.keywords = {"multiarch": True}
+        item_other = MagicMock()
+        item_other.keywords = {"storage": True}
+        config = MagicMock()
+
+        result = filter_multiarch_tests(items=[item_multiarch, item_other], config=config)
+
+        assert result == [item_other]
+        config.hook.pytest_deselected.assert_called_once_with(items=[item_multiarch])
+
+    @patch("utilities.pytest_utils.py_config", {"cluster_type": AMD_64})
+    def test_no_deselection_when_no_multiarch_tests(self):
+        """No deselection occurs when no tests have the multiarch marker."""
+        item_other = MagicMock()
+        item_other.keywords = {"storage": True}
+        config = MagicMock()
+
+        result = filter_multiarch_tests(items=[item_other], config=config)
+
+        assert result == [item_other]
+        config.hook.pytest_deselected.assert_not_called()

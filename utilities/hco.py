@@ -1,6 +1,8 @@
 import json
 import logging
+from collections.abc import Collection, Iterator
 from contextlib import contextmanager
+from typing import TYPE_CHECKING
 
 from kubernetes.dynamic.exceptions import NotFoundError, ResourceNotFoundError
 from ocp_resources.cdi import CDI
@@ -15,20 +17,22 @@ from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 import utilities.infra
-from utilities.constants import (
+from utilities.constants.hco import (
     DEFAULT_HCO_CONDITIONS,
     ENABLE_COMMON_BOOT_IMAGE_IMPORT,
     EXPECTED_STATUS_CONDITIONS,
     HCO_SUBSCRIPTION,
     IMAGE_CRON_STR,
     SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
+)
+from utilities.constants.storage import StorageClassNames
+from utilities.constants.timeouts import (
     TIMEOUT_2MIN,
     TIMEOUT_4MIN,
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
     TIMEOUT_30MIN,
-    StorageClassNames,
 )
 from utilities.ssp import (
     wait_for_at_least_one_auto_update_data_import_cron,
@@ -36,6 +40,10 @@ from utilities.ssp import (
     wait_for_ssp_conditions,
 )
 from utilities.storage import verify_boot_sources_reimported
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+    from ocp_resources.data_import_cron import DataImportCron
 
 LOGGER = logging.getLogger(__name__)
 
@@ -348,11 +356,12 @@ def wait_for_hco_version(client, hco_ns_name, cnv_version):
 
 
 def disable_common_boot_image_import_hco_spec(
-    admin_client,
-    hco_resource,
-    golden_images_namespace,
-    golden_images_data_import_crons,
-):
+    admin_client: DynamicClient,
+    hco_resource: HyperConverged,
+    golden_images_namespace: Namespace,
+    golden_images_data_import_crons: list[DataImportCron],
+    exclude_data_source_names: Collection[str] | None = None,
+) -> Iterator[None]:
     if hco_resource.instance.spec[ENABLE_COMMON_BOOT_IMAGE_IMPORT]:
         update_common_boot_image_import_spec(
             hco_resource=hco_resource,
@@ -365,12 +374,18 @@ def disable_common_boot_image_import_hco_spec(
             hco_resource=hco_resource,
             admin_client=admin_client,
             namespace=golden_images_namespace,
+            exclude_data_source_names=exclude_data_source_names,
         )
     else:
         yield
 
 
-def enable_common_boot_image_import_spec_wait_for_data_import_cron(hco_resource, admin_client, namespace):
+def enable_common_boot_image_import_spec_wait_for_data_import_cron(
+    hco_resource: HyperConverged,
+    admin_client: DynamicClient,
+    namespace: Namespace,
+    exclude_data_source_names: Collection[str] | None = None,
+) -> None:
     hco_namespace = Namespace(name=hco_resource.namespace)
     update_common_boot_image_import_spec(
         hco_resource=hco_resource,
@@ -383,6 +398,7 @@ def enable_common_boot_image_import_spec_wait_for_data_import_cron(hco_resource,
         admin_client=admin_client,
         namespace=namespace.name,
         consecutive_checks_count=1,
+        exclude_data_source_names=exclude_data_source_names,
     )
 
 

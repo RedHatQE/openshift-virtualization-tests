@@ -2,15 +2,17 @@ from typing import Any
 
 from ocp_resources.datavolume import DataVolume
 
-from utilities.constants import (
-    ARM_64,
+from utilities.constants import Images
+from utilities.constants.architecture import ARM_64
+from utilities.constants.images import OS_FLAVOR_FEDORA
+from utilities.constants.instance_types import (
     CENTOS_STREAM10_PREFERENCE,
     EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS,
-    HPP_CAPABILITIES,
-    OS_FLAVOR_FEDORA,
     PREFERENCE_STR,
     RHEL10_PREFERENCE,
-    Images,
+)
+from utilities.constants.storage import (
+    HPP_CAPABILITIES,
     StorageClassNames,
 )
 from utilities.storage import HppCsiStorageClass
