@@ -10,10 +10,8 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.storage_profile import StorageProfile
 
-from tests.storage.utils import assert_disk_bus
 from tests.utils import create_windows2022_vm_with_data_volume_template
-from utilities.constants.storage import HOTPLUG_DISK_SCSI_BUS, HOTPLUG_DISK_SERIAL, HOTPLUG_DISK_VIRTIO_BUS
-from utilities.constants.virt import WIN_2K22
+from utilities.constants import HOTPLUG_DISK_SERIAL, WIN_2K22, Images
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.jira import is_jira_open
 from utilities.storage import (
@@ -29,8 +27,6 @@ from utilities.virt import (
     fedora_vm_body,
     migrate_vm_and_verify,
     running_vm,
-    vm_instance_from_template,
-    wait_for_windows_vm,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -76,53 +72,6 @@ def hotplug_volume_windows_scope_class(
 
 
 @pytest.fixture(scope="class")
-<<<<<<< HEAD
-def vm_instance_from_template_multi_storage_scope_class(
-    request,
-    unprivileged_client,
-    namespace,
-    data_volume_multi_storage_scope_class,
-    cpu_for_migration,
-):
-    """Calls vm_instance_from_template contextmanager
-
-    Creates a VM from template and starts it (if requested).
-    """
-    with vm_instance_from_template(
-        request=request,
-        unprivileged_client=unprivileged_client,
-        namespace=namespace,
-        existing_data_volume=data_volume_multi_storage_scope_class,
-        vm_cpu_model=cpu_for_migration if request.param.get("set_vm_common_cpu") else None,
-    ) as vm:
-        yield vm
-
-
-@pytest.fixture(scope="class")
-def started_windows_vm_scope_class(
-    request,
-    vm_instance_from_template_multi_storage_scope_class,
-):
-    wait_for_windows_vm(
-        vm=vm_instance_from_template_multi_storage_scope_class,
-        version=request.param["os_version"],
-    )
-
-
-@pytest.fixture(scope="class")
-def data_volume_multi_storage_scope_class(
-    request,
-    unprivileged_client,
-    namespace,
-    storage_class_matrix__class__,
-):
-    yield from data_volume(
-        request=request,
-        namespace=namespace,
-        storage_class_matrix=storage_class_matrix__class__,
-        client=namespace.client,
-    )
-=======
 def vm_instance_multi_storage_scope_class(
     unprivileged_client,
     namespace,
@@ -142,7 +91,6 @@ def vm_instance_multi_storage_scope_class(
         cpu_model=modern_cpu_for_migration,
     ) as vm:
         yield vm
->>>>>>> f9fb41bc ([Storage] Windows Session Scoped Data Source + CDI Clone and Hotplug implementation of it (#4571))
 
 
 @pytest.fixture(scope="class")
@@ -281,24 +229,9 @@ class TestHotPlugWithSerialPersist:
 
 
 @pytest.mark.parametrize(
-    "data_volume_multi_storage_scope_class,"
-    "vm_instance_from_template_multi_storage_scope_class,"
-    "started_windows_vm_scope_class,"
     "hotplug_volume_windows_scope_class",
     [
-        pytest.param(
-            {
-                "dv_name": "dv-windows",
-                "image": WINDOWS_LATEST.get("image_path"),
-                "dv_size": WINDOWS_LATEST.get("dv_size"),
-            },
-            {
-                "vm_name": f"vm-win-{WINDOWS_LATEST.get('os_version')}",
-                "template_labels": WINDOWS_LATEST_LABELS,
-            },
-            {"os_version": WINDOWS_LATEST.get("os_version")},
-            {"persist": True, "serial": HOTPLUG_DISK_SERIAL},
-        ),
+        pytest.param({"persist": True, "serial": HOTPLUG_DISK_SERIAL}),
     ],
     indirect=True,
 )
@@ -309,21 +242,10 @@ class TestHotPlugWindows:
     def test_windows_hotplug(
         self,
         blank_disk_dv_multi_storage_scope_class,
-<<<<<<< HEAD
-        data_volume_multi_storage_scope_class,
-        vm_instance_from_template_multi_storage_scope_class,
-        started_windows_vm_scope_class,
+        vm_instance_multi_storage_scope_class,
         hotplug_volume_windows_scope_class,
     ):
-        wait_for_vm_volume_ready(vm=vm_instance_from_template_multi_storage_scope_class)
-=======
-        vm_instance_multi_storage_scope_class,
-    ):
-        wait_for_vm_volume_ready(
-            vm=vm_instance_multi_storage_scope_class,
-            volume_name=blank_disk_dv_multi_storage_scope_class.name,
-        )
->>>>>>> f9fb41bc ([Storage] Windows Session Scoped Data Source + CDI Clone and Hotplug implementation of it (#4571))
+        wait_for_vm_volume_ready(vm=vm_instance_multi_storage_scope_class)
         assert_disk_serial(
             command=shlex.split("wmic diskdrive get SerialNumber"),
             vm=vm_instance_multi_storage_scope_class,
@@ -334,26 +256,14 @@ class TestHotPlugWindows:
     @pytest.mark.dependency(depends=["test_windows_hotplug"])
     def test_windows_hotplug_migrate(
         self,
-<<<<<<< HEAD
-        unprivileged_client,
+        admin_client,
         blank_disk_dv_multi_storage_scope_class,
-        data_volume_multi_storage_scope_class,
-        vm_instance_from_template_multi_storage_scope_class,
-        started_windows_vm_scope_class,
+        vm_instance_multi_storage_scope_class,
         hotplug_volume_windows_scope_class,
-    ):
-        if is_dv_migratable(dv=blank_disk_dv_multi_storage_scope_class):
-            migrate_vm_and_verify(
-                vm=vm_instance_from_template_multi_storage_scope_class,
-=======
-        admin_client: DynamicClient,
-        blank_disk_dv_multi_storage_scope_class: DataVolume,
-        vm_instance_multi_storage_scope_class: VirtualMachineForTests,
     ):
         if is_dv_migratable(dv=blank_disk_dv_multi_storage_scope_class):
             migrate_vm_and_verify(
                 vm=vm_instance_multi_storage_scope_class,
                 client=admin_client,
->>>>>>> f9fb41bc ([Storage] Windows Session Scoped Data Source + CDI Clone and Hotplug implementation of it (#4571))
                 check_ssh_connectivity=True,
             )

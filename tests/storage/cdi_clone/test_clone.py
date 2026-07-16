@@ -10,13 +10,15 @@ from tests.storage.utils import (
     assert_pvc_snapshot_clone_annotation,
     assert_use_populator,
 )
+from tests.utils import create_windows2022_vm_using_existing_dv
 from utilities.constants import (
     OS_FLAVOR_FEDORA,
     OS_FLAVOR_WINDOWS,
     TIMEOUT_1MIN,
-    TIMEOUT_40MIN,
+    WIN_2K22,
     Images,
 )
+from utilities.ssp import validate_os_info_vmi_vs_windows_os
 from utilities.storage import (
     check_disk_count_in_vm,
     create_dv,
@@ -58,38 +60,6 @@ def create_vm_from_clone_dv_template(
         ),
     ) as vm:
         running_vm(vm=vm)
-
-
-@pytest.mark.tier3
-@pytest.mark.parametrize(
-    "data_volume_multi_storage_scope_function",
-    [
-        pytest.param(
-            {
-                "dv_name": "dv-source",
-                "image": f"{Images.Windows.DIR}/{Images.Windows.WIN11_IMG}",
-                "dv_size": Images.Windows.DEFAULT_DV_SIZE,
-            },
-            marks=(pytest.mark.polarion("CNV-1892")),
-        ),
-    ],
-    indirect=True,
-)
-@pytest.mark.s390x
-def test_successful_clone_of_large_image(
-    namespace,
-    data_volume_multi_storage_scope_function,
-):
-    with create_dv(
-        source="pvc",
-        dv_name="dv-target",
-        namespace=namespace.name,
-        size=data_volume_multi_storage_scope_function.size,
-        source_pvc=data_volume_multi_storage_scope_function.name,
-        storage_class=data_volume_multi_storage_scope_function.storage_class,
-        client=namespace.client,
-    ) as cdv:
-        cdv.wait_for_dv_success(timeout=WINDOWS_CLONE_TIMEOUT)
 
 
 @pytest.mark.sno
@@ -164,7 +134,8 @@ class TestWindowsClonedDv:
             - Cloned DataVolume status is "Succeeded"
         """
         assert cloned_windows_dv_multi_storage_scope_class.status == DataVolume.Status.SUCCEEDED, (
-            f"Cloned DV status is {cloned_windows_dv_multi_storage_scope_class.status}, expected {DataVolume.Status.SUCCEEDED}"
+            f"Cloned DV status is {cloned_windows_dv_multi_storage_scope_class.status},"
+            f" expected {DataVolume.Status.SUCCEEDED}"
         )
 
     @pytest.mark.polarion("CNV-3638")

@@ -35,6 +35,7 @@ from utilities.artifactory import (
 from utilities.constants import (
     DISK_SERIAL,
     NODE_HUGE_PAGES_1GI_KEY,
+    OS_FLAVOR_WIN_CONTAINER_DISK,
     OS_FLAVOR_WINDOWS,
     RHSM_SECRET_NAME,
     TCP_TIMEOUT_30SEC,
@@ -46,10 +47,9 @@ from utilities.constants import (
     TIMEOUT_10SEC,
     TIMEOUT_15SEC,
     TIMEOUT_30MIN,
-    Images,
-    OS_FLAVOR_WIN_CONTAINER_DISK,
     U1_LARGE,
     WINDOWS_2K22_PREFERENCE,
+    Images,
 )
 from utilities.data_collector import get_data_collector_dir, write_to_file
 from utilities.exceptions import ResourceValueError
@@ -65,6 +65,7 @@ from utilities.virt import (
     running_vm,
     wait_for_migration_finished,
     wait_for_ssh_connectivity,
+    wait_for_windows_vm,
 )
 
 NUM_TEST_VMS = 3
@@ -690,7 +691,6 @@ def verify_rwx_default_storage(client: DynamicClient) -> None:
             f"Default storage class '{storage_class}' doesn't support RWX mode "
             f"(required: RWX, found: {found_mode or 'none'})"
         )
-
 
 
 @contextmanager
