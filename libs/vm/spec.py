@@ -76,6 +76,7 @@ class Interface:
     sriov: dict[Any, Any] | None = None
     binding: NetBinding | None = None
     state: str | None = None
+    macAddress: str | None = None  # noqa: N815
 
 
 @dataclass
