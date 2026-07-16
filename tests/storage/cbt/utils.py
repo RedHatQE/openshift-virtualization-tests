@@ -49,6 +49,7 @@ BOOT_VOLUME_DEVICE_PATH = "/dev/target-boot"
 BACKUP_PVC_VOLUME_KEY = "backup-src"
 CHECKPOINT_TIMESTAMP_PATTERN = re.compile(r"(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})")
 
+
 def cbt_pvc_size_with_headroom(
     source_disk_size: str,
     headroom_gib: int = 10,
@@ -398,7 +399,6 @@ def _run_one_shot_client_pod(
             )
         except TimeoutExpiredError as wait_error:
             raise RuntimeError(
-                f"CBT pod {client_pod.name} did not succeed: {wait_error}. "
-                f"{_pod_debug_context(client_pod=client_pod)}"
+                f"CBT pod {client_pod.name} did not succeed: {wait_error}. {_pod_debug_context(client_pod=client_pod)}"
             ) from wait_error
         LOGGER.info(f"CBT pod {client_pod.name} completed successfully")

@@ -73,8 +73,7 @@ def main() -> None:
     raw_files = _list_volume_raw_files(volume_name=volume_name)
     source_raw = raw_files[-1]
     print(
-        f"Pull restore: selected {source_raw} from {len(raw_files)} raw file(s) "
-        f"under {BACKUP_DIR}/{volume_name}",
+        f"Pull restore: selected {source_raw} from {len(raw_files)} raw file(s) under {BACKUP_DIR}/{volume_name}",
         flush=True,
     )
     _copy_raw_to_target(source_raw=source_raw, target_file=target_file, volume_mode=volume_mode)
