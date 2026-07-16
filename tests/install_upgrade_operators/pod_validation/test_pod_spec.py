@@ -52,10 +52,10 @@ def xfail_if_jira_87629_open_and_migration_controller_pod(jira_87629_open, cnv_p
 
 @pytest.mark.skip_must_gather_collection
 @pytest.mark.polarion("CNV-7261")
-def test_no_new_cnv_pods_added(cnv_pods, cnv_jobs, deploy_passt_network_binding):
+def test_no_new_cnv_pods_added(cnv_pods, cnv_jobs, jira_cnv_92995_open):
     all_pods = ALL_CNV_PODS.copy()
     all_pods.append(HPP_POOL)
-    if deploy_passt_network_binding:
+    if jira_cnv_92995_open:
         all_pods.append(PASST_BINDING_CNI)
 
     new_pods = [

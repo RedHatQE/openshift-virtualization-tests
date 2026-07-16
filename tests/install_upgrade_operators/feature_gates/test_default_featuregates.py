@@ -81,11 +81,11 @@ def resource_object_value_by_key(request):
 def test_default_featuregates_by_resource(
     expected,
     resource_object_value_by_key,
-    deploy_passt_network_binding,
+    jira_cnv_92995_open,
 ):
     if isinstance(resource_object_value_by_key, list):
         resource_object_value_by_key = set(resource_object_value_by_key)
-    if deploy_passt_network_binding and expected is EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES:
+    if jira_cnv_92995_open and expected is EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES:
         expected = expected | {"PasstIPStackMigration"}
     error_message = f"Expected featuregates: {expected}, actual: {resource_object_value_by_key}"
     assert expected == resource_object_value_by_key, error_message
