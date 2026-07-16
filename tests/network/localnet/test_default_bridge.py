@@ -9,7 +9,7 @@ import pytest
 from libs.net.ip import filter_cluster_unsupported_addresses, filter_link_local_addresses, have_same_ip_families
 from libs.net.traffic_generator import client_server_active_connection, is_tcp_connection
 from libs.net.vmspec import lookup_iface_status
-from tests.network.localnet.liblocalnet import (
+from tests.network.libs.localnet import (
     GUEST_2ND_IFACE_NAME,
     LOCALNET_BR_EX_INTERFACE,
     LOCALNET_BR_EX_INTERFACE_NO_VLAN,

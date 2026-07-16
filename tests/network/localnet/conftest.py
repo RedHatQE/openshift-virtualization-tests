@@ -19,7 +19,7 @@ from libs.vm.spec import Interface, Multus, Network
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs import cloudinit
 from tests.network.libs import cluster_user_defined_network as libcudn
-from tests.network.localnet.liblocalnet import (
+from tests.network.libs.localnet import (
     GUEST_1ST_IFACE_NAME,
     GUEST_2ND_IFACE_NAME,
     LINK_STATE_DOWN,

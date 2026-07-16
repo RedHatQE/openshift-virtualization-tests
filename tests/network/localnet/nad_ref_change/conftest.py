@@ -13,7 +13,7 @@ from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs import cloudinit
 from tests.network.libs import cluster_user_defined_network as libcudn
 from tests.network.libs.connectivity import ARP_ISOLATION_SYSCTL_CMD, poll_tcp_connectivity
-from tests.network.localnet.liblocalnet import (
+from tests.network.libs.localnet import (
     CUDN_B_NAME,
     GUEST_1ST_IFACE_NAME,
     GUEST_2ND_IFACE_NAME,
