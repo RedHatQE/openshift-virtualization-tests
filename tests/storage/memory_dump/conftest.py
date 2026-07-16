@@ -5,12 +5,18 @@ import bitmath
 import pytest
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
-from pytest_testconfig import config as py_config
 
 from tests.storage.memory_dump.utils import wait_for_memory_dump_status_completed
+from tests.utils import create_windows2022_vm_with_data_volume_template
 from utilities.constants import Images
 from utilities.constants.timeouts import TIMEOUT_2MIN
-from utilities.storage import PodWithPVC, get_containers_for_pods_with_pvc, virtctl_memory_dump
+from utilities.constants.virt import WIN_2K22
+from utilities.storage import (
+    PodWithPVC,
+    data_volume_template_with_source_ref_dict,
+    get_containers_for_pods_with_pvc,
+    virtctl_memory_dump,
+)
 
 
 @pytest.fixture()
@@ -18,22 +24,17 @@ def windows_vm_with_vtpm_for_memory_dump(
     unprivileged_client,
     namespace,
     modern_cpu_for_migration,
+    windows_validation_os_images_data_source_scope_session,
 ):
-    with (
-        create_windows2022_dv_template_from_registry(
-            dv_name="windows-2022-dv",
-            namespace=namespace.name,
-            client=unprivileged_client,
-            storage_class=py_config["default_storage_class"],
-        ) as dv_template,
-        create_windows2022_vm_with_vtpm(
-            vm_name="windows-2022-vm",
-            namespace=namespace.name,
-            client=unprivileged_client,
-            dv_template=dv_template,
-            cpu_model=modern_cpu_for_migration,
-        ) as vm,
-    ):
+    with create_windows2022_vm_with_data_volume_template(
+        dv_template=data_volume_template_with_source_ref_dict(
+            data_source=windows_validation_os_images_data_source_scope_session,
+        ),
+        namespace=namespace.name,
+        client=unprivileged_client,
+        vm_name=f"vm-{WIN_2K22}-memory-dump",
+        cpu_model=modern_cpu_for_migration,
+    ) as vm:
         yield vm
 
 
