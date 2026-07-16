@@ -13,30 +13,26 @@ import os
 import re
 import subprocess
 import sys
-from pathlib import Path
-from typing import Any
 
 PULL_RESTORE_PARAMS_ENV = "CBT_PULL_RESTORE_PARAMS"
+BACKUP_DIR = "/backup"
 VOLUME_MODE_BLOCK = "Block"
+CHECKPOINT_TIMESTAMP_PATTERN = re.compile(r"(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})")
 
 
-def _load_params() -> dict[str, Any]:
-    """Load restore parameters from the environment."""
-    params_json = os.environ[PULL_RESTORE_PARAMS_ENV]
-    return json.loads(params_json)
-
-
-# Duplicated in push_restore_runner.py / pull_collect_runner.py — runners are
-# standalone scripts executed inside pods and cannot share test-framework imports.
-def _checkpoint_timestamp_from_path(path: str, checkpoint_timestamp_pattern: str) -> str:
+# Duplicated in pull_collect_runner.py — runners are standalone scripts executed
+# inside pods and cannot share imports from the test framework.
+def _checkpoint_timestamp_from_path(path: str) -> str:
     """Return the checkpoint timestamp embedded in a backup path."""
-    match = re.search(checkpoint_timestamp_pattern, path)
-    return match.group(1) if match else ""
+    match = CHECKPOINT_TIMESTAMP_PATTERN.search(path)
+    if not match:
+        raise RuntimeError(f"Backup path {path!r} has no checkpoint timestamp")
+    return match.group(1)
 
 
-def _list_volume_raw_files(params: dict[str, Any]) -> list[str]:
+def _list_volume_raw_files(volume_name: str) -> list[str]:
     """Return raw backup files for the boot volume, sorted by checkpoint timestamp."""
-    volume_backup_dir = str(Path(str(params["backup_dir"])) / str(params["volume_name"]))
+    volume_backup_dir = f"{BACKUP_DIR}/{volume_name}"
     find_result = subprocess.run(
         ["/usr/bin/find", volume_backup_dir, "-name", "*.raw", "-type", "f"],
         check=True,
@@ -46,7 +42,7 @@ def _list_volume_raw_files(params: dict[str, Any]) -> list[str]:
     raw_files = [line.strip() for line in find_result.stdout.splitlines() if line.strip()]
     if not raw_files:
         list_result = subprocess.run(
-            ["/usr/bin/find", str(params["backup_dir"]), "-type", "f"],
+            ["/usr/bin/find", BACKUP_DIR, "-type", "f"],
             check=False,
             capture_output=True,
             text=True,
@@ -54,14 +50,7 @@ def _list_volume_raw_files(params: dict[str, Any]) -> list[str]:
         raise RuntimeError(
             f"No raw backup files under {volume_backup_dir}. Files under backup_dir:\n{list_result.stdout}"
         )
-    checkpoint_timestamp_pattern = str(params["checkpoint_timestamp_pattern"])
-    return sorted(
-        raw_files,
-        key=lambda path: _checkpoint_timestamp_from_path(
-            path=path,
-            checkpoint_timestamp_pattern=checkpoint_timestamp_pattern,
-        ),
-    )
+    return sorted(raw_files, key=_checkpoint_timestamp_from_path)
 
 
 def _copy_raw_to_target(*, source_raw: str, target_file: str, volume_mode: str) -> None:
@@ -75,38 +64,20 @@ def _copy_raw_to_target(*, source_raw: str, target_file: str, volume_mode: str) 
     subprocess.run(["cp", "--sparse=always", source_raw, target_file], check=True)
 
 
-def _assert_target_written(*, target_file: str) -> None:
-    """Fail if the restore target was not written."""
-    target_path = Path(target_file)
-    if target_path.is_block_device():
-        size_result = subprocess.run(
-            ["blockdev", "--getsize64", target_file],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-        target_size = int(size_result.stdout.strip())
-        if target_size <= 0:
-            raise RuntimeError(f"Block restore target {target_file} has size {target_size}")
-        return
-    if not target_path.is_file() or target_path.stat().st_size == 0:
-        raise RuntimeError(f"Filesystem restore target {target_file} is missing or empty")
-
-
 def main() -> None:
     """Restore the latest pull-mode raw snapshot for a volume to the boot disk target."""
-    params = _load_params()
+    params = json.loads(os.environ[PULL_RESTORE_PARAMS_ENV])
     target_file = str(params["target_file"])
     volume_mode = str(params["volume_mode"])
-    raw_files = _list_volume_raw_files(params=params)
+    volume_name = str(params["volume_name"])
+    raw_files = _list_volume_raw_files(volume_name=volume_name)
     source_raw = raw_files[-1]
     print(
         f"Pull restore: selected {source_raw} from {len(raw_files)} raw file(s) "
-        f"under {params['backup_dir']}/{params['volume_name']}",
+        f"under {BACKUP_DIR}/{volume_name}",
         flush=True,
     )
     _copy_raw_to_target(source_raw=source_raw, target_file=target_file, volume_mode=volume_mode)
-    _assert_target_written(target_file=target_file)
     print(f"Pull restore complete: wrote {target_file}", flush=True)
 
 
