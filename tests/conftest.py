@@ -8,9 +8,6 @@ import multiprocessing
 import os
 import os.path
 import re
-import subprocess
-from bisect import bisect_left
-from collections import defaultdict
 from datetime import UTC, datetime
 from signal import SIGINT, SIGTERM, getsignal, signal
 
@@ -31,7 +28,6 @@ from ocp_resources.virtual_machine_instance_migration import (
 )
 from ocp_resources.virtual_machine_instancetype import VirtualMachineInstancetype
 from ocp_resources.virtual_machine_preference import VirtualMachinePreference
-from ocp_utilities.monitoring import Prometheus
 from packaging.version import parse
 from pytest_testconfig import config as py_config
 
@@ -43,9 +39,7 @@ from tests.utils import download_and_extract_tar
 from utilities.artifactory import get_artifactory_header, get_test_artifact_server_url
 from utilities.constants import Images
 from utilities.constants.cluster import (
-    AUDIT_LOGS_PATH,
     NODE_TYPE_WORKER_LABEL,
-    OC_ADM_LOGS_COMMAND,
 )
 from utilities.constants.hco import (
     HOTFIX_STR,
@@ -99,9 +93,6 @@ from utilities.virt import (
 
 LOGGER = logging.getLogger(__name__)
 CNV_NOT_INSTALLED = "CNV not yet installed."
-
-# Pre-compiled regex for audit log filename parsing: captures date and time components
-AUDIT_LOG_PATTERN = re.compile(r"audit-(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2}\.\d{3})\.log")
 
 
 @pytest.fixture(scope="module")
@@ -205,14 +196,6 @@ def started_windows_vm(
     wait_for_windows_vm(
         vm=vm_instance_from_template_multi_storage_scope_function,
         version=request.param["os_version"],
-    )
-
-
-@pytest.fixture(scope="session")
-def prometheus():
-    return Prometheus(
-        verify_ssl=False,
-        bearer_token=utilities.infra.get_prometheus_k8s_token(duration="86400s"),
     )
 
 
@@ -511,71 +494,6 @@ def generated_ssh_key_for_vm_access(ssh_key_tmpdir_scope_session):
     if os.path.isfile(vm_ssh_key_file):
         os.unlink(vm_ssh_key_file)
     del os.environ[CNV_VM_SSH_KEY_PATH]
-
-
-@pytest.fixture()
-def audit_logs(session_start_time):
-    """
-    Get audit logs names filtered by session start time.
-
-    Only returns audit logs that are relevant to the current test session:
-    - The active audit.log file
-    - Rotated files with timestamps >= session_start_time
-    - The immediately previous rotated file (to catch events just before session start)
-    """
-    output = subprocess.getoutput(
-        f"{OC_ADM_LOGS_COMMAND} --role=control-plane {AUDIT_LOGS_PATH} | grep audit"
-    ).splitlines()
-
-    nodes_logs = defaultdict(list)
-    for line in output:
-        parts = line.split()
-        if len(parts) != 2:
-            LOGGER.error(f"Fail to get log: {line}")
-            continue
-
-        node, log = parts
-
-        # Always include active audit.log
-        if log == "audit.log":
-            nodes_logs[node].append(log)
-            continue
-
-        # Parse timestamp from rotated file name using regex
-        match = AUDIT_LOG_PATTERN.match(string=log)
-        if match:
-            # Rebuild ISO format: YYYY-MM-DDTHH:MM:SS.mmm
-            timestamp_str = f"{match.group(1)}T{match.group(2)}:{match.group(3)}:{match.group(4)}"
-            try:
-                log_timestamp = datetime.strptime(timestamp_str, "%Y-%m-%dT%H:%M:%S.%f")
-                nodes_logs[node].append((log, log_timestamp))
-            except ValueError as err:
-                LOGGER.warning(f"Invalid timestamp in log {log}: {err}")
-        else:
-            LOGGER.info(f"Skipping non-audit file: {log}")
-
-    # Filter rotated logs to keep only relevant ones
-    filtered_nodes_logs = {}
-    for node, logs in nodes_logs.items():
-        # Separate active audit.log from rotated files with timestamps
-        active_logs = [log for log in logs if isinstance(log, str)]
-        rotated_with_ts = sorted([item for item in logs if isinstance(item, tuple)], key=lambda x: x[1])
-
-        # Find where session_start_time fits in the sorted rotated logs using binary search
-        timestamps = [ts for _, ts in rotated_with_ts]
-        idx = bisect_left(a=timestamps, x=session_start_time)
-
-        # Slice: Start one index back (if exists) to get the "immediately previous" log
-        start_idx = max(0, idx - 1)
-        relevant_rotated = [log for log, ts in rotated_with_ts[start_idx:]]
-
-        final_logs = relevant_rotated + active_logs
-
-        if final_logs:
-            filtered_nodes_logs[node] = final_logs
-            LOGGER.info(f"Node {node}: processing {len(final_logs)} audit log(s) (filtered from {len(logs)} total)")
-
-    return filtered_nodes_logs
 
 
 @pytest.fixture(scope="session")
