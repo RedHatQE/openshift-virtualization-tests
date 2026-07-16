@@ -12,13 +12,9 @@ Preconditions:
     - Namespace for RBAC testing
 """
 
-import logging
-
 import pytest
 from kubernetes.dynamic.exceptions import ForbiddenError
 from ocp_resources.virtual_machine import VirtualMachine
-
-LOGGER = logging.getLogger(__name__)
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.arm64]
 
@@ -79,13 +75,16 @@ class TestRoleAggregationReenabledAccess:
         - RoleBinding granting the unprivileged user the respective ClusterRole in the namespace
         - HyperConverged CR spec.roleAggregationStrategy restored to "AggregateToDefault"
           (role aggregation re-enabled)
-        - Wait for the aggregation labels to be restored on the kubevirt.io ClusterRoles
+        - Aggregation labels restored on kubevirt.io ClusterRoles
     """
 
-    @pytest.mark.polarion("CNV-16029")
-    @pytest.mark.usefixtures("admin_reenabled_aggregation")
+    @pytest.mark.parametrize(
+        "reenabled_aggregation_with_role",
+        [pytest.param("admin", marks=pytest.mark.polarion("CNV-16029"))],
+        indirect=True,
+    )
     def test_admin_can_delete_vm_collection_when_aggregation_reenabled(
-        self, vm_resource_for_unprivileged_client, namespace
+        self, reenabled_aggregation_with_role, vm_collection_resource_for_unprivileged_client, namespace
     ):
         """
         Test that an unprivileged user with the admin role can perform a delete-collection
@@ -101,11 +100,16 @@ class TestRoleAggregationReenabledAccess:
         Expected:
             - Delete-collection operation succeeds
         """
-        vm_resource_for_unprivileged_client.delete(namespace=namespace.name, label_selector="rbac-test=nonexistent")
+        vm_collection_resource_for_unprivileged_client.delete(
+            namespace=namespace.name, label_selector="rbac-test=nonexistent"
+        )
 
-    @pytest.mark.polarion("CNV-16260")
-    @pytest.mark.usefixtures("edit_reenabled_aggregation")
-    def test_edit_can_create_vm_dry_run_when_aggregation_reenabled(self, dry_run_vm):
+    @pytest.mark.parametrize(
+        "reenabled_aggregation_with_role",
+        [pytest.param("edit", marks=pytest.mark.polarion("CNV-16260"))],
+        indirect=True,
+    )
+    def test_edit_can_create_vm_dry_run_when_aggregation_reenabled(self, reenabled_aggregation_with_role, dry_run_vm):
         """
         Test that an unprivileged user with the edit role can create a VirtualMachine
         using a server-side dry-run when role aggregation is enabled.
@@ -122,9 +126,14 @@ class TestRoleAggregationReenabledAccess:
         """
         dry_run_vm.create()
 
-    @pytest.mark.polarion("CNV-16261")
-    @pytest.mark.usefixtures("view_reenabled_aggregation")
-    def test_view_can_list_vms_when_aggregation_reenabled(self, unprivileged_client, namespace):
+    @pytest.mark.parametrize(
+        "reenabled_aggregation_with_role",
+        [pytest.param("view", marks=pytest.mark.polarion("CNV-16261"))],
+        indirect=True,
+    )
+    def test_view_can_list_vms_when_aggregation_reenabled(
+        self, reenabled_aggregation_with_role, unprivileged_client, namespace
+    ):
         """
         Test that an unprivileged user with the view role can list VirtualMachine
         resources when role aggregation is enabled.

@@ -123,7 +123,6 @@ def disabled_aggregation_with_role_binding(
         hyperconverged_resource: HyperConverged CR to patch.
         role_name: ClusterRole name to bind (admin, edit, or view).
     """
-    cluster_role = ClusterRole(name=role_name, client=admin_client, ensure_exists=True)
     with RoleBinding(
         name=f"test-role-bind-{role_name}",
         namespace=namespace_name,
@@ -131,8 +130,8 @@ def disabled_aggregation_with_role_binding(
         subjects_kind="User",
         subjects_name=UNPRIVILEGED_USER,
         subjects_namespace=namespace_name,
-        role_ref_kind=cluster_role.kind,
-        role_ref_name=cluster_role.name,
+        role_ref_kind="ClusterRole",
+        role_ref_name=role_name,
     ):
         wait_for_vm_list_access(client=unprivileged_client, namespace_name=namespace_name)
 
@@ -180,7 +179,6 @@ def reenabled_aggregation_with_role_binding(
     ):
         wait_for_aggregation_labels(admin_client=admin_client, expected_present=False)
         LOGGER.info(f"Creating RoleBinding for {role_name} role")
-        cluster_role = ClusterRole(name=role_name, client=admin_client, ensure_exists=True)
         with RoleBinding(
             name=f"test-role-bind-{role_name}",
             namespace=namespace_name,
@@ -188,8 +186,8 @@ def reenabled_aggregation_with_role_binding(
             subjects_kind="User",
             subjects_name=UNPRIVILEGED_USER,
             subjects_namespace=namespace_name,
-            role_ref_kind=cluster_role.kind,
-            role_ref_name=cluster_role.name,
+            role_ref_kind="ClusterRole",
+            role_ref_name=role_name,
         ):
             LOGGER.info("Restoring roleAggregationStrategy to AggregateToDefault")
             with ResourceEditorValidateHCOReconcile(
