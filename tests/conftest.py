@@ -2,7 +2,6 @@
 Pytest conftest file for CNV tests
 """
 
-import copy
 import logging
 import multiprocessing
 import os
@@ -18,12 +17,8 @@ from datetime import UTC, datetime
 from signal import SIGINT, SIGTERM, getsignal, signal
 
 import bcrypt
-import bitmath
-import paramiko
 import pytest
-import requests
 import yaml
-from bs4 import BeautifulSoup
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.application_aware_resource_quota import ApplicationAwareResourceQuota
 from ocp_resources.catalog_source import CatalogSource
@@ -39,7 +34,6 @@ from ocp_resources.deployment import Deployment
 from ocp_resources.hostpath_provisioner import HostPathProvisioner
 from ocp_resources.infrastructure import Infrastructure
 from ocp_resources.machine import Machine
-from ocp_resources.migration_policy import MigrationPolicy
 from ocp_resources.mutating_webhook_config import MutatingWebhookConfiguration
 from ocp_resources.namespace import Namespace
 from ocp_resources.network_addons_config import NetworkAddonsConfig
@@ -53,17 +47,6 @@ from ocp_resources.secret import Secret
 from ocp_resources.service_account import ServiceAccount
 from ocp_resources.sriov_network_node_policy import SriovNetworkNodePolicy
 from ocp_resources.storage_class import StorageClass
-from ocp_resources.virtual_machine_cluster_instancetype import (
-    VirtualMachineClusterInstancetype,
-)
-from ocp_resources.virtual_machine_cluster_preference import (
-    VirtualMachineClusterPreference,
-)
-from ocp_resources.virtual_machine_instance_migration import (
-    VirtualMachineInstanceMigration,
-)
-from ocp_resources.virtual_machine_instancetype import VirtualMachineInstancetype
-from ocp_resources.virtual_machine_preference import VirtualMachinePreference
 from ocp_utilities.monitoring import Prometheus
 from packaging.version import parse
 from pytest_testconfig import config as py_config
@@ -73,8 +56,7 @@ import utilities.hco
 from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster, supported_cluster_ip_versions
 from libs.net.ip import filter_link_local_addresses, random_cidr_addresses_by_family
 from libs.net.vmspec import lookup_iface_status
-from tests.utils import download_and_extract_tar
-from utilities.artifactory import get_artifactory_header, get_http_image_url, get_test_artifact_server_url
+from utilities.artifactory import get_http_image_url
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.cluster import cache_admin_client, get_oc_whoami_username
 from utilities.constants import Images
@@ -115,12 +97,6 @@ from utilities.constants.hco import (
     SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
     UpgradeStreams,
 )
-from utilities.constants.images import OS_FLAVOR_RHEL
-from utilities.constants.instance_types import (
-    EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS,
-    INSTANCE_TYPE_STR,
-    PREFERENCE_STR,
-)
 from utilities.constants.namespaces import NamespacesNames
 from utilities.constants.networking import (
     KMP_ENABLED_LABEL,
@@ -134,18 +110,8 @@ from utilities.constants.pytest import (
     UNPRIVILEGED_USER,
 )
 from utilities.constants.storage import BIND_IMMEDIATE_ANNOTATION, StorageClassNames
-from utilities.constants.timeouts import (
-    TIMEOUT_3MIN,
-    TIMEOUT_4MIN,
-    TIMEOUT_5MIN,
-)
-from utilities.constants.virt import (
-    CNV_VM_SSH_KEY_PATH,
-    ES_NONE,
-    MIGRATION_POLICY_VM_LABEL,
-    NODE_HUGE_PAGES_1GI_KEY,
-    VIRTIO,
-)
+from utilities.constants.timeouts import TIMEOUT_4MIN
+from utilities.constants.virt import ES_NONE
 from utilities.cpu import (
     find_common_cpu_model_for_live_migration,
     get_common_cpu_from_nodes,
@@ -214,15 +180,12 @@ from utilities.storage import (
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
-    get_base_templates_list,
     get_hyperconverged_kubevirt,
     get_hyperconverged_ovs_annotations,
     get_kubevirt_hyperconverged_spec,
     kubernetes_taint_exists,
     running_vm,
-    start_and_fetch_processid_on_linux_vm,
     vm_instance_from_template,
-    wait_for_windows_vm,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -958,22 +921,6 @@ def vm_instance_from_template_multi_storage_scope_function(
         yield vm
 
 
-"""
-Windows-specific fixtures
-"""
-
-
-@pytest.fixture()
-def started_windows_vm(
-    request,
-    vm_instance_from_template_multi_storage_scope_function,
-):
-    wait_for_windows_vm(
-        vm=vm_instance_from_template_multi_storage_scope_function,
-        version=request.param["os_version"],
-    )
-
-
 @pytest.fixture(scope="session")
 def worker_nodes_ipv4_false_secondary_nics(
     admin_client,
@@ -1596,11 +1543,6 @@ def junitxml_plugin(request, record_testsuite_property):
     return record_testsuite_property if request.config.pluginmanager.has_plugin("junitxml") else None
 
 
-@pytest.fixture(scope="module")
-def base_templates(admin_client):
-    return get_base_templates_list(client=admin_client)
-
-
 @pytest.fixture(scope="package")
 def must_gather_image_url(csv_scope_session):
     LOGGER.info(f"Csv name is : {csv_scope_session.name}")
@@ -1837,21 +1779,6 @@ def kmp_enabled_namespace(kmp_vm_label, unprivileged_client, admin_client):
 
 
 @pytest.fixture(scope="session")
-def rhel_latest_os_params():
-    """This fixture is needed as during collection pytest_testconfig is empty.
-    os_params or any globals using py_config in conftest cannot be used.
-    """
-    if latest_rhel_dict := py_config.get("latest_rhel_os_dict"):
-        return {
-            "rhel_image_path": f"{get_test_artifact_server_url()}{latest_rhel_dict['image_path']}",
-            "rhel_dv_size": latest_rhel_dict["dv_size"],
-            "rhel_template_labels": latest_rhel_dict["template_labels"],
-        }
-
-    raise ValueError("Failed to get latest RHEL OS parameters")
-
-
-@pytest.fixture(scope="session")
 def hco_target_csv_name(cnv_target_version):
     return get_hco_csv_name_by_version(cnv_target_version=cnv_target_version) if cnv_target_version else None
 
@@ -1997,23 +1924,6 @@ def autouse_fixtures(
 
 
 @pytest.fixture(scope="session")
-def ssh_key_tmpdir_scope_session(tmpdir_factory):
-    yield tmpdir_factory.mktemp("vm-ssh-key-folder")
-
-
-@pytest.fixture(scope="session")
-def generated_ssh_key_for_vm_access(ssh_key_tmpdir_scope_session):
-    key_generated = paramiko.RSAKey.generate(bits=2048)
-    vm_ssh_key_file = os.path.join(ssh_key_tmpdir_scope_session, "vm_ssh_key.key")
-    os.environ[CNV_VM_SSH_KEY_PATH] = vm_ssh_key_file
-    key_generated.write_private_key_file(filename=vm_ssh_key_file)
-    yield
-    if os.path.isfile(vm_ssh_key_file):
-        os.unlink(vm_ssh_key_file)
-    del os.environ[CNV_VM_SSH_KEY_PATH]
-
-
-@pytest.fixture(scope="session")
 def rhel9_http_image_url():
     return get_http_image_url(image_directory=Images.Rhel.DIR, image_name=Images.Rhel.RHEL9_4_IMG)
 
@@ -2136,87 +2046,6 @@ def fips_enabled_cluster(workers_utility_pods):
     return False
 
 
-@pytest.fixture(scope="class")
-def instance_type_for_test_scope_class(namespace, common_instance_type_param_dict):
-    instance_type_param_dict = copy.deepcopy(common_instance_type_param_dict)
-    instance_type_param_dict["namespace"] = namespace.name
-    return VirtualMachineInstancetype(**instance_type_param_dict)
-
-
-@pytest.fixture(scope="class")
-def common_instance_type_param_dict(request):
-    common_instance_dict = {
-        "name": request.param["name"],
-        "cpu": {"guest": request.param.get("preferred_cpu_topology_value", 1)},
-        "memory": {"guest": request.param["memory_requests"]},
-    }
-    if request.param.get("dedicated_cpu_placement"):
-        common_instance_dict["cpu"]["dedicated_cpu_placement"] = request.param["dedicated_cpu_placement"]
-    if request.param.get("cpu_model"):
-        common_instance_dict["cpu"]["model"] = request.param["cpu_model"]
-    if request.param.get("cpu_isolate_emulator_thread") is not None:
-        common_instance_dict["cpu"]["isolateEmulatorThread"] = request.param["cpu_isolate_emulator_thread"]
-    if request.param.get("cpu_numa"):
-        common_instance_dict["cpu"]["numa"] = request.param["cpu_numa"]
-    if request.param.get("cpu_realtime"):
-        common_instance_dict["cpu"]["realtime"] = request.param["cpu_realtime"]
-    if request.param.get("cpu_max_sockets"):
-        common_instance_dict["cpu"]["maxSockets"] = request.param["cpu_max_sockets"]
-    if request.param.get("gpus_list"):
-        common_instance_dict["gpus"] = request.param["gpus_list"]
-    if request.param.get("host_devices_list"):
-        common_instance_dict["host_devices"] = request.param["host_devices_list"]
-    if request.param.get("io_thread_policy"):
-        common_instance_dict["io_threads_policy"] = request.param["io_thread_policy"]
-    if request.param.get("memory_huge_pages"):
-        common_instance_dict["memory"]["hugepages"] = request.param["memory_huge_pages"]
-    if request.param.get("memory_max_guest"):
-        common_instance_dict["memory"]["maxGuest"] = request.param["memory_max_guest"]
-    return common_instance_dict
-
-
-@pytest.fixture(scope="class")
-def vm_preference_for_test(namespace, common_vm_preference_param_dict):
-    vm_preference_param_dict = copy.deepcopy(common_vm_preference_param_dict)
-    vm_preference_param_dict["namespace"] = namespace.name
-    return VirtualMachinePreference(**vm_preference_param_dict)
-
-
-@pytest.fixture(scope="class")
-def common_vm_preference_param_dict(request):
-    common_preference_dict = {
-        "name": request.param["name"],
-        "client": request.param.get("client"),
-        "teardown": request.param.get("teardown", True),
-        "yaml_file": request.param.get("yaml_file"),
-    }
-    if request.param.get("clock_timezone") or request.param.get("clock_utc_seconds_offset"):
-        common_preference_dict["clock"] = {
-            "preferredClockOffset": {
-                "timezone": request.param.get("clock_timezone"),
-                "utc": {"offsetSeconds": request.param.get("clock_utc_seconds_offset")},
-            }
-        }
-    if request.param.get("clock_preferred_timer"):
-        common_preference_dict.setdefault("clock", {})["preferredTimer"] = request.param["clock_preferred_timer"]
-
-    if request.param.get("cpu_topology"):
-        common_preference_dict["cpu"] = {"preferredCPUTopology": request.param["cpu_topology"]}
-    if request.param.get("devices"):
-        common_preference_dict["devices"] = request.param["devices"]
-    if request.param.get("features"):
-        common_preference_dict["features"] = request.param["features"]
-    if request.param.get("firmware"):
-        common_preference_dict["firmware"] = request.param["firmware"]
-    if request.param.get("machine_type"):
-        common_preference_dict["machine"] = {"preferredMachineType": request.param["machine_type"]}
-    if request.param.get("storage_class"):
-        common_preference_dict["volumes"] = {"preferredStorageClassName": request.param["storage_class"]}
-    if request.param.get("cpu_spread_option"):
-        common_preference_dict.setdefault("cpu", {}).update({"spreadOption": request.param.get("cpu_spread_option")})
-    return common_preference_dict
-
-
 @pytest.fixture(scope="module")
 def disabled_default_sources_in_operatorhub_scope_module(admin_client, installing_cnv):
     if installing_cnv:
@@ -2229,37 +2058,6 @@ def disabled_default_sources_in_operatorhub_scope_module(admin_client, installin
 @pytest.fixture(scope="module")
 def kmp_deployment(admin_client, hco_namespace):
     return Deployment(namespace=hco_namespace.name, name=KUBEMACPOOL_MAC_CONTROLLER_MANAGER, client=admin_client)
-
-
-@pytest.fixture(scope="class")
-def running_metric_vm(namespace, unprivileged_client):
-    name = "running-metrics-vm"
-    with VirtualMachineForTests(
-        name=name,
-        namespace=namespace.name,
-        body=fedora_vm_body(name=name),
-        client=unprivileged_client,
-        network_model=VIRTIO,
-    ) as vm:
-        running_vm(vm=vm, wait_for_cloud_init=True)
-        yield vm
-
-
-@pytest.fixture()
-def vm_from_template_with_existing_dv(
-    request,
-    unprivileged_client,
-    namespace,
-    data_volume_scope_function,
-):
-    """create VM from template using an existing DV (and not a golden image)"""
-    with vm_instance_from_template(
-        request=request,
-        unprivileged_client=unprivileged_client,
-        namespace=namespace,
-        existing_data_volume=data_volume_scope_function,
-    ) as vm:
-        yield vm
 
 
 @pytest.fixture()
@@ -2280,52 +2078,10 @@ def hco_status_related_objects(hyperconverged_resource_scope_module):
     return hyperconverged_resource_scope_module.instance.status.relatedObjects
 
 
-@pytest.fixture(scope="class")
-def rhel_vm_with_instance_type_and_preference(
-    namespace,
-    unprivileged_client,
-    instance_type_for_test_scope_class,
-    vm_preference_for_test,
-):
-    with (
-        instance_type_for_test_scope_class as vm_instance_type,
-        vm_preference_for_test as vm_preference,
-    ):
-        with VirtualMachineForTests(
-            client=unprivileged_client,
-            name="rhel-vm-with-instance-type",
-            namespace=namespace.name,
-            image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
-            vm_instance_type=vm_instance_type,
-            vm_preference=vm_preference,
-        ) as vm:
-            yield vm
-
-
 @pytest.fixture(scope="session")
 def is_disconnected_cluster():
     # To enable disconnected_cluster pass --tc=disconnected_cluster:True to pytest commandline.
     return py_config.get("disconnected_cluster")
-
-
-@pytest.fixture()
-def migration_policy_with_bandwidth():
-    with MigrationPolicy(
-        name="migration-policy",
-        bandwidth_per_migration="128Ki",
-        vmi_selector=MIGRATION_POLICY_VM_LABEL,
-    ) as mp:
-        yield mp
-
-
-@pytest.fixture(scope="class")
-def migration_policy_with_bandwidth_scope_class():
-    with MigrationPolicy(
-        name="migration-policy",
-        bandwidth_per_migration="128Ki",
-        vmi_selector=MIGRATION_POLICY_VM_LABEL,
-    ) as mp:
-        yield mp
 
 
 @pytest.fixture(scope="session")
@@ -2363,38 +2119,6 @@ def storage_class_with_block_volume_mode(available_storage_classes_names):
         volume_mode=DataVolume.VolumeMode.BLOCK,
         sc_names=available_storage_classes_names,
     )
-
-
-@pytest.fixture(scope="class")
-def vm_for_test(request, namespace, unprivileged_client):
-    vm_name = request.param
-    with VirtualMachineForTests(
-        client=unprivileged_client,
-        name=vm_name,
-        body=fedora_vm_body(name=vm_name),
-        namespace=namespace.name,
-    ) as vm:
-        running_vm(vm=vm)
-        yield vm
-
-
-@pytest.fixture(scope="class")
-def migrated_vm_multiple_times(request, vm_for_migration_test):
-    vmim = []
-    for migration_index in range(request.param):
-        migration_obj = VirtualMachineInstanceMigration(
-            name=f"{vm_for_migration_test.name}-{migration_index}",
-            namespace=vm_for_migration_test.namespace,
-            vmi_name=vm_for_migration_test.vmi.name,
-            teardown=False,
-        )
-        migration_obj.deploy(wait=True)
-        migration_obj.wait_for_status(status=migration_obj.Status.SUCCEEDED, timeout=TIMEOUT_3MIN)
-        vmim.append(migration_obj)
-        LOGGER.info(f"Migration #{migration_index + 1} done")
-    yield
-    for mig_obj in vmim:
-        mig_obj.clean_up()
 
 
 @pytest.fixture()
@@ -2436,28 +2160,6 @@ def snapshot_storage_class_name_scope_module(
     storage_class_matrix_snapshot_matrix__module__,
 ):
     return [*storage_class_matrix_snapshot_matrix__module__][0]
-
-
-@pytest.fixture(scope="class")
-def rhel_vm_with_cluster_instance_type_and_preference(namespace, unprivileged_client):
-    with VirtualMachineForTests(
-        name="rhel-vm-with-clustertype-resources",
-        image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
-        namespace=namespace.name,
-        client=unprivileged_client,
-        vm_instance_type=VirtualMachineClusterInstancetype(
-            name=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[INSTANCE_TYPE_STR]
-        ),
-        vm_preference=VirtualMachineClusterPreference(name=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[PREFERENCE_STR]),
-        os_flavor=OS_FLAVOR_RHEL,
-    ) as vm:
-        running_vm(
-            vm=vm,
-            wait_for_interfaces=False,
-            ssh_timeout=TIMEOUT_5MIN,
-            wait_for_cloud_init=True,
-        )
-        yield vm
 
 
 @pytest.fixture(scope="session")
@@ -2554,20 +2256,6 @@ def dvs_for_upgrade(
 
 
 @pytest.fixture(scope="class")
-def vm_for_migration_test(request, namespace, unprivileged_client, cpu_for_migration):
-    vm_name = request.param
-    with VirtualMachineForTests(
-        client=unprivileged_client,
-        name=vm_name,
-        body=fedora_vm_body(name=vm_name),
-        cpu_model=cpu_for_migration,
-        namespace=namespace.name,
-    ) as vm:
-        running_vm(vm=vm)
-        yield vm
-
-
-@pytest.fixture(scope="class")
 def ssp_resource_scope_class(admin_client, hco_namespace):
     return get_ssp_resource(admin_client=admin_client, namespace=hco_namespace)
 
@@ -2595,43 +2283,6 @@ def skip_on_aws_cluster(is_aws_cluster):
 def machine_type_from_kubevirt_config(kubevirt_config_scope_module, nodes_cpu_architecture):
     """Extract machine type default from kubevirt CR."""
     return kubevirt_config_scope_module["architectureConfiguration"][nodes_cpu_architecture]["machineType"]
-
-
-@pytest.fixture(scope="module")
-def skip_if_no_cpumanager_workers(schedulable_nodes):
-    if not any([node.labels.cpumanager == "true" for node in schedulable_nodes]):
-        pytest.skip("Test should run on cluster with CPU Manager")
-
-
-@pytest.fixture(scope="module")
-def latest_osinfo_db_file_name(osinfo_repo):
-    sorted_osinfo_repo = f"{osinfo_repo}/?C=M;O=A"
-    soup_page = BeautifulSoup(
-        markup=requests.get(sorted_osinfo_repo, headers=get_artifactory_header(), verify=False).text,
-        features="html.parser",
-    )
-    full_link = soup_page.findAll(name="a", attrs={"href": re.compile(r"osinfo-db-[0-9]*.tar.xz")})
-
-    assert full_link, "No osinfo-db file was found."
-
-    return full_link[-1].get("href")
-
-
-@pytest.fixture(scope="module")
-def osinfo_repo():
-    return f"{py_config['servers']['https_server']}/cnv-tests/osinfo-db/"
-
-
-@pytest.fixture(scope="module")
-def downloaded_latest_libosinfo_db(tmpdir_factory, latest_osinfo_db_file_name, osinfo_repo):
-    """Obtain the osinfo path."""
-    osinfo_path = tmpdir_factory.mktemp("osinfodb")
-    download_and_extract_tar(
-        tarfile_url=f"{osinfo_repo}{latest_osinfo_db_file_name}",
-        dest_path=osinfo_path,
-    )
-    osinfo_db_file_name_no_suffix = latest_osinfo_db_file_name.partition(".")[0]
-    yield os.path.join(osinfo_path, osinfo_db_file_name_no_suffix)
 
 
 @pytest.fixture(scope="session")
@@ -2696,18 +2347,6 @@ def nmstate_dependent_placeholder():
     return
 
 
-@pytest.fixture(scope="class")
-def ping_process_in_rhel_os():
-    def _start_ping(vm):
-        return start_and_fetch_processid_on_linux_vm(
-            vm=vm,
-            process_name="ping",
-            args="localhost",
-        )
-
-    return _start_ping
-
-
 @pytest.fixture(scope="module")
 def smbios_from_kubevirt_config(kubevirt_config_scope_module):
     """Extract SMBIOS default from kubevirt CR."""
@@ -2743,13 +2382,3 @@ def application_aware_resource_quota(admin_client, namespace):
 @pytest.fixture(scope="session")
 def is_s390x_cluster(nodes_cpu_architecture):
     return nodes_cpu_architecture == S390X
-
-
-@pytest.fixture(scope="session")
-def hugepages_gib_values(workers):
-    """Return the list of hugepage sizes (in GiB) across all worker nodes."""
-    return [
-        int(bitmath.parse_string(value, strict=False).GiB)
-        for worker in workers
-        if (value := worker.instance.status.allocatable.get(NODE_HUGE_PAGES_1GI_KEY))
-    ]
