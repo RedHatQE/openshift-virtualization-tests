@@ -8,7 +8,6 @@ import multiprocessing
 import os
 import os.path
 import re
-import shlex
 import subprocess
 from bisect import bisect_left
 from collections import defaultdict
@@ -19,20 +18,14 @@ import paramiko
 import pytest
 import requests
 from bs4 import BeautifulSoup
-from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.cluster_role import ClusterRole
 from ocp_resources.cluster_service_version import ClusterServiceVersion
-from ocp_resources.config_map import ConfigMap
 from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
-from ocp_resources.deployment import Deployment
 from ocp_resources.hostpath_provisioner import HostPathProvisioner
 from ocp_resources.migration_policy import MigrationPolicy
-from ocp_resources.mutating_webhook_config import MutatingWebhookConfiguration
 from ocp_resources.namespace import Namespace
-from ocp_resources.node_network_state import NodeNetworkState
 from ocp_resources.role_binding import RoleBinding
-from ocp_resources.sriov_network_node_policy import SriovNetworkNodePolicy
 from ocp_resources.storage_class import StorageClass
 from ocp_resources.virtual_machine_cluster_instancetype import (
     VirtualMachineClusterInstancetype,
@@ -61,10 +54,7 @@ from utilities.constants.cluster import (
     NODE_TYPE_WORKER_LABEL,
     OC_ADM_LOGS_COMMAND,
 )
-from utilities.constants.components import (
-    KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
-    RHEL9_STR,
-)
+from utilities.constants.components import RHEL9_STR
 from utilities.constants.hco import (
     DATA_SOURCE_NAME,
     HOTFIX_STR,
@@ -76,13 +66,7 @@ from utilities.constants.instance_types import (
     INSTANCE_TYPE_STR,
     PREFERENCE_STR,
 )
-from utilities.constants.networking import (
-    KMP_ENABLED_LABEL,
-    KMP_VM_ASSIGNMENT_LABEL,
-    KUBEMACPOOL_MAC_RANGE_CONFIG,
-    LINUX_BRIDGE,
-    OVS_BRIDGE,
-)
+from utilities.constants.networking import LINUX_BRIDGE
 from utilities.constants.storage import BIND_IMMEDIATE_ANNOTATION, StorageClassNames
 from utilities.constants.timeouts import (
     TIMEOUT_3MIN,
@@ -94,17 +78,13 @@ from utilities.constants.virt import (
     MIGRATION_POLICY_VM_LABEL,
     VIRTIO,
 )
-from utilities.data_utils import name_prefix
 from utilities.infra import (
-    ExecCommandOnPod,
     create_ns,
     get_clusterversion,
     get_node_selector_dict,
 )
 from utilities.jira import is_jira_open
 from utilities.network import (
-    EthernetNetworkConfigurationPolicy,
-    MacPool,
     cloud_init_network_data,
     network_device,
     network_nad,
@@ -211,99 +191,6 @@ def ocp_current_version(openshift_current_version):
 @pytest.fixture(scope="session")
 def is_postcopy_migration_bug_open(cluster_has_rhcos10_or_above):
     return cluster_has_rhcos10_or_above and is_jira_open(jira_id="CNV-84023")
-
-
-@pytest.fixture(scope="session")
-def node_physical_nics(workers_utility_pods):
-    interfaces = {}
-    for pod in workers_utility_pods:
-        node = pod.instance.spec.nodeName
-        output = pod.execute(
-            command=shlex.split("bash -c \"nmcli dev s | grep -v unmanaged | grep ethernet | awk '{print $1}'\"")
-        ).split("\n")
-        interfaces[node] = list(filter(None, output))  # Filter out empty lines
-
-    LOGGER.info(f"Nodes physical NICs: {interfaces}")
-    return interfaces
-
-
-@pytest.fixture(scope="session")
-def nodes_active_nics(
-    nmstate_dependent_placeholder,
-    admin_client,
-    workers,
-    workers_utility_pods,
-    node_physical_nics,
-):
-    # TODO: Add support for environments that do not have KNMstate installed. e.g: clouds
-    # TODO: Reduce cognitive complexity
-    def _bridge_ports(node_interface):
-        ports = set()
-        if node_interface["type"] in (OVS_BRIDGE, LINUX_BRIDGE) and node_interface["bridge"].get("port"):
-            for bridge_port in node_interface["bridge"]["port"]:
-                ports.add(bridge_port["name"])
-        elif node_interface["type"] == "bond" and node_interface["link-aggregation"].get("port"):
-            for bridge_port in node_interface["link-aggregation"]["port"]:
-                ports.add(bridge_port)
-        return ports
-
-    """
-    Get nodes active NICs.
-    First NIC is management NIC
-    """
-    nodes_nics = {}
-    for node in workers:
-        nodes_nics[node.name] = {"available": [], "occupied": []}
-        nns = NodeNetworkState(name=node.name, client=admin_client)
-
-        for node_iface in nns.interfaces:
-            iface_name = node_iface["name"]
-            #  Exclude SR-IOV (VFs) interfaces.
-            if re.findall(r"v\d+$", iface_name):
-                continue
-
-            # If the interface is a bridge with physical ports, then these ports should be labeled as occupied.
-            for bridge_port in _bridge_ports(node_interface=node_iface):
-                if (
-                    bridge_port in node_physical_nics[node.name]
-                    and bridge_port not in nodes_nics[node.name]["occupied"]
-                ):
-                    node_iface_type = node_iface["type"]
-                    LOGGER.warning(
-                        f"{node.name}:{bridge_port} is a port of {iface_name} {node_iface_type} - adding it "
-                        f"to the node's occupied interfaces list."
-                    )
-                    nodes_nics[node.name]["occupied"].append(bridge_port)
-                    if bridge_port in nodes_nics[node.name]["available"]:
-                        nodes_nics[node.name]["available"].remove(bridge_port)
-
-            if iface_name in nodes_nics[node.name]["occupied"]:
-                continue
-
-            if iface_name not in node_physical_nics[node.name]:
-                continue
-
-            physically_connected = (
-                ExecCommandOnPod(utility_pods=workers_utility_pods, node=node)
-                .exec(command=f"nmcli -g WIRED-PROPERTIES.CARRIER device show {iface_name}")
-                .lower()
-            )
-            if physically_connected != "on":
-                LOGGER.warning(f"{node.name} {iface_name} link is down")
-                continue
-
-            if node_iface["ipv4"].get("address"):
-                nodes_nics[node.name]["occupied"].append(iface_name)
-            else:
-                nodes_nics[node.name]["available"].append(iface_name)
-
-    LOGGER.info(f"Nodes active NICs: {nodes_nics}")
-    return nodes_nics
-
-
-@pytest.fixture(scope="session")
-def nodes_available_nics(nodes_active_nics):
-    return {node: nodes_active_nics[node]["available"] for node in nodes_active_nics.keys()}
 
 
 @pytest.fixture()
@@ -472,64 +359,6 @@ def started_windows_vm(
 
 
 @pytest.fixture(scope="session")
-def worker_nodes_ipv4_false_secondary_nics(
-    admin_client,
-    nodes_available_nics,
-    schedulable_nodes,
-):
-    """
-    Function removes ipv4 from secondary nics.
-    """
-    for worker_node in schedulable_nodes:
-        worker_nics = nodes_available_nics[worker_node.name]
-        with EthernetNetworkConfigurationPolicy(
-            name=f"disable-ipv4-{name_prefix(worker_node.name)}",
-            client=admin_client,
-            node_selector=get_node_selector_dict(node_selector=worker_node.hostname),
-            interfaces_name=worker_nics,
-        ):
-            LOGGER.info(
-                f"selected worker node - {worker_node.name} under NNCP selected NIC information - {worker_nics} "
-            )
-
-
-@pytest.fixture(scope="session")
-def sriov_namespace(admin_client):
-    return Namespace(name="openshift-sriov-network-operator", client=admin_client)
-
-
-@pytest.fixture(scope="session")
-def sriov_workers(schedulable_nodes):
-    sriov_worker_label = "feature.node.kubernetes.io/network-sriov.capable"
-    yield [node for node in schedulable_nodes if node.labels.get(sriov_worker_label) == "true"]
-
-
-@pytest.fixture(scope="session")
-def sriov_node_policy(
-    admin_client,
-    sriov_namespace,
-):
-    if sriov_namespace.exists:
-        return next(
-            SriovNetworkNodePolicy.get(
-                client=admin_client,
-                namespace=sriov_namespace.name,
-            ),
-            None,
-        )
-    return None
-
-
-@pytest.fixture(scope="session")
-def mac_pool(admin_client, hco_namespace):
-    return MacPool(
-        kmp_range=ConfigMap(
-            namespace=hco_namespace.name, name=KUBEMACPOOL_MAC_RANGE_CONFIG, client=admin_client
-        ).instance["data"]
-    )
-
-
-@pytest.fixture(scope="session")
 def golden_images_namespace(
     admin_client,
 ):
@@ -567,32 +396,6 @@ def golden_images_edit_rolebinding(
         role_ref_name=golden_images_cluster_role_edit.name,
     ) as role_binding:
         yield role_binding
-
-
-@pytest.fixture(scope="session")
-def hosts_common_available_ports(nodes_available_nics):
-    """
-    Get list of common ports from nodes_available_nics.
-
-    nodes_available_nics like
-    [['ens3', 'ens4', 'ens6', 'ens5'],
-    ['ens3', 'ens8', 'ens6', 'ens7'],
-    ['ens3', 'ens8', 'ens6', 'ens7']]
-
-    will return ['ens3', 'ens6']
-    """
-    nic_sets = [set(lst) for lst in nodes_available_nics.values()]
-    if not nic_sets:
-        LOGGER.warning("No available NICs found on any worker node.")
-        return []
-
-    nics_list = sorted(set.intersection(*nic_sets))
-    if not nics_list:
-        LOGGER.warning("No common NICs found across all nodes.")
-        return []
-
-    LOGGER.info(f"Hosts common available NICs: {nics_list}")
-    return nics_list
 
 
 @pytest.fixture(scope="session")
@@ -648,28 +451,6 @@ def hostpath_provisioner_scope_session(admin_client):
 @pytest.fixture(scope="session")
 def hpp_cr_installed(hostpath_provisioner_scope_session):
     return hostpath_provisioner_scope_session.exists
-
-
-@pytest.fixture(scope="session")
-def kmp_vm_label(admin_client):
-    kmp_webhook_config = MutatingWebhookConfiguration(client=admin_client, name="kubemacpool-mutator")
-
-    for webhook in kmp_webhook_config.instance.to_dict()["webhooks"]:
-        if webhook["name"] == KMP_VM_ASSIGNMENT_LABEL:
-            return {
-                ldict["key"]: ldict["values"][0]
-                for ldict in webhook["namespaceSelector"]["matchExpressions"]
-                if ldict["key"] == KMP_VM_ASSIGNMENT_LABEL
-            }
-
-    raise ResourceNotFoundError(f"Webhook {KMP_VM_ASSIGNMENT_LABEL} was not found")
-
-
-@pytest.fixture(scope="class")
-def kmp_enabled_ns(admin_client, kmp_vm_label):
-    # Enabling label "allocate" (or any other non-configured label) - Allocates.
-    kmp_vm_label[KMP_VM_ASSIGNMENT_LABEL] = KMP_ENABLED_LABEL
-    yield from create_ns(admin_client=admin_client, name="kmp-enabled", labels=kmp_vm_label)
 
 
 @pytest.fixture(scope="session")
@@ -906,18 +687,6 @@ def upgrade_namespace_scope_session(admin_client, unprivileged_client):
         unprivileged_client=unprivileged_client,
         admin_client=admin_client,
         name="test-upgrade-namespace",
-    )
-
-
-@pytest.fixture(scope="session")
-def kmp_enabled_namespace(kmp_vm_label, unprivileged_client, admin_client):
-    # Enabling label "allocate" (or any other non-configured label) - Allocates.
-    kmp_vm_label[KMP_VM_ASSIGNMENT_LABEL] = KMP_ENABLED_LABEL
-    yield from create_ns(
-        name="kmp-enabled-for-upgrade",
-        labels=kmp_vm_label,
-        unprivileged_client=unprivileged_client,
-        admin_client=admin_client,
     )
 
 
@@ -1184,11 +953,6 @@ def common_vm_preference_param_dict(request):
     if request.param.get("cpu_spread_option"):
         common_preference_dict.setdefault("cpu", {}).update({"spreadOption": request.param.get("cpu_spread_option")})
     return common_preference_dict
-
-
-@pytest.fixture(scope="module")
-def kmp_deployment(admin_client, hco_namespace):
-    return Deployment(namespace=hco_namespace.name, name=KUBEMACPOOL_MAC_CONTROLLER_MANAGER, client=admin_client)
 
 
 @pytest.fixture(scope="class")
@@ -1524,18 +1288,6 @@ def rwx_fs_available_storage_classes_names(cluster_storage_classes_names):
 @pytest.fixture()
 def storage_class_name_scope_function(storage_class_matrix__function__):
     return [*storage_class_matrix__function__][0]
-
-
-@pytest.fixture(scope="session")
-def nmstate_dependent_placeholder():
-    """
-    Placeholder fixture that serves as a dependency marker for fixtures that interact
-    with NMState Custom Resources (NNCP, NNCE, NNS).
-
-    This fixture is used by pytest_collection_modifyitems to automatically detect
-    and mark tests that depend on NMState functionality.
-    """
-    return
 
 
 @pytest.fixture(scope="class")
