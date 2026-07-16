@@ -6,10 +6,9 @@ from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
-from utilities.exceptions import MissingEnvironmentVariableError
-
 # Circular dependencies are already mocked in conftest.py
 from utilities import pytest_utils
+from utilities.exceptions import MissingEnvironmentVariableError
 from utilities.pytest_utils import (
     _validate_storage_class_options,
     config_default_storage_class,
