@@ -720,7 +720,15 @@ def _is_xfail_no_run(method: object) -> bool:
 
 
 def filter_post_test_alerts_tests(items: list[Item], config: Config) -> list[Item]:
-    # filter out post test alerts tests, if explicitly asked or if running upgrade/install tests
+    """Filter out post-test alert tests when explicitly skipped or running install/upgrade tests.
+
+    Args:
+        items: Collected pytest test items.
+        config: Pytest config object.
+
+    Returns:
+        Filtered list of test items.
+    """
     if (
         config.getoption("--skip-post-test-alerts")
         or config.getoption("--install")

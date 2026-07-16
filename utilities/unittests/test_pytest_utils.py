@@ -2561,7 +2561,7 @@ class TestFilterPostTestAlertsTests:
         item_other.keywords = {"other_test": True}
         items = [item_post_test_alerts, item_other]
         config = MagicMock()
-        config.getoption.side_effect = lambda flag: False
+        config.getoption.return_value = False
 
         result = filter_post_test_alerts_tests(items=items, config=config)
 
