@@ -79,6 +79,10 @@ pytest_plugins = [
     "tests.fixtures.network.cluster",
     "tests.fixtures.images.validation_os_images",
     "tests.fixtures.network.multiarch",
+    "tests.fixtures.network.interfaces",
+    "tests.fixtures.network.mac_pool",
+    "tests.fixtures.network.ovs",
+    "tests.fixtures.network.sriov",
 ]
 
 LOGGER = logging.getLogger(__name__)
