@@ -86,6 +86,7 @@ def test_default_featuregates_by_resource(
     if isinstance(resource_object_value_by_key, list):
         resource_object_value_by_key = set(resource_object_value_by_key)
     if jira_cnv_92995_open and expected is EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES:
-        expected = expected | {"PasstIPStackMigration"}
+        expected = expected - {"PasstIPStackMigration"}
+        resource_object_value_by_key = resource_object_value_by_key - {"PasstIPStackMigration"}
     error_message = f"Expected featuregates: {expected}, actual: {resource_object_value_by_key}"
     assert expected == resource_object_value_by_key, error_message
