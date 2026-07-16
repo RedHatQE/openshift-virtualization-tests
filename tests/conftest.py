@@ -29,11 +29,8 @@ from ocp_resources.application_aware_resource_quota import ApplicationAwareResou
 from ocp_resources.catalog_source import CatalogSource
 from ocp_resources.cdi import CDI
 from ocp_resources.cdi_config import CDIConfig
-from ocp_resources.cluster_role import ClusterRole
-from ocp_resources.cluster_service_version import ClusterServiceVersion
 from ocp_resources.config_map import ConfigMap
 from ocp_resources.daemonset import DaemonSet
-from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.hostpath_provisioner import HostPathProvisioner
@@ -48,11 +45,9 @@ from ocp_resources.node_network_state import NodeNetworkState
 from ocp_resources.oauth import OAuth
 from ocp_resources.pod import Pod
 from ocp_resources.resource import ResourceEditor, get_client
-from ocp_resources.role_binding import RoleBinding
 from ocp_resources.secret import Secret
 from ocp_resources.service_account import ServiceAccount
 from ocp_resources.sriov_network_node_policy import SriovNetworkNodePolicy
-from ocp_resources.storage_class import StorageClass
 from ocp_resources.virtual_machine_cluster_instancetype import (
     VirtualMachineClusterInstancetype,
 )
@@ -104,11 +99,9 @@ from utilities.constants.components import (
     CDI_KUBEVIRT_HYPERCONVERGED,
     CLUSTER,
     KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
-    RHEL9_STR,
     VIRTCTL_CLI_DOWNLOADS,
 )
 from utilities.constants.hco import (
-    DATA_SOURCE_NAME,
     FEATURE_GATES,
     HCO_SUBSCRIPTION,
     HOTFIX_STR,
@@ -133,7 +126,7 @@ from utilities.constants.pytest import (
     UNPRIVILEGED_PASSWORD,
     UNPRIVILEGED_USER,
 )
-from utilities.constants.storage import BIND_IMMEDIATE_ANNOTATION, StorageClassNames
+from utilities.constants.storage import BIND_IMMEDIATE_ANNOTATION
 from utilities.constants.timeouts import (
     TIMEOUT_3MIN,
     TIMEOUT_4MIN,
@@ -199,17 +192,9 @@ from utilities.operator import (
 )
 from utilities.pytest_utils import exit_pytest_execution
 from utilities.sanity import cluster_sanity
-from utilities.ssp import get_data_import_crons, get_ssp_resource
+from utilities.ssp import get_ssp_resource
 from utilities.storage import (
     construct_datavolume_source_dict,
-    create_or_update_data_source,
-    data_volume,
-    get_default_storage_class,
-    get_storage_class_with_specified_volume_mode,
-    is_snapshot_supported_by_sc,
-    remove_default_storage_classes,
-    update_default_sc,
-    verify_boot_sources_reimported,
 )
 from utilities.virt import (
     VirtualMachineForTests,
@@ -238,12 +223,6 @@ ACCESS_TOKEN = {
     "accessTokenInactivityTimeout": None,
 }
 CNV_NOT_INSTALLED = "CNV not yet installed."
-RWX_FS_STORAGE_CLASS_NAMES_LIST = [
-    StorageClassNames.CEPHFS,
-    StorageClassNames.TRIDENT_CSI_FSX,
-    StorageClassNames.PORTWORX_CSI_DB_SHARED,
-]
-
 # Pre-compiled regex for audit log filename parsing: captures date and time components
 AUDIT_LOG_PATTERN = re.compile(r"audit-(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2}\.\d{3})\.log")
 
@@ -798,166 +777,6 @@ def workers_type(workers_utility_pods, installing_cnv):
     return virtual
 
 
-@pytest.fixture()
-def data_volume_multi_storage_scope_function(
-    request,
-    namespace,
-    storage_class_matrix__function__,
-):
-    yield from data_volume(
-        request=request,
-        namespace=namespace,
-        storage_class_matrix=storage_class_matrix__function__,
-        client=namespace.client,
-    )
-
-
-@pytest.fixture(scope="module")
-def data_volume_multi_storage_scope_module(
-    request,
-    namespace,
-    storage_class_matrix__module__,
-):
-    yield from data_volume(
-        request=request,
-        namespace=namespace,
-        storage_class_matrix=storage_class_matrix__module__,
-        client=namespace.client,
-    )
-
-
-@pytest.fixture()
-def golden_image_data_volume_multi_storage_scope_function(
-    admin_client,
-    request,
-    golden_images_namespace,
-    storage_class_matrix__function__,
-):
-    yield from data_volume(
-        request=request,
-        namespace=golden_images_namespace,
-        storage_class_matrix=storage_class_matrix__function__,
-        check_dv_exists=True,
-        client=admin_client,
-    )
-
-
-@pytest.fixture()
-def golden_image_data_source_multi_storage_scope_function(
-    admin_client, golden_image_data_volume_multi_storage_scope_function
-):
-    yield from create_or_update_data_source(
-        admin_client=admin_client,
-        dv=golden_image_data_volume_multi_storage_scope_function,
-    )
-
-
-@pytest.fixture()
-def data_volume_scope_function(request, namespace):
-    yield from data_volume(
-        request=request,
-        namespace=namespace,
-        storage_class=request.param["storage_class"],
-        client=namespace.client,
-    )
-
-
-@pytest.fixture(scope="class")
-def data_volume_scope_class(request, namespace):
-    yield from data_volume(
-        request=request,
-        namespace=namespace,
-        storage_class=request.param["storage_class"],
-        client=namespace.client,
-    )
-
-
-@pytest.fixture(scope="module")
-def golden_image_data_volume_scope_module(request, admin_client, golden_images_namespace):
-    yield from data_volume(
-        request=request,
-        namespace=golden_images_namespace,
-        storage_class=request.param["storage_class"],
-        check_dv_exists=True,
-        client=admin_client,
-    )
-
-
-@pytest.fixture()
-def golden_image_data_volume_scope_function(request, admin_client, golden_images_namespace):
-    yield from data_volume(
-        request=request,
-        namespace=golden_images_namespace,
-        storage_class=request.param["storage_class"],
-        check_dv_exists=True,
-        client=admin_client,
-    )
-
-
-@pytest.fixture()
-def golden_image_data_source_scope_function(admin_client, golden_image_data_volume_scope_function):
-    yield from create_or_update_data_source(admin_client=admin_client, dv=golden_image_data_volume_scope_function)
-
-
-@pytest.fixture(scope="session")
-def rhel9_data_source_scope_session(golden_images_namespace):
-    return DataSource(
-        client=golden_images_namespace.client,
-        name=RHEL9_STR,
-        namespace=golden_images_namespace.name,
-        ensure_exists=True,
-    )
-
-
-@pytest.fixture(scope="session")
-def rhel10_data_source_scope_session(golden_images_namespace):
-    return DataSource(
-        namespace=golden_images_namespace.name,
-        name="rhel10",
-        client=golden_images_namespace.client,
-        ensure_exists=True,
-    )
-
-
-@pytest.fixture(scope="session")
-def latest_rhel_data_source(golden_images_namespace):
-    """Provide the DataSource for the latest RHEL version supported on this architecture."""
-    return DataSource(
-        client=golden_images_namespace.client,
-        name=py_config["latest_instance_type_rhel_os_dict"][DATA_SOURCE_NAME],
-        namespace=golden_images_namespace.name,
-        ensure_exists=True,
-    )
-
-
-"""
-VM creation from template
-"""
-
-
-@pytest.fixture()
-def vm_instance_from_template_multi_storage_scope_function(
-    request,
-    unprivileged_client,
-    namespace,
-    data_volume_multi_storage_scope_function,
-    cpu_for_migration,
-):
-    """Calls vm_instance_from_template contextmanager
-
-    Creates a VM from template and starts it (if requested).
-    """
-
-    with vm_instance_from_template(
-        request=request,
-        unprivileged_client=unprivileged_client,
-        namespace=namespace,
-        existing_data_volume=data_volume_multi_storage_scope_function,
-        vm_cpu_model=(cpu_for_migration if request.param.get("set_vm_common_cpu") else None),
-    ) as vm:
-        yield vm
-
-
 """
 Windows-specific fixtures
 """
@@ -1141,45 +960,6 @@ def skip_if_no_common_modern_cpu(cluster_common_modern_node_cpu):
 
 
 @pytest.fixture(scope="session")
-def golden_images_namespace(
-    admin_client,
-):
-    for ns in Namespace.get(
-        name=py_config["golden_images_namespace"],
-        client=admin_client,
-    ):
-        return ns
-
-
-@pytest.fixture(scope="session")
-def golden_images_cluster_role_edit(
-    admin_client,
-):
-    for cluster_role in ClusterRole.get(
-        name="os-images.kubevirt.io:edit",
-        client=admin_client,
-    ):
-        return cluster_role
-
-
-@pytest.fixture()
-def golden_images_edit_rolebinding(
-    golden_images_namespace,
-    golden_images_cluster_role_edit,
-):
-    with RoleBinding(
-        name="role-bind-create-dv",
-        namespace=golden_images_namespace.name,
-        subjects_kind="User",
-        subjects_name="unprivileged-user",
-        subjects_namespace=golden_images_namespace.name,
-        role_ref_kind=golden_images_cluster_role_edit.kind,
-        role_ref_name=golden_images_cluster_role_edit.name,
-    ) as role_binding:
-        yield role_binding
-
-
-@pytest.fixture(scope="session")
 def hosts_common_available_ports(nodes_available_nics):
     """
     Get list of common ports from nodes_available_nics.
@@ -1203,17 +983,6 @@ def hosts_common_available_ports(nodes_available_nics):
 
     LOGGER.info(f"Hosts common available NICs: {nics_list}")
     return nics_list
-
-
-@pytest.fixture(scope="session")
-def default_sc(admin_client):
-    """
-    Get default Storage Class defined
-    """
-    try:
-        yield get_default_storage_class(client=admin_client)
-    except ValueError:
-        yield
 
 
 @pytest.fixture()
@@ -1293,25 +1062,6 @@ def network_addons_config_scope_session(admin_client):
 
 
 @pytest.fixture(scope="session")
-def ocs_storage_class(cluster_storage_classes):
-    """
-    Get the OCS storage class if configured
-    """
-    for sc in cluster_storage_classes:
-        if sc.name == StorageClassNames.CEPH_RBD_VIRTUALIZATION:
-            return sc
-
-
-@pytest.fixture(scope="session")
-def skip_test_if_no_ocs_sc(ocs_storage_class):
-    """
-    Skip test if no OCS storage class available
-    """
-    if not ocs_storage_class:
-        pytest.skip("Skipping test, OCS storage class is not deployed")
-
-
-@pytest.fixture(scope="session")
 def hyperconverged_ovs_annotations_enabled_scope_session(
     admin_client,
     hco_namespace,
@@ -1334,16 +1084,6 @@ def hyperconverged_ovs_annotations_enabled_scope_session(
             label="app=ovs-cni",
         )
     )
-
-
-@pytest.fixture(scope="session")
-def cluster_storage_classes(admin_client):
-    return list(StorageClass.get(client=admin_client))
-
-
-@pytest.fixture(scope="session")
-def cluster_storage_classes_names(cluster_storage_classes):
-    return [sc.name for sc in cluster_storage_classes]
 
 
 @pytest.fixture(scope="class")
@@ -1531,17 +1271,6 @@ def cluster_info(
         f"\tIPv6 cluster: {ipv6_supported_cluster()}\n"
         f"\tVirtctl version: \n\t{virtctl_client_version}\n\t{virtctl_server_version}\n"
     )
-
-
-@pytest.fixture(scope="session")
-def ocs_current_version(ocs_storage_class, admin_client):
-    if ocs_storage_class:
-        for csv in ClusterServiceVersion.get(
-            client=admin_client,
-            namespace="openshift-storage",
-            label_selector=f"{ClusterServiceVersion.ApiGroup.OPERATORS_COREOS_COM}/ocs-operator.openshift-storage",
-        ):
-            return csv.instance.spec.version
 
 
 @pytest.fixture(scope="session")
@@ -1886,11 +1615,6 @@ def disabled_common_boot_image_import_hco_spec_scope_function(
     )
 
 
-@pytest.fixture()
-def golden_images_data_import_crons_scope_function(admin_client, golden_images_namespace):
-    return get_data_import_crons(admin_client=admin_client, namespace=golden_images_namespace)
-
-
 @pytest.fixture(scope="session")
 def sno_cluster(admin_client):
     return get_infrastructure(admin_client=admin_client).instance.status.infrastructureTopology == "SingleReplica"
@@ -1914,11 +1638,6 @@ def disabled_common_boot_image_import_hco_spec_scope_class(
         golden_images_namespace=golden_images_namespace,
         golden_images_data_import_crons=golden_images_data_import_crons_scope_class,
     )
-
-
-@pytest.fixture(scope="class")
-def golden_images_data_import_crons_scope_class(admin_client, golden_images_namespace):
-    return get_data_import_crons(admin_client=admin_client, namespace=golden_images_namespace)
 
 
 @pytest.fixture(scope="session")
@@ -2016,30 +1735,6 @@ def generated_ssh_key_for_vm_access(ssh_key_tmpdir_scope_session):
 @pytest.fixture(scope="session")
 def rhel9_http_image_url():
     return get_http_image_url(image_directory=Images.Rhel.DIR, image_name=Images.Rhel.RHEL9_4_IMG)
-
-
-@pytest.fixture(scope="session")
-def storage_class_for_snapshot(admin_client):
-    available_storage_classes = py_config["storage_class_matrix"]
-    sc_for_snapshot = None
-    sc_names = []
-    for sc in available_storage_classes:
-        sc_name = [*sc][0]
-        if is_snapshot_supported_by_sc(sc_name=sc_name, client=admin_client):
-            sc_for_snapshot = sc_name
-            LOGGER.info(f"Storage class for snapshot: {sc_for_snapshot}")
-            break
-        sc_names.append(sc_name)
-    if not sc_for_snapshot:
-        LOGGER.warning(f"No Storage class among {sc_names} supports snapshots")
-    yield sc_for_snapshot
-
-
-@pytest.fixture(scope="session")
-def skip_if_no_storage_class_for_snapshot(storage_class_for_snapshot):
-    if not storage_class_for_snapshot:
-        sc_names = [[*sc][0] for sc in py_config["storage_class_matrix"]]
-        pytest.skip(f"There's no Storage Class among {sc_names} that supports snapshots, skipping the test")
 
 
 @pytest.fixture()
@@ -2339,32 +2034,6 @@ def worker_machine1(worker_node1):
     raise ResourceNotFoundError(f"Machine object for {worker_node1.name} doesn't exists")
 
 
-@pytest.fixture(scope="session")
-def available_storage_classes_names():
-    return [[*sc][0] for sc in py_config["storage_class_matrix"]]
-
-
-@pytest.fixture(scope="session")
-def storage_class_with_filesystem_volume_mode(available_storage_classes_names):
-    yield get_storage_class_with_specified_volume_mode(
-        volume_mode=DataVolume.VolumeMode.FILE, sc_names=available_storage_classes_names
-    )
-
-
-@pytest.fixture(scope="module")
-def skip_test_if_no_block_sc(storage_class_with_block_volume_mode):
-    if not storage_class_with_block_volume_mode:
-        pytest.skip("Skip the test: no Storage class with Block volume mode")
-
-
-@pytest.fixture(scope="session")
-def storage_class_with_block_volume_mode(available_storage_classes_names):
-    yield get_storage_class_with_specified_volume_mode(
-        volume_mode=DataVolume.VolumeMode.BLOCK,
-        sc_names=available_storage_classes_names,
-    )
-
-
 @pytest.fixture(scope="class")
 def vm_for_test(request, namespace, unprivileged_client):
     vm_name = request.param
@@ -2397,14 +2066,6 @@ def migrated_vm_multiple_times(request, vm_for_migration_test):
         mig_obj.clean_up()
 
 
-@pytest.fixture()
-def removed_default_storage_classes(admin_client, golden_images_namespace, cluster_storage_classes):
-    with remove_default_storage_classes(cluster_storage_classes=cluster_storage_classes):
-        yield
-    if not verify_boot_sources_reimported(admin_client=admin_client, namespace=golden_images_namespace.name):
-        pytest.fail("Failed to reimport all boot sources at teardown")
-
-
 @pytest.fixture(scope="session")
 def csv_related_images_scope_session(csv_scope_session):
     return csv_scope_session.instance.spec.relatedImages
@@ -2429,13 +2090,6 @@ def hyperconverged_status_templates_scope_class(
     hyperconverged_resource_scope_class,
 ):
     return hyperconverged_resource_scope_class.instance.status.dataImportCronTemplates
-
-
-@pytest.fixture(scope="module")
-def snapshot_storage_class_name_scope_module(
-    storage_class_matrix_snapshot_matrix__module__,
-):
-    return [*storage_class_matrix_snapshot_matrix__module__][0]
 
 
 @pytest.fixture(scope="class")
@@ -2463,50 +2117,6 @@ def rhel_vm_with_cluster_instance_type_and_preference(namespace, unprivileged_cl
 @pytest.fixture(scope="session")
 def upgrade_skip_default_sc_setup(pytestconfig):
     return pytestconfig.option.upgrade_skip_default_sc_setup
-
-
-@pytest.fixture(scope="session")
-def updated_default_storage_class_ocs_virt(
-    admin_client,
-    upgrade_skip_default_sc_setup,
-    cluster_storage_classes,
-    available_storage_classes_names,
-    ocs_storage_class,
-    golden_images_namespace,
-):
-    # set ocs-virt as default storage class if it isn't
-    if (
-        not upgrade_skip_default_sc_setup
-        and ocs_storage_class
-        and ocs_storage_class.name in available_storage_classes_names
-        and ocs_storage_class.instance.metadata.get("annotations", {}).get(
-            StorageClass.Annotations.IS_DEFAULT_VIRT_CLASS
-        )
-        != "true"
-    ):
-        boot_source_imported_successfully = False
-        with remove_default_storage_classes(cluster_storage_classes=cluster_storage_classes):
-            with update_default_sc(default=True, storage_class=ocs_storage_class):
-                boot_source_imported_successfully = verify_boot_sources_reimported(
-                    admin_client=admin_client,
-                    namespace=golden_images_namespace.name,
-                )
-                if boot_source_imported_successfully:
-                    yield
-
-        # on teardown, wait for the original sources to re-create
-        verify_boot_sources_reimported(
-            admin_client=admin_client,
-            namespace=golden_images_namespace.name,
-        )
-        if not boot_source_imported_successfully:
-            exit_pytest_execution(
-                admin_client=admin_client,
-                log_message=f"Failed to set {ocs_storage_class.name} as default storage class",
-                filename="default_storage_class_failure.txt",
-            )
-    else:
-        yield
 
 
 @pytest.fixture(scope="session")
@@ -2632,20 +2242,6 @@ def downloaded_latest_libosinfo_db(tmpdir_factory, latest_osinfo_db_file_name, o
     )
     osinfo_db_file_name_no_suffix = latest_osinfo_db_file_name.partition(".")[0]
     yield os.path.join(osinfo_path, osinfo_db_file_name_no_suffix)
-
-
-@pytest.fixture(scope="session")
-def rwx_fs_available_storage_classes_names(cluster_storage_classes_names):
-    return [
-        storage_class
-        for storage_class in cluster_storage_classes_names
-        if storage_class in RWX_FS_STORAGE_CLASS_NAMES_LIST
-    ]
-
-
-@pytest.fixture()
-def storage_class_name_scope_function(storage_class_matrix__function__):
-    return [*storage_class_matrix__function__][0]
 
 
 @pytest.fixture(scope="session")
