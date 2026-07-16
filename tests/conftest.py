@@ -2,32 +2,14 @@
 Pytest conftest file for CNV tests
 """
 
-import copy
 import logging
 import multiprocessing
 import os
-import os.path
-import re
 from datetime import UTC, datetime
 from signal import SIGINT, SIGTERM, getsignal, signal
 
-import paramiko
 import pytest
-import requests
-from bs4 import BeautifulSoup
 from ocp_resources.datavolume import DataVolume
-from ocp_resources.migration_policy import MigrationPolicy
-from ocp_resources.virtual_machine_cluster_instancetype import (
-    VirtualMachineClusterInstancetype,
-)
-from ocp_resources.virtual_machine_cluster_preference import (
-    VirtualMachineClusterPreference,
-)
-from ocp_resources.virtual_machine_instance_migration import (
-    VirtualMachineInstanceMigration,
-)
-from ocp_resources.virtual_machine_instancetype import VirtualMachineInstancetype
-from ocp_resources.virtual_machine_preference import VirtualMachinePreference
 from packaging.version import parse
 from pytest_testconfig import config as py_config
 
@@ -35,9 +17,6 @@ import utilities.hco
 from libs.net.cluster import supported_cluster_ip_versions
 from libs.net.ip import filter_link_local_addresses, random_cidr_addresses_by_family
 from libs.net.vmspec import lookup_iface_status
-from tests.utils import download_and_extract_tar
-from utilities.artifactory import get_artifactory_header, get_test_artifact_server_url
-from utilities.constants import Images
 from utilities.constants.cluster import (
     NODE_TYPE_WORKER_LABEL,
 )
@@ -45,30 +24,14 @@ from utilities.constants.hco import (
     HOTFIX_STR,
     UpgradeStreams,
 )
-from utilities.constants.images import OS_FLAVOR_RHEL
-from utilities.constants.instance_types import (
-    EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS,
-    INSTANCE_TYPE_STR,
-    PREFERENCE_STR,
-)
 from utilities.constants.networking import LINUX_BRIDGE
 from utilities.constants.storage import BIND_IMMEDIATE_ANNOTATION
-from utilities.constants.timeouts import (
-    TIMEOUT_3MIN,
-    TIMEOUT_5MIN,
-)
-from utilities.constants.virt import (
-    CNV_VM_SSH_KEY_PATH,
-    ES_NONE,
-    MIGRATION_POLICY_VM_LABEL,
-    VIRTIO,
-)
+from utilities.constants.virt import ES_NONE
 from utilities.infra import (
     create_ns,
     get_clusterversion,
     get_node_selector_dict,
 )
-from utilities.jira import is_jira_open
 from utilities.network import (
     cloud_init_network_data,
     network_device,
@@ -84,11 +47,8 @@ from utilities.storage import (
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
-    get_base_templates_list,
     running_vm,
-    start_and_fetch_processid_on_linux_vm,
     vm_instance_from_template,
-    wait_for_windows_vm,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -155,11 +115,6 @@ def ocp_current_version(openshift_current_version):
     return parse(version=openshift_current_version.split("-")[0])
 
 
-@pytest.fixture(scope="session")
-def is_postcopy_migration_bug_open(cluster_has_rhcos10_or_above):
-    return cluster_has_rhcos10_or_above and is_jira_open(jira_id="CNV-84023")
-
-
 @pytest.fixture()
 def vm_instance_from_template_multi_storage_scope_function(
     request,
@@ -183,30 +138,9 @@ def vm_instance_from_template_multi_storage_scope_function(
         yield vm
 
 
-"""
-Windows-specific fixtures
-"""
-
-
-@pytest.fixture()
-def started_windows_vm(
-    request,
-    vm_instance_from_template_multi_storage_scope_function,
-):
-    wait_for_windows_vm(
-        vm=vm_instance_from_template_multi_storage_scope_function,
-        version=request.param["os_version"],
-    )
-
-
 @pytest.fixture(scope="session")
 def junitxml_plugin(request, record_testsuite_property):
-    return record_testsuite_property if request.config.pluginmanager.has_plugin("junitxml") else None
-
-
-@pytest.fixture(scope="module")
-def base_templates(admin_client):
-    return get_base_templates_list(client=admin_client)
+    return record_testsuite_property if request.config.pluginmanager.hasplugin("junitxml") else None
 
 
 @pytest.fixture
@@ -430,21 +364,6 @@ def upgrade_namespace_scope_session(admin_client, unprivileged_client):
 
 
 @pytest.fixture(scope="session")
-def rhel_latest_os_params():
-    """This fixture is needed as during collection pytest_testconfig is empty.
-    os_params or any globals using py_config in conftest cannot be used.
-    """
-    if latest_rhel_dict := py_config.get("latest_rhel_os_dict"):
-        return {
-            "rhel_image_path": f"{get_test_artifact_server_url()}{latest_rhel_dict['image_path']}",
-            "rhel_dv_size": latest_rhel_dict["dv_size"],
-            "rhel_template_labels": latest_rhel_dict["template_labels"],
-        }
-
-    raise ValueError("Failed to get latest RHEL OS parameters")
-
-
-@pytest.fixture(scope="session")
 def hco_target_csv_name(cnv_target_version):
     return get_hco_csv_name_by_version(cnv_target_version=cnv_target_version) if cnv_target_version else None
 
@@ -480,23 +399,6 @@ def autouse_fixtures(
 
 
 @pytest.fixture(scope="session")
-def ssh_key_tmpdir_scope_session(tmpdir_factory):
-    yield tmpdir_factory.mktemp("vm-ssh-key-folder")
-
-
-@pytest.fixture(scope="session")
-def generated_ssh_key_for_vm_access(ssh_key_tmpdir_scope_session):
-    key_generated = paramiko.RSAKey.generate(bits=2048)
-    vm_ssh_key_file = os.path.join(ssh_key_tmpdir_scope_session, "vm_ssh_key.key")
-    os.environ[CNV_VM_SSH_KEY_PATH] = vm_ssh_key_file
-    key_generated.write_private_key_file(filename=vm_ssh_key_file)
-    yield
-    if os.path.isfile(vm_ssh_key_file):
-        os.unlink(vm_ssh_key_file)
-    del os.environ[CNV_VM_SSH_KEY_PATH]
-
-
-@pytest.fixture(scope="session")
 def installing_cnv(pytestconfig):
     return pytestconfig.option.install
 
@@ -509,224 +411,6 @@ def is_production_source(cnv_source):
 @pytest.fixture(scope="session")
 def cnv_source(pytestconfig):
     return pytestconfig.option.cnv_source or "osbs"
-
-
-@pytest.fixture(scope="class")
-def instance_type_for_test_scope_class(namespace, common_instance_type_param_dict):
-    instance_type_param_dict = copy.deepcopy(common_instance_type_param_dict)
-    instance_type_param_dict["namespace"] = namespace.name
-    instance_type_param_dict["client"] = namespace.client
-    return VirtualMachineInstancetype(**instance_type_param_dict)
-
-
-@pytest.fixture(scope="class")
-def common_instance_type_param_dict(request):
-    common_instance_dict = {
-        "name": request.param["name"],
-        "cpu": {"guest": request.param.get("preferred_cpu_topology_value", 1)},
-        "memory": {"guest": request.param["memory_requests"]},
-    }
-    if request.param.get("dedicated_cpu_placement"):
-        common_instance_dict["cpu"]["dedicated_cpu_placement"] = request.param["dedicated_cpu_placement"]
-    if request.param.get("cpu_model"):
-        common_instance_dict["cpu"]["model"] = request.param["cpu_model"]
-    if request.param.get("cpu_isolate_emulator_thread") is not None:
-        common_instance_dict["cpu"]["isolateEmulatorThread"] = request.param["cpu_isolate_emulator_thread"]
-    if request.param.get("cpu_numa"):
-        common_instance_dict["cpu"]["numa"] = request.param["cpu_numa"]
-    if request.param.get("cpu_realtime"):
-        common_instance_dict["cpu"]["realtime"] = request.param["cpu_realtime"]
-    if request.param.get("cpu_max_sockets"):
-        common_instance_dict["cpu"]["maxSockets"] = request.param["cpu_max_sockets"]
-    if request.param.get("gpus_list"):
-        common_instance_dict["gpus"] = request.param["gpus_list"]
-    if request.param.get("host_devices_list"):
-        common_instance_dict["host_devices"] = request.param["host_devices_list"]
-    if request.param.get("io_thread_policy"):
-        common_instance_dict["io_threads_policy"] = request.param["io_thread_policy"]
-    if request.param.get("memory_huge_pages"):
-        common_instance_dict["memory"]["hugepages"] = request.param["memory_huge_pages"]
-    if request.param.get("memory_max_guest"):
-        common_instance_dict["memory"]["maxGuest"] = request.param["memory_max_guest"]
-    return common_instance_dict
-
-
-@pytest.fixture(scope="class")
-def vm_preference_for_test(namespace, common_vm_preference_param_dict):
-    vm_preference_param_dict = copy.deepcopy(common_vm_preference_param_dict)
-    vm_preference_param_dict["namespace"] = namespace.name
-    if vm_preference_param_dict.get("client") is None:
-        vm_preference_param_dict["client"] = namespace.client
-    return VirtualMachinePreference(**vm_preference_param_dict)
-
-
-@pytest.fixture(scope="class")
-def common_vm_preference_param_dict(request):
-    common_preference_dict = {
-        "name": request.param["name"],
-        "client": request.param.get("client"),
-        "teardown": request.param.get("teardown", True),
-        "yaml_file": request.param.get("yaml_file"),
-    }
-    if request.param.get("clock_timezone") or request.param.get("clock_utc_seconds_offset"):
-        common_preference_dict["clock"] = {
-            "preferredClockOffset": {
-                "timezone": request.param.get("clock_timezone"),
-                "utc": {"offsetSeconds": request.param.get("clock_utc_seconds_offset")},
-            }
-        }
-    if request.param.get("clock_preferred_timer"):
-        common_preference_dict.setdefault("clock", {})["preferredTimer"] = request.param["clock_preferred_timer"]
-
-    if request.param.get("cpu_topology"):
-        common_preference_dict["cpu"] = {"preferredCPUTopology": request.param["cpu_topology"]}
-    if request.param.get("devices"):
-        common_preference_dict["devices"] = request.param["devices"]
-    if request.param.get("features"):
-        common_preference_dict["features"] = request.param["features"]
-    if request.param.get("firmware"):
-        common_preference_dict["firmware"] = request.param["firmware"]
-    if request.param.get("machine_type"):
-        common_preference_dict["machine"] = {"preferredMachineType": request.param["machine_type"]}
-    if request.param.get("storage_class"):
-        common_preference_dict["volumes"] = {"preferredStorageClassName": request.param["storage_class"]}
-    if request.param.get("cpu_spread_option"):
-        common_preference_dict.setdefault("cpu", {}).update({"spreadOption": request.param.get("cpu_spread_option")})
-    return common_preference_dict
-
-
-@pytest.fixture(scope="class")
-def running_metric_vm(namespace, unprivileged_client):
-    name = "running-metrics-vm"
-    with VirtualMachineForTests(
-        name=name,
-        namespace=namespace.name,
-        body=fedora_vm_body(name=name),
-        client=unprivileged_client,
-        network_model=VIRTIO,
-    ) as vm:
-        running_vm(vm=vm, wait_for_cloud_init=True)
-        yield vm
-
-
-@pytest.fixture()
-def vm_from_template_with_existing_dv(
-    request,
-    unprivileged_client,
-    namespace,
-    data_volume_scope_function,
-):
-    """create VM from template using an existing DV (and not a golden image)"""
-    with vm_instance_from_template(
-        request=request,
-        unprivileged_client=unprivileged_client,
-        namespace=namespace,
-        existing_data_volume=data_volume_scope_function,
-    ) as vm:
-        yield vm
-
-
-@pytest.fixture(scope="class")
-def rhel_vm_with_instance_type_and_preference(
-    namespace,
-    unprivileged_client,
-    instance_type_for_test_scope_class,
-    vm_preference_for_test,
-):
-    with (
-        instance_type_for_test_scope_class as vm_instance_type,
-        vm_preference_for_test as vm_preference,
-    ):
-        with VirtualMachineForTests(
-            client=unprivileged_client,
-            name="rhel-vm-with-instance-type",
-            namespace=namespace.name,
-            image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
-            vm_instance_type=vm_instance_type,
-            vm_preference=vm_preference,
-        ) as vm:
-            yield vm
-
-
-@pytest.fixture()
-def migration_policy_with_bandwidth(admin_client):
-    with MigrationPolicy(
-        client=admin_client,
-        name="migration-policy",
-        bandwidth_per_migration="128Ki",
-        vmi_selector=MIGRATION_POLICY_VM_LABEL,
-    ) as mp:
-        yield mp
-
-
-@pytest.fixture(scope="class")
-def migration_policy_with_bandwidth_scope_class(admin_client):
-    with MigrationPolicy(
-        client=admin_client,
-        name="migration-policy",
-        bandwidth_per_migration="128Ki",
-        vmi_selector=MIGRATION_POLICY_VM_LABEL,
-    ) as mp:
-        yield mp
-
-
-@pytest.fixture(scope="class")
-def vm_for_test(request, namespace, unprivileged_client):
-    vm_name = request.param
-    with VirtualMachineForTests(
-        client=unprivileged_client,
-        name=vm_name,
-        body=fedora_vm_body(name=vm_name),
-        namespace=namespace.name,
-    ) as vm:
-        running_vm(vm=vm)
-        yield vm
-
-
-@pytest.fixture(scope="class")
-def migrated_vm_multiple_times(request, admin_client, vm_for_migration_test):
-    vmim = []
-    for migration_index in range(request.param):
-        migration_obj = VirtualMachineInstanceMigration(
-            client=admin_client,
-            name=f"{vm_for_migration_test.name}-{migration_index}",
-            namespace=vm_for_migration_test.namespace,
-            vmi_name=vm_for_migration_test.vmi.name,
-            teardown=False,
-        )
-        migration_obj.deploy(wait=True)
-        migration_obj.wait_for_status(status=migration_obj.Status.SUCCEEDED, timeout=TIMEOUT_3MIN)
-        vmim.append(migration_obj)
-        LOGGER.info(f"Migration #{migration_index + 1} done")
-    yield
-    for mig_obj in vmim:
-        mig_obj.clean_up()
-
-
-@pytest.fixture(scope="class")
-def rhel_vm_with_cluster_instance_type_and_preference(namespace, unprivileged_client):
-    with VirtualMachineForTests(
-        name="rhel-vm-with-clustertype-resources",
-        image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
-        namespace=namespace.name,
-        client=unprivileged_client,
-        vm_instance_type=VirtualMachineClusterInstancetype(
-            client=unprivileged_client,
-            name=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[INSTANCE_TYPE_STR],
-        ),
-        vm_preference=VirtualMachineClusterPreference(
-            client=unprivileged_client,
-            name=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[PREFERENCE_STR],
-        ),
-        os_flavor=OS_FLAVOR_RHEL,
-    ) as vm:
-        running_vm(
-            vm=vm,
-            wait_for_interfaces=False,
-            ssh_timeout=TIMEOUT_5MIN,
-            wait_for_cloud_init=True,
-        )
-        yield vm
 
 
 @pytest.fixture(scope="session")
@@ -776,63 +460,6 @@ def dvs_for_upgrade(
         artifactory_secret=artifactory_secret,
         artifactory_config_map=artifactory_config_map,
     )
-
-
-@pytest.fixture(scope="class")
-def vm_for_migration_test(request, namespace, unprivileged_client, cpu_for_migration):
-    vm_name = request.param
-    with VirtualMachineForTests(
-        client=unprivileged_client,
-        name=vm_name,
-        body=fedora_vm_body(name=vm_name),
-        cpu_model=cpu_for_migration,
-        namespace=namespace.name,
-    ) as vm:
-        running_vm(vm=vm)
-        yield vm
-
-
-@pytest.fixture(scope="module")
-def latest_osinfo_db_file_name(osinfo_repo):
-    sorted_osinfo_repo = f"{osinfo_repo}/?C=M;O=A"
-    soup_page = BeautifulSoup(
-        markup=requests.get(sorted_osinfo_repo, headers=get_artifactory_header(), verify=False).text,
-        features="html.parser",
-    )
-    full_link = soup_page.findAll(name="a", attrs={"href": re.compile(r"osinfo-db-[0-9]*.tar.xz")})
-
-    assert full_link, "No osinfo-db file was found."
-
-    return full_link[-1].get("href")
-
-
-@pytest.fixture(scope="module")
-def osinfo_repo():
-    return f"{py_config['servers']['https_server']}/cnv-tests/osinfo-db/"
-
-
-@pytest.fixture(scope="module")
-def downloaded_latest_libosinfo_db(tmpdir_factory, latest_osinfo_db_file_name, osinfo_repo):
-    """Obtain the osinfo path."""
-    osinfo_path = tmpdir_factory.mktemp("osinfodb")
-    download_and_extract_tar(
-        tarfile_url=f"{osinfo_repo}{latest_osinfo_db_file_name}",
-        dest_path=osinfo_path,
-    )
-    osinfo_db_file_name_no_suffix = latest_osinfo_db_file_name.partition(".")[0]
-    yield os.path.join(osinfo_path, osinfo_db_file_name_no_suffix)
-
-
-@pytest.fixture(scope="class")
-def ping_process_in_rhel_os():
-    def _start_ping(vm):
-        return start_and_fetch_processid_on_linux_vm(
-            vm=vm,
-            process_name="ping",
-            args="localhost",
-        )
-
-    return _start_ping
 
 
 # TODO: Replace this fixture with py_config.get("conformance_tests")
