@@ -91,7 +91,8 @@ def vm_with_guest_tools(
         vm_instance_type=VirtualMachineClusterInstancetype(name="u1.large"),
         vm_preference=VirtualMachineClusterPreference(name="windows.10"),
         data_volume_template=data_volume_template_with_source_ref_dict(
-            data_source=golden_image_data_source_scope_class
+            data_source=golden_image_data_source_scope_class,
+            storage_class=py_config["default_storage_class"],
         ),
         termination_grace_period=TIMEOUT_3MIN,
         os_flavor=OS_FLAVOR_WINDOWS,
