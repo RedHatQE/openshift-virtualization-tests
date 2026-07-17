@@ -25,9 +25,6 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.storage.constants import NO_STORAGE_CLASS_FAILURE_MESSAGE
 from utilities import console
-from utilities.artifactory import (
-    get_http_image_url,
-)
 from utilities.constants import Images
 from utilities.constants.cluster import LS_COMMAND
 from utilities.constants.components import CDI_UPLOADPROXY
