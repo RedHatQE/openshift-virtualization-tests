@@ -18,14 +18,14 @@ from tests.storage.utils import (
     create_windows_directory,
     set_permissions,
 )
-from tests.utils import create_windows2022_dv_template_from_registry, create_windows2022_vm_with_vtpm
-from utilities.constants import (
+from tests.utils import create_windows2022_vm_with_data_volume_template
+from utilities.constants.pytest import UNPRIVILEGED_USER
+from utilities.constants.timeouts import (
     TIMEOUT_2MIN,
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
-    UNPRIVILEGED_USER,
 )
-from utilities.virt import running_vm, wait_for_windows_vm
+from utilities.storage import data_volume_template_with_source_ref_dict
 
 LOGGER = logging.getLogger(__name__)
 
@@ -51,34 +51,24 @@ def permissions_for_dv(namespace, admin_client):
 
 
 @pytest.fixture()
-def windows_dv_template_from_registry(
+def windows_vm_with_vtpm_for_snapshot(
     request,
     namespace,
     unprivileged_client,
+    modern_cpu_for_migration,
+    windows_validation_os_images_data_source_scope_session,
     storage_class_matrix_snapshot_matrix__module__,
 ):
-    with create_windows2022_dv_template_from_registry(
-        dv_name=request.param["dv_name"],
-        namespace=namespace.name,
-        client=unprivileged_client,
-        storage_class=next(iter(storage_class_matrix_snapshot_matrix__module__)),
-    ) as dv_template:
-        yield dv_template
-
-
-@pytest.fixture()
-def windows_vm_with_vtpm_for_snapshot(
-    request, namespace, unprivileged_client, modern_cpu_for_migration, windows_dv_template_from_registry
-):
-    with create_windows2022_vm_with_vtpm(
-        dv_template=windows_dv_template_from_registry,
+    with create_windows2022_vm_with_data_volume_template(
+        dv_template=data_volume_template_with_source_ref_dict(
+            data_source=windows_validation_os_images_data_source_scope_session,
+            storage_class=next(iter(storage_class_matrix_snapshot_matrix__module__)),
+        ),
         namespace=namespace.name,
         client=unprivileged_client,
         vm_name=request.param["vm_name"],
         cpu_model=modern_cpu_for_migration,
     ) as vm:
-        running_vm(vm=vm, wait_for_interfaces=False, check_ssh_connectivity=False)
-        wait_for_windows_vm(vm=vm, version="2022")
         yield vm
 
 
@@ -127,7 +117,7 @@ def file_created_during_snapshot(windows_vm_with_vtpm_for_snapshot, windows_snap
         host=windows_vm_with_vtpm_for_snapshot.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC
     )
     windows_snapshot.wait_snapshot_done(timeout=TIMEOUT_10MIN)
-    windows_vm_for_snapshot.stop(wait=True)
+    windows_vm_with_vtpm_for_snapshot.stop(wait=True)
 
 
 @pytest.fixture()

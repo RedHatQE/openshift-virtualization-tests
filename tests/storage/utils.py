@@ -39,7 +39,6 @@ from utilities.infra import (
 from utilities.ssp import validate_os_info_vmi_vs_windows_os
 from utilities.storage import (
     PodWithPVC,
-    construct_datavolume_source_dict,
     create_dv,
     get_containers_for_pods_with_pvc,
 )
@@ -345,29 +344,6 @@ def get_hpp_daemonset(hco_namespace, hpp_cr_suffix, admin_client):
     )
     assert daemonset.exists, "hpp_daemonset does not exist"
     return daemonset
-
-
-def create_cirros_dv(
-    namespace,
-    name,
-    storage_class,
-    client,
-    access_modes=None,
-    volume_mode=None,
-    dv_size=Images.Cirros.DEFAULT_DV_SIZE,
-):
-    with create_dv(
-        dv_name=f"dv-{name}",
-        namespace=namespace,
-        url=get_http_image_url(image_directory=Images.Cirros.DIR, image_name=Images.Cirros.QCOW2_IMG),
-        size=dv_size,
-        storage_class=storage_class,
-        access_modes=access_modes,
-        volume_mode=volume_mode,
-        client=client,
-    ) as dv:
-        dv.wait_for_dv_success()
-        yield dv
 
 
 def check_snapshot_indication(snapshot, is_online):

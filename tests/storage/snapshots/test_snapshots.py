@@ -443,10 +443,9 @@ def test_fail_to_snapshot_with_unprivileged_client_dv_permissions(
 
 @pytest.mark.tier3
 @pytest.mark.parametrize(
-    "windows_dv_template_from_registry, windows_vm_with_vtpm_for_snapshot",
+    "windows_vm_with_vtpm_for_snapshot",
     [
         pytest.param(
-            {"dv_name": "dv-8307"},
             {"vm_name": "vm-8307"},
             marks=pytest.mark.polarion("CNV-8307"),
         ),
@@ -477,7 +476,7 @@ def test_online_windows_vm_successful_restore(
     "windows_vm_with_vtpm_for_snapshot",
     [
         pytest.param(
-            {"dv_name": "dv-8536", "vm_name": "vm-8536"},
+            {"vm_name": "vm-8536"},
             marks=pytest.mark.polarion("CNV-8536"),
         ),
     ],
