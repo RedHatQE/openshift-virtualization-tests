@@ -1,20 +1,8 @@
 import copy
 
 import pytest
-from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
-from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_resources.virtual_machine_instancetype import VirtualMachineInstancetype
 from ocp_resources.virtual_machine_preference import VirtualMachinePreference
-
-from utilities.constants import Images
-from utilities.constants.images import OS_FLAVOR_RHEL
-from utilities.constants.instance_types import (
-    EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS,
-    INSTANCE_TYPE_STR,
-    PREFERENCE_STR,
-)
-from utilities.constants.timeouts import TIMEOUT_5MIN
-from utilities.virt import VirtualMachineForTests, running_vm
 
 
 @pytest.fixture(scope="class")
@@ -96,47 +84,3 @@ def vm_preference_for_test(namespace, common_vm_preference_param_dict):
     vm_preference_param_dict = copy.deepcopy(common_vm_preference_param_dict)
     vm_preference_param_dict["namespace"] = namespace.name
     return VirtualMachinePreference(**vm_preference_param_dict)
-
-
-@pytest.fixture(scope="class")
-def rhel_vm_with_instance_type_and_preference(
-    namespace,
-    unprivileged_client,
-    instance_type_for_test_scope_class,
-    vm_preference_for_test,
-):
-    with (
-        instance_type_for_test_scope_class as vm_instance_type,
-        vm_preference_for_test as vm_preference,
-    ):
-        with VirtualMachineForTests(
-            client=unprivileged_client,
-            name="rhel-vm-with-instance-type",
-            namespace=namespace.name,
-            image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
-            vm_instance_type=vm_instance_type,
-            vm_preference=vm_preference,
-        ) as vm:
-            yield vm
-
-
-@pytest.fixture(scope="class")
-def rhel_vm_with_cluster_instance_type_and_preference(namespace, unprivileged_client):
-    with VirtualMachineForTests(
-        name="rhel-vm-with-clustertype-resources",
-        image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
-        namespace=namespace.name,
-        client=unprivileged_client,
-        vm_instance_type=VirtualMachineClusterInstancetype(
-            name=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[INSTANCE_TYPE_STR]
-        ),
-        vm_preference=VirtualMachineClusterPreference(name=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[PREFERENCE_STR]),
-        os_flavor=OS_FLAVOR_RHEL,
-    ) as vm:
-        running_vm(
-            vm=vm,
-            wait_for_interfaces=False,
-            ssh_timeout=TIMEOUT_5MIN,
-            wait_for_cloud_init=True,
-        )
-        yield vm

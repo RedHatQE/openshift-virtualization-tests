@@ -17,6 +17,7 @@ from datetime import UTC, datetime
 from signal import SIGINT, SIGTERM, getsignal, signal
 
 import bcrypt
+import bitmath
 import pytest
 import yaml
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
@@ -111,7 +112,7 @@ from utilities.constants.pytest import (
 )
 from utilities.constants.storage import BIND_IMMEDIATE_ANNOTATION, StorageClassNames
 from utilities.constants.timeouts import TIMEOUT_4MIN
-from utilities.constants.virt import ES_NONE
+from utilities.constants.virt import ES_NONE, NODE_HUGE_PAGES_1GI_KEY
 from utilities.cpu import (
     find_common_cpu_model_for_live_migration,
     get_common_cpu_from_nodes,
@@ -2382,3 +2383,19 @@ def application_aware_resource_quota(admin_client, namespace):
 @pytest.fixture(scope="session")
 def is_s390x_cluster(nodes_cpu_architecture):
     return nodes_cpu_architecture == S390X
+
+
+@pytest.fixture(scope="module")
+def skip_if_no_cpumanager_workers(schedulable_nodes):
+    if not any([node.labels.cpumanager == "true" for node in schedulable_nodes]):
+        pytest.skip("Test should run on cluster with CPU Manager")
+
+
+@pytest.fixture(scope="session")
+def hugepages_gib_values(workers):
+    """Return the list of hugepage sizes (in GiB) across all worker nodes."""
+    return [
+        int(bitmath.parse_string(value, strict=False).GiB)
+        for worker in workers
+        if (value := worker.instance.status.allocatable.get(NODE_HUGE_PAGES_1GI_KEY))
+    ]

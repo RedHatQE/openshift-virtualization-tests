@@ -1,14 +1,22 @@
-import bitmath
 import pytest
+from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
+from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from pytest_testconfig import config as py_config
 
 from utilities.artifactory import get_test_artifact_server_url
-from utilities.constants.virt import NODE_HUGE_PAGES_1GI_KEY, VIRTIO
+from utilities.constants import Images
+from utilities.constants.images import OS_FLAVOR_RHEL
+from utilities.constants.instance_types import (
+    EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS,
+    INSTANCE_TYPE_STR,
+    PREFERENCE_STR,
+)
+from utilities.constants.timeouts import TIMEOUT_5MIN
+from utilities.constants.virt import VIRTIO
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
     running_vm,
-    start_and_fetch_processid_on_linux_vm,
     vm_instance_from_template,
     wait_for_windows_vm,
 )
@@ -98,29 +106,45 @@ def started_windows_vm(
     )
 
 
-@pytest.fixture(scope="module")
-def skip_if_no_cpumanager_workers(schedulable_nodes):
-    if not any([node.labels.cpumanager == "true" for node in schedulable_nodes]):
-        pytest.skip("Test should run on cluster with CPU Manager")
+@pytest.fixture(scope="class")
+def rhel_vm_with_instance_type_and_preference(
+    namespace,
+    unprivileged_client,
+    instance_type_for_test_scope_class,
+    vm_preference_for_test,
+):
+    with (
+        instance_type_for_test_scope_class as vm_instance_type,
+        vm_preference_for_test as vm_preference,
+    ):
+        with VirtualMachineForTests(
+            client=unprivileged_client,
+            name="rhel-vm-with-instance-type",
+            namespace=namespace.name,
+            image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
+            vm_instance_type=vm_instance_type,
+            vm_preference=vm_preference,
+        ) as vm:
+            yield vm
 
 
 @pytest.fixture(scope="class")
-def ping_process_in_rhel_os():
-    def _start_ping(vm):
-        return start_and_fetch_processid_on_linux_vm(
+def rhel_vm_with_cluster_instance_type_and_preference(namespace, unprivileged_client):
+    with VirtualMachineForTests(
+        name="rhel-vm-with-clustertype-resources",
+        image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
+        namespace=namespace.name,
+        client=unprivileged_client,
+        vm_instance_type=VirtualMachineClusterInstancetype(
+            name=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[INSTANCE_TYPE_STR]
+        ),
+        vm_preference=VirtualMachineClusterPreference(name=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[PREFERENCE_STR]),
+        os_flavor=OS_FLAVOR_RHEL,
+    ) as vm:
+        running_vm(
             vm=vm,
-            process_name="ping",
-            args="localhost",
+            wait_for_interfaces=False,
+            ssh_timeout=TIMEOUT_5MIN,
+            wait_for_cloud_init=True,
         )
-
-    return _start_ping
-
-
-@pytest.fixture(scope="session")
-def hugepages_gib_values(workers):
-    """Return the list of hugepage sizes (in GiB) across all worker nodes."""
-    return [
-        int(bitmath.parse_string(value, strict=False).GiB)
-        for worker in workers
-        if (value := worker.instance.status.allocatable.get(NODE_HUGE_PAGES_1GI_KEY))
-    ]
+        yield vm

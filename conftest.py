@@ -85,6 +85,7 @@ pytest_plugins = [
     "tests.fixtures.virt.ssh",
     "tests.fixtures.virt.templates",
     "tests.fixtures.virt.virtual_machines",
+    "tests.fixtures.virt.vm_actions",
 ]
 
 LOGGER = logging.getLogger(__name__)
