@@ -81,7 +81,7 @@ pytest_plugins = [
     "tests.fixtures.network.multiarch",
     "tests.fixtures.storage.classes",
     "tests.fixtures.storage.golden_images",
-    "tests.fixtures.storage.volumes",
+    "tests.fixtures.storage.data_volumes",
 ]
 
 LOGGER = logging.getLogger(__name__)
