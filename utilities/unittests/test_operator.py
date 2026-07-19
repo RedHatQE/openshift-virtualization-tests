@@ -19,6 +19,7 @@ from utilities.operator import (
     create_operator,
     create_operator_group,
     create_subscription,
+    determine_upgrade_stream,
     disable_default_sources_in_operatorhub,
     get_catalog_source,
     get_cluster_operator_status_conditions,
@@ -1563,3 +1564,37 @@ class TestUpdateImageInCatalogSource:
 
         mock_create_catalog.assert_called_once()
         mock_wait_manifest.assert_called_once()
+
+
+class TestDetermineUpgradeStream:
+    """Test cases for determine_upgrade_stream function."""
+
+    def test_x_stream_upgrade(self):
+        """Major version bump is identified as x-stream."""
+        assert determine_upgrade_stream(current_version="3.11.0", target_version="4.0.0") == "x-stream"
+
+    def test_y_stream_upgrade(self):
+        """Minor version bump is identified as y-stream."""
+        assert determine_upgrade_stream(current_version="4.15.3", target_version="4.16.0") == "y-stream"
+
+    def test_z_stream_upgrade(self):
+        """Patch version bump is identified as z-stream."""
+        assert determine_upgrade_stream(current_version="4.15.1", target_version="4.15.2") == "z-stream"
+
+    def test_z_stream_from_hotfix(self):
+        """Hotfix build upgrading to the same semver release is z-stream."""
+        assert determine_upgrade_stream(current_version="4.15.1-hotfix", target_version="4.15.1") == "z-stream"
+
+    def test_version_suffix_stripped_before_comparison(self):
+        """Build metadata suffix (e.g. -1234) is stripped before semver comparison."""
+        assert determine_upgrade_stream(current_version="4.15.1-1234567", target_version="4.15.2") == "z-stream"
+
+    def test_downgrade_raises_value_error(self):
+        """Attempting to downgrade raises ValueError."""
+        with pytest.raises(ValueError, match="Cannot upgrade to older/identical versions"):
+            determine_upgrade_stream(current_version="4.16.0", target_version="4.15.0")
+
+    def test_same_version_raises_value_error(self):
+        """Identical current and target versions raise ValueError."""
+        with pytest.raises(ValueError, match="Cannot upgrade to older/identical versions"):
+            determine_upgrade_stream(current_version="4.15.1", target_version="4.15.1")

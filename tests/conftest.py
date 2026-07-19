@@ -1902,6 +1902,11 @@ def audit_logs(session_start_time):
 
 
 @pytest.fixture(scope="session")
+def installing_cnv(pytestconfig):
+    return pytestconfig.option.install
+
+
+@pytest.fixture(scope="session")
 def fips_enabled_cluster(workers_utility_pods):
     """
     Check if FIPS is enabled on cluster

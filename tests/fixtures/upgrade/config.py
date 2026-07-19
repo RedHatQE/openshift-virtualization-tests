@@ -53,11 +53,6 @@ def upgrade_skip_default_sc_setup(pytestconfig):
 
 
 @pytest.fixture(scope="session")
-def installing_cnv(pytestconfig):
-    return pytestconfig.option.install
-
-
-@pytest.fixture(scope="session")
 def cnv_source(pytestconfig):
     return pytestconfig.option.cnv_source or "osbs"
 
