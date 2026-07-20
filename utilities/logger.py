@@ -1,6 +1,6 @@
 import logging
 import multiprocessing
-from datetime import datetime
+from datetime import UTC, datetime
 from logging.handlers import QueueHandler, QueueListener, RotatingFileHandler
 
 from colorlog import ColoredFormatter
@@ -28,7 +28,7 @@ class DuplicateFilter(logging.Filter):
 
 class TestLogFormatter(ColoredFormatter):
     def formatTime(self, record, datefmt=None):
-        return datetime.fromtimestamp(record.created).isoformat()
+        return datetime.fromtimestamp(record.created, tz=UTC).isoformat()
 
 
 def setup_logging(log_level, log_file="/tmp/pytest-tests.log"):
