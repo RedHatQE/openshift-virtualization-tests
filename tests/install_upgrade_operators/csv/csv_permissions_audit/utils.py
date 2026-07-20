@@ -1,12 +1,4 @@
-import os
-import pathlib
-
 from ocp_resources.cluster_service_version import ClusterServiceVersion
-
-
-def get_yaml_file_path():
-    file_path = pathlib.Path(__file__).parent.resolve()
-    return os.path.join(str(file_path), "csv-permissions.yaml")
 
 
 def get_csv_permissions(csv_name_starts_with, namespace):
