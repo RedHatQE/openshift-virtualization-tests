@@ -3,6 +3,7 @@ Pytest conftest file for CNV network tests
 """
 
 import logging
+from collections.abc import Generator
 
 import pytest
 from kubernetes.dynamic import DynamicClient
@@ -15,8 +16,12 @@ from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError
 
 from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
+from libs.vm.factory import base_vmspec, fedora_vm
+from libs.vm.vm import BaseVirtualMachine
 from tests.network.utils import get_vlan_index_number
 from utilities.constants import (
+    AMD_64,
+    ARM_64,
     CLUSTER,
     CLUSTER_NETWORK_ADDONS_OPERATOR,
     VIRT_HANDLER,
@@ -45,6 +50,26 @@ def get_index_number():
 @pytest.fixture(scope="session")
 def index_number():
     return get_index_number()
+
+
+@pytest.fixture(scope="class")
+def arm_vm(namespace: Namespace, unprivileged_client: DynamicClient) -> Generator[BaseVirtualMachine]:
+    spec = base_vmspec()
+    spec.template.spec.architecture = ARM_64
+    with fedora_vm(namespace=namespace.name, name="arm-vm", client=unprivileged_client, spec=spec) as vm:
+        vm.start(wait=True)
+        vm.wait_for_agent_connected()
+        yield vm
+
+
+@pytest.fixture(scope="class")
+def amd_vm(namespace: Namespace, unprivileged_client: DynamicClient) -> Generator[BaseVirtualMachine]:
+    spec = base_vmspec()
+    spec.template.spec.architecture = AMD_64
+    with fedora_vm(namespace=namespace.name, name="amd-vm", client=unprivileged_client, spec=spec) as vm:
+        vm.start(wait=True)
+        vm.wait_for_agent_connected()
+        yield vm
 
 
 @pytest.fixture(scope="session")

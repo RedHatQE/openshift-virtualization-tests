@@ -8,7 +8,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 from tests.storage.storage_migration.constants import (
     CONTENT,
     FILE_BEFORE_STORAGE_MIGRATION,
-    MOUNT_HOTPLUGGED_DEVICE_PATH,
+    MOUNT_HOTPLUGGED_DEVICE_PATHS,
 )
 from tests.storage.utils import check_file_in_vm
 from utilities.constants import TIMEOUT_2MIN, TIMEOUT_5SEC, TIMEOUT_10MIN, TIMEOUT_10SEC
@@ -74,14 +74,26 @@ def verify_storage_migration_succeeded(
         verify_vm_storage_class_updated(vm=vm, target_storage_class=target_storage_class)
 
 
-def verify_file_in_hotplugged_disk(vm: VirtualMachineForTests, file_name: str, file_content: str) -> None:
-    output = run_ssh_commands(
-        host=vm.ssh_exec,
-        commands=shlex.split(f"cat {MOUNT_HOTPLUGGED_DEVICE_PATH}/{file_name}"),
-        wait_timeout=TIMEOUT_2MIN,
-        sleep=TIMEOUT_5SEC,
-    )[0]
-    assert output.strip() == file_content, f"'{output}' does not equal '{file_content}'"
+def verify_files_in_hotplugged_disks(vm: VirtualMachineForTests, file_name: str, file_content: str) -> None:
+    """Verify that a file exists with expected content on all hotplugged disk mount paths.
+
+    Args:
+        vm: The VM to check.
+        file_name: Name of the file to verify on each mount path.
+        file_content: Expected content of the file.
+    """
+    mismatches = {}
+    for mount_path in MOUNT_HOTPLUGGED_DEVICE_PATHS:
+        output = run_ssh_commands(
+            host=vm.ssh_exec,
+            commands=shlex.split(f"cat {mount_path}/{file_name}"),
+            wait_timeout=TIMEOUT_2MIN,
+            sleep=TIMEOUT_5SEC,
+        )[0]
+        stripped_output = output.strip()
+        if stripped_output != file_content:
+            mismatches[mount_path] = f"'{stripped_output}' does not equal '{file_content}'"
+    assert not mismatches, f"Data mismatch on hotplugged disk(s): {mismatches}"
 
 
 def wait_for_storage_migration_completed(
