@@ -27,12 +27,10 @@ from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 
 from utilities.artifactory import (
-    cleanup_artifactory_secret_and_config_map,
     get_artifactory_config_map,
     get_artifactory_header,
     get_artifactory_secret,
     get_http_image_url,
-    get_test_artifact_server_url,
 )
 from utilities.constants import (
     DISK_SERIAL,
@@ -51,7 +49,6 @@ from utilities.constants import (
     TIMEOUT_15SEC,
     TIMEOUT_30MIN,
     U1_LARGE,
-    WIN_2K22,
     WINDOWS_2K22_PREFERENCE,
     Images,
 )
@@ -61,7 +58,6 @@ from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import (
     ExecCommandOnPod,
 )
-from utilities.os_utils import get_windows_container_disk_path
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,

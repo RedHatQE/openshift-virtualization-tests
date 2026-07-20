@@ -11,7 +11,7 @@ from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.storage_profile import StorageProfile
 
 from tests.utils import create_windows2022_vm_with_data_volume_template
-from utilities.constants import HOTPLUG_DISK_SERIAL, WIN_2K22, Images
+from utilities.constants import HOTPLUG_DISK_SERIAL, WIN_2K22
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.storage import (
     assert_disk_serial,
