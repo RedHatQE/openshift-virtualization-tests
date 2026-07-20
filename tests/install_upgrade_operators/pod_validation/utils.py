@@ -1,13 +1,6 @@
 import logging
 import re
 
-from ocp_resources.resource import Resource
-
-from tests.install_upgrade_operators.utils import (
-    get_resource_container_env_image_mismatch,
-)
-from utilities.exceptions import ResourceMismatch
-
 VALID_PRIORITY_CLASS = [
     "openshift-user-critical",
     "system-cluster-critical",
@@ -81,38 +74,3 @@ def validate_cnv_pods_resource_request(cnv_pods, resource):
         assert not cpu_error, f"For following pods invalid cpu values found: {cpu_error}"
     else:
         raise AssertionError(f"Invalid resource: {resource}")
-
-
-def assert_cnv_pod_container_env_image_not_in_upstream(cnv_pods_by_type):
-    cnv_pods_env_with_upstream_image_reference = {}
-    for pod in cnv_pods_by_type:
-        cnv_pods_env_with_upstream_image_reference[pod.name] = {}
-        for container in pod.instance.spec.containers:
-            pod_env_image_mismatch = get_resource_container_env_image_mismatch(container=container)
-            if pod_env_image_mismatch:
-                cnv_pods_env_with_upstream_image_reference[pod.name][container["name"]] = pod_env_image_mismatch
-    validate_image_values(pod_image_dict=cnv_pods_env_with_upstream_image_reference)
-
-
-def assert_cnv_pod_container_image_not_in_upstream(cnv_pods_by_type):
-    cnv_pods_with_upstream_image_reference = {
-        pod.name: {
-            container["name"]: container["image"]
-            for container in pod.instance.spec.containers
-            if not container["image"].startswith(Resource.ApiGroup.IMAGE_REGISTRY)
-        }
-        for pod in cnv_pods_by_type
-    }
-    validate_image_values(pod_image_dict=cnv_pods_with_upstream_image_reference)
-
-
-def validate_image_values(pod_image_dict):
-    cnv_pods_with_upstream_image_reference = filter_dict_remove_keys_with_empty_value(input_dictionary=pod_image_dict)
-    if cnv_pods_with_upstream_image_reference:
-        raise ResourceMismatch(
-            f"For following pods found upstream image references: {cnv_pods_with_upstream_image_reference}"
-        )
-
-
-def filter_dict_remove_keys_with_empty_value(input_dictionary):
-    return {key: value for key, value in input_dictionary.items() if value}

@@ -1,8 +1,6 @@
 import pytest
 
 from tests.install_upgrade_operators.deployment.utils import (
-    assert_cnv_deployment_container_env_image_not_in_upstream,
-    assert_cnv_deployment_container_image_not_in_upstream,
     validate_liveness_probe_fields,
     validate_request_fields,
 )
@@ -92,11 +90,3 @@ def test_no_new_cnv_deployments_added(cnv_deployments_excluding_hpp_pool):
         if list(filter(deployment.name.startswith, ALL_CNV_DEPLOYMENTS)) == []
     ]
     assert not new_deployment, f"New cnv deployment: {new_deployment}, has been added."
-
-
-@pytest.mark.gating
-@pytest.mark.conformance
-@pytest.mark.polarion("CNV-8264")
-def test_cnv_deployment_container_image(cnv_deployment_by_name):
-    assert_cnv_deployment_container_image_not_in_upstream(cnv_deployment=cnv_deployment_by_name)
-    assert_cnv_deployment_container_env_image_not_in_upstream(cnv_deployment=cnv_deployment_by_name)

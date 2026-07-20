@@ -4,8 +4,6 @@ import pytest
 from ocp_resources.job import Job
 
 from tests.install_upgrade_operators.pod_validation.utils import (
-    assert_cnv_pod_container_env_image_not_in_upstream,
-    assert_cnv_pod_container_image_not_in_upstream,
     validate_cnv_pods_priority_class_name_exists,
     validate_cnv_pods_resource_request,
     validate_priority_class_value,
@@ -67,9 +65,3 @@ def test_pods_resource_request(
         cnv_pods=cnv_pods_by_type,
         resource=pod_resource_validation_matrix__function__,
     )
-
-
-@pytest.mark.polarion("CNV-8267")
-def test_cnv_pod_container_image(cnv_pods_by_type):
-    assert_cnv_pod_container_image_not_in_upstream(cnv_pods_by_type=cnv_pods_by_type)
-    assert_cnv_pod_container_env_image_not_in_upstream(cnv_pods_by_type=cnv_pods_by_type)

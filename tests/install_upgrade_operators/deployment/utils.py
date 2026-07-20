@@ -1,10 +1,5 @@
 import re
 
-from ocp_resources.resource import Resource
-
-from tests.install_upgrade_operators.utils import (
-    get_resource_container_env_image_mismatch,
-)
 from utilities.exceptions import ResourceMismatch
 
 
@@ -80,32 +75,4 @@ def validate_request_fields(deployment, cpu_min_value):
         raise ResourceMismatch(
             f"For deployment {deployment.name} mismatch in cpu values found: {invalid_cpus}, "
             f"expected cpu values < {cpu_min_value}"
-        )
-
-
-def assert_cnv_deployment_container_image_not_in_upstream(cnv_deployment):
-    cnv_deployments_with_upstream_image_reference = {
-        container["name"]: container["image"]
-        for container in cnv_deployment.instance.spec.template.spec.containers
-        if not container["image"].startswith(Resource.ApiGroup.IMAGE_REGISTRY)
-    }
-
-    if cnv_deployments_with_upstream_image_reference:
-        raise ResourceMismatch(
-            f"For following deployments upstream image references "
-            f"found: {cnv_deployments_with_upstream_image_reference}"
-        )
-
-
-def assert_cnv_deployment_container_env_image_not_in_upstream(cnv_deployment):
-    cnv_deployments_env_with_upstream_image_reference = {}
-    for container in cnv_deployment.instance.spec.template.spec.containers:
-        resource_env_image_mismatch = get_resource_container_env_image_mismatch(container=container)
-        if resource_env_image_mismatch:
-            cnv_deployments_env_with_upstream_image_reference[container["name"]] = resource_env_image_mismatch
-
-    if cnv_deployments_env_with_upstream_image_reference:
-        raise ResourceMismatch(
-            f"For following deployments upstream image references "
-            f"found: {cnv_deployments_env_with_upstream_image_reference}"
         )
