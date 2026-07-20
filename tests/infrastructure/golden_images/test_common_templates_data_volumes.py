@@ -16,9 +16,9 @@ NON_EXISTING_DV_NAME = "non-existing-dv"
 
 @pytest.fixture()
 def vm_from_golden_image_multi_storage(
-    request,
     unprivileged_client,
     namespace,
+    storage_class_name_scope_function,
     golden_image_data_source_multi_storage_scope_function,
 ):
     with VirtualMachineForTests(
@@ -28,6 +28,7 @@ def vm_from_golden_image_multi_storage(
         vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL),
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=golden_image_data_source_multi_storage_scope_function,
+            storage_class=storage_class_name_scope_function,
         ),
     ) as vm:
         running_vm(vm=vm)

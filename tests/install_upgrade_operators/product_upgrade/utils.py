@@ -3,9 +3,14 @@ from __future__ import annotations
 import json
 import logging
 import re
+from datetime import datetime, timezone
 from pprint import pformat
 from threading import Thread
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from ocp_resources.subscription import Subscription
+    from ocp_utilities.monitoring import Prometheus
 
 from deepdiff import DeepDiff
 from kubernetes.dynamic import DynamicClient
@@ -23,9 +28,9 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.install_upgrade_operators.constants import WORKLOAD_UPDATE_STRATEGY_KEY_NAME, WORKLOADUPDATEMETHODS
 from tests.install_upgrade_operators.utils import wait_for_install_plan
+from tests.upgrade_params import EUS
 from utilities.constants import (
     BASE_EXCEPTIONS_DICT,
-    BREW_REGISTERY_SOURCE,
     FIRING_STATE,
     HCO_CATALOG_SOURCE,
     IMAGE_CRON_STR,
@@ -47,6 +52,7 @@ from utilities.infra import (
     get_deployments,
     get_pod_by_name_prefix,
     get_pods,
+    stable_channel_released_to_prod,
     wait_for_consistent_resource_conditions,
     wait_for_version_explorer_response,
 )
@@ -54,14 +60,12 @@ from utilities.operator import (
     approve_install_plan,
     get_hco_csv_name_by_version,
     update_image_in_catalog_source,
+    update_subscription_source,
     wait_for_mcp_update_completion,
 )
 
 LOGGER = logging.getLogger(__name__)
 TIER_2_PODS_TYPE = "tier-2"
-
-# list of whitelisted alerts
-WHITELIST_ALERTS_UPGRADE_LIST = ["OutdatedVirtualMachineInstanceWorkloads"]
 
 
 def wait_for_pod_replacement(client, hco_namespace, pod_name, related_images, status_dict):
@@ -455,6 +459,7 @@ def verify_upgrade_ocp(
         machine_config_pools_list=machine_config_pools_list,
         initial_mcp_conditions=initial_mcp_conditions,
         nodes=nodes,
+        timeout=TIMEOUT_180MIN,
     )
 
     wait_for_cluster_version_stable_conditions(
@@ -462,20 +467,23 @@ def verify_upgrade_ocp(
     )
 
 
-def get_all_cnv_alerts(prometheus, file_name, base_directory):
-    cnv_alerts = []
-    alerts_fired = prometheus.alerts()
-    for alert in alerts_fired["data"].get("alerts"):
-        if (
-            alert["labels"].get("kubernetes_operator_part_of")
-            and alert["labels"]["kubernetes_operator_part_of"] == "kubevirt"
-        ):
-            alert_name = alert["labels"]["alertname"]
-            if alert_name in WHITELIST_ALERTS_UPGRADE_LIST:
-                LOGGER.info(f"Whitelist alert {alert_name}")
-                continue
-            cnv_alerts.append(alert)
+def get_all_firing_cnv_alerts(prometheus: Prometheus, file_name: str, base_directory: str) -> list[dict[str, Any]]:
+    """Returns all currently firing CNV alerts.
 
+    Args:
+        prometheus: Prometheus client instance.
+        file_name: Name of the file to write alert data to.
+        base_directory: Directory path for writing alert data files.
+
+    Returns:
+        List of alert dicts for firing alerts with kubernetes_operator_part_of=kubevirt.
+    """
+    cnv_alerts = [
+        alert
+        for alert in prometheus.alerts()["data"]["alerts"]
+        if alert["labels"].get("kubernetes_operator_part_of") == "kubevirt" and alert["state"] == FIRING_STATE
+    ]
+    LOGGER.info(f"Firing CNV alerts: {[alert['labels']['alertname'] for alert in cnv_alerts]}")
     write_to_file(
         base_directory=base_directory,
         file_name=file_name,
@@ -484,127 +492,224 @@ def get_all_cnv_alerts(prometheus, file_name, base_directory):
     return cnv_alerts
 
 
-def get_alerts_fired_during_upgrade(prometheus, before_upgrade_alerts, base_directory):
-    after_upgrade_alerts = get_all_cnv_alerts(
-        prometheus=prometheus,
-        file_name="after_upgrade_alerts.json",
-        base_directory=base_directory,
-    )
-    before_upgrade_alert_names = [alert["labels"]["alertname"] for alert in before_upgrade_alerts]
-    fired_during_upgrade = []
-    for alert in after_upgrade_alerts:
-        alert_name = alert["labels"]["alertname"]
-        if alert_name in before_upgrade_alert_names:
-            continue
-        LOGGER.info(f"Alert {alert_name}, state: {alert['state']} fired during upgrade.")
-        fired_during_upgrade.append(alert)
-    return fired_during_upgrade
+def query_alerts_fired_in_range(
+    prometheus: Prometheus,
+    start_time: datetime,
+) -> list[dict[str, Any]]:
+    """Returns raw CNV firing-alert results since start_time using a range vector selector.
 
-
-def process_alerts_fired_during_upgrade(prometheus, fired_alerts_during_upgrade):
-    pending_alerts = []
-    for alert in fired_alerts_during_upgrade:
-        if alert["state"] == "pending":
-            pending_alerts.append(alert["labels"]["alertname"])
-
-    LOGGER.info(f"Pending alerts: {pending_alerts}")
-    if pending_alerts:
-        # wait for the pending alerts to be fired within 10 minutes, since pending alerts would be part of alerts fired
-        # during upgrade, we don't need to fail, if pending alerts did not fire.
-        wait_for_pending_alerts_to_fire(prometheus=prometheus, pending_alerts=pending_alerts)
-
-
-def wait_for_pending_alerts_to_fire(pending_alerts, prometheus):
-    def _get_fired_alerts(_prometheus, _alert_list):
-        _all_alerts = _prometheus.alerts()
-        current_firing_alerts = []
-        current_pending_alerts = []
-        for _alert in _all_alerts["data"].get("alerts"):
-            if (
-                not _alert["labels"].get("kubernetes_operator_part_of")
-                or _alert["labels"]["kubernetes_operator_part_of"] != "kubevirt"
-            ):
-                continue
-            _alert_name = _alert["labels"]["alertname"]
-            if _alert["state"] == FIRING_STATE:
-                current_firing_alerts.append(_alert_name)
-            elif _alert["state"] == "pending":
-                current_pending_alerts.append(_alert_name)
-
-        not_fired = [_alert for _alert in _alert_list if _alert not in current_firing_alerts]
-        LOGGER.warning(f"Out of {_alert_list}, following alerts are still not fired: {not_fired}")
-        return not_fired
-
-    _pending_alerts = pending_alerts
-    sampler = TimeoutSampler(
-        wait_timeout=TIMEOUT_10MIN,
-        sleep=2,
-        func=_get_fired_alerts,
-        _prometheus=prometheus,
-        _alert_list=_pending_alerts,
-    )
-    try:
-        for sample in sampler:
-            if not sample:
-                return
-            _pending_alerts = sample
-            LOGGER.warning(f"Waiting on alerts: {_pending_alerts}")
-    except TimeoutExpiredError:
-        LOGGER.error(f"Out of {pending_alerts}, following alerts did not get to {FIRING_STATE}: {_pending_alerts}")
-
-
-def get_upgrade_path(target_version: str) -> dict[str, list[dict[str, str | list[str]]]]:
-    return wait_for_version_explorer_response(
-        api_end_point="GetUpgradePath", query_string=f"targetVersion={target_version}"
-    )
-
-
-def get_shortest_upgrade_path(target_version: str) -> dict[str, str | list[str]]:
-    """
-    Get the shortest upgrade path to a given CNV target version(latest z stream)
+    Uses an instant query with a PromQL range vector selector to retrieve all alert
+    samples since start_time, including alerts that have since resolved.
 
     Args:
-        target_version (str): The target version of the upgrade path.
+        prometheus: Prometheus client instance.
+        start_time: Start of the lookback window.
 
     Returns:
-        dict: The shortest upgrade path to the target version.
+        List of result dicts, each containing 'metric' labels and 'values' timestamps.
     """
-    upgrade_paths = get_upgrade_path(target_version=target_version)["path"]
-    assert upgrade_paths, f"Couldn't find upgrade path for {target_version} version"
-    upgrade_path = max(
-        upgrade_paths,
-        key=lambda path: (
-            Version(version="0") if "-hotfix" in path["startVersion"] else Version(version=str(path["startVersion"]))
-        ),
+    duration_seconds = int((datetime.now(tz=timezone.utc) - start_time).total_seconds())
+    query = f'ALERTS{{alertstate="{FIRING_STATE}",kubernetes_operator_part_of="kubevirt"}}[{duration_seconds}s]'
+    return prometheus.query_sampler(query=query)
+
+
+def get_alerts_fired_during_upgrade(
+    prometheus: Prometheus,
+    before_upgrade_alert_names: set[str],
+    upgrade_start_time: datetime,
+    base_directory: str,
+) -> dict[str, list[dict[str, Any]]]:
+    """Returns new alerts that fired during the upgrade, grouped by alertname.
+
+    Uses an instant query with a PromQL range vector selector over the upgrade window to
+    catch all alerts that reached firing state, including those that resolved before this
+    function runs. Filters out alerts that were already firing before the upgrade started.
+
+    Args:
+        prometheus: Prometheus client instance.
+        before_upgrade_alert_names: Alert names captured before upgrade.
+        upgrade_start_time: Datetime of when the upgrade started.
+        base_directory: Directory path for writing alert data files.
+
+    Returns:
+        Dict mapping alertname to the list of full result objects (metric + values) for that alert.
+    """
+    fired_alerts = query_alerts_fired_in_range(
+        prometheus=prometheus,
+        start_time=upgrade_start_time,
     )
+
+    alerts_by_name: dict[str, list[dict[str, Any]]] = {}
+    for alert in fired_alerts:
+        alert_name = alert["metric"]["alertname"]
+        if alert_name not in before_upgrade_alert_names:
+            alerts_by_name.setdefault(alert_name, []).append(alert)
+
+    if alerts_by_name:
+        write_to_file(
+            base_directory=base_directory,
+            file_name="alerts_fired_during_upgrade.json",
+            content=json.dumps(fired_alerts, indent=2),
+        )
+    return alerts_by_name
+
+
+def get_upgrade_path(target_version: str, channel: str = "stable") -> dict[str, Any]:
+    """Query the version explorer for upgrade paths to a target CNV version on a given channel."""
+    return wait_for_version_explorer_response(
+        api_end_point="GetUpgradePath",
+        query_string=f"targetVersion={target_version}&channel={channel}",
+    )
+
+
+def find_path_with_start_version(paths: list[dict[str, Any]], start_version: str) -> dict[str, Any] | None:
+    """Find an upgrade path entry matching start_version."""
+    for path in paths:
+        if str(path["startVersion"]).lstrip("v") == start_version:
+            return path
+    return None
+
+
+def get_cnv_image_url_for_version(version: str, channel: str) -> str:
+    """Return the CNV image URL of the first successful build for a version on a given channel."""
+    builds = get_build_info_by_version(version=version, channel=channel)["successful_builds"]
+    assert builds, f"No successful builds for {version} on {channel} channel"
+    return builds[0]["iib"]
+
+
+def get_stable_released_builds(minor_version: str) -> list[dict[str, Any]]:
+    """Return stable released builds for a minor version, sorted newest-first."""
+    builds = wait_for_version_explorer_response(
+        api_end_point="GetReleasedBuilds",
+        query_string=f"minor_version={minor_version}&stage=false",
+    )["builds"]
+    stable_builds = sorted(
+        [build for build in builds if stable_channel_released_to_prod(channels=build["channels"])],
+        key=lambda build: Version(version=build["csv_version"]),
+        reverse=True,
+    )
+    assert stable_builds, f"No stable released builds for {minor_version}"
+    return stable_builds
+
+
+def get_stable_channel_iib(build: dict[str, Any]) -> str:
+    """Extract the IIB URL from a build's stable channel entry."""
+    stable_entry = next(
+        (item for item in build["channels"] if item.get("channel") == "stable" and item.get("released_to_prod")),
+        None,
+    )
+    if not stable_entry:
+        raise ValueError(f"No stable released channel entry in build: {build}")
+    return stable_entry["iib"]
+
+
+def build_version_images(
+    versions: list[str],
+    target_version: str,
+    target_cnv_image_url: str,
+    channel: str = "stable",
+) -> dict[str, dict[str, str]]:
+    """Build a {version: {"cnv_image_url": ..., "channel": ...}} dict from a versions list."""
+    images: dict[str, dict[str, str]] = {}
+    for raw_version in versions:
+        version = raw_version.lstrip("v")
+        if version == target_version:
+            images[version] = {"cnv_image_url": target_cnv_image_url, "channel": channel}
+        else:
+            images[version] = {
+                "cnv_image_url": get_cnv_image_url_for_version(version=version, channel=channel),
+                "channel": channel,
+            }
+    return images
+
+
+def find_intermediate_cnv_versions(
+    current_version: str,
+    target_version: str,
+    target_channel: str = "stable",
+) -> tuple[dict[str, dict[str, str]], dict[str, Any]]:
+    """Find the intermediate CNV versions for an EUS-to-EUS upgrade.
+
+    Walks stable z-streams for the intermediate minor (current+1) from latest to oldest,
+    picks the first valid startVersion in the target's upgrade path, then resolves the
+    full hop path from current to intermediate.
+
+    Returns:
+        Tuple of (non_eus_images, target_step).
+    """
+    target_paths = get_upgrade_path(target_version=target_version, channel=target_channel)["path"]
+    assert target_paths, f"No upgrade paths for {target_version} on {target_channel} channel"
+
+    current = Version(version=current_version)
+    intermediate_minor = f"{current.major}.{current.minor + 1}"
+    stable_builds = get_stable_released_builds(minor_version=intermediate_minor)
+
+    for build in stable_builds:
+        intermediate_version = build["csv_version"].lstrip("v")
+        target_step = find_path_with_start_version(paths=target_paths, start_version=intermediate_version)
+        if not target_step:
+            continue
+
+        LOGGER.info(f"Using {intermediate_version} as intermediate version for EUS upgrade to {target_version}")
+        intermediate_iib = get_stable_channel_iib(build=build)
+
+        intermediate_paths = get_upgrade_path(target_version=intermediate_version, channel="stable")["path"]
+        intermediate_step = find_path_with_start_version(paths=intermediate_paths, start_version=current_version)
+
+        if intermediate_step:
+            non_eus_images = build_version_images(
+                versions=intermediate_step["versions"],
+                target_version=intermediate_version,
+                target_cnv_image_url=intermediate_iib,
+            )
+        else:
+            non_eus_images = {intermediate_version: {"cnv_image_url": intermediate_iib, "channel": "stable"}}
+
+        return non_eus_images, target_step
+
+    raise AssertionError(f"No valid intermediate in {intermediate_minor} for upgrade to {target_version}")
+
+
+def build_eus_upgrade_path_dict(
+    current_cnv_version: str,
+    target_cnv_version: str,
+    target_channel: str = "stable",
+    target_cnv_image_url: str | None = None,
+) -> dict[str, dict[str, dict[str, str]]]:
+    """Build the EUS-to-EUS upgrade path with IIB images for each phase.
+
+    Args:
+        current_cnv_version: Currently installed CNV version (e.g., "4.20.15").
+        target_cnv_version: EUS target CNV version (e.g., "4.22.0").
+        target_channel: Channel for the target GetUpgradePath query (default "stable").
+        target_cnv_image_url: CNV image URL for the EUS target (from --cnv-image CLI arg).
+
+    Returns:
+        Dict with "non-eus" and "eus" keys, each mapping version string
+        to a dict with "cnv_image_url" and "channel" keys.
+    """
+    assert target_cnv_image_url, "target_cnv_image_url is required for EUS upgrade path"
+    non_eus_images, target_step = find_intermediate_cnv_versions(
+        current_version=current_cnv_version,
+        target_version=target_cnv_version,
+        target_channel=target_channel,
+    )
+    eus_images = build_version_images(
+        versions=target_step["versions"],
+        target_version=target_cnv_version,
+        target_cnv_image_url=target_cnv_image_url,
+        channel=target_channel,
+    )
+    upgrade_path = {"non-eus": non_eus_images, EUS: eus_images}
+    LOGGER.info(f"Upgrade path for EUS-to-EUS upgrade: {upgrade_path}")
     return upgrade_path
 
 
-def get_iib_images_of_cnv_versions(versions: list[str], errata_status: str = "true") -> dict[str, str]:
-    version_images = {}
-    for version in versions:
-        iib = get_successful_fbc_build_iib(
-            build_info=get_build_info_by_version(version=version, errata_status=errata_status)["successful_builds"]
-        )
-        version_images[version] = f"{BREW_REGISTERY_SOURCE}/rh-osbs/iib:{iib}"
-    return version_images
-
-
-def get_successful_fbc_build_iib(build_info: list[dict[str, str]]) -> str:
-    LOGGER.info(f"Build info found: {build_info}")
-    for build in build_info:
-        if build["pipeline"] == "RHTAP FBC":
-            return build["iib"]
-    raise AssertionError("Should have a fbc build")
-
-
-def get_build_info_by_version(version: str, errata_status: str = "true") -> dict[str, Any]:
-    query_string = f"version={version}"
-    if errata_status:
-        query_string = f"{query_string}&errata_status={errata_status}"
+def get_build_info_by_version(version: str, channel: str = "stable") -> dict[str, Any]:
+    """Get successful builds for a CNV version from the version explorer, filtered by channel."""
     return wait_for_version_explorer_response(
         api_end_point="GetSuccessfulBuildsByVersion",
-        query_string=query_string,
+        query_string=f"version={version}&channel={channel}",
     )
 
 
@@ -631,8 +736,21 @@ def perform_cnv_upgrade(
     cr_name: str,
     hco_namespace: Namespace,
     cnv_target_version: str,
+    subscription: Subscription | None = None,
+    subscription_source: str | None = None,
+    subscription_channel: str | None = None,
 ) -> None:
     hco_target_csv_name = get_hco_csv_name_by_version(cnv_target_version=cnv_target_version)
+
+    if subscription or subscription_source or subscription_channel:
+        assert subscription and subscription_source and subscription_channel, (
+            "subscription, subscription_source, and subscription_channel must all be provided together"
+        )
+        update_subscription_source(
+            subscription=subscription,
+            subscription_source=subscription_source,
+            subscription_channel=subscription_channel,
+        )
 
     LOGGER.info("Updating image in CatalogSource")
     update_image_in_catalog_source(

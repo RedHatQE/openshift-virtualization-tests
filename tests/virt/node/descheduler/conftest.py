@@ -20,20 +20,15 @@ from tests.virt.node.descheduler.utils import (
     deploy_vms,
     vm_nodes,
     vms_per_nodes,
-    wait_vmi_failover,
 )
 from tests.virt.utils import (
     build_node_affinity_dict,
     get_boot_time_for_multiple_vms,
     get_non_terminated_pods,
 )
-from utilities.constants import TIMEOUT_5MIN, TIMEOUT_5SEC
+from utilities.constants import TIMEOUT_5MIN, TIMEOUT_5SEC, NamespacesNames
 from utilities.infra import wait_for_pods_deletion
-from utilities.virt import (
-    node_mgmt_console,
-    wait_for_migration_finished,
-    wait_for_node_schedulable_status,
-)
+from utilities.virt import wait_for_migration_finished
 
 LOGGER = logging.getLogger(__name__)
 
@@ -41,8 +36,29 @@ LOGGER = logging.getLogger(__name__)
 LOCALHOST = "localhost"
 
 
+@pytest.fixture(scope="package")
+def descheduler_operator_reconciled(admin_client):
+    """Restart descheduler-operator deployment to trigger reconciliation.
+
+    Workaround for the issue when descheduler is installed before other OpenShift operators.
+    After restart, the operator reconciles and adds all namespaces with prefix "openshift-"
+    to the protected list.
+    """
+    LOGGER.info("Restarting descheduler-operator deployment to trigger reconciliation")
+    deployment = Deployment(
+        name="descheduler-operator",
+        namespace=NamespacesNames.OPENSHIFT_KUBE_DESCHEDULER_OPERATOR,
+        client=admin_client,
+    )
+    initial_replicas = deployment.instance.spec.replicas
+    deployment.scale_replicas(replica_count=0)
+    deployment.wait_for_replicas(deployed=False)
+    deployment.scale_replicas(replica_count=initial_replicas)
+    deployment.wait_for_replicas()
+
+
 @pytest.fixture(scope="module")
-def descheduler_long_lifecycle_profile(admin_client):
+def descheduler_long_lifecycle_profile(admin_client, descheduler_operator_reconciled):
     with create_kube_descheduler(
         admin_client=admin_client,
         profiles=["LongLifecycle"],
@@ -58,6 +74,7 @@ def descheduler_long_lifecycle_profile(admin_client):
 def descheduler_kubevirt_relieve_and_migrate_profile(
     admin_client,
     schedulable_nodes,
+    descheduler_operator_reconciled,
     nodes_taints_before_descheduler_test_run,
 ):
     with create_kube_descheduler(
@@ -121,46 +138,6 @@ def deployed_vms_for_descheduler_test(
         deployment_size=vm_deployment_size,
         descheduler_eviction=True,
     )
-
-
-@pytest.fixture(scope="class")
-def vms_orig_nodes_before_node_drain(deployed_vms_for_descheduler_test):
-    return vm_nodes(vms=deployed_vms_for_descheduler_test)
-
-
-@pytest.fixture(scope="class")
-def vms_boot_time_before_node_drain(
-    deployed_vms_for_descheduler_test,
-):
-    yield get_boot_time_for_multiple_vms(vm_list=deployed_vms_for_descheduler_test)
-
-
-@pytest.fixture(scope="class")
-def node_to_drain(
-    schedulable_nodes,
-    vms_orig_nodes_before_node_drain,
-):
-    vm_per_node_counters = vms_per_nodes(vms=vms_orig_nodes_before_node_drain)
-    for node in schedulable_nodes:
-        if vm_per_node_counters[node.name] > 0:
-            return node
-
-    raise ValueError("No suitable node to drain")
-
-
-@pytest.fixture()
-def drain_uncordon_node(
-    admin_client,
-    deployed_vms_for_descheduler_test,
-    vms_orig_nodes_before_node_drain,
-    node_to_drain,
-):
-    """Return when node is schedulable again after uncordon"""
-    with node_mgmt_console(admin_client=admin_client, node=node_to_drain, node_mgmt="drain"):
-        wait_for_node_schedulable_status(node=node_to_drain, status=False)
-        for vm in deployed_vms_for_descheduler_test:
-            if vms_orig_nodes_before_node_drain[vm.name].name == node_to_drain.name:
-                wait_vmi_failover(vm=vm, orig_node=vms_orig_nodes_before_node_drain[vm.name])
 
 
 @pytest.fixture()
@@ -258,7 +235,14 @@ def unallocated_pod_count(
     node_with_least_available_memory,
 ):
     non_terminated_pod_count = len(get_non_terminated_pods(client=admin_client, node=node_with_least_available_memory))
-    return int(node_with_least_available_memory.instance.status.capacity.pods) - non_terminated_pod_count
+    capacity = int(node_with_least_available_memory.instance.status.capacity.pods)
+    # Target 85% utilization: high enough to trigger descheduler (>70%) but below scheduler preemption threshold
+    target_pod_count = int(capacity * 0.85)
+    pods_to_add = max(0, target_pod_count - non_terminated_pod_count)
+    LOGGER.info(
+        f"Node {node_with_least_available_memory.name}: current pods {non_terminated_pod_count}, will add {pods_to_add}"
+    )
+    return pods_to_add
 
 
 @pytest.fixture(scope="class")
@@ -275,6 +259,7 @@ def utilization_imbalance(
     with PodDisruptionBudget(
         name=utilization_imbalance_deployment_name,
         namespace=namespace.name,
+        client=admin_client,
         min_available=unallocated_pod_count,
         selector=evict_protected_pod_selector,
     ):
@@ -320,10 +305,12 @@ def utilization_imbalance(
 @pytest.fixture(scope="class")
 def node_to_run_stress(schedulable_nodes, deployed_vms_for_descheduler_test):
     vm_per_node_counters = vms_per_nodes(vms=vm_nodes(vms=deployed_vms_for_descheduler_test))
-    for node in schedulable_nodes:
-        if vm_per_node_counters[node.name] > 0:
-            LOGGER.info(f"Node to run stress: {node.name}")
-            return node
+    node_with_most_vms = max(schedulable_nodes, key=lambda node: vm_per_node_counters.get(node.name, 0))
+    if vm_per_node_counters[node_with_most_vms.name] > 0:
+        LOGGER.info(
+            f"Node to run stress: {node_with_most_vms.name} with {vm_per_node_counters[node_with_most_vms.name]} VMs"
+        )
+        return node_with_most_vms
 
     raise ValueError("No suitable node to run stress")
 

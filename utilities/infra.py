@@ -327,19 +327,19 @@ def get_daemonset_by_name(admin_client, daemonset_name, namespace_name):
 
 
 def wait_for_consistent_resource_conditions(
-    dynamic_client,
-    expected_conditions,
-    resource_kind,
-    stop_conditions=None,
-    condition_key1="type",
-    condition_key2="status",
-    namespace=None,
-    total_timeout=TIMEOUT_10MIN,
-    polling_interval=5,
-    consecutive_checks_count=10,
-    exceptions_dict=None,
-    resource_name=None,
-):
+    dynamic_client: DynamicClient,
+    expected_conditions: dict[str, str],
+    resource_kind: type[Resource],
+    stop_conditions: dict[str, str] | None = None,
+    condition_key1: str = "type",
+    condition_key2: str = "status",
+    namespace: str | None = None,
+    total_timeout: int = TIMEOUT_10MIN,
+    polling_interval: int = 5,
+    consecutive_checks_count: int = 10,
+    exceptions_dict: dict[type[Exception], list[str]] | None = None,
+    resource_name: str | None = None,
+) -> None:
     """This function awaits certain conditions of a given resource_kind (HCO, CSV, etc.).
 
     Using TimeoutSampler loop and poll the CR (of the resource_kind type) and attempt to match the expected conditions
@@ -712,6 +712,24 @@ def get_all_console_links(console_cli_downloads_spec_links):
     return all_urls
 
 
+@retry(
+    wait_timeout=TIMEOUT_2MIN,
+    sleep=TIMEOUT_10SEC,
+    exceptions_dict={
+        requests.exceptions.SSLError: [],
+        requests.exceptions.ConnectionError: [],
+        requests.exceptions.Timeout: [],
+    },
+)
+def _download_file(url: str, local_file_name: str) -> str:
+    urllib3.disable_warnings()  # TODO: remove this when we fix the SSL warning
+    response = requests.get(url=url, verify=False, timeout=TIMEOUT_30SEC)
+    response.raise_for_status()
+    with open(local_file_name, "wb") as file_downloaded:
+        file_downloaded.write(response.content)
+    return local_file_name
+
+
 def download_and_extract_file_from_cluster(tmpdir, url):
     """
     Download and extract archive file from the cluster
@@ -725,13 +743,8 @@ def download_and_extract_file_from_cluster(tmpdir, url):
     """
     zip_file_extension = ".zip"
     LOGGER.info(f"Downloading archive using: url={url}")
-    urllib3.disable_warnings()  # TODO: remove this when we fix the SSL warning
     local_file_name = os.path.join(tmpdir, url.split("/")[-1])
-    with requests.get(url, verify=False, stream=True) as created_request:
-        created_request.raise_for_status()
-        with open(local_file_name, "wb") as file_downloaded:
-            for chunk in created_request.iter_content(chunk_size=8192):
-                file_downloaded.write(chunk)
+    _download_file(url=url, local_file_name=local_file_name)
     LOGGER.info("Extract the downloaded archive.")
     if url.endswith(zip_file_extension):
         archive_file_object = zipfile.ZipFile(file=local_file_name)

@@ -3,7 +3,6 @@ Pytest conftest file for CNV tests
 """
 
 import copy
-import ipaddress
 import logging
 import os
 import os.path
@@ -42,11 +41,9 @@ from ocp_resources.migration_policy import MigrationPolicy
 from ocp_resources.mutating_webhook_config import MutatingWebhookConfiguration
 from ocp_resources.namespace import Namespace
 from ocp_resources.network_addons_config import NetworkAddonsConfig
-from ocp_resources.network_config_openshift_io import Network
 from ocp_resources.node import Node
 from ocp_resources.node_network_state import NodeNetworkState
 from ocp_resources.oauth import OAuth
-from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.pod import Pod
 from ocp_resources.resource import ResourceEditor, get_client
 from ocp_resources.role_binding import RoleBinding
@@ -66,11 +63,12 @@ from ocp_resources.virtual_machine_instance_migration import (
 from ocp_resources.virtual_machine_instancetype import VirtualMachineInstancetype
 from ocp_resources.virtual_machine_preference import VirtualMachinePreference
 from ocp_utilities.monitoring import Prometheus
-from packaging.version import Version, parse
+from packaging.version import parse
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutSampler
 
 import utilities.hco
+from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
 from tests.utils import download_and_extract_tar
 from utilities.artifactory import get_artifactory_header, get_http_image_url, get_test_artifact_server_url
 from utilities.bitwarden import get_cnv_tests_secret_by_name
@@ -999,16 +997,6 @@ def mac_pool(admin_client, hco_namespace):
     )
 
 
-def _skip_access_mode_rwo(storage_class_matrix):
-    if storage_class_matrix[[*storage_class_matrix][0]]["access_mode"] == PersistentVolumeClaim.AccessMode.RWO:
-        pytest.skip(reason="Skipping when access_mode is RWO; possible reason: cannot migrate VMI with non-shared PVCs")
-
-
-@pytest.fixture()
-def skip_access_mode_rwo_scope_function(storage_class_matrix__function__):
-    _skip_access_mode_rwo(storage_class_matrix=storage_class_matrix__function__)
-
-
 @pytest.fixture(scope="session")
 def nodes_cpu_architecture(nodes):
     return get_nodes_cpu_architecture(nodes=nodes)
@@ -1437,8 +1425,6 @@ def cluster_info(
     hco_image,
     ocs_current_version,
     kubevirt_resource_scope_session,
-    ipv6_supported_cluster,
-    ipv4_supported_cluster,
     workers_type,
     nodes_cpu_architecture,
 ):
@@ -1458,8 +1444,8 @@ def cluster_info(
         f"\tCNI type: {get_cluster_cni_type(admin_client=admin_client)}\n"
         f"\tWorkers type: {workers_type}\n"
         f"\tCluster CPU Architecture: {nodes_cpu_architecture}\n"
-        f"\tIPv4 cluster: {ipv4_supported_cluster}\n"
-        f"\tIPv6 cluster: {ipv6_supported_cluster}\n"
+        f"\tIPv4 cluster: {ipv4_supported_cluster()}\n"
+        f"\tIPv6 cluster: {ipv6_supported_cluster()}\n"
         f"\tVirtctl version: \n\t{virtctl_client_version}\n\t{virtctl_server_version}\n"
     )
 
@@ -1766,49 +1752,18 @@ def hco_target_csv_name(cnv_target_version):
 
 
 @pytest.fixture(scope="session")
-def eus_hco_target_csv_name(eus_target_cnv_version):
-    if eus_target_cnv_version is None:
-        LOGGER.warning("Cannot determine EUS HCO target CSV name: EUS target version is None (non-EUS version)")
-        return None
-    return get_hco_csv_name_by_version(cnv_target_version=eus_target_cnv_version)
-
-
-@pytest.fixture(scope="session")
 def cnv_target_version(pytestconfig):
     return pytestconfig.option.cnv_version
 
 
 @pytest.fixture(scope="session")
-def eus_target_cnv_version(pytestconfig, cnv_current_version):
-    cnv_current_version = Version(version=cnv_current_version)
-    minor = cnv_current_version.minor
-    # EUS-to-EUS upgrades are only viable between even-numbered minor versions, return None if non-eus version
-    if minor % 2:
-        LOGGER.warning(f"EUS upgrade can not be performed from non-eus version: {cnv_current_version}")
-        return None
-    return pytestconfig.option.eus_cnv_target_version or f"{cnv_current_version.major}.{minor + 2}.0"
+def cnv_channel(pytestconfig):
+    return pytestconfig.option.cnv_channel
 
 
 @pytest.fixture()
 def ssp_resource_scope_function(admin_client, hco_namespace):
     return get_ssp_resource(admin_client=admin_client, namespace=hco_namespace)
-
-
-@pytest.fixture(scope="session")
-def cluster_service_network(admin_client):
-    return Network(client=admin_client, name="cluster").instance.status.serviceNetwork
-
-
-@pytest.fixture(scope="session")
-def ipv4_supported_cluster(cluster_service_network):
-    if cluster_service_network:
-        return any([ipaddress.ip_network(ip).version == 4 for ip in cluster_service_network])
-
-
-@pytest.fixture(scope="session")
-def ipv6_supported_cluster(cluster_service_network):
-    if cluster_service_network:
-        return any([ipaddress.ip_network(ip).version == 6 for ip in cluster_service_network])
 
 
 @pytest.fixture()
@@ -2538,6 +2493,11 @@ def rwx_fs_available_storage_classes_names(cluster_storage_classes_names):
     ]
 
 
+@pytest.fixture()
+def storage_class_name_scope_function(storage_class_matrix__function__):
+    return [*storage_class_matrix__function__][0]
+
+
 @pytest.fixture(scope="session")
 def rhsm_credentials_from_bitwarden():
     return get_cnv_tests_secret_by_name(secret_name="RHSM_CREDENTIALS")
@@ -2572,11 +2532,6 @@ def nmstate_namespace(admin_client):
     except ResourceNotFoundError:
         LOGGER.info(f"Namespace '{NamespacesNames.OPENSHIFT_NMSTATE}' not found.")
         return None
-
-
-@pytest.fixture()
-def ipv6_single_stack_cluster(ipv4_supported_cluster, ipv6_supported_cluster):
-    return ipv6_supported_cluster and not ipv4_supported_cluster
 
 
 @pytest.fixture(scope="class")

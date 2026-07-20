@@ -4,12 +4,12 @@
 
 import json
 import os
-import subprocess
 import sys
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 # Add utilities to Python path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -20,6 +20,15 @@ from bitwarden import (
 )
 
 from utilities.exceptions import MissingEnvironmentVariableError
+
+_original_timeout_sampler_init = TimeoutSampler.__init__
+
+
+def _short_timeout_init(self: TimeoutSampler, *args: object, **kwargs: object) -> None:
+    """Override TimeoutSampler.__init__ to use short timeout for tests."""
+    kwargs["wait_timeout"] = 0.05
+    kwargs["sleep"] = 0.01
+    _original_timeout_sampler_init(self, *args, **kwargs)
 
 
 class TestGetAllCnvTestsSecrets:
@@ -51,7 +60,6 @@ class TestGetAllCnvTestsSecrets:
             call_args = mock_run_command.call_args
             assert call_args.kwargs["command"] == ["bws", "--access-token", "test-token", "secret", "list"]
             assert call_args.kwargs["capture_output"] is True
-            assert call_args.kwargs["check"] is True
 
     @patch("bitwarden.run_command")
     def test_get_all_cnv_tests_secrets_command_error(self, mock_run_command):
@@ -60,11 +68,14 @@ class TestGetAllCnvTestsSecrets:
             # Clear cache before test
             get_all_cnv_tests_secrets.cache_clear()
 
-            # Mock bws command failure (run_command raises CalledProcessError when check=True)
-            mock_run_command.side_effect = subprocess.CalledProcessError(1, "bws", stderr="Authentication failed")
+            # Mock bws command failure; run_command returns failure tuple
+            mock_run_command.return_value = (False, "", "503 Service Unavailable")
 
-            with pytest.raises(subprocess.CalledProcessError):
+            with pytest.raises(TimeoutExpiredError), patch.object(TimeoutSampler, "__init__", new=_short_timeout_init):
                 get_all_cnv_tests_secrets()
+
+            # Verify retry happened (called more than once)
+            assert mock_run_command.call_count > 1
 
     @patch("bitwarden.run_command")
     def test_get_all_cnv_tests_secrets_invalid_json(self, mock_run_command):
@@ -73,11 +84,14 @@ class TestGetAllCnvTestsSecrets:
             # Clear cache before test
             get_all_cnv_tests_secrets.cache_clear()
 
-            # Mock run_command with invalid JSON response
-            mock_run_command.return_value = (True, "invalid json {", "")
+            # Mock run_command returning success but empty stdout (causes JSONDecodeError)
+            mock_run_command.return_value = (True, "", "")
 
-            with pytest.raises(json.JSONDecodeError):
+            with pytest.raises(TimeoutExpiredError), patch.object(TimeoutSampler, "__init__", new=_short_timeout_init):
                 get_all_cnv_tests_secrets()
+
+            # Verify retry happened
+            assert mock_run_command.call_count > 1
 
     def test_get_all_cnv_tests_secrets_missing_access_token(self):
         """Test error when ACCESS_TOKEN is not set"""
@@ -178,11 +192,14 @@ class TestGetCnvTestsSecretByName:
                 "secret1": "uuid-1",
             }
 
-            # Mock bws command failure
-            mock_run_command.side_effect = subprocess.CalledProcessError(1, "bws", stderr="Secret not accessible")
+            # Mock bws command failure; run_command returns failure tuple
+            mock_run_command.return_value = (False, "", "Secret not accessible")
 
-            with pytest.raises(subprocess.CalledProcessError):
+            with pytest.raises(TimeoutExpiredError), patch.object(TimeoutSampler, "__init__", new=_short_timeout_init):
                 get_cnv_tests_secret_by_name("secret1")
+
+            # Verify retry happened
+            assert mock_run_command.call_count > 1
 
     @patch("bitwarden.get_all_cnv_tests_secrets")
     def test_get_cnv_tests_secret_by_name_disabled_bitwarden(self, mock_get_all):

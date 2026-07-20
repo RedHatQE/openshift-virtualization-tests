@@ -121,6 +121,33 @@ def wait_for_missing_iface_status(vm: BaseVirtualMachine, iface_name: str) -> bo
     return True
 
 
+def wait_for_ifaces_status(
+    vm: BaseVirtualMachine,
+    ip_addresses_by_spec_net_name: dict[str, list[str]],
+) -> None:
+    """Wait for all VM interfaces to be ready.
+
+    Args:
+        vm: The virtual machine to wait for.
+        ip_addresses_by_spec_net_name: Mapping of spec network name to its expected IP addresses.
+            Primary (masquerade) interfaces are detected automatically from the VM spec.
+    """
+    for iface in vm.template_spec.domain.devices.interfaces:  # type: ignore
+        if iface.masquerade is not None:
+            lookup_iface_status(vm=vm, iface_name=iface.name)
+        else:
+            lookup_iface_status(
+                vm=vm,
+                iface_name=iface.name,
+                predicate=lambda iface_status: (
+                    "guest-agent" in iface_status["infoSource"]
+                    and all(
+                        ip in iface_status.get("ipAddresses", []) for ip in ip_addresses_by_spec_net_name[iface.name]
+                    )
+                ),
+            )
+
+
 def lookup_primary_network(vm: BaseVirtualMachine) -> Network:
     for network in vm.instance.spec.template.spec.networks:
         if network.pod is not None:

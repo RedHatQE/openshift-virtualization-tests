@@ -561,12 +561,11 @@ def data_volume_template_dict(
 
 
 def data_volume_template_with_source_ref_dict(data_source, storage_class=None):
-    source_dict = data_source.source.instance.to_dict()
     dv = DataVolume(
         name=utilities.infra.unique_name(name=data_source.name),
         namespace=data_source.namespace,
         size=get_dv_size_from_datasource(data_source=data_source),
-        storage_class=storage_class or source_dict["spec"].get("storageClassName"),
+        storage_class=storage_class,
         api_name="storage",
         source_ref={
             "kind": data_source.kind,
@@ -632,7 +631,7 @@ def write_file(
 
 def write_file_via_ssh(vm: virt_util.VirtualMachineForTests, filename: str, content: str) -> None:
     """
-    Write content to a file in VM using SSH connection.
+    Write content to a file in VM using SSH connection with retry.
 
     Args:
         vm: VirtualMachine instance with SSH connectivity
@@ -640,19 +639,41 @@ def write_file_via_ssh(vm: virt_util.VirtualMachineForTests, filename: str, cont
         content: Content to write to the file
     """
     cmd = shlex.split(f"echo {shlex.quote(content)} > {shlex.quote(filename)} && sync")
-    run_ssh_commands(host=vm.ssh_exec, commands=cmd)
+    run_ssh_commands(host=vm.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC)
 
 
-def run_command_on_cirros_vm_and_check_output(vm, command, expected_result):
-    with console.Console(vm=vm) as vm_console:
-        vm_console.sendline(command)
-        vm_console.expect(expected_result, timeout=20)
+def run_command_on_vm_and_check_output(
+    vm: virt_util.VirtualMachineForTests, command: str, expected_result: str
+) -> None:
+    """Run command on VM via SSH with retry and verify output matches expected result.
+
+    Command execution is retried with 2-minute timeout and 5-second intervals.
+
+    Args:
+        vm (VirtualMachineForTests): VM to run command on.
+        command (str): Command to run.
+        expected_result (str): Expected result to check.
+
+    Raises:
+        AssertionError: If command output differs from expected result.
+    """
+    cmd_output = run_ssh_commands(
+        host=vm.ssh_exec,
+        commands=shlex.split(f"bash -c {shlex.quote(command)}"),
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
+    )[0].strip()
+    expected_result = expected_result.strip()
+    assert expected_result == cmd_output, (
+        f"Command output mismatch.\nCommand: {command}\nExpected: '{expected_result}'\nActual: '{cmd_output}'"
+    )
 
 
 def assert_disk_serial(vm, command=shlex.split("sudo ls /dev/disk/by-id")):
-    assert HOTPLUG_DISK_SERIAL in run_ssh_commands(host=vm.ssh_exec, commands=command)[0], (
-        f"hotplug disk serial id {HOTPLUG_DISK_SERIAL} is not in VM"
-    )
+    assert (
+        HOTPLUG_DISK_SERIAL
+        in run_ssh_commands(host=vm.ssh_exec, commands=command, wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC)[0]
+    ), f"hotplug disk serial id {HOTPLUG_DISK_SERIAL} is not in VM"
 
 
 def assert_hotplugvolume_nonexist(vm):
@@ -816,6 +837,8 @@ def check_disk_count_in_vm(vm):
     out = run_ssh_commands(
         host=vm.ssh_exec,
         commands=[shlex.split("lsblk | grep disk | grep -v SWAP| wc -l")],
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
     )[0].strip()
     assert out == str(len(vm.instance.spec.template.spec.domain.devices.disks)), (
         "Failed to verify actual disk count against VMI"

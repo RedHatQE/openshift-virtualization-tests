@@ -2,13 +2,11 @@ import logging
 
 import pytest
 import yaml
-from dictdiffer import diff
 from ocp_resources.resource import Resource
 from pytest_testconfig import config as py_config
 
 from tests.install_upgrade_operators.csv.csv_permissions_audit.utils import (
     get_csv_permissions,
-    get_yaml_file_path,
 )
 from utilities.constants import (
     AAQ_OPERATOR,
@@ -19,7 +17,6 @@ from utilities.constants import (
     HYPERCONVERGED_CLUSTER_OPERATOR,
     KUBEVIRT_MIGRATION_OPERATOR,
     KUBEVIRT_OPERATOR,
-    QUARANTINED,
     SSP_OPERATOR,
 )
 from utilities.jira import is_jira_open
@@ -67,47 +64,11 @@ def csv_permissions(admin_client):
     )
 
 
-@pytest.fixture(scope="module")
-def csv_permissions_from_yaml(pytestconfig, admin_client):
-    file_path = get_yaml_file_path()
-    if pytestconfig.option.update_csv:
-        LOGGER.warning(f"Updating content for {file_path}.")
-        with open(file_path, "w") as fd:
-            fd.write(
-                yaml.dump(
-                    get_csv_permissions(
-                        namespace=py_config["hco_namespace"],
-                        csv_name_starts_with=py_config["hco_cr_name"],
-                        admin_client=admin_client,
-                    )
-                )
-            )
-    with open(file_path, "r") as fd:
-        return yaml.safe_load(fd)
-
-
 @pytest.mark.polarion("CNV-9805")
 def test_new_operator_in_csv(operators_from_csv):
     assert sorted(list(operators_from_csv)) == sorted(CNV_OPERATORS), (
         f"Expected cnv operators:{CNV_OPERATORS} does not match operators {operators_from_csv} "
     )
-
-
-@pytest.mark.polarion("CNV-9547")
-@pytest.mark.xfail(
-    reason=f"{QUARANTINED}: Should be tested in tier1; tracked in CNV-72139",
-    run=False,
-)
-def test_compare_csv_permissions(cnv_operators_matrix__function__, csv_permissions_from_yaml, csv_permissions):
-    from_yaml = csv_permissions_from_yaml.get(cnv_operators_matrix__function__, {})
-    from_csv = csv_permissions.get(cnv_operators_matrix__function__, {})
-    _diff = list(diff(from_yaml, from_csv))
-    if _diff:
-        LOGGER.error(f"CSV permission comparison failed for {cnv_operators_matrix__function__} with diff: {_diff}")
-        raise AssertionError(
-            f"For {cnv_operators_matrix__function__} unexpected differences in CNV CSV permissions compare to saved "
-            f"permissions in {get_yaml_file_path()}"
-        )
 
 
 @pytest.mark.polarion("CNV-9548")

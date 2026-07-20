@@ -1,8 +1,8 @@
 import ast
 import logging
 import shlex
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Generator
 
 import requests
 from kubernetes.dynamic import DynamicClient
@@ -12,7 +12,6 @@ from ocp_resources.config_map import ConfigMap
 from ocp_resources.daemonset import DaemonSet
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.hostpath_provisioner import HostPathProvisioner
-from ocp_resources.pod import Pod
 from ocp_resources.resource import Resource
 from ocp_resources.role_binding import RoleBinding
 from ocp_resources.route import Route
@@ -36,10 +35,13 @@ from utilities.constants import (
     CDI_UPLOADPROXY,
     LS_COMMAND,
     TIMEOUT_2MIN,
+    TIMEOUT_5MIN,
+    TIMEOUT_5SEC,
     TIMEOUT_20SEC,
     TIMEOUT_30MIN,
     Images,
 )
+from utilities.exceptions import DataVolumeConditionMessageNotFoundError
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import (
     get_pod_by_name_prefix,
@@ -277,40 +279,50 @@ def get_importer_pod(
         raise
 
 
-def wait_for_importer_container_message(importer_pod, msg):
-    LOGGER.info(f"Wait for {importer_pod.name} container to show message: {msg}")
-    try:
-        sampled_msg = TimeoutSampler(
-            wait_timeout=120,
-            sleep=5,
-            func=lambda: (
-                importer_container_status_reason(importer_pod) == Pod.Status.CRASH_LOOPBACK_OFF
-                and msg
-                in importer_pod.instance.status
-                .containerStatuses[0]
-                .get("lastState", {})
-                .get("terminated", {})
-                .get("message", "")
-            ),
-        )
-        for sample in sampled_msg:
-            if sample:
-                return
-    except TimeoutExpiredError:
-        LOGGER.error(f"{importer_pod.name} did not get message: {msg}")
-        raise
-
-
-def importer_container_status_reason(pod):
+def wait_for_dv_condition_message(dv: DataVolume, expected_message: str, timeout: int = TIMEOUT_5MIN) -> None:
     """
-    Get status for why importer pod container is waiting or terminated
-    (for container status running there is no 'reason' key)
+    Wait for DataVolume condition to contain expected message.
+
+    Uses substring matching (not exact match) because CDI messages
+    often include variable context like timestamps, pod names, or URLs.
+
+    Monitors ADDED and MODIFIED events. DELETED events cause immediate failure.
+    Other event types are logged and ignored.
+
+    Example:
+        Expected: "certificate signed by unknown authority"
+        Actual message: "Unable to connect: ... x509: certificate signed by unknown authority"
+
+    Args:
+        dv: DataVolume resource to monitor for condition messages
+        expected_message: Expected message substring to find in condition messages
+        timeout: Timeout in seconds for the operation, default is TIMEOUT_5MIN.
+
+    Raises:
+        DataVolumeConditionMessageNotFoundError: If expected message not found within timeout
+            or if the DataVolume is deleted during monitoring.
     """
-    container_state = pod.instance.status.containerStatuses[0].state
-    if container_state.waiting:
-        return container_state.waiting.reason
-    if container_state.terminated:
-        return container_state.terminated.reason
+    LOGGER.info(f"Watching {dv.name} for message: {expected_message} for up to {timeout} seconds.")
+    last_conditions: list[dict[str, str]] = []
+    deleted = False
+    for event in dv.watcher(timeout=timeout):
+        event_type = event["type"]
+        if event_type == "DELETED":
+            deleted = True
+            break
+        if event_type not in ("ADDED", "MODIFIED"):
+            LOGGER.info(f"Ignoring {event_type} event for DataVolume {dv.name}")
+            continue
+        last_conditions = (event["object"].status or {}).get("conditions", [])
+        if any(expected_message in condition.get("message", "") for condition in last_conditions):
+            LOGGER.info(f"Found expected message in {dv.name}: {expected_message}")
+            return
+
+    reason = f"DataVolume '{dv.name}' was deleted" if deleted else f"Timed out after {timeout} seconds"
+    LOGGER.error(f"{reason} while waiting for message: {expected_message}")
+    raise DataVolumeConditionMessageNotFoundError(
+        dv_name=dv.name, expected_message=expected_message, last_conditions=last_conditions
+    )
 
 
 def assert_pvc_snapshot_clone_annotation(pvc, storage_class):
@@ -396,29 +408,6 @@ def update_scratch_space_sc(cdi_config, new_sc, hco):
         yield edited_cdi_config
 
 
-def create_cirros_dv(
-    namespace,
-    name,
-    storage_class,
-    client,
-    access_modes=None,
-    volume_mode=None,
-    dv_size=Images.Cirros.DEFAULT_DV_SIZE,
-):
-    with create_dv(
-        dv_name=f"dv-{name}",
-        namespace=namespace,
-        url=get_http_image_url(image_directory=Images.Cirros.DIR, image_name=Images.Cirros.QCOW2_IMG),
-        size=dv_size,
-        storage_class=storage_class,
-        access_modes=access_modes,
-        volume_mode=volume_mode,
-        client=client,
-    ) as dv:
-        dv.wait_for_dv_success()
-        yield dv
-
-
 def check_snapshot_indication(snapshot, is_online):
     snapshot_indications = snapshot.instance.status.indications
     online = "Online"
@@ -465,15 +454,17 @@ def assert_windows_directory_existence(
     expected_result: bool, windows_vm: VirtualMachineForTests, directory_path: str
 ) -> None:
     cmd = shlex.split(f'powershell -command "Test-Path -Path {directory_path}"')
-    out = run_ssh_commands(host=windows_vm.ssh_exec, commands=cmd)[0].strip()
+    out = run_ssh_commands(host=windows_vm.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC)[
+        0
+    ].strip()
     assert expected_result == ast.literal_eval(out), f"Directory exist: {out}, expected result: {expected_result}"
 
 
 def create_windows_directory(windows_vm: VirtualMachineForTests, directory_path: str) -> None:
     cmd = shlex.split(
-        f'powershell -command "New-Item -Path {directory_path} -ItemType Directory"',
+        f'powershell -command "New-Item -Path {directory_path} -ItemType Directory -Force"',
     )
-    run_ssh_commands(host=windows_vm.ssh_exec, commands=cmd)
+    run_ssh_commands(host=windows_vm.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC)
     assert_windows_directory_existence(
         expected_result=True,
         windows_vm=windows_vm,

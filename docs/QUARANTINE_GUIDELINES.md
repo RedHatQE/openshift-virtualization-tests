@@ -165,6 +165,22 @@ Understanding this distinction is critical:
 | **Tracking**       | Blocker bug in Jira                     | Task with `xfail` marker                       |
 | **Fix Timeline**   | Current sprint                          | Based on priority                              |
 
+**Selecting quarantined tests:**
+
+Tests marked with `@pytest.mark.xfail(reason=f"{QUARANTINED}: ...", run=False)` automatically
+receive a `quarantined` pytest marker during collection. This enables:
+
+```bash
+# Run only quarantined tests (e.g., to verify fixes)
+pytest -m quarantined
+
+# Exclude quarantined tests
+pytest -m "not quarantined"
+
+# Combine with other markers
+pytest -m "quarantined and storage"
+```
+
 ### Implementation
 
 **Tools:**

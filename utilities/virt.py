@@ -1016,8 +1016,9 @@ class VirtualMachineForTests(VirtualMachine):
                 sc_name = self.vm_preference.instance.spec.get("volumes", {}).get("preferredStorageClassName")
                 if sc_name:
                     return sc_name
-            else:
-                return get_default_storage_class(client=self.client).name
+            default_sc = get_default_storage_class(client=self.client).name
+            LOGGER.info(f"Using default storage class: {default_sc} for access mode field")
+            return default_sc
 
         api_name = "pvc" if self.data_volume_template and self.data_volume_template["spec"].get("pvc") else "storage"
         return (
@@ -2349,6 +2350,7 @@ def fetch_pid_from_linux_vm(vm, process_name):
     cmd_res = run_ssh_commands(
         host=vm.ssh_exec,
         commands=shlex.split(f"pgrep {process_name} -x || true"),
+        wait_timeout=TIMEOUT_2MIN,
     )[0].strip()
     assert cmd_res, f"VM {vm.name}, '{process_name}' process not found"
     return int(cmd_res)
@@ -2371,6 +2373,7 @@ def fetch_pid_from_windows_vm(vm, process_name):
         host=vm.ssh_exec,
         commands=shlex.split(f"powershell -Command (Get-Process -Name {process_name.removesuffix('.exe')}).Id"),
         tcp_timeout=TCP_TIMEOUT_30SEC,
+        wait_timeout=TIMEOUT_2MIN,
     )[0].strip()
     assert cmd_res, f"Process '{process_name}' not in output: {cmd_res}"
     return int(cmd_res)
@@ -2549,8 +2552,9 @@ def delete_guestosinfo_keys(data: Dict[str, Any]) -> Dict[str, Any]:
     supportedCommands - removed as the data is used for internal guest agent validations
     fsInfo, userList - checked in validate_fs_info_virtctl_vs_linux_os / validate_user_info_virtctl_vs_linux_os
     fsFreezeStatus - removed as it is not related to GA validations
+    load - present in virtctl/cnv guest-agent output but not in libvirt/linux
     """
-    removed_keys = ["supportedCommands", "fsInfo", "userList", "fsFreezeStatus"]
+    removed_keys = ["supportedCommands", "fsInfo", "userList", "fsFreezeStatus", "load"]
     [data.pop(key, None) for key in removed_keys]
 
     return data
@@ -2615,7 +2619,7 @@ def get_vm_boot_time(vm: VirtualMachineForTests) -> str:
         if "windows" in vm.name  # type: ignore[operator]
         else "who -b"
     )
-    return run_ssh_commands(host=vm.ssh_exec, commands=shlex.split(boot_command))[0]
+    return run_ssh_commands(host=vm.ssh_exec, commands=shlex.split(boot_command), wait_timeout=TIMEOUT_2MIN)[0]
 
 
 def username_password_from_cloud_init(vm_volumes: list[dict[str, Any]]) -> tuple[str, str]:

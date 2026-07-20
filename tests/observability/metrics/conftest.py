@@ -69,7 +69,6 @@ from utilities.infra import (
     get_pod_by_name_prefix,
     unique_name,
 )
-from utilities.jira import is_jira_open
 from utilities.monitoring import get_metrics_value
 from utilities.network import assert_ping_successful, get_ip_from_vm_or_virt_handler_pod, ping
 from utilities.ssp import verify_ssp_pod_is_running
@@ -409,9 +408,7 @@ def initiate_metric_value(request, prometheus):
 
 
 @pytest.fixture()
-def vm_for_vm_disk_allocation_size_test(
-    namespace, client_based_on_bug_73864, unprivileged_client, golden_images_namespace
-):
+def vm_for_vm_disk_allocation_size_test(namespace, unprivileged_client, golden_images_namespace):
     with VirtualMachineForTests(
         client=unprivileged_client,
         name="disk-allocation-size-vm",
@@ -420,7 +417,7 @@ def vm_for_vm_disk_allocation_size_test(
             data_source=DataSource(
                 name=OS_FLAVOR_FEDORA,
                 namespace=golden_images_namespace.name,
-                client=client_based_on_bug_73864,
+                client=unprivileged_client,
             ),
             storage_class=py_config["default_storage_class"],
         ),
@@ -455,11 +452,20 @@ def windows_vm_info_to_compare(windows_vm_for_test):
     return get_vm_comparison_info_dict(vm=windows_vm_for_test)
 
 
-@pytest.fixture(scope="module")
-def windows_vm_for_test(namespace, unprivileged_client):
+@pytest.fixture(scope="package")
+def windows_vm_namespace(admin_client, unprivileged_client):
+    yield from create_ns(
+        admin_client=admin_client,
+        unprivileged_client=unprivileged_client,
+        name=unique_name(name="observability-win-vm"),
+    )
+
+
+@pytest.fixture(scope="package")
+def windows_vm_for_test(windows_vm_namespace, unprivileged_client):
     with create_windows11_wsl2_vm(
         dv_name="dv-for-windows",
-        namespace=namespace.name,
+        namespace=windows_vm_namespace.name,
         client=unprivileged_client,
         vm_name="win-vm-for-test",
         storage_class=py_config["default_storage_class"],
@@ -546,13 +552,8 @@ def aaq_resource_hard_limit_and_used(application_aware_resource_quota):
     return formatted_hard_limit, formatted_used_value
 
 
-@pytest.fixture(scope="session")
-def client_based_on_bug_73864(admin_client, unprivileged_client):
-    return admin_client if is_jira_open(jira_id="CNV-73864") else unprivileged_client
-
-
 @pytest.fixture(scope="class")
-def fedora_vm_with_stress_ng(namespace, client_based_on_bug_73864, unprivileged_client, golden_images_namespace):
+def fedora_vm_with_stress_ng(namespace, unprivileged_client, golden_images_namespace):
     with VirtualMachineForTests(
         client=unprivileged_client,
         name="fedora-vm-test-with-stress-ng",
@@ -563,7 +564,7 @@ def fedora_vm_with_stress_ng(namespace, client_based_on_bug_73864, unprivileged_
             data_source=DataSource(
                 name=OS_FLAVOR_FEDORA,
                 namespace=golden_images_namespace.name,
-                client=client_based_on_bug_73864,
+                client=unprivileged_client,
             ),
             storage_class=py_config["default_storage_class"],
         ),

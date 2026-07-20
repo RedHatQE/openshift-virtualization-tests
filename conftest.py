@@ -21,6 +21,8 @@ from _pytest.nodes import Collector, Node
 from _pytest.reports import CollectReport, TestReport
 from _pytest.runner import CallInfo
 from kubernetes.dynamic.exceptions import ConflictError
+from ocp_resources.network_config_openshift_io import Network
+from packaging.version import Version
 from pyhelper_utils.shell import run_command
 from pytest import Item
 from pytest_testconfig import config as py_config
@@ -121,12 +123,9 @@ def pytest_addoption(parser):
     leftovers_collector = parser.getgroup(name="LeftoversCollector")
     scale_group = parser.getgroup(name="Scale")
     session_group = parser.getgroup(name="Session")
-    csv_group = parser.getgroup(name="CSV")
     ci_group = parser.getgroup(name="CI")
     component_sanity_group = parser.getgroup(name="ComponentSanity")
     ai_insights_group = parser.getgroup(name="ai-job-insight")
-
-    csv_group.addoption("--update-csv", action="store_true")
 
     # Upgrade addoption
     install_upgrade_group.addoption(
@@ -167,7 +166,6 @@ def pytest_addoption(parser):
         "--eus-ocp-images",
         help="Comma-separated OCP images to use for EUS-to-EUS upgrade.",
     )
-    install_upgrade_group.addoption("--eus-cnv-target-version", help="target CNV version for eus upgrade")
     install_upgrade_group.addoption(
         "--upgrade-skip-default-sc-setup",
         help="Skip the fixture that changes the default sc in upgrade lane",
@@ -383,18 +381,21 @@ def pytest_cmdline_main(config):
     if upgrade_option == "ocp" and not config.getoption("ocp_image"):
         raise ValueError("Running with --upgrade ocp: Missing --ocp-image")
 
-    if upgrade_option == "cnv":
+    if upgrade_option in ("cnv", "eus"):
         if not config.getoption("cnv_version"):
             raise ValueError("Missing --cnv-version")
         if not config.getoption("cnv_image"):
-            if config.getoption("cnv_source") != "production":
+            if upgrade_option == "eus" or config.getoption("cnv_source") != "production":
                 raise ValueError("Missing --cnv-image")
 
-    if upgrade_option == "eus":
+    if upgrade_option == "eus" and not config.option.collectonly:
+        cnv_version = config.getoption("cnv_version")
+        if Version(version=cnv_version).minor % 2:
+            raise ValueError(f"EUS target version {cnv_version} must have an even minor version")
         eus_ocp_images = config.getoption("eus_ocp_images")
         if not (eus_ocp_images and len(eus_ocp_images.split(",")) == 2):
             raise ValueError(
-                f"Two OCP images are needed to perform EUS-to-EUS upgrade with --eus-ocp-images."
+                f"Two OCP images are needed for EUS-to-EUS upgrade with --eus-ocp-images."
                 f" Provided images: {eus_ocp_images}"
             )
 
@@ -584,6 +585,8 @@ def pytest_collection_modifyitems(session, config, items):
     3. Adds the tier2 marker for tests without an exclusion marker.
     4. Marks tests by team.
     5. Filters upgrade tests based on the --upgrade option.
+    6. Dynamically mark NMState-dependent tests.
+    7. Auto-adds the quarantined marker for xfail-quarantined tests.
 
     Args:
         session (pytest.Session): The pytest session object.
@@ -615,6 +618,15 @@ def pytest_collection_modifyitems(session, config, items):
 
         # All tests are verified on X86_64 platforms, adding `x86_64` to all tests
         item.add_marker(marker=X86_64)
+
+        # Auto-add quarantined marker for xfail tests with QUARANTINED reason
+        for marker in item.iter_markers(name="xfail"):
+            reason = marker.kwargs.get("reason", "")
+            run = marker.kwargs.get("run", True)
+            if QUARANTINED in reason and not run:
+                item.add_marker(marker="quarantined")
+                break
+
     #  Collect only 'upgrade_custom' tests when running pytest with --upgrade_custom
     keep, discard = filter_upgrade_tests(items=items, config=config)
     items[:] = keep
@@ -834,6 +846,9 @@ def pytest_sessionstart(session):
     if not skip_if_pytest_flags_exists(pytest_config=session.config):
         admin_client = utilities.cluster.cache_admin_client()
         py_config["version_explorer_url"] = get_cnv_version_explorer_url(pytest_config=session.config)
+        py_config["cluster_service_network"] = Network(
+            client=admin_client, name="cluster"
+        ).instance.status.serviceNetwork
         if not session.config.getoption("--skip-artifactory-check"):
             py_config["server_url"] = py_config["server_url"] or get_artifactory_server_url(
                 cluster_host_url=admin_client.configuration.host, session=session
@@ -908,7 +923,7 @@ def is_skip_must_gather(node: Node) -> bool:
 
 def get_inspect_command_namespace_string(node: Node, test_name: str) -> str:
     namespace_str = ""
-    components = [key for key in NAMESPACE_COLLECTION.keys() if f"tests/{key}/" in test_name]
+    components = [key for key in NAMESPACE_COLLECTION if f"tests/{key}/" in test_name]
     if not components:
         LOGGER.warning(f"{test_name} does not require special data collection on failure")
     else:

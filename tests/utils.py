@@ -27,10 +27,12 @@ from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 
 from utilities.artifactory import (
+    cleanup_artifactory_secret_and_config_map,
     get_artifactory_config_map,
     get_artifactory_header,
     get_artifactory_secret,
     get_http_image_url,
+    get_test_artifact_server_url,
 )
 from utilities.constants import (
     DISK_SERIAL,
@@ -41,6 +43,7 @@ from utilities.constants import (
     TCP_TIMEOUT_30SEC,
     TIMEOUT_1MIN,
     TIMEOUT_1SEC,
+    TIMEOUT_2MIN,
     TIMEOUT_3MIN,
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
@@ -48,6 +51,7 @@ from utilities.constants import (
     TIMEOUT_15SEC,
     TIMEOUT_30MIN,
     U1_LARGE,
+    WIN_2K22,
     WINDOWS_2K22_PREFERENCE,
     Images,
 )
@@ -57,6 +61,7 @@ from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import (
     ExecCommandOnPod,
 )
+from utilities.os_utils import get_windows_container_disk_path
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
@@ -218,17 +223,19 @@ def get_os_cpu_count(vm):
         cmd = shlex.split("echo %NUMBER_OF_PROCESSORS%")
     else:
         cmd = shlex.split("nproc")
-    return int(run_ssh_commands(host=vm.ssh_exec, commands=cmd)[0].strip())
+    return int(run_ssh_commands(host=vm.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN)[0].strip())
 
 
 def get_os_memory_value(vm):
     if "windows" in vm.name:
         cmd = shlex.split("wmic ComputerSystem get TotalPhysicalMemory")
-        wmic_total_mem = run_ssh_commands(host=vm.ssh_exec, commands=cmd)[0].strip().split()[1]
+        wmic_total_mem = (
+            run_ssh_commands(host=vm.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN)[0].strip().split()[1]
+        )
         return f"{round(float(bitmath.Bit(int(wmic_total_mem)).to_Gib()))}Gi"
     else:
         cmd = shlex.split("awk \"'{print$2/1024/1024;exit}'\" /proc/meminfo")
-        meminfo = run_ssh_commands(host=vm.ssh_exec, commands=cmd)[0].strip()
+        meminfo = run_ssh_commands(host=vm.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN)[0].strip()
         return f"{round(float(meminfo))}Gi"
 
 
