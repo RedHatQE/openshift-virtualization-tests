@@ -60,6 +60,7 @@ dependencies = [
   "pytest-dependency>=0.6.0",
   "pytest-jira>=0.3.24",
   "pytest-order>=1.3.0",
+  "pytest-subtests>=0.13.1",
   "pytest-progress>=1.3.0",
   "pytest-testconfig>=0.2.0",
   "python-benedict>=0.34.0",

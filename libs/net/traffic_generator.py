@@ -8,6 +8,7 @@ from libs.vm.vm import BaseVirtualMachine
 
 _DEFAULT_CMD_TIMEOUT_SEC: Final[int] = 10
 _IPERF_BIN: Final[str] = "iperf3"
+IPERF_SERVER_PORT: Final[int] = 5201
 
 
 LOGGER = logging.getLogger(__name__)
@@ -27,10 +28,14 @@ class Server:
         self,
         vm: BaseVirtualMachine,
         port: int,
+        bind_ip: str | None = None,
+        bind_dev: str | None = None,
     ):
         self._vm = vm
         self._port = port
         self._cmd = f"{_IPERF_BIN} --server --port {self._port} --one-off"
+        self._cmd += f" --bind {bind_ip}" if bind_ip else ""
+        self._cmd += f" --bind-dev {bind_dev}" if bind_dev else ""
 
     def __enter__(self) -> "Server":
         self._vm.console(
@@ -62,11 +67,13 @@ class Client:
         vm: BaseVirtualMachine,
         server_ip: str,
         server_port: int,
+        bind_dev: str | None = None,
     ):
         self._vm = vm
         self._server_ip = server_ip
         self._server_port = server_port
         self._cmd = f"{_IPERF_BIN} --client {self._server_ip} --time 0 --port {self._server_port}"
+        self._cmd += f" --bind-dev {bind_dev}" if bind_dev else ""
 
     def __enter__(self) -> "Client":
         self._vm.console(
