@@ -14,6 +14,8 @@ jobs:
     permissions:
       pull-requests: read
     uses: ./.github/workflows/check-pr-approval.yml
+    secrets:
+      ORG_READ_TOKEN: ${{ secrets.ORG_READ_TOKEN }}
 
   build-and-push-staging:
     needs: [check-approval]

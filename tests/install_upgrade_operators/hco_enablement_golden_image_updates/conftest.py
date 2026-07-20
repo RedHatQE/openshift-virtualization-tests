@@ -3,6 +3,7 @@ from ocp_resources.image_stream import ImageStream
 from ocp_resources.pod import Pod
 from ocp_utilities.infra import get_pods_by_name_prefix
 
+from tests.install_upgrade_operators.constants import CUSTOM_DATASOURCE_NAME
 from tests.install_upgrade_operators.hco_enablement_golden_image_updates.utils import (
     CUSTOM_TEMPLATE,
     HCO_CR_DATA_IMPORT_SCHEDULE_KEY,
@@ -15,6 +16,7 @@ from utilities.constants.hco import (
     COMMON_TEMPLATES_KEY_NAME,
     SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
 )
+from utilities.hco import disable_common_boot_image_import_hco_spec
 from utilities.ssp import get_ssp_resource
 
 
@@ -113,3 +115,20 @@ def ssp_spec_templates_scope_function(ssp_resource_scope_function):
 @pytest.fixture(scope="session")
 def common_templates_scope_session(hyperconverged_status_scope_session):
     return hyperconverged_status_scope_session[SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME]
+
+
+@pytest.fixture()
+def disabled_boot_image_import_excluding_custom_datasource(
+    admin_client,
+    hyperconverged_resource_scope_function,
+    golden_images_namespace,
+    golden_images_data_import_crons_scope_function,
+):
+    """Disable common boot image import, skipping verification of the custom DataSource."""
+    yield from disable_common_boot_image_import_hco_spec(
+        admin_client=admin_client,
+        hco_resource=hyperconverged_resource_scope_function,
+        golden_images_namespace=golden_images_namespace,
+        golden_images_data_import_crons=golden_images_data_import_crons_scope_function,
+        exclude_data_source_names={CUSTOM_DATASOURCE_NAME},
+    )

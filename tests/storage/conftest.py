@@ -47,7 +47,7 @@ from utilities.constants import Images
 from utilities.constants.cluster import CNV_TEST_SERVICE_ACCOUNT
 from utilities.constants.components import CDI_OPERATOR, CDI_UPLOADPROXY
 from utilities.constants.images import OS_FLAVOR_FEDORA, OS_FLAVOR_RHEL
-from utilities.constants.instance_types import RHEL10_PREFERENCE, U1_SMALL
+from utilities.constants.instance_types import PREFERENCE_STR, U1_SMALL
 from utilities.constants.networking import SECURITY_CONTEXT
 from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_5SEC, TIMEOUT_30MIN
 from utilities.hco import (
@@ -58,7 +58,11 @@ from utilities.infra import (
     INTERNAL_HTTP_SERVER_ADDRESS,
     ExecCommandOnPod,
 )
-from utilities.storage import data_volume_template_with_source_ref_dict, get_downloaded_artifact, write_file_via_ssh
+from utilities.storage import (
+    data_volume_template_with_source_ref_dict,
+    get_downloaded_artifact,
+    write_file_via_ssh,
+)
 from utilities.virt import VirtualMachineForTests, running_vm
 
 LOGGER = logging.getLogger(__name__)
@@ -378,7 +382,7 @@ def rhel_vm_for_snapshot(
     admin_client,
     namespace,
     rhel_vm_name,
-    rhel10_data_source_scope_session,
+    latest_rhel_data_source,
     snapshot_storage_class_name_scope_module,
 ):
     """Create a RHEL VM with using DataSource that supports snapshots"""
@@ -388,9 +392,12 @@ def rhel_vm_for_snapshot(
         client=admin_client,
         os_flavor=OS_FLAVOR_RHEL,
         vm_instance_type=VirtualMachineClusterInstancetype(client=admin_client, name=U1_SMALL),
-        vm_preference=VirtualMachineClusterPreference(client=admin_client, name=RHEL10_PREFERENCE),
+        vm_preference=VirtualMachineClusterPreference(
+            client=admin_client,
+            name=py_config["latest_instance_type_rhel_os_dict"][PREFERENCE_STR],
+        ),
         data_volume_template=data_volume_template_with_source_ref_dict(
-            data_source=rhel10_data_source_scope_session,
+            data_source=latest_rhel_data_source,
             storage_class=snapshot_storage_class_name_scope_module,
         ),
     ) as vm:
