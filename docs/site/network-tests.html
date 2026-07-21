@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Networking Tests - openshift-virtualization-tests</title>
+    <meta name="description" content="Validate OpenShift Virtualization deployments comprehensively with a standardized, strictly-typed test framework.">
+    <link rel="stylesheet" href="assets/style.css">
+    <script>try{var t=localStorage.getItem('theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark')}catch(e){}</script>
+    <link rel="alternate" type="text/plain" title="LLM Documentation Index" href="llms.txt">
+    <link rel="alternate" type="text/plain" title="LLM Full Documentation" href="llms-full.txt">
+</head>
+<body>
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <a href="index.html" class="sidebar-logo">openshift-virtualization-tests</a>
+            <p class="sidebar-tagline">Validate OpenShift Virtualization deployments comprehensively with a standardized, strictly-typed test framework.</p>
+        </div>
+
+        <div class="sidebar-search">
+            <input type="text" id="search-input" placeholder="Search... (⌘K)" autocomplete="off" readonly>
+            <div id="search-results" class="search-results"></div>
+        </div>
+
+        <nav class="sidebar-nav">
+
+            <div class="nav-group">
+                <h3 class="nav-group-title">Getting Started</h3>
+                <ul class="nav-group-pages">
+
+                    <li>
+                        <a href="quickstart.html"
+                           class="nav-link">
+                            Quickstart &amp; Setup
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="running-tests.html"
+                           class="nav-link">
+                            Running and Filtering Tests
+                        </a>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="nav-group">
+                <h3 class="nav-group-title">Test Domains</h3>
+                <ul class="nav-group-pages">
+
+                    <li>
+                        <a href="virt-tests.html"
+                           class="nav-link">
+                            Virtualization Tests
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="network-tests.html"
+                           class="nav-link active" aria-current="page">
+                            Networking Tests
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="storage-tests.html"
+                           class="nav-link">
+                            Storage Tests
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="infrastructure-observability.html"
+                           class="nav-link">
+                            Infrastructure &amp; Observability
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="operations-chaos.html"
+                           class="nav-link">
+                            Operations &amp; Chaos
+                        </a>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="nav-group">
+                <h3 class="nav-group-title">Framework &amp; Patterns</h3>
+                <ul class="nav-group-pages">
+
+                    <li>
+                        <a href="fixture-strategy.html"
+                           class="nav-link">
+                            Pytest Fixture Strategy
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="resource-lifecycle.html"
+                           class="nav-link">
+                            Resource Lifecycle &amp; Validation
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="configuration-constants.html"
+                           class="nav-link">
+                            Configuration &amp; Global Contexts
+                        </a>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="nav-group">
+                <h3 class="nav-group-title">Writing Tests</h3>
+                <ul class="nav-group-pages">
+
+                    <li>
+                        <a href="test-design-workflow.html"
+                           class="nav-link">
+                            Test Design Workflow (STP/STD)
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="implementing-tests.html"
+                           class="nav-link">
+                            Implementing New Tests
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="quarantine-process.html"
+                           class="nav-link">
+                            Test Quarantine Process
+                        </a>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="nav-group">
+                <h3 class="nav-group-title">Utilities Reference</h3>
+                <ul class="nav-group-pages">
+
+                    <li>
+                        <a href="utilities-reference.html"
+                           class="nav-link">
+                            Project Utilities
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="external-wrappers.html"
+                           class="nav-link">
+                            External Ecosystem Wrappers
+                        </a>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="nav-group">
+                <h3 class="nav-group-title">Development Workflow</h3>
+                <ul class="nav-group-pages">
+
+                    <li>
+                        <a href="code-quality.html"
+                           class="nav-link">
+                            Code Quality &amp; Pre-commits
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="pr-discipline.html"
+                           class="nav-link">
+                            Pull Request Discipline
+                        </a>
+                    </li>
+
+                </ul>
+            </div>
+
+            <div class="nav-group">
+                <h3 class="nav-group-title">Advanced Topics</h3>
+                <ul class="nav-group-pages">
+
+                    <li>
+                        <a href="multi-architecture-testing.html"
+                           class="nav-link">
+                            Multi-Architecture Support
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="scale-upgrades.html"
+                           class="nav-link">
+                            Scale &amp; Upgrades Testing
+                        </a>
+                    </li>
+
+                </ul>
+            </div>
+
+        </nav>
+    </aside>
+
+    <div class="main-wrapper">
+        <header class="top-bar">
+            <div class="top-bar-left">
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar" aria-expanded="false">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </button>
+                <a href="index.html" class="top-bar-title">openshift-virtualization-tests</a>
+            </div>
+            <div class="top-bar-spacer"></div>
+            <div class="top-bar-right">
+                <button class="top-bar-search-btn" id="search-trigger" aria-label="Search">
+                    <kbd>&#8984;K</kbd> Search
+                </button>
+                <a href="https://github.com/myk-org/docsfy" target="_blank" rel="noopener" class="docsfy-badge" title="Generated with docsfy">
+                    ⚡ docs<span class="brand-accent">fy</span>
+                </a>
+
+                <a href="https://github.com/RedHatQE/openshift-virtualization-tests" target="_blank" rel="noopener noreferrer" class="top-bar-github" id="github-link" data-repo-url="https://github.com/RedHatQE/openshift-virtualization-tests">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                    <span class="github-stars" id="github-stars" title="GitHub stars"></span>
+                </a>
+
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                    </svg>
+                    <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <main class="content">
+
+            <article class="article">
+                <div class="article-body">
+                    <!-- SECURITY: |safe is intentional. Content is AI-generated markdown
+                         converted to HTML server-side by the markdown library, not
+                         user-supplied input. XSS risk is minimal and accepted since
+                         the AI generates the content, not end users. -->
+                    <h1 id="networking-tests">Networking Tests</h1>
+<p>Validate and verify virtualization networking topologies like SR-IOV, L2 Bridging, and IPv6 by writing robust network tests. This guide shows how to ensure VirtualMachines correctly route traffic, apply network policies, and handle complex network configurations reliably.</p>
+<h2 id="prerequisites">Prerequisites</h2>
+<ul>
+<li>An OpenShift cluster configured with the desired networking operators (e.g., NMState, SR-IOV Network Operator).</li>
+<li>Test fixtures providing running VirtualMachines (VMs) connected to the target networks.</li>
+<li>Familiarity with test markers and execution (see <a href="running-tests.html">Running and Filtering Tests</a>).</li>
+</ul>
+<h2 id="quick-example">Quick Example</h2>
+<p>The most common network test validates basic connectivity (e.g., pinging from one VM to another over a specific interface). Here is a simple example using built-in network utilities:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">pytest</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">libs.net.vmspec</span><span class="w"> </span><span class="kn">import</span> <span class="n">lookup_iface_status_ip</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">utilities.network</span><span class="w"> </span><span class="kn">import</span> <span class="n">assert_ping_successful</span>
+
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">ipv4</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">test_vm_basic_connectivity</span><span class="p">(</span><span class="n">vm_a</span><span class="p">,</span> <span class="n">vm_b</span><span class="p">,</span> <span class="n">target_network</span><span class="p">):</span>
+    <span class="c1"># Lookup the destination IP on VM B&#39;s secondary interface</span>
+    <span class="n">dst_ip</span> <span class="o">=</span> <span class="n">lookup_iface_status_ip</span><span class="p">(</span>
+        <span class="n">vm</span><span class="o">=</span><span class="n">vm_b</span><span class="p">,</span>
+        <span class="n">iface_name</span><span class="o">=</span><span class="n">target_network</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+        <span class="n">ip_family</span><span class="o">=</span><span class="mi">4</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Assert successful ping from VM A to VM B&#39;s IP</span>
+    <span class="n">assert_ping_successful</span><span class="p">(</span><span class="n">src_vm</span><span class="o">=</span><span class="n">vm_a</span><span class="p">,</span> <span class="n">dst_ip</span><span class="o">=</span><span class="n">dst_ip</span><span class="p">)</span>
+</code></pre></div>
+
+<h2 id="step-by-step-testing-network-configurations">Step-by-Step: Testing Network Configurations</h2>
+<p>When developing tests for complex networking features like L2 bridges or SR-IOV, follow these steps to ensure reliable results.</p>
+<h3 id="1-extract-the-destination-ip-address">1. Extract the Destination IP Address</h3>
+<p>Do not hardcode or assume IP addresses. Always dynamically look up the IP address of the target VM on the specific interface being tested.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">libs.net.vmspec</span><span class="w"> </span><span class="kn">import</span> <span class="n">lookup_iface_status_ip</span>
+
+<span class="c1"># Fetch IPv4 address for a specific interface</span>
+<span class="n">ip_address</span> <span class="o">=</span> <span class="n">lookup_iface_status_ip</span><span class="p">(</span>
+    <span class="n">vm</span><span class="o">=</span><span class="n">my_target_vm</span><span class="p">,</span>
+    <span class="n">iface_name</span><span class="o">=</span><span class="s2">&quot;bridge-network&quot;</span><span class="p">,</span>
+    <span class="n">ip_family</span><span class="o">=</span><span class="mi">4</span>
+<span class="p">)</span>
+</code></pre></div>
+
+<h3 id="2-verify-connectivity-or-packet-loss">2. Verify Connectivity or Packet Loss</h3>
+<p>Instead of using raw sub-processes or direct SSH libraries, use the project's utility functions to verify connectivity behaviors (like pings or packet loss) with built-in retry logic and robust logging.</p>
+<ul>
+<li><strong>Successful Ping:</strong> <code>assert_ping_successful(src_vm, dst_ip)</code></li>
+<li><strong>Failed Ping (Negative Test):</strong> <code>assert_no_ping(src_vm, dst_ip)</code></li>
+</ul>
+<blockquote>
+<p><strong>Tip:</strong> If you need to test connectivity <em>during</em> an event (e.g., during live migration), use polling functions like <code>wait_for_no_packet_loss_after_connection</code> from the L2 bridge utilities.</p>
+</blockquote>
+<h3 id="3-tag-with-special-infrastructure-markers">3. Tag with Special Infrastructure Markers</h3>
+<p>Networking features often require specific hardware (like GPUs or physical network cards) or cluster configurations. You MUST tag tests requiring non-standard capabilities using the appropriate infrastructure markers.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">pytest</span>
+
+<span class="n">pytestmark</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">special_infra</span><span class="p">,</span>
+    <span class="n">pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">sriov</span><span class="p">,</span>  <span class="c1"># Requires SR-IOV hardware</span>
+<span class="p">]</span>
+</code></pre></div>
+
+<p>See <a href="implementing-tests.html">Implementing New Tests</a> for more details on properly tagging infrastructure requirements.</p>
+<h2 id="advanced-usage">Advanced Usage</h2>
+<h3 id="testing-network-policies">Testing Network Policies</h3>
+<p>When testing network policies, you often need to verify that specific ports are blocked or allowed. Use the <code>run_ssh_commands</code> utility to execute commands like <code>curl</code> directly from the source VM.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">shlex</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pytest</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pyhelper_utils.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">CommandExecFailed</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pyhelper_utils.shell</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_ssh_commands</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_network_policy_deny_http</span><span class="p">(</span><span class="n">vm_a</span><span class="p">,</span> <span class="n">vm_b</span><span class="p">,</span> <span class="n">deny_all_policy</span><span class="p">):</span>
+    <span class="n">dst_ip</span> <span class="o">=</span> <span class="n">vm_b</span><span class="o">.</span><span class="n">vmi</span><span class="o">.</span><span class="n">interfaces</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">ipAddress</span>
+    <span class="n">command</span> <span class="o">=</span> <span class="n">shlex</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;curl --connect-timeout 5 -I http://</span><span class="si">{</span><span class="n">dst_ip</span><span class="si">}</span><span class="s2">:80&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Expect the command to fail because the policy denies the traffic</span>
+    <span class="k">with</span> <span class="n">pytest</span><span class="o">.</span><span class="n">raises</span><span class="p">(</span><span class="n">CommandExecFailed</span><span class="p">):</span>
+        <span class="n">run_ssh_commands</span><span class="p">(</span>
+            <span class="n">host</span><span class="o">=</span><span class="n">vm_a</span><span class="o">.</span><span class="n">ssh_exec</span><span class="p">,</span>
+            <span class="n">commands</span><span class="o">=</span><span class="p">[</span><span class="n">command</span><span class="p">]</span>
+        <span class="p">)</span>
+</code></pre></div>
+
+<h3 id="ipv6-and-link-local-addresses">IPv6 and Link-Local Addresses</h3>
+<p>If your test operates in an IPv6 environment, standard IP lookups might return a list of addresses including link-local addresses. You can filter these specifically if your scenario requires routing via <code>fe80::</code> addresses:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">libs.net.ip</span><span class="w"> </span><span class="kn">import</span> <span class="n">filter_link_local_addresses</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">libs.net.vmspec</span><span class="w"> </span><span class="kn">import</span> <span class="n">lookup_iface_status</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_ipv6_link_local_ping</span><span class="p">(</span><span class="n">vm_a</span><span class="p">,</span> <span class="n">vm_b</span><span class="p">,</span> <span class="n">ipv6_network</span><span class="p">):</span>
+    <span class="c1"># Fetch all IPs for the interface</span>
+    <span class="n">all_ips</span> <span class="o">=</span> <span class="n">lookup_iface_status</span><span class="p">(</span><span class="n">vm</span><span class="o">=</span><span class="n">vm_b</span><span class="p">,</span> <span class="n">iface_name</span><span class="o">=</span><span class="n">ipv6_network</span><span class="o">.</span><span class="n">name</span><span class="p">)[</span><span class="s2">&quot;ipAddresses&quot;</span><span class="p">]</span>
+
+    <span class="c1"># Filter for link-local addresses only</span>
+    <span class="n">link_local_ips</span> <span class="o">=</span> <span class="n">filter_link_local_addresses</span><span class="p">(</span><span class="n">ip_addresses</span><span class="o">=</span><span class="n">all_ips</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">dst_ip</span> <span class="ow">in</span> <span class="n">link_local_ips</span><span class="p">:</span>
+         <span class="n">assert_ping_successful</span><span class="p">(</span><span class="n">src_vm</span><span class="o">=</span><span class="n">vm_a</span><span class="p">,</span> <span class="n">dst_ip</span><span class="o">=</span><span class="n">dst_ip</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="testing-l2-protocols-dhcp-custom-ethernet-types">Testing L2 Protocols (DHCP, Custom Ethernet Types)</h3>
+<p>When testing lower-level protocols over bridging configurations (like OVS or Linux Bridges), you might need to broadcast or send custom Ethernet types.</p>
+<table>
+<thead>
+<tr>
+<th>Traffic Type</th>
+<th>Implementation Strategy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>DHCP Broadcast</strong></td>
+<td>Use <code>TimeoutSampler</code> to poll <code>lookup_iface_status_ip</code> until an IP in the DHCP range is assigned.</td>
+</tr>
+<tr>
+<td><strong>Custom EtherTypes</strong></td>
+<td>Execute tools like <code>nping -e eth1 --ether-type 0x88B6</code> via <code>run_ssh_commands</code> and parse the output.</td>
+</tr>
+<tr>
+<td><strong>Multicast</strong></td>
+<td>Use <code>assert_ping_successful</code> targeting multicast IPs (e.g., <code>224.0.0.1</code>).</td>
+</tr>
+</tbody>
+</table>
+<p>See <a href="resource-lifecycle.html">Resource Lifecycle &amp; Validation</a> for detailed usage of polling timeouts during network traffic evaluation.</p>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<ul>
+<li><strong>Interface IP Not Found:</strong> If <code>lookup_iface_status_ip</code> fails or returns <code>None</code>, the VM might still be booting or the secondary network might be incorrectly configured. Wrap the lookup in a timeout loop to wait for the IP to appear.</li>
+<li><strong>SSH Command Timeouts:</strong> Commands executed over SSH might hang indefinitely if a network policy silently drops traffic. Always use <code>--connect-timeout</code> (or equivalent flags) in tools like <code>curl</code> to ensure they fail fast.</li>
+<li><strong>Fixture Collection Errors:</strong> If tests complain about missing networking components or undefined fixtures, ensure your test environment supports the requested network type and that you haven't forgotten required decorators (e.g., <code>@pytest.mark.ipv4</code>).</li>
+</ul>
+<h2 id="related-pages">Related Pages</h2>
+<ul>
+<li><a href="virt-tests.html">Virtualization Tests</a></li>
+<li><a href="storage-tests.html">Storage Tests</a></li>
+<li><a href="infrastructure-observability.html">Infrastructure &amp; Observability</a></li>
+</ul>
+                </div>
+            </article>
+            <nav class="page-nav">
+
+                <a href="virt-tests.html" class="page-nav-link page-nav-prev">
+                    <span class="page-nav-label">Previous</span>
+                    <span class="page-nav-title">Virtualization Tests</span>
+                </a>
+
+
+                <a href="storage-tests.html" class="page-nav-link page-nav-next">
+                    <span class="page-nav-label">Next</span>
+                    <span class="page-nav-title">Storage Tests</span>
+                </a>
+
+            </nav>
+
+            <aside class="toc-sidebar">
+                <div class="toc-container">
+                    <h3>On this page</h3>
+                    <div class="toc">
+<ul>
+<li><a href="#prerequisites">Prerequisites</a></li>
+<li><a href="#quick-example">Quick Example</a></li>
+<li><a href="#step-by-step-testing-network-configurations">Step-by-Step: Testing Network Configurations</a><ul>
+<li><a href="#1-extract-the-destination-ip-address">1. Extract the Destination IP Address</a></li>
+<li><a href="#2-verify-connectivity-or-packet-loss">2. Verify Connectivity or Packet Loss</a></li>
+<li><a href="#3-tag-with-special-infrastructure-markers">3. Tag with Special Infrastructure Markers</a></li>
+</ul>
+</li>
+<li><a href="#advanced-usage">Advanced Usage</a><ul>
+<li><a href="#testing-network-policies">Testing Network Policies</a></li>
+<li><a href="#ipv6-and-link-local-addresses">IPv6 and Link-Local Addresses</a></li>
+<li><a href="#testing-l2-protocols-dhcp-custom-ethernet-types">Testing L2 Protocols (DHCP, Custom Ethernet Types)</a></li>
+</ul>
+</li>
+<li><a href="#troubleshooting">Troubleshooting</a></li>
+<li><a href="#related-pages">Related Pages</a></li>
+</ul>
+</div>
+
+                </div>
+            </aside>
+
+
+        </main>
+
+        <footer class="page-footer">
+
+            <span class="footer-version">Generated from version 5.0</span>
+            <span class="footer-sep">&middot;</span>
+
+            Generated with <a href="https://github.com/myk-org/docsfy" target="_blank" rel="noopener">docs<span class="brand-accent">fy</span></a>
+            <span class="footer-sep">&middot;</span>
+            <span class="footer-llm">LLM-friendly: <a href="llms.txt">llms.txt</a> &middot; <a href="llms-full.txt">llms-full.txt</a></span>
+        </footer>
+    </div>
+
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <script src="assets/theme.js"></script>
+    <script src="assets/search.js"></script>
+    <script src="assets/copy.js"></script>
+    <script src="assets/callouts.js"></script>
+    <script src="assets/scrollspy.js"></script>
+    <script src="assets/codelabels.js"></script>
+    <script src="assets/github.js"></script>
+    <script>
+(function() {
+    var toggle = document.getElementById('sidebar-toggle');
+    var sidebar = document.getElementById('sidebar');
+    var overlay = document.getElementById('sidebar-overlay');
+    if (toggle && sidebar) {
+        toggle.addEventListener('click', function() {
+            sidebar.classList.toggle('open');
+            if (overlay) overlay.classList.toggle('open');
+            var expanded = sidebar.classList.contains('open');
+            toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        });
+    }
+    if (overlay) {
+        overlay.addEventListener('click', function() {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('open');
+            if (toggle) toggle.setAttribute('aria-expanded', 'false');
+        });
+    }
+})();
+</script>
+<script>
+(function() {
+    var sidebar = document.querySelector('.sidebar-nav') || document.querySelector('.sidebar');
+    if (!sidebar) return;
+
+    // Restore scroll position
+    var saved = sessionStorage.getItem('sidebar-scroll');
+    if (saved) sidebar.scrollTop = parseInt(saved, 10);
+
+    // Save scroll position before navigating
+    sidebar.addEventListener('scroll', function() {
+        sessionStorage.setItem('sidebar-scroll', sidebar.scrollTop.toString());
+    });
+
+    // Also scroll active link into view if no saved position
+    if (!saved) {
+        var active = sidebar.querySelector('.nav-link.active');
+        if (active) {
+            active.scrollIntoView({ block: 'center', behavior: 'instant' });
+        }
+    }
+})();
+</script>
+</body>
+</html>
