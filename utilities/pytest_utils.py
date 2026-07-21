@@ -416,7 +416,12 @@ def get_artifactory_server_url(cluster_host_url, session):
 
 
 def get_cnv_version_explorer_url(pytest_config):
-    if pytest_config.getoption("install") or pytest_config.getoption("upgrade") in ("eus", "cnv"):
+    needs_url = (
+        pytest_config.getoption("install")
+        or pytest_config.getoption("upgrade") in ("eus", "cnv")
+        or pytest_config.getoption("upgrade_custom") in ("cnv", "ocp")
+    )
+    if needs_url:
         LOGGER.info("Checking for cnv version explorer url:")
         version_explorer_url = os.environ.get("CNV_VERSION_EXPLORER_URL")
         if not version_explorer_url:
