@@ -8,10 +8,11 @@ import yaml
 from dacite import from_dict
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.node import Node
+from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine import VirtualMachine, VirtualMachineInstance
 from pytest_testconfig import config as py_config
 
-from libs.vm.spec import CloudInitNoCloud, ContainerDisk, Disk, SpecDisk, VMSpec, Volume
+from libs.vm.spec import CloudInitNoCloud, ContainerDisk, Disk, Memory, SpecDisk, VMISpec, VMSpec, Volume
 from tests.network.libs import cloudinit
 from utilities import infra
 from utilities.constants import CLOUD_INIT_DISK_NAME
@@ -75,6 +76,26 @@ class BaseVirtualMachine(VirtualMachine):
             condition=VirtualMachineInstance.Condition.Type.AGENT_CONNECTED,
             status=VirtualMachineInstance.Condition.Status.TRUE,
         )
+
+    def set_guest_memory(self, memory_guest: str) -> None:
+        """Set the guest memory and update the VM spec on the cluster.
+
+        On a running VM this triggers an automatic live migration.
+
+        Args:
+            memory_guest: New guest memory value (e.g. "5Gi").
+        """
+        if self._spec.template.spec.domain.memory:
+            self._spec.template.spec.domain.memory.guest = memory_guest
+        else:
+            self._spec.template.spec.domain.memory = Memory(guest=memory_guest)
+        ResourceEditor(
+            patches={self: {"spec": {"template": {"spec": {"domain": {"memory": {"guest": memory_guest}}}}}}}
+        ).update()
+
+    @property
+    def template_spec(self) -> VMISpec:
+        return self._spec.template.spec
 
     @property
     def cloud_init_network_data(self) -> cloudinit.NetworkData:
