@@ -14,6 +14,7 @@ from utilities.constants import (
     HOSTPATH_PROVISIONER,
     HOSTPATH_PROVISIONER_CSI,
     LINUX_BRIDGE,
+    PASST_BINDING_CNI,
 )
 
 pytestmark = [
@@ -59,13 +60,15 @@ def test_openshift_io_scc_exists(cnv_pods):
 
 
 @pytest.fixture()
-def pods_not_allowlisted_or_anyuid(cnv_pods):
+def pods_not_allowlisted_or_anyuid(cnv_pods, jira_cnv_92995_open):
     pod_names = []
     for pod in cnv_pods:
         annotations = pod.instance.metadata.annotations.get("openshift.io/scc")
         if (
-            annotations != "anyuid" or not pod.name.startswith(CLUSTER_NETWORK_ADDONS_OPERATOR)
-        ) and annotations not in POD_SCC_ALLOWLIST:
+            (annotations != "anyuid" or not pod.name.startswith(CLUSTER_NETWORK_ADDONS_OPERATOR))
+            and (not jira_cnv_92995_open or annotations != "privileged" or not pod.name.startswith(PASST_BINDING_CNI))
+            and annotations not in POD_SCC_ALLOWLIST
+        ):
             pod_names.append(pod.name)
     return pod_names
 

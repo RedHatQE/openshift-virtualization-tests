@@ -57,10 +57,14 @@ class TestHardcodedFeatureGates:
         updated_resource,
         expected_value,
         key_name,
+        jira_cnv_92995_open,
     ):
         actual_value = get_resource_key_value(resource=updated_resource, key_name=key_name)
         if isinstance(actual_value, list):
             actual_value = set(actual_value)
+        if jira_cnv_92995_open and expected_value is EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES:
+            expected_value = expected_value - {"PasstIPStackMigration"}
+            actual_value = actual_value - {"PasstIPStackMigration"}
         assert actual_value == expected_value, (
             f"For {updated_resource.name}, actual featuregates:"
             f" {actual_value} does not match expected "
