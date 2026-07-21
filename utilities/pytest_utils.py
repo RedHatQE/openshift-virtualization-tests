@@ -9,11 +9,13 @@ import shutil
 import socket
 import sys
 from collections import defaultdict
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
-from _pytest.config import Config
-from _pytest.nodes import Item
+
+if TYPE_CHECKING:
+    from _pytest.config import Config
+    from _pytest.nodes import Item
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.config_map import ConfigMap
 from ocp_resources.namespace import Namespace
