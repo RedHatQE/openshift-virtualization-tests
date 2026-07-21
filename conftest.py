@@ -42,6 +42,7 @@ from utilities.exceptions import MissingEnvironmentVariableError, StorageSanityE
 from utilities.junit_ai_utils import enrich_junit_xml, setup_ai_analysis
 from utilities.logger import setup_logging
 from utilities.pytest_utils import (
+    _inject_failure_junit,
     config_default_storage_class,
     deploy_run_in_progress_config_map,
     deploy_run_in_progress_namespace,
@@ -751,39 +752,41 @@ def pytest_sessionstart(session):
 
 
 def pytest_sessionfinish(session, exitstatus):
-    shutil.rmtree(path=session.config.option.basetemp, ignore_errors=True)
-    if not skip_if_pytest_flags_exists(pytest_config=session.config):
-        run_in_progress_config_map().clean_up()
-        deploy_run_in_progress_namespace().clean_up()
+    try:
+        shutil.rmtree(path=session.config.option.basetemp, ignore_errors=True)
+        if not skip_if_pytest_flags_exists(pytest_config=session.config):
+            run_in_progress_config_map().clean_up()
+            deploy_run_in_progress_namespace().clean_up()
 
-    reporter = session.config.pluginmanager.get_plugin("terminalreporter")
-    reporter.summary_stats()
-    if session.config.getoption("--data-collector"):
-        db = Database()
-        file_path = db.database_file_path
-        LOGGER.info(f"Removing database file path {file_path}")
-        os.remove(file_path)
-    # clean up the empty folders
-    collector_directory = py_config["data_collector"]["data_collector_base_directory"]
-    if os.path.exists(collector_directory):
-        for root, dirs, files in os.walk(collector_directory, topdown=False):
-            for _dir in dirs:
-                dir_path = os.path.join(root, _dir)
-                if not os.listdir(dir_path):
-                    shutil.rmtree(dir_path, ignore_errors=True)
-    # Enrich JUnit XML with AI analysis after all tests complete.
-    # Source: https://github.com/myk-org/jenkins-job-insight/blob/main/examples/pytest-junitxml/conftest_junit_ai.py
-    if session.config.option.analyze_with_ai:
-        if exitstatus == 0:
-            LOGGER.info("No test failures (exit code %d), skipping AI analysis", exitstatus)
+        reporter = session.config.pluginmanager.get_plugin("terminalreporter")
+        reporter.summary_stats()
+        if session.config.getoption("--data-collector"):
+            db = Database()
+            file_path = db.database_file_path
+            LOGGER.info(f"Removing database file path {file_path}")
+            os.remove(file_path)
+        # clean up the empty folders
+        collector_directory = py_config["data_collector"]["data_collector_base_directory"]
+        if os.path.exists(collector_directory):
+            for root, dirs, files in os.walk(collector_directory, topdown=False):
+                for _dir in dirs:
+                    dir_path = os.path.join(root, _dir)
+                    if not os.listdir(dir_path):
+                        shutil.rmtree(dir_path, ignore_errors=True)
+        # Enrich JUnit XML with AI analysis after all tests complete.
+        # Source: https://github.com/myk-org/jenkins-job-insight/blob/main/examples/pytest-junitxml/conftest_junit_ai.py
+        if session.config.option.analyze_with_ai:
+            if exitstatus == 0:
+                LOGGER.info("No test failures (exit code %d), skipping AI analysis", exitstatus)
 
-        else:
-            try:
-                enrich_junit_xml(session)
-            except Exception:
-                LOGGER.exception("Failed to enrich JUnit XML, original preserved")
-
-    session.config.option.log_listener.stop()
+            else:
+                try:
+                    enrich_junit_xml(session)
+                except Exception:
+                    LOGGER.exception("Failed to enrich JUnit XML, original preserved")
+    finally:
+        _inject_failure_junit(session=session)
+        session.config.option.log_listener.stop()
 
 
 def get_all_node_markers(node: Node) -> list[str]:

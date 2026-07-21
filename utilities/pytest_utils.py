@@ -6,6 +6,7 @@ import re
 import shutil
 import socket
 import sys
+import tempfile
 
 import pytest
 from ocp_resources.config_map import ConfigMap
@@ -23,9 +24,89 @@ from utilities.constants import (
 )
 from utilities.data_collector import get_data_collector_base_directory, write_to_file
 from utilities.exceptions import MissingEnvironmentVariableError
+from typing import TYPE_CHECKING
+from xml.etree import ElementTree
+
 from utilities.infra import exit_pytest_execution
 
+if TYPE_CHECKING:
+    from typing import TypedDict
+
+    class _FailureInfoDict(TypedDict):
+        message: str
+        log_message: str
+        return_code: int
+
 LOGGER = logging.getLogger(__name__)
+_failure_info: _FailureInfoDict | None = None
+
+
+def _inject_failure_junit(session: "pytest.Session") -> None:
+    """Inject a synthetic JUnit test case for early exits via `pytest.exit()`.
+
+    When `exit_pytest_execution` is called, it stores failure details in
+    `_failure_info` and then calls `pytest.exit()`, which means no regular
+    test result is recorded.  This helper creates a minimal JUnit XML file
+    that contains a single failing ``<testcase>`` so CI dashboards still
+    report the failure.
+
+    The file is written next to the original ``--junitxml`` report (with a
+    ``-exit-error`` suffix) so the CI system can pick it up as an
+    additional report.
+    """
+    if _failure_info is None:
+        return
+
+    junit_path: str | None = getattr(session.config.option, "xmlpath", None)
+    if not junit_path:
+        LOGGER.debug("No --junitxml path configured; skipping failure JUnit injection.")
+        return
+
+    message = _failure_info["message"]
+    log_message = _failure_info["log_message"]
+    return_code = _failure_info["return_code"]
+
+    testsuites = ElementTree.Element("testsuites")
+    testsuite = ElementTree.SubElement(
+        testsuites,
+        "testsuite",
+        name="pytest-exit-error",
+        tests="1",
+        errors="0",
+        failures="1",
+        skipped="0",
+    )
+    testcase = ElementTree.SubElement(
+        testsuite,
+        "testcase",
+        classname="pytest.exit",
+        name=f"exit_code_{return_code}",
+    )
+    failure_elem = ElementTree.SubElement(
+        testcase,
+        "failure",
+        message=message[:256],
+    )
+    failure_elem.text = log_message
+
+    tree = ElementTree.ElementTree(testsuites)
+
+    base, ext = os.path.splitext(junit_path)
+    exit_junit_path = f"{base}-exit-error{ext}"
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="wb",
+            suffix=".xml",
+            dir=os.path.dirname(exit_junit_path) or ".",
+            delete=False,
+        ) as tmp:
+            tree.write(tmp, encoding="utf-8", xml_declaration=True)
+            tmp_path = tmp.name
+
+        shutil.move(tmp_path, exit_junit_path)
+        LOGGER.info("Wrote exit-error JUnit report to %s", exit_junit_path)
+    except Exception:
+        LOGGER.exception("Failed to write exit-error JUnit report")
 
 
 def get_base_matrix_name(matrix_name):
