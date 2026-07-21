@@ -7,6 +7,18 @@ import re
 import shutil
 import socket
 import sys
+import tempfile
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from typing import TypedDict
+
+    class _FailureInfoDict(TypedDict):
+        message: str
+        log_message: str
+        return_code: int
+
+from xml.etree import ElementTree
 
 import pytest
 from ocp_resources.config_map import ConfigMap
@@ -27,6 +39,80 @@ from utilities.exceptions import MissingEnvironmentVariableError
 from utilities.infra import exit_pytest_execution
 
 LOGGER = logging.getLogger(__name__)
+
+_failure_info: _FailureInfoDict | None = None
+
+
+def _inject_failure_junit(session: pytest.Session) -> None:
+    """Inject a synthetic error testcase into JUnit XML for pytest exit failures.
+
+    When exit_pytest_execution aborts the session, the exit reason may not appear
+    in the JUnit XML report. CI systems can miss the failure — either because the
+    report is empty (no tests ran) or because the exit reason is not captured as a
+    testcase. This function re-opens the XML file after LogXML writes it and adds
+    a synthetic error testcase to ensure the exit failure is always reported.
+
+    Note:
+        Must be called during pytest_sessionfinish, after LogXML has written the
+        XML file. Pluggy calls hooks in LIFO (last-in-first-out) registration
+        order: conftest is registered before the junitxml plugin, so the
+        conftest hook runs after LogXML has written its output.
+
+    Args:
+        session: The pytest session object, used to access the junitxml file path.
+    """
+    if _failure_info is None:
+        return
+
+    xml_path = getattr(session.config.option, "xmlpath", None)
+    if not xml_path or not os.path.exists(xml_path):
+        LOGGER.info("No JUnit XML file found, skipping synthetic testcase injection")
+        return
+
+    return_code = _failure_info["return_code"]
+    log_message = _failure_info["log_message"]
+
+    sanitized_name = re.sub(r"[^a-z0-9_]", "", _failure_info["message"].lower().replace(" ", "_"))
+    sanitized_name = re.sub(r"_+", "_", sanitized_name).strip("_")[:80]
+    name = sanitized_name or "execution_failure"
+
+    tree = ElementTree.parse(xml_path)
+    root = tree.getroot()
+
+    testsuite = root.find("testsuite")
+    if testsuite is None:
+        LOGGER.warning("No <testsuite> element found in JUnit XML, skipping injection")
+        return
+
+    testcase = ElementTree.SubElement(
+        testsuite,
+        "testcase",
+        attrib={"classname": "pytest_exit", "name": name, "time": "0.000"},
+    )
+    error_node = ElementTree.SubElement(
+        testcase,
+        "error",
+        attrib={"message": f"Pytest execution failed (exit code: {return_code})"},
+    )
+    # Strip XML 1.0 illegal control characters — ElementTree passes them through, corrupting the file.
+    error_node.text = re.sub(r"[^\x09\x0A\x0D\x20-\uD7FF\uE000-\uFFFD\U00010000-\U0010FFFF]", "\ufffd", log_message)
+
+    current_errors = int(testsuite.get("errors", "0"))
+    testsuite.set("errors", str(current_errors + 1))
+    current_tests = int(testsuite.get("tests", "0"))
+    testsuite.set("tests", str(current_tests + 1))
+
+    xml_dir = os.path.dirname(os.path.abspath(xml_path))
+    fd, tmp_path = tempfile.mkstemp(dir=xml_dir, suffix=".xml")
+    try:
+        with os.fdopen(fd, mode="w") as tmp_file:
+            tree.write(tmp_file, encoding="unicode", xml_declaration=True)
+        os.replace(tmp_path, xml_path)
+    except BaseException:
+        os.unlink(tmp_path)
+        raise
+
+    LOGGER.info(f"Injected synthetic failure testcase into JUnit XML (exit code: {return_code})")
 
 
 def get_base_matrix_name(matrix_name):

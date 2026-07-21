@@ -60,6 +60,7 @@ from pytest_testconfig import config as py_config
 from requests import HTTPError, Timeout, TooManyRedirects
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 
+import utilities.pytest_utils
 import utilities.virt
 from utilities.constants import (
     AMD_64,
@@ -886,6 +887,11 @@ def exit_pytest_execution(message, return_code=SANITY_TESTS_FAILURE, filename=No
         )
     if junitxml_property:
         junitxml_property(name="exit_code", value=return_code)
+    utilities.pytest_utils._failure_info = {
+        "message": message,
+        "log_message": message,
+        "return_code": return_code,
+    }
     pytest.exit(reason=message, returncode=return_code)
 
 

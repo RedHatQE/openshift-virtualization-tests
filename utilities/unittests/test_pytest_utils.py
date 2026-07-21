@@ -3,11 +3,12 @@
 """Unit tests for pytest_utils module"""
 
 from unittest.mock import MagicMock, patch
+from xml.etree import ElementTree
 
 import pytest
 
 # Circular dependencies are already mocked in conftest.py
-from utilities import pytest_utils
+from utilities import pytest_utils as pytest_utils_module
 from utilities.exceptions import MissingEnvironmentVariableError
 from utilities.pytest_utils import (
     _validate_storage_class_options,
@@ -174,11 +175,9 @@ class TestConfigDefaultStorageClass:
 
         config_default_storage_class(mock_session)
 
-        from utilities.pytest_utils import py_config
-
-        assert py_config["default_storage_class"] == "new-sc"
-        assert py_config["default_volume_mode"] == "Filesystem"
-        assert py_config["default_access_mode"] == "ReadWriteOnce"
+        assert pytest_utils_module.py_config["default_storage_class"] == "new-sc"
+        assert pytest_utils_module.py_config["default_volume_mode"] == "Filesystem"
+        assert pytest_utils_module.py_config["default_access_mode"] == "ReadWriteOnce"
 
     @patch(
         "utilities.pytest_utils.py_config",
@@ -204,11 +203,9 @@ class TestConfigDefaultStorageClass:
 
         config_default_storage_class(mock_session)
 
-        from utilities.pytest_utils import py_config
-
-        assert py_config["default_storage_class"] == "first-sc"
-        assert py_config["default_volume_mode"] == "Filesystem"
-        assert py_config["default_access_mode"] == "ReadWriteOnce"
+        assert pytest_utils_module.py_config["default_storage_class"] == "first-sc"
+        assert pytest_utils_module.py_config["default_volume_mode"] == "Filesystem"
+        assert pytest_utils_module.py_config["default_access_mode"] == "ReadWriteOnce"
 
     @patch(
         "utilities.pytest_utils.py_config",
@@ -234,10 +231,8 @@ class TestConfigDefaultStorageClass:
 
         config_default_storage_class(mock_session)
 
-        from utilities.pytest_utils import py_config
-
         # Should keep original-sc since it's in the matrix
-        assert py_config["default_storage_class"] == "original-sc"
+        assert pytest_utils_module.py_config["default_storage_class"] == "original-sc"
 
     @patch(
         "utilities.pytest_utils.py_config",
@@ -256,10 +251,8 @@ class TestConfigDefaultStorageClass:
 
         config_default_storage_class(mock_session)
 
-        from utilities.pytest_utils import py_config
-
         # Should remain unchanged
-        assert py_config["default_storage_class"] == "original-sc"
+        assert pytest_utils_module.py_config["default_storage_class"] == "original-sc"
 
     @patch(
         "utilities.pytest_utils.py_config",
@@ -374,9 +367,9 @@ class TestConfigDefaultStorageClass:
 
         config_default_storage_class(mock_session)
 
-        assert pytest_utils.py_config["default_storage_class"] == "sc-1"
-        assert pytest_utils.py_config["default_volume_mode"] == "Filesystem"
-        assert pytest_utils.py_config["default_access_mode"] == "ReadWriteOnce"
+        assert pytest_utils_module.py_config["default_storage_class"] == "sc-1"
+        assert pytest_utils_module.py_config["default_volume_mode"] == "Filesystem"
+        assert pytest_utils_module.py_config["default_access_mode"] == "ReadWriteOnce"
 
     @patch(
         "utilities.pytest_utils.py_config",
@@ -397,7 +390,7 @@ class TestConfigDefaultStorageClass:
 
         config_default_storage_class(mock_session)
 
-        assert pytest_utils.py_config["default_storage_class"] == "original-sc"
+        assert pytest_utils_module.py_config["default_storage_class"] == "original-sc"
 
 
 class TestValidateStorageClassOptions:
@@ -912,3 +905,309 @@ class TestGetCnvVersionExplorerUrl:
         result = get_cnv_version_explorer_url(mock_config)
 
         assert result is None
+
+
+class TestInjectFailureJunit:
+    """Test cases for _inject_failure_junit (private) and _failure_info mechanism"""
+
+    def setup_method(self):
+        pytest_utils_module._failure_info = None
+
+    def teardown_method(self):
+        pytest_utils_module._failure_info = None
+
+    @patch("utilities.pytest_utils.ElementTree")
+    def test_no_op_when_no_failure(self, mock_element_tree):
+        """Test _inject_failure_junit does nothing when no failure was recorded."""
+        mock_session = MagicMock()
+        mock_session.config.option.xmlpath = None
+        pytest_utils_module._inject_failure_junit(session=mock_session)
+        mock_element_tree.parse.assert_not_called()
+
+    @patch("utilities.pytest_utils.ElementTree")
+    def test_no_op_when_no_xmlpath(self, mock_element_tree):
+        """Test _inject_failure_junit does nothing when no junitxml path is configured."""
+        pytest_utils_module._failure_info = {
+            "message": "Test failure",
+            "log_message": "Detailed failure",
+            "return_code": 99,
+        }
+
+        mock_session = MagicMock()
+        mock_session.config.option.xmlpath = None
+
+        pytest_utils_module._inject_failure_junit(session=mock_session)
+        mock_element_tree.parse.assert_not_called()
+
+    def test_no_op_when_no_testsuite(self, tmp_path):
+        """Test _inject_failure_junit skips injection when XML has no testsuite element."""
+        pytest_utils_module._failure_info = {
+            "message": "Test failure",
+            "log_message": "Detailed failure",
+            "return_code": 99,
+        }
+
+        xml_path = tmp_path / "test-results.xml"
+        xml_path.write_text('<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests" />')
+
+        mock_session = MagicMock()
+        mock_session.config.option.xmlpath = str(xml_path)
+
+        pytest_utils_module._inject_failure_junit(session=mock_session)
+
+        tree = ElementTree.parse(xml_path)
+        assert tree.getroot().find("testsuite") is None
+
+    def test_injects_synthetic_testcase(self, tmp_path):
+        """Test _inject_failure_junit creates synthetic error testcase in JUnit XML."""
+        pytest_utils_module._failure_info = {
+            "message": "Cluster sanity failed",
+            "log_message": "Detailed cluster sanity failure message",
+            "return_code": 99,
+        }
+
+        xml_path = tmp_path / "test-results.xml"
+        xml_path.write_text(
+            '<?xml version="1.0" encoding="utf-8"?>'
+            '<testsuites name="pytest tests">'
+            '<testsuite name="pytest" errors="0" failures="0" skipped="0" tests="0" '
+            'time="0.001" timestamp="2026-01-01T00:00:00" hostname="test" />'
+            "</testsuites>"
+        )
+
+        mock_session = MagicMock()
+        mock_session.config.option.xmlpath = str(xml_path)
+
+        pytest_utils_module._inject_failure_junit(session=mock_session)
+
+        tree = ElementTree.parse(xml_path)
+        root = tree.getroot()
+        testsuite = root.find("testsuite")
+        testcase = testsuite.find("testcase")
+        assert testcase is not None, "Synthetic testcase not found in XML"
+        assert testcase.get("classname") == "pytest_exit"
+        assert testcase.get("name") == "cluster_sanity_failed"
+        error_elem = testcase.find("error")
+        assert error_elem is not None, "Error element not found in testcase"
+        assert "exit code: 99" in error_elem.get("message")
+        assert "Detailed cluster sanity failure message" in error_elem.text
+        assert testsuite.get("errors") == "1"
+        assert testsuite.get("tests") == "1"
+
+    def test_injects_into_non_empty_suite(self, tmp_path):
+        """Test _inject_failure_junit appends synthetic testcase to suite with existing tests."""
+        pytest_utils_module._failure_info = {
+            "message": "Storage class failure",
+            "log_message": "Failed to set default storage class",
+            "return_code": 99,
+        }
+
+        xml_path = tmp_path / "test-results.xml"
+        xml_path.write_text(
+            '<?xml version="1.0" encoding="utf-8"?>'
+            '<testsuites name="pytest tests">'
+            '<testsuite name="pytest" errors="0" failures="1" skipped="0" tests="3" '
+            'time="10.5" timestamp="2026-01-01T00:00:00" hostname="test">'
+            '<testcase classname="tests.test_example" name="test_one" time="1.0" />'
+            '<testcase classname="tests.test_example" name="test_two" time="2.0">'
+            '<failure message="AssertionError">assert False</failure>'
+            "</testcase>"
+            '<testcase classname="tests.test_example" name="test_three" time="3.0" />'
+            "</testsuite>"
+            "</testsuites>"
+        )
+
+        mock_session = MagicMock()
+        mock_session.config.option.xmlpath = str(xml_path)
+
+        pytest_utils_module._inject_failure_junit(session=mock_session)
+
+        tree = ElementTree.parse(xml_path)
+        root = tree.getroot()
+        testsuite = root.find("testsuite")
+        testcases = testsuite.findall("testcase")
+        assert len(testcases) == 4, f"Expected 4 testcases, got {len(testcases)}"
+        synthetic = testcases[-1]
+        assert synthetic.get("classname") == "pytest_exit"
+        assert synthetic.get("name") == "storage_class_failure"
+        assert testsuite.get("errors") == "1"
+        assert testsuite.get("tests") == "4"
+        assert testsuite.get("failures") == "1"
+
+    def test_sanitized_name_collapses_underscores(self, tmp_path):
+        """Test _inject_failure_junit collapses consecutive underscores in testcase name."""
+        pytest_utils_module._failure_info = {
+            "message": "Cluster: sanity -- failed!",
+            "log_message": "Detailed failure",
+            "return_code": 99,
+        }
+
+        xml_path = tmp_path / "test-results.xml"
+        xml_path.write_text(
+            '<?xml version="1.0" encoding="utf-8"?>'
+            '<testsuites name="pytest tests">'
+            '<testsuite name="pytest" errors="0" failures="0" skipped="0" tests="0" '
+            'time="0.001" timestamp="2026-01-01T00:00:00" hostname="test" />'
+            "</testsuites>"
+        )
+
+        mock_session = MagicMock()
+        mock_session.config.option.xmlpath = str(xml_path)
+
+        pytest_utils_module._inject_failure_junit(session=mock_session)
+
+        tree = ElementTree.parse(xml_path)
+        testsuite = tree.getroot().find("testsuite")
+        testcase = testsuite.find("testcase")
+        assert testcase.get("name") == "cluster_sanity_failed"
+
+    def test_sanitized_name_fallback(self, tmp_path):
+        """Test _inject_failure_junit uses 'execution_failure' for messages with only special chars."""
+        pytest_utils_module._failure_info = {
+            "message": "!@#$%^&*()",
+            "log_message": "Special chars only",
+            "return_code": 99,
+        }
+
+        xml_path = tmp_path / "test-results.xml"
+        xml_path.write_text(
+            '<?xml version="1.0" encoding="utf-8"?>'
+            '<testsuites name="pytest tests">'
+            '<testsuite name="pytest" errors="0" failures="0" skipped="0" tests="0" '
+            'time="0.001" timestamp="2026-01-01T00:00:00" hostname="test" />'
+            "</testsuites>"
+        )
+
+        mock_session = MagicMock()
+        mock_session.config.option.xmlpath = str(xml_path)
+
+        pytest_utils_module._inject_failure_junit(session=mock_session)
+
+        tree = ElementTree.parse(xml_path)
+        testsuite = tree.getroot().find("testsuite")
+        testcase = testsuite.find("testcase")
+        assert testcase.get("name") == "execution_failure"
+
+    def test_error_text_escapes_xml_chars(self, tmp_path):
+        """Test _inject_failure_junit escapes XML special characters in error text."""
+        pytest_utils_module._failure_info = {
+            "message": "XML test",
+            "log_message": 'Failed with <error> & "quotes"',
+            "return_code": 99,
+        }
+
+        xml_path = tmp_path / "test-results.xml"
+        xml_path.write_text(
+            '<?xml version="1.0" encoding="utf-8"?>'
+            '<testsuites name="pytest tests">'
+            '<testsuite name="pytest" errors="0" failures="0" skipped="0" tests="0" '
+            'time="0.001" timestamp="2026-01-01T00:00:00" hostname="test" />'
+            "</testsuites>"
+        )
+
+        mock_session = MagicMock()
+        mock_session.config.option.xmlpath = str(xml_path)
+
+        pytest_utils_module._inject_failure_junit(session=mock_session)
+
+        tree = ElementTree.parse(xml_path)
+        testsuite = tree.getroot().find("testsuite")
+        testcase = testsuite.find("testcase")
+        error_elem = testcase.find("error")
+        assert "<error>" in error_elem.text
+        assert "&" in error_elem.text
+
+    def test_control_chars_sanitized(self, tmp_path):
+        """Test _inject_failure_junit strips XML-illegal control characters from error text."""
+        pytest_utils_module._failure_info = {
+            "message": "Control char test",
+            "log_message": "Failed\x07with\x08control\x00chars",
+            "return_code": 99,
+        }
+
+        xml_path = tmp_path / "test-results.xml"
+        xml_path.write_text(
+            '<?xml version="1.0" encoding="utf-8"?>'
+            '<testsuites name="pytest tests">'
+            '<testsuite name="pytest" errors="0" failures="0" skipped="0" tests="0" '
+            'time="0.001" timestamp="2026-01-01T00:00:00" hostname="test" />'
+            "</testsuites>"
+        )
+
+        mock_session = MagicMock()
+        mock_session.config.option.xmlpath = str(xml_path)
+
+        pytest_utils_module._inject_failure_junit(session=mock_session)
+
+        tree = ElementTree.parse(xml_path)
+        testsuite = tree.getroot().find("testsuite")
+        testcase = testsuite.find("testcase")
+        error_elem = testcase.find("error")
+        assert error_elem.text is not None
+        assert "Failed" in error_elem.text
+        assert "control" in error_elem.text
+        assert "\x07" not in error_elem.text
+        assert "\x08" not in error_elem.text
+        assert "\x00" not in error_elem.text
+
+    def test_injection_runs_despite_earlier_teardown_failure(self, tmp_path):
+        """Test _inject_failure_junit executes even when prior teardown raises."""
+        pytest_utils_module._failure_info = {
+            "message": "Cluster sanity failed",
+            "log_message": "Sanity check failure details",
+            "return_code": 99,
+        }
+
+        xml_path = tmp_path / "test-results.xml"
+        xml_path.write_text(
+            '<?xml version="1.0" encoding="utf-8"?>'
+            '<testsuites name="pytest tests">'
+            '<testsuite name="pytest" errors="0" failures="0" skipped="0" tests="0" '
+            'time="0.001" timestamp="2026-01-01T00:00:00" hostname="test" />'
+            "</testsuites>"
+        )
+
+        mock_session = MagicMock()
+        mock_session.config.option.xmlpath = str(xml_path)
+
+        with pytest.raises(RuntimeError, match="Earlier teardown failed"):
+            try:
+                raise RuntimeError("Earlier teardown failed")
+            finally:
+                pytest_utils_module._inject_failure_junit(session=mock_session)
+
+        tree = ElementTree.parse(xml_path)
+        testsuite = tree.getroot().find("testsuite")
+        testcase = testsuite.find("testcase")
+        assert testcase is not None, "Synthetic testcase must be injected despite earlier failure"
+        assert testcase.get("classname") == "pytest_exit"
+        assert testsuite.get("errors") == "1"
+
+    def test_atomic_write_preserves_original_on_failure(self, tmp_path):
+        """Test _inject_failure_junit preserves the original XML if write fails."""
+        pytest_utils_module._failure_info = {
+            "message": "Test failure",
+            "log_message": "Details",
+            "return_code": 99,
+        }
+
+        xml_path = tmp_path / "test-results.xml"
+        original_content = (
+            '<?xml version="1.0" encoding="utf-8"?>'
+            '<testsuites name="pytest tests">'
+            '<testsuite name="pytest" errors="0" failures="0" skipped="0" tests="0" '
+            'time="0.001" timestamp="2026-01-01T00:00:00" hostname="test" />'
+            "</testsuites>"
+        )
+        xml_path.write_text(original_content)
+
+        mock_session = MagicMock()
+        mock_session.config.option.xmlpath = str(xml_path)
+
+        with patch("utilities.pytest_utils.os.replace", side_effect=OSError("disk full")):
+            with pytest.raises(OSError, match="disk full"):
+                pytest_utils_module._inject_failure_junit(session=mock_session)
+
+        assert xml_path.exists()
+        content = xml_path.read_text()
+        assert "pytest_exit" not in content, "Original XML should not be modified on write failure"

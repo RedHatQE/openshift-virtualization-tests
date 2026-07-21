@@ -1,4 +1,0 @@
-DATA_SOURCE_READY_FOR_CONSUMPTION_MESSAGE = "DataSource is ready to be consumed"
-CUSTOM_DATA_IMPORT_CRON_NAME = "custom-data-import-cron"
-CUSTOM_DATA_SOURCE_NAME = "custom-data-source"
-PVC_NOT_FOUND_ERROR = "PVC not found"
