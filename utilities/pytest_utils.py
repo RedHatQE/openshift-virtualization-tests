@@ -720,7 +720,7 @@ def _is_xfail_no_run(method: object) -> bool:
 
 
 def filter_post_test_alerts_tests(items: list[Item], config: Config) -> list[Item]:
-    """Filter out post-test alert tests when explicitly skipped or running install/upgrade tests.
+    """Filter out post-test alert tests when explicitly skipped or running install tests.
 
     Args:
         items: Collected pytest test items.
@@ -729,12 +729,7 @@ def filter_post_test_alerts_tests(items: list[Item], config: Config) -> list[Ite
     Returns:
         Filtered list of test items.
     """
-    if (
-        config.getoption("--skip-post-test-alerts")
-        or config.getoption("--install")
-        or config.getoption("--upgrade")
-        or config.getoption("--upgrade_custom")
-    ):
+    if config.getoption("--skip-post-test-alerts") or config.getoption("--install"):
         discard_tests, items_to_return = remove_tests_from_list(items=items, filter_str="post_test_alerts")
         config.hook.pytest_deselected(items=discard_tests)
         return items_to_return

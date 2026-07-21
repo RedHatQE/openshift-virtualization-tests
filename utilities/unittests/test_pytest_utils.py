@@ -2525,34 +2525,6 @@ class TestFilterPostTestAlertsTests:
         assert result == [item_other]
         config.hook.pytest_deselected.assert_called_once_with(items=[item_post_test_alerts])
 
-    def test_filters_when_upgrade_flag_set(self):
-        """Post-test alert tests are filtered out when --upgrade flag is set."""
-        item_post_test_alerts = MagicMock()
-        item_post_test_alerts.keywords = {"post_test_alerts": True}
-        item_other = MagicMock()
-        item_other.keywords = {"other_test": True}
-        config = MagicMock()
-        config.getoption.side_effect = lambda flag: flag == "--upgrade"
-
-        result = filter_post_test_alerts_tests(items=[item_post_test_alerts, item_other], config=config)
-
-        assert result == [item_other]
-        config.hook.pytest_deselected.assert_called_once_with(items=[item_post_test_alerts])
-
-    def test_filters_when_upgrade_custom_flag_set(self):
-        """Post-test alert tests are filtered out when --upgrade_custom flag is set."""
-        item_post_test_alerts = MagicMock()
-        item_post_test_alerts.keywords = {"post_test_alerts": True}
-        item_other = MagicMock()
-        item_other.keywords = {"other_test": True}
-        config = MagicMock()
-        config.getoption.side_effect = lambda flag: flag == "--upgrade_custom"
-
-        result = filter_post_test_alerts_tests(items=[item_post_test_alerts, item_other], config=config)
-
-        assert result == [item_other]
-        config.hook.pytest_deselected.assert_called_once_with(items=[item_post_test_alerts])
-
     def test_no_filtering_when_no_flags_set(self):
         """All items are returned unchanged when no filtering flags are set."""
         item_post_test_alerts = MagicMock()
