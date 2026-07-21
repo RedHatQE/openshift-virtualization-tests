@@ -6,6 +6,7 @@ import re
 import shutil
 import socket
 import sys
+import tempfile
 
 import pytest
 from ocp_resources.config_map import ConfigMap
@@ -14,6 +15,9 @@ from ocp_resources.resource import ResourceEditor
 from pytest_testconfig import config as py_config
 
 from utilities.bitwarden import get_cnv_tests_secret_by_name
+from typing import TYPE_CHECKING
+from xml.etree import ElementTree
+
 from utilities.constants import (
     CNV_TEST_RUN_IN_PROGRESS,
     CNV_TEST_RUN_IN_PROGRESS_NS,
@@ -26,6 +30,85 @@ from utilities.exceptions import MissingEnvironmentVariableError
 from utilities.infra import exit_pytest_execution
 
 LOGGER = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from typing import TypedDict
+
+    class _FailureInfoDict(TypedDict):
+        message: str
+        log_message: str
+        return_code: int
+
+_failure_info: "_FailureInfoDict | None" = None
+
+
+def _inject_failure_junit(session: "pytest.Session") -> None:
+    """Append a synthetic failure test case to every JUnit XML file.
+
+    When ``_failure_info`` has been populated (via `exit_pytest_execution`),
+    this helper opens each JUnit XML path known to the session and injects
+    a ``<testcase>`` element whose ``<failure>`` body carries the original
+    error message.  This ensures CI dashboards (Polarion, ReportPortal …)
+    always surface the reason a run was aborted even though no real test
+    case captured it.
+
+    The function is safe to call unconditionally – it silently returns when
+    there is nothing to inject.
+    """
+    global _failure_info  # noqa: PLW0603
+    if _failure_info is None:
+        return
+
+    info = _failure_info
+    _failure_info = None  # reset so we never inject twice
+
+    xml_path = getattr(session.config.option, "xmlpath", None)
+    if not xml_path:
+        LOGGER.debug("No --junitxml path configured; skipping failure injection.")
+        return
+
+    LOGGER.info("Injecting synthetic failure into JUnit XML: %s", xml_path)
+    try:
+        tree = ElementTree.parse(xml_path)  # noqa: S314
+    except (FileNotFoundError, ElementTree.ParseError) as exc:
+        LOGGER.warning("Cannot parse JUnit XML %s: %s", xml_path, exc)
+        return
+
+    root = tree.getroot()
+    suites = root.findall("testsuite") if root.tag == "testsuites" else [root]
+
+    for suite in suites:
+        tc = ElementTree.SubElement(
+            suite,
+            "testcase",
+            classname="pytest.exit",
+            name="pytest_exit_failure",
+            time="0",
+        )
+        fail_el = ElementTree.SubElement(
+            tc,
+            "failure",
+            message=info["message"][:256],
+        )
+        fail_el.text = info["log_message"]
+
+        # Update suite counters
+        tests = int(suite.get("tests", "0"))
+        failures = int(suite.get("failures", "0"))
+        suite.set("tests", str(tests + 1))
+        suite.set("failures", str(failures + 1))
+
+    # Write to a temp file then rename for atomicity
+    dir_name = os.path.dirname(xml_path) or "."
+    fd, tmp_path = tempfile.mkstemp(dir=dir_name, suffix=".xml")
+    try:
+        with os.fdopen(fd, "wb") as tmp_f:
+            tree.write(tmp_f, encoding="utf-8", xml_declaration=True)
+        os.replace(tmp_path, xml_path)
+        LOGGER.info("Synthetic failure testcase written to %s", xml_path)
+    except BaseException:
+        os.unlink(tmp_path)
+        raise
 
 
 def get_base_matrix_name(matrix_name):
