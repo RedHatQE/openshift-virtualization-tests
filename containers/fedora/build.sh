@@ -31,7 +31,7 @@ case "$CPU_ARCH" in
         CPU_ARCH_CODE="x86_64"
         VIRT_TYPE="kvm"
         BOOT_OPTS=""
-	;;
+ ;;
     "arm64")
         CPU_ARCH_CODE="aarch64"
         VIRT_TYPE="qemu"
@@ -56,7 +56,7 @@ case "$CPU_ARCH" in
         CPU_ARCH_CODE="s390x"
         VIRT_TYPE="qemu"
         BOOT_OPTS=""
-	;;
+ ;;
     *)
         echo "Use the value amd64, s390x or arm64 for CPU_ARCH env variable"
         exit 1
@@ -94,6 +94,44 @@ fi
 WORK_IMAGE="${FEDORA_IMAGE%.qcow2}-work.qcow2"
 cp "${FEDORA_IMAGE}" "${WORK_IMAGE}"
 
+# On arm64 QEMU emulation (arm64, s390x) the real-root systemd device timeout
+# (DefaultDeviceTimeoutSec, 45s) can expire before virtio devices are
+# enumerated after pivot-root, causing local-fs.target to fail and breaking
+# cloud-init's dependency chain.
+#
+# Fedora uses BLS (Boot Loader Specification): the kernel cmdline lives in a
+# per-entry .conf file under /boot/loader/entries/ on the ext4 /boot partition
+# (vda2). grub.cfg only sets a kernelopts fallback and delegates to blscfg.
+# We must patch the options line in that .conf file directly.
+#
+# guestfish operations are pure host-side filesystem ops requiring no guest
+# code execution, so they work cross-architecture without KVM.
+if [ "${CPU_ARCH}" = "arm64" ]; then
+    BLS_ENTRY_TMP=$(mktemp)
+    # Mount the ext4 /boot partition (second partition) explicitly.
+    # guestfish -i mounts the btrfs root subvolume, which does not contain
+    # the BLS entries.
+    BLS_ENTRY=$(guestfish -a "${WORK_IMAGE}" \
+        run : \
+        mount /dev/sda2 / : \
+        ls /loader/entries \
+        | grep '\.conf$' | head -1)
+    if [ -z "${BLS_ENTRY}" ]; then
+        echo "ERROR: No BLS entry found in /boot/loader/entries/"
+        rm -f "${BLS_ENTRY_TMP}"
+        exit 1
+    fi
+    guestfish -a "${WORK_IMAGE}" \
+        run : \
+        mount /dev/sda2 / : \
+        download "/loader/entries/${BLS_ENTRY}" "${BLS_ENTRY_TMP}"
+    sed -i 's/^\(options .*\)/\1 systemd.default_device_timeout_sec=300/' "${BLS_ENTRY_TMP}"
+    guestfish -a "${WORK_IMAGE}" \
+        run : \
+        mount /dev/sda2 / : \
+        upload "${BLS_ENTRY_TMP}" "/loader/entries/${BLS_ENTRY}"
+    rm -f "${BLS_ENTRY_TMP}"
+fi
 
 # Clean up any leftovers from a previous failed run
 rm -rf $BUILD_DIR
@@ -139,7 +177,7 @@ CONSOLE_PID=$!
 echo "Waiting for VM to shut down after cloud-init completes..."
 WAIT_SECONDS=0
 PERIOD_SECONDS=60
-TIMEOUT_SECONDS=1800
+TIMEOUT_SECONDS=3600
 while true; do
     DOMAIN_STATE=$(virsh domstate "${NAME}" 2>&1) || true
     if [ "${DOMAIN_STATE}" = "shut off" ] || echo "${DOMAIN_STATE}" | grep -q "failed to get domain"; then
