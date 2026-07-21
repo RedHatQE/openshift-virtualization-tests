@@ -26,9 +26,10 @@ def test_no_new_cnv_daemonset_added(sno_cluster, cnv_daemonset_names, jira_cnv_9
     to catch any new cnv deployments that is not part of cnv_deployment_matrix
     """
     cnv_daemonsets = ALL_CNV_DAEMONSETS.copy() if not sno_cluster else ALL_CNV_DAEMONSETS_NO_HPP_CSI.copy()
-    actual = cnv_daemonset_names
     if jira_cnv_92995_open:
         cnv_daemonsets = [ds for ds in cnv_daemonsets if ds != PASST_BINDING_CNI]
-        actual = [ds for ds in actual if ds != PASST_BINDING_CNI]
+        cnv_daemonset_names = [ds for ds in cnv_daemonset_names if ds != PASST_BINDING_CNI]
 
-    assert sorted(actual) == sorted(cnv_daemonsets), f"New cnv daemonsets found: {set(actual) - set(cnv_daemonsets)}"
+    assert sorted(cnv_daemonset_names) == sorted(cnv_daemonsets), (
+        f"New cnv daemonsets found: {set(cnv_daemonset_names) - set(cnv_daemonsets)}"
+    )

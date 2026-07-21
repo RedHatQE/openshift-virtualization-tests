@@ -271,5 +271,7 @@ def jira_87629_open():
 
 
 @pytest.fixture(scope="session")
-def jira_cnv_92995_open():
-    return is_jira_open(jira_id="CNV-92995")
+def jira_cnv_92995_open(hyperconverged_resource_scope_session):
+    annotations = hyperconverged_resource_scope_session.instance.metadata.annotations or {}
+    hco_annotated = annotations.get("hco.kubevirt.io/deployPasstNetworkBinding") == "true"
+    return hco_annotated and is_jira_open(jira_id="CNV-92995")
