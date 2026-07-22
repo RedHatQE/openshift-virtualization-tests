@@ -1,9 +1,6 @@
 import pytest
 from ocp_resources.datavolume import DataVolume
 
-from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE
-from utilities.constants import Images
-from utilities.constants.storage import REGISTRY_STR
 from utilities.constants.timeouts import TIMEOUT_40MIN
 from utilities.constants.virt import WIN_2K22
 from utilities.storage import create_dv, data_volume, get_dv_size_from_datasource
@@ -28,17 +25,21 @@ def data_volume_snapshot_capable_storage_scope_function(
 def fedora_dv_with_filesystem_volume_mode(
     unprivileged_client,
     namespace,
+    fedora_data_source_scope_module,
     storage_class_with_filesystem_volume_mode,
 ):
     with create_dv(
         dv_name="dv-fedora-fs",
         namespace=namespace.name,
-        source=REGISTRY_STR,
-        url=QUAY_FEDORA_CONTAINER_IMAGE,
-        size=Images.Fedora.DEFAULT_DV_SIZE,
+        size=get_dv_size_from_datasource(data_source=fedora_data_source_scope_module),
         storage_class=storage_class_with_filesystem_volume_mode,
         volume_mode=DataVolume.VolumeMode.FILE,
         client=unprivileged_client,
+        source_ref={
+            "kind": fedora_data_source_scope_module.kind,
+            "name": fedora_data_source_scope_module.name,
+            "namespace": fedora_data_source_scope_module.namespace,
+        },
     ) as dv:
         dv.wait_for_dv_success()
         yield dv
@@ -48,17 +49,21 @@ def fedora_dv_with_filesystem_volume_mode(
 def fedora_dv_with_block_volume_mode(
     unprivileged_client,
     namespace,
+    fedora_data_source_scope_module,
     storage_class_with_block_volume_mode,
 ):
     with create_dv(
         dv_name="dv-fedora-block",
         namespace=namespace.name,
-        source=REGISTRY_STR,
-        url=QUAY_FEDORA_CONTAINER_IMAGE,
-        size=Images.Fedora.DEFAULT_DV_SIZE,
+        size=get_dv_size_from_datasource(data_source=fedora_data_source_scope_module),
         storage_class=storage_class_with_block_volume_mode,
         volume_mode=DataVolume.VolumeMode.BLOCK,
         client=unprivileged_client,
+        source_ref={
+            "kind": fedora_data_source_scope_module.kind,
+            "name": fedora_data_source_scope_module.name,
+            "namespace": fedora_data_source_scope_module.namespace,
+        },
     ) as dv:
         dv.wait_for_dv_success()
         yield dv

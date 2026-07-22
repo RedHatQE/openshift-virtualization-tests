@@ -228,6 +228,7 @@ def test_successful_snapshot_clone(
 
 
 @pytest.mark.gating
+@pytest.mark.conformance
 @pytest.mark.polarion("CNV-5607")
 @pytest.mark.s390x
 def test_clone_from_fs_to_block_using_dv_template(
@@ -237,6 +238,18 @@ def test_clone_from_fs_to_block_using_dv_template(
     fedora_dv_with_filesystem_volume_mode,
     storage_class_with_block_volume_mode,
 ):
+    """Test cloning a DV from filesystem to block volume mode via DV template.
+
+    Preconditions:
+        - Fedora DataVolume with filesystem volume mode (from golden image DataSource)
+        - Storage class supporting block volume mode
+
+    Steps:
+        1. Create a VM using a clone DataVolume template that clones the filesystem DV to block
+
+    Expected:
+        - VM is created successfully with the cloned block DV
+    """
     create_vm_from_clone_dv_template(
         vm_name="vm-5607",
         dv_name="dv-5607",
@@ -248,6 +261,7 @@ def test_clone_from_fs_to_block_using_dv_template(
     )
 
 
+@pytest.mark.conformance
 @pytest.mark.polarion("CNV-5608")
 @pytest.mark.smoke()
 @pytest.mark.s390x
@@ -259,6 +273,18 @@ def test_clone_from_block_to_fs_using_dv_template(
     storage_class_with_filesystem_volume_mode,
     default_fs_overhead,
 ):
+    """Test cloning a DV from block to filesystem volume mode via DV template.
+
+    Preconditions:
+        - Fedora DataVolume with block volume mode (from golden image DataSource)
+        - Storage class supporting filesystem volume mode
+
+    Steps:
+        1. Create a VM using a clone DataVolume template that clones the block DV to filesystem
+
+    Expected:
+        - VM is created successfully with the cloned filesystem DV
+    """
     create_vm_from_clone_dv_template(
         vm_name="vm-5608",
         dv_name="dv-5608",
