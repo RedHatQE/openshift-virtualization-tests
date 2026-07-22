@@ -209,6 +209,11 @@ def hco_spec_scope_module(hyperconverged_resource_scope_module):
     return hyperconverged_resource_scope_module.instance.to_dict()["spec"]
 
 
+@pytest.fixture(scope="session")
+def hco_current_version(admin_client, hco_namespace):
+    return get_hco_version(client=admin_client, hco_ns_name=hco_namespace.name)
+
+
 @pytest.fixture(scope="class")
 def hco_version_scope_class(admin_client, hco_namespace):
     return get_hco_version(client=admin_client, hco_ns_name=hco_namespace.name)

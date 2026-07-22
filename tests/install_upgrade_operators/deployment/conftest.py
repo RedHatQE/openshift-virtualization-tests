@@ -5,7 +5,6 @@ from utilities.constants.components import (
     HPP_POOL,
     KUBEVIRT_MIGRATION_CONTROLLER,
 )
-from utilities.hco import get_hco_version
 from utilities.infra import get_deployment_by_name, get_deployments
 from utilities.jira import is_jira_open
 
@@ -28,11 +27,6 @@ def cnv_deployments_excluding_hpp_pool(admin_client, hco_namespace):
         for deployment in get_deployments(admin_client=admin_client, namespace=hco_namespace.name)
         if not deployment.name.startswith(HPP_POOL)
     ]
-
-
-@pytest.fixture(scope="session")
-def hco_current_version(admin_client, hco_namespace):
-    return get_hco_version(client=admin_client, hco_ns_name=hco_namespace.name)
 
 
 @pytest.fixture()
