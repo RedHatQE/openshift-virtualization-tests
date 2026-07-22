@@ -1,10 +1,13 @@
 import pytest
 
 from utilities.constants.components import (
+    HCO_OPERATOR,
     HPP_POOL,
     KUBEVIRT_MIGRATION_CONTROLLER,
 )
+from utilities.hco import get_hco_version
 from utilities.infra import get_deployment_by_name, get_deployments
+from utilities.jira import is_jira_open
 
 
 @pytest.fixture()
@@ -25,6 +28,37 @@ def cnv_deployments_excluding_hpp_pool(admin_client, hco_namespace):
         for deployment in get_deployments(admin_client=admin_client, namespace=hco_namespace.name)
         if not deployment.name.startswith(HPP_POOL)
     ]
+
+
+@pytest.fixture(scope="session")
+def hco_current_version(admin_client, hco_namespace):
+    return get_hco_version(client=admin_client, hco_ns_name=hco_namespace.name)
+
+
+@pytest.fixture(scope="session")
+def jira_92888_open():
+    return is_jira_open(jira_id="CNV-92888")
+
+
+@pytest.fixture(scope="session")
+def jira_92889_open():
+    return is_jira_open(jira_id="CNV-92889")
+
+
+@pytest.fixture()
+def skip_if_sriov_conforma_jira_open_and_hco_operator(
+    hco_current_version, jira_92888_open, jira_92889_open, cnv_deployment_by_name
+):
+    if cnv_deployment_by_name.name != HCO_OPERATOR:
+        return
+    if hco_current_version.startswith("4.23") and jira_92888_open:
+        pytest.skip(
+            "Skipping hco-operator image check: nightly sriov-dp-admission-controller triggers upstream registry violation (CNV-92888)"
+        )
+    if hco_current_version.startswith("5.0") and jira_92889_open:
+        pytest.skip(
+            "Skipping hco-operator image check: nightly sriov-dp-admission-controller triggers upstream registry violation (CNV-92889)"
+        )
 
 
 @pytest.fixture()
