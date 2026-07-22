@@ -1,12 +1,10 @@
 import pytest
 
 from utilities.constants.components import (
-    HCO_OPERATOR,
     HPP_POOL,
     KUBEVIRT_MIGRATION_CONTROLLER,
 )
 from utilities.infra import get_deployment_by_name, get_deployments
-from utilities.jira import is_jira_open
 
 
 @pytest.fixture()
@@ -27,20 +25,6 @@ def cnv_deployments_excluding_hpp_pool(admin_client, hco_namespace):
         for deployment in get_deployments(admin_client=admin_client, namespace=hco_namespace.name)
         if not deployment.name.startswith(HPP_POOL)
     ]
-
-
-@pytest.fixture()
-def xfail_if_sriov_conforma_jira_open_and_hco_operator(hco_current_version, cnv_deployment_by_name):
-    if cnv_deployment_by_name.name != HCO_OPERATOR:
-        return
-    if hco_current_version.startswith("4.23") and is_jira_open(jira_id="CNV-92888"):
-        pytest.xfail(
-            "hco-operator image check xfailed: nightly sriov-dp-admission-controller triggers upstream registry violation (CNV-92888)"
-        )
-    if hco_current_version.startswith("5.0") and is_jira_open(jira_id="CNV-92889"):
-        pytest.xfail(
-            "hco-operator image check xfailed: nightly sriov-dp-admission-controller triggers upstream registry violation (CNV-92889)"
-        )
 
 
 @pytest.fixture()

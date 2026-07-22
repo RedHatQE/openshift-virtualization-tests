@@ -12,12 +12,10 @@ from tests.install_upgrade_operators.pod_validation.utils import (
 )
 from utilities.constants.components import (
     ALL_CNV_PODS,
-    HCO_OPERATOR,
     HOSTPATH_PROVISIONER_CSI,
     HPP_POOL,
     KUBEVIRT_MIGRATION_CONTROLLER,
 )
-from utilities.jira import is_jira_open
 
 pytestmark = [pytest.mark.sno, pytest.mark.arm64, pytest.mark.s390x]
 
@@ -33,20 +31,6 @@ def cnv_jobs(admin_client, hco_namespace):
 def xfail_if_jira_76659_open_and_migration_controller_pod(jira_76659_open, cnv_pods_by_type):
     if any(pod.name.startswith(KUBEVIRT_MIGRATION_CONTROLLER) for pod in cnv_pods_by_type) and jira_76659_open:
         pytest.xfail(f"{KUBEVIRT_MIGRATION_CONTROLLER} pod has no priority class name due to CNV-76659 bug")
-
-
-@pytest.fixture()
-def xfail_if_sriov_conforma_jira_open_and_hco_operator_pod(hco_current_version, cnv_pods_by_type):
-    if not any(pod.name.startswith(HCO_OPERATOR) for pod in cnv_pods_by_type):
-        return
-    if hco_current_version.startswith("4.23") and is_jira_open(jira_id="CNV-92888"):
-        pytest.xfail(
-            "hco-operator pod image check xfailed: nightly sriov-dp-admission-controller triggers upstream registry violation (CNV-92888)"
-        )
-    if hco_current_version.startswith("5.0") and is_jira_open(jira_id="CNV-92889"):
-        pytest.xfail(
-            "hco-operator pod image check xfailed: nightly sriov-dp-admission-controller triggers upstream registry violation (CNV-92889)"
-        )
 
 
 @pytest.mark.skip_must_gather_collection
@@ -85,7 +69,7 @@ def test_pods_resource_request(
     )
 
 
-@pytest.mark.usefixtures("xfail_if_sriov_conforma_jira_open_and_hco_operator_pod")
+@pytest.mark.usefixtures("xfail_if_sriov_conforma_jira_open_and_hco_operator")
 @pytest.mark.polarion("CNV-8267")
 def test_cnv_pod_container_image(cnv_pods_by_type):
     assert_cnv_pod_container_image_not_in_upstream(cnv_pods_by_type=cnv_pods_by_type)
