@@ -295,6 +295,7 @@ class VirtualMachineForTests(VirtualMachine):
         hugepages_page_size=None,
         vm_affinity=None,
         annotations=None,
+        label=None,
     ):
         """
         Virtual machine creation
@@ -376,6 +377,7 @@ class VirtualMachineForTests(VirtualMachine):
             hugepages_page_size (str, optional) defines the size of huge pages,Valid values are 2 Mi and 1 Gi
             vm_affinity (dict, optional): If affinity is specifies, obey all the affinity rules
             annotations (dict, optional): annotations to be added to the VM
+            label (dict, optional): labels to be added to VM metadata (not the VMI template)
         """
         # Sets VM unique name - replaces "." with "-" in the name to handle valid values.
 
@@ -389,6 +391,7 @@ class VirtualMachineForTests(VirtualMachine):
             node_selector=node_selector,
             node_selector_labels=node_selector_labels,
             yaml_file=yaml_file,
+            label=label,
         )
         self.body = body
         self.interfaces = interfaces or []
