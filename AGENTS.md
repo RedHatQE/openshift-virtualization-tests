@@ -90,6 +90,8 @@ New feature tests MUST follow the STD-first workflow:
 ### Coverage Tracking
 
 - **STP link REQUIRED** — every new feature test file MUST include an STP link in the module, class, or test docstring
+- **STP scenario coverage REQUIRED** — when an STD or test references an STP, every test scenario defined in that STP MUST have a corresponding STD/test declaration in the same file or PR, unless the scenario is intentionally excluded. Intentional exclusions MUST be documented in the PR description with justification and a follow-up Jira link per excluded scenario. Partial STP coverage without documented exclusions blocks merge.
+- **STD alignment with STP** — STD docstring `Preconditions:`, `Steps:`, and `Expected:` sections MUST align with the STP scenario description for the scenario being covered.
 - **RFE/Jira link REQUIRED when no STP exists** — if there is no STP, the module, class, or test docstring MUST include a link to the RFE or Jira epic (not support cases) for coverage tracking
 
 ### Test Requirements
@@ -99,6 +101,11 @@ New feature tests MUST follow the STD-first workflow:
   - **`tier2` is implicit** — added automatically to all tests that don't have an exclusion marker (see `EXCLUDE_MARKER_FROM_TIER2_MARKER` in `conftest.py` for the full list). Do NOT add `@pytest.mark.tier2` explicitly.
   - **Team markers are implicit** — `network`, `storage`, `virt`, `iuo`, `observability`, `infrastructure`, `data_protection`, and `chaos` are added automatically based on the test's directory location. Do NOT add them explicitly.
   - **`gating` marker** — marks tier2 tests that are part of the gating job. Apply when a test should block release promotion.
+  - **`special_infra` marker REQUIRED for special hardware/configuration** — new tests that require non-standard cluster capabilities MUST include `@pytest.mark.special_infra` at module (`pytestmark`), class, or test level, in addition to the specific requirement marker. See `pytest.ini` marker definitions. This applies when the test uses any of:
+    - **Hardware requirements** (`pytest.ini`): `gpu`, `sriov`, `bgp`, `ibm_bare_metal`
+    - **Configuration requirements** (`pytest.ini`): `dpdk`, `swap`, `cpu_manager`, `numa`, `hugepages`, `jumbo_frame`, `rwx_default_storage`, `descheduler`
+    - **Resource requirements** (`pytest.ini`): `high_resource_vm`
+    - **Exempt** (do NOT require `special_infra`): `single_nic` (runs on minimal-NIC clusters), `remote_cluster`, `mixed_os_nodes`, `cclm`, and operator-only markers (`hpp`, `mtv`, `tekton`, `service_mesh`, `nmstate`)
 - **Each test verifies ONE aspect only** - single purpose, easy to understand
 - **Tests MUST be independent** - use `pytest-dependency` ONLY when test B requires side effects from test A (e.g., cluster-wide configuration).
   For resource dependencies, use shared fixtures instead. **When using `@pytest.mark.dependency`, a comment explaining WHY the dependency exists is REQUIRED.**
@@ -222,6 +229,14 @@ When reviewing quarantine PRs, verify the **quarantine mechanism matches the fai
 
 Internal tooling and automation scripts live in `scripts/`. Each tool has its own subdirectory with an entry point, utilities, and tests. Scripts are NOT part of the test suite — they are standalone CLI tools for CI/CD integration and reporting.
 
+### Generated Documentation
+
+`docs/site/` contains an auto-generated documentation site (produced by [docsfy](https://github.com/myk-org/docsfy)).
+
+- ❌ **NEVER modify files under `docs/site/`** — they are auto-generated and overwritten on each regeneration
+- ❌ **NEVER include `docs/site/` changes in PRs** — reject any PR that modifies generated docs
+- ✅ To update, generate docs manually with docsfy and commit directly to `main` (not via PR)
+
 ### Constants Module Placement
 
 Project constants live in `utilities/constants/` as domain-specific modules.
@@ -269,11 +284,33 @@ This is a test suite - internal APIs have NO backward compatibility requirements
   - `##### Special notes for reviewer:` — must be present (may be empty)
   - `##### jira-ticket:` — must be present (may be empty)
 
+### Utilities Unit Test Requirements
+
+Changes under `utilities/` require matching unit test coverage unless an exception below applies. If you add a function, add its tests. If you change behavior, update the assertions. Do not treat a passing `utilities-unittests` as proof of coverage — it only runs existing tests. Missing test coverage for new or modified utility code is a defect.
+
+**Add or update unit tests in the same commit/PR when ANY of these apply:**
+
+- A **coverage-enforced** utilities module changed (any `utilities/*.py` file **not** listed in `[tool.coverage.run] omit` in `pyproject.toml`)
+- A module that already has `utilities/unittests/test_<module>.py` and the change adds or modifies **testable behavior** (new public function, changed logic, bug fix, new error path)
+- A bug fix in utilities code where a mocked unit test can lock the regression without a cluster
+
+Add or update tests in `utilities/unittests/test_<module>.py`. New public functions need dedicated test methods. For changes to existing behavior, extend the matching test rather than adding a redundant one. Follow patterns in [`utilities/unittests/README.md`](utilities/unittests/README.md) and existing `test_*.py` files. Do not put utility helpers in `conftest.py` under `utilities/unittests/`.
+
+**Unit tests are NOT required before commit when:**
+
+- Only **coverage-omitted** large modules changed (`virt.py`, `infra.py`, `network.py`, `storage.py`) and the change is thin wiring (parameter pass-through, logging, default value) already covered by integration tests
+- The change is docs-only, import-only, or a rename with no behavior change
+
+When unit tests are not added, state why in the PR (`##### Special notes for reviewer:`) — e.g. "coverage-omitted `virt.py` helper; behavior covered by `test_migrate_snapshot_hotplugged_vm`".
+
 ## Essential Commands
 
 ### Before Committing Verification (MANDATORY)
 
 Before committing, these checks MUST pass:
+
+1. **Utilities unit test assessment** — per [Utilities Unit Test Requirements](#utilities-unit-test-requirements) above: add tests when required, or document why not
+2. **Commands below** — all must pass
 
 ```bash
 # Required before every commit
@@ -289,9 +326,20 @@ uv run tox -e utilities-unittests
 
 **No exceptions.** Fix all failures before committing. Do not use `--no-verify` to bypass hooks.
 
+### AI Documentation Reference
+
+When working on code or reviewing changes, consult `docs/site/llms.txt` for a structured index of project documentation.
+To understand a specific domain, read the corresponding `.md` file from `docs/site/` listed in the index.
+Per-domain documentation may also live under the relevant `tests/<domain>/` directory (e.g., `tests/network/README.md`).
+
+- **Quick orientation** — read `docs/site/llms.txt` for the full docs index
+- **Deep dive** — read specific `docs/site/<topic>.md` files relevant to the task
+- ❌ **Do NOT** load `docs/site/llms-full.txt` into context — read individual topic files instead
+
 ## Related Documentation
 
 - [`docs/CODE_ORGANIZATION.md`](docs/CODE_ORGANIZATION.md) — Constants, utilities, and fixtures layout and import rules
+- [`utilities/unittests/README.md`](utilities/unittests/README.md) — Utilities unit test patterns and coverage status
 - [`docs/QUARANTINE_GUIDELINES.md`](docs/QUARANTINE_GUIDELINES.md) — Test quarantine and de-quarantine procedures
 - [`docs/SOFTWARE_TEST_DESCRIPTION.md`](docs/SOFTWARE_TEST_DESCRIPTION.md) — STD docstring format and requirements
 - [`docs/CODING_AND_STYLE_GUIDE.md`](docs/CODING_AND_STYLE_GUIDE.md) — Detailed coding and style conventions

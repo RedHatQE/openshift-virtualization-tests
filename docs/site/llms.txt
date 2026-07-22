@@ -1,0 +1,43 @@
+# openshift-virtualization-tests
+
+> Validate OpenShift Virtualization deployments comprehensively with a standardized, strictly-typed test framework.
+
+## Getting Started
+
+- [Quickstart & Setup](quickstart.md): Set up your Python environment using 'uv', configure dependencies, and run your first test suite against an OpenShift cluster.
+- [Running and Filtering Tests](running-tests.md): Learn how to use pytest markers (tier2, tier3, gating, special_infra), filter by test domains, and execute tests inside containers.
+
+## Test Domains
+
+- [Virtualization Tests](virt-tests.md): Explore VM lifecycle, scheduling, compute configurations, and multi-architecture capabilities under the virt/ domain.
+- [Networking Tests](network-tests.md): Understand network topologies, SR-IOV, L2 bridging, IPv6 setups, and network policy tests in the network/ domain.
+- [Storage Tests](storage-tests.md): Validate persistent storage, CDI (Containerized Data Importer), volume modes, and dynamic provisioning in the storage/ domain.
+- [Infrastructure & Observability](infrastructure-observability.md): Test cluster-level configurations, prometheus metrics, logging pipelines, and node features under infrastructure/ and observability/.
+- [Operations & Chaos](operations-chaos.md): Execute disruptive testing, upgrade operator validations, and disaster recovery scenarios via chaos/ and data_protection/ suites.
+
+## Framework & Patterns
+
+- [Pytest Fixture Strategy](fixture-strategy.md): Master fixture scoping, dependency injection, and proper noun-based naming conventions across root, shared, and domain-specific conftest.py files.
+- [Resource Lifecycle & Validation](resource-lifecycle.md): How to manage OpenShift resource creation, utilize TimeoutSampler for polling, and avoid defensive programming anti-patterns.
+- [Configuration & Global Contexts](configuration-constants.md): Manage global parameters (global_config.py) and domain-specific constants (utilities/constants/) for multi-cloud and multi-arch test runs.
+
+## Writing Tests
+
+- [Test Design Workflow (STP/STD)](test-design-workflow.md): Follow the mandatory Software Test Plan (STP) and Software Test Description (STD) docstring workflow before implementing any code.
+- [Implementing New Tests](implementing-tests.md): Step-by-step guide to writing independent test cases, defining clear assertions, reusing utilities, and properly tagging special infrastructure needs.
+- [Test Quarantine Process](quarantine-process.md): Learn the difference between product bugs (Jira markers) and automation issues (xfail quarantines) and how to manage failing tests.
+
+## Utilities Reference
+
+- [Project Utilities](utilities-reference.md): Reference documentation for domain-specific utility functions located in utilities/ and custom classes in libs/.
+- [External Ecosystem Wrappers](external-wrappers.md): Guide to using pyhelper-utils, ocp-resources, and openshift-python-wrapper for cluster interactions instead of raw scripts.
+
+## Development Workflow
+
+- [Code Quality & Pre-commits](code-quality.md): Use uv, tox, and pre-commit to enforce Google-format docstrings, strict type hinting, and 100% dead-code elimination.
+- [Pull Request Discipline](pr-discipline.md): How to structure PRs, adhere to the single-topic rule, sign commits (DCO), and successfully pass gating CI checks.
+
+## Advanced Topics
+
+- [Multi-Architecture Support](multi-architecture-testing.md): Design tests that dynamically adjust to amd64, arm64, and s390x topologies using platform constants and conditional logic.
+- [Scale & Upgrades Testing](scale-upgrades.md): Deep dive into tests/scale/ and operator upgrade routines, managing massive test state safely.

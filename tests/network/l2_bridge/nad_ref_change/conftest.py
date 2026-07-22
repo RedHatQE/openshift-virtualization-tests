@@ -6,7 +6,7 @@ from ocp_resources.namespace import Namespace
 
 from libs.net.ip import random_cidr_addresses_by_family
 from libs.net.netattachdef import NetworkAttachmentDefinition
-from libs.net.vmspec import wait_for_ifaces_status
+from libs.vm.oper import run_vm
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.l2_bridge.libl2bridge import LINUX_BRIDGE_IFACE_NAME_1, LINUX_BRIDGE_IFACE_NAME_2
 from tests.network.l2_bridge.nad_ref_change.lib_helpers import (
@@ -36,9 +36,7 @@ def ref_vm(
         iface_names=[LINUX_BRIDGE_IFACE_NAME_1, LINUX_BRIDGE_IFACE_NAME_2],
         runcmd=ARP_ISOLATION_SYSCTL_CMD,
     ) as vm:
-        vm.start(wait=True)
-        vm.wait_for_agent_connected()
-        wait_for_ifaces_status(
+        run_vm(
             vm=vm,
             ip_addresses_by_spec_net_name={
                 LINUX_BRIDGE_IFACE_NAME_1: [addr.split("/")[0] for addr in iface_a_ips],
@@ -65,9 +63,7 @@ def under_test_vm_two_ifaces(
         iface_names=[LINUX_BRIDGE_IFACE_NAME_1, LINUX_BRIDGE_IFACE_NAME_2],
         runcmd=ARP_ISOLATION_SYSCTL_CMD,
     ) as vm:
-        vm.start(wait=True)
-        vm.wait_for_agent_connected()
-        wait_for_ifaces_status(
+        run_vm(
             vm=vm,
             ip_addresses_by_spec_net_name={
                 LINUX_BRIDGE_IFACE_NAME_1: [addr.split("/")[0] for addr in iface_a_ips],
@@ -101,9 +97,7 @@ def non_migratable_under_test_vm(
         iface_names=[LINUX_BRIDGE_IFACE_NAME_1],
         runcmd=ARP_ISOLATION_SYSCTL_CMD,
     ) as vm:
-        vm.start(wait=True)
-        vm.wait_for_agent_connected()
-        wait_for_ifaces_status(
+        run_vm(
             vm=vm,
             ip_addresses_by_spec_net_name={
                 LINUX_BRIDGE_IFACE_NAME_1: [addr.split("/")[0] for addr in iface_a_ips],

@@ -17,6 +17,7 @@ def udn_vm(
     template_labels: dict | None = None,
     anti_affinity_namespaces: list[str] | None = None,
     affinity: Affinity | None = None,
+    architecture: str | None = None,
 ) -> BaseVirtualMachine:
     """Create a Fedora VM connected to a primary UDN using the specified binding.
 
@@ -28,11 +29,14 @@ def udn_vm(
         template_labels: Optional labels to add to the VM pod template, also used as anti-affinity key.
         anti_affinity_namespaces: Optional namespaces to scope the pod anti-affinity rule.
         affinity: Optional explicit affinity rules. When set, takes precedence over auto-generated anti-affinity from template_labels.
+        architecture: Optional specific desired architecture of the target VM image.
 
     Returns:
         Configured BaseVirtualMachine object (not yet started).
     """
     spec = base_vmspec()
+    if architecture is not None:
+        spec.template.spec.architecture = architecture
     iface, network = udn_primary_network(name="udn-primary", binding=binding)
     spec.template.spec.domain.devices.interfaces = [iface]  # type: ignore
     spec.template.spec.networks = [network]

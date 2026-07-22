@@ -2,7 +2,7 @@ import logging
 import math
 import os
 import shlex
-from collections.abc import Generator
+from collections.abc import Collection, Generator
 from contextlib import contextmanager
 from typing import Any
 
@@ -645,14 +645,14 @@ class PodWithPVC(Pod):
         )
 
 
-def data_volume_template_dict(
-    target_dv_name,
-    target_dv_namespace,
-    source_dv,
-    volume_mode=None,
-    size=None,
-    storage_class=None,
-):
+def data_volume_template_dict_with_pvc_source(
+    target_dv_name: str,
+    target_dv_namespace: str,
+    source_dv: DataVolume,
+    volume_mode: str | None = None,
+    size: str | None = None,
+    storage_class: str | None = None,
+) -> dict[str, Any]:
     source_dv_pvc_spec = source_dv.pvc.instance.spec
     dv = DataVolume(
         name=target_dv_name,
@@ -791,12 +791,6 @@ def run_command_on_vm_and_check_output(
     assert expected_result == cmd_output, (
         f"Command output mismatch.\nCommand: {command}\nExpected: '{expected_result}'\nActual: '{cmd_output}'"
     )
-
-
-def run_command_on_cirros_vm_and_check_output(vm, command, expected_result):
-    with console.Console(vm=vm) as vm_console:
-        vm_console.sendline(command)
-        vm_console.expect(expected_result, timeout=20)
 
 
 def assert_disk_serial(vm, command=_DEFAULT_DISK_SERIAL_COMMAND):
@@ -1225,9 +1219,12 @@ def get_data_sources_managed_by_data_import_cron(client: DynamicClient, namespac
 
 
 def verify_boot_sources_reimported(
-    admin_client: DynamicClient, namespace: str, consecutive_checks_count: int = 6
+    admin_client: DynamicClient,
+    namespace: str,
+    consecutive_checks_count: int = 6,
+    exclude_data_source_names: Collection[str] | None = None,
 ) -> bool:
-    """Verify all DataImportCron-managed DataSources reach Ready=True.
+    """Verify DataImportCron-managed DataSources reach Ready=True.
 
     Checks DataSources sequentially each with its own timeout. Stops on the first
     DataSource that does not become ready.
@@ -1236,12 +1233,18 @@ def verify_boot_sources_reimported(
         admin_client: Cluster admin client.
         namespace: Namespace containing the DataImportCron-managed DataSources.
         consecutive_checks_count: Consecutive Ready=True polls required for stability.
+        exclude_data_source_names: DataSources whose name is in this collection
+            are skipped (e.g. custom DIC templates without valid sources).
+            When None, all DIC-managed DataSources are verified.
 
     Returns:
-        True if all DataSources reached Ready=True otherwise false
+        True if all non-excluded DIC-managed DataSources reached Ready=True, otherwise False
     """
     try:
         for data_source in get_data_sources_managed_by_data_import_cron(client=admin_client, namespace=namespace):
+            if exclude_data_source_names is not None and data_source.name in exclude_data_source_names:
+                LOGGER.info(f"Skipping DataSource {data_source.name}: excluded from verification")
+                continue
             LOGGER.info(f"Waiting for DataSource {data_source.name} consistent ready status")
             utilities.infra.wait_for_consistent_resource_conditions(
                 dynamic_client=admin_client,

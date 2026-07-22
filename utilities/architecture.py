@@ -27,7 +27,7 @@ def get_cluster_architecture() -> set[str]:
 
     # Needed for CI
     if arch := os.environ.get("OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH"):
-        return {arch}
+        return set(arch.split(","))
 
     # Skip cluster connection for pytest flags that exit immediately without collecting tests
     _pytest_exit_flags = {"--help", "-h", "--version"}

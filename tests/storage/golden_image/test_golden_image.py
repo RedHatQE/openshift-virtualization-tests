@@ -15,8 +15,8 @@ pytestmark = pytest.mark.post_upgrade
 
 
 LOGGER = logging.getLogger(__name__)
-LATEST_RHEL_IMAGE = RHEL_LATEST["image_path"]
-RHEL_IMAGE_SIZE = RHEL_LATEST["dv_size"]
+LATEST_RHEL_IMAGE = RHEL_LATEST.get("image_path")
+RHEL_IMAGE_SIZE = RHEL_LATEST.get("dv_size")
 
 
 DV_PARAM = {

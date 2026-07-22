@@ -11,8 +11,8 @@ from libs.net.udn import UDN_BINDING_DEFAULT_PLUGIN_NAME
 from libs.net.vmspec import lookup_iface_status
 from libs.vm.affinity import new_node_affinity
 from libs.vm.vm import BaseVirtualMachine
-from tests.network.libs.nodes import RHCOS9_WORKER_LABEL
 from tests.network.libs.vm_factory import udn_vm
+from utilities.constants.cluster import RHCOS9_WORKER_LABEL
 
 _UDN_PRIMARY_IFACE_NAME = "udn-primary"
 
