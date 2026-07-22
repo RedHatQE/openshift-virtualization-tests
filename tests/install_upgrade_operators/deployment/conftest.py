@@ -35,29 +35,17 @@ def hco_current_version(admin_client, hco_namespace):
     return get_hco_version(client=admin_client, hco_ns_name=hco_namespace.name)
 
 
-@pytest.fixture(scope="session")
-def jira_92888_open():
-    return is_jira_open(jira_id="CNV-92888")
-
-
-@pytest.fixture(scope="session")
-def jira_92889_open():
-    return is_jira_open(jira_id="CNV-92889")
-
-
 @pytest.fixture()
-def skip_if_sriov_conforma_jira_open_and_hco_operator(
-    hco_current_version, jira_92888_open, jira_92889_open, cnv_deployment_by_name
-):
+def xfail_if_sriov_conforma_jira_open_and_hco_operator(hco_current_version, cnv_deployment_by_name):
     if cnv_deployment_by_name.name != HCO_OPERATOR:
         return
-    if hco_current_version.startswith("4.23") and jira_92888_open:
-        pytest.skip(
-            "Skipping hco-operator image check: nightly sriov-dp-admission-controller triggers upstream registry violation (CNV-92888)"
+    if hco_current_version.startswith("4.23") and is_jira_open(jira_id="CNV-92888"):
+        pytest.xfail(
+            "hco-operator image check xfailed: nightly sriov-dp-admission-controller triggers upstream registry violation (CNV-92888)"
         )
-    if hco_current_version.startswith("5.0") and jira_92889_open:
-        pytest.skip(
-            "Skipping hco-operator image check: nightly sriov-dp-admission-controller triggers upstream registry violation (CNV-92889)"
+    if hco_current_version.startswith("5.0") and is_jira_open(jira_id="CNV-92889"):
+        pytest.xfail(
+            "hco-operator image check xfailed: nightly sriov-dp-admission-controller triggers upstream registry violation (CNV-92889)"
         )
 
 
