@@ -392,7 +392,7 @@ def rhel_vm_with_hooks_opt_out(
         ),
         annotations={SKIP_BACKUP_HOOKS_ANNOTATION: "true"},
     ) as vm:
-        running_vm(vm=vm, wait_for_cloud_init=True)
+        running_vm(vm=vm)
         assert vm.instance.metadata.annotations.get(SKIP_BACKUP_HOOKS_ANNOTATION) == "true", (
             f"VM {vm.name} missing {SKIP_BACKUP_HOOKS_ANNOTATION} annotation"
         )
@@ -411,21 +411,3 @@ def velero_backup_vm_with_hooks_opt_out(
         name="backup-hooks-opt-out",
     ) as backup:
         yield backup
-
-
-@pytest.fixture()
-def velero_restore_vm_with_hooks_opt_out(admin_client, velero_backup_vm_with_hooks_opt_out):
-    """Velero restore after deleting the namespace containing a VM with backup hooks opt-out."""
-    restored_ns_name = velero_backup_vm_with_hooks_opt_out.included_namespaces[0]
-    Namespace(name=restored_ns_name, client=admin_client).delete(wait=True)
-    with VeleroRestore(
-        client=admin_client,
-        included_namespaces=velero_backup_vm_with_hooks_opt_out.included_namespaces,
-        name="restore-hooks-opt-out",
-        backup_name=velero_backup_vm_with_hooks_opt_out.name,
-        timeout=TIMEOUT_15MIN,
-    ) as restore:
-        yield restore
-    # Delete the restored namespace early to prevent later fixtures from racing
-    # against Velero-restored resources with CSI finalizers during their own teardown.
-    Namespace(name=restored_ns_name, client=admin_client).delete(wait=True)

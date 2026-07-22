@@ -11,7 +11,6 @@ import pytest
 
 from tests.data_protection.oadp.utils import get_velero_backup_logs
 from utilities.oadp import VeleroBackup
-from utilities.virt import wait_for_running_vm
 
 LOGGER = logging.getLogger(__name__)
 
@@ -20,7 +19,11 @@ HOOK_LOG_PATTERN = "freeze"
 
 class TestVeleroBackupHookOptOut:
     """
-    Tests for Velero backup hook opt-out with backup/restore operations.
+    Tests for Velero backup hook opt-out.
+
+    The skip-backup-hooks annotation is intended for metadata-only backup workflows where
+    third-party solutions handle the actual data protection. These tests verify that
+    freeze/unfreeze hooks are not executed when the annotation is set.
 
     Preconditions:
         - VM with backup hooks disabled
@@ -64,35 +67,23 @@ class TestVeleroBackupHookOptOut:
 
     @pytest.mark.polarion("CNV-16268")
     @pytest.mark.s390x
-    @pytest.mark.usefixtures("velero_restore_vm_with_hooks_opt_out")
-    def test_full_backup_restore_hooks_disabled(
+    def test_backup_running_vm_hooks_disabled(
         self,
         admin_client,
-        rhel_vm_with_hooks_opt_out,
         velero_backup_vm_with_hooks_opt_out,
     ):
         """
-        Test that full backup/restore cycle completes with hooks disabled.
+        Test that backup of a running VM completes with hooks disabled.
 
         Preconditions:
             - Running VM with backup hooks disabled
 
         Steps:
             1. Run Velero backup
-            2. Delete VM and namespace
-            3. Restore from backup
 
         Expected:
-            - VM is restored and running after backup/restore cycle without hook execution
+            - Backup completes successfully without freeze/unfreeze hook execution
         """
-        # Skip guest agent and SSH checks: the skip-backup-hooks annotation skips fsfreeze,
-        # producing crash-consistent snapshots that can leave the restored filesystem inconsistent
-        # (e.g. corrupted XFS metadata, 0-byte files). VMI Running status is sufficient here.
-        wait_for_running_vm(
-            vm=rhel_vm_with_hooks_opt_out,
-            wait_for_interfaces=False,
-            check_ssh_connectivity=False,
-        )
         backup_logs = get_velero_backup_logs(
             backup_name=velero_backup_vm_with_hooks_opt_out.name,
             client=admin_client,
