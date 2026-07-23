@@ -5,7 +5,6 @@ import shlex
 
 import pytest
 import yaml
-from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.config_map import ConfigMap
 from ocp_resources.custom_resource_definition import CustomResourceDefinition
 from ocp_resources.pod import Pod
@@ -134,19 +133,6 @@ def kubevirt_crd_resources(admin_client, custom_resource_definitions):
         if "kubevirt.io" in resource.instance.spec.group:
             kubevirt_resources.append(resource)
     return kubevirt_resources
-
-
-@pytest.fixture(scope="module")
-def kubevirt_crd_names(kubevirt_crd_resources):
-    return [crd.name for crd in kubevirt_crd_resources]
-
-
-@pytest.fixture()
-def kubevirt_crd_by_type(cnv_crd_matrix__function__, kubevirt_crd_resources, kubevirt_crd_names):
-    for crd in kubevirt_crd_resources:
-        if crd.name == cnv_crd_matrix__function__:
-            return crd
-    raise ResourceNotFoundError(f"CRD: {cnv_crd_matrix__function__} not found in kubevirt crds: {kubevirt_crd_names}")
 
 
 @pytest.fixture(scope="package")
