@@ -9,20 +9,16 @@ import os
 import os.path
 import re
 import shlex
-import shutil
 import subprocess
-import tempfile
 from bisect import bisect_left
 from collections import defaultdict
 from datetime import UTC, datetime
 from signal import SIGINT, SIGTERM, getsignal, signal
 
-import bcrypt
 import bitmath
 import paramiko
 import pytest
 import requests
-import yaml
 from bs4 import BeautifulSoup
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.application_aware_resource_quota import ApplicationAwareResourceQuota
@@ -32,25 +28,18 @@ from ocp_resources.cdi_config import CDIConfig
 from ocp_resources.cluster_role import ClusterRole
 from ocp_resources.cluster_service_version import ClusterServiceVersion
 from ocp_resources.config_map import ConfigMap
-from ocp_resources.daemonset import DaemonSet
 from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.hostpath_provisioner import HostPathProvisioner
-from ocp_resources.infrastructure import Infrastructure
-from ocp_resources.machine import Machine
 from ocp_resources.migration_policy import MigrationPolicy
 from ocp_resources.mutating_webhook_config import MutatingWebhookConfiguration
 from ocp_resources.namespace import Namespace
 from ocp_resources.network_addons_config import NetworkAddonsConfig
-from ocp_resources.node import Node
 from ocp_resources.node_network_state import NodeNetworkState
-from ocp_resources.oauth import OAuth
 from ocp_resources.pod import Pod
-from ocp_resources.resource import ResourceEditor, get_client
 from ocp_resources.role_binding import RoleBinding
 from ocp_resources.secret import Secret
-from ocp_resources.service_account import ServiceAccount
 from ocp_resources.sriov_network_node_policy import SriovNetworkNodePolicy
 from ocp_resources.storage_class import StorageClass
 from ocp_resources.virtual_machine_cluster_instancetype import (
@@ -67,45 +56,29 @@ from ocp_resources.virtual_machine_preference import VirtualMachinePreference
 from ocp_utilities.monitoring import Prometheus
 from packaging.version import parse
 from pytest_testconfig import config as py_config
-from timeout_sampler import TimeoutSampler
 
 import utilities.hco
-from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster, supported_cluster_ip_versions
+from libs.net.cluster import supported_cluster_ip_versions
 from libs.net.ip import filter_link_local_addresses, random_cidr_addresses_by_family
 from libs.net.vmspec import lookup_iface_status
 from tests.utils import download_and_extract_tar
 from utilities.artifactory import get_artifactory_header, get_http_image_url, get_test_artifact_server_url
 from utilities.bitwarden import get_cnv_tests_secret_by_name
-from utilities.cluster import cache_admin_client, get_oc_whoami_username
 from utilities.constants import Images
 from utilities.constants.aaq import (
     AAQ_NAMESPACE_LABEL,
     ARQ_QUOTA_HARD_SPEC,
 )
-from utilities.constants.architecture import (
-    ARM_64,
-    S390X,
-)
 from utilities.constants.cluster import (
     AUDIT_LOGS_PATH,
-    CNV_TEST_SERVICE_ACCOUNT,
-    KUBECONFIG,
-    KUBERNETES_ARCH_LABEL,
-    NODE_ROLE_KUBERNETES_IO,
     NODE_TYPE_WORKER_LABEL,
     OC_ADM_LOGS_COMMAND,
-    POD_SECURITY_NAMESPACE_LABELS,
     RHSM_SECRET_NAME,
-    UTILITY,
-    WORKER_NODE_LABEL_KEY,
-    WORKERS_TYPE,
 )
 from utilities.constants.components import (
     CDI_KUBEVIRT_HYPERCONVERGED,
-    CLUSTER,
     KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
     RHEL9_STR,
-    VIRTCTL_CLI_DOWNLOADS,
 )
 from utilities.constants.hco import (
     DATA_SOURCE_NAME,
@@ -121,7 +94,6 @@ from utilities.constants.instance_types import (
     INSTANCE_TYPE_STR,
     PREFERENCE_STR,
 )
-from utilities.constants.namespaces import NamespacesNames
 from utilities.constants.networking import (
     KMP_ENABLED_LABEL,
     KMP_VM_ASSIGNMENT_LABEL,
@@ -129,14 +101,9 @@ from utilities.constants.networking import (
     LINUX_BRIDGE,
     OVS_BRIDGE,
 )
-from utilities.constants.pytest import (
-    UNPRIVILEGED_PASSWORD,
-    UNPRIVILEGED_USER,
-)
 from utilities.constants.storage import BIND_IMMEDIATE_ANNOTATION, StorageClassNames
 from utilities.constants.timeouts import (
     TIMEOUT_3MIN,
-    TIMEOUT_4MIN,
     TIMEOUT_5MIN,
 )
 from utilities.constants.virt import (
@@ -146,37 +113,17 @@ from utilities.constants.virt import (
     NODE_HUGE_PAGES_1GI_KEY,
     VIRTIO,
 )
-from utilities.cpu import (
-    find_common_cpu_model_for_live_migration,
-    get_common_cpu_from_nodes,
-    get_host_model_cpu,
-    get_nodes_cpu_model,
-)
 from utilities.data_utils import base64_encode_str, name_prefix
 from utilities.exceptions import MissingEnvironmentVariableError
 from utilities.infra import (
-    ClusterHosts,
     ExecCommandOnPod,
-    add_scc_to_service_account,
     create_ns,
-    download_file_from_cluster,
-    generate_namespace_name,
-    generate_openshift_pull_secret_file,
-    get_cluster_platform,
     get_clusterversion,
-    get_daemonset_yaml_file_with_image_hash,
-    get_deployment_by_name,
     get_hyperconverged_resource,
-    get_infrastructure,
     get_node_selector_dict,
-    get_nodes_with_label,
     get_pods,
     get_subscription,
-    get_utility_pods_from_nodes,
-    label_nodes,
     label_project,
-    login_with_user_password,
-    run_virtctl_command,
     scale_deployment_replicas,
     wait_for_pods_deletion,
 )
@@ -185,7 +132,6 @@ from utilities.network import (
     MacPool,
     cloud_init_network_data,
     enable_hyperconverged_ovs_annotations,
-    get_cluster_cni_type,
     network_device,
     network_nad,
     wait_for_node_marked_by_bridge,
@@ -195,10 +141,8 @@ from utilities.network import (
 from utilities.operator import (
     disable_default_sources_in_operatorhub,
     get_hco_csv_name_by_version,
-    get_machine_config_pool_by_name,
 )
 from utilities.pytest_utils import exit_pytest_execution
-from utilities.sanity import cluster_sanity
 from utilities.ssp import get_data_import_crons, get_ssp_resource
 from utilities.storage import (
     construct_datavolume_source_dict,
@@ -218,7 +162,6 @@ from utilities.virt import (
     get_hyperconverged_kubevirt,
     get_hyperconverged_ovs_annotations,
     get_kubevirt_hyperconverged_spec,
-    kubernetes_taint_exists,
     running_vm,
     start_and_fetch_processid_on_linux_vm,
     vm_instance_from_template,
@@ -226,17 +169,6 @@ from utilities.virt import (
 )
 
 LOGGER = logging.getLogger(__name__)
-HTTP_SECRET_NAME = "htpass-secret-for-cnv-tests"
-HTPASSWD_PROVIDER_DICT = {
-    "name": "htpasswd_provider",
-    "mappingMethod": "claim",
-    "type": "HTPasswd",
-    "htpasswd": {"fileData": {"name": HTTP_SECRET_NAME}},
-}
-ACCESS_TOKEN = {
-    "accessTokenMaxAgeSeconds": 604800,
-    "accessTokenInactivityTimeout": None,
-}
 CNV_NOT_INSTALLED = "CNV not yet installed."
 RWX_FS_STORAGE_CLASS_NAMES_LIST = [
     StorageClassNames.CEPHFS,
@@ -286,11 +218,6 @@ def junitxml_polarion(record_testsuite_property):
 
 
 @pytest.fixture(scope="session")
-def kubeconfig_export_path():
-    return os.environ.get(KUBECONFIG)
-
-
-@pytest.fixture(scope="session")
 def session_start_time() -> datetime:
     """
     Capture when test session started in UTC.
@@ -301,324 +228,6 @@ def session_start_time() -> datetime:
         datetime: UTC timestamp when test session began (timezone-naive)
     """
     return datetime.now(UTC).replace(tzinfo=None)
-
-
-@pytest.fixture(scope="session")
-def exported_kubeconfig(unprivileged_secret, kubeconfig_export_path):
-    if not unprivileged_secret:
-        yield
-
-    else:
-        kube_config_path = os.path.join(os.path.expanduser("~"), ".kube/config")
-
-        if os.path.isfile(kube_config_path) and kubeconfig_export_path:
-            LOGGER.warning(
-                f"Both {KUBECONFIG} {kubeconfig_export_path} and {kube_config_path} exist. "
-                f"{kubeconfig_export_path} is used as kubeconfig source for this run."
-            )
-
-        orig_kubeconfig_file_path = kubeconfig_export_path or kube_config_path
-
-        tests_kubeconfig_dir_path = tempfile.mkdtemp(suffix="-cnv-tests-kubeconfig")
-        LOGGER.info(f"Setting {KUBECONFIG} dir for this run to point to: {tests_kubeconfig_dir_path}")
-
-        kubeconfig_file_dest_path = os.path.join(tests_kubeconfig_dir_path, KUBECONFIG.lower())
-
-        LOGGER.info(f"Copy {KUBECONFIG} to {kubeconfig_file_dest_path}")
-        shutil.copyfile(src=orig_kubeconfig_file_path, dst=kubeconfig_file_dest_path)
-
-        LOGGER.info(f"Set: {KUBECONFIG}={kubeconfig_file_dest_path}")
-        os.environ[KUBECONFIG] = kubeconfig_file_dest_path
-
-        yield kubeconfig_file_dest_path
-
-        LOGGER.info(f"Remove: {kubeconfig_file_dest_path}")
-        shutil.rmtree(tests_kubeconfig_dir_path, ignore_errors=True)
-
-        if kubeconfig_export_path:
-            LOGGER.info(f"Set: {KUBECONFIG}={kubeconfig_export_path}")
-            os.environ[KUBECONFIG] = kubeconfig_export_path
-
-        else:
-            del os.environ[KUBECONFIG]
-
-
-@pytest.fixture(scope="session")
-def admin_client():
-    """
-    Get DynamicClient
-    """
-    return cache_admin_client()
-
-
-@pytest.fixture(scope="session")
-def unprivileged_secret(admin_client, skip_unprivileged_client):
-    if skip_unprivileged_client:
-        yield
-
-    else:
-        password = UNPRIVILEGED_PASSWORD.encode()
-        enc_password = bcrypt.hashpw(password, bcrypt.gensalt(5, prefix=b"2a")).decode()
-        crypto_credentials = f"{UNPRIVILEGED_USER}:{enc_password}"
-        with Secret(
-            name=HTTP_SECRET_NAME,
-            namespace=NamespacesNames.OPENSHIFT_CONFIG,
-            htpasswd=base64_encode_str(text=crypto_credentials),
-            client=admin_client,
-        ) as secret:
-            yield secret
-
-        #  Wait for oauth-openshift deployment to update after removing htpass-secret
-        _wait_for_oauth_openshift_deployment(admin_client=admin_client)
-
-
-def _wait_for_oauth_openshift_deployment(admin_client):
-    dp = get_deployment_by_name(
-        deployment_name="oauth-openshift",
-        namespace_name="openshift-authentication",
-        admin_client=admin_client,
-    )
-
-    _log = f"Wait for {dp.name} -> Type: Progressing -> Reason:"
-
-    def _wait_sampler(_reason):
-        sampler = TimeoutSampler(
-            wait_timeout=TIMEOUT_4MIN,
-            sleep=1,
-            func=lambda: dp.instance.status.conditions,
-        )
-        for sample in sampler:
-            for _spl in sample:
-                if _spl.type == "Progressing" and _spl.reason == _reason:
-                    return
-
-    for reason in ("ReplicaSetUpdated", "NewReplicaSetAvailable"):
-        LOGGER.info(f"{_log} {reason}")
-        _wait_sampler(_reason=reason)
-
-
-@pytest.fixture(scope="session")
-def skip_unprivileged_client():
-    # To disable unprivileged_client pass --tc=no_unprivileged_client:True to pytest commandline.
-    return py_config.get("no_unprivileged_client")
-
-
-@pytest.fixture(scope="session")
-def identity_provider_config(skip_unprivileged_client, admin_client):
-    if skip_unprivileged_client:
-        return
-
-    return OAuth(client=admin_client, name=CLUSTER)
-
-
-@pytest.fixture(scope="session")
-def identity_provider_with_htpasswd(skip_unprivileged_client, admin_client, identity_provider_config):
-    if skip_unprivileged_client:
-        yield
-    else:
-        identity_provider_config_editor = ResourceEditor(
-            patches={
-                identity_provider_config: {
-                    "metadata": {"name": identity_provider_config.name},
-                    "spec": {
-                        "identityProviders": [HTPASSWD_PROVIDER_DICT],
-                        "tokenConfig": ACCESS_TOKEN,
-                    },
-                }
-            }
-        )
-        identity_provider_config_editor.update(backup_resources=True)
-        _wait_for_oauth_openshift_deployment(admin_client=admin_client)
-        yield
-        identity_provider_config_editor.restore()
-
-
-@pytest.fixture(scope="session")
-def unprivileged_client(
-    skip_unprivileged_client,
-    admin_client,
-    unprivileged_secret,
-    identity_provider_with_htpasswd,
-    exported_kubeconfig,
-):
-    """
-    Provides none privilege API client
-    """
-    if skip_unprivileged_client:
-        LOGGER.info("no_unprivileged_client was set, using admin_client")
-        yield admin_client
-
-    else:
-        current_user = get_oc_whoami_username()
-        if login_with_user_password(
-            api_address=admin_client.configuration.host,
-            user=UNPRIVILEGED_USER,
-            password=UNPRIVILEGED_PASSWORD,
-        ):  # Login to an unprivileged account
-            with open(exported_kubeconfig) as fd:
-                kubeconfig_content = yaml.safe_load(fd)
-            unprivileged_context = kubeconfig_content["current-context"]
-
-            # Get back to an admin account
-            login_with_user_password(
-                api_address=admin_client.configuration.host,
-                user=current_user.strip(),
-            )
-            yield get_client(config_file=exported_kubeconfig, context=unprivileged_context)
-
-        else:
-            yield admin_client
-
-
-@pytest.fixture(scope="session")
-def nodes(admin_client):
-    yield list(Node.get(client=admin_client))
-
-
-@pytest.fixture(scope="session")
-def schedulable_nodes(nodes, nodes_cpu_architecture):
-    """Get nodes marked as schedulable by kubevirt.
-
-    For multi-arch testing - filter nodes by the architecture being tested.
-    """
-    schedulable_label = "kubevirt.io/schedulable"
-    schedulable = [
-        node
-        for node in nodes
-        if schedulable_label in node.labels.keys()
-        and node.labels[schedulable_label] == "true"
-        and not node.instance.spec.unschedulable
-        and not kubernetes_taint_exists(node)
-        and node.kubelet_ready
-        and (not nodes_cpu_architecture or node.labels.get(KUBERNETES_ARCH_LABEL) == nodes_cpu_architecture)
-    ]
-
-    LOGGER.info(
-        f"Schedulable nodes: {[node.name for node in schedulable]}, node architecture: {nodes_cpu_architecture or 'all'}"
-    )
-    yield schedulable
-
-
-@pytest.fixture(scope="session")
-def workers(nodes):
-    return get_nodes_with_label(nodes=nodes, label=WORKER_NODE_LABEL_KEY)
-
-
-@pytest.fixture(scope="session")
-def control_plane_nodes(nodes):
-    return get_nodes_with_label(nodes=nodes, label=f"{NODE_ROLE_KUBERNETES_IO}/control-plane")
-
-
-@pytest.fixture(scope="session")
-def cnv_tests_utilities_namespace(admin_client, installing_cnv):
-    if installing_cnv:
-        yield
-    else:
-        name = NamespacesNames.CNV_TESTS_UTILITIES
-        if Namespace(client=admin_client, name=name).exists:
-            exit_pytest_execution(
-                log_message=f"{name} namespace already exists."
-                f"\nAfter verifying no one else is performing tests against the cluster, run:"
-                f"\n'oc delete namespace {name}'",
-                return_code=100,
-                message=f"{name} namespace already exists.",
-                filename="cnv_tests_utilities_ns_failure.txt",
-                admin_client=admin_client,
-            )
-
-        else:
-            yield from create_ns(
-                admin_client=admin_client,
-                labels=POD_SECURITY_NAMESPACE_LABELS,
-                name=name,
-            )
-
-
-@pytest.fixture(scope="session")
-def cnv_tests_utilities_service_account(admin_client, cnv_tests_utilities_namespace, installing_cnv):
-    if installing_cnv:
-        yield
-    else:
-        with ServiceAccount(
-            client=admin_client,
-            name=CNV_TEST_SERVICE_ACCOUNT,
-            namespace=cnv_tests_utilities_namespace.name,
-        ) as service_account:
-            add_scc_to_service_account(
-                namespace=cnv_tests_utilities_namespace.name,
-                scc_name="privileged",
-                sa_name=service_account.name,
-            )
-            yield service_account
-
-
-@pytest.fixture(scope="session")
-def utility_daemonset(
-    admin_client,
-    installing_cnv,
-    generated_pulled_secret,
-    cnv_tests_utilities_namespace,
-    cnv_tests_utilities_service_account,
-):
-    """
-    Deploy utility daemonset into the cnv-tests-utilities namespace.
-
-    This daemonset deploys a pod on every node with hostNetwork and the main usage is to run commands on the hosts.
-    For example to create linux bridge and other components related to the host configuration.
-    """
-    if installing_cnv:
-        yield
-    else:
-        modified_ds_yaml_file = get_daemonset_yaml_file_with_image_hash(
-            generated_pulled_secret=generated_pulled_secret,
-            service_account=cnv_tests_utilities_service_account,
-        )
-        with DaemonSet(client=admin_client, yaml_file=modified_ds_yaml_file) as ds:
-            ds.wait_until_deployed()
-            yield ds
-
-
-@pytest.fixture(scope="session")
-def generated_pulled_secret(
-    is_production_source,
-    installing_cnv,
-    admin_client,
-):
-    if is_production_source and installing_cnv:
-        return
-    return generate_openshift_pull_secret_file()
-
-
-@pytest.fixture(scope="session")
-def workers_utility_pods(admin_client, workers, utility_daemonset, installing_cnv):
-    """
-    Get utility pods from worker nodes.
-    When the tests start we deploy a pod on every worker node in the cluster using a daemonset.
-    These pods have a label of cnv-test=utility and they are privileged pods with hostnetwork=true
-    """
-    if installing_cnv:
-        return
-    return get_utility_pods_from_nodes(
-        nodes=workers,
-        admin_client=admin_client,
-        label_selector="cnv-test=utility",
-    )
-
-
-@pytest.fixture(scope="session")
-def control_plane_utility_pods(admin_client, installing_cnv, control_plane_nodes, utility_daemonset):
-    """
-    Get utility pods from control plane nodes.
-    When the tests start we deploy a pod on every control plane node in the cluster using a daemonset.
-    These pods have a label of cnv-test=utility and they are privileged pods with hostnetwork=true
-    """
-    if installing_cnv:
-        return
-    return get_utility_pods_from_nodes(
-        nodes=control_plane_nodes,
-        admin_client=admin_client,
-        label_selector="cnv-test=utility",
-    )
 
 
 @pytest.fixture(scope="session")
@@ -712,90 +321,6 @@ def nodes_active_nics(
 @pytest.fixture(scope="session")
 def nodes_available_nics(nodes_active_nics):
     return {node: nodes_active_nics[node]["available"] for node in nodes_active_nics.keys()}
-
-
-@pytest.fixture(scope="module")
-def namespace(request, admin_client, unprivileged_client):
-    """
-    To create namespace using admin client, pass {"use_unprivileged_client": False} to request.param
-    (default for "use_unprivileged_client" is True)
-    """
-    use_unprivileged_client = getattr(request, "param", {}).get("use_unprivileged_client", True)
-    teardown = getattr(request, "param", {}).get("teardown", True)
-    unprivileged_client = unprivileged_client if use_unprivileged_client else None
-    yield from create_ns(
-        unprivileged_client=unprivileged_client,
-        admin_client=admin_client,
-        name=generate_namespace_name(file_path=request.fspath.strpath.split(f"{os.path.dirname(__file__)}/")[1]),
-        teardown=teardown,
-    )
-
-
-@pytest.fixture(scope="session")
-def leftovers_cleanup(admin_client, cnv_tests_utilities_namespace, identity_provider_config):
-    LOGGER.info("Checking for leftover resources")
-    secret = Secret(
-        client=admin_client,
-        name=HTTP_SECRET_NAME,
-        namespace=NamespacesNames.OPENSHIFT_CONFIG,
-    )
-    ds = None
-    if cnv_tests_utilities_namespace:
-        ds = DaemonSet(
-            client=admin_client,
-            name=UTILITY,
-            namespace=cnv_tests_utilities_namespace.name,
-        )
-    #  Delete Secret and DaemonSet created by us.
-    for resource_ in (secret, ds):
-        if resource_ and resource_.exists:
-            resource_.delete(wait=True)
-
-    #  Remove leftovers from OAuth
-    if not identity_provider_config:
-        # When running CI (k8s) OAuth is not exists on the cluster.
-        LOGGER.warning("OAuth does not exist on the cluster")
-        return
-
-    identity_providers_spec = identity_provider_config.instance.to_dict()["spec"]
-    identity_providers_token = identity_providers_spec.get("tokenConfig")
-    identity_providers = identity_providers_spec.get("identityProviders", [])
-
-    if ACCESS_TOKEN == identity_providers_token:
-        identity_providers_spec["tokenConfig"] = None
-
-    if HTPASSWD_PROVIDER_DICT in identity_providers:
-        identity_providers.pop(identity_providers.index(HTPASSWD_PROVIDER_DICT))
-        identity_providers_spec["identityProviders"] = identity_providers or None
-
-    r_editor = ResourceEditor(
-        patches={
-            identity_provider_config: {
-                "metadata": {"name": identity_provider_config.name},
-                "spec": identity_providers_spec,
-            }
-        }
-    )
-    r_editor.update()
-
-
-@pytest.fixture(scope="session")
-def workers_type(workers_utility_pods, installing_cnv):
-    if installing_cnv:
-        return
-    physical = ClusterHosts.Type.PHYSICAL
-    virtual = ClusterHosts.Type.VIRTUAL
-    for pod in workers_utility_pods:
-        pod_exec = ExecCommandOnPod(utility_pods=workers_utility_pods, node=pod.node)
-        out = pod_exec.exec(command="systemd-detect-virt", ignore_rc=True)
-        if out == "none":
-            LOGGER.info(f"Cluster workers are: {physical}")
-            os.environ[WORKERS_TYPE] = physical
-            return physical
-
-    LOGGER.info(f"Cluster workers are: {virtual}")
-    os.environ[WORKERS_TYPE] = virtual
-    return virtual
 
 
 @pytest.fixture()
@@ -1020,24 +545,6 @@ def hco_namespace(admin_client, installing_cnv):
 
 
 @pytest.fixture(scope="session")
-def worker_node1(schedulable_nodes):
-    # Get first worker nodes out of schedulable_nodes list
-    return schedulable_nodes[0]
-
-
-@pytest.fixture(scope="session")
-def worker_node2(schedulable_nodes):
-    # Get second worker nodes out of schedulable_nodes list
-    return schedulable_nodes[1]
-
-
-@pytest.fixture(scope="session")
-def worker_node3(schedulable_nodes):
-    # Get third worker nodes out of schedulable_nodes list
-    return schedulable_nodes[2]
-
-
-@pytest.fixture(scope="session")
 def sriov_namespace(admin_client):
     return Namespace(name="openshift-sriov-network-operator", client=admin_client)
 
@@ -1071,73 +578,6 @@ def mac_pool(admin_client, hco_namespace):
             namespace=hco_namespace.name, name=KUBEMACPOOL_MAC_RANGE_CONFIG, client=admin_client
         ).instance["data"]
     )
-
-
-@pytest.fixture(scope="session")
-def nodes_cpu_architecture():
-    return py_config.get("cpu_arch")
-
-
-@pytest.fixture(scope="session")
-def cluster_node_cpus(schedulable_nodes):
-    # Get cpu model information from the nodes
-    return get_nodes_cpu_model(nodes=schedulable_nodes)
-
-
-@pytest.fixture(scope="session")
-def cluster_common_node_cpu(cluster_node_cpus):
-    return get_common_cpu_from_nodes(cluster_cpus=set.intersection(*cluster_node_cpus.get("common").values()))
-
-
-@pytest.fixture(scope="session")
-def cluster_common_modern_node_cpu(cluster_node_cpus):
-    return get_common_cpu_from_nodes(cluster_cpus=set.intersection(*cluster_node_cpus.get("modern").values()))
-
-
-@pytest.fixture(scope="session")
-def host_cpu_model(schedulable_nodes, nodes_cpu_architecture):
-    # get the host-model-cpu labels from the nodes
-    return None if nodes_cpu_architecture == ARM_64 else get_host_model_cpu(nodes=schedulable_nodes)
-
-
-@pytest.fixture(scope="session")
-def cpu_for_migration(cluster_common_node_cpu, host_cpu_model, nodes_cpu_architecture):
-    """
-    Get a CPU model that is common for all nodes
-    """
-    return (
-        None
-        if nodes_cpu_architecture == ARM_64
-        else find_common_cpu_model_for_live_migration(
-            cluster_cpu=cluster_common_node_cpu, host_cpu_model=host_cpu_model
-        )
-    )
-
-
-@pytest.fixture(scope="session")
-def modern_cpu_for_migration(cluster_common_modern_node_cpu, host_cpu_model, nodes_cpu_architecture):
-    """
-    Get a modern CPU model that is common for all nodes
-    """
-    return (
-        None
-        if nodes_cpu_architecture == ARM_64
-        else find_common_cpu_model_for_live_migration(
-            cluster_cpu=cluster_common_modern_node_cpu, host_cpu_model=host_cpu_model
-        )
-    )
-
-
-@pytest.fixture(scope="module")
-def skip_if_no_common_cpu(cluster_common_node_cpu, nodes_cpu_architecture):
-    if not cluster_common_node_cpu and nodes_cpu_architecture != ARM_64:
-        pytest.skip("This is a heterogeneous cluster")
-
-
-@pytest.fixture(scope="module")
-def skip_if_no_common_modern_cpu(cluster_common_modern_node_cpu):
-    if not cluster_common_modern_node_cpu and nodes_cpu_architecture != ARM_64:
-        pytest.skip("This is a heterogeneous cluster")
 
 
 @pytest.fixture(scope="session")
@@ -1395,58 +835,6 @@ def cnv_pods(admin_client, hco_namespace):
 
 
 @pytest.fixture(scope="session")
-def cluster_sanity_scope_session(
-    request,
-    nodes,
-    cluster_storage_classes_names,
-    admin_client,
-    hco_namespace,
-    junitxml_plugin,
-    hyperconverged_resource_scope_session,
-    installing_cnv,
-):
-    """
-    Performs various cluster level checks, e.g.: storage class validation, node state, as well as all cnv pod
-    check to ensure all are in 'Running' state, to determine current state of cluster
-    """
-    if not installing_cnv:
-        cluster_sanity(
-            request=request,
-            admin_client=admin_client,
-            cluster_storage_classes_names=cluster_storage_classes_names,
-            nodes=nodes,
-            hco_namespace=hco_namespace,
-            junitxml_property=junitxml_plugin,
-        )
-
-
-@pytest.fixture(scope="module")
-def cluster_sanity_scope_module(
-    request,
-    nodes,
-    cluster_storage_classes_names,
-    admin_client,
-    hco_namespace,
-    junitxml_plugin,
-    hyperconverged_resource_scope_session,
-    installing_cnv,
-):
-    """
-    Performs various cluster level checks, e.g.: storage class validation, node state, as well as all cnv pod
-    check to ensure all are in 'Running' state, to determine current state of cluster
-    """
-    if not installing_cnv:
-        cluster_sanity(
-            request=request,
-            admin_client=admin_client,
-            cluster_storage_classes_names=cluster_storage_classes_names,
-            nodes=nodes,
-            hco_namespace=hco_namespace,
-            junitxml_property=junitxml_plugin,
-        )
-
-
-@pytest.fixture(scope="session")
 def kmp_vm_label(admin_client):
     kmp_webhook_config = MutatingWebhookConfiguration(client=admin_client, name="kubemacpool-mutator")
 
@@ -1498,39 +886,6 @@ def cdi_spec(cdi):
 @pytest.fixture()
 def hco_spec(hyperconverged_resource_scope_function):
     return hyperconverged_resource_scope_function.instance.to_dict()["spec"]
-
-
-@pytest.fixture(scope="session")
-def cluster_info(
-    admin_client,
-    installing_cnv,
-    openshift_current_version,
-    cnv_current_version,
-    hco_image,
-    ocs_current_version,
-    kubevirt_resource_scope_session,
-    workers_type,
-):
-    title = "\nCluster info:\n"
-    virtctl_client_version, virtctl_server_version = None, None
-    if not installing_cnv:
-        virtctl_client_version, virtctl_server_version = (
-            run_virtctl_command(command=["version"])[1].strip().splitlines()
-        )
-
-    LOGGER.info(
-        f"{title}"
-        f"\tOpenshift version: {openshift_current_version}\n"
-        f"\tCNV version: {cnv_current_version}\n"
-        f"\tHCO image: {hco_image}\n"
-        f"\tOCS version: {ocs_current_version}\n"
-        f"\tCNI type: {get_cluster_cni_type(admin_client=admin_client)}\n"
-        f"\tWorkers type: {workers_type}\n"
-        f"\tCluster CPU Architecture: {', '.join(py_config['cluster_arch'])}\n"
-        f"\tIPv4 cluster: {ipv4_supported_cluster()}\n"
-        f"\tIPv6 cluster: {ipv6_supported_cluster()}\n"
-        f"\tVirtctl version: \n\t{virtctl_client_version}\n\t{virtctl_server_version}\n"
-    )
 
 
 @pytest.fixture(scope="session")
@@ -1891,16 +1246,6 @@ def golden_images_data_import_crons_scope_function(admin_client, golden_images_n
     return get_data_import_crons(admin_client=admin_client, namespace=golden_images_namespace)
 
 
-@pytest.fixture(scope="session")
-def sno_cluster(admin_client):
-    return get_infrastructure(admin_client=admin_client).instance.status.infrastructureTopology == "SingleReplica"
-
-
-@pytest.fixture(scope="session")
-def label_schedulable_nodes(schedulable_nodes):
-    yield from label_nodes(nodes=schedulable_nodes, labels=NODE_TYPE_WORKER_LABEL)
-
-
 @pytest.fixture(scope="class")
 def disabled_common_boot_image_import_hco_spec_scope_class(
     admin_client,
@@ -1919,51 +1264,6 @@ def disabled_common_boot_image_import_hco_spec_scope_class(
 @pytest.fixture(scope="class")
 def golden_images_data_import_crons_scope_class(admin_client, golden_images_namespace):
     return get_data_import_crons(admin_client=admin_client, namespace=golden_images_namespace)
-
-
-@pytest.fixture(scope="session")
-def compact_cluster(nodes, workers, control_plane_nodes):
-    return len(nodes) == len(workers) == len(control_plane_nodes) == 3
-
-
-@pytest.fixture(scope="session")
-def bin_directory(tmpdir_factory):
-    return tmpdir_factory.mktemp("bin")
-
-
-@pytest.fixture(scope="session")
-def os_path_environment():
-    return os.environ["PATH"]
-
-
-@pytest.fixture(scope="session")
-def virtctl_binary(installing_cnv, bin_directory, admin_client):
-    if installing_cnv:
-        return
-    installed_virtctl = os.environ.get("CNV_TESTS_VIRTCTL_BIN")
-    if installed_virtctl:
-        LOGGER.warning(f"Using previously installed: {installed_virtctl}")
-        return
-    return download_file_from_cluster(
-        get_console_spec_links_name=VIRTCTL_CLI_DOWNLOADS, dest_dir=bin_directory, admin_client=admin_client
-    )
-
-
-@pytest.fixture(scope="session")
-def oc_binary(bin_directory, admin_client):
-    installed_oc = os.environ.get("CNV_TESTS_OC_BIN")
-    if installed_oc:
-        LOGGER.warning(f"Using previously installed: {installed_oc}")
-        return
-    return download_file_from_cluster(
-        get_console_spec_links_name="oc-cli-downloads", dest_dir=bin_directory, admin_client=admin_client
-    )
-
-
-@pytest.fixture(scope="session")
-def bin_directory_to_os_path(os_path_environment, bin_directory, virtctl_binary, oc_binary):
-    LOGGER.info(f"Adding {bin_directory} to $PATH")
-    os.environ["PATH"] = f"{bin_directory}:{os_path_environment}"
 
 
 @pytest.fixture(scope="session")
@@ -2120,20 +1420,6 @@ def is_production_source(cnv_source):
 @pytest.fixture(scope="session")
 def cnv_source(pytestconfig):
     return pytestconfig.option.cnv_source or "osbs"
-
-
-@pytest.fixture(scope="session")
-def fips_enabled_cluster(workers_utility_pods):
-    """
-    Check if FIPS is enabled on cluster
-    """
-    for pod in workers_utility_pods:
-        # command output: 0 == fips disabled
-        #                 1 == fips enabled
-        cluster_fips_status = pod.execute(["bash", "-c", "cat /proc/sys/crypto/fips_enabled"]).strip()
-        if int(cluster_fips_status) == 1:
-            return True
-    return False
 
 
 @pytest.fixture(scope="class")
@@ -2302,12 +1588,6 @@ def rhel_vm_with_instance_type_and_preference(
             yield vm
 
 
-@pytest.fixture(scope="session")
-def is_disconnected_cluster():
-    # To enable disconnected_cluster pass --tc=disconnected_cluster:True to pytest commandline.
-    return py_config.get("disconnected_cluster")
-
-
 @pytest.fixture()
 def migration_policy_with_bandwidth():
     with MigrationPolicy(
@@ -2326,17 +1606,6 @@ def migration_policy_with_bandwidth_scope_class():
         vmi_selector=MIGRATION_POLICY_VM_LABEL,
     ) as mp:
         yield mp
-
-
-@pytest.fixture(scope="session")
-def worker_machine1(worker_node1):
-    machine = Machine(
-        name=worker_node1.machine_name,
-        namespace=py_config["machine_api_namespace"],
-    )
-    if machine.exists:
-        return machine
-    raise ResourceNotFoundError(f"Machine object for {worker_node1.name} doesn't exists")
 
 
 @pytest.fixture(scope="session")
@@ -2572,25 +1841,6 @@ def ssp_resource_scope_class(admin_client, hco_namespace):
     return get_ssp_resource(admin_client=admin_client, namespace=hco_namespace)
 
 
-@pytest.fixture(scope="session")
-def kube_system_namespace():
-    kube_system_ns = Namespace(name="kube-system")
-    if kube_system_ns.exists:
-        return kube_system_ns
-    raise ResourceNotFoundError(f"{kube_system_ns.name} namespace not found")
-
-
-@pytest.fixture(scope="session")
-def is_aws_cluster(admin_client):
-    return get_cluster_platform(admin_client=admin_client) == Infrastructure.Type.AWS
-
-
-@pytest.fixture(scope="session")
-def skip_on_aws_cluster(is_aws_cluster):
-    if is_aws_cluster:
-        pytest.skip("This test is skipped on an AWS cluster")
-
-
 @pytest.fixture(scope="module")
 def machine_type_from_kubevirt_config(kubevirt_config_scope_module, nodes_cpu_architecture):
     """Extract machine type default from kubevirt CR."""
@@ -2667,24 +1917,6 @@ def rhsm_created_secret(rhsm_credentials_from_bitwarden, namespace):
 
 
 @pytest.fixture(scope="session")
-def machine_config_pools(admin_client):
-    return [
-        get_machine_config_pool_by_name(mcp_name="master", admin_client=admin_client),
-        get_machine_config_pool_by_name(mcp_name="worker", admin_client=admin_client),
-    ]
-
-
-@pytest.fixture(scope="session")
-def nmstate_namespace(admin_client):
-    try:
-        return Namespace(client=admin_client, name=NamespacesNames.OPENSHIFT_NMSTATE, ensure_exists=True)
-
-    except ResourceNotFoundError:
-        LOGGER.info(f"Namespace '{NamespacesNames.OPENSHIFT_NMSTATE}' not found.")
-        return None
-
-
-@pytest.fixture(scope="session")
 def nmstate_dependent_placeholder():
     """
     Placeholder fixture that serves as a dependency marker for fixtures that interact
@@ -2738,11 +1970,6 @@ def application_aware_resource_quota(admin_client, namespace):
         hard=ARQ_QUOTA_HARD_SPEC,
     ) as arq:
         yield arq
-
-
-@pytest.fixture(scope="session")
-def is_s390x_cluster(nodes_cpu_architecture):
-    return nodes_cpu_architecture == S390X
 
 
 @pytest.fixture(scope="session")
