@@ -807,11 +807,20 @@ def assert_disk_serial(vm, command=_DEFAULT_DISK_SERIAL_COMMAND):
     ), f"hotplug disk serial id {HOTPLUG_DISK_SERIAL} is not in VM"
 
 
-def assert_hotplugvolume_nonexist(vm):
-    volume_status = vm.vmi.instance.status.volumeStatus[0]
-    assert HOTPLUG_VOLUME not in volume_status, (
-        f"{HOTPLUG_VOLUME} in {volume_status}, hotplug disk should become a regular disk for VM"
-    )
+def assert_hotplugvolume_nonexist(vm: virt_util.VirtualMachineForTests) -> None:
+    """Assert no volume in the VM still carries a hotplugVolume marker.
+
+    After a hotplugged disk is persisted the marker must be removed from every
+    volumeStatus entry; a leftover indicates the disk was not fully converted
+    to a regular disk.
+
+    Args:
+        vm: Virtual machine instance to inspect.
+    """
+    for volume_status in vm.vmi.instance.status.volumeStatus:
+        assert HOTPLUG_VOLUME not in volume_status, (
+            f"{HOTPLUG_VOLUME} in {volume_status}, hotplug disk should become a regular disk for VM"
+        )
 
 
 def wait_for_vm_volume_ready(
