@@ -722,6 +722,10 @@ class VirtualMachineForTests(VirtualMachine):
 
             self.res["spec"] = self.body["spec"]
 
+            # body metadata replaces self.res["metadata"]; re-apply caller-provided root metadata.
+            if self.label:
+                self.res["metadata"].setdefault("labels", {}).update(self.label)
+
             if self.annotations:
                 self.res["metadata"].setdefault("annotations", {}).update(self.annotations)
 
