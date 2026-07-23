@@ -1275,6 +1275,8 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
         tpm_params=None,
         additional_labels=None,
         vm_affinity=None,
+        vm_instance_type=None,
+        vm_preference=None,
     ):
         """
         VM creation using common templates.
@@ -1349,6 +1351,8 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
             additional_labels=additional_labels,
             vm_affinity=vm_affinity,
             os_flavor=self.os_flavor,
+            vm_instance_type=vm_instance_type,
+            vm_preference=vm_preference,
         )
         self.data_source = data_source
         self.data_volume_template = data_volume_template
@@ -1372,6 +1376,12 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
         self.set_login_params()
         self.body = self.process_template()
         super().to_dict()
+
+        if self.vm_instance_type or self.vm_instance_type_infer:
+            domain = self.body["spec"]["template"]["spec"]["domain"]
+            domain.pop("cpu", None)
+            domain.pop("memory", None)
+            self.body["metadata"].get("annotations", {}).pop("vm.kubevirt.io/validations", None)
 
         if self.vm_dict:
             merge_dicts(source_dict=self.vm_dict, target_dict=self.res)
@@ -2098,6 +2108,8 @@ def vm_instance_from_template(
     host_device_name=None,
     gpu_name=None,
     vm_affinity=None,
+    vm_instance_type=None,
+    vm_preference=None,
 ):
     """Create a VM from template and start it (start step could be skipped by setting
     request.param['start_vm'] to False.
@@ -2148,6 +2160,8 @@ def vm_instance_from_template(
         machine_type=params.get("machine_type"),
         eviction_strategy=params.get("eviction_strategy"),
         vm_affinity=vm_affinity,
+        vm_instance_type=vm_instance_type,
+        vm_preference=vm_preference,
     ) as vm:
         if params.get("start_vm", True):
             running_vm(
