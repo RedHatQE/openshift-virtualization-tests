@@ -5,6 +5,7 @@ import requests
 from ocp_resources.prometheus_rule import PrometheusRule
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+from tests.observability.runbook_url.utils import github_blob_url_to_raw
 from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_10SEC
 
 LOGGER = logging.getLogger(__name__)
@@ -21,7 +22,7 @@ def cnv_prometheus_rule_alerts(hco_namespace):
     for prometheus_rule in PrometheusRule.get(namespace=hco_namespace.name):
         LOGGER.info(f"Loading alerts from rule: {prometheus_rule.name}")
         result[prometheus_rule.name] = {
-            alert.get("alert"): (alert.get("annotations") or {}).get("runbook_url")
+            alert.get("alert"): alert.get("annotations").get("runbook_url")
             for group in prometheus_rule.instance.spec.groups
             for alert in group["rules"]
             if alert.get("alert")
@@ -45,10 +46,9 @@ def available_runbook_urls(cnv_prometheus_rule_alerts):
     LOGGER.info(f"Validating {len(unique_urls)} unique runbook URLs")
 
     available_urls: set[str] = set()
-    session = requests.Session()
-    try:
+    with requests.Session() as session:
         for runbook_url in sorted(unique_urls):
-            raw_url = runbook_url.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
+            raw_url = github_blob_url_to_raw(blob_url=runbook_url)
             sample = None
             try:
                 for sample in TimeoutSampler(
@@ -71,7 +71,5 @@ def available_runbook_urls(cnv_prometheus_rule_alerts):
                     f"Runbook URL unreachable after retries: {raw_url}, "
                     f"status: {sample.status_code if sample else 'no response'}"
                 )
-    finally:
-        session.close()
 
     return available_urls
