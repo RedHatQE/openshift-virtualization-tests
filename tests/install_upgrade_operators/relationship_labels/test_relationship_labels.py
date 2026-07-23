@@ -4,7 +4,6 @@ import logging
 import pytest
 
 from tests.install_upgrade_operators.relationship_labels.constants import (
-    EXPECTED_RELATED_OBJECTS_LABELS_DICT_MAP,
     EXPECTED_VIRT_DAEMONSETS_LABELS_DICT_MAP,
     EXPECTED_VIRT_DEPLOYMENTS_LABELS_DICT_MAP,
     EXPECTED_VIRT_PODS_LABELS_DICT_MAP,
@@ -26,85 +25,62 @@ pytestmark = [
 LOGGER = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="class")
-def expected_label_dictionary(hco_version_scope_class, request):
+def _build_expected_labels(labels_dict_map: dict, hco_version: str) -> dict:
+    """Build expected labels dict with the current HCO version filled in.
+
+    Args:
+        labels_dict_map: Static expected labels map with VERSION_LABEL_KEY set to None.
+        hco_version: Current HCO version string.
+
+    Returns:
+        dict: Deep copy with VERSION_LABEL_KEY populated.
     """
-    Populate each labels dict (RELATED_OBJECTS_LABELS_DICT_MAP / COMPONENT_LABELS_DICT_MAP)
-    with updates cnv current version, deepcopy and return  updated expected labels dict
-    """
-    expected_labels_dict = request.param["expected_labels_dict"]
-    updated_expected_labels_dict = copy.deepcopy(expected_labels_dict)
-    for deployment_labels in updated_expected_labels_dict.values():
-        deployment_labels[VERSION_LABEL_KEY] = hco_version_scope_class
-    return updated_expected_labels_dict
+    updated = copy.deepcopy(labels_dict_map)
+    for component_labels in updated.values():
+        component_labels[VERSION_LABEL_KEY] = hco_version
+    return updated
 
 
 class TestRelationshipLabels:
-    @pytest.mark.parametrize(
-        "expected_label_dictionary",
-        [
-            pytest.param(
-                {"expected_labels_dict": EXPECTED_VIRT_DEPLOYMENTS_LABELS_DICT_MAP},
-                marks=pytest.mark.polarion("CNV-7190"),
-            ),
-        ],
-        indirect=True,
-    )
-    def test_verify_mismatch_relationship_labels_deployments(self, expected_label_dictionary, cnv_deployment_by_name):
-        verify_component_labels_by_resource(
-            component=cnv_deployment_by_name,
-            expected_component_labels=expected_label_dictionary,
-        )
-
-    @pytest.mark.parametrize(
-        "expected_label_dictionary",
-        [
-            pytest.param(
-                {"expected_labels_dict": EXPECTED_VIRT_DAEMONSETS_LABELS_DICT_MAP},
-                marks=pytest.mark.polarion("CNV-7269"),
-            ),
-        ],
-        indirect=True,
-    )
-    def test_verify_mismatch_relationship_labels_daemonsets(self, expected_label_dictionary, cnv_daemonset_by_name):
-        verify_component_labels_by_resource(
-            component=cnv_daemonset_by_name,
-            expected_component_labels=expected_label_dictionary,
-        )
-
-    @pytest.mark.parametrize(
-        "expected_label_dictionary",
-        [
-            pytest.param(
-                {"expected_labels_dict": EXPECTED_VIRT_PODS_LABELS_DICT_MAP},
-                marks=pytest.mark.polarion("CNV-10307"),
-            ),
-        ],
-        indirect=True,
-    )
-    def test_verify_mismatch_relationship_labels_pods(self, expected_label_dictionary, cnv_pods_by_type):
-        for pod in cnv_pods_by_type:
-            verify_component_labels_by_resource(
-                component=pod,
-                expected_component_labels=expected_label_dictionary,
-            )
-
-    @pytest.mark.parametrize(
-        "expected_label_dictionary",
-        [
-            pytest.param(
-                {"expected_labels_dict": EXPECTED_RELATED_OBJECTS_LABELS_DICT_MAP},
-                marks=pytest.mark.polarion("CNV-7189"),
-            ),
-        ],
-        indirect=True,
-    )
-    def test_verify_relationship_labels_hco_components(
-        self,
-        expected_label_dictionary,
-        ocp_resource_by_name,
+    @pytest.mark.polarion("CNV-7190")
+    def test_verify_mismatch_relationship_labels_deployments(
+        self, subtests, discovered_cnv_deployments, hco_version_scope_class
     ):
-        verify_component_labels_by_resource(
-            component=ocp_resource_by_name,
-            expected_component_labels=expected_label_dictionary,
+        expected_labels = _build_expected_labels(
+            labels_dict_map=EXPECTED_VIRT_DEPLOYMENTS_LABELS_DICT_MAP,
+            hco_version=hco_version_scope_class,
         )
+        for deployment in discovered_cnv_deployments:
+            with subtests.test(msg=deployment.name):
+                verify_component_labels_by_resource(
+                    component=deployment,
+                    expected_component_labels=expected_labels,
+                )
+
+    @pytest.mark.polarion("CNV-7269")
+    def test_verify_mismatch_relationship_labels_daemonsets(
+        self, subtests, discovered_cnv_daemonsets, hco_version_scope_class
+    ):
+        expected_labels = _build_expected_labels(
+            labels_dict_map=EXPECTED_VIRT_DAEMONSETS_LABELS_DICT_MAP,
+            hco_version=hco_version_scope_class,
+        )
+        for daemonset in discovered_cnv_daemonsets:
+            with subtests.test(msg=daemonset.name):
+                verify_component_labels_by_resource(
+                    component=daemonset,
+                    expected_component_labels=expected_labels,
+                )
+
+    @pytest.mark.polarion("CNV-10307")
+    def test_verify_mismatch_relationship_labels_pods(self, subtests, discovered_cnv_pods, hco_version_scope_class):
+        expected_labels = _build_expected_labels(
+            labels_dict_map=EXPECTED_VIRT_PODS_LABELS_DICT_MAP,
+            hco_version=hco_version_scope_class,
+        )
+        for pod in discovered_cnv_pods:
+            with subtests.test(msg=pod.name):
+                verify_component_labels_by_resource(
+                    component=pod,
+                    expected_component_labels=expected_labels,
+                )
