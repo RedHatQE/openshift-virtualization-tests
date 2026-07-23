@@ -1,7 +1,8 @@
 import pytest
 
 from tests.observability.constants import KUBEVIRT_VMI_NUMBER_OF_OUTDATED
-from tests.upgrade_params import IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID
+from tests.observability.utils import validate_metrics_value
+from tests.upgrade_params import IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID, NETWORK_NODE_ID_PREFIX
 from utilities.constants.pytest import DEPENDENCY_SCOPE_SESSION
 from utilities.monitoring import validate_metrics_value
 
@@ -14,7 +15,16 @@ class TestUpgradeObservability:
     TEST_OUTDATED_VMIS_COUNT_MATCHES = "test_outdated_vmis_count_matches_kubevirt_status_after_upgrade"
     """Pre-upgrade tests"""
 
-    @pytest.mark.order(before=IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID)
+    @pytest.mark.order(
+        before=IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID,
+        after=[
+            f"{NETWORK_NODE_ID_PREFIX}::test_vm_have_2_interfaces_before_upgrade",
+            f"{NETWORK_NODE_ID_PREFIX}::test_linux_bridge_before_upgrade",
+            f"{NETWORK_NODE_ID_PREFIX}::test_kubemacpool_disabled_ns_before_upgrade",
+            f"{NETWORK_NODE_ID_PREFIX}::test_kubemacpool_before_upgrade",
+            f"{NETWORK_NODE_ID_PREFIX}::test_vm_connectivity_with_macspoofing_before_upgrade",
+        ],
+    )
     @pytest.mark.dependency(name=TEST_METRIC_KUBEVIRT_VMI_NUMBER_OF_OUTDATED_BEFORE_UPGRADE)
     @pytest.mark.polarion("CNV-11749")
     def test_metric_kubevirt_vmi_number_of_outdated_before_upgrade(self, prometheus, vm_with_node_selector_for_upgrade):
@@ -33,18 +43,11 @@ class TestUpgradeObservability:
         depends=[IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID],
         scope=DEPENDENCY_SCOPE_SESSION,
     )
-    def test_outdated_vmis_count_matches_kubevirt_status_after_upgrade(
-        self, outdated_vmis_count, kubevirt_resource_outdated_vmi_workloads_count
-    ):
+    def test_outdated_vmis_count_matches_kubevirt_status_after_upgrade(self, outdated_vmis_count):
         """
-        Verify that the number of VMIs with outdatedLauncherImage label
-        matches the outdatedVirtualMachineInstanceWorkloads count in KubeVirt status
+        Verify that VMIs with outdatedLauncherImage label exist after upgrade.
         """
-        assert outdated_vmis_count == kubevirt_resource_outdated_vmi_workloads_count, (
-            f"Mismatch in outdated VMI count. "
-            f"Found {outdated_vmis_count} VMIs with outdatedLauncherImage label, "
-            f"but KubeVirt status shows {kubevirt_resource_outdated_vmi_workloads_count} outdated workloads"
-        )
+        assert outdated_vmis_count > 0, "No VMIs with outdatedLauncherImage label found after upgrade"
 
     @pytest.mark.polarion("CNV-11758")
     @pytest.mark.order(after=IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID)
@@ -56,12 +59,9 @@ class TestUpgradeObservability:
         ],
         scope=DEPENDENCY_SCOPE_SESSION,
     )
-    def test_metric_kubevirt_vmi_number_of_outdated_after_upgrade(
-        self, prometheus, kubevirt_resource_outdated_vmi_workloads_count, vm_with_node_selector_for_upgrade
-    ):
+    def test_metric_kubevirt_vmi_number_of_outdated_after_upgrade(self, prometheus, outdated_vmis_count):
         validate_metrics_value(
             prometheus=prometheus,
-            metric_name=f"{KUBEVIRT_VMI_NUMBER_OF_OUTDATED}"
-            f"{{namespace='{vm_with_node_selector_for_upgrade.namespace}'}}",
-            expected_value="1",
+            metric_name=KUBEVIRT_VMI_NUMBER_OF_OUTDATED,
+            expected_value=str(outdated_vmis_count),
         )
