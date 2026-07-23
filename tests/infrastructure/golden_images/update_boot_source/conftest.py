@@ -40,6 +40,11 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture()
+def data_source_by_name_scope_function(request, admin_client, golden_images_namespace):
+    return DataSource(client=admin_client, name=request.param, namespace=golden_images_namespace.name)
+
+
+@pytest.fixture()
 def enabled_common_boot_image_import_feature_gate_scope_function(
     admin_client,
     hyperconverged_resource_scope_function,

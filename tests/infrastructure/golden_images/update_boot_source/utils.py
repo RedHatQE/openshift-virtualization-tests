@@ -1,33 +1,41 @@
 import logging
 import re
+from contextlib import contextmanager
 
 import requests
 from bs4 import BeautifulSoup
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.data_source import DataSource
+from ocp_resources.datavolume import DataVolume
 from ocp_resources.namespace import Namespace
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.template import Template
 from ocp_resources.volume_snapshot import VolumeSnapshot
 from packaging.version import Version
+from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+from tests.infrastructure.golden_images.constants import DATA_SOURCE_READY_FOR_CONSUMPTION_MESSAGE
+from utilities.constants import Images
 from utilities.constants.images import DEFAULT_FEDORA_REGISTRY_URL
-from utilities.constants.storage import WILDCARD_CRON_EXPRESSION
+from utilities.constants.storage import BIND_IMMEDIATE_ANNOTATION, REGISTRY_STR, WILDCARD_CRON_EXPRESSION
 from utilities.constants.timeouts import (
     TIMEOUT_2MIN,
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
     TIMEOUT_30SEC,
 )
+from utilities.exceptions import ResourceValueError
 from utilities.infra import generate_openshift_pull_secret_file
 from utilities.ssp import (
     get_data_import_crons,
     matrix_auto_boot_data_import_cron_prefixes,
+    wait_for_condition_message_value,
 )
 from utilities.storage import (
     DATA_IMPORT_CRON_SUFFIX,
     RESOURCE_MANAGED_BY_DATA_IMPORT_CRON_LABEL,
+    construct_datavolume_source_dict,
 )
 from utilities.virt import get_oc_image_info
 
@@ -234,3 +242,69 @@ def wait_for_created_volume_from_data_import_cron(custom_data_source: DataSource
             f"DataSource conditions: {custom_data_source.instance.get('status', {}).get('conditions')}"
         )
         raise
+
+
+@contextmanager
+def dv_for_data_source(name, data_source, client):
+    """
+    Creates a registry-sourced DataVolume using the default Fedora image, waits for the DV to
+    succeed, then waits for the DataSource to report it is ready for consumption. The underlying
+    OS choice is irrelevant — the DV is used only to provide a backing volume for the DataSource.
+
+    Args:
+        name (str): Name for the DataVolume to create.
+        data_source (DataSource): The DataSource whose namespace the DV is created in.
+            The DataSource is also monitored for readiness after the DV succeeds.
+        client (DynamicClient): Client used to create the DataVolume.
+
+    Yields:
+        DataVolume: The created and ready DataVolume resource.
+    """
+    with DataVolume(
+        client=client,
+        name=name,
+        namespace=data_source.namespace,
+        source_dict=construct_datavolume_source_dict(source=REGISTRY_STR, url=DEFAULT_FEDORA_REGISTRY_URL),
+        size=Images.Fedora.DEFAULT_DV_SIZE,
+        storage_class=py_config["default_storage_class"],
+        annotations=BIND_IMMEDIATE_ANNOTATION,
+        api_name="storage",
+    ) as dv:
+        dv.wait_for_dv_success()
+        wait_for_condition_message_value(
+            resource=data_source,
+            expected_message=DATA_SOURCE_READY_FOR_CONSUMPTION_MESSAGE,
+        )
+        yield dv
+
+
+def wait_for_data_source_unchanged_referenced_volume(data_source, volume_name):
+    """
+    Assert that a DataSource's referenced volume does not change within a short observation window.
+
+    Polls the DataSource and raises ResourceValueError immediately if the
+    source name diverges from ``volume_name``. A TimeoutExpiredError (meaning no change was
+    observed) is treated as success and suppressed.
+
+    Args:
+        data_source (DataSource): The DataSource resource to observe.
+        volume_name (str): The volume name that must remain as the DataSource's source reference.
+
+    Raises:
+        ResourceValueError: If the DataSource's source reference changes to a different volume
+            before the observation window expires.
+    """
+    try:
+        for sample in TimeoutSampler(
+            wait_timeout=TIMEOUT_30SEC,
+            sleep=TIMEOUT_5SEC,
+            func=lambda: data_source.source.name != volume_name,
+        ):
+            if sample:
+                raise ResourceValueError(
+                    f"DataSource {data_source.name} volume reference was updated, "
+                    f"expected {volume_name}, "
+                    f"spec: {data_source.instance.spec}"
+                )
+    except TimeoutExpiredError:
+        return
