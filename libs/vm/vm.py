@@ -10,6 +10,7 @@ from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from pytest_testconfig import config as py_config
+from timeout_sampler import retry
 
 from libs.net.vmspec import VMInterfaceSpecNotFoundError
 from libs.vm.spec import (
@@ -147,7 +148,7 @@ class BaseVirtualMachine(VirtualMachine):
         ).update()
 
     def set_template_affinity(self, affinity: Affinity | None) -> None:
-        """Replace the VM template affinity.
+        """Replace the VM template affinity and wait for the VMI to reflect it.
 
         Serializes without dict_factory so that None-valued fields (e.g. podAffinity: None)
         are preserved as null in the merge patch, ensuring the old affinity type is removed.
@@ -159,6 +160,15 @@ class BaseVirtualMachine(VirtualMachine):
         template_affinity = asdict(obj=affinity) if affinity else None
         patches = {self: {"spec": {"template": {"spec": {"affinity": template_affinity}}}}}
         ResourceEditor(patches=patches).update()
+        expected_affinity = asdict(obj=affinity, dict_factory=self._filter_out_none_values) if affinity else None
+        self._expected_vmi_affinity(expected_affinity=expected_affinity)
+
+    @retry(wait_timeout=10, sleep=1)
+    def _expected_vmi_affinity(self, expected_affinity: dict[str, Any] | None) -> bool:
+        vmi_affinity = self.vmi.instance.to_dict()["spec"].get("affinity")
+        if vmi_affinity != expected_affinity:
+            raise ValueError(f"VMI {self.name} affinity mismatch: expected {expected_affinity}, got {vmi_affinity}")
+        return True
 
     @property
     def template_spec(self) -> VMISpec:
