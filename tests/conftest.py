@@ -70,9 +70,7 @@ from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutSampler
 
 import utilities.hco
-from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster, supported_cluster_ip_versions
-from libs.net.ip import filter_link_local_addresses, random_cidr_addresses_by_family
-from libs.net.vmspec import lookup_iface_status
+from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
 from tests.utils import download_and_extract_tar
 from utilities.artifactory import get_artifactory_header, get_http_image_url, get_test_artifact_server_url
 from utilities.bitwarden import get_cnv_tests_secret_by_name
@@ -111,9 +109,7 @@ from utilities.constants.hco import (
     DATA_SOURCE_NAME,
     FEATURE_GATES,
     HCO_SUBSCRIPTION,
-    HOTFIX_STR,
     SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
-    UpgradeStreams,
 )
 from utilities.constants.images import OS_FLAVOR_RHEL
 from utilities.constants.instance_types import (
@@ -133,7 +129,7 @@ from utilities.constants.pytest import (
     UNPRIVILEGED_PASSWORD,
     UNPRIVILEGED_USER,
 )
-from utilities.constants.storage import BIND_IMMEDIATE_ANNOTATION, StorageClassNames
+from utilities.constants.storage import StorageClassNames
 from utilities.constants.timeouts import (
     TIMEOUT_3MIN,
     TIMEOUT_4MIN,
@@ -141,7 +137,6 @@ from utilities.constants.timeouts import (
 )
 from utilities.constants.virt import (
     CNV_VM_SSH_KEY_PATH,
-    ES_NONE,
     MIGRATION_POLICY_VM_LABEL,
     NODE_HUGE_PAGES_1GI_KEY,
     VIRTIO,
@@ -183,25 +178,19 @@ from utilities.infra import (
 from utilities.network import (
     EthernetNetworkConfigurationPolicy,
     MacPool,
-    cloud_init_network_data,
     enable_hyperconverged_ovs_annotations,
     get_cluster_cni_type,
-    network_device,
-    network_nad,
-    wait_for_node_marked_by_bridge,
     wait_for_ovs_daemonset_resource,
     wait_for_ovs_status,
 )
 from utilities.operator import (
     disable_default_sources_in_operatorhub,
-    get_hco_csv_name_by_version,
     get_machine_config_pool_by_name,
 )
 from utilities.pytest_utils import exit_pytest_execution
 from utilities.sanity import cluster_sanity
 from utilities.ssp import get_data_import_crons, get_ssp_resource
 from utilities.storage import (
-    construct_datavolume_source_dict,
     create_or_update_data_source,
     data_volume,
     get_default_storage_class,
@@ -1645,186 +1634,6 @@ def term_handler_scope_session():
 
 
 @pytest.fixture(scope="session")
-def upgrade_bridge_on_all_nodes(
-    admin_client,
-    label_schedulable_nodes,
-    hosts_common_available_ports,
-):
-    with network_device(
-        interface_type=LINUX_BRIDGE,
-        nncp_name="upgrade-bridge",
-        interface_name="br1upgrade",
-        node_selector_labels=NODE_TYPE_WORKER_LABEL,
-        ports=[hosts_common_available_ports[0]],
-        client=admin_client,
-    ) as br:
-        yield br
-
-
-@pytest.fixture(scope="session")
-def bridge_on_one_node(admin_client, worker_node1):
-    with network_device(
-        interface_type=LINUX_BRIDGE,
-        nncp_name="upgrade-br-marker",
-        interface_name="upg-br-mark",
-        node_selector=get_node_selector_dict(node_selector=worker_node1.name),
-        client=admin_client,
-    ) as br:
-        yield br
-
-
-@pytest.fixture(scope="session")
-def upgrade_bridge_marker_nad(admin_client, bridge_on_one_node, kmp_enabled_namespace, worker_node1):
-    with network_nad(
-        nad_type=LINUX_BRIDGE,
-        nad_name=bridge_on_one_node.bridge_name,
-        interface_name=bridge_on_one_node.bridge_name,
-        namespace=kmp_enabled_namespace,
-        client=admin_client,
-    ) as nad:
-        wait_for_node_marked_by_bridge(bridge_nad=nad, node=worker_node1)
-        yield nad
-
-
-@pytest.fixture(scope="session")
-def running_vm_upgrade_a(
-    unprivileged_client,
-    upgrade_bridge_marker_nad,
-    kmp_enabled_namespace,
-    upgrade_br1test_nad,
-):
-    name = "vm-upgrade-a"
-    cloud_init_data = cloud_init_network_data(
-        data={"ethernets": {"eth1": {"addresses": random_cidr_addresses_by_family(net_seed=0, host_address=1)}}}
-    )
-    with VirtualMachineForTests(
-        name=name,
-        namespace=kmp_enabled_namespace.name,
-        networks={upgrade_bridge_marker_nad.name: upgrade_bridge_marker_nad.name},
-        interfaces=[upgrade_bridge_marker_nad.name],
-        client=unprivileged_client,
-        cloud_init_data=cloud_init_data,
-        body=fedora_vm_body(name=name),
-        eviction_strategy=ES_NONE,
-    ) as vm:
-        running_vm(vm=vm, wait_for_cloud_init=True)
-        ip_families = supported_cluster_ip_versions()
-        lookup_iface_status(
-            vm=vm,
-            iface_name=upgrade_bridge_marker_nad.name,
-            predicate=lambda interface: (
-                len(filter_link_local_addresses(ip_addresses=interface.get("ipAddresses", []))) == len(ip_families)
-            ),
-        )
-        yield vm
-
-
-@pytest.fixture(scope="session")
-def running_vm_upgrade_b(
-    unprivileged_client,
-    upgrade_bridge_marker_nad,
-    kmp_enabled_namespace,
-    upgrade_br1test_nad,
-):
-    name = "vm-upgrade-b"
-    cloud_init_data = cloud_init_network_data(
-        data={"ethernets": {"eth1": {"addresses": random_cidr_addresses_by_family(net_seed=0, host_address=2)}}}
-    )
-    with VirtualMachineForTests(
-        name=name,
-        namespace=kmp_enabled_namespace.name,
-        networks={upgrade_bridge_marker_nad.name: upgrade_bridge_marker_nad.name},
-        interfaces=[upgrade_bridge_marker_nad.name],
-        client=unprivileged_client,
-        cloud_init_data=cloud_init_data,
-        body=fedora_vm_body(name=name),
-        eviction_strategy=ES_NONE,
-    ) as vm:
-        running_vm(vm=vm, wait_for_cloud_init=True)
-        ip_families = supported_cluster_ip_versions()
-        lookup_iface_status(
-            vm=vm,
-            iface_name=upgrade_bridge_marker_nad.name,
-            predicate=lambda interface: (
-                len(filter_link_local_addresses(ip_addresses=interface.get("ipAddresses", []))) == len(ip_families)
-            ),
-        )
-        yield vm
-
-
-@pytest.fixture(scope="session")
-def upgrade_br1test_nad(admin_client, upgrade_namespace_scope_session, upgrade_bridge_on_all_nodes):
-    with network_nad(
-        nad_type=LINUX_BRIDGE,
-        nad_name=upgrade_bridge_on_all_nodes.bridge_name,
-        interface_name=upgrade_bridge_on_all_nodes.bridge_name,
-        namespace=upgrade_namespace_scope_session,
-        client=admin_client,
-    ) as nad:
-        yield nad
-
-
-@pytest.fixture(scope="session")
-def cnv_upgrade_stream(admin_client, pytestconfig, cnv_current_version, cnv_target_version):
-    """
-    Verify if the upgrade can be performed by comparing the current and target versions.
-
-    Args:
-        admin_client: The admin client instance.
-        pytestconfig: The pytest configuration object.
-        cnv_current_version: The current CNV version.
-        cnv_target_version: The target CNV version.
-    """
-    upgrade_stream = determine_upgrade_stream(
-        current_version=cnv_current_version,
-        target_version=cnv_target_version,
-    )
-
-    LOGGER.info(
-        f"CNV upgrade:\n"
-        f"Current version: {cnv_current_version},\n"
-        f"Target version: {cnv_target_version},\n"
-        f"Upgrade stream: {upgrade_stream},\n"
-    )
-    return upgrade_stream
-
-
-def determine_upgrade_stream(current_version, target_version):
-    current_cnv_version = parse(version=current_version.split("-")[0])
-    target_cnv_version = parse(version=target_version.split("-")[0])
-
-    if current_cnv_version.major < target_cnv_version.major:
-        return UpgradeStreams.X_STREAM
-    elif current_cnv_version.minor < target_cnv_version.minor:
-        return UpgradeStreams.Y_STREAM
-    elif current_cnv_version.micro < target_cnv_version.micro:
-        return UpgradeStreams.Z_STREAM
-    elif HOTFIX_STR in current_version:
-        # if we reach here, this is an upgrade out of hotfix to next z-stream
-        return UpgradeStreams.Z_STREAM
-    else:
-        if target_cnv_version <= current_cnv_version:
-            # Upgrade only if a newer CNV version is requested
-            raise ValueError(
-                f"Cannot upgrade to older/identical versions,"
-                f"current: {cnv_current_version} target: {target_cnv_version}"
-            )
-        raise ValueError(
-            f"Unknown upgrade stream. Current cnv version: {current_cnv_version}, "
-            f"target cnv version: {target_cnv_version}."
-        )
-
-
-@pytest.fixture(scope="session")
-def upgrade_namespace_scope_session(admin_client, unprivileged_client):
-    yield from create_ns(
-        unprivileged_client=unprivileged_client,
-        admin_client=admin_client,
-        name="test-upgrade-namespace",
-    )
-
-
-@pytest.fixture(scope="session")
 def kmp_enabled_namespace(kmp_vm_label, unprivileged_client, admin_client):
     # Enabling label "allocate" (or any other non-configured label) - Allocates.
     kmp_vm_label[KMP_VM_ASSIGNMENT_LABEL] = KMP_ENABLED_LABEL
@@ -1849,21 +1658,6 @@ def rhel_latest_os_params():
         }
 
     raise ValueError("Failed to get latest RHEL OS parameters")
-
-
-@pytest.fixture(scope="session")
-def hco_target_csv_name(cnv_target_version):
-    return get_hco_csv_name_by_version(cnv_target_version=cnv_target_version) if cnv_target_version else None
-
-
-@pytest.fixture(scope="session")
-def cnv_target_version(pytestconfig):
-    return pytestconfig.option.cnv_version
-
-
-@pytest.fixture(scope="session")
-def cnv_channel(pytestconfig):
-    return pytestconfig.option.cnv_channel
 
 
 @pytest.fixture()
@@ -2110,16 +1904,6 @@ def audit_logs(session_start_time):
 @pytest.fixture(scope="session")
 def installing_cnv(pytestconfig):
     return pytestconfig.option.install
-
-
-@pytest.fixture(scope="session")
-def is_production_source(cnv_source):
-    return cnv_source == "production"
-
-
-@pytest.fixture(scope="session")
-def cnv_source(pytestconfig):
-    return pytestconfig.option.cnv_source or "osbs"
 
 
 @pytest.fixture(scope="session")
@@ -2461,11 +2245,6 @@ def rhel_vm_with_cluster_instance_type_and_preference(namespace, unprivileged_cl
 
 
 @pytest.fixture(scope="session")
-def upgrade_skip_default_sc_setup(pytestconfig):
-    return pytestconfig.option.upgrade_skip_default_sc_setup
-
-
-@pytest.fixture(scope="session")
 def updated_default_storage_class_ocs_virt(
     admin_client,
     upgrade_skip_default_sc_setup,
@@ -2507,50 +2286,6 @@ def updated_default_storage_class_ocs_virt(
             )
     else:
         yield
-
-
-@pytest.fixture(scope="session")
-def dvs_for_upgrade(
-    admin_client,
-    worker_node1,
-    rhel_latest_os_params,
-    updated_default_storage_class_ocs_virt,
-):
-    golden_images_namespace_name = py_config["golden_images_namespace"]
-    dvs_list = []
-    artifactory_secret = utilities.artifactory.get_artifactory_secret(namespace=golden_images_namespace_name)
-    artifactory_config_map = utilities.artifactory.get_artifactory_config_map(namespace=golden_images_namespace_name)
-
-    for sc in py_config["storage_class_matrix"]:
-        storage_class = [*sc][0]
-        dv = DataVolume(
-            client=admin_client,
-            name=f"dv-for-product-upgrade-{storage_class}",
-            namespace=golden_images_namespace_name,
-            source_dict=construct_datavolume_source_dict(
-                source="http",
-                url=rhel_latest_os_params["rhel_image_path"],
-                secret_name=artifactory_secret.name,
-                cert_configmap_name=artifactory_config_map.name,
-            ),
-            storage_class=storage_class,
-            size=rhel_latest_os_params["rhel_dv_size"],
-            annotations=BIND_IMMEDIATE_ANNOTATION,
-            api_name="storage",
-        )
-        dv.create()
-        dvs_list.append(dv)
-    for dv in dvs_list:
-        dv.wait_for_dv_success()
-
-    yield dvs_list
-
-    for dv in dvs_list:
-        dv.clean_up()
-    utilities.artifactory.cleanup_artifactory_secret_and_config_map(
-        artifactory_secret=artifactory_secret,
-        artifactory_config_map=artifactory_config_map,
-    )
 
 
 @pytest.fixture(scope="class")
