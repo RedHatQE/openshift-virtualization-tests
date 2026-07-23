@@ -660,28 +660,31 @@ def data_volume_template_dict_with_pvc_source(
     size: str | None = None,
     storage_class: str | None = None,
 ) -> dict[str, Any]:
-    source_dv_pvc_spec = source_dv.pvc.instance.spec
     dv = DataVolume(
         name=target_dv_name,
         namespace=target_dv_namespace,
+        client=source_dv.client,
         source_dict=construct_datavolume_source_dict(
             source="pvc",
             source_pvc_name=source_dv.name,
             source_pvc_namespace=source_dv.namespace,
         ),
-        storage_class=storage_class or source_dv_pvc_spec.storageClassName,
-        volume_mode=volume_mode or source_dv_pvc_spec.volumeMode,
+        storage_class=storage_class,
+        volume_mode=volume_mode,
         size=size or source_dv.size,
-        api_name=source_dv.api_name,
+        api_name="storage",
     )
     dv.to_dict()
     return dv.res
 
 
-def data_volume_template_with_source_ref_dict(data_source, storage_class=None):
+def data_volume_template_with_source_ref_dict(
+    data_source: DataSource, storage_class: str | None = None
+) -> dict[str, Any]:
     dv = DataVolume(
         name=utilities.infra.unique_name(name=data_source.name),
         namespace=data_source.namespace,
+        client=data_source.client,
         size=get_dv_size_from_datasource(data_source=data_source),
         storage_class=storage_class,
         api_name="storage",
