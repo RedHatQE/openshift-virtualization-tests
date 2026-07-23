@@ -1807,7 +1807,7 @@ def determine_upgrade_stream(current_version, target_version):
             # Upgrade only if a newer CNV version is requested
             raise ValueError(
                 f"Cannot upgrade to older/identical versions,"
-                f"current: {cnv_current_version} target: {target_cnv_version}"
+                f"current: {current_cnv_version} target: {target_cnv_version}"
             )
         raise ValueError(
             f"Unknown upgrade stream. Current cnv version: {current_cnv_version}, "
