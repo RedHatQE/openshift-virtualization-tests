@@ -63,11 +63,12 @@ def generate_data_import_cron_dict(
     }
 
 
-def template_labels(os):
+def template_labels(os, architecture=None):
     return Template.generate_template_labels(
         os=os,
         workload=Template.Workload.SERVER,
         flavor=Template.Flavor.SMALL,
+        architecture=architecture,
     )
 
 

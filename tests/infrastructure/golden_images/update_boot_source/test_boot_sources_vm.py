@@ -60,6 +60,7 @@ def auto_update_boot_source_instance_type_vm(
         yield vm
 
 
+@pytest.mark.arm64
 @pytest.mark.polarion("CNV-11774")
 def test_instance_type_vm_from_auto_update_boot_source(
     auto_update_boot_source_instance_type_vm,
