@@ -25,12 +25,7 @@ import requests
 import yaml
 from bs4 import BeautifulSoup
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
-from ocp_resources.application_aware_resource_quota import ApplicationAwareResourceQuota
-from ocp_resources.catalog_source import CatalogSource
-from ocp_resources.cdi import CDI
-from ocp_resources.cdi_config import CDIConfig
 from ocp_resources.cluster_role import ClusterRole
-from ocp_resources.cluster_service_version import ClusterServiceVersion
 from ocp_resources.config_map import ConfigMap
 from ocp_resources.daemonset import DaemonSet
 from ocp_resources.data_source import DataSource
@@ -42,11 +37,9 @@ from ocp_resources.machine import Machine
 from ocp_resources.migration_policy import MigrationPolicy
 from ocp_resources.mutating_webhook_config import MutatingWebhookConfiguration
 from ocp_resources.namespace import Namespace
-from ocp_resources.network_addons_config import NetworkAddonsConfig
 from ocp_resources.node import Node
 from ocp_resources.node_network_state import NodeNetworkState
 from ocp_resources.oauth import OAuth
-from ocp_resources.pod import Pod
 from ocp_resources.resource import ResourceEditor, get_client
 from ocp_resources.role_binding import RoleBinding
 from ocp_resources.secret import Secret
@@ -78,10 +71,6 @@ from utilities.artifactory import get_artifactory_header, get_http_image_url, ge
 from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.cluster import cache_admin_client, get_oc_whoami_username
 from utilities.constants import Images
-from utilities.constants.aaq import (
-    AAQ_NAMESPACE_LABEL,
-    ARQ_QUOTA_HARD_SPEC,
-)
 from utilities.constants.architecture import (
     ARM_64,
     S390X,
@@ -101,7 +90,6 @@ from utilities.constants.cluster import (
     WORKERS_TYPE,
 )
 from utilities.constants.components import (
-    CDI_KUBEVIRT_HYPERCONVERGED,
     CLUSTER,
     KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
     RHEL9_STR,
@@ -109,10 +97,7 @@ from utilities.constants.components import (
 )
 from utilities.constants.hco import (
     DATA_SOURCE_NAME,
-    FEATURE_GATES,
-    HCO_SUBSCRIPTION,
     HOTFIX_STR,
-    SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
     UpgradeStreams,
 )
 from utilities.constants.images import OS_FLAVOR_RHEL
@@ -163,21 +148,16 @@ from utilities.infra import (
     generate_namespace_name,
     generate_openshift_pull_secret_file,
     get_cluster_platform,
-    get_clusterversion,
     get_daemonset_yaml_file_with_image_hash,
     get_deployment_by_name,
-    get_hyperconverged_resource,
     get_infrastructure,
     get_node_selector_dict,
     get_nodes_with_label,
     get_pods,
-    get_subscription,
     get_utility_pods_from_nodes,
     label_nodes,
-    label_project,
     login_with_user_password,
     run_virtctl_command,
-    scale_deployment_replicas,
     wait_for_pods_deletion,
 )
 from utilities.network import (
@@ -193,13 +173,12 @@ from utilities.network import (
     wait_for_ovs_status,
 )
 from utilities.operator import (
-    disable_default_sources_in_operatorhub,
     get_hco_csv_name_by_version,
     get_machine_config_pool_by_name,
 )
 from utilities.pytest_utils import exit_pytest_execution
 from utilities.sanity import cluster_sanity
-from utilities.ssp import get_data_import_crons, get_ssp_resource
+from utilities.ssp import get_data_import_crons
 from utilities.storage import (
     construct_datavolume_source_dict,
     create_or_update_data_source,
@@ -215,9 +194,7 @@ from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
     get_base_templates_list,
-    get_hyperconverged_kubevirt,
     get_hyperconverged_ovs_annotations,
-    get_kubevirt_hyperconverged_spec,
     kubernetes_taint_exists,
     running_vm,
     start_and_fetch_processid_on_linux_vm,
@@ -237,7 +214,6 @@ ACCESS_TOKEN = {
     "accessTokenMaxAgeSeconds": 604800,
     "accessTokenInactivityTimeout": None,
 }
-CNV_NOT_INSTALLED = "CNV not yet installed."
 RWX_FS_STORAGE_CLASS_NAMES_LIST = [
     StorageClassNames.CEPHFS,
     StorageClassNames.TRIDENT_CSI_FSX,
@@ -997,29 +973,6 @@ def worker_nodes_ipv4_false_secondary_nics(
 
 
 @pytest.fixture(scope="session")
-def csv_scope_session(admin_client, hco_namespace, installing_cnv):
-    if not installing_cnv:
-        return utilities.hco.get_installed_hco_csv(admin_client=admin_client, hco_namespace=hco_namespace)
-
-
-@pytest.fixture(scope="session")
-def cnv_current_version(installing_cnv, csv_scope_session):
-    if installing_cnv:
-        return CNV_NOT_INSTALLED
-    if csv_scope_session:
-        version = csv_scope_session.instance.spec.version
-        if not version:
-            raise ValueError("CSV spec.version is missing (field is optional in schema).")
-        return version
-
-
-@pytest.fixture(scope="session")
-def hco_namespace(admin_client, installing_cnv):
-    if not installing_cnv:
-        return utilities.hco.get_hco_namespace(admin_client=admin_client, namespace=py_config["hco_namespace"])
-
-
-@pytest.fixture(scope="session")
 def worker_node1(schedulable_nodes):
     # Get first worker nodes out of schedulable_nodes list
     return schedulable_nodes[0]
@@ -1216,65 +1169,6 @@ def default_sc(admin_client):
         yield
 
 
-@pytest.fixture()
-def hyperconverged_resource_scope_function(admin_client, hco_namespace):
-    return get_hyperconverged_resource(client=admin_client, hco_ns_name=hco_namespace.name)
-
-
-@pytest.fixture(scope="class")
-def hyperconverged_resource_scope_class(admin_client, hco_namespace):
-    return get_hyperconverged_resource(client=admin_client, hco_ns_name=hco_namespace.name)
-
-
-@pytest.fixture(scope="module")
-def hyperconverged_resource_scope_module(admin_client, hco_namespace, installing_cnv):
-    if not installing_cnv:
-        return get_hyperconverged_resource(client=admin_client, hco_ns_name=hco_namespace.name)
-
-
-@pytest.fixture(scope="package")
-def hyperconverged_resource_scope_package(admin_client, hco_namespace, installing_cnv):
-    if not installing_cnv:
-        return get_hyperconverged_resource(client=admin_client, hco_ns_name=hco_namespace.name)
-
-
-@pytest.fixture(scope="session")
-def hyperconverged_resource_scope_session(admin_client, hco_namespace, installing_cnv):
-    if not installing_cnv:
-        return get_hyperconverged_resource(client=admin_client, hco_ns_name=hco_namespace.name)
-
-
-@pytest.fixture()
-def kubevirt_hyperconverged_spec_scope_function(admin_client, hco_namespace, installing_cnv):
-    if not installing_cnv:
-        return get_kubevirt_hyperconverged_spec(admin_client=admin_client, hco_namespace=hco_namespace)
-
-
-@pytest.fixture(scope="module")
-def kubevirt_hyperconverged_spec_scope_module(admin_client, hco_namespace):
-    return get_kubevirt_hyperconverged_spec(admin_client=admin_client, hco_namespace=hco_namespace)
-
-
-@pytest.fixture()
-def kubevirt_config(kubevirt_hyperconverged_spec_scope_function):
-    return kubevirt_hyperconverged_spec_scope_function["configuration"]
-
-
-@pytest.fixture(scope="module")
-def kubevirt_config_scope_module(kubevirt_hyperconverged_spec_scope_module):
-    return kubevirt_hyperconverged_spec_scope_module["configuration"]
-
-
-@pytest.fixture()
-def kubevirt_feature_gates(kubevirt_config):
-    return kubevirt_config["developerConfiguration"][FEATURE_GATES]
-
-
-@pytest.fixture(scope="module")
-def kubevirt_feature_gates_scope_module(kubevirt_config_scope_module):
-    return kubevirt_config_scope_module["developerConfiguration"][FEATURE_GATES]
-
-
 @pytest.fixture(scope="class")
 def ovs_daemonset(admin_client, hco_namespace):
     return wait_for_ovs_daemonset_resource(admin_client=admin_client, hco_namespace=hco_namespace)
@@ -1283,13 +1177,6 @@ def ovs_daemonset(admin_client, hco_namespace):
 @pytest.fixture()
 def hyperconverged_ovs_annotations_fetched(hyperconverged_resource_scope_function):
     return get_hyperconverged_ovs_annotations(hyperconverged=hyperconverged_resource_scope_function)
-
-
-@pytest.fixture(scope="session")
-def network_addons_config_scope_session(admin_client):
-    nac = list(NetworkAddonsConfig.get(client=admin_client))
-    assert nac, "There should be one NetworkAddonsConfig CR."
-    return nac[0]
 
 
 @pytest.fixture(scope="session")
@@ -1346,34 +1233,6 @@ def cluster_storage_classes_names(cluster_storage_classes):
     return [sc.name for sc in cluster_storage_classes]
 
 
-@pytest.fixture(scope="class")
-def hyperconverged_with_node_placement(request, admin_client, hco_namespace, hyperconverged_resource_scope_class):
-    """
-    Update HCO CR with infrastructure and workloads spec.
-    """
-    infra_placement = request.param["infra"]
-    workloads_placement = request.param["workloads"]
-
-    LOGGER.info("Fetching HCO to save its initial node placement configuration ")
-    initial_infra = hyperconverged_resource_scope_class.instance.to_dict()["spec"].get("infra", {})
-    initial_workloads = hyperconverged_resource_scope_class.instance.to_dict()["spec"].get("workloads", {})
-    yield utilities.hco.apply_np_changes(
-        admin_client=admin_client,
-        hco=hyperconverged_resource_scope_class,
-        hco_namespace=hco_namespace,
-        infra_placement=infra_placement,
-        workloads_placement=workloads_placement,
-    )
-    LOGGER.info("Revert to initial HCO node placement configuration ")
-    utilities.hco.apply_np_changes(
-        admin_client=admin_client,
-        hco=hyperconverged_resource_scope_class,
-        hco_namespace=hco_namespace,
-        infra_placement=initial_infra,
-        workloads_placement=initial_workloads,
-    )
-
-
 @pytest.fixture(scope="module")
 def hostpath_provisioner_scope_module():
     yield HostPathProvisioner(name=HostPathProvisioner.Name.HOSTPATH_PROVISIONER)
@@ -1387,11 +1246,6 @@ def hostpath_provisioner_scope_session():
 @pytest.fixture(scope="session")
 def hpp_cr_installed(hostpath_provisioner_scope_session):
     return hostpath_provisioner_scope_session.exists
-
-
-@pytest.fixture(scope="module")
-def cnv_pods(admin_client, hco_namespace):
-    yield list(Pod.get(client=admin_client, namespace=hco_namespace.name))
 
 
 @pytest.fixture(scope="session")
@@ -1469,35 +1323,11 @@ def kmp_enabled_ns(admin_client, kmp_vm_label):
 
 
 @pytest.fixture(scope="session")
-def cdi(hco_namespace):
-    cdi = CDI(name=CDI_KUBEVIRT_HYPERCONVERGED)
-    assert cdi.instance is not None
-    yield cdi
-
-
-@pytest.fixture(scope="session")
-def cdi_config():
-    cdi_config = CDIConfig(name="config")
-    assert cdi_config.instance is not None
-    return cdi_config
-
-
-@pytest.fixture(scope="session")
 def prometheus():
     return Prometheus(
         verify_ssl=False,
         bearer_token=utilities.infra.get_prometheus_k8s_token(duration="86400s"),
     )
-
-
-@pytest.fixture()
-def cdi_spec(cdi):
-    return cdi.instance.to_dict()["spec"]
-
-
-@pytest.fixture()
-def hco_spec(hyperconverged_resource_scope_function):
-    return hyperconverged_resource_scope_function.instance.to_dict()["spec"]
 
 
 @pytest.fixture(scope="session")
@@ -1534,64 +1364,6 @@ def cluster_info(
 
 
 @pytest.fixture(scope="session")
-def ocs_current_version(ocs_storage_class, admin_client):
-    if ocs_storage_class:
-        for csv in ClusterServiceVersion.get(
-            client=admin_client,
-            namespace="openshift-storage",
-            label_selector=f"{ClusterServiceVersion.ApiGroup.OPERATORS_COREOS_COM}/ocs-operator.openshift-storage",
-        ):
-            return csv.instance.spec.version
-
-
-@pytest.fixture(scope="session")
-def openshift_current_version(admin_client):
-    return get_clusterversion(client=admin_client).instance.status.history[0].version
-
-
-@pytest.fixture(scope="session")
-def ocp_current_version(openshift_current_version):
-    return parse(version=openshift_current_version.split("-")[0])
-
-
-@pytest.fixture(scope="session")
-def hco_image(
-    admin_client,
-    installing_cnv,
-    cnv_subscription_scope_session,
-):
-    if installing_cnv:
-        return CNV_NOT_INSTALLED
-    source_name = cnv_subscription_scope_session.instance.spec.source
-    for cs in CatalogSource.get(
-        client=admin_client,
-        name=source_name,
-        namespace=py_config["marketplace_namespace"],
-    ):
-        return cs.instance.spec.image
-
-
-@pytest.fixture(scope="session")
-def cnv_subscription_scope_session(
-    admin_client,
-    installing_cnv,
-    hco_namespace,
-):
-    if not installing_cnv:
-        return get_subscription(
-            admin_client=admin_client,
-            namespace=hco_namespace.name,
-            subscription_name=py_config["hco_subscription"] or HCO_SUBSCRIPTION,
-        )
-
-
-@pytest.fixture(scope="session")
-def kubevirt_resource_scope_session(admin_client, installing_cnv, hco_namespace):
-    if not installing_cnv:
-        return get_hyperconverged_kubevirt(admin_client=admin_client, hco_namespace=hco_namespace)
-
-
-@pytest.fixture(scope="session")
 def junitxml_plugin(request, record_testsuite_property):
     return record_testsuite_property if request.config.pluginmanager.has_plugin("junitxml") else None
 
@@ -1599,21 +1371,6 @@ def junitxml_plugin(request, record_testsuite_property):
 @pytest.fixture(scope="module")
 def base_templates(admin_client):
     return get_base_templates_list(client=admin_client)
-
-
-@pytest.fixture(scope="package")
-def must_gather_image_url(csv_scope_session):
-    LOGGER.info(f"Csv name is : {csv_scope_session.name}")
-    must_gather_image = [
-        image["image"] for image in csv_scope_session.instance.spec.relatedImages if "must-gather" in image["name"]
-    ]
-    assert must_gather_image, (
-        f"Csv: {csv_scope_session.name}, "
-        f"related images: {csv_scope_session.instance.spec.relatedImages} "
-        "does not have must gather image."
-    )
-
-    return must_gather_image[0]
 
 
 @pytest.fixture
@@ -1807,7 +1564,7 @@ def determine_upgrade_stream(current_version, target_version):
             # Upgrade only if a newer CNV version is requested
             raise ValueError(
                 f"Cannot upgrade to older/identical versions,"
-                f"current: {cnv_current_version} target: {target_cnv_version}"
+                f"current: {current_cnv_version} target: {target_cnv_version}"
             )
         raise ValueError(
             f"Unknown upgrade stream. Current cnv version: {current_cnv_version}, "
@@ -1867,26 +1624,6 @@ def cnv_channel(pytestconfig):
 
 
 @pytest.fixture()
-def ssp_resource_scope_function(admin_client, hco_namespace):
-    return get_ssp_resource(admin_client=admin_client, namespace=hco_namespace)
-
-
-@pytest.fixture()
-def disabled_common_boot_image_import_hco_spec_scope_function(
-    admin_client,
-    hyperconverged_resource_scope_function,
-    golden_images_namespace,
-    golden_images_data_import_crons_scope_function,
-):
-    yield from utilities.hco.disable_common_boot_image_import_hco_spec(
-        admin_client=admin_client,
-        hco_resource=hyperconverged_resource_scope_function,
-        golden_images_namespace=golden_images_namespace,
-        golden_images_data_import_crons=golden_images_data_import_crons_scope_function,
-    )
-
-
-@pytest.fixture()
 def golden_images_data_import_crons_scope_function(admin_client, golden_images_namespace):
     return get_data_import_crons(admin_client=admin_client, namespace=golden_images_namespace)
 
@@ -1899,21 +1636,6 @@ def sno_cluster(admin_client):
 @pytest.fixture(scope="session")
 def label_schedulable_nodes(schedulable_nodes):
     yield from label_nodes(nodes=schedulable_nodes, labels=NODE_TYPE_WORKER_LABEL)
-
-
-@pytest.fixture(scope="class")
-def disabled_common_boot_image_import_hco_spec_scope_class(
-    admin_client,
-    hyperconverged_resource_scope_class,
-    golden_images_namespace,
-    golden_images_data_import_crons_scope_class,
-):
-    yield from utilities.hco.disable_common_boot_image_import_hco_spec(
-        admin_client=admin_client,
-        hco_resource=hyperconverged_resource_scope_class,
-        golden_images_namespace=golden_images_namespace,
-        golden_images_data_import_crons=golden_images_data_import_crons_scope_class,
-    )
 
 
 @pytest.fixture(scope="class")
@@ -2108,11 +1830,6 @@ def audit_logs(session_start_time):
 
 
 @pytest.fixture(scope="session")
-def installing_cnv(pytestconfig):
-    return pytestconfig.option.install
-
-
-@pytest.fixture(scope="session")
 def is_production_source(cnv_source):
     return cnv_source == "production"
 
@@ -2218,15 +1935,6 @@ def common_vm_preference_param_dict(request):
 
 
 @pytest.fixture(scope="module")
-def disabled_default_sources_in_operatorhub_scope_module(admin_client, installing_cnv):
-    if installing_cnv:
-        yield
-    else:
-        with disable_default_sources_in_operatorhub(admin_client=admin_client):
-            yield
-
-
-@pytest.fixture(scope="module")
 def kmp_deployment(admin_client, hco_namespace):
     return Deployment(namespace=hco_namespace.name, name=KUBEMACPOOL_MAC_CONTROLLER_MANAGER, client=admin_client)
 
@@ -2260,24 +1968,6 @@ def vm_from_template_with_existing_dv(
         existing_data_volume=data_volume_scope_function,
     ) as vm:
         yield vm
-
-
-@pytest.fixture()
-def scaled_deployment(request, hco_namespace):
-    with scale_deployment_replicas(
-        deployment_name=request.param["deployment_name"],
-        replica_count=request.param["replicas"],
-        namespace=hco_namespace.name,
-    ):
-        yield
-
-
-@pytest.fixture(scope="module")
-def hco_status_related_objects(hyperconverged_resource_scope_module):
-    """
-    Gets HCO.status.relatedObjects list
-    """
-    return hyperconverged_resource_scope_module.instance.status.relatedObjects
 
 
 @pytest.fixture(scope="class")
@@ -2403,32 +2093,6 @@ def removed_default_storage_classes(admin_client, golden_images_namespace, clust
         yield
     if not verify_boot_sources_reimported(admin_client=admin_client, namespace=golden_images_namespace.name):
         pytest.fail("Failed to reimport all boot sources at teardown")
-
-
-@pytest.fixture(scope="session")
-def csv_related_images_scope_session(csv_scope_session):
-    return csv_scope_session.instance.spec.relatedImages
-
-
-@pytest.fixture()
-def hyperconverged_status_templates_scope_function(
-    hyperconverged_resource_scope_function,
-):
-    return hyperconverged_resource_scope_function.instance.to_dict()["status"][SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME]
-
-
-@pytest.fixture(scope="module")
-def hyperconverged_status_templates_scope_module(
-    hyperconverged_resource_scope_module,
-):
-    return hyperconverged_resource_scope_module.instance.to_dict()["status"][SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME]
-
-
-@pytest.fixture(scope="class")
-def hyperconverged_status_templates_scope_class(
-    hyperconverged_resource_scope_class,
-):
-    return hyperconverged_resource_scope_class.instance.status.dataImportCronTemplates
 
 
 @pytest.fixture(scope="module")
@@ -2567,11 +2231,6 @@ def vm_for_migration_test(request, namespace, unprivileged_client, cpu_for_migra
         yield vm
 
 
-@pytest.fixture(scope="class")
-def ssp_resource_scope_class(admin_client, hco_namespace):
-    return get_ssp_resource(admin_client=admin_client, namespace=hco_namespace)
-
-
 @pytest.fixture(scope="session")
 def kube_system_namespace():
     kube_system_ns = Namespace(name="kube-system")
@@ -2589,12 +2248,6 @@ def is_aws_cluster(admin_client):
 def skip_on_aws_cluster(is_aws_cluster):
     if is_aws_cluster:
         pytest.skip("This test is skipped on an AWS cluster")
-
-
-@pytest.fixture(scope="module")
-def machine_type_from_kubevirt_config(kubevirt_config_scope_module, nodes_cpu_architecture):
-    """Extract machine type default from kubevirt CR."""
-    return kubevirt_config_scope_module["architectureConfiguration"][nodes_cpu_architecture]["machineType"]
 
 
 @pytest.fixture(scope="module")
@@ -2708,12 +2361,6 @@ def ping_process_in_rhel_os():
     return _start_ping
 
 
-@pytest.fixture(scope="module")
-def smbios_from_kubevirt_config(kubevirt_config_scope_module):
-    """Extract SMBIOS default from kubevirt CR."""
-    return kubevirt_config_scope_module["smbios"]
-
-
 # TODO: Replace this fixture with py_config.get("conformance_tests")
 @pytest.fixture(scope="session")
 def conformance_tests(request):
@@ -2722,22 +2369,6 @@ def conformance_tests(request):
         and "conformance" in marker_args
         and "not conformance" not in marker_args
     )
-
-
-@pytest.fixture(scope="module")
-def updated_namespace_with_aaq_label(admin_client, namespace):
-    label_project(name=namespace.name, label=AAQ_NAMESPACE_LABEL, admin_client=admin_client)
-
-
-@pytest.fixture(scope="class")
-def application_aware_resource_quota(admin_client, namespace):
-    with ApplicationAwareResourceQuota(
-        client=admin_client,
-        name="application-aware-resource-quota-for-aaq-test",
-        namespace=namespace.name,
-        hard=ARQ_QUOTA_HARD_SPEC,
-    ) as arq:
-        yield arq
 
 
 @pytest.fixture(scope="session")
