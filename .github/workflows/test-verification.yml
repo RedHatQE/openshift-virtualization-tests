@@ -1,0 +1,407 @@
+# description: Mandatory test verification gate. When CodeRabbit posts a test plan,
+# append an editable verification section to the PR description. Authors fill evidence
+# per plan item; test-verification check blocks merge until complete. Resets on code push.
+
+name: Test verification
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_target:
+    types: [edited, synchronize]
+
+concurrency:
+  group: test-verification-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: true
+
+permissions:
+  pull-requests: write
+  checks: write
+
+jobs:
+  inject-verification-section:
+    if: |
+      github.event_name == 'issue_comment' &&
+      github.event.issue.pull_request &&
+      (
+        github.event.comment.user.login == 'coderabbitai[bot]' ||
+        github.event.comment.user.login == 'openshift-virtualization-qe-bot-3'
+      ) &&
+      contains(github.event.comment.body, '<!-- test-execution-plan-start -->')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Inject verification section and require action
+        uses: actions/github-script@v9
+        with:
+          github-token: ${{ secrets.BOT3_TOKEN }}
+          script: |
+            const comment = context.payload.comment;
+            const issue = context.payload.issue;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const prNumber = issue.number;
+            const planUrl = comment.html_url;
+            const planBody = comment.body || '';
+
+            const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: prNumber });
+            const headSha = pr.head.sha;
+            let body = pr.body || '';
+
+            // Extract plan content between markers, fall back to full body
+            const planMarkerMatch = planBody.match(
+              /<!-- test-execution-plan-start -->([\s\S]*?)<!-- test-execution-plan-end -->/
+            );
+            const planContent = planMarkerMatch ? planMarkerMatch[1] : planBody;
+
+            // Build verification items from plan bullets and smoke/gating flags
+            const items = [];
+            const bulletRe = /^\s*-\s*`([^`]+)`/gm;
+            let match;
+            const examplePatterns = ['path/to/test_file.py'];
+            while ((match = bulletRe.exec(planContent)) !== null) {
+              const label = match[1];
+              if (!examplePatterns.some(pattern => label.includes(pattern))) {
+                items.push({ label });
+              }
+            }
+            if (/Run smoke tests:\s*True/i.test(planContent)) {
+              items.push({ label: 'Run smoke tests' });
+            }
+            if (/Run gating tests:\s*True/i.test(planContent)) {
+              items.push({ label: 'Run gating tests' });
+            }
+            if (!items.length) {
+              items.push({ label: 'Review the test execution plan and list what you ran' });
+            }
+
+            const itemLines = items.map((item, index) => {
+              const num = index + 1;
+              return `- [ ] **${num}.** \`${item.label}\` — **ran:** _fill command, Jenkins job, or CI link_`;
+            }).join('\n');
+
+            const verificationBlock = [
+              '<!-- test-verification-start -->',
+              '### Test verification (required for merge)',
+              `_Test plan: [view plan](${planUrl}) · Tree: \`${headSha.slice(0, 7)}\`_`,
+              '',
+              '**Edit this section** (you own the PR description). For each item, check the box and set exactly one:',
+              '- **ran:** command you executed (cluster/local)',
+              '- **ci:** Jenkins or GitHub Actions run URL',
+              '- **skip:** you disagree with this plan item — explain why (min 30 characters)',
+              '- **na:** not applicable with reason (min 30 characters)',
+              '',
+              itemLines,
+              '<!-- test-verification-end -->',
+            ].join('\n');
+
+            if (body.includes('<!-- test-verification-start -->')) {
+              body = body.replace(
+                /<!-- test-verification-start -->[\s\S]*?<!-- test-verification-end -->/,
+                verificationBlock
+              );
+            } else {
+              body = body.trimEnd() + `\n\n---\n${verificationBlock}\n`;
+            }
+
+            await github.rest.pulls.update({ owner, repo, pull_number: prNumber, body });
+
+            await github.rest.checks.create({
+              owner, repo,
+              name: 'test-verification',
+              head_sha: headSha,
+              status: 'completed',
+              conclusion: 'action_required',
+              output: {
+                title: 'Test verification required',
+                summary: 'Fill the **Test verification** section in the PR description, then save.',
+                text: [
+                  `Test plan: ${planUrl}`,
+                  '',
+                  'Each plan item needs ran/ci/skip/na with evidence.',
+                  'Merge is blocked until this check is green.',
+                ].join('\n'),
+              },
+            });
+
+  validate-verification:
+    if: |
+      github.event_name == 'pull_request_target' &&
+      github.event.action == 'edited' &&
+      github.event.changes.body &&
+      !endsWith(github.event.sender.login, '[bot]') &&
+      github.event.sender.login != 'openshift-virtualization-qe-bot-3'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Validate verification section and update check
+        uses: actions/github-script@v9
+        with:
+          github-token: ${{ secrets.BOT3_TOKEN }}
+          script: |
+            const core = require('@actions/core');
+            const pr = context.payload.pull_request;
+            const sender = context.payload.sender;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const prNumber = pr.number;
+            const headSha = pr.head.sha;
+            const body = pr.body || '';
+
+            if (!body.includes('<!-- test-verification-start -->')) {
+              const previousBody = context.payload.changes?.body?.from || '';
+              if (previousBody.includes('<!-- test-verification-start -->')) {
+                await github.rest.checks.create({
+                  owner, repo,
+                  name: 'test-verification',
+                  head_sha: headSha,
+                  status: 'completed',
+                  conclusion: 'action_required',
+                  output: {
+                    title: 'Test verification section removed',
+                    summary: 'The verification section was removed from the PR description. Restore it or wait for a new test plan.',
+                  },
+                });
+              }
+              return;
+            }
+
+            const sectionMatch = body.match(
+              /<!-- test-verification-start -->[\s\S]*?<!-- test-verification-end -->/
+            );
+            if (!sectionMatch) {
+              await github.rest.checks.create({
+                owner, repo,
+                name: 'test-verification',
+                head_sha: headSha,
+                status: 'completed',
+                conclusion: 'action_required',
+                output: {
+                  title: 'Test verification section corrupted',
+                  summary: 'The verification section markers are incomplete or malformed. Restore the section or wait for a new test plan.',
+                },
+              });
+              return;
+            }
+            const section = sectionMatch[0];
+
+            // Authorization: PR author or write/admin
+            const prAuthor = pr.user.login;
+            let isAllowed = sender.login === prAuthor;
+            if (!isAllowed) {
+              try {
+                const { data } = await github.rest.repos.getCollaboratorPermissionLevel({
+                  owner, repo, username: sender.login,
+                });
+                isAllowed = ['admin', 'write'].includes(data.permission);
+              } catch (error) {
+                core.warning(`Permission check failed: ${error.message}`);
+              }
+            }
+            if (!isAllowed) {
+              await github.rest.checks.create({
+                owner, repo,
+                name: 'test-verification',
+                head_sha: headSha,
+                status: 'completed',
+                conclusion: 'action_required',
+                output: {
+                  title: 'Verification edit rejected',
+                  summary: `@${sender.login} is not authorized to update the verification section. Only the PR author or users with write access can fill verification.`,
+                },
+              });
+              return;
+            }
+
+            const PLACEHOLDERS = new Set([
+              'n/a', 'na', 'none', 'not needed', 'tbd', 'tba', '-', '.',
+              'fill command, jenkins job, or ci link',
+              '_fill command, jenkins job, or ci link_',
+            ]);
+
+            function reasonOk(text) {
+              const t = text.trim();
+              if (t.length < 30) return false;
+              if (PLACEHOLDERS.has(t.toLowerCase())) return false;
+              return t.split(/\s+/).filter(Boolean).length >= 3;
+            }
+
+            const itemRe = /^-\s*\[([ xX])\]\s*\*\*(\d+)\.\*\*\s*`([^`]+)`\s*—\s*\*\*(ran|ci|skip|na):\*\*\s*(.*)$/gm;
+            const items = [];
+            let itemMatch;
+            while ((itemMatch = itemRe.exec(section)) !== null) {
+              items.push({
+                checked: itemMatch[1].toLowerCase() === 'x',
+                num: itemMatch[2],
+                label: itemMatch[3],
+                disposition: itemMatch[4].toLowerCase(),
+                evidence: itemMatch[5].trim(),
+              });
+            }
+
+            const errors = [];
+            if (!items.length) {
+              errors.push('No verification items found — use the template lines under Test verification.');
+            }
+
+            for (const item of items) {
+              if (!item.checked) {
+                errors.push(`Item ${item.num} (${item.label}): checkbox not checked.`);
+              }
+              if (item.disposition === 'ran' || item.disposition === 'ci') {
+                if (!item.evidence || item.evidence.length < 10 || PLACEHOLDERS.has(item.evidence.toLowerCase())) {
+                  errors.push(`Item ${item.num}: ${item.disposition} requires concrete evidence (command or URL).`);
+                }
+              } else if (item.disposition === 'skip' || item.disposition === 'na') {
+                if (!reasonOk(item.evidence)) {
+                  errors.push(`Item ${item.num}: ${item.disposition} requires a specific reason (min 30 chars, 3+ words).`);
+                }
+              } else {
+                // Unreachable with current regex (ran|ci|skip|na) — guard against future pattern changes
+                errors.push(`Item ${item.num}: use ran, ci, skip, or na.`);
+              }
+            }
+
+            if (errors.length) {
+              await github.rest.checks.create({
+                owner, repo,
+                name: 'test-verification',
+                head_sha: headSha,
+                status: 'completed',
+                conclusion: 'failure',
+                output: {
+                  title: 'Test verification incomplete',
+                  summary: `${errors.length} issue(s) — fix the PR description and save again.`,
+                  text: errors.map((e) => `- ${e}`).join('\n'),
+                },
+              });
+              return;
+            }
+
+            const summaryLines = items.map((item) =>
+              `${item.num}. ${item.label} → ${item.disposition}: ${item.evidence}`
+            );
+
+            const disputedItems = items.filter(
+              (item) => item.disposition === 'skip' || item.disposition === 'na'
+            );
+
+            const checkTitle = disputedItems.length
+              ? 'Test verification complete (includes disputed items)'
+              : 'Test verification complete';
+
+            const checkSummary = disputedItems.length
+              ? `Recorded by @${sender.login} for tree ${headSha.slice(0, 7)} — ${disputedItems.length} skip/na item(s); reviewers judge in code review`
+              : `Verified by @${sender.login} for tree ${headSha.slice(0, 7)}`;
+
+            await github.rest.checks.create({
+              owner, repo,
+              name: 'test-verification',
+              head_sha: headSha,
+              status: 'completed',
+              conclusion: 'success',
+              output: {
+                title: checkTitle,
+                summary: checkSummary,
+                text: summaryLines.join('\n'),
+              },
+            });
+
+  reset-on-push:
+    if: |
+      github.event_name == 'pull_request_target' &&
+      github.event.action == 'synchronize'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Reset verification on code change
+        uses: actions/github-script@v9
+        with:
+          github-token: ${{ secrets.BOT3_TOKEN }}
+          script: |
+            const before = context.payload.before;
+            const after = context.payload.after;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pr = context.payload.pull_request;
+            const prNumber = pr.number;
+
+            let isCleanRebase = false;
+            if (before !== '0000000000000000000000000000000000000000') {
+              try {
+                const [beforeCommit, afterCommit] = await Promise.all([
+                  github.rest.git.getCommit({ owner, repo, commit_sha: before }),
+                  github.rest.git.getCommit({ owner, repo, commit_sha: after }),
+                ]);
+                isCleanRebase = beforeCommit.data.tree.sha === afterCommit.data.tree.sha;
+              } catch {
+                isCleanRebase = false;
+              }
+            }
+
+            if (isCleanRebase) {
+              console.log('Clean rebase — preserving prior verification state.');
+
+              // Look up the prior check conclusion on the old commit
+              const { data: checkRuns } = await github.rest.checks.listForRef({
+                owner, repo,
+                ref: before,
+                check_name: 'test-verification',
+                per_page: 1,
+              });
+
+              if (checkRuns.check_runs.length) {
+                const prior = checkRuns.check_runs[0];
+                await github.rest.checks.create({
+                  owner, repo,
+                  name: 'test-verification',
+                  head_sha: after,
+                  status: prior.status,
+                  conclusion: prior.conclusion,
+                  output: {
+                    title: `${prior.output?.title ?? 'Test verification'} (rebase)`,
+                    summary: prior.output?.summary || 'Preserved from previous commit.',
+                  },
+                });
+              } else {
+                await github.rest.checks.create({
+                  owner, repo,
+                  name: 'test-verification',
+                  head_sha: after,
+                  status: 'completed',
+                  conclusion: 'action_required',
+                  output: {
+                    title: 'Test verification state unknown',
+                    summary: 'No prior verification check found. Request a new test plan or fill the verification section.',
+                  },
+                });
+              }
+              return;
+            }
+
+            const { data: fullPr } = await github.rest.pulls.get({ owner, repo, pull_number: prNumber });
+            let body = fullPr.body || '';
+
+            if (body.includes('<!-- test-verification-start -->')) {
+              body = body.replace(
+                /(?:\n*---\n)?<!-- test-verification-start -->[\s\S]*?<!-- test-verification-end -->/,
+                ''
+              ).trimEnd();
+              await github.rest.pulls.update({ owner, repo, pull_number: prNumber, body });
+            }
+
+            await github.rest.checks.create({
+              owner, repo,
+              name: 'test-verification',
+              head_sha: after,
+              status: 'completed',
+              conclusion: 'action_required',
+              output: {
+                title: 'Test verification invalidated',
+                summary: 'Code changed — re-run tests and fill verification after a new plan is posted.',
+                text: 'Push removed the verification section. Add verified label or /test-plan to get a new plan.',
+              },
+            });
