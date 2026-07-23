@@ -94,6 +94,7 @@ def test_no_new_cnv_deployments_added(cnv_deployments_excluding_hpp_pool):
     assert not new_deployment, f"New cnv deployment: {new_deployment}, has been added."
 
 
+@pytest.mark.usefixtures("xfail_if_sriov_conforma_jira_open_and_hco_operator")
 @pytest.mark.gating
 @pytest.mark.conformance
 @pytest.mark.polarion("CNV-8264")
