@@ -78,6 +78,7 @@ dependencies = [
   "openshift-python-wrapper~=4.18.0",
   "marshmallow>=4.0",
   "pytest-html>=4.1.1",
+  "dacite>=1.9.2",
 ]
 
 [tool.hatch.build.targets.wheel]
