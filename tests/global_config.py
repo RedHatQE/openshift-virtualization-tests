@@ -5,6 +5,7 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.virtual_machine import VirtualMachine
 
+from libs.net.cluster import cluster_domain
 from utilities.architecture import get_cluster_architecture
 from utilities.artifactory import BASE_ARTIFACTORY_LOCATION
 from utilities.constants import Images
@@ -260,7 +261,7 @@ cnv_pod_deletion_test_matrix = [
 ]
 os_login_param: dict[str, Any] = {}
 # Network configuration
-vlans = [f"{_id}" for _id in range(1000, 1020)]
+vlans = [f"{_id}" for _id in (range(2000, 2025) if "rdu2" in cluster_domain() else range(1000, 1020))]
 
 for _dir in dir():
     if not config:

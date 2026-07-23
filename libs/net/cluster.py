@@ -2,7 +2,10 @@ import ipaddress
 import logging
 from functools import cache
 
+from ocp_resources.ingress_config_openshift_io import Ingress
 from pytest_testconfig import py_config
+
+from utilities.cluster import cache_admin_client
 
 LOGGER = logging.getLogger(__name__)
 
@@ -35,6 +38,12 @@ def ipv6_supported_cluster() -> bool:
 
 def _cluster_ip_family_supported(ip_family: int) -> bool:
     return any(ipaddress.ip_network(ip).version == ip_family for ip in py_config.get("cluster_service_network"))
+
+
+@cache
+def cluster_domain() -> str:
+    """Return the cluster ingress domain (e.g. 'apps.rdu2.example.com')."""
+    return Ingress(client=cache_admin_client(), name="cluster", ensure_exists=True).instance.spec.domain
 
 
 @cache
