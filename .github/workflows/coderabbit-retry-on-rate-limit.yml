@@ -1,0 +1,173 @@
+# description: Automatically retry CodeRabbit reviews that hit rate limits.
+# Runs every 15 minutes. Scans all open non-draft, non-WIP, non-stale PRs
+# for CodeRabbit rate-limit comments, parses the wait time, and posts
+# "@coderabbitai full review" once the wait period has elapsed.
+
+name: CodeRabbit Retry on Rate Limit
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  pull-requests: write
+  contents: read
+
+concurrency:
+  group: coderabbit-retry
+  cancel-in-progress: true
+
+jobs:
+  retry-rate-limited-reviews:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Scan and retry rate-limited PRs
+        env:
+          GH_TOKEN: ${{ secrets.BOT3_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          echo "Scanning open PRs for CodeRabbit rate-limit comments..."
+
+          PRS=$(gh pr list --repo "$REPO" --state open \
+            --search "draft:false -label:Stale -label:wip" \
+            --json number,title,labels --limit 200 \
+            --sort updated)
+          PR_COUNT=$(echo "$PRS" | jq 'length')
+          echo "Found $PR_COUNT open non-draft/non-stale/non-wip PRs"
+
+          RETRIED=0
+          CHECKED=0
+          SKIPPED=0
+
+          for row in $(echo "$PRS" | jq -r '.[] | @base64'); do
+            pr_json=$(echo "$row" | base64 -d)
+            PR_NUM=$(echo "$pr_json" | jq -r '.number')
+            PR_TITLE=$(echo "$pr_json" | jq -r '.title')
+
+            # Skip WIP PRs by title (secondary check — label already filtered by --search)
+            if echo "$PR_TITLE" | grep -qiE '\bwip\b|\[wip\]'; then
+              echo "PR #$PR_NUM: WIP in title — skipping"
+              SKIPPED=$((SKIPPED + 1))
+              continue
+            fi
+
+            CHECKED=$((CHECKED + 1))
+            echo ""
+            echo "=== PR #$PR_NUM: $PR_TITLE ==="
+
+            # Fetch all issue comments from CodeRabbit
+            if ! COMMENTS=$(gh api "repos/$REPO/issues/$PR_NUM/comments" --paginate \
+              --slurp --jq '[.[][] | select(.user.login == "coderabbitai[bot]")]'); then
+              echo "  ⚠️ Failed to fetch comments — skipping"
+              continue
+            fi
+
+            # --- Find the latest rate-limit comment ---
+            RATE_LIMIT_UPDATED_AT=""
+            RATE_LIMIT_BODY=""
+
+            # Find the latest rate-limit comment using CodeRabbit's HTML marker (most reliable).
+            # CodeRabbit edits in-place, so use updated_at for timing.
+            RL_COMMENT=$(echo "$COMMENTS" | jq -r '
+              [.[] | select(.body | test("rate limited by coderabbit"; "i"))]
+              | sort_by(.updated_at) | last // empty
+            ')
+            if [ -n "$RL_COMMENT" ] && [ "$RL_COMMENT" != "null" ]; then
+              RATE_LIMIT_UPDATED_AT=$(echo "$RL_COMMENT" | jq -r '.updated_at')
+              RATE_LIMIT_BODY=$(echo "$RL_COMMENT" | jq -r '.body')
+            fi
+
+            if [ -z "$RATE_LIMIT_UPDATED_AT" ] || [ -z "$RATE_LIMIT_BODY" ]; then
+              echo "  No rate-limit comment found"
+              continue
+            fi
+
+            echo "  Found rate-limit comment (updated: $RATE_LIMIT_UPDATED_AT)"
+
+            # --- Check if CodeRabbit already recovered (posted a review summary after rate-limit) ---
+            # A recovered comment has the walkthrough marker but NOT the rate-limit marker.
+            GOOD_COMMENT_COUNT=$(echo "$COMMENTS" | jq -r --arg rl_time "$RATE_LIMIT_UPDATED_AT" '
+              [.[] | select(
+                .updated_at > $rl_time
+                and (.body | test("rate limited by coderabbit"; "i") | not)
+                and (.body | test("Walkthrough|summarize by coderabbit"; "i"))
+              )] | length
+            ')
+            if [ "$GOOD_COMMENT_COUNT" -gt 0 ] 2>/dev/null; then
+              echo "  CodeRabbit already reviewed after rate-limit — skipping"
+              continue
+            fi
+
+            # --- Check cooldown: was a retry already requested within 30 min for THIS rate-limit event? ---
+            # Match on hidden marker rather than author (BOT3_TOKEN author varies).
+            # Only consider retry markers posted AFTER the current rate-limit comment.
+            RETRY_MARKER="<!-- coderabbit-rate-limit-retry -->"
+            if ! RAW_COMMENTS=$(gh api "repos/$REPO/issues/$PR_NUM/comments" --paginate --slurp); then
+              echo "  ⚠️ Failed to fetch comments for cooldown check — skipping"
+              continue
+            fi
+            RETRY_COMMENTS=$(echo "$RAW_COMMENTS" | jq -r --arg rl_time "$RATE_LIMIT_UPDATED_AT" \
+              '[.[][] | select(.body | test("coderabbit-rate-limit-retry")) | select(.created_at > $rl_time)] | sort_by(.created_at) | last // empty')
+
+            if [ -n "$RETRY_COMMENTS" ] && [ "$RETRY_COMMENTS" != "null" ]; then
+              RECENT_RETRY_AT=$(echo "$RETRY_COMMENTS" | jq -r '.created_at // empty')
+              if [ -n "$RECENT_RETRY_AT" ]; then
+                RETRY_EPOCH=$(date -d "$RECENT_RETRY_AT" +%s)
+                NOW_EPOCH=$(date +%s)
+                COOLDOWN_SECS=1800  # 30 minutes
+                if [ $((NOW_EPOCH - RETRY_EPOCH)) -lt $COOLDOWN_SECS ]; then
+                  echo "  Retry already requested at $RECENT_RETRY_AT (within 30 min cooldown) — skipping"
+                  continue
+                fi
+              fi
+            fi
+
+            # --- Parse wait time from the rate-limit comment ---
+            # Extract hours/minutes/seconds generically from the rate-limit body.
+            # Handles all known CodeRabbit formats:
+            #   "Please wait **5 minutes and 1 seconds**"
+            #   "**Next review available in:** **57 minutes**"
+            #   "More reviews will be available in 8 minutes and 7 seconds."
+            WAIT_HOURS=$(echo "$RATE_LIMIT_BODY" | grep -oP '\d+(?=\s*\*{0,2}\s*hour)' | head -1 || echo "0")
+            WAIT_MINUTES=$(echo "$RATE_LIMIT_BODY" | grep -oP '\d+(?=\s*\*{0,2}\s*minute)' | head -1 || echo "0")
+            WAIT_SECONDS=$(echo "$RATE_LIMIT_BODY" | grep -oP '\d+(?=\s*\*{0,2}\s*second)' | head -1 || echo "0")
+
+            if [ "$WAIT_HOURS" = "0" ] && [ "$WAIT_MINUTES" = "0" ] && [ "$WAIT_SECONDS" = "0" ]; then
+              WAIT_MINUTES=10
+              echo "  Could not parse wait time — using default ${WAIT_MINUTES}m"
+            fi
+
+            TOTAL_WAIT_SECS=$(( WAIT_HOURS * 3600 + WAIT_MINUTES * 60 + WAIT_SECONDS ))
+            echo "  Wait time from comment: ${WAIT_HOURS}h ${WAIT_MINUTES}m ${WAIT_SECONDS}s (${TOTAL_WAIT_SECS}s total)"
+
+            # --- Check if wait time has elapsed since comment was last updated ---
+            COMMENT_EPOCH=$(date -d "$RATE_LIMIT_UPDATED_AT" +%s)
+            NOW_EPOCH=$(date +%s)
+            ELAPSED=$((NOW_EPOCH - COMMENT_EPOCH))
+
+            echo "  Elapsed since comment: ${ELAPSED}s"
+
+            if [ "$ELAPSED" -ge "$TOTAL_WAIT_SECS" ]; then
+              echo "  ✅ Wait time elapsed! Requesting full review..."
+              RETRY_BODY=$(printf '%s\n%s' "${RETRY_MARKER}" "@coderabbitai full review")
+              gh api "repos/$REPO/issues/$PR_NUM/comments" \
+                -f body="${RETRY_BODY}" --silent
+              RETRIED=$((RETRIED + 1))
+              echo "  Posted @coderabbitai full review"
+            else
+              REMAINING=$((TOTAL_WAIT_SECS - ELAPSED))
+              echo "  ⏳ Still waiting — ${REMAINING}s remaining"
+            fi
+          done
+
+          echo ""
+          echo "========================================="
+          echo "Summary:"
+          echo "  PRs checked: $CHECKED"
+          echo "  PRs skipped (draft/WIP/stale): $SKIPPED"
+          echo "  Retries requested: $RETRIED"
