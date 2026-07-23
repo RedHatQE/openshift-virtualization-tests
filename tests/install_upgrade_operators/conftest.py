@@ -104,11 +104,6 @@ def cdi_resource_scope_function(admin_client):
 
 
 @pytest.fixture()
-def cdi_feature_gates(cdi_resource_scope_function):
-    return cdi_resource_scope_function.instance.spec.config.get("featureGates")
-
-
-@pytest.fixture()
 def cnao_resource(admin_client):
     return get_network_addon_config(admin_client=admin_client)
 

@@ -31,7 +31,6 @@ from tests.observability.metrics.utils import (
     validate_vmi_sync_total_reported_and_positive,
     validate_vnic_info,
 )
-from tests.observability.utils import validate_metrics_value
 from utilities.constants.pytest import QUARANTINED
 from utilities.constants.storage import (
     CAPACITY,
@@ -44,7 +43,7 @@ from utilities.constants.timeouts import (
 )
 from utilities.constants.virt import MIGRATION_POLICY_VM_LABEL
 from utilities.infra import get_node_selector_dict
-from utilities.monitoring import get_metrics_value
+from utilities.monitoring import get_metrics_value, validate_metrics_value
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 LOGGER = logging.getLogger(__name__)

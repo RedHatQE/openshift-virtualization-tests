@@ -36,6 +36,7 @@ import utilities.virt as virt_util
 from utilities import console
 from utilities.artifactory import get_test_artifact_server_url
 from utilities.constants import Images
+from utilities.constants.architecture import MULTIARCH
 from utilities.constants.components import HPP_POOL
 from utilities.constants.images import OS_FLAVOR_WINDOWS
 from utilities.constants.networking import POD_CONTAINER_SPEC
@@ -137,7 +138,13 @@ def construct_datavolume_source_dict(
             validate_file_exists_in_url(url=url)
         source_spec: dict[str, Any] = {"http": {"url": url}}
     elif source == "registry":
-        source_spec = {"registry": {"url": url}}
+        registry_spec: dict[str, Any] = {"url": url}
+        # For multi-arch cluster and single --cpu-arch=ARCH, explicitly set the registry platform architecture
+        # For --cpu-arch=ARCH1,ARCH2, py_config["cpu_arch"] is never set
+        cpu_arch = py_config.get("cpu_arch")
+        if cpu_arch and py_config.get("cluster_type") == MULTIARCH:
+            registry_spec["platform"] = {"architecture": cpu_arch}
+        source_spec = {"registry": registry_spec}
     elif source == "pvc":
         pvc_spec: dict[str, Any] = {"name": source_pvc_name}
         if source_pvc_namespace is not None:
@@ -791,12 +798,6 @@ def run_command_on_vm_and_check_output(
     assert expected_result == cmd_output, (
         f"Command output mismatch.\nCommand: {command}\nExpected: '{expected_result}'\nActual: '{cmd_output}'"
     )
-
-
-def run_command_on_cirros_vm_and_check_output(vm, command, expected_result):
-    with console.Console(vm=vm) as vm_console:
-        vm_console.sendline(command)
-        vm_console.expect(expected_result, timeout=20)
 
 
 def assert_disk_serial(vm, command=_DEFAULT_DISK_SERIAL_COMMAND):

@@ -40,7 +40,6 @@ class TestHardcodedFeatureGates:
             list_resource_reconcile=[KubeVirt],
             wait_for_reconcile_post_update=True,
         ):
-            kubevirt_resource.reload()
             actual = get_resource_key_value(resource=kubevirt_resource, key_name=KUBEVIRT_FEATUREGATES_KEY)
             if isinstance(actual, list):
                 actual = set(actual)
@@ -61,7 +60,6 @@ class TestHardcodedFeatureGates:
             list_resource_reconcile=[CDI],
             wait_for_reconcile_post_update=True,
         ):
-            cdi_resource_scope_function.reload()
             actual = get_resource_key_value(resource=cdi_resource_scope_function, key_name=CDI_FEATUREGATES_KEY)
             if isinstance(actual, list):
                 actual = set(actual)
