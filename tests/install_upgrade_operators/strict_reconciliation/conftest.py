@@ -4,7 +4,6 @@ import pytest
 from ocp_resources.cdi import CDI
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.network_addons_config import NetworkAddonsConfig
-from ocp_resources.resource import ResourceEditor
 
 from tests.install_upgrade_operators.strict_reconciliation.constants import (
     CUSTOM_HCO_CR_SPEC,
@@ -15,9 +14,6 @@ from tests.install_upgrade_operators.strict_reconciliation.utils import (
     wait_for_hco_related_object_version_change,
     wait_for_resource_version_update,
 )
-from tests.utils import wait_for_cr_labels_change
-from utilities.constants.cluster import VERSION_LABEL_KEY
-from utilities.constants.timeouts import TIMEOUT_1MIN
 from utilities.hco import ResourceEditorValidateHCOReconcile
 
 LOGGER = logging.getLogger(__name__)
@@ -188,20 +184,3 @@ def reconciled_cr_post_hco_update(
 @pytest.fixture()
 def pre_update_resource_version(related_object_from_hco_status):
     return related_object_from_hco_status["resourceVersion"]
-
-
-@pytest.fixture()
-def updated_resource_labels(ocp_resource_by_name):
-    expected_labels = ocp_resource_by_name.labels
-    expected_labels.custom_label = ocp_resource_by_name.name
-    with ResourceEditor(
-        patches={
-            ocp_resource_by_name: {
-                "metadata": {
-                    "labels": {VERSION_LABEL_KEY: None, "custom_label": ocp_resource_by_name.name},
-                }
-            }
-        }
-    ):
-        wait_for_cr_labels_change(expected_value=expected_labels, component=ocp_resource_by_name, timeout=TIMEOUT_1MIN)
-        yield expected_labels

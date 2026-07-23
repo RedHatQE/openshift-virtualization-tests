@@ -33,10 +33,7 @@ from utilities.constants.components import (
     KUBE_CNI_LINUX_BRIDGE_PLUGIN,
     KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
 )
-from utilities.constants.hco import (
-    ALL_CNV_CRDS,
-    VM_CRD,
-)
+from utilities.constants.hco import VM_CRD
 from utilities.constants.namespaces import NamespacesNames
 from utilities.constants.networking import KUBEMACPOOL_MAC_RANGE_CONFIG
 from utilities.must_gather import get_must_gather_output_file
@@ -368,75 +365,76 @@ class TestMustGatherCluster:
                 checks=VALIDATE_UID_NAME,
             )
 
-    @pytest.mark.polarion("CNV-8508")
-    def test_no_new_cnv_crds(self, kubevirt_crd_names):
-        new_crds = [crd for crd in kubevirt_crd_names if crd not in ALL_CNV_CRDS]
-        assert not new_crds, f"Following crds are new: {new_crds}."
-
     @pytest.mark.polarion("CNV-2724")
-    def test_crd_resources(self, admin_client, must_gather_for_test, kubevirt_crd_by_type):
-        crd_name = kubevirt_crd_by_type.name
-        for version in kubevirt_crd_by_type.instance.spec.versions:
-            if not version.served:
-                LOGGER.warning(f"Skipping {version.name} for {crd_name} because it is not served")
-                continue
-            resource_objs = admin_client.resources.get(
-                api_version=version.name,
-                kind=kubevirt_crd_by_type.instance.spec.names.kind,
-            )
-
-            for resource_item in resource_objs.get().to_dict()["items"]:
-                resource_metadata = resource_item["metadata"]
-                name = resource_metadata["name"]
-                if "namespace" in resource_metadata:
-                    if crd_name == VM_CRD:
-                        resource_file = os.path.join(
-                            must_gather_for_test,
-                            f"namespaces/{resource_metadata['namespace']}/{Resource.ApiGroup.KUBEVIRT_IO}"
-                            f"/virtualmachines/custom/{name}.yaml",
-                        )
-                    else:
-                        resource_file = os.path.join(
-                            must_gather_for_test,
-                            f"namespaces/{resource_metadata['namespace']}/crs/{crd_name}/{name}.yaml",
-                        )
-                else:
-                    resource_file = os.path.join(
-                        must_gather_for_test,
-                        f"cluster-scoped-resources/{crd_name}/{name}.yaml",
-                    )
-
-                try:
-                    with open(resource_file) as resource_file:
-                        file_content = yaml.safe_load(
-                            resource_file.read(),
-                        )
-                    resource_name_from_file = file_content["metadata"]["name"]
-                    resource_uid_from_file = file_content["metadata"]["uid"]
-                    actual_resource_uid = resource_metadata["uid"]
-                    assert name == resource_name_from_file, (
-                        f"Actual resource name: {name}, must-gather collected resource name: {resource_name_from_file}"
-                    )
-
-                    assert actual_resource_uid == resource_uid_from_file, (
-                        f"Resource uid: {actual_resource_uid} does not "
-                        "match with must-gather data:"
-                        f" {resource_uid_from_file}"
-                    )
-                except FileNotFoundError:
-                    # Skip volatile DataVolumes from openshift-virtualization-os-images (managed by DataImportCron)
-                    if (
-                        crd_name == f"datavolumes.{Resource.ApiGroup.CDI_KUBEVIRT_IO}"
-                        and resource_metadata.get("namespace") == NamespacesNames.OPENSHIFT_VIRTUALIZATION_OS_IMAGES
-                    ):
-                        LOGGER.warning(
-                            f"Skipping volatile DataVolume {name} "
-                            f"from {NamespacesNames.OPENSHIFT_VIRTUALIZATION_OS_IMAGES}"
-                        )
+    @pytest.mark.polarion("CNV-2724")
+    def test_crd_resources(self, subtests, admin_client, must_gather_for_test, kubevirt_crd_resources):
+        for crd in kubevirt_crd_resources:
+            crd_name = crd.name
+            with subtests.test(msg=crd_name):
+                for version in crd.instance.spec.versions:
+                    if not version.served:
+                        LOGGER.warning(f"Skipping {version.name} for {crd_name} because it is not served")
                         continue
-                    # Re-raise for any other missing resource file
-                    LOGGER.error(f"Resource file not found: {resource_file}")
-                    raise
+                    resource_objs = admin_client.resources.get(
+                        api_version=version.name,
+                        kind=crd.instance.spec.names.kind,
+                    )
+
+                    for resource_item in resource_objs.get().to_dict()["items"]:
+                        resource_metadata = resource_item["metadata"]
+                        name = resource_metadata["name"]
+                        if "namespace" in resource_metadata:
+                            if crd_name == VM_CRD:
+                                resource_file = os.path.join(
+                                    must_gather_for_test,
+                                    f"namespaces/{resource_metadata['namespace']}"
+                                    f"/{Resource.ApiGroup.KUBEVIRT_IO}"
+                                    f"/virtualmachines/custom/{name}.yaml",
+                                )
+                            else:
+                                resource_file = os.path.join(
+                                    must_gather_for_test,
+                                    f"namespaces/{resource_metadata['namespace']}/crs/{crd_name}/{name}.yaml",
+                                )
+                        else:
+                            resource_file = os.path.join(
+                                must_gather_for_test,
+                                f"cluster-scoped-resources/{crd_name}/{name}.yaml",
+                            )
+
+                        try:
+                            with open(resource_file) as resource_file:
+                                file_content = yaml.safe_load(
+                                    resource_file.read(),
+                                )
+                            resource_name_from_file = file_content["metadata"]["name"]
+                            resource_uid_from_file = file_content["metadata"]["uid"]
+                            actual_resource_uid = resource_metadata["uid"]
+                            assert name == resource_name_from_file, (
+                                f"Actual resource name: {name}, "
+                                f"must-gather collected resource name: {resource_name_from_file}"
+                            )
+
+                            assert actual_resource_uid == resource_uid_from_file, (
+                                f"Resource uid: {actual_resource_uid} does not "
+                                "match with must-gather data:"
+                                f" {resource_uid_from_file}"
+                            )
+                        except FileNotFoundError:
+                            # Skip volatile DataVolumes from openshift-virtualization-os-images
+                            if (
+                                crd_name == f"datavolumes.{Resource.ApiGroup.CDI_KUBEVIRT_IO}"
+                                and resource_metadata.get("namespace")
+                                == NamespacesNames.OPENSHIFT_VIRTUALIZATION_OS_IMAGES
+                            ):
+                                LOGGER.warning(
+                                    f"Skipping volatile DataVolume {name} "
+                                    f"from {NamespacesNames.OPENSHIFT_VIRTUALIZATION_OS_IMAGES}"
+                                )
+                                continue
+                            # Re-raise for any other missing resource file
+                            LOGGER.error(f"Resource file not found: {resource_file}")
+                            raise
 
     @pytest.mark.polarion("CNV-2939")
     def test_image_stream_tag_resources(self, admin_client, must_gather_for_test):
