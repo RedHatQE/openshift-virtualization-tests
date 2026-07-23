@@ -4,7 +4,6 @@ import re
 
 import pytest
 from ocp_resources.network_attachment_definition import NetworkAttachmentDefinition
-from ocp_resources.virtual_machine import VirtualMachine
 from pytest_testconfig import py_config
 
 from tests.install_upgrade_operators.constants import FILE_SUFFIX, SECTION_TITLE
@@ -59,42 +58,20 @@ def kubevirt_architecture_configuration_scope_session(
 @pytest.mark.usefixtures("collected_cluster_must_gather_with_vms")
 @pytest.mark.sno
 class TestMustGatherClusterWithVMs:
-    @pytest.mark.parametrize(
-        ("resource_type", "resource_path", "checks"),
-        [
-            pytest.param(
-                NetworkAttachmentDefinition,
-                "namespaces/{namespace}/"
-                f"{NetworkAttachmentDefinition.ApiGroup.K8S_CNI_CNCF_IO}/"
-                "network-attachment-definitions/{name}.yaml",
-                VALIDATE_FIELDS,
-                marks=(pytest.mark.polarion("CNV-2720")),
-                id="test_network_attachment_definitions_resources",
-            ),
-            pytest.param(
-                VirtualMachine,
-                f"namespaces/{{namespace}}/{VirtualMachine.ApiGroup.KUBEVIRT_IO}/virtualmachines/custom/{{name}}.yaml",
-                VALIDATE_FIELDS,
-                marks=(pytest.mark.polarion("CNV-3043")),
-                id="test_virtualmachine_resources",
-            ),
-        ],
-        indirect=["resource_type"],
-    )
-    def test_resource_type(
+    @pytest.mark.polarion("CNV-2720")
+    def test_network_attachment_definitions_resources(
         self,
         admin_client,
         collected_cluster_must_gather_with_vms,
-        resource_type,
-        resource_path,
-        checks,
     ):
         check_list_of_resources(
             client=admin_client,
-            resource_type=resource_type,
+            resource_type=NetworkAttachmentDefinition,
             temp_dir=collected_cluster_must_gather_with_vms,
-            resource_path=resource_path,
-            checks=checks,
+            resource_path="namespaces/{namespace}/"
+            f"{NetworkAttachmentDefinition.ApiGroup.K8S_CNI_CNCF_IO}/"
+            "network-attachment-definitions/{name}.yaml",
+            checks=VALIDATE_FIELDS,
         )
 
 

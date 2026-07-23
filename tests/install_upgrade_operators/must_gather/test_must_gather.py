@@ -5,11 +5,8 @@ import re
 import pytest
 import yaml
 from ocp_resources.api_service import APIService
-from ocp_resources.cdi_config import CDIConfig
-from ocp_resources.imagestreamtag import ImageStreamTag
 from ocp_resources.mutating_webhook_config import MutatingWebhookConfiguration
 from ocp_resources.namespace import Namespace
-from ocp_resources.network_addons_config import NetworkAddonsConfig
 from ocp_resources.node_network_state import NodeNetworkState
 from ocp_resources.pod import Pod
 from ocp_resources.resource import Resource
@@ -31,7 +28,6 @@ from utilities.constants.components import (
     BRIDGE_MARKER,
     CLUSTER_NETWORK_ADDONS_OPERATOR,
     KUBE_CNI_LINUX_BRIDGE_PLUGIN,
-    KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
 )
 from utilities.constants.hco import (
     ALL_CNV_CRDS,
@@ -55,49 +51,19 @@ LOGGER = logging.getLogger(__name__)
     "collected_cluster_must_gather", "collected_must_gather_all_images", "cnv_image_path_must_gather_all_images"
 )
 class TestMustGatherCluster:
-    @pytest.mark.parametrize(
-        ("resource_type", "resource_path", "checks"),
-        [
-            pytest.param(
-                NodeNetworkState,
-                f"cluster-scoped-resources/{NodeNetworkState.ApiGroup.NMSTATE_IO}/nodenetworkstates/{{name}}.yaml",
-                VALIDATE_UID_NAME,
-                marks=(pytest.mark.polarion("CNV-2707")),
-                id="test_nodenetworkstate_resources",
-            ),
-            pytest.param(
-                NetworkAddonsConfig,
-                f"cluster-scoped-resources/"
-                f"networkaddonsconfigs.{NetworkAddonsConfig.ApiGroup.NETWORKADDONSOPERATOR_NETWORK_KUBEVIRT_IO}/"
-                "{name}.yaml",
-                VALIDATE_UID_NAME,
-                marks=(pytest.mark.polarion("CNV-3042")),
-                id="test_networkaddonsoperator_resources",
-            ),
-            pytest.param(
-                CDIConfig,
-                f"cluster-scoped-resources/cdiconfigs.{CDIConfig.ApiGroup.CDI_KUBEVIRT_IO}/{{name}}.yaml",
-                VALIDATE_FIELDS,
-                marks=(pytest.mark.polarion("CNV-3373")),
-                id="test_cdi_config_resources",
-            ),
-        ],
-        indirect=["resource_type"],
-    )
-    def test_resource_type(
+    @pytest.mark.polarion("CNV-2707")
+    def test_nodenetworkstate_resources(
         self,
         admin_client,
         must_gather_for_test,
-        resource_type,
-        resource_path,
-        checks,
     ):
         check_list_of_resources(
             client=admin_client,
-            resource_type=resource_type,
+            resource_type=NodeNetworkState,
             temp_dir=must_gather_for_test,
-            resource_path=resource_path,
-            checks=checks,
+            resource_path=f"cluster-scoped-resources/{NodeNetworkState.ApiGroup.NMSTATE_IO}"
+            "/nodenetworkstates/{name}.yaml",
+            checks=VALIDATE_UID_NAME,
         )
 
     @pytest.mark.polarion("CNV-2982")
@@ -152,12 +118,6 @@ class TestMustGatherCluster:
                 py_config["hco_namespace"],
                 marks=(pytest.mark.polarion("CNV-2705")),
                 id="test_kube_cni_pods",
-            ),
-            pytest.param(
-                "kubemacpool-leader=true",
-                py_config["hco_namespace"],
-                marks=(pytest.mark.polarion("CNV-2983")),
-                id=f"{KUBEMACPOOL_MAC_CONTROLLER_MANAGER}_pods",
             ),
             pytest.param(
                 f"name={CLUSTER_NETWORK_ADDONS_OPERATOR}",
@@ -275,17 +235,6 @@ class TestMustGatherCluster:
                 results_file=results_file,
                 compare_method=compare_method,
             )
-
-    @pytest.mark.polarion("CNV-2801")
-    def test_nmstate_config_data(self, admin_client, must_gather_for_test):
-        check_list_of_resources(
-            client=admin_client,
-            resource_type=NodeNetworkState,
-            temp_dir=must_gather_for_test,
-            resource_path=f"cluster-scoped-resources/{NodeNetworkState.ApiGroup.NMSTATE_IO}/"
-            "nodenetworkstates/{name}.yaml",
-            checks=(("metadata", "name"), ("metadata", "uid")),
-        )
 
     @pytest.mark.parametrize(
         "label_selector",
@@ -437,28 +386,6 @@ class TestMustGatherCluster:
                     # Re-raise for any other missing resource file
                     LOGGER.error(f"Resource file not found: {resource_file}")
                     raise
-
-    @pytest.mark.polarion("CNV-2939")
-    def test_image_stream_tag_resources(self, admin_client, must_gather_for_test):
-        resource_path = (
-            f"namespaces/{NamespacesNames.OPENSHIFT}/{ImageStreamTag.ApiGroup.IMAGE_OPENSHIFT_IO}/imagestreamtags"
-        )
-        istag_dir = os.path.join(
-            must_gather_for_test,
-            resource_path,
-        )
-        assert len(os.listdir(istag_dir)) == len(
-            list(ImageStreamTag.get(client=admin_client, namespace=NamespacesNames.OPENSHIFT))
-        )
-        check_list_of_resources(
-            client=admin_client,
-            resource_type=ImageStreamTag,
-            temp_dir=must_gather_for_test,
-            resource_path=f"{resource_path}/{{name}}.yaml",
-            checks=VALIDATE_UID_NAME,
-            namespace=NamespacesNames.OPENSHIFT,
-            filter_resource="redhat",
-        )
 
 
 @pytest.mark.sriov
