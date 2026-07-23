@@ -39,6 +39,25 @@ tiers, architecture, hardware requirements, configuration requirements, required
 operators, CI labels, and install/upgrade lifecycle markers. Tests without an explicit
 tier marker are considered tier2 by CI job selection.
 
+## Available Analysis Agents
+
+When the `subagent` tool is available, delegate specialized analysis to these agents
+instead of doing it inline. Each agent produces a structured report with
+`## Summary`, `## Details`, and `## Classification Impact` sections.
+
+| Agent | Delegate when... |
+|-------|------------------|
+| `fixture-tracer` | You need to trace the pytest fixture chain for a failing test |
+| `wait-param-auditor` | A timeout/connectivity failure needs CODE ISSUE elimination |
+| `quarantine-checker` | You need to check if a test is quarantined or Jira-skipped |
+| `teardown-cascade-detector` | Multiple tests fail and you suspect cross-test contamination |
+| `version-extractor` | You need to extract environment versions for the details block |
+| `product-code-investigator` | You need to trace a failure into upstream product source code |
+| `marker-analyzer` | You need to understand a test's markers, tier, or hardware requirements |
+
+If `subagent` is not available, read the agent file directly (e.g.,
+`read .rootcoz/agents/fixture-tracer.md`) and follow its instructions inline.
+
 ## 2. Decision Procedure and Classification Rules
 
 Your goal is to classify each failure as `CODE ISSUE`, `PRODUCT BUG`, or
@@ -74,9 +93,10 @@ purely environmental signals into a confident product-defect claim.
    Inspect `pytest.raises(...)`, expected error conditions, docstrings, or comments
    such as `should fail` or `negative test`.
 3. **Check quarantine status.**
-   If the test is marked with `@pytest.mark.jira("CNV-XXXXX", run=False)`, it is
-   quarantined for a known issue. The Jira ticket contains the expected failure mode.
-   Only classify a new defect if the failure does NOT match the quarantined issue.
+   If `quarantine-checker` agent is available, delegate to it. Otherwise, read
+   `.rootcoz/agents/quarantine-checker.md` and follow its instructions to check
+   both automation quarantine (`xfail` + `QUARANTINED`) and Jira conditional skips
+   (`pytest.mark.jira(..., run=False)`).
 4. **Prefer direct evidence over wrapper location.**
    File paths like `tests/`, `utilities/`, `libs/`, and `conftest.py` are useful clues,
    but they are not verdicts. Those modules often wrap product, cluster, or node state.
@@ -354,11 +374,11 @@ Root Cause:
 The test failure is caused by...
 </details_template>
 
-If `run-info.json` is missing or a field is absent, search other artifacts
-for version evidence: console logs, must-gather output, CSV names, operator
-pod image tags, or log output under `build-artifacts/`.
-If a version still cannot be determined, mark as `unknown`.
-Do NOT skip this step — the environment block MUST appear in every `details` field.
+If `version-extractor` agent is available, delegate to it.
+**If not available:** Read `.rootcoz/agents/version-extractor.md` and follow its
+instructions to extract ALL versions from `build-artifacts/run-info.json` with
+`[HIGH]`/`[LOW]` relevance markers. The `details` field MUST begin with the
+Environment block. Do NOT skip this step.
 
 ### Self-Verification (MANDATORY)
 
@@ -509,18 +529,13 @@ Required steps for EVERY failure:
    `test_<file>::<method>`. Map it to the test file path in the repo.
 2. **Read the test function.** Understand what the test is doing, what it validates,
    and what the expected behavior is.
-3. **Read the fixtures.** Check the `conftest.py` in the same directory to understand
-   the setup and teardown logic.
+3. **Read the fixtures.** If `fixture-tracer` agent is available, delegate fixture
+   chain analysis to it. Otherwise, read `.rootcoz/agents/fixture-tracer.md` and
+   follow its instructions to trace the fixture chain.
 4. **Read the helper functions.** If the test calls utility functions, read them too.
-5. **Inspect wait and readiness parameters.** For every helper call that starts a VM,
-   waits for a condition, or establishes connectivity, check the boolean parameters
-   and timeout values. Read the helper function's signature and docstring to understand
-   what each parameter controls. Pay special attention to parameters like
-   `wait_for_interfaces`, `wait_for_cloud_init`, `wait_for_ssh`, and similar flags —
-   when set to `False`, they skip readiness checks that may be required for the test
-   to succeed. A test that skips waiting for a precondition and then fails because that
-   precondition was not met is a `CODE ISSUE`, regardless of how the symptom appears
-   in artifacts.
+5. **Inspect wait and readiness parameters.** If `wait-param-auditor` agent is available,
+   delegate this analysis to it. Otherwise, read `.rootcoz/agents/wait-param-auditor.md`
+   and follow its instructions to audit wait parameters and timeout values.
 6. **Trace the failure path.** Follow the stack trace through the source code to find
    exactly where and why the failure occurred.
 
@@ -534,72 +549,20 @@ explicitly argue why the failure is NOT a `CODE ISSUE` before classifying as
 SSH banner errors, timeout expiry) look identical whether the root cause is a product
 defect or a test that skipped necessary wait steps.
 
-Required elimination checklist (include in your `details`):
-
-1. **List every wait/readiness call in the test path.** Trace from the test function
-   through all helpers and fixtures. For each VM startup or readiness helper, list
-   the call with its parameters. Example:
-   `running_vm(vm=vm, wait_for_interfaces=False)` — skips interface readiness.
-2. **Verify each wait parameter is correct.** If any `wait_for_*` parameter is `False`,
-   explain why skipping that wait is safe for this test scenario. If you cannot justify
-   it, classify as `CODE ISSUE`.
-3. **Verify timeout values are sufficient.** Compare the test's timeout against the
-   expected duration of the operation. If the test allows 120s but the operation
-   (boot + network + SSH) typically needs longer, classify as `CODE ISSUE`.
-4. **State your counter-argument.** Write one sentence explaining the strongest
-   argument for `CODE ISSUE` and why you are rejecting it. If you cannot articulate
-   a counter-argument, reconsider your classification.
-
-If you skip this checklist for a timeout/connectivity failure, your analysis is
-incomplete and may be rejected.
+If `wait-param-auditor` agent is available, delegate this analysis to it.
+**If not available:** Read `.rootcoz/agents/wait-param-auditor.md` and follow its
+instructions to audit all wait/readiness parameters in the test path.
+If you skip this analysis, your classification may be rejected.
 
 ### MANDATORY: Verify Product Behavior Before Declaring PRODUCT BUG
 
 **Before classifying any failure as `PRODUCT BUG`, you MUST verify that the product
 code actually has the defect you're claiming.**
 
-Required steps before declaring PRODUCT BUG:
-
-1. **Read the product source code.** If the error points to a KubeVirt, CDI, or HCO
-   component, read the relevant source code in the upstream repositories to understand
-   the expected behavior:
-   - KubeVirt: [kubevirt/kubevirt][kubevirt-repo]
-   - CDI: [kubevirt/containerized-data-importer][cdi-repo]
-   - HCO: [kubevirt/hyperconverged-cluster-operator][hco-repo]
-2. **Read the operator code.** If the failure involves a dependent operator, read its
-   source code to verify the defect exists there:
-   - NMState: [kubernetes-nmstate][nmstate-repo]
-   - SR-IOV: [sriov-network-operator][sriov-repo]
-   - MTV (Forklift): [forklift][mtv-repo]
-   - Node Health Check: [node-healthcheck-operator][nhc-repo]
-   - OADP: [oadp-operator][oadp-repo]
-3. **Trace the error to product code.** Follow the error path from the test failure
-   into the product/operator source. Show the specific product code that is
-   malfunctioning.
-4. **Provide code-level evidence.** Your `archive_evidence` and `evidence` fields must
-   reference specific product source files, functions, or code paths — not just
-   error messages from the test side.
-
-If you cannot trace the failure to a specific defect in the product or operator source
-code, reconsider whether it is truly a `PRODUCT BUG` or if it is a `CODE ISSUE` in
-the test infrastructure.
-
-### Show Your Work: Product Code Investigation
-
-When classifying as `PRODUCT BUG`, your analysis MUST include evidence that you
-investigated the product source code. In your `details` field, include a section like:
-
-```
-Product code investigation:
-- Examined [component] source at [repo]/[path/to/file.go]
-- The [function/handler] at [file:line] is responsible for [behavior]
-- The code shows [specific observation about why this is a product defect]
-```
-
-This proves the classification is based on actual product code analysis, not just
-symptoms observed from the test side. If the product code is not accessible or the
-relevant code path cannot be identified, state this explicitly and lower confidence
-to `medium` or `low`.
+If `product-code-investigator` agent is available, delegate to it.
+**If not available:** Read `.rootcoz/agents/product-code-investigator.md` and follow
+its instructions to trace the failure into upstream product source code.
+If the product code is not accessible, state this and lower confidence to `medium` or `low`.
 
 Key locations in the repository:
 
@@ -659,16 +622,12 @@ When a failure involves a dependent operator, determine ownership:
 
 ## 7. Additional Version Sources
 
-If `build-artifacts/run-info.json` does not contain a needed component version,
-check `build-artifacts/` for version evidence (CSV names, operator pod image
-tags, log output). If not found there, check `additional_repos` for the
-component's source repo context.
+If `version-extractor` agent is available, it handles fallback version detection
+automatically. Otherwise, check `build-artifacts/` for version evidence (CSV names,
+operator pod image tags, log output) and `additional_repos` for component source context.
 
-## FINAL REMINDER — READ THIS LAST
-
-**You MUST include ALL component versions from `run-info.json` in the
-`details` Environment block. Not just the relevant ones — ALL of them.
-If you only included 3 versions, go back and add the rest NOW.**
+**REMINDER:** The `details` Environment block MUST include ALL component versions
+from `run-info.json`, not just relevant ones.
 
 [ocp-virt-doc]: https://docs.redhat.com/en/documentation/red_hat_openshift_virtualization/
 [kubevirt-repo]: https://github.com/kubevirt/kubevirt
