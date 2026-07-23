@@ -24,6 +24,10 @@ if TYPE_CHECKING:
 from xml.etree import ElementTree
 
 import pytest
+
+if TYPE_CHECKING:
+    from _pytest.config import Config
+    from _pytest.nodes import Item
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.config_map import ConfigMap
 from ocp_resources.namespace import Namespace
@@ -872,3 +876,20 @@ def assert_incremental_classes_fully_collected(items: list[pytest.Item]) -> None
 
 def _is_xfail_no_run(method: object) -> bool:
     return any(mark.name == "xfail" and mark.kwargs.get("run") is False for mark in getattr(method, "pytestmark", []))
+
+
+def filter_post_test_alerts_tests(items: list[Item], config: Config) -> list[Item]:
+    """Filter out post-test alert tests when explicitly skipped or running install tests.
+
+    Args:
+        items: Collected pytest test items.
+        config: Pytest config object.
+
+    Returns:
+        Filtered list of test items.
+    """
+    if config.getoption("--skip-post-test-alerts") or config.getoption("--install"):
+        discard_tests, items_to_return = remove_tests_from_list(items=items, filter_str="post_test_alerts")
+        config.hook.pytest_deselected(items=discard_tests)
+        return items_to_return
+    return items

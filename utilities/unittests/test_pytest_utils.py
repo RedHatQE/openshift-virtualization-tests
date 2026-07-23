@@ -32,6 +32,7 @@ from utilities.pytest_utils import (
     exit_pytest_execution,
     filter_hpp_tests,
     filter_multiarch_tests,
+    filter_post_test_alerts_tests,
     generate_common_template_matrix_dicts,
     generate_instance_type_matrix_dicts,
     get_artifactory_server_url,
@@ -2769,6 +2770,53 @@ class TestFilterHppTests:
 
         assert result == []
         config.hook.pytest_deselected.assert_called_once_with(items=[item_hpp])
+
+
+class TestFilterPostTestAlertsTests:
+    """Test cases for filter_post_test_alerts_tests function."""
+
+    def test_filters_when_skip_post_test_alerts_flag_set(self):
+        """Post-test alert tests are filtered out when --skip-post-test-alerts flag is set."""
+        item_post_test_alerts = MagicMock()
+        item_post_test_alerts.keywords = {"post_test_alerts": True}
+        item_other = MagicMock()
+        item_other.keywords = {"other_test": True}
+        config = MagicMock()
+        config.getoption.side_effect = lambda flag: flag == "--skip-post-test-alerts"
+
+        result = filter_post_test_alerts_tests(items=[item_post_test_alerts, item_other], config=config)
+
+        assert result == [item_other]
+        config.hook.pytest_deselected.assert_called_once_with(items=[item_post_test_alerts])
+
+    def test_filters_when_install_flag_set(self):
+        """Post-test alert tests are filtered out when --install flag is set."""
+        item_post_test_alerts = MagicMock()
+        item_post_test_alerts.keywords = {"post_test_alerts": True}
+        item_other = MagicMock()
+        item_other.keywords = {"other_test": True}
+        config = MagicMock()
+        config.getoption.side_effect = lambda flag: flag == "--install"
+
+        result = filter_post_test_alerts_tests(items=[item_post_test_alerts, item_other], config=config)
+
+        assert result == [item_other]
+        config.hook.pytest_deselected.assert_called_once_with(items=[item_post_test_alerts])
+
+    def test_no_filtering_when_no_flags_set(self):
+        """All items are returned unchanged when no filtering flags are set."""
+        item_post_test_alerts = MagicMock()
+        item_post_test_alerts.keywords = {"post_test_alerts": True}
+        item_other = MagicMock()
+        item_other.keywords = {"other_test": True}
+        items = [item_post_test_alerts, item_other]
+        config = MagicMock()
+        config.getoption.return_value = False
+
+        result = filter_post_test_alerts_tests(items=items, config=config)
+
+        assert result == items
+        config.hook.pytest_deselected.assert_not_called()
 
 
 class TestFilterMultiarchTests:
