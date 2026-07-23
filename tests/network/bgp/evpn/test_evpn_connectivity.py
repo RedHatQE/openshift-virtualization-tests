@@ -201,8 +201,8 @@ def test_connectivity_after_udn_vm_cold_reboot(
 @pytest.mark.polarion("CNV-15233")
 @pytest.mark.order("last")
 def test_source_provider_migration(
+    external_l2_endpoint,
     external_l3_endpoint,
-    cudn_evpn_layer2,
     vm_source_provider,
     vm_evpn_target,
     frr_external_pod,
@@ -226,16 +226,13 @@ def test_source_provider_migration(
     Expected:
     - New connections are established after new UDN VM deployment.
     """
-    mac_vrf_vni = cudn_evpn_layer2.instance.spec.network.evpn.macVRF.vni
-
-    teardown_evpn_l2_endpoint(pod=frr_external_pod.pod, vni=mac_vrf_vni)
+    teardown_evpn_l2_endpoint(endpoint=external_l2_endpoint)
 
     vm_source_provider.start(wait=True)
     vm_source_provider.wait_for_agent_connected()
 
     new_l2_endpoint = deploy_evpn_l2_endpoint(
         pod=frr_external_pod.pod,
-        vni=mac_vrf_vni,
         endpoint_ips=[_L2_ENDPOINT_IPV4, _L2_ENDPOINT_IPV6],
     )
 
