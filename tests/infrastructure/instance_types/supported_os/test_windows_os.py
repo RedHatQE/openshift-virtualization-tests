@@ -2,16 +2,27 @@ import logging
 
 import pytest
 
-from utilities.guest_support import assert_windows_efi, check_vm_xml_hyperv, check_windows_vm_hvinfo
+from utilities.guest_support import (
+    assert_windows_efi,
+    check_vm_xml_hyperv,
+    check_windows_vm_hvinfo,
+    validate_pause_unpause_windows_vm,
+)
 from utilities.virt import running_vm
 
-pytestmark = [pytest.mark.high_resource_vm, pytest.mark.tier3]
+pytestmark = [pytest.mark.high_resource_vm, pytest.mark.special_infra, pytest.mark.tier3, pytest.mark.sno]
 
 LOGGER = logging.getLogger(__name__)
 TESTS_CLASS_NAME = "TestCommonPreferenceWindows"
 
 
 class TestCommonPreferenceWindows:
+    """
+    Tests for supporting Windows os when using a VM with instance types.
+
+    Jira: https://redhat.atlassian.net/browse/CNV-92873  # <skip-jira-utils-check>
+    """
+
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::create_vm")
     @pytest.mark.polarion("CNV-12269")
     def test_create_vm(
@@ -26,17 +37,22 @@ class TestCommonPreferenceWindows:
     def test_start_vm(self, golden_image_windows_vm):
         running_vm(vm=golden_image_windows_vm)
 
+    # all the tests following this comment depend on start_vm: requires a running VM
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
     @pytest.mark.polarion("CNV-12387")
     def test_efi_secureboot_enabled(self, golden_image_windows_vm):
         assert_windows_efi(vm=golden_image_windows_vm)
 
-    @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
     @pytest.mark.polarion("CNV-12388")
     def test_hyperv(self, admin_client, golden_image_windows_vm):
         check_vm_xml_hyperv(vm=golden_image_windows_vm, admin_client=admin_client)
         check_windows_vm_hvinfo(vm=golden_image_windows_vm)
+
+    @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
+    @pytest.mark.polarion("CNV-16330")
+    def test_pause_unpause_vm(self, golden_image_windows_vm):
+        validate_pause_unpause_windows_vm(vm=golden_image_windows_vm)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::create_vm"])
     @pytest.mark.polarion("CNV-12271")

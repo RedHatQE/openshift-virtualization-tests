@@ -4,6 +4,7 @@ from tests.observability.constants import KUBEVIRT_VMI_NUMBER_OF_OUTDATED
 from tests.observability.utils import validate_metrics_value
 from tests.upgrade_params import IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID, NETWORK_NODE_ID_PREFIX
 from utilities.constants.pytest import DEPENDENCY_SCOPE_SESSION
+from utilities.monitoring import validate_metrics_value
 
 
 @pytest.mark.cnv_upgrade
