@@ -30,15 +30,33 @@ case "$CPU_ARCH" in
     "amd64")
         CPU_ARCH_CODE="x86_64"
         VIRT_TYPE="kvm"
-	;;
+        BOOT_OPTS=""
+ ;;
     "arm64")
         CPU_ARCH_CODE="aarch64"
         VIRT_TYPE="qemu"
-	;;
+        # aarch64 requires UEFI and a writable per-VM NVRAM vars file.
+        # Without the vars file libvirt cannot configure ACPI on aarch64.
+        AARCH64_VARS="/tmp/aavmf-vars-${NAME}.fd"
+        for vars_path in \
+            "/usr/share/edk2/aarch64/vars-template-pflash.qcow2" \
+            "/usr/share/AAVMF/AAVMF_VARS.fd"; do
+            if [ -f "${vars_path}" ]; then
+                cp "${vars_path}" "${AARCH64_VARS}"
+                break
+            fi
+        done
+        if [ ! -f "${AARCH64_VARS}" ]; then
+            echo "ERROR: No aarch64 UEFI vars template found. Install qemu-efi-aarch64."
+            exit 1
+        fi
+        BOOT_OPTS="--boot uefi,nvram=${AARCH64_VARS}"
+ ;;
     "s390x")
         CPU_ARCH_CODE="s390x"
         VIRT_TYPE="qemu"
-	;;
+        BOOT_OPTS=""
+ ;;
     *)
         echo "Use the value amd64, s390x or arm64 for CPU_ARCH env variable"
         exit 1
@@ -71,21 +89,111 @@ if [ $FEDORA_VERSION -gt 40 ]; then
    OS_VARIANT="fedora40"
 fi
 
+# Work on a copy of the base image so the original is never mutated.
+# This ensures cloud-init always runs fresh on repeated executions.
+WORK_IMAGE="${FEDORA_IMAGE%.qcow2}-work.qcow2"
+cp "${FEDORA_IMAGE}" "${WORK_IMAGE}"
+
+# On arm64 QEMU emulation (arm64, s390x) the real-root systemd device timeout
+# (DefaultDeviceTimeoutSec, 45s) can expire before virtio devices are
+# enumerated after pivot-root, causing local-fs.target to fail and breaking
+# cloud-init's dependency chain.
+#
+# Fedora uses BLS (Boot Loader Specification): the kernel cmdline lives in a
+# per-entry .conf file under /boot/loader/entries/ on the ext4 /boot partition
+# (vda2). grub.cfg only sets a kernelopts fallback and delegates to blscfg.
+# We must patch the options line in that .conf file directly.
+#
+# guestfish operations are pure host-side filesystem ops requiring no guest
+# code execution, so they work cross-architecture without KVM.
+if [ "${CPU_ARCH}" = "arm64" ]; then
+    BLS_ENTRY_TMP=$(mktemp)
+    # Mount the ext4 /boot partition (second partition) explicitly.
+    # guestfish -i mounts the btrfs root subvolume, which does not contain
+    # the BLS entries.
+    BLS_ENTRY=$(guestfish -a "${WORK_IMAGE}" \
+        run : \
+        mount /dev/sda2 / : \
+        ls /loader/entries \
+        | grep '\.conf$' | head -1)
+    if [ -z "${BLS_ENTRY}" ]; then
+        echo "ERROR: No BLS entry found in /boot/loader/entries/"
+        rm -f "${BLS_ENTRY_TMP}"
+        exit 1
+    fi
+    guestfish -a "${WORK_IMAGE}" \
+        run : \
+        mount /dev/sda2 / : \
+        download "/loader/entries/${BLS_ENTRY}" "${BLS_ENTRY_TMP}"
+    sed -i 's/^\(options .*\)/\1 systemd.default_device_timeout_sec=300/' "${BLS_ENTRY_TMP}"
+    guestfish -a "${WORK_IMAGE}" \
+        run : \
+        mount /dev/sda2 / : \
+        upload "${BLS_ENTRY_TMP}" "/loader/entries/${BLS_ENTRY}"
+    rm -f "${BLS_ENTRY_TMP}"
+fi
+
+# Clean up any leftovers from a previous failed run
+rm -rf $BUILD_DIR
+if virsh domstate "${NAME}" &>/dev/null; then
+    echo "Found existing domain '${NAME}', removing it before proceeding..."
+    virsh destroy "${NAME}" 2>/dev/null || true
+    if [ "${CPU_ARCH}" = "arm64" ]; then
+        virsh undefine --nvram "${NAME}"
+    else
+        virsh undefine "${NAME}"
+    fi
+fi
+
+CONSOLE_LOG="/tmp/console-${NAME}.log"
+# Pre-create the log file with open permissions so the qemu process can write to it
+touch "${CONSOLE_LOG}"
+chmod 666 "${CONSOLE_LOG}"
 echo "Run the VM (ctrl+] to exit)"
+# shellcheck disable=SC2086
 virt-install \
   --memory 2048 \
   --vcpus 2 \
   --arch $CPU_ARCH_CODE \
   --name $NAME \
-  --disk $FEDORA_IMAGE,device=disk \
+  --disk $WORK_IMAGE,device=disk \
   --disk $CLOUD_INIT_ISO,device=cdrom \
   --os-variant $OS_VARIANT \
   --virt-type $VIRT_TYPE \
   --graphics none \
   --network default \
   --noautoconsole \
-  --wait 30 \
+  --serial file,path="${CONSOLE_LOG}" \
+  $BOOT_OPTS \
   --import
+
+# Stream the guest serial console log to stdout so CI logs show what is happening inside the VM.
+# tail -f works without a TTY and streams as lines are written by the guest.
+tail -f "${CONSOLE_LOG}" &
+CONSOLE_PID=$!
+
+# Wait for cloud-init to finish (user-data issues 'shutdown' as its last step).
+# virsh domstate exits non-zero for unknown domains, so we treat that as "shut off" too.
+echo "Waiting for VM to shut down after cloud-init completes..."
+WAIT_SECONDS=0
+PERIOD_SECONDS=60
+TIMEOUT_SECONDS=3600
+while true; do
+    DOMAIN_STATE=$(virsh domstate "${NAME}" 2>&1) || true
+    if [ "${DOMAIN_STATE}" = "shut off" ] || echo "${DOMAIN_STATE}" | grep -q "failed to get domain"; then
+        break
+    fi
+    if [ ${WAIT_SECONDS} -ge ${TIMEOUT_SECONDS} ]; then
+        echo "ERROR: VM did not shut down within ${TIMEOUT_SECONDS} seconds (last state: ${DOMAIN_STATE})"
+        exit 1
+    fi
+    sleep ${PERIOD_SECONDS}
+    WAIT_SECONDS=$((WAIT_SECONDS + PERIOD_SECONDS))
+done
+echo "VM shut down after ${WAIT_SECONDS} seconds"
+# Stop the console tailer and clean up temp files
+kill "${CONSOLE_PID}" 2>/dev/null || true
+rm -f "${CONSOLE_LOG}" "${AARCH64_VARS:-}"
 
 # Prepare VM image
 virt-sysprep -d "${NAME}" --operations machine-id,bash-history,logfiles,tmp-files,net-hostname,net-hwaddr
@@ -104,7 +212,7 @@ rm -f "${CLOUD_INIT_ISO}"
 
 mkdir $BUILD_DIR
 echo "Snapshot image"
-qemu-img convert -c -O qcow2 "${FEDORA_IMAGE}" "${BUILD_DIR}/${FEDORA_IMAGE}"
+qemu-img convert -c -O qcow2 "${WORK_IMAGE}" "${BUILD_DIR}/${FEDORA_IMAGE}"
 
 echo "Create Dockerfile"
 

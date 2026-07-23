@@ -7,32 +7,69 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+env:
+  REMOTE_REPOSITORY: quay.io/openshift-cnv/qe-cnv-tests-fedora-staging
+
 jobs:
-  guest-fedora-amd64:
+  prepare:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      matrix: ${{ steps.component-builder-config.outputs.matrix }}
+      fedora_version: ${{ steps.component-builder-config.outputs.fedora_version }}
+      fedora_image_base: ${{ steps.component-builder-config.outputs.fedora_image_base }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Read component builder config
+        id: component-builder-config
+        run: |
+          echo "matrix=$(jq -c '.matrix' .github/component-builder-config.json)" >> "${GITHUB_OUTPUT}"
+          echo "fedora_version=$(jq -r '.fedora_version' .github/component-builder-config.json)" >> "${GITHUB_OUTPUT}"
+          echo "fedora_image_base=$(jq -r '.fedora_image_base' .github/component-builder-config.json)" >> "${GITHUB_OUTPUT}"
+
+  guest-fedora:
+    runs-on: ubuntu-latest
+    needs: prepare
+    strategy:
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
     env:
-      FEDORA_IMAGE: Fedora-Cloud-Base-Generic-43-1.6.x86_64.qcow2
-      FEDORA_VERSION: 43
-      CPU_ARCH: amd64
+      FEDORA_VERSION: ${{ needs.prepare.outputs.fedora_version }}
+      FEDORA_IMAGE_BASE: ${{ needs.prepare.outputs.fedora_image_base }}
+      CPU_ARCH: ${{ matrix.arch }}
       FULL_EMULATION: "true"
       DEBIAN_FRONTEND: noninteractive
     steps:
       - name: Check out code
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Install dependencies for VM build
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            qemu-system-x86 \
+            ${{ matrix.qemu_package }} \
             libvirt-daemon-system \
             virtinst cloud-image-utils \
             libguestfs-tools
+
       - name: Tweak hosted runner to enable 'virt-sysprep'
         # https://bugs.launchpad.net/ubuntu/+source/linux/+bug/759725
         run: sudo chmod 0644 /boot/vmlinuz*
+
       - name: Fetch base Fedora image
         working-directory: ./containers/fedora
-        run: wget -q "https://download.fedoraproject.org/pub/fedora/linux/releases/43/Cloud/x86_64/images/${{ env.FEDORA_IMAGE }}"
+        run: |
+          FEDORA_IMAGE="${FEDORA_IMAGE_BASE}.${{ matrix.url_arch }}.qcow2"
+          wget -q "${{ matrix.fedora_url }}/${FEDORA_IMAGE}"
+
       - name: Install uv
         uses: astral-sh/setup-uv@v8.3.2
         with:
@@ -42,21 +79,23 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
           NO_SECRETS: "true"
+          FEDORA_IMAGE: ${{ env.FEDORA_IMAGE_BASE }}.${{ matrix.url_arch }}.qcow2
         run: ./build.sh
+
       - name: Save container image as tarball
         env:
           local_repository: "localhost/fedora"
-          remote_repository: "quay.io/openshift-cnv/qe-cnv-tests-fedora-staging"
           arch_tag: "${{ env.FEDORA_VERSION }}-${{ env.CPU_ARCH }}"
         run: |
           mkdir -p artifacts
-          podman tag "${local_repository}":"${arch_tag}" "${remote_repository}":"${arch_tag}"
-          podman save -o artifacts/fedora-image.tar "${remote_repository}":"${arch_tag}"
-          echo "Saved image to artifacts/fedora-image.tar"
+          podman tag "${local_repository}":"${arch_tag}" "${{ env.REMOTE_REPOSITORY }}":"${arch_tag}"
+          podman save -o artifacts/fedora-image-${{ env.CPU_ARCH }}.tar "${{ env.REMOTE_REPOSITORY }}":"${arch_tag}"
+          echo "Saved image to artifacts/fedora-image-${{ env.CPU_ARCH }}.tar"
+
       - name: Upload container image artifact
         uses: actions/upload-artifact@v7
         with:
-          name: fedora-container-image
-          path: artifacts/fedora-image.tar
+          name: fedora-container-image-${{ env.CPU_ARCH }}
+          path: artifacts/fedora-image-${{ env.CPU_ARCH }}.tar
           retention-days: 5
           compression-level: 0
