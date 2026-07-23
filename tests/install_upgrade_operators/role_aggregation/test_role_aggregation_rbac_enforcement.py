@@ -13,8 +13,10 @@ Preconditions:
 """
 
 import pytest
+from kubernetes.dynamic.exceptions import ForbiddenError
+from ocp_resources.virtual_machine import VirtualMachine
 
-__test__ = False
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.arm64]
 
 
 class TestRoleAggregationDisabled:
@@ -22,19 +24,23 @@ class TestRoleAggregationDisabled:
     Tests for RBAC enforcement when role aggregation is disabled.
 
     Preconditions:
-        - HyperConverged CR spec.roleAggregationStrategy set to "AggregateToDefault" (role aggregation enabled)
+        - HyperConverged CR spec.roleAggregationStrategy set to "AggregateToDefault"
+          (role aggregation enabled)
         - RoleBinding granting the unprivileged user the parametrized ClusterRole in the namespace
     """
 
     @pytest.mark.parametrize(
-        "role",
+        "disabled_aggregation_with_role",
         [
             pytest.param("admin", marks=pytest.mark.polarion("CNV-16028")),
             pytest.param("edit", marks=pytest.mark.polarion("CNV-16262")),
             pytest.param("view", marks=pytest.mark.polarion("CNV-16263")),
         ],
+        indirect=True,
     )
-    def test_vm_list_forbidden_when_aggregation_disabled(self, role):
+    def test_vm_list_forbidden_when_aggregation_disabled(
+        self, disabled_aggregation_with_role, unprivileged_client, namespace
+    ):
         """
         [NEGATIVE] Test that an unprivileged user with a standard OpenShift role is forbidden
         from listing virtualization resources when role aggregation is disabled.
@@ -46,7 +52,8 @@ class TestRoleAggregationDisabled:
             - User can list VirtualMachine resources in the namespace successfully
 
         Steps:
-            1. Set HyperConverged CR spec.roleAggregationStrategy to "Manual" (disable role aggregation)
+            1. Set HyperConverged CR spec.roleAggregationStrategy to "Manual"
+               (disable role aggregation)
             2. Wait for the aggregation labels to be removed from the kubevirt.io ClusterRoles
             3. Attempt to list VirtualMachine resources in the namespace using the unprivileged
                user's credentials
@@ -54,6 +61,8 @@ class TestRoleAggregationDisabled:
         Expected:
             - Operation is rejected with a Forbidden error
         """
+        with pytest.raises(ForbiddenError):
+            list(VirtualMachine.get(client=unprivileged_client, namespace=namespace.name))
 
 
 class TestRoleAggregationReenabledAccess:
@@ -61,14 +70,22 @@ class TestRoleAggregationReenabledAccess:
     Tests for role-specific access when role aggregation is re-enabled.
 
     Preconditions:
-        - HyperConverged CR spec.roleAggregationStrategy set to "Manual" (role aggregation disabled)
+        - HyperConverged CR spec.roleAggregationStrategy set to "Manual"
+          (role aggregation disabled)
         - RoleBinding granting the unprivileged user the respective ClusterRole in the namespace
-        - HyperConverged CR spec.roleAggregationStrategy restored to "AggregateToDefault" (role aggregation re-enabled)
-        - Wait for the aggregation labels to be restored on the kubevirt.io ClusterRoles
+        - HyperConverged CR spec.roleAggregationStrategy restored to "AggregateToDefault"
+          (role aggregation re-enabled)
+        - Aggregation labels restored on kubevirt.io ClusterRoles
     """
 
-    @pytest.mark.polarion("CNV-16029")
-    def test_admin_can_delete_vm_collection_when_aggregation_reenabled(self):
+    @pytest.mark.parametrize(
+        "reenabled_aggregation_with_role",
+        [pytest.param("admin", marks=pytest.mark.polarion("CNV-16029"))],
+        indirect=True,
+    )
+    def test_admin_can_delete_vm_collection_when_aggregation_reenabled(
+        self, reenabled_aggregation_with_role, vm_collection_resource_for_unprivileged_client, namespace
+    ):
         """
         Test that an unprivileged user with the admin role can perform a delete-collection
         call on VirtualMachine resources when role aggregation is enabled.
@@ -83,9 +100,16 @@ class TestRoleAggregationReenabledAccess:
         Expected:
             - Delete-collection operation succeeds
         """
+        vm_collection_resource_for_unprivileged_client.delete(
+            namespace=namespace.name, label_selector="rbac-test=nonexistent"
+        )
 
-    @pytest.mark.polarion("CNV-16260")
-    def test_edit_can_create_vm_dry_run_when_aggregation_reenabled(self):
+    @pytest.mark.parametrize(
+        "reenabled_aggregation_with_role",
+        [pytest.param("edit", marks=pytest.mark.polarion("CNV-16260"))],
+        indirect=True,
+    )
+    def test_edit_can_create_vm_dry_run_when_aggregation_reenabled(self, reenabled_aggregation_with_role, dry_run_vm):
         """
         Test that an unprivileged user with the edit role can create a VirtualMachine
         using a server-side dry-run when role aggregation is enabled.
@@ -100,9 +124,16 @@ class TestRoleAggregationReenabledAccess:
         Expected:
             - Dry-run create operation succeeds
         """
+        dry_run_vm.create()
 
-    @pytest.mark.polarion("CNV-16261")
-    def test_view_can_list_vms_when_aggregation_reenabled(self):
+    @pytest.mark.parametrize(
+        "reenabled_aggregation_with_role",
+        [pytest.param("view", marks=pytest.mark.polarion("CNV-16261"))],
+        indirect=True,
+    )
+    def test_view_can_list_vms_when_aggregation_reenabled(
+        self, reenabled_aggregation_with_role, unprivileged_client, namespace
+    ):
         """
         Test that an unprivileged user with the view role can list VirtualMachine
         resources when role aggregation is enabled.
@@ -116,3 +147,4 @@ class TestRoleAggregationReenabledAccess:
         Expected:
             - VirtualMachine resources are listed successfully
         """
+        list(VirtualMachine.get(client=unprivileged_client, namespace=namespace.name))
