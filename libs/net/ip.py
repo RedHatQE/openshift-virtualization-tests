@@ -30,34 +30,15 @@ def random_cidr_addresses_by_family(net_seed: int, host_address: int) -> list[st
     Returns:
         List of CIDR strings (e.g. ["192.168.1.1/24", "fd00::1/64"]).
     """
-    return [
-        f"{ip}/64" if ipaddress.ip_address(ip).version == 6 else f"{ip}/24"
-        for ip in random_ip_addresses_by_family(net_seed=net_seed, host_address=host_address)
-    ]
-
-
-def random_ip_addresses_by_family(
-    net_seed: int,
-    host_address: int,
-) -> list[str]:
-    """Generate IP addresses for each IP family supported by the cluster network stack.
-
-    Args:
-        net_seed: Seed index for selecting the random network portion of the address.
-        host_address: Host portion of the address, used to place VMs on the same subnet.
-
-    Returns:
-        List of IP address strings, one per IP family supported by the cluster.
-    """
-    ips = []
+    addresses = []
     if ipv4_supported_cluster():
-        ips.append(random_ipv4_address(net_seed=net_seed, host_address=host_address))
+        addresses.append(random_ipv4_address(net_seed=net_seed, host_address=host_address))
     if ipv6_supported_cluster():
-        ips.append(random_ipv6_address(net_seed=net_seed, host_address=host_address))
-    return ips
+        addresses.append(random_ipv6_address(net_seed=net_seed, host_address=host_address))
+    return addresses
 
 
-def random_ipv4_address(net_seed: int, host_address: int) -> str:
+def random_ipv4_address(net_seed: int, host_address: int, cidr_required: bool = True) -> str:
     """Construct a random IPv4 address using a cached list of random third octets.
 
     Uses a pre-defined network address, a cached random third octet and the given
@@ -66,12 +47,14 @@ def random_ipv4_address(net_seed: int, host_address: int) -> str:
     Args:
         net_seed (int): The index used to select a random third octet from the cached list.
         host_address (int): The last (fourth) octet of the IPv4 address.
+        cidr_required (bool): When True (default), appends /24 prefix length to the address.
 
     Returns:
-        str: A string representing a randomized IPv4 address.
+        str: A randomized IPv4 address, optionally in CIDR notation.
     """
     third_octets = _random_octets(count=_MAX_NUM_OF_RANDOM_OCTETS_PER_SESSION)
-    return f"{_IPV4_ADDRESS_SUBNET_PREFIX_VMI}.{third_octets[net_seed]}.{host_address}"
+    subnet_length = "/24" if cidr_required else ""
+    return f"{_IPV4_ADDRESS_SUBNET_PREFIX_VMI}.{third_octets[net_seed]}.{host_address}{subnet_length}"
 
 
 @cache
@@ -90,7 +73,7 @@ def _random_octets(count: int) -> list[int]:
     return random.sample(range(1, 254), count)
 
 
-def random_ipv6_address(net_seed: int, host_address: int) -> str:
+def random_ipv6_address(net_seed: int, host_address: int, cidr_required: bool = True) -> str:
     """Construct a random IPv6 address using a cached list of random seventh hextets.
 
     Uses a pre-defined network prefix, a cached random seventh hextet and the given
@@ -99,12 +82,14 @@ def random_ipv6_address(net_seed: int, host_address: int) -> str:
     Args:
         net_seed (int): The index used to select a random seventh hextet from the cached list.
         host_address (int): The last (eighth) hextet of the IPv6 address.
+        cidr_required (bool): When True (default), appends /64 prefix length to the address.
 
     Returns:
-        str: A string representing a randomized IPv6 address.
+        str: A randomized IPv6 address, optionally in CIDR notation.
     """
     seventh_hextets = _random_hextets(count=_MAX_NUM_OF_RANDOM_HEXTETS_PER_SESSION)
-    return f"{_IPV6_ADDRESS_SUBNET_PREFIX_VMI}::{seventh_hextets[net_seed]:x}:{host_address:x}"
+    subnet_length = "/64" if cidr_required else ""
+    return f"{_IPV6_ADDRESS_SUBNET_PREFIX_VMI}::{seventh_hextets[net_seed]:x}:{host_address:x}{subnet_length}"
 
 
 @cache

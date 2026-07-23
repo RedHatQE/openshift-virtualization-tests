@@ -33,7 +33,7 @@ def localnet_ipam_nad(
                 topology=libnad.CNIPluginOvnK8sConfig.Topology.LOCALNET.value,
                 netAttachDefName=f"{namespace_localnet_1.name}/{localnet_ipam_nad_name}",
                 vlanID=vlan_id,
-                subnets=f"{random_ipv4_address(net_seed=0, host_address=0)}/24",
+                subnets=random_ipv4_address(net_seed=0, host_address=0),
             )
         ],
     )
