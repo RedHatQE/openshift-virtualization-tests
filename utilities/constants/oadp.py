@@ -7,3 +7,4 @@ backup storage location names used across OADP test scenarios.
 FILE_NAME_FOR_BACKUP = "file_before_backup.txt"
 TEXT_TO_TEST = "text"
 BACKUP_STORAGE_LOCATION = "dpa-1"
+SKIP_BACKUP_HOOKS_ANNOTATION = "kubevirt.io/skip-backup-hooks"

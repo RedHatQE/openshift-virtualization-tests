@@ -16,8 +16,13 @@ from utilities.artifactory import (
 )
 from utilities.constants import Images
 from utilities.constants.images import OS_FLAVOR_RHEL, OS_FLAVOR_WIN_CONTAINER_DISK
-from utilities.constants.instance_types import U1_LARGE
-from utilities.constants.oadp import BACKUP_STORAGE_LOCATION, FILE_NAME_FOR_BACKUP, TEXT_TO_TEST
+from utilities.constants.instance_types import RHEL10_PREFERENCE, U1_LARGE, U1_SMALL
+from utilities.constants.oadp import (
+    BACKUP_STORAGE_LOCATION,
+    FILE_NAME_FOR_BACKUP,
+    SKIP_BACKUP_HOOKS_ANNOTATION,
+    TEXT_TO_TEST,
+)
 from utilities.constants.os_matrix import CONTAINER_DISK_IMAGE_PATH_STR
 from utilities.constants.timeouts import TIMEOUT_8MIN, TIMEOUT_15MIN
 from utilities.infra import create_ns
@@ -32,6 +37,7 @@ from utilities.storage import (
     construct_datavolume_source_dict,
     create_dv,
     create_vm_from_dv,
+    data_volume_template_with_source_ref_dict,
     get_downloaded_artifact,
     virtctl_upload_dv,
     write_file,
@@ -363,3 +369,45 @@ def velero_restore_second_namespace_with_datamover(
         timeout=TIMEOUT_15MIN,
     ) as restore:
         yield restore
+
+
+@pytest.fixture()
+def rhel_vm_with_hooks_opt_out(
+    admin_client,
+    namespace_for_backup,
+    rhel10_data_source_scope_session,
+    snapshot_storage_class_name_scope_module,
+):
+    """Running RHEL VM with kubevirt.io/skip-backup-hooks annotation set to 'true'."""
+    with VirtualMachineForTests(
+        name="vm-hooks-opt-out",
+        namespace=namespace_for_backup.name,
+        client=admin_client,
+        os_flavor=OS_FLAVOR_RHEL,
+        vm_instance_type=VirtualMachineClusterInstancetype(client=admin_client, name=U1_SMALL),
+        vm_preference=VirtualMachineClusterPreference(client=admin_client, name=RHEL10_PREFERENCE),
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=rhel10_data_source_scope_session,
+            storage_class=snapshot_storage_class_name_scope_module,
+        ),
+        annotations={SKIP_BACKUP_HOOKS_ANNOTATION: "true"},
+    ) as vm:
+        running_vm(vm=vm)
+        assert vm.instance.metadata.annotations.get(SKIP_BACKUP_HOOKS_ANNOTATION) == "true", (
+            f"VM {vm.name} missing {SKIP_BACKUP_HOOKS_ANNOTATION} annotation"
+        )
+        yield vm
+
+
+@pytest.fixture()
+def velero_backup_vm_with_hooks_opt_out(
+    admin_client,
+    rhel_vm_with_hooks_opt_out,
+    namespace_for_backup,
+):
+    with VeleroBackup(
+        client=admin_client,
+        included_namespaces=[namespace_for_backup.name],
+        name="backup-hooks-opt-out",
+    ) as backup:
+        yield backup
