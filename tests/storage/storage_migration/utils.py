@@ -1,7 +1,9 @@
+import logging
 import shlex
 
 from ocp_resources.multi_namespace_virtual_machine_storage_migration import MultiNamespaceVirtualMachineStorageMigration
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
+from pyhelper_utils.exceptions import CommandExecFailed
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
@@ -11,9 +13,13 @@ from tests.storage.storage_migration.constants import (
     MOUNT_HOTPLUGGED_DEVICE_PATHS,
 )
 from tests.storage.utils import check_file_in_vm
+from utilities.constants.images import OS_FLAVOR_WINDOWS
 from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5SEC, TIMEOUT_10MIN, TIMEOUT_10SEC
+from utilities.data_collector import get_data_collector_dir, write_to_file
 from utilities.exceptions import StorageMigrationError
 from utilities.virt import VirtualMachineForTests, get_vm_boot_time
+
+LOGGER = logging.getLogger(__name__)
 
 
 def verify_vms_boot_time_after_storage_migration(
@@ -34,7 +40,51 @@ def verify_vms_boot_time_after_storage_migration(
         current_boot_time = get_vm_boot_time(vm=vm)
         if initial_boot_time[vm.name] != current_boot_time:
             rebooted_vms[vm.name] = {"initial": initial_boot_time[vm.name], "current": current_boot_time}
+            collect_reboot_diagnostic_events(vm=vm)
     assert not rebooted_vms, f"Boot time changed for VMs:\n {rebooted_vms}"
+
+
+def collect_reboot_diagnostic_events(vm: VirtualMachineForTests) -> None:
+    """
+    Collect event log entries related to reboot/shutdown.
+
+    Args:
+        vm: VM to collect diagnostic events from.
+
+    Side effects:
+        Writes SSH command output to ``{vm.name}_reboot_events.txt``
+        under the data-collector directory.
+    """
+    base_dir = get_data_collector_dir()
+
+    if vm.os_flavor == OS_FLAVOR_WINDOWS:
+        # Event IDs: 6005=boot, 6006=clean shutdown, 6008=unexpected shutdown,
+        # 6009=OS version at boot, 1074=shutdown initiated, 41=Kernel-Power unexpected reboot
+        cmd = shlex.split(
+            'powershell.exe -command "'
+            "Get-WinEvent -FilterHashtable @{LogName='System'; Id=6005,6006,6008,6009,1074,41} "
+            '-MaxEvents 50 | Format-List"'
+        )
+    else:
+        cmd = shlex.split(
+            "bash -c '"
+            "last reboot; echo ---; "
+            "journalctl --list-boots --no-pager; echo ---; "
+            "journalctl --no-pager -o short-precise "
+            '| grep -iE "shutdown|reboot|restart|power|kill" | tail -n 100'
+            "'"
+        )
+
+    try:
+        output = run_ssh_commands(host=vm.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN)[0]
+        write_to_file(
+            base_directory=base_dir,
+            file_name=f"{vm.name}_reboot_events.txt",
+            content=output,
+        )
+        LOGGER.info(f"Collected reboot diagnostic events for VM {vm.name}")
+    except (CommandExecFailed, TimeoutExpiredError, IndexError, OSError) as exc:
+        LOGGER.error(f"Failed to collect reboot diagnostic events for VM {vm.name}: {exc}")
 
 
 def verify_vm_storage_class_updated(vm: VirtualMachineForTests, target_storage_class: str) -> None:
