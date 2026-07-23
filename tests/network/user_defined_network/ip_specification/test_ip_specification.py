@@ -18,10 +18,8 @@ from libs.net.traffic_generator import TcpServer, client_server_active_connectio
 from libs.net.traffic_generator import VMTcpClient as TcpClient
 from libs.net.vmspec import lookup_iface_status_ip, lookup_primary_network
 from libs.vm.vm import BaseVirtualMachine
-from tests.network.user_defined_network.ip_specification.libipspec import (
-    ip_address_annotation,
-    read_guest_interface_ipv4,
-)
+from tests.network.libs.connectivity import read_guest_interface_ipv4
+from tests.network.user_defined_network.ip_specification.libipspec import ip_address_annotation
 from utilities.constants.networking import PUBLIC_DNS_SERVER_IP
 from utilities.virt import migrate_vm_and_verify
 
