@@ -2,11 +2,11 @@ import pytest
 from ocp_resources.kubevirt import KubeVirt
 
 from tests.install_upgrade_operators.constants import (
-    DISABLE_MDEV_CONFIGURATION,
     FEATUREGATES,
     FG_ENABLED,
     MEDIATED_DEVICES_CONFIGURATION,
 )
+from utilities.constants.hco import DISABLE_MDEV_CONFIGURATION
 from utilities.hco import ResourceEditorValidateHCOReconcile
 
 pytestmark = [pytest.mark.s390x, pytest.mark.skip_must_gather_collection]
