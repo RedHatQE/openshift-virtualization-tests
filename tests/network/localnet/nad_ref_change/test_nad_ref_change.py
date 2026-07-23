@@ -15,7 +15,7 @@ import pytest
 from libs.net.ip import filter_link_local_addresses
 from libs.net.vmspec import lookup_iface_status, update_nad_references
 from tests.network.libs.connectivity import poll_tcp_connectivity
-from tests.network.localnet.liblocalnet import (
+from tests.network.libs.localnet import (
     GUEST_1ST_IFACE_NAME,
     GUEST_2ND_IFACE_NAME,
     IFACE_A_NAME,

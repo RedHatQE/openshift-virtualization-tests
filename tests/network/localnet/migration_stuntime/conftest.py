@@ -11,14 +11,14 @@ from libs.vm.spec import Interface, Multus, Network
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs import cloudinit
 from tests.network.libs import cluster_user_defined_network as libcudn
-from tests.network.libs.stuntime import CLIENT_VM_LABEL, SERVER_VM_LABEL, ContinuousPing
-from tests.network.localnet.liblocalnet import (
+from tests.network.libs.localnet import (
     GUEST_1ST_IFACE_NAME,
     LOCALNET_OVS_BRIDGE_INTERFACE,
     ip_addresses_from_pool,
     libnncp,
     localnet_vm,
 )
+from tests.network.libs.stuntime import CLIENT_VM_LABEL, SERVER_VM_LABEL, ContinuousPing
 
 LOGGER = logging.getLogger(__name__)
 

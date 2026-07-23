@@ -15,7 +15,7 @@ from libs.vm.vm import BaseVirtualMachine, add_volume_disk, cloudinitdisk_storag
 from tests.network.l2_bridge.libl2bridge import LINUX_BRIDGE_IFACE_NAME_1, LINUX_BRIDGE_IFACE_NAME_2
 from tests.network.libs import cloudinit
 from tests.network.libs.cloudinit import primary_iface_cloud_init
-from tests.network.localnet.liblocalnet import GUEST_1ST_IFACE_NAME, GUEST_3RD_IFACE_NAME
+from tests.network.libs.localnet import GUEST_1ST_IFACE_NAME, GUEST_3RD_IFACE_NAME
 
 LOGGER = logging.getLogger(__name__)
 
