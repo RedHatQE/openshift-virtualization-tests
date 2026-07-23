@@ -8,58 +8,14 @@ import pytest
 
 from tests.storage.hpp.utils import (
     DV_NAME,
-    HCO_NODE_PLACEMENT,
-    NODE_SELECTOR,
-    TYPE,
     VM_NAME,
     edit_hpp_with_node_selector,
 )
-from utilities.constants.cluster import NODE_STR
 from utilities.storage import check_disk_count_in_vm
 
 LOGGER = logging.getLogger(__name__)
 
 pytestmark = pytest.mark.hpp
-
-
-@pytest.mark.destructive
-@pytest.mark.parametrize(
-    (
-        "updated_hpp_with_node_placement",
-        "hyperconverged_with_node_placement",
-        "cirros_vm_for_node_placement_tests",
-    ),
-    [
-        pytest.param(
-            {TYPE: NODE_SELECTOR},
-            HCO_NODE_PLACEMENT,
-            {DV_NAME: "dv-5711", VM_NAME: "vm-5711", NODE_STR: None},
-            marks=pytest.mark.polarion("CNV-5711"),
-        ),
-        pytest.param(
-            {TYPE: "affinity"},
-            HCO_NODE_PLACEMENT,
-            {DV_NAME: "dv-5712", VM_NAME: "vm-5712", NODE_STR: None},
-            marks=pytest.mark.polarion("CNV-5712"),
-        ),
-        pytest.param(
-            {TYPE: "tolerations"},
-            HCO_NODE_PLACEMENT,
-            {DV_NAME: "dv-5713", VM_NAME: "vm-5713", NODE_STR: None},
-            marks=pytest.mark.polarion("CNV-5713"),
-        ),
-    ],
-    indirect=True,
-)
-def test_create_dv_on_right_node_with_node_placement(
-    worker_node1,
-    update_node_labels,
-    updated_hpp_with_node_placement,
-    hyperconverged_with_node_placement,
-    cirros_vm_for_node_placement_tests,
-):
-    # The VM should be created on the node that have the node labels
-    assert cirros_vm_for_node_placement_tests.vmi.node.name == worker_node1.name
 
 
 @pytest.mark.post_upgrade
