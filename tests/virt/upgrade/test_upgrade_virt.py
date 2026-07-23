@@ -21,7 +21,7 @@ from tests.virt.upgrade.utils import (
     verify_run_strategy_vmi_status,
     verify_vms_ssh_connectivity,
 )
-from tests.virt.utils import assert_migration_post_copy_mode, verify_guest_boot_time
+from tests.virt.utils import assert_migration_post_copy_mode, get_pci_fingerprint, verify_guest_boot_time
 from utilities.constants.hco import DATA_SOURCE_NAME
 from utilities.constants.pytest import DEPENDENCY_SCOPE_SESSION
 from utilities.exceptions import ResourceValueError
@@ -78,7 +78,8 @@ class TestUpgradeVirt:
     @pytest.mark.polarion("CNV-2974")
     @pytest.mark.order("first")
     @pytest.mark.dependency(name=VMS_RUNNING_BEFORE_UPGRADE_TEST_NODE_ID)
-    def test_is_vm_running_before_upgrade(self, vms_for_upgrade, linux_boot_time_before_upgrade):
+    @pytest.mark.usefixtures("linux_boot_time_before_upgrade", "pci_fingerprints_before_upgrade")
+    def test_is_vm_running_before_upgrade(self, vms_for_upgrade):
         for vm in vms_for_upgrade:
             assert vm.vmi.status == VirtualMachineInstance.Status.RUNNING
 
@@ -297,6 +298,29 @@ class TestUpgradeVirt:
     ):
         migratable_vms = [vm for vm in vms_for_upgrade if vm.name in virt_migratable_vms_names]
         verify_guest_boot_time(vm_list=migratable_vms, initial_boot_time=linux_boot_time_before_upgrade)
+
+    @pytest.mark.ocp_upgrade
+    @pytest.mark.sno
+    @pytest.mark.polarion("CNV-16329")
+    @pytest.mark.order(
+        after=[IMAGE_UPDATE_AFTER_UPGRADE_NODE_ID, VIRT_VMS_RUNNING_AFTER_UPGRADE_TEST_NODE_ID],
+        before=AFTER_UPGRADE_STORAGE_ORDERING,
+    )
+    @pytest.mark.dependency(
+        depends=[
+            IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID,
+            VIRT_VMS_RUNNING_AFTER_UPGRADE_TEST_NODE_ID,
+        ],
+        scope=DEPENDENCY_SCOPE_SESSION,
+    )
+    def test_pci_topology_after_upgrade(self, vms_for_upgrade, pci_fingerprints_before_upgrade):
+        """STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/pci-topology-stability.md"""
+        failed_vms = {}
+        for vm in vms_for_upgrade:
+            current_fingerprint = get_pci_fingerprint(vm=vm)
+            if current_fingerprint != pci_fingerprints_before_upgrade[vm.name]:
+                failed_vms[vm.name] = {"before": pci_fingerprints_before_upgrade[vm.name], "after": current_fingerprint}
+        assert not failed_vms, f"PCI topology changed after upgrade: {failed_vms}"
 
     @pytest.mark.ocp_upgrade
     @pytest.mark.sno
