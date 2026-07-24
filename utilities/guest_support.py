@@ -10,8 +10,13 @@ from utilities.constants.timeouts import (
     TIMEOUT_15SEC,
     TIMEOUT_90SEC,
 )
-from utilities.constants.virt import HYPERV_FEATURES_LABELS_DOM_XML
-from utilities.virt import VirtualMachineForTests
+from utilities.constants.virt import HYPERV_FEATURES_LABELS_DOM_XML, OS_PROC_NAME
+from utilities.virt import (
+    VirtualMachineForTests,
+    fetch_pid_from_windows_vm,
+    pause_unpause_vm_and_check_connectivity,
+    start_and_fetch_processid_on_windows_vm,
+)
 
 
 def assert_windows_efi(vm: VirtualMachineForTests) -> None:
@@ -148,3 +153,20 @@ def check_windows_vm_hvinfo(vm: VirtualMachineForTests) -> None:
         f"The following hyperV flags are not set correctly in the guest: {failed_windows_hyperv_list}\n"
         f"VM hvinfo dict:{hvinfo_dict}"
     )
+
+
+def validate_pause_unpause_windows_vm(vm: VirtualMachineForTests, pre_pause_pid: int | None = None) -> None:
+    proc_name = OS_PROC_NAME["windows"]
+    if pre_pause_pid is None:
+        pre_pause_pid = start_and_fetch_processid_on_windows_vm(vm=vm, process_name=proc_name)
+    pause_unpause_vm_and_check_connectivity(vm=vm)
+    post_pause_pid = fetch_pid_from_windows_vm(vm=vm, process_name=proc_name)
+    kill_processes_by_name_windows(vm=vm, process_name=proc_name)
+    assert post_pause_pid == pre_pause_pid, (
+        f"PID mismatch!\nPre pause PID is: {pre_pause_pid}\nPost pause PID is: {post_pause_pid}"
+    )
+
+
+def kill_processes_by_name_windows(vm: VirtualMachineForTests, process_name: str) -> None:
+    cmd = shlex.split(f"taskkill /F /IM {process_name}")
+    run_ssh_commands(host=vm.ssh_exec, commands=cmd, tcp_timeout=TCP_TIMEOUT_30SEC)
