@@ -16,6 +16,9 @@ DEPRECATED_API_ALERT = "KubeVirtDeprecatedAPIRequested"
 
 
 @pytest.mark.s390x
+@pytest.mark.upgrade
+@pytest.mark.upgrade_custom
+@pytest.mark.cnv_upgrade
 @pytest.mark.polarion("CNV-16276")
 @pytest.mark.order("last")
 def test_no_deprecated_api_alert_after_tests(prometheus, elapsed_seconds_since_suite_start):
