@@ -18,11 +18,11 @@ def cnv_prometheus_rule_alerts(hco_namespace):
     Returns:
         dict[str, dict[str, str]]: Mapping of rule name to {alert_name: runbook_url}.
     """
-    result: dict[str, dict[str, str]] = {}
+    result = {}
     for prometheus_rule in PrometheusRule.get(namespace=hco_namespace.name):
         LOGGER.info(f"Loading alerts from rule: {prometheus_rule.name}")
         result[prometheus_rule.name] = {
-            alert.get("alert"): alert.get("annotations").get("runbook_url")
+            alert.get("alert"): (alert.get("annotations") or {}).get("runbook_url")
             for group in prometheus_rule.instance.spec.groups
             for alert in group["rules"]
             if alert.get("alert")
@@ -37,7 +37,7 @@ def available_runbook_urls(cnv_prometheus_rule_alerts):
     Returns:
         set[str]: Set of runbook URLs that are reachable via HTTP HEAD.
     """
-    unique_urls: set[str] = set()
+    unique_urls = set()
     for alerts in cnv_prometheus_rule_alerts.values():
         for runbook_url in alerts.values():
             if runbook_url:
@@ -45,10 +45,14 @@ def available_runbook_urls(cnv_prometheus_rule_alerts):
 
     LOGGER.info(f"Validating {len(unique_urls)} unique runbook URLs")
 
-    available_urls: set[str] = set()
+    available_urls = set()
     with requests.Session() as session:
         for runbook_url in sorted(unique_urls):
-            raw_url = github_blob_url_to_raw(blob_url=runbook_url)
+            try:
+                raw_url = github_blob_url_to_raw(blob_url=runbook_url)
+            except ValueError as error:
+                LOGGER.warning(f"Skipping malformed runbook URL '{runbook_url}': {error}")
+                continue
             sample = None
             try:
                 for sample in TimeoutSampler(

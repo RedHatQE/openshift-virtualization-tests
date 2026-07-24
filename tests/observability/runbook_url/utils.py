@@ -32,7 +32,7 @@ def github_blob_url_to_raw(blob_url: str) -> str:
 
 
 def validate_downstream_runbook_url(
-    cnv_prometheus_rule_alerts: dict[str, dict[str, str]],
+    cnv_prometheus_rule_alerts: dict[str, dict[str, str | None]],
     available_runbook_urls: set[str],
     subtests: pytest.Subtests,
 ) -> None:
