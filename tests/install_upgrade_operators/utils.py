@@ -1,7 +1,6 @@
 import importlib
 import inspect
 import logging
-import re
 from typing import Any
 
 from benedict import benedict
@@ -192,19 +191,6 @@ def get_function_name(function_name):
         str: name of the function
     """
     return inspect.getsource(function_name).split("(")[0].split(" ")[-1]
-
-
-def get_resource_container_env_image_mismatch(container):
-    return [
-        env_dict
-        for env_dict in container.get("env", [])
-        if "image" in env_dict["name"].lower()
-        and env_dict.get("value")
-        and not re.match(
-            rf"NOT_AVAILABLE|{Resource.ApiGroup.IMAGE_REGISTRY}",
-            env_dict.get("value"),
-        )
-    ]
 
 
 def get_ocp_resource_module_name(related_object_kind, list_submodules):
