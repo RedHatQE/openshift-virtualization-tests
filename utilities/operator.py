@@ -18,12 +18,13 @@ from ocp_resources.operator_hub import OperatorHub
 from ocp_resources.pod import Pod
 from ocp_resources.resource import Resource, ResourceEditor
 from ocp_resources.subscription import Subscription
+from packaging.version import parse
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 import utilities.infra
 from utilities.constants.cluster import BASE_EXCEPTIONS_DICT
-from utilities.constants.hco import DEFAULT_RESOURCE_CONDITIONS
+from utilities.constants.hco import DEFAULT_RESOURCE_CONDITIONS, HOTFIX_STR, UpgradeStreams
 from utilities.constants.timeouts import (
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
@@ -622,3 +623,42 @@ def wait_for_cluster_operator_stabilize(admin_client, wait_timeout=TIMEOUT_20MIN
 
 def get_hco_csv_name_by_version(cnv_target_version: str) -> str:
     return f"kubevirt-hyperconverged-operator.v{cnv_target_version}"
+
+
+def determine_upgrade_stream(current_version: str, target_version: str) -> str:
+    """Determine the CNV upgrade stream by comparing current and target versions.
+
+    Args:
+        current_version: The current CNV version string (e.g. "4.15.1-hotfix").
+        target_version: The target CNV version string (e.g. "4.16.0").
+
+    Returns:
+        The upgrade stream identifier: one of UpgradeStreams.X_STREAM,
+        UpgradeStreams.Y_STREAM, or UpgradeStreams.Z_STREAM.
+
+    Raises:
+        ValueError: If the target version is not newer than the current version,
+            or if the stream cannot be determined.
+    """
+    current_cnv_version = parse(version=current_version.split("-")[0])
+    target_cnv_version = parse(version=target_version.split("-")[0])
+
+    if current_cnv_version.major < target_cnv_version.major:
+        return UpgradeStreams.X_STREAM
+    elif current_cnv_version.minor < target_cnv_version.minor:
+        return UpgradeStreams.Y_STREAM
+    elif current_cnv_version.micro < target_cnv_version.micro:
+        return UpgradeStreams.Z_STREAM
+    elif HOTFIX_STR in current_version:
+        # if we reach here, this is an upgrade out of hotfix to next z-stream
+        return UpgradeStreams.Z_STREAM
+    else:
+        if target_cnv_version <= current_cnv_version:
+            raise ValueError(
+                f"Cannot upgrade to older/identical versions,"
+                f"current: {current_cnv_version} target: {target_cnv_version}"
+            )
+        raise ValueError(
+            f"Unknown upgrade stream. Current cnv version: {current_cnv_version}, "
+            f"target cnv version: {target_cnv_version}."
+        )

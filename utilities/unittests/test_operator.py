@@ -19,6 +19,7 @@ from utilities.operator import (
     create_operator,
     create_operator_group,
     create_subscription,
+    determine_upgrade_stream,
     disable_default_sources_in_operatorhub,
     get_catalog_source,
     get_cluster_operator_status_conditions,
@@ -30,6 +31,7 @@ from utilities.operator import (
     get_mcp_updating_transition_times,
     get_mcps_with_all_machines_ready,
     get_mcps_with_different_transition_times,
+    get_mcps_with_true_condition_status,
     get_nodes_not_ready,
     get_operator_hub,
     update_image_in_catalog_source,
@@ -682,6 +684,50 @@ class TestWaitForMcpReadyMachineCount:
         mock_consecutive_checks.assert_called_once()
 
 
+class TestGetMcpsWithTrueConditionStatus:
+    """Test cases for get_mcps_with_true_condition_status function."""
+
+    @patch("utilities.operator.Resource")
+    def test_returns_mcps_with_matching_true_condition(self, mock_resource_class):
+        """MCP names whose condition type is True are included in the result set."""
+        mock_resource_class.Condition.Status.TRUE = "True"
+
+        mock_mcp_worker = MagicMock()
+        mock_mcp_worker.name = "worker"
+        mock_mcp_worker.instance.status.conditions = [
+            {"type": "Updated", "status": "True"},
+            {"type": "Updating", "status": "False"},
+        ]
+        mock_mcp_master = MagicMock()
+        mock_mcp_master.name = "master"
+        mock_mcp_master.instance.status.conditions = [
+            {"type": "Updated", "status": "False"},
+        ]
+
+        result = get_mcps_with_true_condition_status(
+            condition_type="Updated",
+            machine_config_pools_list=[mock_mcp_worker, mock_mcp_master],
+        )
+
+        assert result == {"worker"}
+
+    @patch("utilities.operator.Resource")
+    def test_returns_empty_set_when_no_mcps_match(self, mock_resource_class):
+        """Empty set is returned when no MCP has the condition as True."""
+        mock_resource_class.Condition.Status.TRUE = "True"
+
+        mock_mcp = MagicMock()
+        mock_mcp.name = "worker"
+        mock_mcp.instance.status.conditions = [{"type": "Updated", "status": "False"}]
+
+        result = get_mcps_with_true_condition_status(
+            condition_type="Updated",
+            machine_config_pools_list=[mock_mcp],
+        )
+
+        assert result == set()
+
+
 class TestConsecutiveChecksForMcpCondition:
     """Test cases for consecutive_checks_for_mcp_condition function"""
 
@@ -738,6 +784,29 @@ class TestConsecutiveChecksForMcpCondition:
             )
 
         mock_collect_data.assert_called_once()
+
+    def test_consecutive_checks_reset_then_succeed(self):
+        """Consecutive-check counter resets to zero when some MCPs miss the condition."""
+        mock_mcp1 = MagicMock()
+        mock_mcp1.name = "worker"
+        mock_mcp2 = MagicMock()
+        mock_mcp2.name = "master"
+
+        mock_sampler = MagicMock()
+        mock_sampler.__iter__ = MagicMock(
+            return_value=iter([
+                {"worker"},  # partial match → reset (line 143)
+                {"worker", "master"},
+                {"worker", "master"},
+                {"worker", "master"},
+            ])
+        )
+        mock_sampler.wait_timeout = 600
+
+        consecutive_checks_for_mcp_condition(
+            mcp_sampler=mock_sampler,
+            machine_config_pools_list=[mock_mcp1, mock_mcp2],
+        )
 
 
 class TestWaitForMcpUpdateEnd:
@@ -821,6 +890,41 @@ class TestWaitForMcpUpdateStart:
 
         # Should not raise because MCPs reached Updated
         wait_for_mcp_update_start([mock_mcp], initial_times)
+
+        mock_collect_data.assert_called_once()
+
+    @patch("utilities.operator.collect_mcp_data_on_update_timeout")
+    @patch("utilities.operator.get_mcps_with_true_condition_status")
+    @patch("utilities.operator.TimeoutSampler")
+    @patch("utilities.operator.MachineConfigPool")
+    def test_wait_for_update_start_timeout_no_updated_raises(
+        self,
+        mock_mcp_class,
+        mock_sampler,
+        mock_get_true_status,
+        mock_collect_data,
+    ):
+        """Timeout with zero MCPs reaching Updated re-raises TimeoutExpiredError."""
+        mock_mcp_class.Status.UPDATING = "Updating"
+        mock_mcp_class.Status.UPDATED = "Updated"
+
+        mock_mcp = MagicMock()
+        mock_mcp.name = "worker"
+
+        class MockSamplerIterator:
+            wait_timeout = 600
+
+            def __iter__(self):
+                return self
+
+            def __next__(self):
+                raise TimeoutExpiredError("Timeout")
+
+        mock_sampler.return_value = MockSamplerIterator()
+        mock_get_true_status.return_value = set()
+
+        with pytest.raises(TimeoutExpiredError):
+            wait_for_mcp_update_start([mock_mcp], {"worker": "2024-01-15T10:00:00Z"})
 
         mock_collect_data.assert_called_once()
 
@@ -1022,6 +1126,50 @@ class TestWaitForCatalogsourceReady:
 
         with pytest.raises(TimeoutExpiredError):
             wait_for_catalogsource_ready(mock_admin_client, "test-catalog")
+
+    @patch("utilities.operator.TimeoutSampler")
+    @patch("utilities.operator.utilities.infra.get_pods")
+    @patch("utilities.operator.py_config")
+    @patch("utilities.operator.Namespace")
+    @patch("utilities.operator.Pod")
+    def test_wait_catalogsource_ready_inner_func_filters_non_running_pods(
+        self,
+        mock_pod_class,
+        mock_namespace_class,
+        mock_config,
+        mock_get_pods,
+        mock_sampler,
+    ):
+        """Inner pod-filter function excludes pods not in Running phase."""
+        mock_admin_client = MagicMock()
+        mock_config.__getitem__.return_value = "openshift-marketplace"
+        mock_pod_class.Status.RUNNING = "Running"
+
+        mock_pod_running = MagicMock()
+        mock_pod_running.name = "catalog-pod-1"
+        mock_pod_running.instance.status.phase = "Running"
+
+        mock_pod_not_running = MagicMock()
+        mock_pod_not_running.name = "catalog-pod-2"
+        mock_pod_not_running.instance.status.phase = "Pending"
+
+        mock_get_pods.return_value = [mock_pod_running, mock_pod_not_running]
+
+        captured_func = None
+
+        def capture_sampler(*args, **kwargs):
+            nonlocal captured_func
+            captured_func = kwargs.get("func")
+            mock_instance = MagicMock()
+            mock_instance.__iter__ = MagicMock(return_value=iter([[]]))
+            return mock_instance
+
+        mock_sampler.side_effect = capture_sampler
+
+        wait_for_catalogsource_ready(mock_admin_client, "test-catalog")
+
+        result = captured_func()
+        assert result == ["catalog-pod-2"]
 
 
 class TestCreateOperatorGroup:
@@ -1312,6 +1460,55 @@ class TestWaitForAllNodesReady:
         with pytest.raises(TimeoutExpiredError):
             wait_for_all_nodes_ready([MagicMock()])
 
+    @patch("utilities.operator.TimeoutSampler")
+    @patch("utilities.operator.get_nodes_not_ready")
+    def test_wait_all_nodes_ready_reset_then_succeed(
+        self,
+        mock_get_nodes,
+        mock_sampler,
+    ):
+        """Consecutive-check counter resets to zero when not-ready nodes appear mid-run."""
+        mock_node = MagicMock()
+        mock_node.name = "node1"
+        not_ready = [mock_node]
+
+        mock_sampler_instance = MagicMock()
+        mock_sampler_instance.__iter__ = MagicMock(return_value=iter([not_ready, [], [], []]))
+        mock_sampler.return_value = mock_sampler_instance
+
+        wait_for_all_nodes_ready([mock_node])
+
+        mock_sampler.assert_called_once()
+
+    @patch("utilities.operator.TimeoutSampler")
+    @patch("utilities.operator.get_nodes_not_ready")
+    def test_wait_all_nodes_ready_timeout_with_not_ready_nodes(
+        self,
+        mock_get_nodes,
+        mock_sampler,
+    ):
+        """Timeout logs not-ready node names and re-raises TimeoutExpiredError."""
+        mock_node = MagicMock()
+        mock_node.name = "node1"
+        not_ready = [mock_node]
+
+        class MockSamplerIterator:
+            _yielded = False
+
+            def __iter__(self):
+                return self
+
+            def __next__(self):
+                if not self._yielded:
+                    self._yielded = True
+                    return not_ready
+                raise TimeoutExpiredError("Timeout")
+
+        mock_sampler.return_value = MockSamplerIterator()
+
+        with pytest.raises(TimeoutExpiredError):
+            wait_for_all_nodes_ready([mock_node])
+
 
 class TestGetNodesNotReady:
     """Test cases for get_nodes_not_ready function"""
@@ -1366,6 +1563,28 @@ class TestWaitForNodesToHaveSameKubeletVersion:
                 return self
 
             def __next__(self):
+                raise TimeoutExpiredError("Timeout")
+
+        mock_sampler.return_value = MockSamplerIterator()
+
+        with pytest.raises(TimeoutExpiredError):
+            wait_for_nodes_to_have_same_kubelet_version([MagicMock()])
+
+    @patch("utilities.operator.TimeoutSampler")
+    def test_wait_same_version_timeout_with_version_mismatch(self, mock_sampler):
+        """Timeout with mismatched kubelet versions logs the divergence and re-raises."""
+        divergent_versions = {"node1": "v1.24.0", "node2": "v1.25.0"}
+
+        class MockSamplerIterator:
+            _yielded = False
+
+            def __iter__(self):
+                return self
+
+            def __next__(self):
+                if not self._yielded:
+                    self._yielded = True
+                    return divergent_versions
                 raise TimeoutExpiredError("Timeout")
 
         mock_sampler.return_value = MockSamplerIterator()
@@ -1563,3 +1782,44 @@ class TestUpdateImageInCatalogSource:
 
         mock_create_catalog.assert_called_once()
         mock_wait_manifest.assert_called_once()
+
+
+class TestDetermineUpgradeStream:
+    """Test cases for determine_upgrade_stream function."""
+
+    def test_x_stream_upgrade(self):
+        """Major version bump is identified as x-stream."""
+        assert determine_upgrade_stream(current_version="3.11.0", target_version="4.0.0") == "x-stream"
+
+    def test_y_stream_upgrade(self):
+        """Minor version bump is identified as y-stream."""
+        assert determine_upgrade_stream(current_version="4.15.3", target_version="4.16.0") == "y-stream"
+
+    def test_z_stream_upgrade(self):
+        """Patch version bump is identified as z-stream."""
+        assert determine_upgrade_stream(current_version="4.15.1", target_version="4.15.2") == "z-stream"
+
+    def test_z_stream_from_hotfix(self):
+        """Hotfix build upgrading to the same semver release is z-stream."""
+        assert determine_upgrade_stream(current_version="4.15.1-hotfix", target_version="4.15.1") == "z-stream"
+
+    def test_version_suffix_stripped_before_comparison(self):
+        """Build metadata suffix (e.g. -1234) is stripped before semver comparison."""
+        assert determine_upgrade_stream(current_version="4.15.1-1234567", target_version="4.15.2") == "z-stream"
+
+    def test_downgrade_raises_value_error(self):
+        """Attempting to downgrade raises ValueError."""
+        with pytest.raises(ValueError, match="Cannot upgrade to older/identical versions"):
+            determine_upgrade_stream(current_version="4.16.0", target_version="4.15.0")
+
+    def test_same_version_raises_value_error(self):
+        """Identical current and target versions raise ValueError."""
+        with pytest.raises(ValueError, match="Cannot upgrade to older/identical versions"):
+            determine_upgrade_stream(current_version="4.15.1", target_version="4.15.1")
+
+    def test_unknown_stream_raises_value_error(self):
+        """Post-release target with equal major.minor.micro raises unknown-stream ValueError."""
+        # "4.15.1.post1" parses with the same major/minor/micro as "4.15.1" but is
+        # semantically newer, so none of the x/y/z-stream branches fire.
+        with pytest.raises(ValueError, match="Unknown upgrade stream"):
+            determine_upgrade_stream(current_version="4.15.1", target_version="4.15.1.post1")
