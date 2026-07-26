@@ -1,13 +1,11 @@
 import pytest
-from ocp_resources.kubevirt import KubeVirt
 
 from tests.install_upgrade_operators.constants import (
     DISABLE_MDEV_CONFIGURATION,
     FEATUREGATES,
-    FG_ENABLED,
     MEDIATED_DEVICES_CONFIGURATION,
 )
-from utilities.hco import ResourceEditorValidateHCOReconcile
+from utilities.hco import set_hco_feature_gates
 
 pytestmark = [pytest.mark.s390x, pytest.mark.skip_must_gather_collection]
 
@@ -17,10 +15,9 @@ def updated_fg_hco(
     request,
     hyperconverged_resource_scope_function,
 ):
-    with ResourceEditorValidateHCOReconcile(
-        patches={hyperconverged_resource_scope_function: {"spec": {FEATUREGATES: request.param["featuregate"]}}},
-        list_resource_reconcile=[KubeVirt],
-        wait_for_reconcile_post_update=True,
+    with set_hco_feature_gates(
+        hco_resource=hyperconverged_resource_scope_function,
+        enable=request.param["enable"],
     ):
         yield
 
@@ -29,7 +26,7 @@ def updated_fg_hco(
     "updated_fg_hco",
     [
         pytest.param(
-            {"featuregate": {DISABLE_MDEV_CONFIGURATION: FG_ENABLED}},
+            {"enable": [DISABLE_MDEV_CONFIGURATION]},
             marks=pytest.mark.polarion("CNV-10091"),
             id="test_enable_fg_disable_mdev_config_hco",
         ),
@@ -41,8 +38,9 @@ def test_enable_fg_hco(
     hco_spec,
     kubevirt_resource,
 ):
-    assert hco_spec[FEATUREGATES][DISABLE_MDEV_CONFIGURATION] is True, (
-        f"HCO featureGates.{DISABLE_MDEV_CONFIGURATION} is not True: {hco_spec[FEATUREGATES]}"
+    hco_fg_names = {fg["name"] for fg in hco_spec.get(FEATUREGATES, [])}
+    assert DISABLE_MDEV_CONFIGURATION in hco_fg_names, (
+        f"HCO featureGates does not contain {DISABLE_MDEV_CONFIGURATION}: {hco_spec.get(FEATUREGATES, [])}"
     )
 
     kubevirt_mdev_enabled = kubevirt_resource.instance.spec["configuration"][MEDIATED_DEVICES_CONFIGURATION]["enabled"]

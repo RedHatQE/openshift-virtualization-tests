@@ -21,6 +21,7 @@ from utilities.constants.hco import (
     DEFAULT_HCO_CONDITIONS,
     ENABLE_COMMON_BOOT_IMAGE_IMPORT,
     EXPECTED_STATUS_CONDITIONS,
+    FEATURE_GATES,
     HCO_SUBSCRIPTION,
     IMAGE_CRON_STR,
     SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
@@ -543,6 +544,37 @@ def update_hco_templates_spec(
             name=custom_datasource_name,
             namespace=golden_images_namespace.name,
         ).clean_up()
+
+
+@contextmanager
+def set_hco_feature_gates(
+    hco_resource: HyperConverged,
+    enable: list[str] | None = None,
+    disable: list[str] | None = None,
+) -> Iterator[None]:
+    """Enable or disable HCO feature gates with safe read-modify-write and automatic restore.
+
+    Args:
+        hco_resource: The HyperConverged resource to patch.
+        enable: Feature gate names to enable.
+        disable: Feature gate names to disable.
+
+    Yields:
+        None. On exit the original feature gate state is restored.
+    """
+    current_fgs = hco_resource.instance.to_dict()["spec"].get(FEATURE_GATES, [])
+    by_name = {fg["name"]: fg for fg in current_fgs}
+    for name in enable or []:
+        by_name[name] = {"name": name}
+    for name in disable or []:
+        by_name[name] = {"name": name, "state": "Disabled"}
+
+    with ResourceEditorValidateHCOReconcile(
+        patches={hco_resource: {"spec": {FEATURE_GATES: list(by_name.values())}}},
+        list_resource_reconcile=[KubeVirt],
+        wait_for_reconcile_post_update=True,
+    ):
+        yield
 
 
 @contextmanager

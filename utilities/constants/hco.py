@@ -50,6 +50,13 @@ class UpgradeStreams:
     Z_STREAM = "z-stream"
 
 
+HCO_VIRTUALIZATION_KEY = "virtualization"
+HCO_STORAGE_KEY = "storage"
+HCO_SECURITY_KEY = "security"
+HCO_DEPLOYMENT_KEY = "deployment"
+HCO_WORKLOAD_SOURCES_KEY = "workloadSources"
+HCO_NETWORKING_KEY = "networking"
+
 TLS_OLD_POLICY = "old"
 TLS_CUSTOM_POLICY = "custom"
 TLS_SECURITY_PROFILE = "tlsSecurityProfile"
