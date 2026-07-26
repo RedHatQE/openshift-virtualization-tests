@@ -74,8 +74,7 @@ from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster, sup
 from libs.net.ip import filter_link_local_addresses, random_cidr_addresses_by_family
 from libs.net.vmspec import lookup_iface_status
 from tests.utils import download_and_extract_tar
-from utilities.artifactory import get_artifactory_header, get_http_image_url, get_test_artifact_server_url
-from utilities.bitwarden import get_cnv_tests_secret_by_name
+from utilities.artifactory import get_artifactory_header, get_test_artifact_server_url
 from utilities.cluster import cache_admin_client, get_oc_whoami_username
 from utilities.constants import Images
 from utilities.constants.aaq import (
@@ -95,7 +94,6 @@ from utilities.constants.cluster import (
     NODE_TYPE_WORKER_LABEL,
     OC_ADM_LOGS_COMMAND,
     POD_SECURITY_NAMESPACE_LABELS,
-    RHSM_SECRET_NAME,
     UTILITY,
     WORKER_NODE_LABEL_KEY,
     WORKERS_TYPE,
@@ -153,7 +151,6 @@ from utilities.cpu import (
     get_nodes_cpu_model,
 )
 from utilities.data_utils import base64_encode_str, name_prefix
-from utilities.exceptions import MissingEnvironmentVariableError
 from utilities.infra import (
     ClusterHosts,
     ExecCommandOnPod,
@@ -1966,16 +1963,6 @@ def bin_directory_to_os_path(os_path_environment, bin_directory, virtctl_binary,
     os.environ["PATH"] = f"{bin_directory}:{os_path_environment}"
 
 
-@pytest.fixture(scope="session")
-def artifactory_setup(pytestconfig):
-    LOGGER.info("Checking for artifactory credentials:")
-    if pytestconfig.option.skip_artifactory_check:
-        LOGGER.warning("Explicitly skipping artifactory setup check due to use of --skip-artifactory-check")
-        return
-    if not (os.environ.get("ARTIFACTORY_TOKEN") and os.environ.get("ARTIFACTORY_USER")):
-        raise MissingEnvironmentVariableError("Please set ARTIFACTORY_USER and ARTIFACTORY_TOKEN environment variables")
-
-
 @pytest.fixture(autouse=True)
 def autouse_fixtures(
     leftovers_cleanup,  # Must be called first to avoid deleting created resources.
@@ -2011,11 +1998,6 @@ def generated_ssh_key_for_vm_access(ssh_key_tmpdir_scope_session):
     if os.path.isfile(vm_ssh_key_file):
         os.unlink(vm_ssh_key_file)
     del os.environ[CNV_VM_SSH_KEY_PATH]
-
-
-@pytest.fixture(scope="session")
-def rhel9_http_image_url():
-    return get_http_image_url(image_directory=Images.Rhel.DIR, image_name=Images.Rhel.RHEL9_4_IMG)
 
 
 @pytest.fixture(scope="session")
@@ -2646,24 +2628,6 @@ def rwx_fs_available_storage_classes_names(cluster_storage_classes_names):
 @pytest.fixture()
 def storage_class_name_scope_function(storage_class_matrix__function__):
     return [*storage_class_matrix__function__][0]
-
-
-@pytest.fixture(scope="session")
-def rhsm_credentials_from_bitwarden():
-    return get_cnv_tests_secret_by_name(secret_name="RHSM_CREDENTIALS")
-
-
-@pytest.fixture(scope="module")
-def rhsm_created_secret(rhsm_credentials_from_bitwarden, namespace):
-    with Secret(
-        name=RHSM_SECRET_NAME,
-        namespace=namespace.name,
-        data_dict={
-            "username": base64_encode_str(text=rhsm_credentials_from_bitwarden["user"]),
-            "password": base64_encode_str(text=rhsm_credentials_from_bitwarden["password"]),
-        },
-    ) as secret:
-        yield secret
 
 
 @pytest.fixture(scope="session")
