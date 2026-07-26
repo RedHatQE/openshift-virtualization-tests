@@ -28,7 +28,6 @@ def test_modern_profile_propagates_to_cnv_services(
 
     Preconditions:
         - AAQ enabled
-        - Template feature gate enabled with virt-template deployments ready
         - NetworkPolicy allowing test access to console-plugin pods
         - Modern TLS profile applied to the APIServer and propagated to all managed CRs
         - All CNV services with a clusterIP discovered
