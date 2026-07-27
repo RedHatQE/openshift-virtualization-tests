@@ -561,6 +561,7 @@ def create_cirros_vm(
     artifactory_config_map = get_artifactory_config_map(namespace=namespace)
 
     dv = DataVolume(
+        client=client,
         name=dv_name,
         namespace=namespace,
         source_dict=construct_datavolume_source_dict(
