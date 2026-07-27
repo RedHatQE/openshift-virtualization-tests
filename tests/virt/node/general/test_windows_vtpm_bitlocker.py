@@ -78,6 +78,7 @@ def enable_bitlocker(vm):
 @pytest.fixture(scope="class")
 def file_system_persistent_storage_hco_config(
     request,
+    admin_client,
     hyperconverged_resource_scope_module,
     rwx_fs_available_storage_classes_names,
 ):
@@ -89,6 +90,7 @@ def file_system_persistent_storage_hco_config(
         storage_class = py_config["default_storage_class"]
 
     with update_hco_with_persistent_storage_config(
+        admin_client=admin_client,
         hco_cr=hyperconverged_resource_scope_module,
         storage_class=storage_class,
     ):

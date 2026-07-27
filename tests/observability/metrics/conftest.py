@@ -403,7 +403,8 @@ def storage_class_labels_for_testing(admin_client):
 def template_validator_finalizer(admin_client, hco_namespace):
     deployment = Deployment(name=VIRT_TEMPLATE_VALIDATOR, namespace=hco_namespace.name, client=admin_client)
     with ResourceEditorValidateHCOReconcile(
-        patches={deployment: {"metadata": {"finalizers": ["ssp.kubernetes.io/temporary-finalizer"]}}}
+        admin_client=admin_client,
+        patches={deployment: {"metadata": {"finalizers": ["ssp.kubernetes.io/temporary-finalizer"]}}},
     ):
         yield
 

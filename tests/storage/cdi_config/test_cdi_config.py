@@ -119,6 +119,7 @@ def test_cdi_spec_reconciled_by_hco(initial_cdi_config_from_cr, cdi_with_extra_n
 )
 @pytest.mark.s390x
 def test_cdi_tunables_in_hco_propagated_to_cr(
+    admin_client,
     hyperconverged_resource_scope_module,
     cdi,
     namespace,
@@ -142,6 +143,7 @@ def test_cdi_tunables_in_hco_propagated_to_cr(
         return current_cdi_config_from_cr == initial_cdi_config_from_cr
 
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={hyperconverged_resource_scope_module: {"spec": hco_updated_spec_stanza}},
         list_resource_reconcile=[CDI],
     ):

@@ -64,9 +64,11 @@ def vm_with_hugepages(namespace):
 
 @pytest.fixture()
 def disabled_free_page_reporting_in_hco_cr(
+    admin_client,
     hyperconverged_resource_scope_function,
 ):
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={
             hyperconverged_resource_scope_function: {
                 "spec": {"virtualMachineOptions": {"disableFreePageReporting": True}}
