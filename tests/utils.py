@@ -40,7 +40,6 @@ from utilities.constants import (
     TIMEOUT_15SEC,
     TIMEOUT_30MIN,
     U1_LARGE,
-    WIN_2K22,
     WINDOWS_2K22_PREFERENCE,
     Images,
 )
@@ -647,53 +646,6 @@ def verify_wsl2_guest_works(vm: VirtualMachineForTests) -> None:
     except TimeoutExpiredError:
         LOGGER.error(f"VM {vm.name} failed to start WSL2")
         raise
-
-
-@contextmanager
-def create_windows2022_dv_from_registry(
-    dv_name: str,
-    namespace: str,
-    client: DynamicClient,
-    storage_class: str,
-) -> Generator[dict]:
-    """
-    Creates a Windows Server 2022 DataVolume from registry container disk.
-
-    Args:
-        dv_name: Name for the DataVolume
-        namespace: Kubernetes namespace
-        client: Kubernetes client
-        storage_class: Storage class name
-
-    Yields:
-        dict: DataVolume template dictionary with metadata and spec
-    """
-    from utilities.infra import cleanup_artifactory_secret_and_config_map, get_test_artifact_server_url
-    from utilities.os_utils import get_windows_container_disk_path
-
-    artifactory_secret = get_artifactory_secret(namespace=namespace)
-    artifactory_config_map = get_artifactory_config_map(namespace=namespace)
-
-    dv = DataVolume(
-        name=dv_name,
-        namespace=namespace,
-        storage_class=storage_class,
-        source="registry",
-        url=f"{get_test_artifact_server_url(schema='registry')}/{get_windows_container_disk_path(os_value=WIN_2K22)}",
-        size=Images.Windows.CONTAINER_DISK_DV_SIZE,
-        client=client,
-        api_name="storage",
-        secret=artifactory_secret,
-        cert_configmap=artifactory_config_map.name,
-    )
-    dv.to_dict()
-
-    try:
-        yield {"metadata": dv.res["metadata"], "spec": dv.res["spec"]}
-    finally:
-        cleanup_artifactory_secret_and_config_map(
-            artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
-        )
 
 
 @contextmanager

@@ -867,10 +867,6 @@ WINDOWS_2K22_PREFERENCE = "windows.2k22"
 WIN_2K16 = "win2k16"
 WIN_2K19 = "win2k19"
 
-# Windows VirtualMachine preferences
-WINDOWS_11_PREFERENCE = "windows.11"
-WINDOWS_2K22_PREFERENCE = "windows.2k22"
-
 PUBLIC_DNS_SERVER_IP = "8.8.8.8"
 
 BIND_IMMEDIATE_ANNOTATION = {f"{Resource.ApiGroup.CDI_KUBEVIRT_IO}/storage.bind.immediate.requested": "true"}

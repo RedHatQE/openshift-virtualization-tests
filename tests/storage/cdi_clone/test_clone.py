@@ -134,7 +134,8 @@ class TestWindowsClonedDv:
             - Cloned DataVolume status is "Succeeded"
         """
         assert cloned_windows_dv_multi_storage_scope_class.status == DataVolume.Status.SUCCEEDED, (
-            f"Cloned DV status is {cloned_windows_dv_multi_storage_scope_class.status}, expected {DataVolume.Status.SUCCEEDED}"
+            f"Cloned DV status is {cloned_windows_dv_multi_storage_scope_class.status}, "
+            f"expected {DataVolume.Status.SUCCEEDED}"
         )
 
     @pytest.mark.polarion("CNV-3638")
