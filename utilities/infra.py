@@ -651,11 +651,11 @@ def get_daemonsets(admin_client, namespace):
 
 
 @contextmanager
-def scale_deployment_replicas(deployment_name, namespace, replica_count):
+def scale_deployment_replicas(deployment_name, namespace, replica_count, client):
     """
     It scales deployments replicas. At the end of the test restores them back
     """
-    deployment = Deployment(name=deployment_name, namespace=namespace)
+    deployment = Deployment(client=client, name=deployment_name, namespace=namespace)
     initial_replicas = deployment.instance.spec.replicas
     deployment.scale_replicas(replica_count=replica_count)
     deployment.wait_for_replicas(deployed=replica_count > 0)
@@ -903,6 +903,7 @@ def utility_daemonset_for_custom_tests(
     generated_pulled_secret,
     cnv_tests_utilities_service_account,
     label,
+    client,
     node_selector_label=None,
     delete_pod_resources_limit=False,
 ):
@@ -914,6 +915,7 @@ def utility_daemonset_for_custom_tests(
         cnv_tests_utilities_service_account (ServiceAccount): fixture that contains the service account
         for CNV tests utilities.
         label (str): string that is used as a label for the daemonset.
+        client (DynamicClient): Dynamic client for API operations.
         node_selector_label (dict):  dictionary that contains the node selector for the daemonset. This is an optional
         parameter and if not provided, no node selector will be set.
         delete_pod_resources_limit (bool): boolean that indicates whether the pod resources
@@ -945,7 +947,7 @@ def utility_daemonset_for_custom_tests(
 
     ds_yaml_file = io.StringIO(yaml.dump(ds_yaml))
 
-    with DaemonSet(yaml_file=ds_yaml_file) as ds:
+    with DaemonSet(client=client, yaml_file=ds_yaml_file) as ds:
         ds.wait_until_deployed()
         yield ds
 
