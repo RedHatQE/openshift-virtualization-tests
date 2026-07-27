@@ -20,16 +20,14 @@ def cnv_daemonset_names(admin_client, hco_namespace):
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-8509")
 # Not marked as `conformance` as this is a "utility" test to match against test matrix
-def test_no_new_cnv_daemonset_added(sno_cluster, cnv_daemonset_names, jira_cnv_92995_open):
+def test_no_new_cnv_daemonset_added(sno_cluster, cnv_daemonset_names, passt_tainted_cluster):
     """
     Since cnv deployments image validations are done via polarion parameterization, this test has been added
     to catch any new cnv deployments that is not part of cnv_deployment_matrix
     """
-    cnv_daemonsets = ALL_CNV_DAEMONSETS.copy() if not sno_cluster else ALL_CNV_DAEMONSETS_NO_HPP_CSI.copy()
-    if jira_cnv_92995_open:
-        cnv_daemonsets = [ds for ds in cnv_daemonsets if ds != PASST_BINDING_CNI]
-        cnv_daemonset_names = [ds for ds in cnv_daemonset_names if ds != PASST_BINDING_CNI]
+    expected = set(ALL_CNV_DAEMONSETS) if not sno_cluster else set(ALL_CNV_DAEMONSETS_NO_HPP_CSI)
+    actual = set(cnv_daemonset_names)
+    if passt_tainted_cluster:
+        actual = actual - {PASST_BINDING_CNI}
 
-    assert sorted(cnv_daemonset_names) == sorted(cnv_daemonsets), (
-        f"New cnv daemonsets found: {set(cnv_daemonset_names) - set(cnv_daemonsets)}"
-    )
+    assert actual == expected, f"New cnv daemonsets found: {actual - expected}"
