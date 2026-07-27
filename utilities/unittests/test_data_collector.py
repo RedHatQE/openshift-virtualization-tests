@@ -425,7 +425,7 @@ class TestCollectDefaultCnvMustGatherWithVmGather:
 
         collect_default_cnv_must_gather_with_vm_gather(1800, "/target/dir", admin_client=mock_client)
 
-        mock_namespace_class.assert_called_once_with(name="test-hco-ns")
+        mock_namespace_class.assert_called_once_with(client=mock_client, name="test-hco-ns")
         mock_get_csv.assert_called_once_with(admin_client=mock_client, hco_namespace=mock_namespace)
 
         # ASSERTION: Verify the expected must-gather image selection behavior
