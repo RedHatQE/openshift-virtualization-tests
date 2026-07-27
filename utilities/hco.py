@@ -386,7 +386,7 @@ def enable_common_boot_image_import_spec_wait_for_data_import_cron(
     namespace: Namespace,
     exclude_data_source_names: Collection[str] | None = None,
 ) -> None:
-    hco_namespace = Namespace(name=hco_resource.namespace)
+    hco_namespace = Namespace(client=admin_client, name=hco_resource.namespace)
     update_common_boot_image_import_spec(
         hco_resource=hco_resource,
         enable=True,
@@ -557,6 +557,7 @@ def enabled_aaq_in_hco(client, hco_namespace, hyperconverged_resource, enable_ac
         patches=patches,
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,
+        admin_client=client,
     ):
         yield
     # need to wait when all AAQ system pods removed
