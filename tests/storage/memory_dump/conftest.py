@@ -6,11 +6,11 @@ import pytest
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from pytest_testconfig import config as py_config
+from utilities.constants.virt import WIN_2K22
 
 from tests.storage.memory_dump.utils import wait_for_memory_dump_status_completed
 from tests.utils import create_windows2022_vm_with_data_volume_template
 from utilities.constants import TIMEOUT_2MIN, Images
-from utilities.constants.virt import WIN_2K22
 from utilities.storage import (
     PodWithPVC,
     data_volume_template_with_source_ref_dict,
