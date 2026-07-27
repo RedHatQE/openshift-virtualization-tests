@@ -1,6 +1,7 @@
 import logging
 
 import pytest
+from packaging.version import Version
 
 from tests.install_upgrade_operators.deployment.utils import (
     assert_cnv_deployment_container_env_image_not_in_upstream,
@@ -14,6 +15,8 @@ from utilities.constants.components import (
     HPP_POOL,
     KUBEVIRT_MIGRATION_CONTROLLER,
 )
+from utilities.hco import get_hco_version
+from utilities.jira import is_jira_open
 
 LOGGER = logging.getLogger(__name__)
 
@@ -84,12 +87,17 @@ def test_cnv_deployment_priority_class_name(subtests, discovered_cnv_deployments
             )
 
 
-
 @pytest.mark.gating
 @pytest.mark.conformance
 @pytest.mark.polarion("CNV-8264")
-def test_cnv_deployment_container_image(subtests, discovered_cnv_deployments):
+def test_cnv_deployment_container_image(subtests, discovered_cnv_deployments, admin_client, hco_namespace):
+    hco_version = Version(version=get_hco_version(client=admin_client, hco_ns_name=hco_namespace.name))
     for deployment in discovered_cnv_deployments:
         with subtests.test(msg=deployment.name):
+            if deployment.name == HCO_OPERATOR:
+                if hco_version >= Version("4.23") and is_jira_open(jira_id="CNV-92888"):
+                    pytest.xfail("sriov-dp-admission-controller upstream registry violation (CNV-92888)")
+                if hco_version >= Version("5.0") and is_jira_open(jira_id="CNV-92889"):
+                    pytest.xfail("sriov-dp-admission-controller upstream registry violation (CNV-92889)")
             assert_cnv_deployment_container_image_not_in_upstream(cnv_deployment=deployment)
             assert_cnv_deployment_container_env_image_not_in_upstream(cnv_deployment=deployment)

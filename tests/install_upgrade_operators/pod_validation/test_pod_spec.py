@@ -1,6 +1,7 @@
 import logging
 
 import pytest
+from packaging.version import Version
 
 from tests.install_upgrade_operators.pod_validation.utils import (
     assert_cnv_pod_container_env_image_not_in_upstream,
@@ -10,10 +11,13 @@ from tests.install_upgrade_operators.pod_validation.utils import (
     validate_priority_class_value,
 )
 from utilities.constants.components import (
+    HCO_OPERATOR,
     HOSTPATH_PROVISIONER_CSI,
     HPP_POOL,
     KUBEVIRT_MIGRATION_CONTROLLER,
 )
+from utilities.hco import get_hco_version
+from utilities.jira import is_jira_open
 
 pytestmark = [pytest.mark.sno, pytest.mark.arm64, pytest.mark.s390x]
 
@@ -58,10 +62,15 @@ def test_pods_resource_request(
             )
 
 
-@pytest.mark.usefixtures("xfail_if_sriov_conforma_jira_open_and_hco_operator")
 @pytest.mark.polarion("CNV-8267")
-def test_cnv_pod_container_image(subtests, discovered_cnv_pods):
+def test_cnv_pod_container_image(subtests, discovered_cnv_pods, admin_client, hco_namespace):
+    hco_version = Version(version=get_hco_version(client=admin_client, hco_ns_name=hco_namespace.name))
     for pod in discovered_cnv_pods:
         with subtests.test(msg=pod.name):
+            if pod.name.startswith(HCO_OPERATOR):
+                if hco_version >= Version("4.23") and is_jira_open(jira_id="CNV-92888"):
+                    pytest.xfail("sriov-dp-admission-controller upstream registry violation (CNV-92888)")
+                if hco_version >= Version("5.0") and is_jira_open(jira_id="CNV-92889"):
+                    pytest.xfail("sriov-dp-admission-controller upstream registry violation (CNV-92889)")
             assert_cnv_pod_container_image_not_in_upstream(cnv_pods_by_type=[pod])
             assert_cnv_pod_container_env_image_not_in_upstream(cnv_pods_by_type=[pod])
