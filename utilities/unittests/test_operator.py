@@ -69,6 +69,7 @@ class TestClusterWithIcsp:
 
         result = cluster_with_icsp(client=mock_client)
         assert result is True
+        mock_icsp_class.get.assert_called_once_with(dyn_client=mock_client)
 
     @patch("utilities.operator.ImageContentSourcePolicy")
     def test_cluster_with_icsp_absent(self, mock_icsp_class):
@@ -78,6 +79,7 @@ class TestClusterWithIcsp:
 
         result = cluster_with_icsp(client=mock_client)
         assert result is False
+        mock_icsp_class.get.assert_called_once_with(dyn_client=mock_client)
 
 
 class TestGetCatalogSource:
@@ -925,6 +927,8 @@ class TestWaitForCatalogSourceDisabled:
         wait_for_catalog_source_disabled(client=mock_client, catalog_name="test-catalog")
 
         mock_sampler.assert_called_once()
+        assert mock_sampler.call_args.kwargs["client"] == mock_client
+        assert mock_sampler.call_args.kwargs["catalog_name"] == "test-catalog"
 
     @patch("utilities.operator.TimeoutSampler")
     @patch("utilities.operator.get_catalog_source")

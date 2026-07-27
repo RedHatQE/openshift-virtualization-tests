@@ -588,10 +588,11 @@ class TestResourceEditorValidateHCOReconcile:
         assert editor.hco_namespace == mock_namespace
         assert editor._consecutive_checks_count == 5
         assert editor.list_resource_reconcile == []
+        mock_namespace_class.assert_called_once_with(client=mock_client, name="openshift-cnv")
 
     @patch("utilities.hco.wait_for_hco_conditions")
-    @patch("utilities.hco.Namespace")
-    def test_resource_editor_update_without_reconcile(self, mock_namespace_class, mock_wait_hco):
+    @patch("utilities.hco.Namespace", new=MagicMock())
+    def test_resource_editor_update_without_reconcile(self, mock_wait_hco):
         """Test ResourceEditorValidateHCOReconcile update without wait_for_reconcile_post_update"""
         mock_client = MagicMock()
         mock_resource = MagicMock()
@@ -607,8 +608,8 @@ class TestResourceEditorValidateHCOReconcile:
             mock_wait_hco.assert_not_called()
 
     @patch("utilities.hco.wait_for_hco_conditions")
-    @patch("utilities.hco.Namespace")
-    def test_resource_editor_update_with_reconcile(self, mock_namespace_class, mock_wait_hco):
+    @patch("utilities.hco.Namespace", new=MagicMock())
+    def test_resource_editor_update_with_reconcile(self, mock_wait_hco):
         """Test ResourceEditorValidateHCOReconcile update with wait_for_reconcile_post_update"""
         mock_client = MagicMock()
         mock_resource = MagicMock()
@@ -624,8 +625,8 @@ class TestResourceEditorValidateHCOReconcile:
             mock_wait_hco.assert_called_once()
 
     @patch("utilities.hco.wait_for_hco_conditions")
-    @patch("utilities.hco.Namespace")
-    def test_resource_editor_restore(self, mock_namespace_class, mock_wait_hco):
+    @patch("utilities.hco.Namespace", new=MagicMock())
+    def test_resource_editor_restore(self, mock_wait_hco):
         """Test ResourceEditorValidateHCOReconcile restore"""
         mock_client = MagicMock()
         mock_resource = MagicMock()
@@ -966,6 +967,7 @@ class TestUpdateHcoAnnotations:
             pass
 
         mock_editor_class.assert_called_once()
+        assert mock_editor_class.call_args.kwargs["admin_client"] == mock_client
 
     @patch("utilities.hco.ResourceEditorValidateHCOReconcile")
     def test_update_annotations_with_existing(self, mock_editor_class):
@@ -990,6 +992,7 @@ class TestUpdateHcoAnnotations:
             pass
 
         mock_editor_class.assert_called_once()
+        assert mock_editor_class.call_args.kwargs["admin_client"] == mock_client
 
     @patch("utilities.hco.ResourceEditorValidateHCOReconcile")
     def test_update_annotations_overwrite(self, mock_editor_class):
@@ -1011,6 +1014,9 @@ class TestUpdateHcoAnnotations:
             overwrite_patches=True,
         ):
             pass
+
+        mock_editor_class.assert_called_once()
+        assert mock_editor_class.call_args.kwargs["admin_client"] == mock_client
 
         mock_editor_class.assert_called_once()
 
