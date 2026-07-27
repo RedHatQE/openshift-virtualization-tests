@@ -2,6 +2,7 @@ import pytest
 from ocp_resources.datavolume import DataVolume
 
 from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE
+from tests.storage.stop_status_utils import dv_stop_status_restart_threshold
 from utilities.constants import Images
 from utilities.constants.storage import REGISTRY_STR
 from utilities.constants.timeouts import TIMEOUT_40MIN
@@ -40,7 +41,7 @@ def fedora_dv_with_filesystem_volume_mode(
         volume_mode=DataVolume.VolumeMode.FILE,
         client=unprivileged_client,
     ) as dv:
-        dv.wait_for_dv_success()
+        dv.wait_for_dv_success(stop_status_func=dv_stop_status_restart_threshold, dv=dv)
         yield dv
 
 
@@ -60,7 +61,7 @@ def fedora_dv_with_block_volume_mode(
         volume_mode=DataVolume.VolumeMode.BLOCK,
         client=unprivileged_client,
     ) as dv:
-        dv.wait_for_dv_success()
+        dv.wait_for_dv_success(stop_status_func=dv_stop_status_restart_threshold, dv=dv)
         yield dv
 
 
