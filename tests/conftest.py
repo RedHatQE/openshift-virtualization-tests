@@ -1165,6 +1165,7 @@ def golden_images_edit_rolebinding(
     golden_images_cluster_role_edit,
 ):
     with RoleBinding(
+        client=golden_images_namespace.client,
         name="role-bind-create-dv",
         namespace=golden_images_namespace.name,
         subjects_kind="User",
@@ -1372,13 +1373,13 @@ def hyperconverged_with_node_placement(request, admin_client, hco_namespace, hyp
 
 
 @pytest.fixture(scope="module")
-def hostpath_provisioner_scope_module():
-    yield HostPathProvisioner(name=HostPathProvisioner.Name.HOSTPATH_PROVISIONER)
+def hostpath_provisioner_scope_module(admin_client):
+    yield HostPathProvisioner(client=admin_client, name=HostPathProvisioner.Name.HOSTPATH_PROVISIONER)
 
 
 @pytest.fixture(scope="session")
-def hostpath_provisioner_scope_session():
-    yield HostPathProvisioner(name=HostPathProvisioner.Name.HOSTPATH_PROVISIONER)
+def hostpath_provisioner_scope_session(admin_client):
+    yield HostPathProvisioner(client=admin_client, name=HostPathProvisioner.Name.HOSTPATH_PROVISIONER)
 
 
 @pytest.fixture(scope="session")
@@ -1467,14 +1468,14 @@ def kmp_enabled_ns(admin_client, kmp_vm_label):
 
 @pytest.fixture(scope="session")
 def cdi(hco_namespace):
-    cdi = CDI(name=CDI_KUBEVIRT_HYPERCONVERGED)
+    cdi = CDI(client=hco_namespace.client, name=CDI_KUBEVIRT_HYPERCONVERGED)
     assert cdi.instance is not None
     yield cdi
 
 
 @pytest.fixture(scope="session")
-def cdi_config():
-    cdi_config = CDIConfig(name="config")
+def cdi_config(admin_client):
+    cdi_config = CDIConfig(client=admin_client, name="config")
     assert cdi_config.instance is not None
     return cdi_config
 
@@ -2122,6 +2123,7 @@ def fips_enabled_cluster(workers_utility_pods):
 def instance_type_for_test_scope_class(namespace, common_instance_type_param_dict):
     instance_type_param_dict = copy.deepcopy(common_instance_type_param_dict)
     instance_type_param_dict["namespace"] = namespace.name
+    instance_type_param_dict["client"] = namespace.client
     return VirtualMachineInstancetype(**instance_type_param_dict)
 
 
@@ -2161,6 +2163,8 @@ def common_instance_type_param_dict(request):
 def vm_preference_for_test(namespace, common_vm_preference_param_dict):
     vm_preference_param_dict = copy.deepcopy(common_vm_preference_param_dict)
     vm_preference_param_dict["namespace"] = namespace.name
+    if vm_preference_param_dict.get("client") is None:
+        vm_preference_param_dict["client"] = namespace.client
     return VirtualMachinePreference(**vm_preference_param_dict)
 
 
@@ -2291,8 +2295,9 @@ def is_disconnected_cluster():
 
 
 @pytest.fixture()
-def migration_policy_with_bandwidth():
+def migration_policy_with_bandwidth(admin_client):
     with MigrationPolicy(
+        client=admin_client,
         name="migration-policy",
         bandwidth_per_migration="128Ki",
         vmi_selector=MIGRATION_POLICY_VM_LABEL,
@@ -2301,8 +2306,9 @@ def migration_policy_with_bandwidth():
 
 
 @pytest.fixture(scope="class")
-def migration_policy_with_bandwidth_scope_class():
+def migration_policy_with_bandwidth_scope_class(admin_client):
     with MigrationPolicy(
+        client=admin_client,
         name="migration-policy",
         bandwidth_per_migration="128Ki",
         vmi_selector=MIGRATION_POLICY_VM_LABEL,
@@ -2313,6 +2319,7 @@ def migration_policy_with_bandwidth_scope_class():
 @pytest.fixture(scope="session")
 def worker_machine1(worker_node1):
     machine = Machine(
+        client=worker_node1.client,
         name=worker_node1.machine_name,
         namespace=py_config["machine_api_namespace"],
     )
@@ -2361,10 +2368,11 @@ def vm_for_test(request, namespace, unprivileged_client):
 
 
 @pytest.fixture(scope="class")
-def migrated_vm_multiple_times(request, vm_for_migration_test):
+def migrated_vm_multiple_times(request, admin_client, vm_for_migration_test):
     vmim = []
     for migration_index in range(request.param):
         migration_obj = VirtualMachineInstanceMigration(
+            client=admin_client,
             name=f"{vm_for_migration_test.name}-{migration_index}",
             namespace=vm_for_migration_test.namespace,
             vmi_name=vm_for_migration_test.vmi.name,
@@ -2428,9 +2436,13 @@ def rhel_vm_with_cluster_instance_type_and_preference(namespace, unprivileged_cl
         namespace=namespace.name,
         client=unprivileged_client,
         vm_instance_type=VirtualMachineClusterInstancetype(
-            name=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[INSTANCE_TYPE_STR]
+            client=unprivileged_client,
+            name=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[INSTANCE_TYPE_STR],
         ),
-        vm_preference=VirtualMachineClusterPreference(name=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[PREFERENCE_STR]),
+        vm_preference=VirtualMachineClusterPreference(
+            client=unprivileged_client,
+            name=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[PREFERENCE_STR],
+        ),
         os_flavor=OS_FLAVOR_RHEL,
     ) as vm:
         running_vm(
@@ -2555,8 +2567,8 @@ def ssp_resource_scope_class(admin_client, hco_namespace):
 
 
 @pytest.fixture(scope="session")
-def kube_system_namespace():
-    kube_system_ns = Namespace(name="kube-system")
+def kube_system_namespace(admin_client):
+    kube_system_ns = Namespace(client=admin_client, name="kube-system")
     if kube_system_ns.exists:
         return kube_system_ns
     raise ResourceNotFoundError(f"{kube_system_ns.name} namespace not found")
