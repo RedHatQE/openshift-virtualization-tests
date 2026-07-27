@@ -369,7 +369,7 @@ def artifactory_config_map_chaos_namespace_scope_module(chaos_namespace):
 
 @pytest.fixture(scope="class")
 def chaos_vms_instancetype_list(request, admin_client, chaos_namespace):
-    required_instancetype = get_instance_type(name=U1_SMALL)
+    required_instancetype = get_instance_type(name=U1_SMALL, client=admin_client)
 
     vms_list = []
     for idx in range(request.param["number_of_vms"]):
