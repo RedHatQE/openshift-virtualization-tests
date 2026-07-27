@@ -9,7 +9,7 @@ from pytest_testconfig import config as py_config
 
 from tests.storage.memory_dump.utils import wait_for_memory_dump_status_completed
 from tests.utils import create_windows2022_vm_with_vtpm_from_registry
-from utilities.constants import TIMEOUT_2MIN, Images, WIN_2K22
+from utilities.constants import TIMEOUT_2MIN, WIN_2K22, Images
 from utilities.storage import (
     PodWithPVC,
     data_volume_template_with_source_ref_dict,
