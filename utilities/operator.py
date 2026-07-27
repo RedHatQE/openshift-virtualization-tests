@@ -246,6 +246,7 @@ def get_catalog_source(client: DynamicClient, catalog_name: str) -> CatalogSourc
     if catalog_source.exists:
         return catalog_source
     LOGGER.warning(f"CatalogSource {catalog_name} not found in namespace: {market_place_namespace}")
+    return None
 
 
 def wait_for_catalog_source_disabled(client: DynamicClient, catalog_name: str) -> None:

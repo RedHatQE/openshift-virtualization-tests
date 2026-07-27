@@ -32,7 +32,9 @@ LOGGER = logging.getLogger(__name__)
 @pytest.fixture(scope="class")
 def hco_cr_with_mdev_permitted_hostdevices(admin_client, hyperconverged_resource_scope_class, supported_gpu_device):
     yield from patch_hco_cr_with_mdev_permitted_hostdevices(
-        admin_client=admin_client, hyperconverged_resource=hyperconverged_resource_scope_class, supported_gpu_device=supported_gpu_device
+        admin_client=admin_client,
+        hyperconverged_resource=hyperconverged_resource_scope_class,
+        supported_gpu_device=supported_gpu_device,
     )
 
 

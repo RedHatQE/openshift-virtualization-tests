@@ -646,7 +646,7 @@ def updated_disable_serial_console_log_false(admin_client, hyperconverged_resour
                 hyperconverged_resource_scope_class: {
                     "spec": {"virtualMachineOptions": {"disableSerialConsoleLog": False}}
                 }
-            }
+            },
         ):
             yield
     else:

@@ -132,7 +132,9 @@ def updated_common_templates_non_existent_ns(
 ):
     with ResourceEditorValidateHCOReconcile(
         admin_client=admin_client,
-        patches={hyperconverged_resource_scope_function: {"spec": {COMMON_BOOT_IMAGE_NAMESPACE_STR: "non-existent-ns"}}}
+        patches={
+            hyperconverged_resource_scope_function: {"spec": {COMMON_BOOT_IMAGE_NAMESPACE_STR: "non-existent-ns"}}
+        },
     ):
         yield
     wait_for_hco_conditions(

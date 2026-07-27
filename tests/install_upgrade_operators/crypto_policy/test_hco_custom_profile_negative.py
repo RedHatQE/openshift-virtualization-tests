@@ -54,7 +54,7 @@ def test_set_ciphers_for_tlsv13(admin_client, hyperconverged_resource_scope_func
     with pytest.raises(ForbiddenError, match=error_string):
         with ResourceEditorValidateHCOReconcile(
             admin_client=admin_client,
-            patches={hyperconverged_resource_scope_function: {"spec": {TLS_SECURITY_PROFILE: tls_custom_profile}}}
+            patches={hyperconverged_resource_scope_function: {"spec": {TLS_SECURITY_PROFILE: tls_custom_profile}}},
         ):
             LOGGER.error(
                 "Setting HCO with custom tlsSecurityProfile with TLS Version 1.3 "

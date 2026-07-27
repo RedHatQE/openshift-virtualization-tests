@@ -82,13 +82,14 @@ def stopped_vm_metric_1(vm_metric_1):
 
 
 @pytest.fixture()
-def vm_in_error_state(namespace):
+def vm_in_error_state(namespace, unprivileged_client):
     vm_name = "vm-in-error-state"
     with VirtualMachineForTests(
         name=vm_name,
         namespace=namespace.name,
         body=fedora_vm_body(name=vm_name),
         node_selector=get_node_selector_dict(node_selector="non-existent-node"),
+        client=unprivileged_client,
     ) as vm:
         vm.start()
         vm.wait_for_specific_status(status=VirtualMachine.Status.ERROR_UNSCHEDULABLE)
@@ -109,13 +110,14 @@ def pvc_for_vm_in_starting_state(unprivileged_client, namespace):
 
 
 @pytest.fixture()
-def vm_in_starting_state(namespace, pvc_for_vm_in_starting_state):
+def vm_in_starting_state(namespace, unprivileged_client, pvc_for_vm_in_starting_state):
     vm_name = "vm-in-starting-state"
     with VirtualMachineForTests(
         name=vm_name,
         namespace=namespace.name,
         body=fedora_vm_body(name=vm_name),
         pvc=pvc_for_vm_in_starting_state,
+        client=unprivileged_client,
     ) as vm:
         vm.start()
         vm.wait_for_specific_status(status=VirtualMachine.Status.WAITING_FOR_VOLUME_BINDING)

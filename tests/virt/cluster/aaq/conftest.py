@@ -68,7 +68,9 @@ def enabled_aaq_in_hco_scope_package(admin_client, hco_namespace, hyperconverged
 
 
 @pytest.fixture(scope="class")
-def updated_aaq_allocation_method(admin_client, hyperconverged_resource_scope_class, aaq_allocation_methods_matrix__class__):
+def updated_aaq_allocation_method(
+    admin_client, hyperconverged_resource_scope_class, aaq_allocation_methods_matrix__class__
+):
     with ResourceEditorValidateHCOReconcile(
         admin_client=admin_client,
         patches={
@@ -86,7 +88,9 @@ def updated_aaq_allocation_method(admin_client, hyperconverged_resource_scope_cl
 
 @pytest.fixture()
 def updated_hco_memory_overcommit(admin_client, hyperconverged_resource_scope_class):
-    yield from update_hco_memory_overcommit(admin_client=admin_client, hco=hyperconverged_resource_scope_class, percentage=50)
+    yield from update_hco_memory_overcommit(
+        admin_client=admin_client, hco=hyperconverged_resource_scope_class, percentage=50
+    )
 
 
 @pytest.fixture(scope="class")
