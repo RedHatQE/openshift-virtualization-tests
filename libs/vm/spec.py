@@ -50,6 +50,7 @@ class CPU:
 @dataclass
 class Memory:
     guest: str
+    maxGuest: str | None = None  # noqa: N815
 
 
 @dataclass

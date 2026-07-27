@@ -1,10 +1,17 @@
 # openshift-virtualization-tests
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/RedHatQE/openshift-virtualization-tests)
+
 This repository contains tests to verify the functionality of OpenShift with
 [OpenShift Virtualization](https://www.redhat.com/en/technologies/cloud-computing/openshift/virtualization), formerly named `CNV` (Container Native Virtualization)
 
 The tests are written in Python and use [pytest](https://docs.pytest.org/en/stable/) as a test framework.
 
+## Documentation
+
+Browse the full [**Documentation Site**](https://redhatqe.github.io/openshift-virtualization-tests/) for comprehensive guides, architecture overviews, and reference material.
+
+For developer and contributor docs, see the [docs/](docs/) directory.
 
 ## Getting started and running the tests
 Please follow the [Getting Started Guide](docs/GETTING_STARTED.md) and [Run the tests](docs/RUNNING_TESTS.md) on how to run the tests.

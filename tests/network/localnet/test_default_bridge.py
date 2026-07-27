@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from libs.net.ip import filter_link_local_addresses, have_same_ip_families
+from libs.net.ip import filter_cluster_unsupported_addresses, filter_link_local_addresses, have_same_ip_families
 from libs.net.traffic_generator import client_server_active_connection, is_tcp_connection
 from libs.net.vmspec import lookup_iface_status
 from tests.network.localnet.liblocalnet import (
@@ -65,7 +65,6 @@ def test_connectivity_post_migration_between_localnet_vms(
                 assert is_tcp_connection(server=server, client=client)
 
 
-@pytest.mark.jira("CNV-90600", run=False)
 @pytest.mark.single_nic
 @pytest.mark.s390x
 @pytest.mark.usefixtures("nncp_localnet")
@@ -86,16 +85,20 @@ def test_vmi_reports_ip_on_secondary_interface_without_vlan(
         vm=vm,
         iface_name=LOCALNET_BR_EX_INTERFACE_NO_VLAN,
         predicate=lambda interface: have_same_ip_families(
-            actual_ips=filter_link_local_addresses(
-                ip_addresses=[str(ip_interface(addr).ip) for addr in interface["ipAddresses"]]
+            actual_ips=filter_cluster_unsupported_addresses(
+                ip_addresses=filter_link_local_addresses(
+                    ip_addresses=[str(ip_interface(addr).ip) for addr in interface["ipAddresses"]]
+                )
             ),
             expected_ips=expected_ips,
         ),
     )
-    reported_ips = filter_link_local_addresses(
-        ip_addresses=[str(ip_interface(addr).ip) for addr in iface_status.ipAddresses]
+    reported_ips = filter_cluster_unsupported_addresses(
+        ip_addresses=filter_link_local_addresses(
+            ip_addresses=[str(ip_interface(addr).ip) for addr in iface_status.ipAddresses]
+        )
     )
     assert set(reported_ips) == set(expected_ips), (
-        f"IP addresses mismatch for interface {LOCALNET_BR_EX_INTERFACE_NO_VLAN} on VM {vm.name},"
+        f"IP addresses mismatch for interface {LOCALNET_BR_EX_INTERFACE_NO_VLAN} on VM {vm.name}, "
         f"Reported: {reported_ips}, Expected: {expected_ips}"
     )

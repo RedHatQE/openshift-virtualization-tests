@@ -17,11 +17,12 @@ from ocp_resources.virtual_machine_cluster_preference import (
 )
 from ocp_resources.virtual_machine_export import VirtualMachineExport
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
+from pytest_testconfig import config as py_config
 
 from tests.storage.constants import TEST_FILE_CONTENT, TEST_FILE_NAME
 from tests.storage.vm_export.utils import create_blank_dv_by_specific_user, get_manifest_from_vmexport, get_manifest_url
 from utilities.constants.images import OS_FLAVOR_RHEL
-from utilities.constants.instance_types import U1_SMALL
+from utilities.constants.instance_types import PREFERENCE_STR, U1_SMALL
 from utilities.constants.pytest import UNPRIVILEGED_PASSWORD, UNPRIVILEGED_USER
 from utilities.infra import create_ns, login_with_user_password
 from utilities.storage import data_volume_template_with_source_ref_dict, write_file_via_ssh
@@ -202,7 +203,7 @@ def vmexport_download_path(tmp_path):
 def rhel_vm_for_snapshot_with_content(
     unprivileged_client,
     namespace,
-    rhel10_data_source_scope_session,
+    latest_rhel_data_source,
     snapshot_storage_class_name_scope_module,
 ):
     with VirtualMachineForTests(
@@ -211,9 +212,11 @@ def rhel_vm_for_snapshot_with_content(
         client=unprivileged_client,
         os_flavor=OS_FLAVOR_RHEL,
         vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL),
-        vm_preference=VirtualMachineClusterPreference(name="rhel.10"),
+        vm_preference=VirtualMachineClusterPreference(
+            name=py_config["latest_instance_type_rhel_os_dict"][PREFERENCE_STR],
+        ),
         data_volume_template=data_volume_template_with_source_ref_dict(
-            data_source=rhel10_data_source_scope_session,
+            data_source=latest_rhel_data_source,
             storage_class=snapshot_storage_class_name_scope_module,
         ),
     ) as vm:

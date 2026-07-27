@@ -27,10 +27,12 @@ from tests.network.bgp.evpn.libevpn import (
     deploy_evpn_bridge,
     deploy_evpn_l2_endpoint,
     deploy_evpn_l3_endpoint,
+    deploy_evpn_l3_vrf,
     evpn_workloads_active_connections,
     teardown_evpn_bridge,
     teardown_evpn_l2_endpoint,
     teardown_evpn_l3_endpoint,
+    teardown_evpn_l3_vrf,
 )
 from tests.network.libs import cluster_user_defined_network as libcudn
 from tests.network.libs.bgp import (
@@ -225,6 +227,8 @@ def evpn_bridge(
         pod=frr_external_pod.pod,
         local_vtep_ip=frr_external_pod.ipv4,
         remote_vtep_ips=worker_ips,
+        l2_vni=EVPN_MAC_VRF_VNI,
+        l3_vni=EVPN_IP_VRF_VNI,
     )
     yield
     teardown_evpn_bridge(pod=frr_external_pod.pod)
@@ -237,27 +241,35 @@ def external_l2_endpoint(
 ) -> Generator[EvpnEndpoint]:
     endpoint = deploy_evpn_l2_endpoint(
         pod=frr_external_pod.pod,
-        vni=EVPN_MAC_VRF_VNI,
         endpoint_ips=[EXTERNAL_L2_ENDPOINT_IPV4, EXTERNAL_L2_ENDPOINT_IPV6],
         mac_address=EXTERNAL_L2_ENDPOINT_MAC,
     )
     yield endpoint
-    teardown_evpn_l2_endpoint(pod=frr_external_pod.pod, vni=EVPN_MAC_VRF_VNI)
+    teardown_evpn_l2_endpoint(endpoint=endpoint)
+
+
+@pytest.fixture(scope="module")
+def external_l3_vrf(
+    evpn_bridge: None,
+    frr_external_pod: ExternalFrrPodInfo,
+) -> Generator[None]:
+    deploy_evpn_l3_vrf(pod=frr_external_pod.pod, vni=EVPN_IP_VRF_VNI)
+    yield
+    teardown_evpn_l3_vrf(pod=frr_external_pod.pod)
 
 
 @pytest.fixture(scope="module")
 def external_l3_endpoint(
-    evpn_bridge: None,
+    external_l3_vrf: None,
     frr_external_pod: ExternalFrrPodInfo,
 ) -> Generator[EvpnEndpoint]:
     endpoint = deploy_evpn_l3_endpoint(
         pod=frr_external_pod.pod,
-        vni=EVPN_IP_VRF_VNI,
         endpoint_ips=[EXTERNAL_L3_ENDPOINT_IPV4, EXTERNAL_L3_ENDPOINT_IPV6],
         gateway_ips=[EXTERNAL_L3_GATEWAY_IPV4, EXTERNAL_L3_GATEWAY_IPV6],
     )
     yield endpoint
-    teardown_evpn_l3_endpoint(pod=frr_external_pod.pod)
+    teardown_evpn_l3_endpoint(endpoint=endpoint)
 
 
 @pytest.fixture()

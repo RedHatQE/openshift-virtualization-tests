@@ -13,6 +13,7 @@ from ocp_resources.storage_class import StorageClass
 from pytest_testconfig import config as py_config
 
 from libs.net.cluster import is_ipv6_single_stack_cluster
+from tests.os_params import RHEL_LATEST
 from tests.storage.cdi_upload.utils import get_storage_profile_minimum_supported_pvc_size
 from tests.storage.utils import assert_use_populator, create_windows_vm_validate_guest_agent_info
 from utilities.constants import Images
@@ -495,8 +496,8 @@ def test_successful_vm_from_uploaded_dv_windows(
     [
         pytest.param(
             {
-                "image_path": py_config["latest_rhel_os_dict"]["image_path"],
-                "image_file": py_config["latest_rhel_os_dict"]["image_name"],
+                "image_path": RHEL_LATEST.get("image_path"),
+                "image_file": RHEL_LATEST.get("image_name"),
             },
             marks=(pytest.mark.polarion("CNV-4512")),
         ),

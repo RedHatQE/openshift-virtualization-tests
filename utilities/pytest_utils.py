@@ -8,8 +8,20 @@ import re
 import shutil
 import socket
 import sys
+import tempfile
 from collections import defaultdict
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from typing import TypedDict
+
+    class _FailureInfoDict(TypedDict):
+        message: str
+        log_message: str
+        return_code: int
+
+
+from xml.etree import ElementTree
 
 import pytest
 from kubernetes.dynamic import DynamicClient
@@ -50,6 +62,81 @@ from utilities.os_utils import (
 )
 
 LOGGER = logging.getLogger(__name__)
+
+
+_failure_info: _FailureInfoDict | None = None
+
+
+def _inject_failure_junit(session: pytest.Session) -> None:
+    """Inject a synthetic error testcase into JUnit XML for pytest exit failures.
+
+    When exit_pytest_execution aborts the session, the exit reason may not appear
+    in the JUnit XML report. CI systems can miss the failure — either because the
+    report is empty (no tests ran) or because the exit reason is not captured as a
+    testcase. This function re-opens the XML file after LogXML writes it and adds
+    a synthetic error testcase to ensure the exit failure is always reported.
+
+    Note:
+        Must be called during pytest_sessionfinish, after LogXML has written the
+        XML file. Pluggy calls hooks in LIFO (last-in-first-out) registration
+        order: conftest is registered before the junitxml plugin, so the
+        conftest hook runs after LogXML has written its output.
+
+    Args:
+        session: The pytest session object, used to access the junitxml file path.
+    """
+    if _failure_info is None:
+        return
+
+    xml_path = getattr(session.config.option, "xmlpath", None)
+    if not xml_path or not os.path.exists(xml_path):
+        LOGGER.info("No JUnit XML file found, skipping synthetic testcase injection")
+        return
+
+    return_code = _failure_info["return_code"]
+    log_message = _failure_info["log_message"]
+
+    sanitized_name = re.sub(r"[^a-z0-9_]", "", _failure_info["message"].lower().replace(" ", "_"))
+    sanitized_name = re.sub(r"_+", "_", sanitized_name).strip("_")[:80]
+    name = sanitized_name or "execution_failure"
+
+    tree = ElementTree.parse(xml_path)
+    root = tree.getroot()
+
+    testsuite = root.find("testsuite")
+    if testsuite is None:
+        LOGGER.warning("No <testsuite> element found in JUnit XML, skipping injection")
+        return
+
+    testcase = ElementTree.SubElement(
+        testsuite,
+        "testcase",
+        attrib={"classname": "pytest_exit", "name": name, "time": "0.000"},
+    )
+    error_node = ElementTree.SubElement(
+        testcase,
+        "error",
+        attrib={"message": f"Pytest execution failed (exit code: {return_code})"},
+    )
+    # Strip XML 1.0 illegal control characters — ElementTree passes them through, corrupting the file.
+    error_node.text = re.sub(r"[^\x09\x0A\x0D\x20-\uD7FF\uE000-\uFFFD\U00010000-\U0010FFFF]", "\ufffd", log_message)
+
+    current_errors = int(testsuite.get("errors", "0"))
+    testsuite.set("errors", str(current_errors + 1))
+    current_tests = int(testsuite.get("tests", "0"))
+    testsuite.set("tests", str(current_tests + 1))
+
+    xml_dir = os.path.dirname(os.path.abspath(xml_path))
+    fd, tmp_path = tempfile.mkstemp(dir=xml_dir, suffix=".xml")
+    try:
+        with os.fdopen(fd, mode="w") as tmp_file:
+            tree.write(tmp_file, encoding="unicode", xml_declaration=True)
+        os.replace(tmp_path, xml_path)
+    except BaseException:
+        os.unlink(tmp_path)
+        raise
+
+    LOGGER.info(f"Injected synthetic failure testcase into JUnit XML (exit code: {return_code})")
 
 
 def get_base_matrix_name(matrix_name):
@@ -112,6 +199,46 @@ def get_matrix_params(pytest_config, matrix_name):
     return _matrix_params if isinstance(_matrix_params, list) else [_matrix_params]
 
 
+def _validate_storage_class_options(
+    cmd_default_storage_class: str | None = None,
+    cmdline_storage_class_matrix: list[str] | None = None,
+) -> None:
+    """Validates that storage class CLI options reference existing storage classes.
+
+    Args:
+        cmd_default_storage_class: Value from --default-storage-class CLI option.
+        cmdline_storage_class_matrix: Parsed values from --storage-class-matrix CLI option.
+
+    Raises:
+        ValueError: If any storage class name is not found in py_config["system_storage_class_matrix"].
+    """
+    available_sc_names = [sc_name for sc in py_config["system_storage_class_matrix"] for sc_name in sc]
+
+    if cmdline_storage_class_matrix:
+        # Verify storage classes passed via --storage-class-matrix are supported
+        if invalid_sc_names := set(cmdline_storage_class_matrix) - set(available_sc_names):
+            raise ValueError(
+                f"Storage class(es) {sorted(invalid_sc_names)} from --storage-class-matrix not found. "
+                f"Available storage classes: {available_sc_names}"
+            )
+
+        # Verify default storage class passed via --default-storage-class exists in --storage-class-matrix
+        if cmd_default_storage_class and cmd_default_storage_class not in cmdline_storage_class_matrix:
+            raise ValueError(
+                f"Default storage class '{cmd_default_storage_class}' not in --storage-class-matrix. "
+                f"Matrix storage classes: {cmdline_storage_class_matrix}"
+            )
+
+        return
+
+    # Verify default storage class passed via --default-storage-class is supported (when matrix is not passed from cli)
+    if cmd_default_storage_class and cmd_default_storage_class not in available_sc_names:
+        raise ValueError(
+            f"Default storage class '{cmd_default_storage_class}' not found in system storage class matrix. "
+            f"Available storage classes: {available_sc_names}"
+        )
+
+
 def config_default_storage_class(session):
     # Default storage class selection order:
     # 1. --default-storage-class from command line
@@ -123,26 +250,43 @@ def config_default_storage_class(session):
     global_config_default_sc = py_config["default_storage_class"]
     cmd_default_storage_class = session.config.getoption(name="default_storage_class")
     cmdline_storage_class_matrix = session.config.getoption(name="storage_class_matrix")
+    system_storage_class_matrix = py_config["system_storage_class_matrix"]
+
+    parsed_cmdline_matrix = cmdline_storage_class_matrix.split(",") if cmdline_storage_class_matrix else None
+    try:
+        _validate_storage_class_options(
+            cmd_default_storage_class=cmd_default_storage_class,
+            cmdline_storage_class_matrix=parsed_cmdline_matrix,
+        )
+    except ValueError as error:
+        error_message = str(error)
+        target_location = os.path.join(get_data_collector_base_directory(), "utilities", "pytest_exit_errors")
+        write_to_file(
+            file_name="storage_class_validation_error",
+            content=error_message,
+            base_directory=target_location,
+        )
+        pytest.exit(reason=error_message, returncode=4)
+
     updated_default_sc = None
     if cmd_default_storage_class:
         updated_default_sc = cmd_default_storage_class
-    elif cmdline_storage_class_matrix:
-        cmdline_storage_class_matrix = cmdline_storage_class_matrix.split(",")
+    elif parsed_cmdline_matrix:
         updated_default_sc = (
-            global_config_default_sc
-            if global_config_default_sc in cmdline_storage_class_matrix
-            else cmdline_storage_class_matrix[0]
+            global_config_default_sc if global_config_default_sc in parsed_cmdline_matrix else parsed_cmdline_matrix[0]
         )
 
     # Update only if the requested default sc is not the same as set in global_config
     if updated_default_sc and updated_default_sc != global_config_default_sc:
         py_config["default_storage_class"] = updated_default_sc
-        default_storage_class_configuration = [
+        matching_configurations = [
             sc_dict
-            for sc in py_config["storage_class_matrix"]
+            for sc in system_storage_class_matrix
             for sc_name, sc_dict in sc.items()
             if sc_name == updated_default_sc
-        ][0]
+        ]
+
+        default_storage_class_configuration = matching_configurations[0]
 
         py_config["default_volume_mode"] = default_storage_class_configuration["volume_mode"]
         py_config["default_access_mode"] = default_storage_class_configuration["access_mode"]
@@ -367,6 +511,11 @@ def exit_pytest_execution(
         junitxml_property (pytest plugin): record_testsuite_property
         message (str): Message to log in an error file. If not provided, `log_message` will be used.
         admin_client (DynamicClient): cluster admin client
+
+    Note:
+        Records the failure details in a module-level store so that
+        _inject_failure_junit can emit a synthetic JUnit XML testcase
+        during pytest_sessionfinish.
     """
     target_location = os.path.join(get_data_collector_base_directory(), "utilities", "pytest_exit_errors")
     # collect must-gather for past 5 minutes:
@@ -386,6 +535,14 @@ def exit_pytest_execution(
         )
     if junitxml_property:
         junitxml_property(name="exit_code", value=return_code)
+
+    global _failure_info
+    _failure_info = {
+        "message": message or log_message,
+        "log_message": log_message,
+        "return_code": return_code,
+    }
+
     pytest.exit(reason=log_message, returncode=return_code)
 
 
@@ -647,6 +804,28 @@ def update_cpu_arch_related_config(cpu_arch_option: str) -> None:
                 generate_instance_type_matrix_dicts(os_dict=py_config, cpu_arch=arch)
             else:
                 generate_instance_type_matrix_dicts(os_dict=py_config)
+
+
+def filter_multiarch_tests(items: list[pytest.Item], config: pytest.Config) -> list[pytest.Item]:
+    """Deselect multiarch-marked tests on homogeneous clusters.
+
+    On heterogeneous clusters (cluster_type=MULTIARCH), all tests pass through unchanged.
+    On homogeneous clusters, tests marked with 'multiarch' are deselected and reported
+    via pytest_deselected so they appear in the session summary.
+
+    Args:
+        items: Collected test items.
+        config: Pytest config object, used to report deselected items.
+
+    Returns:
+        Filtered list of test items with multiarch tests removed on homogeneous clusters.
+    """
+    if py_config.get("cluster_type") == MULTIARCH:
+        return items
+    discard_tests, items_to_return = remove_tests_from_list(items=items, filter_str="multiarch")
+    if discard_tests:
+        config.hook.pytest_deselected(items=discard_tests)
+    return items_to_return
 
 
 def assert_incremental_classes_fully_collected(items: list[pytest.Item]) -> None:

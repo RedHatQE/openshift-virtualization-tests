@@ -13,6 +13,8 @@ Not here:
 - Pytest/test-runner strings → ``pytest.py``
 """
 
+from typing import Final
+
 from kubernetes.dynamic.exceptions import InternalServerError
 from ocp_resources.resource import Resource
 from urllib3.exceptions import (
@@ -28,6 +30,7 @@ NODE_STR = "node"
 NODE_TYPE_WORKER_LABEL = {"node-type": "worker"}
 NODE_ROLE_KUBERNETES_IO = "node-role.kubernetes.io"
 WORKER_NODE_LABEL_KEY = f"{NODE_ROLE_KUBERNETES_IO}/worker"
+RHCOS9_WORKER_LABEL: Final[str] = f"{NODE_ROLE_KUBERNETES_IO}/worker-rhcos9"
 VERSION_LABEL_KEY = f"{Resource.ApiGroup.APP_KUBERNETES_IO}/version"
 CPU_MODEL_LABEL_PREFIX = f"cpu-model.node.{Resource.ApiGroup.KUBEVIRT_IO}"
 TSC_FREQUENCY = "tsc-frequency"

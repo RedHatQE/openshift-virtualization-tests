@@ -11,6 +11,8 @@ from timeout_sampler import TimeoutExpiredError
 
 # Need to mock circular imports for guest_support
 import utilities
+from utilities.constants.timeouts import TCP_TIMEOUT_30SEC
+from utilities.constants.virt import OS_PROC_NAME
 
 mock_virt = MagicMock()
 sys.modules["utilities.virt"] = mock_virt
@@ -21,6 +23,8 @@ from utilities.guest_support import (
     assert_windows_efi,
     check_vm_xml_hyperv,
     check_windows_vm_hvinfo,
+    kill_processes_by_name_windows,
+    validate_pause_unpause_windows_vm,
 )
 
 
@@ -510,3 +514,82 @@ class TestCheckWindowsVmHvinfo:
 
         with pytest.raises(TimeoutExpiredError):
             check_windows_vm_hvinfo(mock_vm)
+
+
+class TestKillProcessesByNameWindows:
+    """Test cases for kill_processes_by_name_windows function"""
+
+    @patch("utilities.guest_support.run_ssh_commands")
+    def test_kill_processes_by_name_windows(self, mock_run_ssh):
+        """Test that taskkill command is issued for the given process name"""
+        mock_vm = MagicMock()
+        mock_vm.ssh_exec = MagicMock()
+
+        kill_processes_by_name_windows(vm=mock_vm, process_name="notepad.exe")
+
+        mock_run_ssh.assert_called_once_with(
+            host=mock_vm.ssh_exec,
+            commands=["taskkill", "/F", "/IM", "notepad.exe"],
+            tcp_timeout=TCP_TIMEOUT_30SEC,
+        )
+
+
+class TestValidatePauseUnpauseWindowsVm:
+    """Test cases for validate_pause_unpause_windows_vm function"""
+
+    @patch("utilities.guest_support.kill_processes_by_name_windows")
+    @patch("utilities.guest_support.fetch_pid_from_windows_vm")
+    @patch("utilities.guest_support.pause_unpause_vm_and_check_connectivity")
+    @patch("utilities.guest_support.start_and_fetch_processid_on_windows_vm")
+    def test_validate_pause_unpause_windows_vm_matching_pids_starts_process(
+        self, mock_start_and_fetch_pid, mock_pause_unpause, mock_fetch_pid, mock_kill_processes
+    ):
+        """Test that a process is started when no pre-pause PID is supplied and PIDs match after unpause"""
+        mock_vm = MagicMock()
+        mock_start_and_fetch_pid.return_value = 1234
+        mock_fetch_pid.return_value = 1234
+
+        validate_pause_unpause_windows_vm(vm=mock_vm)
+
+        mock_start_and_fetch_pid.assert_called_once_with(vm=mock_vm, process_name=OS_PROC_NAME["windows"])
+        mock_pause_unpause.assert_called_once_with(vm=mock_vm)
+        mock_fetch_pid.assert_called_once_with(vm=mock_vm, process_name=OS_PROC_NAME["windows"])
+        mock_kill_processes.assert_called_once_with(vm=mock_vm, process_name=OS_PROC_NAME["windows"])
+
+    @patch("utilities.guest_support.kill_processes_by_name_windows")
+    @patch("utilities.guest_support.fetch_pid_from_windows_vm")
+    @patch("utilities.guest_support.pause_unpause_vm_and_check_connectivity")
+    @patch("utilities.guest_support.start_and_fetch_processid_on_windows_vm")
+    def test_validate_pause_unpause_windows_vm_uses_provided_pre_pause_pid(
+        self, mock_start_and_fetch_pid, mock_pause_unpause, mock_fetch_pid, mock_kill_processes
+    ):
+        """Test that the provided pre-pause PID is used instead of starting a new process"""
+        mock_vm = MagicMock()
+        mock_fetch_pid.return_value = 5678
+
+        validate_pause_unpause_windows_vm(vm=mock_vm, pre_pause_pid=5678)
+
+        mock_start_and_fetch_pid.assert_not_called()
+        mock_pause_unpause.assert_called_once_with(vm=mock_vm)
+        mock_fetch_pid.assert_called_once_with(vm=mock_vm, process_name=OS_PROC_NAME["windows"])
+        mock_kill_processes.assert_called_once_with(vm=mock_vm, process_name=OS_PROC_NAME["windows"])
+
+    @patch("utilities.guest_support.kill_processes_by_name_windows")
+    @patch("utilities.guest_support.fetch_pid_from_windows_vm")
+    @patch("utilities.guest_support.pause_unpause_vm_and_check_connectivity")
+    @patch("utilities.guest_support.start_and_fetch_processid_on_windows_vm")
+    def test_validate_pause_unpause_windows_vm_pid_mismatch(
+        self, mock_start_and_fetch_pid, mock_pause_unpause, mock_fetch_pid, mock_kill_processes
+    ):
+        """Test assertion failure when the PID before and after pause/unpause differ"""
+        mock_vm = MagicMock()
+        mock_start_and_fetch_pid.return_value = 1234
+        mock_fetch_pid.return_value = 4321
+
+        with pytest.raises(AssertionError, match="PID mismatch"):
+            validate_pause_unpause_windows_vm(vm=mock_vm)
+
+        mock_start_and_fetch_pid.assert_called_once_with(vm=mock_vm, process_name=OS_PROC_NAME["windows"])
+        mock_pause_unpause.assert_called_once_with(vm=mock_vm)
+        mock_fetch_pid.assert_called_once_with(vm=mock_vm, process_name=OS_PROC_NAME["windows"])
+        mock_kill_processes.assert_called_once_with(vm=mock_vm, process_name=OS_PROC_NAME["windows"])
