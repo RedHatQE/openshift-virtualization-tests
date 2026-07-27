@@ -12,14 +12,14 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
-def cnv_prometheus_rule_alerts(hco_namespace):
+def cnv_prometheus_rule_alerts(admin_client, hco_namespace):
     """All alert-to-runbook-URL mappings per CNV prometheus rule.
 
     Returns:
         dict[str, dict[str, str]]: Mapping of rule name to {alert_name: runbook_url}.
     """
     result = {}
-    for prometheus_rule in PrometheusRule.get(namespace=hco_namespace.name):
+    for prometheus_rule in PrometheusRule.get(dyn_client=admin_client, namespace=hco_namespace.name):
         LOGGER.info(f"Loading alerts from rule: {prometheus_rule.name}")
         result[prometheus_rule.name] = {
             alert.get("alert"): (alert.get("annotations") or {}).get("runbook_url")
