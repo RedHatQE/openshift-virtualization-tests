@@ -5,14 +5,10 @@ from ocp_resources.catalog_source import CatalogSource
 from pytest_testconfig import config as py_config
 
 import utilities.hco
+from utilities.constants.hco import SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME
 from utilities.infra import get_hyperconverged_resource
 
 LOGGER = logging.getLogger(__name__)
-
-
-@pytest.fixture(scope="session")
-def installing_cnv(pytestconfig):
-    return pytestconfig.option.install
 
 
 @pytest.fixture(scope="session")
@@ -129,24 +125,30 @@ def hco_image(
         return cs.instance.spec.image
 
 
-@pytest.fixture(scope="package")
-def must_gather_image_url(csv_scope_session):
-    LOGGER.info(f"Csv name is : {csv_scope_session.name}")
-    must_gather_image = [
-        image["image"] for image in csv_scope_session.instance.spec.relatedImages if "must-gather" in image["name"]
-    ]
-    assert must_gather_image, (
-        f"Csv: {csv_scope_session.name}, "
-        f"related images: {csv_scope_session.instance.spec.relatedImages} "
-        "does not have must gather image."
-    )
-
-    return must_gather_image[0]
-
-
 @pytest.fixture(scope="module")
 def hco_status_related_objects(hyperconverged_resource_scope_module):
     """
     Gets HCO.status.relatedObjects list
     """
     return hyperconverged_resource_scope_module.instance.status.relatedObjects
+
+
+@pytest.fixture()
+def hyperconverged_status_templates_scope_function(
+    hyperconverged_resource_scope_function,
+):
+    return hyperconverged_resource_scope_function.instance.to_dict()["status"][SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME]
+
+
+@pytest.fixture(scope="module")
+def hyperconverged_status_templates_scope_module(
+    hyperconverged_resource_scope_module,
+):
+    return hyperconverged_resource_scope_module.instance.to_dict()["status"][SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME]
+
+
+@pytest.fixture(scope="class")
+def hyperconverged_status_templates_scope_class(
+    hyperconverged_resource_scope_class,
+):
+    return hyperconverged_resource_scope_class.instance.status.dataImportCronTemplates

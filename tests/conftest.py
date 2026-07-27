@@ -488,6 +488,11 @@ def control_plane_nodes(nodes):
 
 
 @pytest.fixture(scope="session")
+def installing_cnv(pytestconfig):
+    return pytestconfig.option.install
+
+
+@pytest.fixture(scope="session")
 def cnv_tests_utilities_namespace(admin_client, installing_cnv):
     if installing_cnv:
         yield

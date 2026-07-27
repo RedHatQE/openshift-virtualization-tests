@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 from pytest_testconfig import config as py_config
 
@@ -5,6 +7,8 @@ import utilities.hco
 from utilities.constants.hco import HCO_SUBSCRIPTION
 from utilities.infra import get_subscription
 from utilities.operator import disable_default_sources_in_operatorhub
+
+LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="session")
@@ -41,6 +45,21 @@ def cnv_subscription_scope_session(
 @pytest.fixture(scope="session")
 def csv_related_images_scope_session(csv_scope_session):
     return csv_scope_session.instance.spec.relatedImages
+
+
+@pytest.fixture(scope="package")
+def must_gather_image_url(csv_scope_session):
+    LOGGER.info(f"Csv name is : {csv_scope_session.name}")
+    must_gather_image = [
+        image["image"] for image in csv_scope_session.instance.spec.relatedImages if "must-gather" in image["name"]
+    ]
+    assert must_gather_image, (
+        f"Csv: {csv_scope_session.name}, "
+        f"related images: {csv_scope_session.instance.spec.relatedImages} "
+        "does not have must gather image."
+    )
+
+    return must_gather_image[0]
 
 
 @pytest.fixture(scope="module")
