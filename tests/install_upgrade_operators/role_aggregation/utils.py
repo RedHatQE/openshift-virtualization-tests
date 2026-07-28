@@ -7,11 +7,9 @@ from typing import TYPE_CHECKING
 from kubernetes.dynamic.exceptions import ForbiddenError
 from ocp_resources.cluster_role import ClusterRole
 from ocp_resources.kubevirt import KubeVirt
-from ocp_resources.role_binding import RoleBinding
 from ocp_resources.virtual_machine import VirtualMachine
 from timeout_sampler import TimeoutSampler
 
-from utilities.constants.pytest import UNPRIVILEGED_USER
 from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_5MIN
 from utilities.hco import ResourceEditorValidateHCOReconcile
 
@@ -107,94 +105,62 @@ def wait_for_vm_list_access(client: DynamicClient, namespace_name: str) -> None:
             break
 
 
-def disabled_aggregation_with_role_binding(
+def disable_aggregation_and_wait(
     admin_client: DynamicClient,
     unprivileged_client: DynamicClient,
     namespace_name: str,
     hyperconverged_resource: HyperConverged,
     role_name: str,
 ) -> Generator[None]:
-    """Create role binding, disable aggregation, wait for RBAC revocation.
+    """Set roleAggregationStrategy to Manual and wait for RBAC revocation.
 
     Args:
         admin_client: Admin DynamicClient for API access.
         unprivileged_client: Unprivileged DynamicClient to verify access changes.
-        namespace_name: Namespace where the RoleBinding is created.
+        namespace_name: Namespace to verify RBAC in.
         hyperconverged_resource: HyperConverged CR to patch.
-        role_name: ClusterRole name to bind (admin, edit, or view).
+        role_name: ClusterRole name for logging context.
+
+    Yields:
+        None when aggregation is disabled and RBAC revocation is confirmed.
     """
-    with RoleBinding(
-        name=f"test-role-bind-{role_name}",
-        namespace=namespace_name,
-        client=admin_client,
-        subjects_kind="User",
-        subjects_name=UNPRIVILEGED_USER,
-        subjects_namespace=namespace_name,
-        role_ref_kind="ClusterRole",
-        role_ref_name=role_name,
-    ):
-        wait_for_vm_list_access(client=unprivileged_client, namespace_name=namespace_name)
-
-        with ResourceEditorValidateHCOReconcile(
-            patches={hyperconverged_resource: {"spec": {"roleAggregationStrategy": "Manual"}}},
-            list_resource_reconcile=[KubeVirt],
-            wait_for_reconcile_post_update=True,
-        ):
-            wait_for_aggregation_labels(admin_client=admin_client, expected_present=False)
-            LOGGER.info(f"Waiting for {role_name} role de-aggregation to propagate")
-            for sample in TimeoutSampler(
-                wait_timeout=TIMEOUT_1MIN,
-                sleep=2,
-                func=vm_list_is_forbidden,
-                client=unprivileged_client,
-                namespace_name=namespace_name,
-            ):
-                if sample:
-                    break
-            LOGGER.info(f"Aggregation disabled with {role_name} RoleBinding; user access revoked")
-            yield
-
-
-def reenabled_aggregation_with_role_binding(
-    admin_client: DynamicClient,
-    namespace_name: str,
-    hyperconverged_resource: HyperConverged,
-    role_name: str,
-) -> Generator[None]:
-    """Disable aggregation, create role binding, re-enable aggregation, wait for labels.
-
-    Follows the precondition order: Manual → RoleBinding → AggregateToDefault → labels restored.
-
-    Args:
-        admin_client: Admin DynamicClient for API access.
-        namespace_name: Namespace where the RoleBinding is created.
-        hyperconverged_resource: HyperConverged CR to patch.
-        role_name: ClusterRole name to bind (admin, edit, or view).
-    """
-    LOGGER.info(f"Setting roleAggregationStrategy to Manual for {role_name} re-enable test")
     with ResourceEditorValidateHCOReconcile(
         patches={hyperconverged_resource: {"spec": {"roleAggregationStrategy": "Manual"}}},
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,
     ):
         wait_for_aggregation_labels(admin_client=admin_client, expected_present=False)
-        LOGGER.info(f"Creating RoleBinding for {role_name} role")
-        with RoleBinding(
-            name=f"test-role-bind-{role_name}",
-            namespace=namespace_name,
-            client=admin_client,
-            subjects_kind="User",
-            subjects_name=UNPRIVILEGED_USER,
-            subjects_namespace=namespace_name,
-            role_ref_kind="ClusterRole",
-            role_ref_name=role_name,
+        LOGGER.info(f"Waiting for {role_name} role de-aggregation to propagate")
+        for sample in TimeoutSampler(
+            wait_timeout=TIMEOUT_1MIN,
+            sleep=2,
+            func=vm_list_is_forbidden,
+            client=unprivileged_client,
+            namespace_name=namespace_name,
         ):
-            LOGGER.info("Restoring roleAggregationStrategy to AggregateToDefault")
-            with ResourceEditorValidateHCOReconcile(
-                patches={hyperconverged_resource: {"spec": {"roleAggregationStrategy": "AggregateToDefault"}}},
-                list_resource_reconcile=[KubeVirt],
-                wait_for_reconcile_post_update=True,
-            ):
-                wait_for_aggregation_labels(admin_client=admin_client, expected_present=True)
-                LOGGER.info(f"Role aggregation re-enabled with {role_name} RoleBinding; labels confirmed present")
-                yield
+            if sample:
+                break
+        LOGGER.info(f"Aggregation disabled with {role_name} RoleBinding; user access revoked")
+        yield
+
+
+def ensure_aggregation_enabled(admin_client: DynamicClient, hyperconverged_resource: HyperConverged) -> None:
+    """Verify roleAggregationStrategy is AggregateToDefault and aggregation labels are present.
+
+    Checks the current strategy value and patches it if not AggregateToDefault,
+    then waits for aggregation labels to be present on all kubevirt.io ClusterRoles.
+
+    Args:
+        admin_client: Admin DynamicClient for API access.
+        hyperconverged_resource: HyperConverged CR to check and patch.
+    """
+    current_strategy = hyperconverged_resource.instance.spec.get("roleAggregationStrategy", "AggregateToDefault")
+    if current_strategy != "AggregateToDefault":
+        LOGGER.info(f"roleAggregationStrategy is {current_strategy}, setting to AggregateToDefault")
+        editor = ResourceEditorValidateHCOReconcile(
+            patches={hyperconverged_resource: {"spec": {"roleAggregationStrategy": "AggregateToDefault"}}},
+            list_resource_reconcile=[KubeVirt],
+            wait_for_reconcile_post_update=True,
+        )
+        editor.update(backup_resources=False)
+    wait_for_aggregation_labels(admin_client=admin_client, expected_present=True)
