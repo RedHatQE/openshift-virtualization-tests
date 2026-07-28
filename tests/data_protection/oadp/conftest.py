@@ -400,14 +400,7 @@ def rhel_vm_with_hooks_opt_out(
 
 
 @pytest.fixture()
-def velero_backup_vm_with_hooks_opt_out(
-    admin_client,
-    rhel_vm_with_hooks_opt_out,
-    namespace_for_backup,
-):
-    with VeleroBackup(
-        client=admin_client,
-        included_namespaces=[namespace_for_backup.name],
-        name="backup-hooks-opt-out",
-    ) as backup:
-        yield backup
+def paused_rhel_vm_with_hooks_opt_out(rhel_vm_with_hooks_opt_out):
+    """Paused RHEL VM with kubevirt.io/skip-backup-hooks annotation set to 'true'."""
+    rhel_vm_with_hooks_opt_out.vmi.pause(wait=True)
+    yield rhel_vm_with_hooks_opt_out

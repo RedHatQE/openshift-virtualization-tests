@@ -9,12 +9,10 @@ import logging
 
 import pytest
 
-from tests.data_protection.oadp.utils import get_velero_backup_logs
+from tests.data_protection.oadp.utils import assert_velero_backup_hooks_not_injected
 from utilities.oadp import VeleroBackup
 
 LOGGER = logging.getLogger(__name__)
-
-HOOK_LOG_PATTERN = "freeze"
 
 
 class TestVeleroBackupHookOptOut:
@@ -23,7 +21,8 @@ class TestVeleroBackupHookOptOut:
 
     The skip-backup-hooks annotation is intended for metadata-only backup workflows where
     third-party solutions handle the actual data protection. These tests verify that
-    freeze/unfreeze hooks are not executed when the annotation is set.
+    freeze/unfreeze hooks are not injected and that Velero backup completes when the
+    annotation is set.
 
     Preconditions:
         - VM with backup hooks disabled
@@ -35,7 +34,7 @@ class TestVeleroBackupHookOptOut:
         self,
         admin_client,
         namespace_for_backup,
-        rhel_vm_with_hooks_opt_out,
+        paused_rhel_vm_with_hooks_opt_out,
     ):
         """
         Test that backup of paused VM completes with hooks disabled.
@@ -47,10 +46,10 @@ class TestVeleroBackupHookOptOut:
             1. Run Velero backup
 
         Expected:
-            - Backup completes successfully without freeze/unfreeze hook execution
+            - No freeze/unfreeze hooks are injected on the virt-launcher pod
+            - Backup completes successfully
         """
-        rhel_vm_with_hooks_opt_out.vmi.pause(wait=True)
-        LOGGER.info(f"VM {rhel_vm_with_hooks_opt_out.name} paused")
+        assert_velero_backup_hooks_not_injected(vm=paused_rhel_vm_with_hooks_opt_out, admin_client=admin_client)
 
         with VeleroBackup(
             name="backup-paused-optout",
@@ -58,19 +57,14 @@ class TestVeleroBackupHookOptOut:
             included_namespaces=[namespace_for_backup.name],
         ) as backup:
             LOGGER.info(f"Backup {backup.name} completed for paused VM with opt-out annotation")
-            backup_logs = get_velero_backup_logs(backup_name=backup.name, client=admin_client)
-
-        assert backup_logs, f"No logs retrieved for backup {backup.name}"
-        assert HOOK_LOG_PATTERN not in backup_logs.lower(), (
-            f"Backup {backup.name} logs contain hook entries but hooks should be disabled"
-        )
 
     @pytest.mark.polarion("CNV-16268")
     @pytest.mark.s390x
     def test_backup_running_vm_hooks_disabled(
         self,
         admin_client,
-        velero_backup_vm_with_hooks_opt_out,
+        namespace_for_backup,
+        rhel_vm_with_hooks_opt_out,
     ):
         """
         Test that backup of a running VM completes with hooks disabled.
@@ -82,13 +76,14 @@ class TestVeleroBackupHookOptOut:
             1. Run Velero backup
 
         Expected:
-            - Backup completes successfully without freeze/unfreeze hook execution
+            - No freeze/unfreeze hooks are injected on the virt-launcher pod
+            - Backup completes successfully
         """
-        backup_logs = get_velero_backup_logs(
-            backup_name=velero_backup_vm_with_hooks_opt_out.name,
+        assert_velero_backup_hooks_not_injected(vm=rhel_vm_with_hooks_opt_out, admin_client=admin_client)
+
+        with VeleroBackup(
+            name="backup-hooks-opt-out",
             client=admin_client,
-        )
-        assert backup_logs, f"No logs retrieved for backup {velero_backup_vm_with_hooks_opt_out.name}"
-        assert HOOK_LOG_PATTERN not in backup_logs.lower(), (
-            f"Backup {velero_backup_vm_with_hooks_opt_out.name} logs contain hook entries but hooks should be disabled"
-        )
+            included_namespaces=[namespace_for_backup.name],
+        ) as backup:
+            LOGGER.info(f"Backup {backup.name} completed for running VM with opt-out annotation")
