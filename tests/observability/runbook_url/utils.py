@@ -1,34 +1,29 @@
 import logging
-from urllib.parse import urlparse
 
 import pytest
 
 LOGGER = logging.getLogger(__name__)
 
+RUNBOOK_BLOB_PREFIX = "https://github.com/openshift/runbooks/blob/master/"
+RUNBOOK_RAW_PREFIX = "https://raw.githubusercontent.com/openshift/runbooks/master/"
+
 
 def github_blob_url_to_raw(blob_url: str) -> str:
-    """Convert a GitHub blob URL to its raw.githubusercontent.com equivalent.
+    """Convert an openshift/runbooks GitHub blob URL to its raw.githubusercontent.com equivalent.
 
     Args:
-        blob_url: A GitHub blob URL (e.g., https://github.com/owner/repo/blob/ref/path/file.md).
+        blob_url: A GitHub blob URL (e.g., https://github.com/openshift/runbooks/blob/master/alerts/.../Alert.md).
 
     Returns:
         The corresponding raw content URL.
 
     Raises:
-        ValueError: If the URL is not a valid GitHub blob URL.
+        ValueError: If the URL does not match the expected openshift/runbooks blob format.
     """
-    parsed = urlparse(url=blob_url)
-    if parsed.hostname != "github.com":
-        raise ValueError(f"Not a github.com URL: {blob_url}")
+    if not blob_url.startswith(RUNBOOK_BLOB_PREFIX):
+        raise ValueError(f"URL does not match expected prefix '{RUNBOOK_BLOB_PREFIX}': {blob_url}")
 
-    path_parts = parsed.path.strip("/").split("/")
-    if len(path_parts) < 5 or path_parts[2] != "blob":
-        raise ValueError(f"Not a GitHub blob URL: {blob_url}")
-
-    owner, repo = path_parts[0], path_parts[1]
-    ref_and_path = "/".join(path_parts[3:])
-    return f"https://raw.githubusercontent.com/{owner}/{repo}/{ref_and_path}"
+    return blob_url.replace(RUNBOOK_BLOB_PREFIX, RUNBOOK_RAW_PREFIX, 1)
 
 
 def validate_downstream_runbook_url(
