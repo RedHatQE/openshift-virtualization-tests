@@ -43,9 +43,9 @@ from tests.storage.utils import (
     is_hpp_cr_legacy,
 )
 from tests.utils import create_cirros_vm
+from utilities.architecture import get_multiarch_cpu_arch
 from utilities.artifactory import get_artifactory_config_map, get_artifactory_secret
 from utilities.constants import Images
-from utilities.constants.architecture import MULTIARCH
 from utilities.constants.cluster import CNV_TEST_SERVICE_ACCOUNT, KUBERNETES_ARCH_LABEL
 from utilities.constants.components import CDI_OPERATOR, CDI_UPLOADPROXY
 from utilities.constants.images import OS_FLAVOR_FEDORA, OS_FLAVOR_RHEL
@@ -170,8 +170,7 @@ def internal_http_deployment(cnv_tests_utilities_namespace, admin_client):
     This Deployment deploys a pod that runs an HTTP server
     """
     template = copy.deepcopy(INTERNAL_HTTP_TEMPLATE)
-    cpu_arch = py_config.get("cpu_arch")
-    if cpu_arch and py_config.get("cluster_type") == MULTIARCH:
+    if cpu_arch := get_multiarch_cpu_arch():
         template["spec"]["nodeSelector"] = {KUBERNETES_ARCH_LABEL: cpu_arch}
 
     with Deployment(
