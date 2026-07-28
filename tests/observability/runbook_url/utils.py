@@ -21,7 +21,7 @@ def github_blob_url_to_raw(blob_url: str) -> str:
         ValueError: If the URL does not match the expected openshift/runbooks blob format.
     """
     if not blob_url.startswith(RUNBOOK_BLOB_PREFIX):
-        raise ValueError(f"URL does not match expected prefix '{RUNBOOK_BLOB_PREFIX}': {blob_url}")
+        raise ValueError("URL does not match the expected runbook blob prefix")
 
     return blob_url.replace(RUNBOOK_BLOB_PREFIX, RUNBOOK_RAW_PREFIX, 1)
 
