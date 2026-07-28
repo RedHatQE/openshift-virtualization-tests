@@ -632,12 +632,11 @@ def data_volume_template_dict(
 
 
 def data_volume_template_with_source_ref_dict(data_source, storage_class=None):
-    source_dict = data_source.source.instance.to_dict()
     dv = DataVolume(
         name=utilities.infra.unique_name(name=data_source.name),
         namespace=data_source.namespace,
         size=get_dv_size_from_datasource(data_source=data_source),
-        storage_class=storage_class or source_dict["spec"].get("storageClassName"),
+        storage_class=storage_class,
         api_name="storage",
         source_ref={
             "kind": data_source.kind,
@@ -757,12 +756,6 @@ def run_command_on_vm_and_check_output(vm: "VirtualMachineForTests", command: st
     assert expected_result == cmd_output, (
         f"Command output mismatch.\nCommand: {command}\nExpected: '{expected_result}'\nActual: '{cmd_output}'"
     )
-
-
-def run_command_on_cirros_vm_and_check_output(vm, command, expected_result):
-    with console.Console(vm=vm) as vm_console:
-        vm_console.sendline(command)
-        vm_console.expect(expected_result, timeout=20)
 
 
 def assert_disk_serial(vm, command=shlex.split("sudo ls /dev/disk/by-id")):

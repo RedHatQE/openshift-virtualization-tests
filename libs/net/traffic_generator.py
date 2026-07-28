@@ -10,6 +10,7 @@ from libs.vm.vm import BaseVirtualMachine
 
 _DEFAULT_CMD_TIMEOUT_SEC: Final[int] = 10
 _IPERF_BIN: Final[str] = "iperf3"
+IPERF_SERVER_PORT: Final[int] = 5201
 
 
 LOGGER = logging.getLogger(__name__)
@@ -44,16 +45,23 @@ class TcpServer:
     Args:
         vm (BaseVirtualMachine): The virtual machine where the server runs.
         port (int): The port on which the server listens for client connections.
+        bind_ip (str): The IP address to bind the server to (optional).
+        bind_dev (str): Guest network device to bind the server socket to via SO_BINDTODEVICE
+            (e.g. "eth1"). Forces responses out this interface, bypassing ECMP routing.
     """
 
     def __init__(
         self,
         vm: BaseVirtualMachine,
         port: int,
+        bind_ip: str | None = None,
+        bind_dev: str | None = None,
     ):
         self._vm = vm
         self._port = port
         self._cmd = f"{_IPERF_BIN} --server --port {self._port} --one-off"
+        self._cmd += f" --bind {bind_ip}" if bind_ip else ""
+        self._cmd += f" --bind-dev {bind_dev}" if bind_dev else ""
 
     def __enter__(self) -> "TcpServer":
         self._vm.console(
@@ -87,6 +95,10 @@ class VMTcpClient(BaseTcpClient):
         vm (BaseVirtualMachine): The virtual machine where the client runs.
         server_ip (str): The destination IP address of the server the client connects to.
         server_port (int): The port on which the server listens for connections.
+        maximum_segment_size (int): Define explicitly the TCP payload size (in bytes).
+                                    Default value is 0 (do not change mss).
+        bind_dev (str): Guest network device to bind the client socket to via SO_BINDTODEVICE
+            (e.g. "eth1"). Forces traffic out this interface, bypassing ECMP routing.
     """
 
     def __init__(
@@ -94,9 +106,13 @@ class VMTcpClient(BaseTcpClient):
         vm: BaseVirtualMachine,
         server_ip: str,
         server_port: int,
+        maximum_segment_size: int = 0,
+        bind_dev: str | None = None,
     ):
         super().__init__(server_ip=server_ip, server_port=server_port)
         self._vm = vm
+        self._cmd += f" --bind-dev {bind_dev}" if bind_dev else ""
+        self._cmd += f" --set-mss {maximum_segment_size}" if maximum_segment_size else ""
 
     def __enter__(self) -> "VMTcpClient":
         self._vm.console(

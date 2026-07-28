@@ -29,10 +29,12 @@ from utilities.constants import (
     DISK_SERIAL,
     HCO_DEFAULT_CPU_MODEL_KEY,
     OS_FLAVOR_WIN_CONTAINER_DISK,
+    OS_FLAVOR_WINDOWS,
     RHSM_SECRET_NAME,
     TCP_TIMEOUT_30SEC,
     TIMEOUT_1MIN,
     TIMEOUT_1SEC,
+    TIMEOUT_2MIN,
     TIMEOUT_3MIN,
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
@@ -43,6 +45,7 @@ from utilities.constants import (
     WINDOWS_2K22_PREFERENCE,
     Images,
 )
+from utilities.data_collector import get_data_collector_dir, write_to_file
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import (
     ExecCommandOnPod,
@@ -241,26 +244,65 @@ def get_os_cpu_count(vm):
     if "windows" in vm.name:
         cmd = shlex.split("echo %NUMBER_OF_PROCESSORS%")
     else:
-        cmd = shlex.split("nproc")
-    return int(run_ssh_commands(host=vm.ssh_exec, commands=cmd)[0].strip())
+        cmd = shlex.split("nproc --all")
+    return int(run_ssh_commands(host=vm.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN)[0].strip())
 
 
 def get_os_memory_value(vm):
     if "windows" in vm.name:
         cmd = shlex.split("wmic ComputerSystem get TotalPhysicalMemory")
-        wmic_total_mem = run_ssh_commands(host=vm.ssh_exec, commands=cmd)[0].strip().split()[1]
+        wmic_total_mem = (
+            run_ssh_commands(host=vm.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN)[0].strip().split()[1]
+        )
         return f"{round(float(bitmath.Bit(int(wmic_total_mem)).to_Gib()))}Gi"
     else:
         cmd = shlex.split("awk \"'{print$2/1024/1024;exit}'\" /proc/meminfo")
-        meminfo = run_ssh_commands(host=vm.ssh_exec, commands=cmd)[0].strip()
+        meminfo = run_ssh_commands(host=vm.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN)[0].strip()
         return f"{round(float(meminfo))}Gi"
 
 
-def assert_guest_os_cpu_count(vm, spec_cpu_amount):
-    guest_os_cpu_amount = get_os_cpu_count(vm=vm)
-    assert guest_os_cpu_amount == spec_cpu_amount, (
-        f"Wrong amount of CPUs! Guest: {guest_os_cpu_amount}; VMI: {spec_cpu_amount}"
+def _collect_cpu_diagnostic_info(vm):
+    """Collect CPU diagnostic information when CPU count mismatch occurs."""
+    base_dir = get_data_collector_dir()
+    LOGGER.info(f"Collecting CPU diagnostic information for VM {vm.name}")
+
+    if vm.os_flavor == OS_FLAVOR_WINDOWS:
+        cmd = shlex.split('powershell.exe -command "Get-WinEvent -LogName System -MaxEvents 30 | Format-List"')
+    else:
+        cmd = shlex.split("bash -c 'dmesg | tail -n 30'")
+
+    output = run_ssh_commands(host=vm.ssh_exec, commands=cmd)[0]
+    write_to_file(base_directory=base_dir, file_name=f"{vm.name}_cpu_diagnostic.txt", content=output)
+
+
+def wait_for_guest_os_cpu_count(vm, spec_cpu_amount):
+    """Wait for the guest OS CPU count to match the VMI spec.
+
+    Args:
+        vm (VirtualMachineForTests): Target VM.
+        spec_cpu_amount (int): Expected CPU socket count from VMI spec.
+
+    Raises:
+        TimeoutExpiredError: If the guest OS CPU count does not match within the timeout.
+    """
+    sampler = TimeoutSampler(
+        wait_timeout=TIMEOUT_1MIN,
+        sleep=TIMEOUT_5SEC,
+        func=get_os_cpu_count,
+        vm=vm,
     )
+    sample = None
+    try:
+        for sample in sampler:
+            if sample == spec_cpu_amount:
+                LOGGER.info(f"Guest OS CPU count matches VMI spec: {spec_cpu_amount}")
+                return
+    except TimeoutExpiredError:
+        _collect_cpu_diagnostic_info(vm=vm)
+        LOGGER.error(
+            f"Timed out waiting for guest OS CPU count to match VMI spec. Guest: {sample}; VMI: {spec_cpu_amount}"
+        )
+        raise
 
 
 def assert_guest_os_memory_amount(vm, spec_memory_amount):

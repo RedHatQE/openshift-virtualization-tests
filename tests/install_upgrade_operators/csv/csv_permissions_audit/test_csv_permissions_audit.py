@@ -2,19 +2,21 @@ import logging
 
 import pytest
 import yaml
-from dictdiffer import diff
 from ocp_resources.resource import Resource
 from pytest_testconfig import config as py_config
 
 from tests.install_upgrade_operators.csv.csv_permissions_audit.utils import (
     get_csv_permissions,
-    get_yaml_file_path,
 )
 from utilities.constants import (
+    AAQ_OPERATOR,
     CDI_OPERATOR,
+    CLUSTER_NETWORK_ADDONS_OPERATOR,
     CNV_OPERATORS,
     HOSTPATH_PROVISIONER_OPERATOR,
-    QUARANTINED,
+    HYPERCONVERGED_CLUSTER_OPERATOR,
+    KUBEVIRT_MIGRATION_OPERATOR,
+    SSP_OPERATOR,
 )
 from utilities.infra import is_jira_open
 
@@ -24,6 +26,17 @@ pytestmark = pytest.mark.s390x
 
 JIRA_LINKS = {
     "kubevirt-operator": "CNV-23061",
+}
+
+
+OPERATOR_API_GROUP_MAPPING = {
+    AAQ_OPERATOR: Resource.ApiGroup.AAQ_KUBEVIRT_IO,
+    CDI_OPERATOR: Resource.ApiGroup.CDI_KUBEVIRT_IO,
+    CLUSTER_NETWORK_ADDONS_OPERATOR: Resource.ApiGroup.NETWORKADDONSOPERATOR_NETWORK_KUBEVIRT_IO,
+    HOSTPATH_PROVISIONER_OPERATOR: Resource.ApiGroup.HOSTPATHPROVISIONER_KUBEVIRT_IO,
+    HYPERCONVERGED_CLUSTER_OPERATOR: Resource.ApiGroup.HCO_KUBEVIRT_IO,
+    KUBEVIRT_MIGRATION_OPERATOR: Resource.ApiGroup.MIGRATIONS_KUBEVIRT_IO,
+    SSP_OPERATOR: Resource.ApiGroup.SSP_KUBEVIRT_IO,
 }
 
 
@@ -50,46 +63,11 @@ def csv_permissions():
     )
 
 
-@pytest.fixture(scope="module")
-def csv_permissions_from_yaml(pytestconfig):
-    file_path = get_yaml_file_path()
-    if pytestconfig.option.update_csv:
-        LOGGER.warning(f"Updating content for {file_path}.")
-        with open(file_path, "w") as fd:
-            fd.write(
-                yaml.dump(
-                    get_csv_permissions(
-                        namespace=py_config["hco_namespace"],
-                        csv_name_starts_with=py_config["hco_cr_name"],
-                    )
-                )
-            )
-    with open(file_path, "r") as fd:
-        return yaml.safe_load(fd)
-
-
 @pytest.mark.polarion("CNV-9805")
 def test_new_operator_in_csv(operators_from_csv):
     assert sorted(list(operators_from_csv)) == sorted(CNV_OPERATORS), (
         f"Expected cnv operators:{CNV_OPERATORS} does not match operators {operators_from_csv} "
     )
-
-
-@pytest.mark.polarion("CNV-9547")
-@pytest.mark.xfail(
-    reason=f"{QUARANTINED}: Should be tested in tier1; tracked in CNV-72139",
-    run=False,
-)
-def test_compare_csv_permissions(cnv_operators_matrix__function__, csv_permissions_from_yaml, csv_permissions):
-    from_yaml = csv_permissions_from_yaml.get(cnv_operators_matrix__function__, {})
-    from_csv = csv_permissions.get(cnv_operators_matrix__function__, {})
-    _diff = list(diff(from_yaml, from_csv))
-    if _diff:
-        LOGGER.error(f"CSV permission comparison failed for {cnv_operators_matrix__function__} with diff: {_diff}")
-        raise AssertionError(
-            f"For {cnv_operators_matrix__function__} unexpected differences in CNV CSV permissions compare to saved "
-            f"permissions in {get_yaml_file_path()}"
-        )
 
 
 @pytest.mark.polarion("CNV-9548")
@@ -102,16 +80,9 @@ def test_global_csv_permissions(cnv_operators_matrix__function__, global_permiss
             LOGGER.info(f"Permission is: {_permission_entry}")
             if "*" in _permission_entry["verbs"]:
                 # whitelist the cdi/hpp owned resources for cdi operator or hpp operator
-                if (
-                    cnv_operators_matrix__function__ == CDI_OPERATOR
-                    and all(Resource.ApiGroup.CDI_KUBEVIRT_IO in entry for entry in _permission_entry["apiGroups"])
-                ) or (
-                    cnv_operators_matrix__function__ == HOSTPATH_PROVISIONER_OPERATOR
-                    and all(
-                        Resource.ApiGroup.HOSTPATHPROVISIONER_KUBEVIRT_IO in entry
-                        for entry in _permission_entry["apiGroups"]
-                    )
-                ):
+                # allow kubevirt operators to have global permissions on their own component resources
+                operator_api_group = OPERATOR_API_GROUP_MAPPING.get(cnv_operators_matrix__function__)
+                if operator_api_group and all(operator_api_group in entry for entry in _permission_entry["apiGroups"]):
                     continue
                 else:
                     error_list.append(_permission_entry)

@@ -1,3 +1,9 @@
+"""
+Test virtctl guestfs command with specific user.
+
+Jira: https://redhat.atlassian.net/browse/CNV-7487 # <skip-jira-utils-check>
+"""
+
 from subprocess import check_output
 
 import pexpect
@@ -5,9 +11,9 @@ import pytest
 from ocp_resources.pod import Pod
 from pytest_testconfig import config as py_config
 
-from tests.storage.utils import create_cirros_dv
-from utilities.constants import QUARANTINED, TIMEOUT_1MIN, UNPRIVILEGED_PASSWORD, UNPRIVILEGED_USER
+from utilities.constants import TIMEOUT_1MIN, TIMEOUT_10MIN, UNPRIVILEGED_PASSWORD, UNPRIVILEGED_USER
 from utilities.infra import login_with_user_password
+from utilities.storage import create_dv, get_dv_size_from_datasource
 
 pytestmark = pytest.mark.post_upgrade
 
@@ -22,17 +28,19 @@ def virtctl_libguestfs_by_user(
         f"virtctl guestfs {dv_created_by_specific_user.name} -n {dv_created_by_specific_user.namespace} \
         {fs_group_flag}"
     )
-
+    libguestfs_pod = Pod(
+        client=unprivileged_client,
+        name=f"libguestfs-tools-{dv_created_by_specific_user.name}",
+        namespace=dv_created_by_specific_user.namespace,
+    )
+    libguestfs_pod.wait_for_status(status=Pod.Status.RUNNING, timeout=TIMEOUT_10MIN)
     guestfs_proc.send("\n\n")
-    guestfs_proc.expect("$", timeout=TIMEOUT_1MIN)
+    guestfs_proc.expect(r"\$", timeout=TIMEOUT_1MIN)
     yield guestfs_proc
     guestfs_proc.send("exit\n")
     guestfs_proc.expect(pexpect.EOF, timeout=TIMEOUT_1MIN)
     guestfs_proc.close()
-    Pod(
-        name=f"libguestfs-tools-{dv_created_by_specific_user.name}",
-        namespace=dv_created_by_specific_user.namespace,
-    ).wait_deleted()
+    libguestfs_pod.wait_deleted()
 
 
 @pytest.fixture
@@ -40,13 +48,22 @@ def dv_created_by_specific_user(
     request,
     namespace,
     client_for_test,
+    fedora_data_source_scope_module,
 ):
-    yield from create_cirros_dv(
-        name=request.param["data_volume_name"],
-        namespace=namespace.name,
+    with create_dv(
+        dv_name=request.param["data_volume_name"],
         storage_class=py_config["default_storage_class"],
         client=client_for_test,
-    )
+        namespace=namespace.name,
+        source_ref={
+            "kind": fedora_data_source_scope_module.kind,
+            "name": fedora_data_source_scope_module.name,
+            "namespace": fedora_data_source_scope_module.namespace,
+        },
+        size=get_dv_size_from_datasource(data_source=fedora_data_source_scope_module),
+    ) as dv:
+        dv.wait_for_dv_success()
+        yield dv
 
 
 @pytest.fixture()
@@ -67,10 +84,6 @@ def client_for_test(request, admin_client, unprivileged_client):
         )
 
 
-@pytest.mark.xfail(
-    reason=f"{QUARANTINED}: the test is not stable; tracked in CNV-62312",
-    run=False,
-)
 @pytest.mark.parametrize(
     (
         "client_for_test",
@@ -92,7 +105,6 @@ def client_for_test(request, admin_client, unprivileged_client):
 )
 @pytest.mark.s390x
 def test_virtctl_libguestfs_with_specific_user(
-    client_for_test,
     virtctl_libguestfs_by_user,
 ):
     virtctl_libguestfs_by_user.sendline("libguestfs-test-tool")

@@ -382,16 +382,6 @@ def rhel_vm_name(request):
     return request.param["vm_name"]
 
 
-@pytest.fixture(scope="session")
-def available_hpp_storage_class(skip_test_if_no_hpp_sc, cluster_storage_classes):
-    """
-    Get an HPP storage class if there is any in the cluster
-    """
-    for storage_class in cluster_storage_classes:
-        if storage_class.name in HPP_STORAGE_CLASSES:
-            return storage_class
-
-
 @pytest.fixture(scope="module")
 def artifactory_secret_scope_module(namespace):
     artifactory_secret = get_artifactory_secret(namespace=namespace.name)
@@ -504,11 +494,6 @@ def multi_storage_cirros_vm(request, namespace, unprivileged_client, storage_cla
 @pytest.fixture()
 def data_volume_template_metadata(multi_storage_cirros_vm):
     return multi_storage_cirros_vm.data_volume_template["metadata"]
-
-
-@pytest.fixture()
-def storage_class_name_scope_function(storage_class_matrix__function__):
-    return [*storage_class_matrix__function__][0]
 
 
 @pytest.fixture(scope="module")

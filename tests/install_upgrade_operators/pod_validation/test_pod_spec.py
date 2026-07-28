@@ -13,6 +13,7 @@ from tests.install_upgrade_operators.pod_validation.utils import (
 from utilities.constants import (
     ALL_CNV_PODS,
     HPP_POOL,
+    KUBEVIRT_MIGRATION_CONTROLLER,
 )
 
 pytestmark = [pytest.mark.sno, pytest.mark.arm64, pytest.mark.s390x]
@@ -39,6 +40,15 @@ def cnv_pods_by_type_no_hpp_csi_hpp_pool(cnv_pod_priority_class_matrix__function
     return pod_list
 
 
+@pytest.fixture()
+def xfail_if_jira_87629_open_and_migration_controller_pod(jira_87629_open, cnv_pods_by_type_no_hpp_csi_hpp_pool):
+    if (
+        any(pod.name.startswith(KUBEVIRT_MIGRATION_CONTROLLER) for pod in cnv_pods_by_type_no_hpp_csi_hpp_pool)
+        and jira_87629_open
+    ):
+        pytest.xfail(f"{KUBEVIRT_MIGRATION_CONTROLLER} pod has no priority class name due to CNV-87629 bug")
+
+
 @pytest.mark.skip_must_gather_collection
 @pytest.mark.polarion("CNV-7261")
 def test_no_new_cnv_pods_added(cnv_pods, cnv_jobs):
@@ -54,7 +64,10 @@ def test_no_new_cnv_pods_added(cnv_pods, cnv_jobs):
 
 
 @pytest.mark.polarion("CNV-7262")
-def test_pods_priority_class_value(cnv_pods_by_type_no_hpp_csi_hpp_pool):
+def test_pods_priority_class_value(
+    cnv_pods_by_type_no_hpp_csi_hpp_pool,
+    xfail_if_jira_87629_open_and_migration_controller_pod,
+):
     validate_cnv_pods_priority_class_name_exists(pod_list=cnv_pods_by_type_no_hpp_csi_hpp_pool)
     validate_priority_class_value(pod_list=cnv_pods_by_type_no_hpp_csi_hpp_pool)
 

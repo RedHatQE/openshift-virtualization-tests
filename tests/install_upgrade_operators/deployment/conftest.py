@@ -1,6 +1,6 @@
 import pytest
 
-from utilities.constants import HPP_POOL
+from utilities.constants import HPP_POOL, KUBEVIRT_MIGRATION_CONTROLLER
 from utilities.infra import get_deployment_by_name, get_deployments
 
 
@@ -20,3 +20,9 @@ def cnv_deployments_excluding_hpp_pool(admin_client, hco_namespace):
         for deployment in get_deployments(admin_client=admin_client, namespace=hco_namespace.name)
         if not deployment.name.startswith(HPP_POOL)
     ]
+
+
+@pytest.fixture()
+def xfail_if_jira_87629_open_and_migration_controller_deployment(jira_87629_open, cnv_deployment_by_name_no_hpp):
+    if cnv_deployment_by_name_no_hpp.name == KUBEVIRT_MIGRATION_CONTROLLER and jira_87629_open:
+        pytest.xfail(f"{KUBEVIRT_MIGRATION_CONTROLLER} deployment has no priority class name due to CNV-87629 bug")

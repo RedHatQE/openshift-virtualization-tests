@@ -3,7 +3,6 @@ import logging
 import pytest
 
 from tests.install_upgrade_operators.product_upgrade.utils import (
-    process_alerts_fired_during_upgrade,
     verify_nodes_labels_after_upgrade,
     verify_nodes_taints_after_upgrade,
 )
@@ -13,7 +12,6 @@ from tests.upgrade_params import (
     IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID,
 )
 from utilities.constants import DEPENDENCY_SCOPE_SESSION
-from utilities.data_collector import collect_alerts_data
 
 LOGGER = logging.getLogger(__name__)
 
@@ -37,17 +35,11 @@ class TestUpgradeIUO:
     )
     def test_alerts_fired_during_upgrade(
         self,
-        prometheus_scope_function,
         fired_alerts_during_upgrade,
     ):
-        LOGGER.info("Verify if any alerts were fired during upgrade")
-        process_alerts_fired_during_upgrade(
-            prometheus=prometheus_scope_function,
-            fired_alerts_during_upgrade=fired_alerts_during_upgrade,
+        assert not fired_alerts_during_upgrade, (
+            f"Following alerts were fired during upgrade: {list(fired_alerts_during_upgrade.keys())}"
         )
-        if fired_alerts_during_upgrade:
-            collect_alerts_data()
-            raise AssertionError(f"Following alerts were fired during upgrade: {fired_alerts_during_upgrade}")
 
     @pytest.mark.eus_upgrade
     @pytest.mark.polarion("CNV-6866")

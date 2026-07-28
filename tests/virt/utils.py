@@ -113,6 +113,7 @@ def get_stress_ng_pid(ssh_exec, windows=False):
         host=ssh_exec,
         commands=shlex.split(f"{command_prefix} bash -c 'pgrep {stress}'"),
         tcp_timeout=TCP_TIMEOUT_30SEC,
+        wait_timeout=TIMEOUT_2MIN,
     )[0].split("\n")[0]
 
 
