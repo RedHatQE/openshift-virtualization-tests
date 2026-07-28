@@ -24,12 +24,12 @@ def namespace(request, admin_client, unprivileged_client):
     use_unprivileged_client = getattr(request, "param", {}).get("use_unprivileged_client", True)
     teardown = getattr(request, "param", {}).get("teardown", True)
     unprivileged_client = unprivileged_client if use_unprivileged_client else None
+    tests_directory = pathlib.Path(__file__).resolve().parent.parent.parent
+    test_file_path = pathlib.Path(request.fspath).resolve()
     yield from create_ns(
         unprivileged_client=unprivileged_client,
         admin_client=admin_client,
-        name=generate_namespace_name(
-            file_path=request.fspath.strpath.split(f"{pathlib.Path(__file__).parent.parent.parent!s}/")[1]
-        ),
+        name=generate_namespace_name(file_path=str(test_file_path.relative_to(tests_directory))),
         teardown=teardown,
     )
 
