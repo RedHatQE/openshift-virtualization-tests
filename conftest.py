@@ -511,7 +511,9 @@ def filter_upgrade_tests(
     upgrade_markers_to_collect = chosen_upgrade_markers or upgrade_markers
 
     for item in items:
-        if upgrade_markers_to_collect.intersection(set(item.keywords)):
+        if "post_test_alerts" in item.keywords:
+            non_upgrade_tests.append(item)
+        elif upgrade_markers_to_collect.intersection(set(item.keywords)):
             upgrade_tests.append(item)
         else:
             non_upgrade_tests.append(item)
