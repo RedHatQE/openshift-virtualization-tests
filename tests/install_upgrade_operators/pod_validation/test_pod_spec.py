@@ -69,6 +69,7 @@ def test_pods_resource_request(
     )
 
 
+@pytest.mark.usefixtures("xfail_if_sriov_conforma_jira_open_and_hco_operator")
 @pytest.mark.polarion("CNV-8267")
 def test_cnv_pod_container_image(cnv_pods_by_type):
     assert_cnv_pod_container_image_not_in_upstream(cnv_pods_by_type=cnv_pods_by_type)

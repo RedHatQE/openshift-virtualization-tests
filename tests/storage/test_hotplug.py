@@ -28,7 +28,6 @@ from utilities.storage import (
 )
 from utilities.virt import (
     VirtualMachineForTests,
-    fedora_vm_body,
     migrate_vm_and_verify,
     running_vm,
 )
@@ -122,14 +121,24 @@ def param_substring_scope_class(storage_class_name_scope_class):
 
 
 @pytest.fixture(scope="class")
-def fedora_vm_for_hotplug_scope_class(unprivileged_client, namespace, param_substring_scope_class, cpu_for_migration):
-    name = f"fedora-hotplug-{param_substring_scope_class}"
-
+def fedora_vm_for_hotplug_scope_class(
+    unprivileged_client,
+    namespace,
+    param_substring_scope_class,
+    fedora_data_source_scope_module,
+    storage_class_name_scope_class,
+    cpu_for_migration,
+):
     with VirtualMachineForTests(
-        client=unprivileged_client,
-        name=name,
+        name=f"fedora-hotplug-{param_substring_scope_class}",
         namespace=namespace.name,
-        body=fedora_vm_body(name=name),
+        client=unprivileged_client,
+        vm_instance_type_infer=True,
+        vm_preference_infer=True,
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=fedora_data_source_scope_module,
+            storage_class=storage_class_name_scope_class,
+        ),
         cpu_model=cpu_for_migration,
     ) as vm:
         running_vm(vm=vm)
