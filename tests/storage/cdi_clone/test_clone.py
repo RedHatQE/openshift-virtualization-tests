@@ -113,6 +113,8 @@ def test_successful_vm_restart_with_cloned_dv(
 
 @pytest.mark.tier3
 @pytest.mark.incremental
+@pytest.mark.conformance
+@pytest.mark.windows
 class TestWindowsClonedDv:
     """
     Tests for Windows 2022 DV cloning, and VM creation with vTPM.

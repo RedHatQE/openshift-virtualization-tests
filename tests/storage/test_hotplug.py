@@ -262,6 +262,8 @@ class TestHotPlugWithSerialPersist:
 )
 @pytest.mark.usefixtures("hotplug_volume_windows_scope_class")
 @pytest.mark.tier3
+@pytest.mark.conformance
+@pytest.mark.windows
 class TestHotPlugWindows:
     @pytest.mark.polarion("CNV-6525")
     @pytest.mark.dependency(name="test_windows_hotplug")

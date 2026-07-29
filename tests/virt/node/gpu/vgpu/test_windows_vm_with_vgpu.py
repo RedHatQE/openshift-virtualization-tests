@@ -86,6 +86,7 @@ def gpu_vmc(
 @pytest.mark.usefixtures(
     "hco_cr_with_mdev_permitted_hostdevices",
 )
+@pytest.mark.windows
 class TestVGPUWindowsGPUSSpec:
     """
     Test vGPU with Windows VM using gpus spec.

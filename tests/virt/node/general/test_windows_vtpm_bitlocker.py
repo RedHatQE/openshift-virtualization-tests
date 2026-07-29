@@ -155,6 +155,7 @@ def migrated_encrypted_vm(
     ],
     indirect=True,
 )
+@pytest.mark.windows
 class TestBitLockerVTPM:
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::persistent_tpm")
     @pytest.mark.polarion("CNV-10318")

@@ -457,6 +457,7 @@ def test_virtctl_image_upload_dv_in_pudn_namespace(
 
 
 @pytest.mark.tier3
+@pytest.mark.windows
 @pytest.mark.parametrize(
     ("uploaded_dv_with_immediate_binding", "vm_params"),
     [

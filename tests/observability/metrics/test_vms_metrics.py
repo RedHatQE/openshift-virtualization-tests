@@ -281,6 +281,7 @@ class TestVmiFileSystemMetricsLinux:
 
 
 @pytest.mark.tier3
+@pytest.mark.windows
 class TestVmiFileSystemMetricsWindows:
     @pytest.mark.parametrize(
         "capacity_or_used",
@@ -406,6 +407,7 @@ class TestVmDiskAllocatedSizeLinux:
 
 
 @pytest.mark.tier3
+@pytest.mark.windows
 class TestVmDiskAllocatedSizeWindows:
     @pytest.mark.polarion("CNV-11916")
     def test_metric_kubevirt_vm_disk_allocated_size_bytes_windows(self, prometheus, windows_vm_for_test):
@@ -445,6 +447,7 @@ class TestVmVnicInfo:
         )
 
     @pytest.mark.tier3
+    @pytest.mark.windows
     @pytest.mark.polarion("CNV-12224")
     def test_metric_kubevirt_vmi_vnic_info_windows(self, prometheus, windows_vm_for_test, vnic_info_from_vmi_windows):
         validate_vnic_info(
@@ -523,6 +526,7 @@ class TestVmiPhaseTransitionFromDeletion:
         ],
         indirect=True,
     )
+    @pytest.mark.windows
     def test_kubevirt_vmi_phase_transition_from_deletion_seconds_sum_windows(
         self, prometheus, initial_metric_value, windows_vm_for_test, deleted_windows_vmi
     ):
