@@ -2338,12 +2338,15 @@ def get_base_templates_list(client: DynamicClient) -> list[Template]:
 
 
 def get_template_by_labels(admin_client, template_labels):
+    selector_labels = [label for label in template_labels if OS_FLAVOR_FEDORA not in label]
+    if cpu_arch := py_config.get("cpu_arch"):
+        selector_labels.append(f"{Template.Labels.ARCHITECTURE}={cpu_arch}")
     template = list(
         Template.get(
             client=admin_client,
             singular_name=Template.singular_name,
             namespace="openshift",
-            label_selector=",".join([label for label in template_labels if OS_FLAVOR_FEDORA not in label]),
+            label_selector=",".join(selector_labels),
         ),
     )
     if any(

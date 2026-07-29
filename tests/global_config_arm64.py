@@ -2,7 +2,6 @@ from typing import Any
 
 from ocp_resources.datavolume import DataVolume
 
-from utilities.constants import Images
 from utilities.constants.architecture import ARM_64
 from utilities.constants.images import OS_FLAVOR_FEDORA
 from utilities.constants.instance_types import (
@@ -19,7 +18,6 @@ from utilities.storage import HppCsiStorageClass
 
 global config
 
-Images.Cirros.RAW_IMG_XZ = "cirros-0.4.0-aarch64-disk.raw.xz"
 EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[PREFERENCE_STR] = f"rhel.9.{ARM_64}"
 
 

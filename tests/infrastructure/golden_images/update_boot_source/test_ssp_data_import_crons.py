@@ -4,6 +4,7 @@ import pytest
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 from ocp_resources.data_import_cron import DataImportCron
 from ocp_resources.data_source import DataSource
+from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.infrastructure.golden_images.constants import (
@@ -15,7 +16,8 @@ from tests.infrastructure.golden_images.update_boot_source.utils import (
     wait_for_created_volume_from_data_import_cron,
     wait_for_existing_auto_update_data_import_crons,
 )
-from utilities.constants.images import DEFAULT_FEDORA_REGISTRY_URL
+from utilities.constants.architecture import MULTIARCH
+from utilities.constants.images import DEFAULT_FEDORA_REGISTRY_URL, OS_FLAVOR_RHEL
 from utilities.constants.timeouts import (
     TIMEOUT_2MIN,
     TIMEOUT_5MIN,
@@ -31,12 +33,20 @@ from utilities.virt import VirtualMachineForTests, running_vm
 LOGGER = logging.getLogger(__name__)
 
 
-pytestmark = pytest.mark.post_upgrade
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.arm64]
 
 
 @pytest.mark.polarion("CNV-12414")
 def test_updated_rhel_image(golden_images_data_import_crons_scope_class, latest_rhel_release_versions_dict, subtests):
-    for rhel_dic in [dic for dic in golden_images_data_import_crons_scope_class if "rhel" in dic.name.lower()]:
+    cpu_arch = py_config["cpu_arch"]
+    arch_suffix = f"-{cpu_arch}"
+    rhel_dics = [
+        dic
+        for dic in golden_images_data_import_crons_scope_class
+        if OS_FLAVOR_RHEL in dic.name.lower()
+        and (py_config.get("cluster_type") != MULTIARCH or dic.instance.spec.managedDataSource.endswith(arch_suffix))
+    ]
+    for rhel_dic in rhel_dics:
         rhel_instance_dict = rhel_dic.instance
         image_reference_version = get_image_version(
             image=rhel_instance_dict.metadata.annotations.get("cdi.kubevirt.io/storage.import.imageStreamDockerRef")
@@ -44,7 +54,8 @@ def test_updated_rhel_image(golden_images_data_import_crons_scope_class, latest_
         with subtests.test(rhel_dic_name=rhel_dic.name, managed_data_source=rhel_instance_dict.spec.managedDataSource):
             managed_data_source = rhel_instance_dict.spec.managedDataSource
             assert managed_data_source, "spec.managedDataSource doesn't exists"
-            assert latest_rhel_release_versions_dict[managed_data_source] == image_reference_version
+            base_data_source = managed_data_source.removesuffix(arch_suffix)
+            assert latest_rhel_release_versions_dict[base_data_source] == image_reference_version
 
 
 class TestDataImportCronValidation:
