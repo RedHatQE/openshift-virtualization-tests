@@ -1,7 +1,7 @@
 import pytest
 
 from tests.network.connectivity.utils import create_running_vm, secondary_interfaces_cloud_init_data
-from utilities.constants.networking import LINUX_BRIDGE, OVS_BRIDGE
+from utilities.constants.networking import LINUX_BRIDGE
 from utilities.data_utils import name_prefix
 from utilities.infra import get_node_selector_dict
 from utilities.network import compose_cloud_init_data_dict, network_device, network_nad
@@ -47,25 +47,6 @@ def nncp_linux_bridge_device_worker_1_source(
 
 
 @pytest.fixture(scope="class")
-def nncp_ovs_bridge_device_worker_1_source(
-    nmstate_dependent_placeholder,
-    admin_client,
-    hosts_common_available_ports,
-    worker_node1,
-    bridge_device_name,
-):
-    with network_device(
-        interface_type=OVS_BRIDGE,
-        nncp_name=f"ovs-bridge-{name_prefix(worker_node1.name)}",
-        interface_name=bridge_device_name,
-        node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
-        ports=[hosts_common_available_ports[-1]],
-        client=admin_client,
-    ) as br:
-        yield br
-
-
-@pytest.fixture(scope="class")
 def nncp_linux_bridge_device_worker_2_destination(
     nmstate_dependent_placeholder,
     admin_client,
@@ -76,25 +57,6 @@ def nncp_linux_bridge_device_worker_2_destination(
     with network_device(
         interface_type=LINUX_BRIDGE,
         nncp_name=f"linux-bridge-{name_prefix(worker_node2.name)}",
-        interface_name=bridge_device_name,
-        node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
-        ports=[hosts_common_available_ports[-1]],
-        client=admin_client,
-    ) as br:
-        yield br
-
-
-@pytest.fixture(scope="class")
-def nncp_ovs_bridge_device_worker_2_destination(
-    nmstate_dependent_placeholder,
-    admin_client,
-    hosts_common_available_ports,
-    worker_node2,
-    bridge_device_name,
-):
-    with network_device(
-        interface_type=OVS_BRIDGE,
-        nncp_name=f"ovs-bridge-{name_prefix(worker_node2.name)}",
         interface_name=bridge_device_name,
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
         ports=[hosts_common_available_ports[-1]],
@@ -122,24 +84,6 @@ def nad_linux_bridge(
 
 
 @pytest.fixture(scope="class")
-def nad_ovs_bridge(
-    admin_client,
-    namespace,
-    nncp_ovs_bridge_device_worker_1_source,
-    nncp_ovs_bridge_device_worker_2_destination,
-    bridge_device_name,
-):
-    with network_nad(
-        namespace=namespace,
-        nad_type=OVS_BRIDGE,
-        nad_name=f"ovs-{bridge_device_name}-nad",
-        interface_name=bridge_device_name,
-        client=admin_client,
-    ) as nad:
-        yield nad
-
-
-@pytest.fixture(scope="class")
 def nad_linux_bridge_vlan_1(
     admin_client,
     namespace,
@@ -152,26 +96,6 @@ def nad_linux_bridge_vlan_1(
         namespace=namespace,
         nad_type=LINUX_BRIDGE,
         nad_name=f"linux-{bridge_device_name}-vlan{vlan_id_1}-nad",
-        interface_name=bridge_device_name,
-        vlan=vlan_id_1,
-        client=admin_client,
-    ) as nad:
-        yield nad
-
-
-@pytest.fixture(scope="class")
-def nad_ovs_bridge_vlan_1(
-    admin_client,
-    namespace,
-    nncp_ovs_bridge_device_worker_1_source,
-    nncp_ovs_bridge_device_worker_2_destination,
-    bridge_device_name,
-    vlan_id_1,
-):
-    with network_nad(
-        namespace=namespace,
-        nad_type=OVS_BRIDGE,
-        nad_name=f"ovs-{bridge_device_name}-vlan{vlan_id_1}-nad",
         interface_name=bridge_device_name,
         vlan=vlan_id_1,
         client=admin_client,
@@ -200,26 +124,6 @@ def nad_linux_bridge_vlan_2(
 
 
 @pytest.fixture(scope="class")
-def nad_ovs_bridge_vlan_2(
-    admin_client,
-    namespace,
-    nncp_ovs_bridge_device_worker_1_source,
-    nncp_ovs_bridge_device_worker_2_destination,
-    bridge_device_name,
-    vlan_id_2,
-):
-    with network_nad(
-        namespace=namespace,
-        nad_type=OVS_BRIDGE,
-        nad_name=f"ovs-{bridge_device_name}-vlan{vlan_id_2}-nad",
-        interface_name=bridge_device_name,
-        vlan=vlan_id_2,
-        client=admin_client,
-    ) as nad:
-        yield nad
-
-
-@pytest.fixture(scope="class")
 def nad_linux_bridge_vlan_3(
     admin_client,
     namespace,
@@ -232,26 +136,6 @@ def nad_linux_bridge_vlan_3(
         namespace=namespace,
         nad_type=LINUX_BRIDGE,
         nad_name=f"linux-{bridge_device_name}-vlan{vlan_id_3}-nad",
-        interface_name=bridge_device_name,
-        vlan=vlan_id_3,
-        client=admin_client,
-    ) as nad:
-        yield nad
-
-
-@pytest.fixture(scope="class")
-def nad_ovs_bridge_vlan_3(
-    admin_client,
-    namespace,
-    nncp_ovs_bridge_device_worker_1_source,
-    nncp_ovs_bridge_device_worker_2_destination,
-    bridge_device_name,
-    vlan_id_3,
-):
-    with network_nad(
-        namespace=namespace,
-        nad_type=OVS_BRIDGE,
-        nad_name=f"ovs-{bridge_device_name}-vlan{vlan_id_3}-nad",
         interface_name=bridge_device_name,
         vlan=vlan_id_3,
         client=admin_client,
@@ -291,37 +175,6 @@ def vm_linux_bridge_attached_vma_source(
 
 
 @pytest.fixture(scope="class")
-def vm_ovs_bridge_attached_vma_source(
-    worker_node1,
-    namespace,
-    unprivileged_client,
-    nad_ovs_bridge,
-    nad_ovs_bridge_vlan_1,
-    nad_ovs_bridge_vlan_2,
-    ipv6_primary_interface_cloud_init_data,
-):
-    network_names = [
-        nad_ovs_bridge.name,
-        nad_ovs_bridge_vlan_1.name,
-        nad_ovs_bridge_vlan_2.name,
-    ]
-
-    cloud_init_data = compose_cloud_init_data_dict(
-        ipv6_network_data=ipv6_primary_interface_cloud_init_data,
-        network_data=secondary_interfaces_cloud_init_data(host_id=1),
-    )
-
-    yield from create_running_vm(
-        name=f"vma-{OVS_BRIDGE}",
-        node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
-        network_names=network_names,
-        client=unprivileged_client,
-        namespace=namespace,
-        cloud_init_data=cloud_init_data,
-    )
-
-
-@pytest.fixture(scope="class")
 def vm_linux_bridge_attached_vmb_destination(
     worker_node2,
     namespace,
@@ -344,37 +197,6 @@ def vm_linux_bridge_attached_vmb_destination(
 
     yield from create_running_vm(
         name=f"vmb-{LINUX_BRIDGE}",
-        node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
-        network_names=network_names,
-        client=unprivileged_client,
-        namespace=namespace,
-        cloud_init_data=cloud_init_data,
-    )
-
-
-@pytest.fixture(scope="class")
-def vm_ovs_bridge_attached_vmb_destination(
-    worker_node2,
-    namespace,
-    unprivileged_client,
-    nad_ovs_bridge,
-    nad_ovs_bridge_vlan_1,
-    nad_ovs_bridge_vlan_3,
-    ipv6_primary_interface_cloud_init_data,
-):
-    network_names = [
-        nad_ovs_bridge.name,
-        nad_ovs_bridge_vlan_1.name,
-        nad_ovs_bridge_vlan_3.name,
-    ]
-
-    cloud_init_data = compose_cloud_init_data_dict(
-        ipv6_network_data=ipv6_primary_interface_cloud_init_data,
-        network_data=secondary_interfaces_cloud_init_data(host_id=2),
-    )
-
-    yield from create_running_vm(
-        name=f"vmb-{OVS_BRIDGE}",
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
         network_names=network_names,
         client=unprivileged_client,
