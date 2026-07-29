@@ -24,10 +24,6 @@ if TYPE_CHECKING:
 from xml.etree import ElementTree
 
 import pytest
-
-if TYPE_CHECKING:
-    from _pytest.config import Config
-    from _pytest.nodes import Item
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.config_map import ConfigMap
 from ocp_resources.namespace import Namespace
@@ -878,7 +874,7 @@ def _is_xfail_no_run(method: object) -> bool:
     return any(mark.name == "xfail" and mark.kwargs.get("run") is False for mark in getattr(method, "pytestmark", []))
 
 
-def filter_post_test_alerts_tests(items: list[Item], config: Config) -> list[Item]:
+def filter_post_test_alerts_tests(items: list[pytest.Item], config: pytest.Config) -> list[pytest.Item]:
     """Filter out post-test alert tests when explicitly skipped or running install tests.
 
     Args:
