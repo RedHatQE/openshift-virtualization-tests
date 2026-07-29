@@ -123,6 +123,7 @@ def drained_node_for_hotplug_vm(admin_client, hco_namespace, vm_with_hotplug_sup
 )
 @pytest.mark.usefixtures("vm_memory_pressure")
 class TestRhelWorkloadMigration:
+    # Chain root: migration mutates the shared class-scoped VM; subsequent tests verify cumulative side effects.
     @pytest.mark.dependency(name=f"{RHEL_CLASS_NAME}::migrate_vm")
     @pytest.mark.polarion("CNV-15225")
     def test_awd_migration_mode(
@@ -135,6 +136,7 @@ class TestRhelWorkloadMigration:
         assert_expected_migration_mode(vm=vm_with_hotplug_support, expected_mode=migration_mode)
         assert_same_pid_after_migration(orig_pid=vm_background_process_id, vm=vm_with_hotplug_support)
 
+    # Node drain requires a successfully migrated VM; both mutate the shared VM and track PID survival.
     @pytest.mark.dependency(name=f"{RHEL_CLASS_NAME}::node_drain", depends=[f"{RHEL_CLASS_NAME}::migrate_vm"])
     @pytest.mark.polarion("CNV-15245")
     def test_awd_node_drain(
@@ -150,6 +152,7 @@ class TestRhelWorkloadMigration:
     @pytest.mark.parametrize(
         "hotplugged_sockets_memory_guest", [pytest.param({"sockets": SIX_CPU_SOCKETS})], indirect=True
     )
+    # CPU hotplug must follow node drain; the VM must be running on a schedulable node after drain completes.
     @pytest.mark.dependency(name=f"{RHEL_CLASS_NAME}::hotplug_cpu", depends=[f"{RHEL_CLASS_NAME}::node_drain"])
     @pytest.mark.polarion("CNV-15234")
     def test_awd_hotplug_cpu(
@@ -166,6 +169,7 @@ class TestRhelWorkloadMigration:
     @pytest.mark.parametrize(
         "hotplugged_sockets_memory_guest", [pytest.param({"memory_guest": SIX_GI_MEMORY})], indirect=True
     )
+    # Memory hotplug follows CPU hotplug; verifies cumulative hotplug and PID survival on the shared VM.
     @pytest.mark.dependency(depends=[f"{RHEL_CLASS_NAME}::hotplug_cpu"])
     @pytest.mark.polarion("CNV-15235")
     def test_awd_hotplug_memory(
@@ -210,6 +214,7 @@ class TestRhelWorkloadMigration:
 @pytest.mark.high_resource_vm
 @pytest.mark.usefixtures("vm_memory_pressure")
 class TestWindowsWorkloadMigration:
+    # Chain root: migration mutates the shared class-scoped VM; subsequent tests verify cumulative side effects.
     @pytest.mark.dependency(name=f"{WIN_CLASS_NAME}::migrate_vm")
     @pytest.mark.polarion("CNV-15246")
     def test_awd_migration_mode(
@@ -225,6 +230,7 @@ class TestWindowsWorkloadMigration:
     @pytest.mark.parametrize(
         "hotplugged_sockets_memory_guest", [pytest.param({"sockets": SIX_CPU_SOCKETS})], indirect=True
     )
+    # CPU hotplug must follow migration; the VM must be in a migrated state before hotplug changes.
     @pytest.mark.dependency(name=f"{WIN_CLASS_NAME}::hotplug_cpu", depends=[f"{WIN_CLASS_NAME}::migrate_vm"])
     @pytest.mark.polarion("CNV-15247")
     def test_awd_hotplug_cpu(
@@ -241,6 +247,7 @@ class TestWindowsWorkloadMigration:
     @pytest.mark.parametrize(
         "hotplugged_sockets_memory_guest", [pytest.param({"memory_guest": SIX_GI_MEMORY})], indirect=True
     )
+    # Memory hotplug follows CPU hotplug; verifies cumulative hotplug and PID survival on the shared VM.
     @pytest.mark.dependency(depends=[f"{WIN_CLASS_NAME}::hotplug_cpu"])
     @pytest.mark.polarion("CNV-16312")
     def test_awd_hotplug_memory(
