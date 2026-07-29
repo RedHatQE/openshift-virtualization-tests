@@ -1,5 +1,3 @@
-from utilities.constants.hco import DISABLE_MDEV_CONFIGURATION
-
 SECTION_TITLE = "section_title"
 FILE_SUFFIX = "file_suffix"
 HCO_CR_CERT_CONFIG_CA_KEY = "ca"
@@ -27,17 +25,12 @@ RESOURCE_NAMESPACE_STR = "resource_namespace"
 KEY_NAME_STR = "key_name"
 EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES = {
     "CPUManager",
-    "Snapshot",
-    "ExpandDisks",
-    "HostDevices",
-    "VMExport",
-    "KubevirtSeccompProfile",
-    "WithHostModelCPU",
-    "HypervStrictCheck",
-    "VideoConfig",
-    "HotplugVolumes",
     "DecentralizedLiveMigration",
-    "LiveUpdateNADRef",
+    "DeclarativeHotplugVolumes",
+    "HostDevices",
+    "HypervStrictCheck",
+    "KubevirtSeccompProfile",
+    "Snapshot",
 }
 S390X_SPECIFIC_KUBEVIRT_FEATUREGATES = {"SecureExecution"}
 EXPECTED_CDI_HARDCODED_FEATUREGATES = {
@@ -47,14 +40,12 @@ EXPECTED_CDI_HARDCODED_FEATUREGATES = {
 }
 HCO_DEFAULT_FEATUREGATES = {
     DEPLOY_KUBE_SECONDARY_DNS: FG_DISABLED,
-    DISABLE_MDEV_CONFIGURATION: FG_DISABLED,
     PERSISTENT_RESERVATION: FG_DISABLED,
     "alignCPUs": FG_DISABLED,
     "downwardMetrics": FG_DISABLED,
     ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT: FG_DISABLED,
     "decentralizedLiveMigration": FG_ENABLED,
-    "declarativeHotplugVolumes": FG_DISABLED,
-    "videoConfig": FG_ENABLED,
+    "declarativeHotplugVolumes": FG_ENABLED,
     "objectGraph": FG_DISABLED,
     "incrementalBackup": FG_DISABLED,
     "containerPathVolumes": FG_DISABLED,

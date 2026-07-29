@@ -26,6 +26,7 @@ from utilities.infra import (
 def utility_daemonset_for_hpp_test(
     generated_pulled_secret,
     cnv_tests_utilities_service_account,
+    admin_client,
 ):
     """
     Deploy utility daemonset into the cnv_tests_utilities_namespace namespace.
@@ -37,6 +38,7 @@ def utility_daemonset_for_hpp_test(
         generated_pulled_secret=generated_pulled_secret,
         cnv_tests_utilities_service_account=cnv_tests_utilities_service_account,
         label=utility_pods_for_hpp_test,
+        client=admin_client,
     )
 
 

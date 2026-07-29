@@ -36,7 +36,6 @@ from utilities.constants.timeouts import (
     TIMEOUT_30MIN,
     TIMEOUT_30SEC,
 )
-from utilities.constants.virt import OS_PROC_NAME
 from utilities.hco import (
     ResourceEditorValidateHCOReconcile,
     is_hco_tainted,
@@ -52,13 +51,10 @@ from utilities.storage import (
 from utilities.virt import (
     VirtualMachineForTests,
     fetch_pid_from_linux_vm,
-    fetch_pid_from_windows_vm,
     get_vm_boot_time,
     kill_processes_by_name_linux,
     migrate_vm_and_verify,
-    pause_unpause_vm_and_check_connectivity,
     start_and_fetch_processid_on_linux_vm,
-    start_and_fetch_processid_on_windows_vm,
     verify_vm_migrated,
     wait_for_migration_finished,
     wait_for_updated_kv_value,
@@ -212,23 +208,6 @@ def flatten_dict(dictionary, parent_key=""):
         else:
             items.append((new_key, value))
     return dict(items)
-
-
-def kill_processes_by_name_windows(vm, process_name):
-    cmd = shlex.split(f"taskkill /F /IM {process_name}")
-    run_ssh_commands(host=vm.ssh_exec, commands=cmd, tcp_timeout=TCP_TIMEOUT_30SEC)
-
-
-def validate_pause_unpause_windows_vm(vm: VirtualMachineForTests, pre_pause_pid: int | None = None) -> None:
-    proc_name = OS_PROC_NAME["windows"]
-    if not pre_pause_pid:
-        pre_pause_pid = start_and_fetch_processid_on_windows_vm(vm=vm, process_name=proc_name)
-    pause_unpause_vm_and_check_connectivity(vm=vm)
-    post_pause_pid = fetch_pid_from_windows_vm(vm=vm, process_name=proc_name)
-    kill_processes_by_name_windows(vm=vm, process_name=proc_name)
-    assert post_pause_pid == pre_pause_pid, (
-        f"PID mismatch!\nPre pause PID is: {pre_pause_pid}\nPost pause PID is: {post_pause_pid}"
-    )
 
 
 def wait_for_virt_launcher_pod(vmi, privileged_client: DynamicClient):

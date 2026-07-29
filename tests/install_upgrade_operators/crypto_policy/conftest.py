@@ -5,7 +5,6 @@ from kubernetes.client.exceptions import ApiException
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.api_server import APIServer
 from ocp_resources.cdi import CDI
-from ocp_resources.deployment import Deployment
 from ocp_resources.exceptions import ExecOnPodError
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.mig_controller import MigController
@@ -32,7 +31,6 @@ from tests.install_upgrade_operators.crypto_policy.constants import (
     PQC_GROUP_SECP384R1_MLKEM1024,
     PQC_GROUP_X25519_MLKEM768,
     TLS_MODERN_PROFILE,
-    VIRT_TEMPLATE_DEPLOYMENT_NAMES,
 )
 from tests.install_upgrade_operators.crypto_policy.utils import (
     get_node_available_tls_groups,
@@ -51,7 +49,7 @@ from utilities.constants.components import (
 from utilities.constants.hco import TLS_SECURITY_PROFILE
 from utilities.constants.timeouts import TIMEOUT_60MIN
 from utilities.exceptions import MissingResourceException
-from utilities.hco import enabled_aaq_in_hco, update_hco_annotations, wait_for_hco_conditions
+from utilities.hco import enabled_aaq_in_hco, wait_for_hco_conditions
 from utilities.infra import ExecCommandOnPod
 from utilities.operator import wait_for_cluster_operator_stabilize
 
@@ -148,26 +146,8 @@ def services_to_check_connectivity(hco_namespace, admin_client):
 
 
 @pytest.fixture(scope="module")
-def enabled_template_feature_gate(admin_client, hco_namespace, hyperconverged_resource_scope_session):
-    """Enables the Template feature gate via HCO annotation and waits for virt-template deployments."""
-    with update_hco_annotations(
-        resource=hyperconverged_resource_scope_session,
-        path="developerConfiguration/featureGates/-",
-        value="Template",
-    ):
-        for deployment_name in VIRT_TEMPLATE_DEPLOYMENT_NAMES:
-            deployment = Deployment(
-                name=deployment_name,
-                namespace=hco_namespace.name,
-                client=admin_client,
-            )
-            deployment.wait_for_replicas()
-        yield
-
-
-@pytest.fixture(scope="module")
-def cnv_services_with_template(enabled_template_feature_gate, hco_namespace, admin_client):
-    """Discovers all CNV services with a clusterIP, including virt-template services."""
+def cnv_services_with_template(hco_namespace, admin_client):
+    """Discovers all CNV services with a clusterIP."""
     services_list = [
         service
         for service in Service.get(namespace=hco_namespace.name, client=admin_client)
