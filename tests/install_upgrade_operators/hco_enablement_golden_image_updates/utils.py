@@ -98,11 +98,35 @@ def get_templates_by_type_from_hco_status(hco_status_templates, template_type=CO
     ]
 
 
-def get_data_import_cron_by_name(namespace: str, cron_name: str, admin_client: DynamicClient) -> DataImportCron:
-    data_import_cron = DataImportCron(name=cron_name, namespace=namespace, client=admin_client)
-    if data_import_cron.exists:
-        return data_import_cron
-    raise ResourceNotFoundError(f"DataImportCron: {data_import_cron} not found in namespace: {namespace}")
+def get_data_import_crons_by_prefix(
+    namespace: str,
+    cron_prefix: str,
+    admin_client: DynamicClient,
+) -> list[DataImportCron]:
+    """Return all DataImportCrons matching a template base name prefix.
+
+    Matches exact name or name with architecture suffix (e.g. prefix "fedora"
+    matches "fedora", "fedora-amd64", "fedora-arm64").
+
+    Args:
+        namespace: Namespace to search in.
+        cron_prefix: HCO template base name to match against.
+        admin_client: Kubernetes client.
+
+    Returns:
+        List of matching DataImportCron resources.
+
+    Raises:
+        ResourceNotFoundError: If no matching DataImportCrons are found.
+    """
+    matching = [
+        dic
+        for dic in DataImportCron.get(client=admin_client, namespace=namespace)
+        if dic.name == cron_prefix or dic.name.startswith(f"{cron_prefix}-")
+    ]
+    if not matching:
+        raise ResourceNotFoundError(f"No DataImportCron with prefix '{cron_prefix}' found in namespace: {namespace}")
+    return matching
 
 
 def get_template_dict_by_name(template_name, templates):

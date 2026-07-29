@@ -14,6 +14,7 @@ from tests.install_upgrade_operators.hco_enablement_golden_image_updates.utils i
     verify_resource_in_ns,
     verify_resource_not_in_ns,
 )
+from utilities.constants.pytest import QUARANTINED
 from utilities.constants.timeouts import TIMEOUT_3MIN, TIMEOUT_10MIN
 from utilities.hco import (
     ResourceEditorValidateHCOReconcile,
@@ -120,7 +121,18 @@ class TestDefaultCommonTemplates:
         [
             pytest.param(ImageStream, None, marks=pytest.mark.polarion("CNV-11474")),
             pytest.param(DataImportCron, "UpToDate", marks=pytest.mark.polarion("CNV-11475")),
-            pytest.param(DataSource, DataSource.Condition.READY, marks=pytest.mark.polarion("CNV-11476")),
+            pytest.param(
+                DataSource,
+                DataSource.Condition.READY,
+                marks=(
+                    pytest.mark.polarion("CNV-11476"),
+                    pytest.mark.xfail(
+                        reason=f"{QUARANTINED}: Base-name pointer DataSources not created in custom namespace "
+                        f"on multiarch clusters; tracked in CNV-86247",
+                        run=False,
+                    ),
+                ),
+            ),
         ],
     )
     def test_resources_in_custom_ns(
