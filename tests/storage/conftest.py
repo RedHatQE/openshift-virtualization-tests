@@ -370,8 +370,8 @@ def rhel_vm_name(request):
 
 
 @pytest.fixture(scope="module")
-def artifactory_credentials_scope_module(namespace):
-    with artifactory_credentials(namespace=namespace.name) as credentials:
+def artifactory_credentials_scope_module(namespace, admin_client):
+    with artifactory_credentials(namespace=namespace.name, client=admin_client) as credentials:
         yield credentials
 
 

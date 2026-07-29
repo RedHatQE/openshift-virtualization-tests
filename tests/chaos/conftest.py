@@ -354,8 +354,8 @@ def vm_node_with_chaos_label(vm_with_nginx_service):
 
 
 @pytest.fixture(scope="module")
-def artifactory_credentials_chaos_namespace_scope_module(chaos_namespace):
-    with artifactory_credentials(namespace=chaos_namespace.name) as credentials:
+def artifactory_credentials_chaos_namespace_scope_module(chaos_namespace, admin_client):
+    with artifactory_credentials(namespace=chaos_namespace.name, client=admin_client) as credentials:
         yield credentials
 
 
