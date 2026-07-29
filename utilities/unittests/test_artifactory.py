@@ -286,8 +286,9 @@ class TestGetArtifactorySecret:
             mock_secret_instance = MagicMock()
             mock_secret_instance.exists = False
             mock_secret_class.return_value = mock_secret_instance
+            mock_client = MagicMock()
 
-            result = get_artifactory_secret(namespace="test-namespace")
+            result = get_artifactory_secret(namespace="test-namespace", client=mock_client)
 
             # Verify Secret was created with correct parameters
             mock_secret_class.assert_called_once_with(
@@ -295,7 +296,7 @@ class TestGetArtifactorySecret:
                 namespace="test-namespace",
                 accesskeyid="base64_test-user",
                 secretkey="base64_test-token",
-                client=None,
+                client=mock_client,
             )
 
             # Verify base64 encoding was called
@@ -317,7 +318,7 @@ class TestGetArtifactorySecret:
             mock_secret_instance.exists = False
             mock_secret_class.return_value = mock_secret_instance
 
-            result = get_artifactory_secret(namespace="test-namespace")
+            result = get_artifactory_secret(namespace="test-namespace", client=MagicMock())
 
             # Verify deploy was called
             mock_secret_instance.deploy.assert_called_once()
@@ -335,7 +336,7 @@ class TestGetArtifactorySecret:
             mock_secret_instance.exists = True
             mock_secret_class.return_value = mock_secret_instance
 
-            result = get_artifactory_secret(namespace="test-namespace")
+            result = get_artifactory_secret(namespace="test-namespace", client=MagicMock())
 
             # Verify deploy was NOT called
             mock_secret_instance.deploy.assert_not_called()
@@ -346,14 +347,14 @@ class TestGetArtifactorySecret:
         """Test raises KeyError if ARTIFACTORY_USER not set"""
         with patch.dict(os.environ, {"ARTIFACTORY_TOKEN": "test-token"}, clear=True):
             with pytest.raises(KeyError):
-                get_artifactory_secret(namespace="test-namespace")
+                get_artifactory_secret(namespace="test-namespace", client=MagicMock())
 
     @patch("utilities.artifactory.Secret")
     def test_get_artifactory_secret_raises_key_error_if_token_not_set(self, mock_secret_class):
         """Test raises KeyError if ARTIFACTORY_TOKEN not set"""
         with patch.dict(os.environ, {"ARTIFACTORY_USER": "test-user"}, clear=True):
             with pytest.raises(KeyError):
-                get_artifactory_secret(namespace="test-namespace")
+                get_artifactory_secret(namespace="test-namespace", client=MagicMock())
 
     @patch("utilities.artifactory.Secret")
     @patch("utilities.artifactory.base64_encode_str")
@@ -366,7 +367,7 @@ class TestGetArtifactorySecret:
             mock_secret_instance.exists = False
             mock_secret_class.return_value = mock_secret_instance
 
-            get_artifactory_secret(namespace="test-namespace")
+            get_artifactory_secret(namespace="test-namespace", client=MagicMock())
 
             # Verify the name parameter matches the constant
             call_kwargs = mock_secret_class.call_args[1]
@@ -390,15 +391,16 @@ class TestGetArtifactoryConfigMap:
         mock_cm_instance = MagicMock()
         mock_cm_instance.exists = False
         mock_cm_class.return_value = mock_cm_instance
+        mock_client = MagicMock()
 
-        result = get_artifactory_config_map(namespace="test-namespace")
+        result = get_artifactory_config_map(namespace="test-namespace", client=mock_client)
 
         # Verify ConfigMap was created with correct parameters
         mock_cm_class.assert_called_once_with(
             name="artifactory-configmap",
             namespace="test-namespace",
             data={"tlsregistry.crt": mock_cert},
-            client=None,
+            client=mock_client,
         )
 
         # Verify SSL certificate was retrieved
@@ -419,7 +421,7 @@ class TestGetArtifactoryConfigMap:
         mock_cm_instance.exists = False
         mock_cm_class.return_value = mock_cm_instance
 
-        result = get_artifactory_config_map(namespace="test-namespace")
+        result = get_artifactory_config_map(namespace="test-namespace", client=MagicMock())
 
         # Verify deploy was called
         mock_cm_instance.deploy.assert_called_once()
@@ -438,7 +440,7 @@ class TestGetArtifactoryConfigMap:
         mock_cm_instance.exists = True
         mock_cm_class.return_value = mock_cm_instance
 
-        result = get_artifactory_config_map(namespace="test-namespace")
+        result = get_artifactory_config_map(namespace="test-namespace", client=MagicMock())
 
         # Verify deploy was NOT called
         mock_cm_instance.deploy.assert_not_called()
@@ -450,7 +452,7 @@ class TestGetArtifactoryConfigMap:
     def test_get_artifactory_config_map_raises_key_error_if_server_url_missing(self, mock_get_cert, mock_cm_class):
         """Test raises KeyError if server_url not in py_config"""
         with pytest.raises(KeyError):
-            get_artifactory_config_map(namespace="test-namespace")
+            get_artifactory_config_map(namespace="test-namespace", client=MagicMock())
 
     @patch("utilities.artifactory.ConfigMap")
     @patch("utilities.artifactory.ssl.get_server_certificate")
@@ -461,7 +463,7 @@ class TestGetArtifactoryConfigMap:
         mock_get_cert.side_effect = OSError("Connection refused")
 
         with pytest.raises(OSError):
-            get_artifactory_config_map(namespace="test-namespace")
+            get_artifactory_config_map(namespace="test-namespace", client=MagicMock())
 
         mock_get_cert.assert_called_once_with(addr=("test.artifactory.com", 443))
 
@@ -477,7 +479,7 @@ class TestGetArtifactoryConfigMap:
         mock_cm_instance.exists = False
         mock_cm_class.return_value = mock_cm_instance
 
-        get_artifactory_config_map(namespace="test-namespace")
+        get_artifactory_config_map(namespace="test-namespace", client=MagicMock())
 
         # Verify SSL certificate was retrieved from custom server
         mock_get_cert.assert_called_once_with(addr=("custom.server.com", 443))

@@ -133,7 +133,7 @@ def get_artifactory_header() -> dict[str, str]:
 
 def get_artifactory_secret(
     namespace: str,
-    client: DynamicClient | None = None,
+    client: DynamicClient,
 ) -> Secret:
     """
     Create or retrieve an Artifactory authentication secret in the specified namespace.
@@ -144,7 +144,7 @@ def get_artifactory_secret(
 
     Args:
         namespace (str): The Kubernetes namespace where the secret should be created or retrieved.
-        client (DynamicClient | None): Optional Kubernetes client. If None, uses the default client.
+        client (DynamicClient): Kubernetes dynamic client used to create or look up the secret.
 
     Returns:
         Secret: The Artifactory Secret resource object.
@@ -166,7 +166,7 @@ def get_artifactory_secret(
 
 def get_artifactory_config_map(
     namespace: str,
-    client: DynamicClient | None = None,
+    client: DynamicClient,
 ) -> ConfigMap:
     """
     Create or retrieve an Artifactory TLS certificate ConfigMap in the specified namespace.
@@ -178,7 +178,7 @@ def get_artifactory_config_map(
 
     Args:
         namespace (str): The Kubernetes namespace where the ConfigMap should be created or retrieved.
-        client (DynamicClient | None): Optional Kubernetes client. If None, uses the default client.
+        client (DynamicClient): Kubernetes dynamic client used to create or look up the ConfigMap.
 
     Returns:
         ConfigMap: The Artifactory ConfigMap resource object containing the TLS certificate.
