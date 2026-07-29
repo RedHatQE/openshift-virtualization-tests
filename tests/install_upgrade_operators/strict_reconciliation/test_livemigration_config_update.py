@@ -3,6 +3,7 @@ import pytest
 from tests.install_upgrade_operators.strict_reconciliation.constants import (
     ALLOW_AUTO_CONVERGE,
     ALLOW_POST_COPY,
+    ALLOW_WORKLOAD_DISRUPTION,
     KUBEVIRT_CR_CONFIGURATION_KEY,
     KUBEVIRT_CR_MIGRATIONS_KEY,
     LIVE_MIGRATION_CONFIG_KEY,
@@ -33,6 +34,14 @@ class TestLiveMigrationConfigUpdate:
                 ALLOW_POST_COPY,
                 marks=pytest.mark.polarion("CNV-9675"),
                 id="test_allow_post_copy",
+            ),
+            pytest.param(
+                {
+                    PATCH_STR: {SPEC_STR: {LIVE_MIGRATION_CONFIG_KEY: {ALLOW_WORKLOAD_DISRUPTION: EXPECTED_VALUE}}},
+                },
+                ALLOW_WORKLOAD_DISRUPTION,
+                marks=pytest.mark.polarion("CNV-16551"),
+                id="test_allow_workload_disruption",
             ),
         ],
         indirect=["updated_hco_cr"],
