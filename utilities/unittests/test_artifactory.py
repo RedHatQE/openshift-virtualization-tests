@@ -626,9 +626,11 @@ class TestArtifactoryCredentials:
         mock_secret = MagicMock()
         mock_secret.name = "cnv-tests-artifactory-secret"
         mock_get_secret.return_value = mock_secret
+        mock_client = MagicMock()
 
         with artifactory_credentials(
             namespace="test-namespace",
+            client=mock_client,
             create_secret=True,
             create_config_map=False,
         ) as credentials:
@@ -636,7 +638,7 @@ class TestArtifactoryCredentials:
             assert credentials.config_map is None
             assert credentials.secret_name == mock_secret.name
 
-        mock_get_secret.assert_called_once_with(namespace="test-namespace", client=None)
+        mock_get_secret.assert_called_once_with(namespace="test-namespace", client=mock_client)
         mock_get_config_map.assert_not_called()
         mock_cleanup.assert_called_once_with(artifactory_secret=mock_secret, artifactory_config_map=None)
 
@@ -653,9 +655,11 @@ class TestArtifactoryCredentials:
         mock_config_map = MagicMock()
         mock_config_map.name = "artifactory-configmap"
         mock_get_config_map.return_value = mock_config_map
+        mock_client = MagicMock()
 
         with artifactory_credentials(
             namespace="test-namespace",
+            client=mock_client,
             create_secret=False,
             create_config_map=True,
         ) as credentials:
@@ -664,7 +668,7 @@ class TestArtifactoryCredentials:
             assert credentials.cert_configmap_name == mock_config_map.name
 
         mock_get_secret.assert_not_called()
-        mock_get_config_map.assert_called_once_with(namespace="test-namespace", client=None)
+        mock_get_config_map.assert_called_once_with(namespace="test-namespace", client=mock_client)
         mock_cleanup.assert_called_once_with(artifactory_secret=None, artifactory_config_map=mock_config_map)
 
     def test_artifactory_credentials_raises_when_both_disabled(self):
@@ -672,6 +676,7 @@ class TestArtifactoryCredentials:
         with pytest.raises(ValueError, match="At least one of create_secret or create_config_map must be True"):
             with artifactory_credentials(
                 namespace="test-namespace",
+                client=MagicMock(),
                 create_secret=False,
                 create_config_map=False,
             ):
@@ -692,7 +697,7 @@ class TestArtifactoryCredentials:
         mock_get_config_map.side_effect = OSError("SSL connection failed")
 
         with pytest.raises(OSError, match="SSL connection failed"):
-            with artifactory_credentials(namespace="test-namespace"):
+            with artifactory_credentials(namespace="test-namespace", client=MagicMock()):
                 pass
 
         mock_cleanup.assert_called_once_with(
@@ -716,7 +721,7 @@ class TestArtifactoryCredentials:
         mock_get_config_map.return_value = mock_config_map
 
         with pytest.raises(RuntimeError, match="boom"):
-            with artifactory_credentials(namespace="test-namespace"):
+            with artifactory_credentials(namespace="test-namespace", client=MagicMock()):
                 raise RuntimeError("boom")
 
         mock_cleanup.assert_called_once_with(

@@ -223,7 +223,7 @@ def cleanup_artifactory_secret_and_config_map(
 @contextmanager
 def artifactory_credentials(
     namespace: str,
-    client: DynamicClient | None = None,
+    client: DynamicClient,
     *,
     create_secret: bool = True,
     create_config_map: bool = True,
@@ -233,7 +233,7 @@ def artifactory_credentials(
 
     Args:
         namespace: Kubernetes namespace for the credentials resources.
-        client: Optional Kubernetes client. If None, uses the default client.
+        client: Kubernetes dynamic client used to create and delete the resources.
         create_secret: Whether to create/retrieve the Artifactory Secret. Defaults to True.
         create_config_map: Whether to create/retrieve the Artifactory ConfigMap. Defaults to True.
 
