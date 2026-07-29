@@ -92,7 +92,7 @@ def windows_data_volume_template(
 ):
     os_matrix_key = [*windows_os_matrix__module__][0]
     os_params = windows_os_matrix__module__[os_matrix_key]
-    with artifactory_credentials(namespace=namespace.name, client=unprivileged_client) as artifactory:
+    with artifactory_credentials(namespace=namespace.name, client=namespace.client) as artifactory:
         win_dv = DataVolume(
             client=unprivileged_client,
             name=f"{os_matrix_key}-dv",
