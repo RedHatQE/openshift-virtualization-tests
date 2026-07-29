@@ -48,11 +48,7 @@ def available_runbook_urls(cnv_prometheus_rule_alerts):
     available_urls = set()
     with requests.Session() as session:
         for runbook_url in sorted(unique_urls):
-            try:
-                raw_url = github_blob_url_to_raw(blob_url=runbook_url)
-            except ValueError as error:
-                LOGGER.warning(f"Skipping malformed runbook URL '{runbook_url}': {error}")
-                continue
+            raw_url = github_blob_url_to_raw(blob_url=runbook_url)
             sample = None
             try:
                 for sample in TimeoutSampler(
