@@ -14,12 +14,7 @@ from ocp_resources.restore import Restore
 from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.virtual_machine import VirtualMachine
 
-from utilities.artifactory import (
-    cleanup_artifactory_secret_and_config_map,
-    get_artifactory_config_map,
-    get_artifactory_secret,
-    get_http_image_url,
-)
+from utilities.artifactory import artifactory_credentials, get_http_image_url
 from utilities.console import Console
 from utilities.constants import Images
 from utilities.constants.cluster import LS_COMMAND
@@ -150,13 +145,7 @@ def create_rhel_vm(
     wait_running: bool = True,
     volume_mode: str | None = None,
 ) -> Generator[VirtualMachineForTests]:
-    artifactory_secret = None
-    artifactory_config_map = None
-
-    try:
-        artifactory_secret = get_artifactory_secret(namespace=namespace)
-        artifactory_config_map = get_artifactory_config_map(namespace=namespace)
-
+    with artifactory_credentials(namespace=namespace, client=client) as artifactory:
         dv = DataVolume(
             name=dv_name,
             namespace=namespace,
@@ -166,8 +155,8 @@ def create_rhel_vm(
                     image_directory=Images.Rhel.DIR,
                     image_name=rhel_image,
                 ),
-                secret_name=artifactory_secret.name,
-                cert_configmap_name=artifactory_config_map.name,
+                secret_name=artifactory.secret_name,
+                cert_configmap_name=artifactory.cert_configmap_name,
             ),
             storage_class=storage_class,
             size=Images.Rhel.DEFAULT_DV_SIZE,
@@ -188,10 +177,6 @@ def create_rhel_vm(
             if wait_running:
                 running_vm(vm=vm)
             yield vm
-    finally:
-        cleanup_artifactory_secret_and_config_map(
-            artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
-        )
 
 
 class VeleroRestore(Restore):

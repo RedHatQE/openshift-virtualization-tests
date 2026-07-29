@@ -37,8 +37,7 @@ from tests.storage.cross_cluster_live_migration.utils import (
 )
 from tests.storage.utils import get_storage_class_for_storage_migration
 from utilities.artifactory import (
-    get_artifactory_config_map,
-    get_artifactory_secret,
+    artifactory_credentials,
     get_test_artifact_server_url,
 )
 from utilities.constants import Images
@@ -501,23 +500,12 @@ def vm_for_cclm_with_instance_type(
 
 
 @pytest.fixture(scope="class")
-def remote_cluster_artifactory_secret_scope_class(remote_admin_client, remote_cluster_source_test_namespace):
-    artifactory_secret = get_artifactory_secret(
-        namespace=remote_cluster_source_test_namespace.name, client=remote_admin_client
-    )
-    yield artifactory_secret
-    if artifactory_secret:
-        artifactory_secret.clean_up()
-
-
-@pytest.fixture(scope="class")
-def remote_cluster_artifactory_config_map_scope_class(remote_admin_client, remote_cluster_source_test_namespace):
-    artifactory_config_map = get_artifactory_config_map(
-        namespace=remote_cluster_source_test_namespace.name, client=remote_admin_client
-    )
-    yield artifactory_config_map
-    if artifactory_config_map:
-        artifactory_config_map.clean_up()
+def remote_cluster_artifactory_credentials_scope_class(remote_admin_client, remote_cluster_source_test_namespace):
+    with artifactory_credentials(
+        namespace=remote_cluster_source_test_namespace.name,
+        client=remote_admin_client,
+    ) as credentials:
+        yield credentials
 
 
 @pytest.fixture(scope="class")
@@ -525,8 +513,7 @@ def vm_for_cclm_windows_with_instance_type(
     remote_admin_client,
     remote_cluster_source_test_namespace,
     remote_cluster_source_storage_class,
-    remote_cluster_artifactory_secret_scope_class,
-    remote_cluster_artifactory_config_map_scope_class,
+    remote_cluster_artifactory_credentials_scope_class,
 ):
     dv = DataVolume(
         client=remote_admin_client,
@@ -536,8 +523,8 @@ def vm_for_cclm_windows_with_instance_type(
         source_dict=construct_datavolume_source_dict(
             source="registry",
             url=f"{get_test_artifact_server_url(schema='registry')}/{WINDOWS_2022[CONTAINER_DISK_IMAGE_PATH_STR]}",
-            secret_name=remote_cluster_artifactory_secret_scope_class.name,
-            cert_configmap_name=remote_cluster_artifactory_config_map_scope_class.name,
+            secret_name=remote_cluster_artifactory_credentials_scope_class.secret_name,
+            cert_configmap_name=remote_cluster_artifactory_credentials_scope_class.cert_configmap_name,
         ),
         size=Images.Windows.CONTAINER_DISK_DV_SIZE,
         storage_class=remote_cluster_source_storage_class,

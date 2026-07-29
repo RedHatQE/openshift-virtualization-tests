@@ -2488,39 +2488,35 @@ def dvs_for_upgrade(
 ):
     golden_images_namespace_name = py_config["golden_images_namespace"]
     dvs_list = []
-    artifactory_secret = utilities.artifactory.get_artifactory_secret(namespace=golden_images_namespace_name)
-    artifactory_config_map = utilities.artifactory.get_artifactory_config_map(namespace=golden_images_namespace_name)
+    with utilities.artifactory.artifactory_credentials(
+        namespace=golden_images_namespace_name, client=admin_client
+    ) as artifactory:
+        for sc in py_config["storage_class_matrix"]:
+            storage_class = [*sc][0]
+            dv = DataVolume(
+                client=admin_client,
+                name=f"dv-for-product-upgrade-{storage_class}",
+                namespace=golden_images_namespace_name,
+                source_dict=construct_datavolume_source_dict(
+                    source="http",
+                    url=rhel_latest_os_params["rhel_image_path"],
+                    secret_name=artifactory.secret_name,
+                    cert_configmap_name=artifactory.cert_configmap_name,
+                ),
+                storage_class=storage_class,
+                size=rhel_latest_os_params["rhel_dv_size"],
+                annotations=BIND_IMMEDIATE_ANNOTATION,
+                api_name="storage",
+            )
+            dv.create()
+            dvs_list.append(dv)
+        for dv in dvs_list:
+            dv.wait_for_dv_success()
 
-    for sc in py_config["storage_class_matrix"]:
-        storage_class = [*sc][0]
-        dv = DataVolume(
-            client=admin_client,
-            name=f"dv-for-product-upgrade-{storage_class}",
-            namespace=golden_images_namespace_name,
-            source_dict=construct_datavolume_source_dict(
-                source="http",
-                url=rhel_latest_os_params["rhel_image_path"],
-                secret_name=artifactory_secret.name,
-                cert_configmap_name=artifactory_config_map.name,
-            ),
-            storage_class=storage_class,
-            size=rhel_latest_os_params["rhel_dv_size"],
-            annotations=BIND_IMMEDIATE_ANNOTATION,
-            api_name="storage",
-        )
-        dv.create()
-        dvs_list.append(dv)
-    for dv in dvs_list:
-        dv.wait_for_dv_success()
+        yield dvs_list
 
-    yield dvs_list
-
-    for dv in dvs_list:
-        dv.clean_up()
-    utilities.artifactory.cleanup_artifactory_secret_and_config_map(
-        artifactory_secret=artifactory_secret,
-        artifactory_config_map=artifactory_config_map,
-    )
+        for dv in dvs_list:
+            dv.clean_up()
 
 
 @pytest.fixture(scope="class")

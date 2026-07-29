@@ -1,6 +1,9 @@
 import logging
 import os
 import ssl
+from collections.abc import Generator
+from contextlib import contextmanager
+from dataclasses import dataclass
 
 import requests
 from kubernetes.dynamic import DynamicClient
@@ -18,7 +21,49 @@ from utilities.data_utils import base64_encode_str
 LOGGER = logging.getLogger(__name__)
 
 ARTIFACTORY_SECRET_NAME = "cnv-tests-artifactory-secret"
+ARTIFACTORY_CONFIG_MAP_NAME = "artifactory-configmap"
 BASE_ARTIFACTORY_LOCATION = "artifactory/cnv-qe-server-local"
+
+
+@dataclass(frozen=True)
+class ArtifactoryCredentials:
+    """Namespace-scoped Artifactory Secret and/or TLS ConfigMap.
+
+    Attributes:
+        secret: Artifactory Secret when created; None if ``create_secret=False``.
+        config_map: Artifactory ConfigMap when created; None if ``create_config_map=False``.
+    """
+
+    secret: Secret | None = None
+    config_map: ConfigMap | None = None
+
+    @property
+    def secret_name(self) -> str:
+        """Return the Artifactory Secret name.
+
+        Returns:
+            str: Name of the created Secret.
+
+        Raises:
+            ValueError: If the Secret was not created (``create_secret=False``).
+        """
+        if self.secret is None:
+            raise ValueError("Artifactory secret was not created")
+        return self.secret.name
+
+    @property
+    def cert_configmap_name(self) -> str:
+        """Return the Artifactory ConfigMap name.
+
+        Returns:
+            str: Name of the created ConfigMap.
+
+        Raises:
+            ValueError: If the ConfigMap was not created (``create_config_map=False``).
+        """
+        if self.config_map is None:
+            raise ValueError("Artifactory ConfigMap was not created")
+        return self.config_map.name
 
 
 def get_test_artifact_server_url(schema: str = "https") -> str:  # type: ignore[return]
@@ -143,7 +188,7 @@ def get_artifactory_config_map(
         OSError: If SSL connection to the server fails.
     """
     artifactory_cm = ConfigMap(
-        name="artifactory-configmap",
+        name=ARTIFACTORY_CONFIG_MAP_NAME,
         namespace=namespace,
         data={"tlsregistry.crt": ssl.get_server_certificate(addr=(py_config["server_url"], 443))},
         client=client,
@@ -161,19 +206,56 @@ def cleanup_artifactory_secret_and_config_map(
     Clean up Artifactory Secret and ConfigMap resources from the cluster.
 
     Deletes the provided Artifactory Secret and/or ConfigMap resources if they exist.
-    This is typically used in test cleanup to remove temporary Artifactory credentials
-    and certificates from the cluster.
+    Prefer ``artifactory_credentials`` for new code; this remains for low-level cleanup.
 
     Args:
-        artifactory_secret (Secret |  None): The Artifactory Secret resource to delete.
+        artifactory_secret (Secret | None): The Artifactory Secret resource to delete.
             If None, no secret cleanup is performed.
         artifactory_config_map (ConfigMap | None): The Artifactory ConfigMap resource to delete.
             If None, no ConfigMap cleanup is performed.
-
-    Returns:
-        None
     """
     if artifactory_secret:
         artifactory_secret.clean_up()
     if artifactory_config_map:
         artifactory_config_map.clean_up()
+
+
+@contextmanager
+def artifactory_credentials(
+    namespace: str,
+    client: DynamicClient | None = None,
+    *,
+    create_secret: bool = True,
+    create_config_map: bool = True,
+) -> Generator[ArtifactoryCredentials]:
+    """
+    Create Artifactory Secret and/or ConfigMap and guarantee cleanup on exit.
+
+    Args:
+        namespace: Kubernetes namespace for the credentials resources.
+        client: Optional Kubernetes client. If None, uses the default client.
+        create_secret: Whether to create/retrieve the Artifactory Secret. Defaults to True.
+        create_config_map: Whether to create/retrieve the Artifactory ConfigMap. Defaults to True.
+
+    Yields:
+        ArtifactoryCredentials: Created Secret and/or ConfigMap for DV/source auth.
+
+    Raises:
+        ValueError: If both ``create_secret`` and ``create_config_map`` are False.
+    """
+    if not create_secret and not create_config_map:
+        raise ValueError("At least one of create_secret or create_config_map must be True")
+
+    secret: Secret | None = None
+    config_map: ConfigMap | None = None
+    try:
+        if create_secret:
+            secret = get_artifactory_secret(namespace=namespace, client=client)
+        if create_config_map:
+            config_map = get_artifactory_config_map(namespace=namespace, client=client)
+        yield ArtifactoryCredentials(secret=secret, config_map=config_map)
+    finally:
+        cleanup_artifactory_secret_and_config_map(
+            artifactory_secret=secret,
+            artifactory_config_map=config_map,
+        )

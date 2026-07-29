@@ -5,11 +5,7 @@ from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClust
 from pytest_testconfig import config as py_config
 
 from tests.infrastructure.instance_types.supported_os.utils import golden_image_vm_with_instance_type
-from utilities.artifactory import (
-    cleanup_artifactory_secret_and_config_map,
-    get_artifactory_config_map,
-    get_artifactory_secret,
-)
+from utilities.artifactory import artifactory_credentials
 from utilities.constants import Images
 from utilities.constants.hco import DATA_SOURCE_NAME
 from utilities.constants.images import OS_FLAVOR_WIN_CONTAINER_DISK
@@ -96,25 +92,23 @@ def windows_data_volume_template(
 ):
     os_matrix_key = [*windows_os_matrix__module__][0]
     os_params = windows_os_matrix__module__[os_matrix_key]
-    secret = get_artifactory_secret(namespace=namespace.name)
-    cert = get_artifactory_config_map(namespace=namespace.name)
-    win_dv = DataVolume(
-        client=unprivileged_client,
-        name=f"{os_matrix_key}-dv",
-        namespace=namespace.name,
-        api_name="storage",
-        source_dict=construct_datavolume_source_dict(
-            source="registry",
-            url=f"{get_test_artifact_server_url(schema='registry')}/{os_params[CONTAINER_DISK_IMAGE_PATH_STR]}",
-            secret_name=secret.name,
-            cert_configmap_name=cert.name,
-        ),
-        size=Images.Windows.CONTAINER_DISK_DV_SIZE,
-        storage_class=py_config["default_storage_class"],
-    )
-    win_dv.to_dict()
-    yield win_dv
-    cleanup_artifactory_secret_and_config_map(artifactory_secret=secret, artifactory_config_map=cert)
+    with artifactory_credentials(namespace=namespace.name, client=unprivileged_client) as artifactory:
+        win_dv = DataVolume(
+            client=unprivileged_client,
+            name=f"{os_matrix_key}-dv",
+            namespace=namespace.name,
+            api_name="storage",
+            source_dict=construct_datavolume_source_dict(
+                source="registry",
+                url=f"{get_test_artifact_server_url(schema='registry')}/{os_params[CONTAINER_DISK_IMAGE_PATH_STR]}",
+                secret_name=artifactory.secret_name,
+                cert_configmap_name=artifactory.cert_configmap_name,
+            ),
+            size=Images.Windows.CONTAINER_DISK_DV_SIZE,
+            storage_class=py_config["default_storage_class"],
+        )
+        win_dv.to_dict()
+        yield win_dv
 
 
 @pytest.fixture(scope="class")

@@ -17,7 +17,7 @@ from tests.chaos.utils import (
     pod_deleting_process_recover,
     terminate_process,
 )
-from utilities.artifactory import get_artifactory_config_map, get_artifactory_secret
+from utilities.artifactory import artifactory_credentials
 from utilities.constants import Images
 from utilities.constants.components import KUBEMACPOOL_MAC_CONTROLLER_MANAGER
 from utilities.constants.images import OS_FLAVOR_RHEL
@@ -90,15 +90,14 @@ def chaos_dv_rhel9(
     admin_client,
     chaos_namespace,
     rhel9_http_image_url,
-    artifactory_secret_chaos_namespace_scope_module,
-    artifactory_config_map_chaos_namespace_scope_module,
+    artifactory_credentials_chaos_namespace_scope_module,
 ):
     yield DataVolume(
         source_dict=construct_datavolume_source_dict(
             source="http",
             url=rhel9_http_image_url,
-            secret_name=artifactory_secret_chaos_namespace_scope_module.name,
-            cert_configmap_name=artifactory_config_map_chaos_namespace_scope_module.name,
+            secret_name=artifactory_credentials_chaos_namespace_scope_module.secret_name,
+            cert_configmap_name=artifactory_credentials_chaos_namespace_scope_module.cert_configmap_name,
         ),
         name="chaos-dv",
         api_name="storage",
@@ -355,19 +354,9 @@ def vm_node_with_chaos_label(vm_with_nginx_service):
 
 
 @pytest.fixture(scope="module")
-def artifactory_secret_chaos_namespace_scope_module(chaos_namespace):
-    artifactory_secret = get_artifactory_secret(namespace=chaos_namespace.name)
-    yield artifactory_secret
-    if artifactory_secret.exists:
-        artifactory_secret.clean_up()
-
-
-@pytest.fixture(scope="module")
-def artifactory_config_map_chaos_namespace_scope_module(chaos_namespace):
-    artifactory_config_map = get_artifactory_config_map(namespace=chaos_namespace.name)
-    yield artifactory_config_map
-    if artifactory_config_map.exists:
-        artifactory_config_map.clean_up()
+def artifactory_credentials_chaos_namespace_scope_module(chaos_namespace):
+    with artifactory_credentials(namespace=chaos_namespace.name) as credentials:
+        yield credentials
 
 
 @pytest.fixture(scope="class")

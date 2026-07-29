@@ -9,9 +9,7 @@ from tests.data_protection.oadp.utils import (
     FILE_PATH_FOR_WINDOWS_BACKUP,
 )
 from utilities.artifactory import (
-    cleanup_artifactory_secret_and_config_map,
-    get_artifactory_config_map,
-    get_artifactory_secret,
+    artifactory_credentials,
     get_test_artifact_server_url,
 )
 from utilities.constants import Images
@@ -163,13 +161,7 @@ def windows_vm_with_data_volume_template(
     snapshot_storage_class_name_scope_module,
 ):
     """Windows 2022 VM with InstanceType and Preference in the backup namespace for OADP backup testing."""
-    artifactory_secret = None
-    artifactory_config_map = None
-
-    try:
-        artifactory_secret = get_artifactory_secret(namespace=namespace_for_backup.name)
-        artifactory_config_map = get_artifactory_config_map(namespace=namespace_for_backup.name)
-
+    with artifactory_credentials(namespace=namespace_for_backup.name, client=admin_client) as artifactory:
         dv = DataVolume(
             name="oadp-windows-dv",
             namespace=namespace_for_backup.name,
@@ -180,8 +172,8 @@ def windows_vm_with_data_volume_template(
                     f"{get_test_artifact_server_url(schema='registry')}/"
                     f"{py_config['latest_windows_os_dict'][CONTAINER_DISK_IMAGE_PATH_STR]}"
                 ),
-                secret_name=artifactory_secret.name,
-                cert_configmap_name=artifactory_config_map.name,
+                secret_name=artifactory.secret_name,
+                cert_configmap_name=artifactory.cert_configmap_name,
             ),
             size=Images.Windows.CONTAINER_DISK_DV_SIZE,
             client=admin_client,
@@ -201,10 +193,6 @@ def windows_vm_with_data_volume_template(
             running_vm(vm=vm)
             write_file_windows_vm(vm=vm, file_path=FILE_PATH_FOR_WINDOWS_BACKUP, content=TEXT_TO_TEST)
             yield vm
-    finally:
-        cleanup_artifactory_secret_and_config_map(
-            artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
-        )
 
 
 @pytest.fixture()

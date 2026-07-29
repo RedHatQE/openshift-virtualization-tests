@@ -23,7 +23,7 @@ from tests.infrastructure.tekton.utils import (
     win_iso_download_url_for_pipelineref,
     yaml_files_in_dir,
 )
-from utilities.artifactory import get_artifactory_config_map, get_artifactory_secret
+from utilities.artifactory import artifactory_credentials
 from utilities.constants.images import OS_FLAVOR_FEDORA
 from utilities.constants.tekton import (
     TEKTON_AVAILABLE_PIPELINEREF,
@@ -216,8 +216,7 @@ def processed_yaml_files(
 def resource_editor_efi_pipelines(
     admin_client,
     custom_pipeline_namespace,
-    artifactory_secret_custom_pipeline_namespace,
-    artifactory_config_map_custom_pipeline_namespace,
+    artifactory_credentials_custom_pipeline_namespace,
 ):
     pipeline = Pipeline(client=admin_client, name=WINDOWS_EFI_INSTALLER_STR, namespace=custom_pipeline_namespace.name)
     pipeline_dict = pipeline.instance.to_dict()
@@ -229,10 +228,10 @@ def resource_editor_efi_pipelines(
                     manifest = yaml.safe_load(param["value"])
                     if manifest["spec"]["source"]["http"]["url"] == "$(params.winImageDownloadURL)":
                         manifest["spec"]["source"]["http"]["secretRef"] = (
-                            artifactory_secret_custom_pipeline_namespace.name
+                            artifactory_credentials_custom_pipeline_namespace.secret_name
                         )
                         manifest["spec"]["source"]["http"]["certConfigMap"] = (
-                            artifactory_config_map_custom_pipeline_namespace.name
+                            artifactory_credentials_custom_pipeline_namespace.cert_configmap_name
                         )
                     param["value"] = yaml.dump(manifest)
 
@@ -248,19 +247,9 @@ def custom_pipeline_namespace(unprivileged_client, admin_client):
 
 
 @pytest.fixture(scope="module")
-def artifactory_secret_custom_pipeline_namespace(custom_pipeline_namespace):
-    artifactory_secret = get_artifactory_secret(namespace=custom_pipeline_namespace.name)
-    yield artifactory_secret
-    if artifactory_secret.exists:
-        artifactory_secret.clean_up()
-
-
-@pytest.fixture(scope="module")
-def artifactory_config_map_custom_pipeline_namespace(custom_pipeline_namespace):
-    artifactory_config_map = get_artifactory_config_map(namespace=custom_pipeline_namespace.name)
-    yield artifactory_config_map
-    if artifactory_config_map.exists:
-        artifactory_config_map.clean_up()
+def artifactory_credentials_custom_pipeline_namespace(custom_pipeline_namespace):
+    with artifactory_credentials(namespace=custom_pipeline_namespace.name) as credentials:
+        yield credentials
 
 
 @pytest.fixture()

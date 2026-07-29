@@ -15,8 +15,11 @@ from timeout_sampler import TimeoutExpiredError
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from utilities.artifactory import (
+    ARTIFACTORY_CONFIG_MAP_NAME,
     ARTIFACTORY_SECRET_NAME,
     BASE_ARTIFACTORY_LOCATION,
+    ArtifactoryCredentials,
+    artifactory_credentials,
     cleanup_artifactory_secret_and_config_map,
     get_artifactory_config_map,
     get_artifactory_header,
@@ -550,12 +553,188 @@ class TestCleanupArtifactorySecretAndConfigMap:
         )
 
 
+class TestArtifactoryCredentials:
+    """Test cases for ArtifactoryCredentials and artifactory_credentials"""
+
+    def test_artifactory_credentials_name_properties(self):
+        """Test secret_name and cert_configmap_name properties"""
+        mock_secret = MagicMock()
+        mock_secret.name = "cnv-tests-artifactory-secret"
+        mock_config_map = MagicMock()
+        mock_config_map.name = "artifactory-configmap"
+
+        credentials = ArtifactoryCredentials(secret=mock_secret, config_map=mock_config_map)
+
+        assert credentials.secret_name == "cnv-tests-artifactory-secret"
+        assert credentials.cert_configmap_name == "artifactory-configmap"
+
+    def test_artifactory_credentials_secret_name_raises_when_missing(self):
+        """Test secret_name raises when secret was not created"""
+        credentials = ArtifactoryCredentials(config_map=MagicMock())
+
+        with pytest.raises(ValueError, match="Artifactory secret was not created"):
+            _ = credentials.secret_name
+
+    def test_artifactory_credentials_cert_configmap_name_raises_when_missing(self):
+        """Test cert_configmap_name raises when ConfigMap was not created"""
+        credentials = ArtifactoryCredentials(secret=MagicMock())
+
+        with pytest.raises(ValueError, match="Artifactory ConfigMap was not created"):
+            _ = credentials.cert_configmap_name
+
+    @patch("utilities.artifactory.cleanup_artifactory_secret_and_config_map")
+    @patch("utilities.artifactory.get_artifactory_config_map")
+    @patch("utilities.artifactory.get_artifactory_secret")
+    def test_artifactory_credentials_context_manager_yields_pair(
+        self,
+        mock_get_secret,
+        mock_get_config_map,
+        mock_cleanup,
+    ):
+        """Test context manager yields credentials and cleans up on exit"""
+        mock_secret = MagicMock()
+        mock_secret.name = "cnv-tests-artifactory-secret"
+        mock_config_map = MagicMock()
+        mock_config_map.name = "artifactory-configmap"
+        mock_get_secret.return_value = mock_secret
+        mock_get_config_map.return_value = mock_config_map
+        mock_client = MagicMock()
+
+        with artifactory_credentials(namespace="test-namespace", client=mock_client) as credentials:
+            assert credentials.secret is mock_secret
+            assert credentials.config_map is mock_config_map
+            assert credentials.secret_name == mock_secret.name
+            assert credentials.cert_configmap_name == mock_config_map.name
+
+        mock_get_secret.assert_called_once_with(namespace="test-namespace", client=mock_client)
+        mock_get_config_map.assert_called_once_with(namespace="test-namespace", client=mock_client)
+        mock_cleanup.assert_called_once_with(
+            artifactory_secret=mock_secret,
+            artifactory_config_map=mock_config_map,
+        )
+
+    @patch("utilities.artifactory.cleanup_artifactory_secret_and_config_map")
+    @patch("utilities.artifactory.get_artifactory_config_map")
+    @patch("utilities.artifactory.get_artifactory_secret")
+    def test_artifactory_credentials_create_secret_only(
+        self,
+        mock_get_secret,
+        mock_get_config_map,
+        mock_cleanup,
+    ):
+        """Test context manager can create only the Secret"""
+        mock_secret = MagicMock()
+        mock_secret.name = "cnv-tests-artifactory-secret"
+        mock_get_secret.return_value = mock_secret
+
+        with artifactory_credentials(
+            namespace="test-namespace",
+            create_secret=True,
+            create_config_map=False,
+        ) as credentials:
+            assert credentials.secret is mock_secret
+            assert credentials.config_map is None
+            assert credentials.secret_name == mock_secret.name
+
+        mock_get_secret.assert_called_once_with(namespace="test-namespace", client=None)
+        mock_get_config_map.assert_not_called()
+        mock_cleanup.assert_called_once_with(artifactory_secret=mock_secret, artifactory_config_map=None)
+
+    @patch("utilities.artifactory.cleanup_artifactory_secret_and_config_map")
+    @patch("utilities.artifactory.get_artifactory_config_map")
+    @patch("utilities.artifactory.get_artifactory_secret")
+    def test_artifactory_credentials_create_config_map_only(
+        self,
+        mock_get_secret,
+        mock_get_config_map,
+        mock_cleanup,
+    ):
+        """Test context manager can create only the ConfigMap"""
+        mock_config_map = MagicMock()
+        mock_config_map.name = "artifactory-configmap"
+        mock_get_config_map.return_value = mock_config_map
+
+        with artifactory_credentials(
+            namespace="test-namespace",
+            create_secret=False,
+            create_config_map=True,
+        ) as credentials:
+            assert credentials.secret is None
+            assert credentials.config_map is mock_config_map
+            assert credentials.cert_configmap_name == mock_config_map.name
+
+        mock_get_secret.assert_not_called()
+        mock_get_config_map.assert_called_once_with(namespace="test-namespace", client=None)
+        mock_cleanup.assert_called_once_with(artifactory_secret=None, artifactory_config_map=mock_config_map)
+
+    def test_artifactory_credentials_raises_when_both_disabled(self):
+        """Test context manager rejects creating neither resource"""
+        with pytest.raises(ValueError, match="At least one of create_secret or create_config_map must be True"):
+            with artifactory_credentials(
+                namespace="test-namespace",
+                create_secret=False,
+                create_config_map=False,
+            ):
+                pass
+
+    @patch("utilities.artifactory.cleanup_artifactory_secret_and_config_map")
+    @patch("utilities.artifactory.get_artifactory_config_map")
+    @patch("utilities.artifactory.get_artifactory_secret")
+    def test_artifactory_credentials_cleans_up_secret_if_config_map_create_fails(
+        self,
+        mock_get_secret,
+        mock_get_config_map,
+        mock_cleanup,
+    ):
+        """Test Secret is cleaned up when ConfigMap creation fails after Secret creation"""
+        mock_secret = MagicMock()
+        mock_get_secret.return_value = mock_secret
+        mock_get_config_map.side_effect = OSError("SSL connection failed")
+
+        with pytest.raises(OSError, match="SSL connection failed"):
+            with artifactory_credentials(namespace="test-namespace"):
+                pass
+
+        mock_cleanup.assert_called_once_with(
+            artifactory_secret=mock_secret,
+            artifactory_config_map=None,
+        )
+
+    @patch("utilities.artifactory.cleanup_artifactory_secret_and_config_map")
+    @patch("utilities.artifactory.get_artifactory_config_map")
+    @patch("utilities.artifactory.get_artifactory_secret")
+    def test_artifactory_credentials_context_manager_cleanup_on_exception(
+        self,
+        mock_get_secret,
+        mock_get_config_map,
+        mock_cleanup,
+    ):
+        """Test context manager cleans up when body raises"""
+        mock_secret = MagicMock()
+        mock_config_map = MagicMock()
+        mock_get_secret.return_value = mock_secret
+        mock_get_config_map.return_value = mock_config_map
+
+        with pytest.raises(RuntimeError, match="boom"):
+            with artifactory_credentials(namespace="test-namespace"):
+                raise RuntimeError("boom")
+
+        mock_cleanup.assert_called_once_with(
+            artifactory_secret=mock_secret,
+            artifactory_config_map=mock_config_map,
+        )
+
+
 class TestArtifactoryConstants:
     """Test cases for artifactory module constants"""
 
     def test_artifactory_secret_name_constant(self):
         """Test ARTIFACTORY_SECRET_NAME constant is defined"""
         assert ARTIFACTORY_SECRET_NAME == "cnv-tests-artifactory-secret"
+
+    def test_artifactory_config_map_name_constant(self):
+        """Test ARTIFACTORY_CONFIG_MAP_NAME constant is defined"""
+        assert ARTIFACTORY_CONFIG_MAP_NAME == "artifactory-configmap"
 
     def test_base_artifactory_location_constant(self):
         """Test BASE_ARTIFACTORY_LOCATION constant is defined"""

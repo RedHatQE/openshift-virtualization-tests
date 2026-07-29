@@ -280,32 +280,15 @@ class TestVeleroBackup:
 class TestCreateRhelVm:
     """Test cases for create_rhel_vm context manager"""
 
-    @patch("utilities.oadp.cleanup_artifactory_secret_and_config_map")
-    @patch("utilities.oadp.running_vm")
-    @patch("utilities.oadp.VirtualMachineForTests")
-    @patch("utilities.oadp.DataVolume")
-    @patch("utilities.oadp.get_http_image_url")
-    @patch("utilities.oadp.get_artifactory_config_map")
-    @patch("utilities.oadp.get_artifactory_secret")
-    def test_create_rhel_vm_success_with_wait(
-        self,
-        mock_get_secret,
-        mock_get_config_map,
-        mock_get_url,
-        mock_dv_class,
-        mock_vm_class,
-        mock_running_vm,
-        mock_cleanup,
-    ):
-        """Test create_rhel_vm creates VM and waits for running"""
-        mock_client = MagicMock()
-        mock_secret = MagicMock()
-        mock_config_map = MagicMock()
-        mock_config_map.name = "artifactory-cert"
-        mock_get_secret.return_value = mock_secret
-        mock_get_config_map.return_value = mock_config_map
-        mock_get_url.return_value = "http://example.com/rhel-9.6.qcow2"
+    def _mock_artifactory_credentials(self, mock_artifactory_credentials):
+        mock_credentials = MagicMock()
+        mock_credentials.secret_name = "cnv-tests-artifactory-secret"
+        mock_credentials.cert_configmap_name = "artifactory-configmap"
+        mock_artifactory_credentials.return_value.__enter__.return_value = mock_credentials
+        mock_artifactory_credentials.return_value.__exit__.return_value = None
+        return mock_credentials
 
+    def _mock_dv_and_vm(self, mock_dv_class, mock_vm_class):
         mock_dv = MagicMock()
         mock_dv.res = {
             "metadata": {"name": "test-dv", "namespace": "test-namespace"},
@@ -317,6 +300,26 @@ class TestCreateRhelVm:
         mock_vm.__enter__ = MagicMock(return_value=mock_vm)
         mock_vm.__exit__ = MagicMock(return_value=None)
         mock_vm_class.return_value = mock_vm
+        return mock_dv, mock_vm
+
+    @patch("utilities.oadp.running_vm")
+    @patch("utilities.oadp.VirtualMachineForTests")
+    @patch("utilities.oadp.DataVolume")
+    @patch("utilities.oadp.get_http_image_url")
+    @patch("utilities.oadp.artifactory_credentials")
+    def test_create_rhel_vm_success_with_wait(
+        self,
+        mock_artifactory_credentials,
+        mock_get_url,
+        mock_dv_class,
+        mock_vm_class,
+        mock_running_vm,
+    ):
+        """Test create_rhel_vm creates VM and waits for running"""
+        mock_client = MagicMock()
+        self._mock_artifactory_credentials(mock_artifactory_credentials)
+        mock_get_url.return_value = "http://example.com/rhel-9.6.qcow2"
+        mock_dv, mock_vm = self._mock_dv_and_vm(mock_dv_class, mock_vm_class)
 
         with create_rhel_vm(
             storage_class="ocs-storagecluster-ceph-rbd",
@@ -329,50 +332,30 @@ class TestCreateRhelVm:
         ) as vm:
             assert vm == mock_vm
 
-        mock_get_secret.assert_called_once_with(namespace="test-namespace")
-        mock_get_config_map.assert_called_once_with(namespace="test-namespace")
+        mock_artifactory_credentials.assert_called_once_with(namespace="test-namespace", client=mock_client)
         mock_get_url.assert_called_once()
         mock_dv.to_dict.assert_called_once()
         mock_running_vm.assert_called_once_with(vm=mock_vm)
-        mock_cleanup.assert_called_once_with(artifactory_secret=mock_secret, artifactory_config_map=mock_config_map)
+        mock_artifactory_credentials.return_value.__exit__.assert_called_once()
 
-    @patch("utilities.oadp.cleanup_artifactory_secret_and_config_map")
     @patch("utilities.oadp.running_vm")
     @patch("utilities.oadp.VirtualMachineForTests")
     @patch("utilities.oadp.DataVolume")
     @patch("utilities.oadp.get_http_image_url")
-    @patch("utilities.oadp.get_artifactory_config_map")
-    @patch("utilities.oadp.get_artifactory_secret")
+    @patch("utilities.oadp.artifactory_credentials")
     def test_create_rhel_vm_success_without_wait(
         self,
-        mock_get_secret,
-        mock_get_config_map,
+        mock_artifactory_credentials,
         mock_get_url,
         mock_dv_class,
         mock_vm_class,
         mock_running_vm,
-        mock_cleanup,
     ):
         """Test create_rhel_vm creates VM without waiting for running"""
         mock_client = MagicMock()
-        mock_secret = MagicMock()
-        mock_config_map = MagicMock()
-        mock_config_map.name = "artifactory-cert"
-        mock_get_secret.return_value = mock_secret
-        mock_get_config_map.return_value = mock_config_map
+        self._mock_artifactory_credentials(mock_artifactory_credentials)
         mock_get_url.return_value = "http://example.com/rhel-9.6.qcow2"
-
-        mock_dv = MagicMock()
-        mock_dv.res = {
-            "metadata": {"name": "test-dv", "namespace": "test-namespace"},
-            "spec": {"source": "http"},
-        }
-        mock_dv_class.return_value = mock_dv
-
-        mock_vm = MagicMock()
-        mock_vm.__enter__ = MagicMock(return_value=mock_vm)
-        mock_vm.__exit__ = MagicMock(return_value=None)
-        mock_vm_class.return_value = mock_vm
+        _mock_dv, mock_vm = self._mock_dv_and_vm(mock_dv_class, mock_vm_class)
 
         with create_rhel_vm(
             storage_class="ocs-storagecluster-ceph-rbd",
@@ -386,45 +369,26 @@ class TestCreateRhelVm:
             assert vm == mock_vm
 
         mock_running_vm.assert_not_called()
-        mock_cleanup.assert_called_once_with(artifactory_secret=mock_secret, artifactory_config_map=mock_config_map)
+        mock_artifactory_credentials.return_value.__exit__.assert_called_once()
 
-    @patch("utilities.oadp.cleanup_artifactory_secret_and_config_map")
     @patch("utilities.oadp.running_vm")
     @patch("utilities.oadp.VirtualMachineForTests")
     @patch("utilities.oadp.DataVolume")
     @patch("utilities.oadp.get_http_image_url")
-    @patch("utilities.oadp.get_artifactory_config_map")
-    @patch("utilities.oadp.get_artifactory_secret")
+    @patch("utilities.oadp.artifactory_credentials")
     def test_create_rhel_vm_with_volume_mode(
         self,
-        mock_get_secret,
-        mock_get_config_map,
+        mock_artifactory_credentials,
         mock_get_url,
         mock_dv_class,
         mock_vm_class,
         mock_running_vm,
-        mock_cleanup,
     ):
         """Test create_rhel_vm with volume_mode parameter"""
         mock_client = MagicMock()
-        mock_secret = MagicMock()
-        mock_config_map = MagicMock()
-        mock_config_map.name = "artifactory-cert"
-        mock_get_secret.return_value = mock_secret
-        mock_get_config_map.return_value = mock_config_map
+        self._mock_artifactory_credentials(mock_artifactory_credentials)
         mock_get_url.return_value = "http://example.com/rhel-9.6.qcow2"
-
-        mock_dv = MagicMock()
-        mock_dv.res = {
-            "metadata": {"name": "test-dv", "namespace": "test-namespace"},
-            "spec": {"source": "http"},
-        }
-        mock_dv_class.return_value = mock_dv
-
-        mock_vm = MagicMock()
-        mock_vm.__enter__ = MagicMock(return_value=mock_vm)
-        mock_vm.__exit__ = MagicMock(return_value=None)
-        mock_vm_class.return_value = mock_vm
+        _mock_dv, mock_vm = self._mock_dv_and_vm(mock_dv_class, mock_vm_class)
 
         with create_rhel_vm(
             storage_class="ocs-storagecluster-ceph-rbd",
@@ -438,34 +402,25 @@ class TestCreateRhelVm:
         ) as vm:
             assert vm == mock_vm
 
-        # Verify DataVolume was created with volume_mode
         assert mock_dv_class.call_args.kwargs["volume_mode"] == "Block"
-        mock_cleanup.assert_called_once_with(artifactory_secret=mock_secret, artifactory_config_map=mock_config_map)
+        mock_artifactory_credentials.return_value.__exit__.assert_called_once()
 
-    @patch("utilities.oadp.cleanup_artifactory_secret_and_config_map")
     @patch("utilities.oadp.running_vm")
     @patch("utilities.oadp.VirtualMachineForTests")
     @patch("utilities.oadp.DataVolume")
     @patch("utilities.oadp.get_http_image_url")
-    @patch("utilities.oadp.get_artifactory_config_map")
-    @patch("utilities.oadp.get_artifactory_secret")
+    @patch("utilities.oadp.artifactory_credentials")
     def test_create_rhel_vm_cleanup_on_exception(
         self,
-        mock_get_secret,
-        mock_get_config_map,
+        mock_artifactory_credentials,
         mock_get_url,
         mock_dv_class,
         mock_vm_class,
         mock_running_vm,
-        mock_cleanup,
     ):
         """Test create_rhel_vm cleanup happens on exception"""
         mock_client = MagicMock()
-        mock_secret = MagicMock()
-        mock_config_map = MagicMock()
-        mock_config_map.name = "artifactory-cert"
-        mock_get_secret.return_value = mock_secret
-        mock_get_config_map.return_value = mock_config_map
+        self._mock_artifactory_credentials(mock_artifactory_credentials)
         mock_get_url.return_value = "http://example.com/rhel-9.6.qcow2"
 
         mock_dv = MagicMock()
@@ -474,8 +429,6 @@ class TestCreateRhelVm:
             "spec": {"source": "http"},
         }
         mock_dv_class.return_value = mock_dv
-
-        # Make VirtualMachineForTests raise exception on enter
         mock_vm_class.return_value.__enter__.side_effect = Exception("VM creation failed")
 
         with pytest.raises(Exception, match="VM creation failed"):
@@ -490,46 +443,26 @@ class TestCreateRhelVm:
             ):
                 pass
 
-        # Cleanup should still be called
-        mock_cleanup.assert_called_once_with(artifactory_secret=mock_secret, artifactory_config_map=mock_config_map)
+        mock_artifactory_credentials.return_value.__exit__.assert_called_once()
 
-    @patch("utilities.oadp.cleanup_artifactory_secret_and_config_map")
     @patch("utilities.oadp.running_vm")
     @patch("utilities.oadp.VirtualMachineForTests")
     @patch("utilities.oadp.DataVolume")
     @patch("utilities.oadp.get_http_image_url")
-    @patch("utilities.oadp.get_artifactory_config_map")
-    @patch("utilities.oadp.get_artifactory_secret")
+    @patch("utilities.oadp.artifactory_credentials")
     def test_create_rhel_vm_cleanup_on_success(
         self,
-        mock_get_secret,
-        mock_get_config_map,
+        mock_artifactory_credentials,
         mock_get_url,
         mock_dv_class,
         mock_vm_class,
         mock_running_vm,
-        mock_cleanup,
     ):
         """Test create_rhel_vm cleanup happens on successful completion"""
         mock_client = MagicMock()
-        mock_secret = MagicMock()
-        mock_config_map = MagicMock()
-        mock_config_map.name = "artifactory-cert"
-        mock_get_secret.return_value = mock_secret
-        mock_get_config_map.return_value = mock_config_map
+        self._mock_artifactory_credentials(mock_artifactory_credentials)
         mock_get_url.return_value = "http://example.com/rhel-9.6.qcow2"
-
-        mock_dv = MagicMock()
-        mock_dv.res = {
-            "metadata": {"name": "test-dv", "namespace": "test-namespace"},
-            "spec": {"source": "http"},
-        }
-        mock_dv_class.return_value = mock_dv
-
-        mock_vm = MagicMock()
-        mock_vm.__enter__ = MagicMock(return_value=mock_vm)
-        mock_vm.__exit__ = MagicMock(return_value=None)
-        mock_vm_class.return_value = mock_vm
+        self._mock_dv_and_vm(mock_dv_class, mock_vm_class)
 
         with create_rhel_vm(
             storage_class="ocs-storagecluster-ceph-rbd",
@@ -542,47 +475,26 @@ class TestCreateRhelVm:
         ):
             pass
 
-        # Cleanup should be called
-        mock_cleanup.assert_called_once_with(artifactory_secret=mock_secret, artifactory_config_map=mock_config_map)
+        mock_artifactory_credentials.return_value.__exit__.assert_called_once()
 
-    @patch("utilities.oadp.cleanup_artifactory_secret_and_config_map")
     @patch("utilities.oadp.running_vm")
     @patch("utilities.oadp.VirtualMachineForTests")
     @patch("utilities.oadp.DataVolume")
     @patch("utilities.oadp.get_http_image_url")
-    @patch("utilities.oadp.get_artifactory_config_map")
-    @patch("utilities.oadp.get_artifactory_secret")
+    @patch("utilities.oadp.artifactory_credentials")
     def test_create_rhel_vm_running_vm_exception(
         self,
-        mock_get_secret,
-        mock_get_config_map,
+        mock_artifactory_credentials,
         mock_get_url,
         mock_dv_class,
         mock_vm_class,
         mock_running_vm,
-        mock_cleanup,
     ):
         """Test create_rhel_vm handles running_vm exception and still cleans up"""
         mock_client = MagicMock()
-        mock_secret = MagicMock()
-        mock_config_map = MagicMock()
-        mock_config_map.name = "artifactory-cert"
-        mock_get_secret.return_value = mock_secret
-        mock_get_config_map.return_value = mock_config_map
+        self._mock_artifactory_credentials(mock_artifactory_credentials)
         mock_get_url.return_value = "http://example.com/rhel-9.6.qcow2"
-
-        mock_dv = MagicMock()
-        mock_dv.res = {
-            "metadata": {"name": "test-dv", "namespace": "test-namespace"},
-            "spec": {"source": "http"},
-        }
-        mock_dv_class.return_value = mock_dv
-
-        mock_vm = MagicMock()
-        mock_vm.__enter__ = MagicMock(return_value=mock_vm)
-        mock_vm.__exit__ = MagicMock(return_value=None)
-        mock_vm_class.return_value = mock_vm
-
+        self._mock_dv_and_vm(mock_dv_class, mock_vm_class)
         mock_running_vm.side_effect = Exception("VM failed to start")
 
         with pytest.raises(Exception, match="VM failed to start"):
@@ -597,8 +509,7 @@ class TestCreateRhelVm:
             ):
                 pass
 
-        # Cleanup should still be called
-        mock_cleanup.assert_called_once_with(artifactory_secret=mock_secret, artifactory_config_map=mock_config_map)
+        mock_artifactory_credentials.return_value.__exit__.assert_called_once()
 
 
 class TestVeleroRestore:
