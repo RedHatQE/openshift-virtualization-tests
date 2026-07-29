@@ -500,10 +500,10 @@ def vm_for_cclm_with_instance_type(
 
 
 @pytest.fixture(scope="class")
-def remote_cluster_artifactory_credentials_scope_class(remote_admin_client, remote_cluster_source_test_namespace):
+def remote_cluster_artifactory_credentials_scope_class(remote_cluster_source_test_namespace):
     with artifactory_credentials(
         namespace=remote_cluster_source_test_namespace.name,
-        client=remote_admin_client,
+        client=remote_cluster_source_test_namespace.client,
     ) as credentials:
         yield credentials
 

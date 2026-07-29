@@ -2485,16 +2485,18 @@ def dvs_for_upgrade(
     worker_node1,
     rhel_latest_os_params,
     updated_default_storage_class_ocs_virt,
+    golden_images_namespace,
 ):
-    golden_images_namespace_name = py_config["golden_images_namespace"]
     dvs_list = []
-    with artifactory_credentials(namespace=golden_images_namespace_name, client=admin_client) as artifactory:
+    with artifactory_credentials(
+        namespace=golden_images_namespace.name, client=golden_images_namespace.client
+    ) as artifactory:
         for sc in py_config["storage_class_matrix"]:
             storage_class = [*sc][0]
             dv = DataVolume(
                 client=admin_client,
                 name=f"dv-for-product-upgrade-{storage_class}",
-                namespace=golden_images_namespace_name,
+                namespace=golden_images_namespace.name,
                 source_dict=construct_datavolume_source_dict(
                     source="http",
                     url=rhel_latest_os_params["rhel_image_path"],

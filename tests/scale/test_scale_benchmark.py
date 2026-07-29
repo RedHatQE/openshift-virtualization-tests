@@ -259,7 +259,9 @@ def golden_images_scale_dvs(request, keep_resources, admin_client, golden_images
     if not keep_resources:
         request.addfinalizer(_delete_resources)
 
-    with artifactory_credentials(namespace=golden_images_namespace.name, client=admin_client) as artifactory:
+    with artifactory_credentials(
+        namespace=golden_images_namespace.name, client=golden_images_namespace.client
+    ) as artifactory:
         for os_name, dv_info in dvs_info.items():
             storage_types_used = [
                 storage_type_key for storage_type_key in SCALE_STORAGE_TYPES if dv_info[storage_type_key]

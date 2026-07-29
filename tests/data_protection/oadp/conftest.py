@@ -161,7 +161,9 @@ def windows_vm_with_data_volume_template(
     snapshot_storage_class_name_scope_module,
 ):
     """Windows 2022 VM with InstanceType and Preference in the backup namespace for OADP backup testing."""
-    with artifactory_credentials(namespace=namespace_for_backup.name, client=admin_client) as artifactory:
+    with artifactory_credentials(
+        namespace=namespace_for_backup.name, client=namespace_for_backup.client
+    ) as artifactory:
         dv = DataVolume(
             name="oadp-windows-dv",
             namespace=namespace_for_backup.name,

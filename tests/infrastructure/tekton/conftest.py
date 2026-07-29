@@ -247,10 +247,10 @@ def custom_pipeline_namespace(unprivileged_client, admin_client):
 
 
 @pytest.fixture(scope="module")
-def artifactory_credentials_custom_pipeline_namespace(custom_pipeline_namespace, admin_client):
+def artifactory_credentials_custom_pipeline_namespace(custom_pipeline_namespace):
     with artifactory_credentials(
         namespace=custom_pipeline_namespace.name,
-        client=admin_client,
+        client=custom_pipeline_namespace.client,
     ) as credentials:
         yield credentials
 
