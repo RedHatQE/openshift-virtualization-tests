@@ -17,6 +17,7 @@ from tests.network.localnet.liblocalnet import (
     LOCALNET_OVS_BRIDGE_INTERFACE,
     ip_addresses_from_pool,
     libnncp,
+    localnet_cloudinit,
     localnet_vm,
 )
 
@@ -47,15 +48,17 @@ def localnet_stuntime_server_vm(
             Network(name=LOCALNET_OVS_BRIDGE_INTERFACE, multus=Multus(networkName=cudn_localnet_ovs_bridge.name))
         ],
         interfaces=[Interface(name=LOCALNET_OVS_BRIDGE_INTERFACE, bridge={})],
-        network_data=cloudinit.NetworkData(
-            ethernets={
-                GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
-                    addresses=ip_addresses_from_pool(
-                        ipv4_pool=ipv4_localnet_address_pool,
-                        ipv6_pool=ipv6_localnet_address_pool,
+        cloud_init=localnet_cloudinit(
+            network_data=cloudinit.NetworkData(
+                ethernets={
+                    GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
+                        addresses=ip_addresses_from_pool(
+                            ipv4_pool=ipv4_localnet_address_pool,
+                            ipv6_pool=ipv6_localnet_address_pool,
+                        )
                     )
-                )
-            }
+                }
+            )
         ),
         vm_labels=dict([SERVER_VM_LABEL]),
     ) as server_vm:
@@ -81,15 +84,17 @@ def localnet_stuntime_client_vm(
             Network(name=LOCALNET_OVS_BRIDGE_INTERFACE, multus=Multus(networkName=cudn_localnet_ovs_bridge.name))
         ],
         interfaces=[Interface(name=LOCALNET_OVS_BRIDGE_INTERFACE, bridge={})],
-        network_data=cloudinit.NetworkData(
-            ethernets={
-                GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
-                    addresses=ip_addresses_from_pool(
-                        ipv4_pool=ipv4_localnet_address_pool,
-                        ipv6_pool=ipv6_localnet_address_pool,
+        cloud_init=localnet_cloudinit(
+            network_data=cloudinit.NetworkData(
+                ethernets={
+                    GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
+                        addresses=ip_addresses_from_pool(
+                            ipv4_pool=ipv4_localnet_address_pool,
+                            ipv6_pool=ipv6_localnet_address_pool,
+                        )
                     )
-                )
-            }
+                }
+            )
         ),
         affinity=new_pod_affinity(label=SERVER_VM_LABEL),
         vm_labels=dict([CLIENT_VM_LABEL]),

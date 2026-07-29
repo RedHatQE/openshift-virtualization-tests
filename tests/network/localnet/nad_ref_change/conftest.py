@@ -21,6 +21,7 @@ from tests.network.localnet.liblocalnet import (
     IFACE_B_NAME,
     LOCALNET_BR_EX_NETWORK,
     LOCALNET_TEST_LABEL,
+    localnet_cloudinit,
     localnet_cudn,
     localnet_vm,
 )
@@ -66,13 +67,15 @@ def ref_vm_localnet(
             Interface(name=IFACE_A_NAME, bridge={}),
             Interface(name=IFACE_B_NAME, bridge={}),
         ],
-        network_data=cloudinit.NetworkData(
-            ethernets={
-                GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(addresses=iface_a_ips),
-                GUEST_2ND_IFACE_NAME: cloudinit.EthernetDevice(addresses=iface_b_ips),
-            }
+        cloud_init=localnet_cloudinit(
+            network_data=cloudinit.NetworkData(
+                ethernets={
+                    GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(addresses=iface_a_ips),
+                    GUEST_2ND_IFACE_NAME: cloudinit.EthernetDevice(addresses=iface_b_ips),
+                }
+            ),
+            runcmd=ARP_ISOLATION_SYSCTL_CMD,
         ),
-        runcmd=ARP_ISOLATION_SYSCTL_CMD,
     ) as vm:
         run_vm(
             vm=vm,
@@ -97,8 +100,10 @@ def under_test_vm_localnet(
         client=unprivileged_client,
         networks=[Network(name=IFACE_A_NAME, multus=Multus(networkName=cudn_localnet.name))],
         interfaces=[Interface(name=IFACE_A_NAME, bridge={})],
-        network_data=cloudinit.NetworkData(
-            ethernets={GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(addresses=iface_a_ips)},
+        cloud_init=localnet_cloudinit(
+            network_data=cloudinit.NetworkData(
+                ethernets={GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(addresses=iface_a_ips)}
+            ),
         ),
     ) as vm:
         run_vm(
