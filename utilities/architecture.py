@@ -6,8 +6,6 @@ from ocp_resources.node import Node
 from pytest_testconfig import config as py_config
 
 from utilities.cluster import cache_admin_client
-from utilities.constants.architecture import MULTIARCH
-from utilities.constants.cluster import KUBERNETES_ARCH_LABEL
 from utilities.exceptions import UnsupportedCPUArchitectureError
 
 
@@ -24,6 +22,10 @@ def get_cluster_architecture() -> set[str]:
     Raises:
         UnsupportedCPUArchitectureError: If unable to determine architecture.
     """
+    # Lazy import to avoid circular dependency
+    # TODO: remove when/if utilities modules are refactored
+    from utilities.constants.cluster import KUBERNETES_ARCH_LABEL  # noqa: PLC0415
+
     # Needed for CI
     if arch := os.environ.get("OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH"):
         return set(arch.split(","))
@@ -53,6 +55,10 @@ def get_multiarch_cpu_arch() -> str | None:
         str | None: The CPU architecture string (e.g. "arm64") if running on a multiarch
             cluster with a single target arch, None otherwise.
     """
+    # Lazy import to avoid circular dependency
+    # TODO: remove when/if utilities modules are refactored
+    from utilities.constants.architecture import MULTIARCH  # noqa: PLC0415
+
     cpu_arch = py_config.get("cpu_arch")
     if cpu_arch and py_config.get("cluster_type") == MULTIARCH:
         return cpu_arch
