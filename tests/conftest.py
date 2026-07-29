@@ -73,7 +73,7 @@ from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster, sup
 from libs.net.ip import filter_link_local_addresses, random_cidr_addresses_by_family
 from libs.net.vmspec import lookup_iface_status
 from tests.utils import download_and_extract_tar
-from utilities.artifactory import get_artifactory_header, get_test_artifact_server_url
+from utilities.artifactory import artifactory_credentials, get_artifactory_header, get_test_artifact_server_url
 from utilities.cluster import cache_admin_client, get_oc_whoami_username
 from utilities.constants import Images
 from utilities.constants.aaq import (
@@ -2488,9 +2488,7 @@ def dvs_for_upgrade(
 ):
     golden_images_namespace_name = py_config["golden_images_namespace"]
     dvs_list = []
-    with utilities.artifactory.artifactory_credentials(
-        namespace=golden_images_namespace_name, client=admin_client
-    ) as artifactory:
+    with artifactory_credentials(namespace=golden_images_namespace_name, client=admin_client) as artifactory:
         for sc in py_config["storage_class_matrix"]:
             storage_class = [*sc][0]
             dv = DataVolume(

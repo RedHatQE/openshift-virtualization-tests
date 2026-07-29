@@ -192,7 +192,7 @@ class TestCreateDvArtifactory:
     @patch("utilities.storage.DataVolume")
     @patch("utilities.storage.validate_file_exists_in_url")
     @patch("utilities.infra.url_excluded_from_validation", return_value=True)
-    @patch("utilities.artifactory.artifactory_credentials")
+    @patch("utilities.storage.artifactory_credentials")
     def test_create_dv_creates_both_artifactory_resources(
         self,
         mock_artifactory_credentials,
@@ -230,7 +230,7 @@ class TestCreateDvArtifactory:
     @patch("utilities.storage.DataVolume")
     @patch("utilities.storage.validate_file_exists_in_url")
     @patch("utilities.infra.url_excluded_from_validation", return_value=True)
-    @patch("utilities.artifactory.artifactory_credentials")
+    @patch("utilities.storage.artifactory_credentials")
     def test_create_dv_creates_only_missing_secret(
         self,
         mock_artifactory_credentials,
@@ -269,7 +269,7 @@ class TestCreateDvArtifactory:
     @patch("utilities.storage.DataVolume")
     @patch("utilities.storage.validate_file_exists_in_url")
     @patch("utilities.infra.url_excluded_from_validation", return_value=True)
-    @patch("utilities.artifactory.artifactory_credentials")
+    @patch("utilities.storage.artifactory_credentials")
     def test_create_dv_creates_only_missing_config_map(
         self,
         mock_artifactory_credentials,
@@ -308,7 +308,7 @@ class TestCreateDvArtifactory:
     @patch("utilities.storage.DataVolume")
     @patch("utilities.storage.validate_file_exists_in_url")
     @patch("utilities.infra.url_excluded_from_validation", return_value=True)
-    @patch("utilities.artifactory.artifactory_credentials")
+    @patch("utilities.storage.artifactory_credentials")
     def test_create_dv_skips_artifactory_when_both_names_provided(
         self,
         mock_artifactory_credentials,
@@ -340,7 +340,7 @@ class TestCreateDvArtifactory:
     @patch("utilities.storage.DataVolume")
     @patch("utilities.storage.validate_file_exists_in_url")
     @patch("utilities.infra.url_excluded_from_validation", return_value=True)
-    @patch("utilities.artifactory.artifactory_credentials")
+    @patch("utilities.storage.artifactory_credentials")
     def test_create_dv_unwinds_artifactory_on_data_volume_failure(
         self,
         mock_artifactory_credentials,
