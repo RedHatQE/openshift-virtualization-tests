@@ -20,14 +20,14 @@ def cnv_daemonset_names(admin_client, hco_namespace):
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-8509")
 # Not marked as `conformance` as this is a "utility" test to match against test matrix
-def test_no_new_cnv_daemonset_added(sno_cluster, cnv_daemonset_names, passt_tainted_cluster):
+def test_no_new_cnv_daemonset_added(sno_cluster, cnv_daemonset_names, passt_tainted_cluster_jira_92995):
     """
     Since cnv deployments image validations are done via polarion parameterization, this test has been added
     to catch any new cnv deployments that is not part of cnv_deployment_matrix
     """
     expected = set(ALL_CNV_DAEMONSETS) if not sno_cluster else set(ALL_CNV_DAEMONSETS_NO_HPP_CSI)
     actual = set(cnv_daemonset_names)
-    if passt_tainted_cluster:
+    if passt_tainted_cluster_jira_92995:
         actual = actual - {PASST_BINDING_CNI}
 
     assert actual == expected, f"New cnv daemonsets found: {actual - expected}"
