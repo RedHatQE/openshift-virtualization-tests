@@ -10,6 +10,7 @@ import utilities.network
 from libs.net.ip import random_ipv4_address
 from libs.net.vmspec import lookup_iface_status_ip
 from tests.network.libs import cloudinit as netcloud
+from utilities.constants.networking import LINUX_BRIDGE
 from utilities.infra import get_node_selector_dict
 from utilities.network import (
     BondNodeNetworkConfigurationPolicy,
@@ -19,17 +20,14 @@ from utilities.network import (
 )
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
-pytestmark = pytest.mark.usefixtures(
-    "hyperconverged_ovs_annotations_enabled_scope_session",
-    "workers_type",
-)
+pytestmark = pytest.mark.usefixtures("workers_type")
 
 
 @pytest.fixture(scope="class")
-def ovs_linux_br1bond_nad(admin_client, bridge_device_matrix__class__, namespace):
+def linux_br1bond_nad(admin_client, namespace):
     with network_nad(
         namespace=namespace,
-        nad_type=bridge_device_matrix__class__,
+        nad_type=LINUX_BRIDGE,
         nad_name="br1bond-nad",
         interface_name="br1bond",
         client=admin_client,
@@ -38,7 +36,7 @@ def ovs_linux_br1bond_nad(admin_client, bridge_device_matrix__class__, namespace
 
 
 @pytest.fixture(scope="class")
-def ovs_linux_bond1_worker_1(
+def linux_bond1_worker_1(
     nmstate_dependent_placeholder,
     admin_client,
     index_number,
@@ -60,13 +58,13 @@ def ovs_linux_bond1_worker_1(
 
 
 @pytest.fixture(scope="class")
-def ovs_linux_bond1_worker_2(
+def linux_bond1_worker_2(
     nmstate_dependent_placeholder,
     admin_client,
     index_number,
     worker_node2,
     hosts_common_available_ports,
-    ovs_linux_bond1_worker_1,
+    linux_bond1_worker_1,
 ):
     """
     Create BOND if setup support BOND
@@ -76,7 +74,7 @@ def ovs_linux_bond1_worker_2(
         BondNodeNetworkConfigurationPolicy(
             name=f"bond{bond_idx}nncp-worker-2",
             client=admin_client,
-            bond_name=ovs_linux_bond1_worker_1.bond_name,  # Use the same BOND name for each test.
+            bond_name=linux_bond1_worker_1.bond_name,  # Use the same BOND name for each test.
             bond_ports=hosts_common_available_ports[-2:],
             node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
         ) as bond
@@ -85,62 +83,60 @@ def ovs_linux_bond1_worker_2(
 
 
 @pytest.fixture(scope="class")
-def ovs_linux_bridge_on_bond_worker_1(
+def linux_bridge_on_bond_worker_1(
     nmstate_dependent_placeholder,
     admin_client,
-    bridge_device_matrix__class__,
     worker_node1,
-    ovs_linux_br1bond_nad,
-    ovs_linux_bond1_worker_1,
+    linux_br1bond_nad,
+    linux_bond1_worker_1,
 ):
     """
     Create bridge and attach the BOND to it
     """
     with utilities.network.network_device(
-        interface_type=bridge_device_matrix__class__,
+        interface_type=LINUX_BRIDGE,
         nncp_name="bridge-on-bond-worker-1",
-        interface_name=ovs_linux_br1bond_nad.bridge_name,
+        interface_name=linux_br1bond_nad.bridge_name,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
-        ports=[ovs_linux_bond1_worker_1.bond_name],
+        ports=[linux_bond1_worker_1.bond_name],
         client=admin_client,
     ) as br:
         yield br
 
 
 @pytest.fixture(scope="class")
-def ovs_linux_bridge_on_bond_worker_2(
+def linux_bridge_on_bond_worker_2(
     nmstate_dependent_placeholder,
     admin_client,
-    bridge_device_matrix__class__,
     worker_node2,
-    ovs_linux_br1bond_nad,
-    ovs_linux_bond1_worker_2,
+    linux_br1bond_nad,
+    linux_bond1_worker_2,
 ):
     """
     Create bridge and attach the BOND to it
     """
     with utilities.network.network_device(
-        interface_type=bridge_device_matrix__class__,
+        interface_type=LINUX_BRIDGE,
         nncp_name="bridge-on-bond-worker-2",
-        interface_name=ovs_linux_br1bond_nad.bridge_name,
+        interface_name=linux_br1bond_nad.bridge_name,
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
-        ports=[ovs_linux_bond1_worker_2.bond_name],
+        ports=[linux_bond1_worker_2.bond_name],
         client=admin_client,
     ) as br:
         yield br
 
 
 @pytest.fixture(scope="class")
-def ovs_linux_bond_bridge_attached_vma(
+def linux_bond_bridge_attached_vma(
     worker_node1,
     namespace,
     unprivileged_client,
-    ovs_linux_br1bond_nad,
-    ovs_linux_bridge_on_bond_worker_1,
+    linux_br1bond_nad,
+    linux_bridge_on_bond_worker_1,
 ):
     name = "bond-vma"
     networks = OrderedDict()
-    networks[ovs_linux_br1bond_nad.name] = ovs_linux_br1bond_nad.name
+    networks[linux_br1bond_nad.name] = linux_br1bond_nad.name
     netdata = netcloud.NetworkData(
         ethernets={"eth1": netcloud.EthernetDevice(addresses=[f"{random_ipv4_address(net_seed=0, host_address=1)}/24"])}
     )
@@ -160,16 +156,16 @@ def ovs_linux_bond_bridge_attached_vma(
 
 
 @pytest.fixture(scope="class")
-def ovs_linux_bond_bridge_attached_vmb(
+def linux_bond_bridge_attached_vmb(
     worker_node2,
     namespace,
     unprivileged_client,
-    ovs_linux_br1bond_nad,
-    ovs_linux_bridge_on_bond_worker_2,
+    linux_br1bond_nad,
+    linux_bridge_on_bond_worker_2,
 ):
     name = "bond-vmb"
     networks = OrderedDict()
-    networks[ovs_linux_br1bond_nad.name] = ovs_linux_br1bond_nad.name
+    networks[linux_br1bond_nad.name] = linux_br1bond_nad.name
     network_data_data = {
         "ethernets": {"eth1": {"addresses": [f"{random_ipv4_address(net_seed=0, host_address=2)}/24"]}}
     }
@@ -190,8 +186,8 @@ def ovs_linux_bond_bridge_attached_vmb(
 
 
 @pytest.fixture(scope="class")
-def ovs_linux_bond_bridge_attached_vms(ovs_linux_bond_bridge_attached_vma, ovs_linux_bond_bridge_attached_vmb):
-    vms = (ovs_linux_bond_bridge_attached_vma, ovs_linux_bond_bridge_attached_vmb)
+def linux_bond_bridge_attached_vms(linux_bond_bridge_attached_vma, linux_bond_bridge_attached_vmb):
+    vms = (linux_bond_bridge_attached_vma, linux_bond_bridge_attached_vmb)
     for vm in vms:
         vm.wait_for_ready_status(status=True)
         vm.wait_for_agent_connected()
@@ -205,17 +201,17 @@ class TestBondConnectivity:
     def test_bond(
         self,
         namespace,
-        ovs_linux_br1bond_nad,
-        ovs_linux_bridge_on_bond_worker_1,
-        ovs_linux_bridge_on_bond_worker_2,
-        ovs_linux_bond_bridge_attached_vms,
+        linux_br1bond_nad,
+        linux_bridge_on_bond_worker_1,
+        linux_bridge_on_bond_worker_2,
+        linux_bond_bridge_attached_vms,
     ):
-        src_vm, dst_vm = ovs_linux_bond_bridge_attached_vms
+        src_vm, dst_vm = linux_bond_bridge_attached_vms
         assert_ping_successful(
             src_vm=src_vm,
             dst_ip=lookup_iface_status_ip(
                 vm=dst_vm,
-                iface_name=ovs_linux_br1bond_nad.name,
+                iface_name=linux_br1bond_nad.name,
                 ip_family=4,
             ),
         )

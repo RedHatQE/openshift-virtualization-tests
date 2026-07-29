@@ -41,10 +41,6 @@ from utilities.constants.instance_types import (
 )
 from utilities.constants.monitoring import MONITORING_METRICS
 from utilities.constants.namespaces import NamespacesNames
-from utilities.constants.networking import (
-    LINUX_BRIDGE,
-    OVS_BRIDGE,
-)
 from utilities.constants.storage import (
     BREW_REGISTRY_SOURCE,
     HPP_CAPABILITIES,
@@ -140,8 +136,6 @@ cnv_vm_resource_requests_units_matrix = [
 
 
 cnv_vmi_monitoring_metrics_matrix = MONITORING_METRICS
-
-bridge_device_matrix = [LINUX_BRIDGE, OVS_BRIDGE]
 
 storage_class_matrix = [
     {
