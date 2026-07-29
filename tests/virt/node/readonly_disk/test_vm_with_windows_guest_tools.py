@@ -70,7 +70,7 @@ def verify_cdrom_in_xml(vm, admin_client):
 
 @pytest.fixture(scope="session")
 def virtio_win_image(hco_namespace):
-    virtio_win_cm = ConfigMap(name=VIRTIO_WIN, namespace=hco_namespace.name)
+    virtio_win_cm = ConfigMap(client=hco_namespace.client, name=VIRTIO_WIN, namespace=hco_namespace.name)
     return virtio_win_cm.instance.data["virtio-win-image"]
 
 
@@ -94,8 +94,8 @@ def vm_with_guest_tools(
         name="windows-vm-wth-guest-tools",
         namespace=namespace.name,
         client=unprivileged_client,
-        vm_instance_type=VirtualMachineClusterInstancetype(name="u1.large"),
-        vm_preference=VirtualMachineClusterPreference(name="windows.10"),
+        vm_instance_type=VirtualMachineClusterInstancetype(client=unprivileged_client, name="u1.large"),
+        vm_preference=VirtualMachineClusterPreference(client=unprivileged_client, name="windows.10"),
         data_volume_template=golden_image_data_volume_template_for_test_scope_class,
         termination_grace_period=TIMEOUT_3MIN,
         os_flavor=OS_FLAVOR_WINDOWS,

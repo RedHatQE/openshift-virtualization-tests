@@ -64,12 +64,14 @@ def hco_cr_with_vmi_cpu_allocation_ratio(
 
 @pytest.fixture()
 def vm_for_test_cpu_allocation_ratio(
+    unprivileged_client,
     namespace,
 ):
     name = "vm-for-cpu-allocation-ratio-test"
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
+        client=unprivileged_client,
         cpu_cores=CPU_CORES,
         cpu_sockets=CPU_SOCKETS,
         cpu_threads=CPU_THREADS,
@@ -80,8 +82,9 @@ def vm_for_test_cpu_allocation_ratio(
 
 
 @pytest.fixture()
-def limit_range_for_cpu_allocation_test(namespace):
+def limit_range_for_cpu_allocation_test(admin_client, namespace):
     with LimitRange(
+        client=admin_client,
         name="limit-range-for-cpu-allocation-test",
         namespace=namespace.name,
         limits=[

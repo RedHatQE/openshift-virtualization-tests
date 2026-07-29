@@ -61,7 +61,7 @@ def virt_special_infra_sanity(
 
     def _verify_not_psi_cluster():
         LOGGER.info("Verifying tests run on BM cluster")
-        if Infrastructure(name="cluster").instance.status.platform == "OpenStack":
+        if Infrastructure(client=admin_client, name="cluster").platform == "OpenStack":
             failed_verifications_list.append("Cluster should be BM and not PSI")
 
     def _verify_gpu(_gpu_nodes, _nodes_with_supported_gpus):
@@ -75,7 +75,7 @@ def virt_special_infra_sanity(
 
     def _verfify_no_dpdk():
         LOGGER.info("Verifing cluster doesn't have DPDK enabled")
-        if PerformanceProfile(name="dpdk").exists:
+        if PerformanceProfile(client=admin_client, name="dpdk").exists:
             failed_verifications_list.append("Cluster has DPDK enabled (DPDK is incomatible with NVIDIA GPU)")
 
     def _verify_sriov(_sriov_workers):
