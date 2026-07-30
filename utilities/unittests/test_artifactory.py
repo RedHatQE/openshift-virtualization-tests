@@ -716,6 +716,29 @@ class TestArtifactoryCredentials:
     @patch("utilities.artifactory.cleanup_artifactory_secret_and_config_map")
     @patch("utilities.artifactory.get_artifactory_config_map")
     @patch("utilities.artifactory.get_artifactory_secret")
+    def test_artifactory_credentials_skips_preexisting_secret_if_config_map_create_fails(
+        self,
+        mock_get_secret,
+        mock_get_config_map,
+        mock_cleanup,
+    ):
+        """Test pre-existing Secret is not deleted when ConfigMap creation fails"""
+        mock_secret = MagicMock()
+        mock_get_secret.return_value = (mock_secret, False)
+        mock_get_config_map.side_effect = OSError("SSL connection failed")
+
+        with pytest.raises(OSError, match="SSL connection failed"):
+            with artifactory_credentials(namespace="test-namespace", client=MagicMock()):
+                pass
+
+        mock_cleanup.assert_called_once_with(
+            artifactory_secret=None,
+            artifactory_config_map=None,
+        )
+
+    @patch("utilities.artifactory.cleanup_artifactory_secret_and_config_map")
+    @patch("utilities.artifactory.get_artifactory_config_map")
+    @patch("utilities.artifactory.get_artifactory_secret")
     def test_artifactory_credentials_context_manager_cleanup_on_exception(
         self,
         mock_get_secret,
