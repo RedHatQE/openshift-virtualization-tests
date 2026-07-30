@@ -37,7 +37,7 @@ from ocp_resources.namespace import Namespace
 from ocp_resources.package_manifest import PackageManifest
 from ocp_resources.pod import Pod
 from ocp_resources.project_request import ProjectRequest
-from ocp_resources.resource import Resource, ResourceEditor, get_client
+from ocp_resources.resource import Resource, ResourceEditor
 from ocp_resources.secret import Secret
 from ocp_resources.subscription import Subscription
 from packaging.version import Version
@@ -47,6 +47,7 @@ from requests import HTTPError, Timeout, TooManyRedirects
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 
 import utilities.virt
+from utilities.cluster import cache_admin_client
 from utilities.constants.architecture import (
     AMD_64,
     X86_64,
@@ -801,10 +802,22 @@ def unique_name(name, service_type=None):
     return f"{name}-{service_type}{time.time()}".replace(".", "-")
 
 
-def get_openshift_pull_secret(client: DynamicClient = None) -> Secret:
+def get_openshift_pull_secret(client: DynamicClient | None = None) -> Secret:
+    """Return the cluster ``openshift-config/pull-secret`` Secret.
+
+    Reading this Secret requires cluster-admin (or equivalent) privileges, so when
+    ``client`` is omitted, ``cache_admin_client()`` is used.
+
+    Args:
+        client: Optional DynamicClient with permission to read
+            ``openshift-config/pull-secret``. Defaults to ``cache_admin_client()``.
+
+    Returns:
+        The cluster pull-secret Secret resource.
+    """
     pull_secret_name = "pull-secret"
     secret = Secret(
-        client=client or get_client(),
+        client=client or cache_admin_client(),
         name=pull_secret_name,
         namespace=NamespacesNames.OPENSHIFT_CONFIG,
     )
@@ -813,7 +826,7 @@ def get_openshift_pull_secret(client: DynamicClient = None) -> Secret:
 
 
 @cache
-def generate_openshift_pull_secret_file(client: DynamicClient = None) -> str:
+def generate_openshift_pull_secret_file(client: DynamicClient | None = None) -> str:
     # TODO: refactor this code; only needed by `utilities.virt.get_oc_image_info`
     #  Should be called by `utilities.virt.get_oc_image_info` and not require the user to pass it
     pull_secret = get_openshift_pull_secret(client=client)
