@@ -118,6 +118,7 @@ def opted_out_custom_template_namespace(
     custom_vm_template_namespace,
     hyperconverged_resource_scope_function,
     ssp_resource_scope_function,
+    admin_client,
 ):
     ResourceEditorValidateHCOReconcile(
         admin_client=admin_client,
