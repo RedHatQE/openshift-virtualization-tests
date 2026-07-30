@@ -728,7 +728,7 @@ def create_windows2022_vm_using_existing_dv(
         check_running_vm: If True, start the VM and wait for Windows boot
 
     Yields:
-        VirtualMachineForTests: Running Windows 2022 VM with vTPM
+        VirtualMachineForTests: Windows 2022 VM with vTPM
     """
 
     with VirtualMachineForTests(
