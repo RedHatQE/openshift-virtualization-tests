@@ -60,7 +60,7 @@ def test_openshift_io_scc_exists(cnv_pods):
 
 
 @pytest.fixture()
-def pods_not_allowlisted_or_anyuid(cnv_pods, passt_tainted_cluster_jira_92995):
+def pods_not_allowlisted_or_anyuid(cnv_pods, passt_enabled_in_hco_and_jira_92995_open):
     pod_names = []
     for pod in cnv_pods:
         scc = pod.instance.metadata.annotations.get("openshift.io/scc")
@@ -68,7 +68,7 @@ def pods_not_allowlisted_or_anyuid(cnv_pods, passt_tainted_cluster_jira_92995):
             continue
         if scc == "anyuid" and pod.name.startswith(CLUSTER_NETWORK_ADDONS_OPERATOR):
             continue
-        if passt_tainted_cluster_jira_92995 and pod.name.startswith(PASST_BINDING_CNI):
+        if passt_enabled_in_hco_and_jira_92995_open and pod.name.startswith(PASST_BINDING_CNI):
             continue
         pod_names.append(pod.name)
     return pod_names

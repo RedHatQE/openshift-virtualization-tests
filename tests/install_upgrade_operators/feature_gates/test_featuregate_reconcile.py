@@ -57,12 +57,12 @@ class TestHardcodedFeatureGates:
         updated_resource,
         expected_value,
         key_name,
-        passt_tainted_cluster_jira_92995,
+        passt_enabled_in_hco_and_jira_92995_open,
     ):
         actual_value = get_resource_key_value(resource=updated_resource, key_name=key_name)
         if isinstance(actual_value, list):
             actual_value = set(actual_value)
-        if passt_tainted_cluster_jira_92995 and expected_value is EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES:
+        if passt_enabled_in_hco_and_jira_92995_open and expected_value is EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES:
             expected_value = expected_value - {"PasstIPStackMigration"}
             actual_value = actual_value - {"PasstIPStackMigration"}
         assert actual_value == expected_value, (

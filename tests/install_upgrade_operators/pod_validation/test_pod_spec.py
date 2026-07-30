@@ -53,12 +53,12 @@ def xfail_if_jira_87629_open_and_migration_controller_pod(jira_87629_open, cnv_p
 @pytest.mark.skip_must_gather_collection
 @pytest.mark.polarion("CNV-7261")
 def test_no_new_cnv_pods_added(
-    cnv_pods, cnv_jobs, passt_tainted_cluster_jira_92995, hostpath_provisioner_scope_session
+    cnv_pods, cnv_jobs, passt_enabled_in_hco_and_jira_92995_open, hostpath_provisioner_scope_session
 ):
     all_pods = ALL_CNV_PODS.copy()
     if hostpath_provisioner_scope_session.exists:
         all_pods.append(HPP_POOL)
-    if passt_tainted_cluster_jira_92995:
+    if passt_enabled_in_hco_and_jira_92995_open:
         all_pods.append(PASST_BINDING_CNI)
 
     new_pods = [
