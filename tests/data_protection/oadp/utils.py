@@ -40,9 +40,12 @@ def assert_velero_backup_hooks_not_injected(vm: VirtualMachineForTests, admin_cl
     Args:
         vm: VirtualMachine whose virt-launcher pod is checked.
         admin_client: Privileged client used to access the virt-launcher pod.
+
+    Raises:
+        AssertionError: If any Velero hook annotations are found on the virt-launcher pod.
     """
     virt_launcher_pod = vm.vmi.get_virt_launcher_pod(privileged_client=admin_client)
-    pod_annotations = virt_launcher_pod.instance.metadata.annotations or {}
+    pod_annotations = virt_launcher_pod.instance.metadata.annotations
     present_hook_annotations = [
         annotation_key for annotation_key in VELERO_BACKUP_HOOK_ANNOTATIONS if annotation_key in pod_annotations
     ]

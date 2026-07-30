@@ -372,20 +372,26 @@ def velero_restore_second_namespace_with_datamover(
 
 
 @pytest.fixture()
+def namespace_for_hooks_backup(admin_client, unprivileged_client):
+    """Namespace for hooks opt-out tests, created with unprivileged RBAC."""
+    yield from create_ns(admin_client=admin_client, unprivileged_client=unprivileged_client, name="velero-hooks-ns")
+
+
+@pytest.fixture()
 def rhel_vm_with_hooks_opt_out(
-    admin_client,
-    namespace_for_backup,
+    unprivileged_client,
     rhel10_data_source_scope_session,
     snapshot_storage_class_name_scope_module,
+    namespace_for_hooks_backup,
 ):
     """Running RHEL VM with kubevirt.io/skip-backup-hooks annotation set to 'true'."""
     with VirtualMachineForTests(
         name="vm-hooks-opt-out",
-        namespace=namespace_for_backup.name,
-        client=admin_client,
+        namespace=namespace_for_hooks_backup.name,
+        client=unprivileged_client,
         os_flavor=OS_FLAVOR_RHEL,
-        vm_instance_type=VirtualMachineClusterInstancetype(client=admin_client, name=U1_SMALL),
-        vm_preference=VirtualMachineClusterPreference(client=admin_client, name=RHEL10_PREFERENCE),
+        vm_instance_type=VirtualMachineClusterInstancetype(client=unprivileged_client, name=U1_SMALL),
+        vm_preference=VirtualMachineClusterPreference(client=unprivileged_client, name=RHEL10_PREFERENCE),
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=rhel10_data_source_scope_session,
             storage_class=snapshot_storage_class_name_scope_module,

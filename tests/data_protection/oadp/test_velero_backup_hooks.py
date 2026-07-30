@@ -33,7 +33,7 @@ class TestVeleroBackupHookOptOut:
     def test_backup_paused_vm_hooks_disabled(
         self,
         admin_client,
-        namespace_for_backup,
+        namespace_for_hooks_backup,
         paused_rhel_vm_with_hooks_opt_out,
     ):
         """
@@ -49,21 +49,20 @@ class TestVeleroBackupHookOptOut:
             - No freeze/unfreeze hooks are injected on the virt-launcher pod
             - Backup completes successfully
         """
-        assert_velero_backup_hooks_not_injected(vm=paused_rhel_vm_with_hooks_opt_out, admin_client=admin_client)
-
         with VeleroBackup(
             name="backup-paused-optout",
             client=admin_client,
-            included_namespaces=[namespace_for_backup.name],
+            included_namespaces=[namespace_for_hooks_backup.name],
         ) as backup:
             LOGGER.info(f"Backup {backup.name} completed for paused VM with opt-out annotation")
+            assert_velero_backup_hooks_not_injected(vm=paused_rhel_vm_with_hooks_opt_out, admin_client=admin_client)
 
     @pytest.mark.polarion("CNV-16268")
     @pytest.mark.s390x
     def test_backup_running_vm_hooks_disabled(
         self,
         admin_client,
-        namespace_for_backup,
+        namespace_for_hooks_backup,
         rhel_vm_with_hooks_opt_out,
     ):
         """
@@ -79,11 +78,10 @@ class TestVeleroBackupHookOptOut:
             - No freeze/unfreeze hooks are injected on the virt-launcher pod
             - Backup completes successfully
         """
-        assert_velero_backup_hooks_not_injected(vm=rhel_vm_with_hooks_opt_out, admin_client=admin_client)
-
         with VeleroBackup(
             name="backup-hooks-opt-out",
             client=admin_client,
-            included_namespaces=[namespace_for_backup.name],
+            included_namespaces=[namespace_for_hooks_backup.name],
         ) as backup:
             LOGGER.info(f"Backup {backup.name} completed for running VM with opt-out annotation")
+            assert_velero_backup_hooks_not_injected(vm=rhel_vm_with_hooks_opt_out, admin_client=admin_client)
