@@ -104,6 +104,7 @@ def wait_for_vm_list_permission(client: DynamicClient, namespace_name: str, allo
         namespace_name=namespace_name,
     ):
         if sample == allowed:
+            LOGGER.info(f"VM list access reached expected state: allowed={allowed}")
             break
 
 
