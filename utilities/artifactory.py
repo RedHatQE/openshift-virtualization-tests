@@ -134,7 +134,7 @@ def get_artifactory_header() -> dict[str, str]:
 def get_artifactory_secret(
     namespace: str,
     client: DynamicClient,
-) -> Secret:
+) -> tuple[Secret, bool]:
     """
     Create or retrieve an Artifactory authentication secret in the specified namespace.
 
@@ -147,7 +147,7 @@ def get_artifactory_secret(
         client (DynamicClient): Kubernetes dynamic client used to create or look up the secret.
 
     Returns:
-        Secret: The Artifactory Secret resource object.
+        tuple[Secret, bool]: The Artifactory Secret and whether this call deployed it.
 
     Raises:
         KeyError: If ARTIFACTORY_USER or ARTIFACTORY_TOKEN environment variables are not set.
@@ -159,15 +159,16 @@ def get_artifactory_secret(
         secretkey=base64_encode_str(os.environ["ARTIFACTORY_TOKEN"]),
         client=client,
     )
-    if not artifactory_secret.exists:
-        artifactory_secret.deploy()
-    return artifactory_secret
+    if artifactory_secret.exists:
+        return artifactory_secret, False
+    artifactory_secret.deploy()
+    return artifactory_secret, True
 
 
 def get_artifactory_config_map(
     namespace: str,
     client: DynamicClient,
-) -> ConfigMap:
+) -> tuple[ConfigMap, bool]:
     """
     Create or retrieve an Artifactory TLS certificate ConfigMap in the specified namespace.
 
@@ -181,7 +182,7 @@ def get_artifactory_config_map(
         client (DynamicClient): Kubernetes dynamic client used to create or look up the ConfigMap.
 
     Returns:
-        ConfigMap: The Artifactory ConfigMap resource object containing the TLS certificate.
+        tuple[ConfigMap, bool]: The Artifactory ConfigMap and whether this call deployed it.
 
     Raises:
         KeyError: If server_url is not found in py_config.
@@ -193,9 +194,10 @@ def get_artifactory_config_map(
         data={"tlsregistry.crt": ssl.get_server_certificate(addr=(py_config["server_url"], 443))},
         client=client,
     )
-    if not artifactory_cm.exists:
-        artifactory_cm.deploy()
-    return artifactory_cm
+    if artifactory_cm.exists:
+        return artifactory_cm, False
+    artifactory_cm.deploy()
+    return artifactory_cm, True
 
 
 def cleanup_artifactory_secret_and_config_map(
@@ -229,7 +231,10 @@ def artifactory_credentials(
     create_config_map: bool = True,
 ) -> Generator[ArtifactoryCredentials]:
     """
-    Create Artifactory Secret and/or ConfigMap and guarantee cleanup on exit.
+    Create Artifactory Secret and/or ConfigMap and clean up owned resources on exit.
+
+    Only resources deployed by this context are deleted. Pre-existing Secret/ConfigMap
+    resources in the namespace are left in place for longer-lived owners.
 
     Args:
         namespace: Kubernetes namespace for the credentials resources.
@@ -238,7 +243,7 @@ def artifactory_credentials(
         create_config_map: Whether to create/retrieve the Artifactory ConfigMap. Defaults to True.
 
     Yields:
-        ArtifactoryCredentials: Created Secret and/or ConfigMap for DV/source auth.
+        ArtifactoryCredentials: Created or retrieved Secret and/or ConfigMap for DV/source auth.
 
     Raises:
         ValueError: If both ``create_secret`` and ``create_config_map`` are False.
@@ -248,14 +253,16 @@ def artifactory_credentials(
 
     secret: Secret | None = None
     config_map: ConfigMap | None = None
+    owned_secret = False
+    owned_config_map = False
     try:
         if create_secret:
-            secret = get_artifactory_secret(namespace=namespace, client=client)
+            secret, owned_secret = get_artifactory_secret(namespace=namespace, client=client)
         if create_config_map:
-            config_map = get_artifactory_config_map(namespace=namespace, client=client)
+            config_map, owned_config_map = get_artifactory_config_map(namespace=namespace, client=client)
         yield ArtifactoryCredentials(secret=secret, config_map=config_map)
     finally:
         cleanup_artifactory_secret_and_config_map(
-            artifactory_secret=secret,
-            artifactory_config_map=config_map,
+            artifactory_secret=secret if owned_secret else None,
+            artifactory_config_map=config_map if owned_config_map else None,
         )
