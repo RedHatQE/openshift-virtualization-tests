@@ -384,7 +384,14 @@ def rhel_vm_with_hooks_opt_out(
     snapshot_storage_class_name_scope_module,
     namespace_for_hooks_backup,
 ):
-    """Running RHEL VM with kubevirt.io/skip-backup-hooks annotation set to 'true'."""
+    """Running RHEL VM with kubevirt.io/skip-backup-hooks annotation set to 'true'.
+
+    Creates a RHEL VM with the skip-backup-hooks annotation, waits for it to
+    reach a running state, and verifies the annotation is present before yielding.
+
+    Yields:
+        VirtualMachineForTests: Running VM with backup hooks opt-out annotation.
+    """
     with VirtualMachineForTests(
         name="vm-hooks-opt-out",
         namespace=namespace_for_hooks_backup.name,
@@ -407,6 +414,13 @@ def rhel_vm_with_hooks_opt_out(
 
 @pytest.fixture()
 def paused_rhel_vm_with_hooks_opt_out(rhel_vm_with_hooks_opt_out):
-    """Paused RHEL VM with kubevirt.io/skip-backup-hooks annotation set to 'true'."""
+    """Paused RHEL VM with kubevirt.io/skip-backup-hooks annotation set to 'true'.
+
+    Pauses the running VM from rhel_vm_with_hooks_opt_out and yields it
+    in the paused state.
+
+    Yields:
+        VirtualMachineForTests: Paused VM with backup hooks opt-out annotation.
+    """
     rhel_vm_with_hooks_opt_out.vmi.pause(wait=True)
     yield rhel_vm_with_hooks_opt_out
