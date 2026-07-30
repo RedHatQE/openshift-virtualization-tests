@@ -250,15 +250,6 @@ wheels = [
 ]
 
 [[package]]
-name = "dacite"
-version = "1.9.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/55/a0/7ca79796e799a3e782045d29bf052b5cde7439a2bbb17f15ff44f7aacc63/dacite-1.9.2.tar.gz", hash = "sha256:6ccc3b299727c7aa17582f0021f6ae14d5de47c7227932c47fec4cdfefd26f09", size = 22420, upload-time = "2025-02-05T09:27:29.757Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/94/35/386550fd60316d1e37eccdda609b074113298f23cef5bddb2049823fe666/dacite-1.9.2-py3-none-any.whl", hash = "sha256:053f7c3f5128ca2e9aceb66892b1a3c8936d02c686e707bee96e19deef4bc4a0", size = 16600, upload-time = "2025-02-05T09:27:24.345Z" },
-]
-
-[[package]]
 name = "decorator"
 version = "5.2.1"
 source = { registry = "https://pypi.org/simple" }
@@ -708,7 +699,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/5b/8b/824ae9292bbaa548d
 
 [[package]]
 name = "openshift-python-wrapper"
-version = "4.18.7"
+version = "4.18.8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -730,7 +721,7 @@ dependencies = [
     { name = "timeout-sampler" },
     { name = "xmltodict" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/cb/9d/bf412ad6752279d0b3787734d09230d071b60907ef8da6a70fb46c863df1/openshift_python_wrapper-4.18.7.tar.gz", hash = "sha256:3eb5b29ed4f7a84ace8d95ccb6a8b50ab828daf49633081bcd4d50f11ef66b87", size = 6661140, upload-time = "2025-11-19T18:28:13.838Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c6/71/6552c4104ca4b451057c1e40ffccd708a42a2606b6e7c91473adc015b41b/openshift_python_wrapper-4.18.8.tar.gz", hash = "sha256:54b4a0c6a39ef23473fa4ffad31bf328ca6a8a2864187d11007b84f4af10bd49", size = 6663501, upload-time = "2026-07-29T11:30:04.88Z" }
 
 [[package]]
 name = "openshift-python-wrapper-data-collector"
@@ -753,7 +744,6 @@ dependencies = [
     { name = "bs4" },
     { name = "click" },
     { name = "colorlog" },
-    { name = "dacite" },
     { name = "deepdiff" },
     { name = "dictdiffer" },
     { name = "docker" },
@@ -807,7 +797,6 @@ requires-dist = [
     { name = "bs4", specifier = ">=0.0.2" },
     { name = "click", specifier = ">=8.1.7" },
     { name = "colorlog", specifier = ">=6.9.0" },
-    { name = "dacite", specifier = ">=1.9.2" },
     { name = "deepdiff", specifier = ">=8.0.1" },
     { name = "dictdiffer", specifier = ">=0.9.0" },
     { name = "docker", specifier = ">=7.1.0" },
@@ -820,7 +809,7 @@ requires-dist = [
     { name = "marshmallow", specifier = ">=4.0" },
     { name = "netaddr", specifier = ">=1.3.0" },
     { name = "openshift-python-utilities", specifier = ">=6.0.0" },
-    { name = "openshift-python-wrapper", specifier = "~=4.18.0" },
+    { name = "openshift-python-wrapper", specifier = "~=4.18.8" },
     { name = "openstacksdk", specifier = ">=4.1.0" },
     { name = "pexpect", specifier = ">=4.9.0" },
     { name = "podman", specifier = ">=5.2.0" },
