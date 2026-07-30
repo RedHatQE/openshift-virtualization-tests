@@ -406,7 +406,7 @@ def rhel_vm_with_hooks_opt_out(
         annotations={SKIP_BACKUP_HOOKS_ANNOTATION: "true"},
     ) as vm:
         running_vm(vm=vm)
-        assert vm.instance.metadata.annotations.get(SKIP_BACKUP_HOOKS_ANNOTATION) == "true", (
+        assert vm.instance.metadata.annotations[SKIP_BACKUP_HOOKS_ANNOTATION] == "true", (
             f"VM {vm.name} missing {SKIP_BACKUP_HOOKS_ANNOTATION} annotation"
         )
         yield vm
