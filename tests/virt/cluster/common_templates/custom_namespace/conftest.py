@@ -33,6 +33,7 @@ def opt_in_custom_template_namespace(
     ssp_resource_scope_class,
 ):
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={
             hyperconverged_resource_scope_class: {
                 "spec": {COMMON_TEMPLATES_NAMESPACE_KEY: custom_vm_template_namespace.name}
@@ -119,6 +120,7 @@ def opted_out_custom_template_namespace(
     ssp_resource_scope_function,
 ):
     ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={hyperconverged_resource_scope_function: {"spec": {COMMON_TEMPLATES_NAMESPACE_KEY: None}}},
         list_resource_reconcile=[SSP, CDI],
         wait_for_reconcile_post_update=True,

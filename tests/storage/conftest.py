@@ -230,12 +230,14 @@ def uploadproxy_route_deleted(hco_namespace):
 
 @pytest.fixture()
 def cdi_config_upload_proxy_overridden(
+    admin_client,
     hco_namespace,
     hyperconverged_resource_scope_function,
     cdi_config,
     new_route_created,
 ):
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={
             hyperconverged_resource_scope_function: hco_cr_jsonpatch_annotations_dict(
                 component="cdi",

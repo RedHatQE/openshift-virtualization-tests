@@ -15,17 +15,23 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
-def cnv_prometheus_rules_names(hco_namespace):
-    return [prometheus_rule.name for prometheus_rule in PrometheusRule.get(namespace=hco_namespace.name)]
+def cnv_prometheus_rules_names(admin_client, hco_namespace):
+    return [
+        prometheus_rule.name
+        for prometheus_rule in PrometheusRule.get(dyn_client=admin_client, namespace=hco_namespace.name)
+    ]
 
 
 @pytest.fixture()
-def cnv_alerts_runbook_urls_from_prometheus_rule(cnv_prometheus_rules_matrix__function__, hpp_cr_installed):
+def cnv_alerts_runbook_urls_from_prometheus_rule(
+    admin_client, cnv_prometheus_rules_matrix__function__, hpp_cr_installed
+):
     rule_name = cnv_prometheus_rules_matrix__function__
     if rule_name == "prometheus-hpp-rules" and not hpp_cr_installed:
         pytest.xfail(f"Rule {rule_name} should not be present if HPP CR is not installed")
 
     cnv_prometheus_rule_by_name = PrometheusRule(
+        client=admin_client,
         namespace=py_config["hco_namespace"],
         name=rule_name,
     )

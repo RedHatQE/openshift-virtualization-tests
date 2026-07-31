@@ -102,6 +102,7 @@ def updated_kubevirt_config_machine_type(
 ):
     annotations_path = "architectureConfiguration"
     with update_hco_annotations(
+        admin_client=admin_client,
         resource=hyperconverged_resource_scope_class,
         path=annotations_path,
         value={nodes_cpu_architecture: request.param},

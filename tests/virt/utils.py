@@ -66,6 +66,7 @@ LOGGER = logging.getLogger(__name__)
 @contextmanager
 def append_feature_gate_to_hco(feature_gate, resource, client, namespace):
     with update_hco_annotations(
+        admin_client=client,
         resource=resource,
         path="developerConfiguration/featureGates",
         value=feature_gate,
@@ -239,12 +240,13 @@ def validate_machine_type(vm, expected_machine_type, admin_client):
     )
 
 
-def patch_hco_cr_with_mdev_permitted_hostdevices(hyperconverged_resource, supported_gpu_device):
+def patch_hco_cr_with_mdev_permitted_hostdevices(admin_client, hyperconverged_resource, supported_gpu_device):
     required_keys = [MDEV_TYPE_STR, MDEV_NAME_STR, VGPU_DEVICE_NAME_STR]
     missing_keys = [key for key in required_keys if key not in supported_gpu_device]
     if missing_keys:
         raise ValueError(f"Missing required keys in supported_gpu_device: {missing_keys}")
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={
             hyperconverged_resource: {
                 "spec": {
@@ -478,8 +480,9 @@ def get_data_volume_template_dict_with_default_storage_class(
     return data_volume_template
 
 
-def update_hco_memory_overcommit(hco, percentage):
+def update_hco_memory_overcommit(admin_client, hco, percentage):
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={
             hco: {
                 "spec": {

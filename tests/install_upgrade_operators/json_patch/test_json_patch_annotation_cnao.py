@@ -32,6 +32,7 @@ def json_patched_cnao(
     hyperconverged_resource_scope_class,
 ):
     with update_hco_annotations(
+        admin_client=admin_client,
         resource=hyperconverged_resource_scope_class,
         path=PATH,
         op="replace",

@@ -380,11 +380,13 @@ def eus_unpaused_worker_mcp(
 
 @pytest.fixture()
 def eus_paused_workload_update(
+    admin_client,
     hyperconverged_resource_scope_module,
     default_workload_update_strategy,
 ):
     LOGGER.info("Pause workload updates in HCO")
     set_workload_update_methods_hco(
+        admin_client=admin_client,
         hyperconverged_resource=hyperconverged_resource_scope_module,
         workload_update_method=[],
     )
@@ -392,11 +394,13 @@ def eus_paused_workload_update(
 
 @pytest.fixture()
 def eus_unpaused_workload_update(
+    admin_client,
     hyperconverged_resource_scope_module,
     default_workload_update_strategy,
 ):
     LOGGER.info(f"Reset hco.spec.{WORKLOAD_UPDATE_STRATEGY_KEY_NAME}.")
     set_workload_update_methods_hco(
+        admin_client=admin_client,
         hyperconverged_resource=hyperconverged_resource_scope_module,
         workload_update_method=default_workload_update_strategy[WORKLOADUPDATEMETHODS],
     )

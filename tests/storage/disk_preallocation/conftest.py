@@ -13,9 +13,10 @@ from utilities.storage import create_dv
 
 
 @pytest.fixture(scope="module")
-def cdi_preallocation_enabled(hyperconverged_resource_scope_module, cdi_config):
+def cdi_preallocation_enabled(admin_client, hyperconverged_resource_scope_module, cdi_config):
     preallocation_value = True
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={
             hyperconverged_resource_scope_module: hco_cr_jsonpatch_annotations_dict(
                 component="cdi",

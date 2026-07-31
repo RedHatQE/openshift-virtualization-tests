@@ -101,6 +101,7 @@ def updated_common_template(
         )
     LOGGER.info(f"Common templates {updated_templates}, updating to: {updated_common_template}")
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={
             hyperconverged_resource_scope_function: {
                 "spec": {SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME: updated_common_template_dict_list}

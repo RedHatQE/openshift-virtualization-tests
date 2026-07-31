@@ -638,14 +638,15 @@ def must_gather_vm_files_path(collected_vm_details_must_gather, vm_for_migration
 
 
 @pytest.fixture(scope="class")
-def updated_disable_serial_console_log_false(hyperconverged_resource_scope_class):
+def updated_disable_serial_console_log_false(admin_client, hyperconverged_resource_scope_class):
     if hyperconverged_resource_scope_class.instance.spec.virtualMachineOptions.disableSerialConsoleLog:
         with ResourceEditorValidateHCOReconcile(
+            admin_client=admin_client,
             patches={
                 hyperconverged_resource_scope_class: {
                     "spec": {"virtualMachineOptions": {"disableSerialConsoleLog": False}}
                 }
-            }
+            },
         ):
             yield
     else:

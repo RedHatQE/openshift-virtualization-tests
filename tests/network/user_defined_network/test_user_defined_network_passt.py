@@ -36,9 +36,11 @@ def wait_for_ready_vm_with_restart(vm: BaseVirtualMachine) -> bool:
 
 @pytest.fixture(scope="module")
 def passt_enabled_in_hco(
+    admin_client: DynamicClient,
     hyperconverged_resource_scope_module: HyperConverged,
 ) -> Generator[None]:
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={
             hyperconverged_resource_scope_module: {
                 "metadata": {"annotations": {"hco.kubevirt.io/deployPasstNetworkBinding": "true"}}

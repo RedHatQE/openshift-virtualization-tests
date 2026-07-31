@@ -92,7 +92,7 @@ def rhel_vm_for_upgrade_session_scope(
 
 
 @pytest.fixture(scope="session")
-def hco_with_disable_mdev_configuration_session_scope(hyperconverged_resource_scope_session):
+def hco_with_disable_mdev_configuration_session_scope(admin_client, hyperconverged_resource_scope_session):
     """
     Enable disableMDevConfiguration feature gate in HCO.
 
@@ -101,6 +101,7 @@ def hco_with_disable_mdev_configuration_session_scope(hyperconverged_resource_sc
     by NVIDIA GPU Operator).
     """
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={hyperconverged_resource_scope_session: {"spec": {FEATURE_GATES: {DISABLE_MDEV_CONFIGURATION: True}}}},
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,

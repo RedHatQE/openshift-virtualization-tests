@@ -35,8 +35,11 @@ def assert_fs_overhead_added(actual_size: bitmath.Bitmath, requested_size: bitma
 
 
 @pytest.fixture(scope="module")
-def updated_fs_overhead_20_with_hco(storage_class_with_filesystem_volume_mode, hyperconverged_resource_scope_module):
+def updated_fs_overhead_20_with_hco(
+    admin_client, storage_class_with_filesystem_volume_mode, hyperconverged_resource_scope_module
+):
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={
             hyperconverged_resource_scope_module: {
                 "spec": {

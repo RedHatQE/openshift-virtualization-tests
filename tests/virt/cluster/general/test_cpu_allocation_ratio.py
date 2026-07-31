@@ -48,9 +48,11 @@ def vmi_cpu_allocation_ratio_from_hco_post_update(
 
 @pytest.fixture()
 def hco_cr_with_vmi_cpu_allocation_ratio(
+    admin_client,
     hyperconverged_resource_scope_function,
 ):
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={
             hyperconverged_resource_scope_function: {
                 "spec": {"resourceRequirements": {"vmiCPUAllocationRatio": VMI_CPU_ALLOCATION_RATIO}}

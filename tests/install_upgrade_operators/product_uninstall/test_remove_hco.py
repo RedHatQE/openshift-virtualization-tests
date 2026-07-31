@@ -135,7 +135,8 @@ def hco_uninstall_strategy_remove_workloads(
     hyperconverged_resource_scope_function,
 ):
     with ResourceEditorValidateHCOReconcile(
-        patches={hyperconverged_resource_scope_function: {"spec": {"uninstallStrategy": REMOVE_STRATEGY}}}
+        admin_client=admin_client,
+        patches={hyperconverged_resource_scope_function: {"spec": {"uninstallStrategy": REMOVE_STRATEGY}}},
     ):
         wait_for_hco_conditions(
             admin_client=admin_client,

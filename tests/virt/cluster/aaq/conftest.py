@@ -68,8 +68,11 @@ def enabled_aaq_in_hco_scope_package(admin_client, hco_namespace, hyperconverged
 
 
 @pytest.fixture(scope="class")
-def updated_aaq_allocation_method(hyperconverged_resource_scope_class, aaq_allocation_methods_matrix__class__):
+def updated_aaq_allocation_method(
+    admin_client, hyperconverged_resource_scope_class, aaq_allocation_methods_matrix__class__
+):
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={
             hyperconverged_resource_scope_class: {
                 "spec": {
@@ -84,8 +87,10 @@ def updated_aaq_allocation_method(hyperconverged_resource_scope_class, aaq_alloc
 
 
 @pytest.fixture()
-def updated_hco_memory_overcommit(hyperconverged_resource_scope_class):
-    yield from update_hco_memory_overcommit(hco=hyperconverged_resource_scope_class, percentage=50)
+def updated_hco_memory_overcommit(admin_client, hyperconverged_resource_scope_class):
+    yield from update_hco_memory_overcommit(
+        admin_client=admin_client, hco=hyperconverged_resource_scope_class, percentage=50
+    )
 
 
 @pytest.fixture(scope="class")
@@ -172,6 +177,7 @@ def migrated_arq_vm(admin_client: DynamicClient, vm_for_aaq_test: VirtualMachine
 @pytest.fixture(scope="module")
 def enabled_acrq_support(admin_client, hco_namespace, hyperconverged_resource_scope_module):
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={
             hyperconverged_resource_scope_module: {
                 "spec": {

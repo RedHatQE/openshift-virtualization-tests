@@ -273,9 +273,10 @@ def certificate_exists(cdi_spec, hco_spec):
 
 
 @pytest.fixture()
-def updated_certconfig_in_hco_cr(hyperconverged_resource_scope_function, certificate_exists):
+def updated_certconfig_in_hco_cr(admin_client, hyperconverged_resource_scope_function, certificate_exists):
     # Update cert rotation with a short interval for easy testing.
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={
             hyperconverged_resource_scope_function: {
                 "spec": {

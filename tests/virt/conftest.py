@@ -219,9 +219,13 @@ def supported_gpu_device(workers_utility_pods, nodes_with_supported_gpus):
 
 
 @pytest.fixture(scope="session")
-def hco_cr_with_mdev_permitted_hostdevices_scope_session(hyperconverged_resource_scope_session, supported_gpu_device):
+def hco_cr_with_mdev_permitted_hostdevices_scope_session(
+    admin_client, hyperconverged_resource_scope_session, supported_gpu_device
+):
     yield from patch_hco_cr_with_mdev_permitted_hostdevices(
-        hyperconverged_resource=hyperconverged_resource_scope_session, supported_gpu_device=supported_gpu_device
+        admin_client=admin_client,
+        hyperconverged_resource=hyperconverged_resource_scope_session,
+        supported_gpu_device=supported_gpu_device,
     )
 
 
@@ -367,8 +371,10 @@ def vm_for_test_from_template_scope_class(
 
 
 @pytest.fixture(scope="class")
-def hco_memory_overcommit_increased(hyperconverged_resource_scope_class):
-    yield from update_hco_memory_overcommit(hco=hyperconverged_resource_scope_class, percentage=200)
+def hco_memory_overcommit_increased(admin_client, hyperconverged_resource_scope_class):
+    yield from update_hco_memory_overcommit(
+        admin_client=admin_client, hco=hyperconverged_resource_scope_class, percentage=200
+    )
 
 
 @pytest.fixture(scope="session")

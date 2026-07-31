@@ -65,17 +65,21 @@ class TestClusterWithIcsp:
         mock_icsp2.name = "icsp-2"
 
         mock_icsp_class.get.return_value = [mock_icsp1, mock_icsp2]
+        mock_client = MagicMock()
 
-        result = cluster_with_icsp()
+        result = cluster_with_icsp(client=mock_client)
         assert result is True
+        mock_icsp_class.get.assert_called_once_with(dyn_client=mock_client)
 
     @patch("utilities.operator.ImageContentSourcePolicy")
     def test_cluster_with_icsp_absent(self, mock_icsp_class):
         """Test cluster_with_icsp returns False when no ICSP exists"""
         mock_icsp_class.get.return_value = []
+        mock_client = MagicMock()
 
-        result = cluster_with_icsp()
+        result = cluster_with_icsp(client=mock_client)
         assert result is False
+        mock_icsp_class.get.assert_called_once_with(dyn_client=mock_client)
 
 
 class TestGetCatalogSource:
@@ -91,11 +95,13 @@ class TestGetCatalogSource:
         mock_catalog.exists = True
         mock_catalog.name = "test-catalog"
         mock_catalog_source_class.return_value = mock_catalog
+        mock_client = MagicMock()
 
-        result = get_catalog_source("test-catalog")
+        result = get_catalog_source(client=mock_client, catalog_name="test-catalog")
 
         assert result == mock_catalog
         mock_catalog_source_class.assert_called_once_with(
+            client=mock_client,
             namespace="openshift-marketplace",
             name="test-catalog",
         )
@@ -109,8 +115,9 @@ class TestGetCatalogSource:
         mock_catalog = MagicMock()
         mock_catalog.exists = False
         mock_catalog_source_class.return_value = mock_catalog
+        mock_client = MagicMock()
 
-        result = get_catalog_source("nonexistent-catalog")
+        result = get_catalog_source(client=mock_client, catalog_name="nonexistent-catalog")
 
         assert result is None
 
@@ -191,11 +198,12 @@ class TestGetOperatorHub:
         mock_operator_hub.exists = True
         mock_operator_hub.name = "cluster"
         mock_operator_hub_class.return_value = mock_operator_hub
+        mock_client = MagicMock()
 
-        result = get_operator_hub()
+        result = get_operator_hub(client=mock_client)
 
         assert result == mock_operator_hub
-        mock_operator_hub_class.assert_called_once_with(name="cluster")
+        mock_operator_hub_class.assert_called_once_with(client=mock_client, name="cluster")
 
     @patch("utilities.operator.OperatorHub")
     def test_get_operator_hub_not_exists(self, mock_operator_hub_class):
@@ -203,9 +211,10 @@ class TestGetOperatorHub:
         mock_operator_hub = MagicMock()
         mock_operator_hub.exists = False
         mock_operator_hub_class.return_value = mock_operator_hub
+        mock_client = MagicMock()
 
         with pytest.raises(ResourceNotFoundError, match="OperatorHub cluster not found"):
-            get_operator_hub()
+            get_operator_hub(client=mock_client)
 
 
 class TestGetFailedClusterOperator:
@@ -914,9 +923,12 @@ class TestWaitForCatalogSourceDisabled:
         mock_sampler_instance.__iter__ = MagicMock(return_value=iter([None]))
         mock_sampler.return_value = mock_sampler_instance
 
-        wait_for_catalog_source_disabled("test-catalog")
+        mock_client = MagicMock()
+        wait_for_catalog_source_disabled(client=mock_client, catalog_name="test-catalog")
 
         mock_sampler.assert_called_once()
+        assert mock_sampler.call_args.kwargs["client"] == mock_client
+        assert mock_sampler.call_args.kwargs["catalog_name"] == "test-catalog"
 
     @patch("utilities.operator.TimeoutSampler")
     @patch("utilities.operator.get_catalog_source")
@@ -935,9 +947,10 @@ class TestWaitForCatalogSourceDisabled:
                 raise TimeoutExpiredError("Timeout")
 
         mock_sampler.return_value = MockSamplerIterator()
+        mock_client = MagicMock()
 
         with pytest.raises(TimeoutExpiredError):
-            wait_for_catalog_source_disabled("test-catalog")
+            wait_for_catalog_source_disabled(client=mock_client, catalog_name="test-catalog")
 
 
 class TestCreateCatalogSource:

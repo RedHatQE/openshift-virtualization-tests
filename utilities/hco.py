@@ -11,7 +11,7 @@ from ocp_resources.hyperconverged import HyperConverged
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.namespace import Namespace
 from ocp_resources.network_addons_config import NetworkAddonsConfig
-from ocp_resources.resource import Resource, ResourceEditor, get_client
+from ocp_resources.resource import Resource, ResourceEditor
 from ocp_resources.ssp import SSP
 from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
@@ -71,15 +71,15 @@ HCO_JSONPATCH_ANNOTATION_COMPONENT_DICT = {
 class ResourceEditorValidateHCOReconcile(ResourceEditor):
     def __init__(
         self,
+        admin_client,
         hco_namespace="openshift-cnv",
         consecutive_checks_count=3,
         list_resource_reconcile=None,
         wait_for_reconcile_post_update=False,
-        admin_client=None,
         **kwargs,
     ):
         super().__init__(**kwargs)
-        self.admin_client = admin_client or get_client()
+        self.admin_client = admin_client
         self.hco_namespace = Namespace(client=self.admin_client, name=hco_namespace)
         self.wait_for_reconcile_post_update = wait_for_reconcile_post_update
         self._consecutive_checks_count = consecutive_checks_count
@@ -386,7 +386,7 @@ def enable_common_boot_image_import_spec_wait_for_data_import_cron(
     namespace: Namespace,
     exclude_data_source_names: Collection[str] | None = None,
 ) -> None:
-    hco_namespace = Namespace(name=hco_resource.namespace)
+    hco_namespace = Namespace(client=admin_client, name=hco_resource.namespace)
     update_common_boot_image_import_spec(
         hco_resource=hco_resource,
         enable=True,
@@ -455,6 +455,7 @@ def hco_cr_jsonpatch_annotations_dict(component, path, value=None, op="add"):
 
 @contextmanager
 def update_hco_annotations(
+    admin_client,
     resource,
     path,
     value=None,
@@ -467,6 +468,7 @@ def update_hco_annotations(
     Update jsonpatch annotation in HCO CR.
 
     Args:
+        admin_client (DynamicClient): Kubernetes admin client
         resource (HyperConverged): HCO resource object
         path (str): key path in KubeVirt CR
         value (any): key value
@@ -500,6 +502,7 @@ def update_hco_annotations(
         )
 
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={resource: hco_config_jsonpath_dict},
         list_resource_reconcile=resource_list,
         wait_for_reconcile_post_update=True,
@@ -529,6 +532,7 @@ def update_hco_templates_spec(
     golden_images_namespace=None,
 ):
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={hyperconverged_resource: {"spec": {SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME: [updated_template]}}},
         list_resource_reconcile=[SSP, CDI],
         wait_for_reconcile_post_update=True,
@@ -557,6 +561,7 @@ def enabled_aaq_in_hco(client, hco_namespace, hyperconverged_resource, enable_ac
         patches=patches,
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,
+        admin_client=client,
     ):
         yield
     # need to wait when all AAQ system pods removed
