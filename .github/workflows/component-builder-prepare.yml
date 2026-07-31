@@ -38,8 +38,10 @@ jobs:
       - name: Read component builder config
         id: component-builder-config
         run: |
-          echo "matrix=$(jq -c '.matrix' .github/component-builder-config.json)" >> "${GITHUB_OUTPUT}"
-          echo "fedora_version=$(jq -r '.fedora_version' .github/component-builder-config.json)" >> "${GITHUB_OUTPUT}"
-          echo "fedora_image_base=$(jq -r '.fedora_image_base' .github/component-builder-config.json)" >> "${GITHUB_OUTPUT}"
-          echo "fedora_checksum_base=$(jq -r '.fedora_checksum_base' .github/component-builder-config.json)" >> "${GITHUB_OUTPUT}"
-          echo "architectures=$(jq -r '[.matrix.include[].arch] | join(" ")' .github/component-builder-config.json)" >> "${GITHUB_OUTPUT}"
+          set -euo pipefail
+          config=".github/component-builder-config.json"
+          echo "matrix=$(jq -ce '.matrix' "${config}")" >> "${GITHUB_OUTPUT}"
+          echo "fedora_version=$(jq -re '.fedora_version' "${config}")" >> "${GITHUB_OUTPUT}"
+          echo "fedora_image_base=$(jq -re '.fedora_image_base' "${config}")" >> "${GITHUB_OUTPUT}"
+          echo "fedora_checksum_base=$(jq -re '.fedora_checksum_base' "${config}")" >> "${GITHUB_OUTPUT}"
+          echo "architectures=$(jq -re '[.matrix.include[].arch] | join(" ")' "${config}")" >> "${GITHUB_OUTPUT}"
