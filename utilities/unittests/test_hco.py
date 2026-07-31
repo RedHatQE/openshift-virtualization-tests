@@ -1020,6 +1020,62 @@ class TestUpdateHcoAnnotations:
 
         mock_editor_class.assert_called_once()
 
+    @patch("utilities.hco.ResourceEditorValidateHCOReconcile")
+    def test_update_annotations_merge_with_empty_array(self, mock_editor_class):
+        """Test annotation merge when existing annotation is an empty JSON array"""
+        mock_hco = MagicMock()
+        mock_hco.instance.metadata = {"annotations": {"kubevirt.kubevirt.io/jsonpatch": "[]"}}
+
+        mock_editor = MagicMock()
+        mock_editor.__enter__ = MagicMock(return_value=mock_editor)
+        mock_editor.__exit__ = MagicMock(return_value=None)
+        mock_editor_class.return_value = mock_editor
+
+        with update_hco_annotations(
+            resource=mock_hco,
+            path="machineType",
+            value="pc-q35-rhel8.4.0",
+            overwrite_patches=False,
+        ):
+            pass
+
+        call_kwargs = mock_editor_class.call_args[1]
+        patches = call_kwargs["patches"]
+        annotation_value = list(patches.values())[0]["metadata"]["annotations"]["kubevirt.kubevirt.io/jsonpatch"]
+        parsed = json.loads(annotation_value)
+        assert len(parsed) == 1
+        assert parsed[0]["op"] == "add"
+        assert parsed[0]["path"] == "/spec/configuration/machineType"
+        assert parsed[0]["value"] == "pc-q35-rhel8.4.0"
+
+    @patch("utilities.hco.ResourceEditorValidateHCOReconcile")
+    def test_update_annotations_merge_produces_valid_json(self, mock_editor_class):
+        """Test annotation merge with existing patches produces valid combined JSON array"""
+        mock_hco = MagicMock()
+        existing_annotation = '[{"op": "add", "path": "/spec/configuration/cpuModel", "value": "Haswell"}]'
+        mock_hco.instance.metadata = {"annotations": {"kubevirt.kubevirt.io/jsonpatch": existing_annotation}}
+
+        mock_editor = MagicMock()
+        mock_editor.__enter__ = MagicMock(return_value=mock_editor)
+        mock_editor.__exit__ = MagicMock(return_value=None)
+        mock_editor_class.return_value = mock_editor
+
+        with update_hco_annotations(
+            resource=mock_hco,
+            path="machineType",
+            value="pc-q35-rhel8.4.0",
+            overwrite_patches=False,
+        ):
+            pass
+
+        call_kwargs = mock_editor_class.call_args[1]
+        patches = call_kwargs["patches"]
+        annotation_value = list(patches.values())[0]["metadata"]["annotations"]["kubevirt.kubevirt.io/jsonpatch"]
+        parsed = json.loads(annotation_value)
+        assert len(parsed) == 2
+        assert parsed[0]["path"] == "/spec/configuration/cpuModel"
+        assert parsed[1]["path"] == "/spec/configuration/machineType"
+
 
 class TestWaitForAutoBootConfigStabilization:
     """Test cases for wait_for_auto_boot_config_stabilization function"""

@@ -497,9 +497,9 @@ def update_hco_annotations(
     # {"op": "add", "path": "/spec/configuration/cpuModel", "value": "Haswell-noTSX"}]]'
     if resource_existing_jsonpatch_annotation and not overwrite_patches:
         hco_annotations_dict = hco_config_jsonpath_dict["metadata"]["annotations"]
-        hco_annotations_dict[jsonpatch_key] = (
-            f"{resource_existing_jsonpatch_annotation[:-1]},{hco_annotations_dict[jsonpatch_key][1:]}"
-        )
+        existing_patches = json.loads(resource_existing_jsonpatch_annotation)
+        new_patches = json.loads(hco_annotations_dict[jsonpatch_key])
+        hco_annotations_dict[jsonpatch_key] = json.dumps(existing_patches + new_patches)
 
     with ResourceEditorValidateHCOReconcile(
         admin_client=admin_client,
