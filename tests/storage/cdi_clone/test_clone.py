@@ -6,11 +6,11 @@ import pytest
 from ocp_resources.datavolume import DataVolume
 
 from tests.os_params import FEDORA_LATEST
-from tests.storage.stop_status_utils import dv_stop_status_restart_threshold
 from tests.storage.cdi_clone.utils import (
     create_vm_from_clone_dv_template,
     create_vm_with_multi_clone_disks,
 )
+from tests.storage.stop_status_utils import dv_stop_status_restart_threshold
 from tests.storage.utils import (
     assert_pvc_snapshot_clone_annotation,
     assert_use_populator,
@@ -33,8 +33,6 @@ from utilities.storage import (
 from utilities.virt import restart_vm_wait_for_running_vm
 
 HOST_ASSISTED_CLONE_STRATEGY = "copy"
-
-
 
 
 @pytest.mark.sno
