@@ -41,6 +41,8 @@ VIRT_TEMPLATE_VALIDATOR = "virt-template-validator"
 VIRT_EXPORTPROXY = "virt-exportproxy"
 VIRT_PLATFORM_AUTOPILOT = "virt-platform-autopilot"
 VIRT_SYNCHRONIZATION_CONTROLLER = "virt-synchronization-controller"
+VIRT_TEMPLATE_APISERVER = "virt-template-apiserver"
+VIRT_TEMPLATE_CONTROLLER = "virt-template-controller"
 KUBEVIRT_MIGRATION_CONTROLLER = "kubevirt-migration-controller"
 CDI_APISERVER = "cdi-apiserver"
 CDI_DEPLOYMENT = "cdi-deployment"
@@ -240,6 +242,8 @@ ALL_CNV_DEPLOYMENTS = [
     KUBEVIRT_MIGRATION_CONTROLLER,
     VIRT_PLATFORM_AUTOPILOT,
     VIRT_SYNCHRONIZATION_CONTROLLER,
+    VIRT_TEMPLATE_APISERVER,
+    VIRT_TEMPLATE_CONTROLLER,
 ]
 ALL_CNV_DAEMONSETS = [
     BRIDGE_MARKER,
