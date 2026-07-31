@@ -1,3 +1,18 @@
+# /rerun-smoke — re-trigger Jenkins smoke via the retest-smoke label.
+#
+# Trigger: PR comment starting with `/rerun-smoke` from OWNER/MEMBER/COLLABORATOR.
+#
+# Logic:
+#   1. React +1 immediately (request acknowledged).
+#   2. If retest-smoke is absent → add it (Jenkins job github-events-listener
+#      picks up the labeled event; Jenkins usually removes the label after).
+#   3. If retest-smoke is present:
+#        - labeled < 4h ago (or no labeled event found) → do not re-add;
+#          log "check github-events-listener"; replace +1 with -1.
+#        - labeled >= 4h ago → remove then re-add so Jenkins sees a fresh
+#          labeled event; leave +1.
+#   4. Reactions: +1 = label added/refreshed; -1 = skipped (cooldown).
+
 name: Retest Smoke
 on:
   issue_comment:
@@ -5,10 +20,11 @@ on:
 
 concurrency:
   group: retest-smoke-${{ github.event.issue.number }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   retest-smoke:
+    # Only /rerun-smoke on PRs from trusted associations.
     if: >-
       startsWith(github.event.comment.body, '/rerun-smoke')
       && github.event.issue.pull_request
@@ -18,20 +34,118 @@ jobs:
     permissions:
       issues: write
       pull-requests: write
+    env:
+      # Matches expected Jenkins smoke re-trigger window for github-events-listener.
+      RETEST_SMOKE_COOLDOWN_HOURS: '4'
     steps:
-      - name: Add thumbs up reaction
+      # Acknowledge the request immediately; replaced with -1 if we skip re-trigger.
+      - name: Acknowledge request
         uses: peter-evans/create-or-update-comment@v5
         with:
           comment-id: ${{ github.event.comment.id }}
           reactions: '+1'
 
-      - name: Add retest-smoke label
+      - name: Manage retest-smoke label
+        id: manage-label
         uses: actions/github-script@v9
+        env:
+          RETEST_SMOKE_COOLDOWN_HOURS: ${{ env.RETEST_SMOKE_COOLDOWN_HOURS }}
         with:
           script: |
-            await github.rest.issues.addLabels({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.payload.issue.number,
-              labels: ['retest-smoke']
+            const labelName = 'retest-smoke';
+            const cooldownHours = Number(process.env.RETEST_SMOKE_COOLDOWN_HOURS);
+            const cooldownMs = cooldownHours * 60 * 60 * 1000;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issue_number = context.payload.issue.number;
+
+            const { data: issue } = await github.rest.issues.get({
+              owner,
+              repo,
+              issue_number,
             });
+            const hasLabel = issue.labels.some((label) => label.name === labelName);
+
+            // Label already present: decide skip (cooldown) vs remove+re-add (stale).
+            if (hasLabel) {
+              const events = await github.paginate(github.rest.issues.listEvents, {
+                owner,
+                repo,
+                issue_number,
+                per_page: 100,
+              });
+
+              let labeledAtMs = null;
+              for (const event of events) {
+                // Keep only retest-smoke "labeled" events from issue history.
+                if (event.event === 'labeled' && event.label?.name === labelName) {
+                  const eventMs = Date.parse(event.created_at);
+                  // Track the most recent labeled timestamp (order-independent).
+                  if (labeledAtMs === null || eventMs > labeledAtMs) {
+                    labeledAtMs = eventMs;
+                  }
+                }
+              }
+
+              // No history → cannot compute age; fail closed (treat as in cooldown).
+              if (labeledAtMs === null) {
+                console.log(
+                  'retest-smoke is present but no labeled event was found; ' +
+                    'treating as within cooldown. Check Jenkins job github-events-listener.'
+                );
+                core.setOutput('label_added', 'false');
+                return;
+              }
+
+              const labeledAt = new Date(labeledAtMs);
+              const ageMs = Date.now() - labeledAtMs;
+              // Still within cooldown → Jenkins may still be handling the last trigger.
+              if (ageMs < cooldownMs) {
+                console.log(
+                  `retest-smoke was added less than ${cooldownHours} hours ago ` +
+                    `(${labeledAt.toISOString()}). Check Jenkins job github-events-listener.`
+                );
+                core.setOutput('label_added', 'false');
+                return;
+              }
+
+              console.log(
+                `retest-smoke is older than ${cooldownHours} hours ` +
+                  `(labeled at ${labeledAt.toISOString()}); removing before re-adding.`
+              );
+              try {
+                await github.rest.issues.removeLabel({
+                  owner,
+                  repo,
+                  issue_number,
+                  name: labelName,
+                });
+              } catch (error) {
+                // 404: label already gone (e.g. Jenkins raced us); continue to addLabels.
+                if (error.status !== 404) {
+                  throw error;
+                }
+                console.log(
+                  'retest-smoke was already removed before removeLabel; continuing to addLabels.'
+                );
+              }
+            }
+
+            // Fresh add, or re-add after stale remove (also the no-label path).
+            await github.rest.issues.addLabels({
+              owner,
+              repo,
+              issue_number,
+              labels: [labelName],
+            });
+            console.log('Added retest-smoke label.');
+            core.setOutput('label_added', 'true');
+
+      # Cooldown/skip path: replace the initial +1 with -1.
+      - name: Mark request skipped
+        if: steps.manage-label.outputs.label_added == 'false'
+        uses: peter-evans/create-or-update-comment@v5
+        with:
+          comment-id: ${{ github.event.comment.id }}
+          reactions: '-1'
+          reactions-edit-mode: replace
