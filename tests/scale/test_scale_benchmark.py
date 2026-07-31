@@ -63,7 +63,7 @@ SCALE_STORAGE_TYPES = {
     OCS: StorageClassNames.CEPH_RBD_VIRTUALIZATION,
     NFS: StorageClassNames.NFS,
 }
-pytestmark = pytest.mark.scale
+pytestmark = [pytest.mark.scale, pytest.mark.windows]
 
 
 def log_nodes_load_data(vms=None):

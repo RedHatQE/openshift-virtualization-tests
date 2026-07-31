@@ -128,6 +128,7 @@ def test_win_virtio_image(virtio_win_image, hco_csv_win_virtio_image):
     [pytest.param({"os_dict": WINDOWS_10})],
     indirect=True,
 )
+@pytest.mark.windows
 class TestWindowsGuestTools:
     @pytest.mark.polarion("CNV-6517")
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::vm_with_guest_tools")

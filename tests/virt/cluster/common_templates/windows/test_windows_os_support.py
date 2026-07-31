@@ -49,6 +49,7 @@ LOGGER = logging.getLogger(__name__)
 TESTS_CLASS_NAME = "TestCommonTemplatesWindows"
 
 
+@pytest.mark.windows
 class TestCommonTemplatesWindows:
     @pytest.mark.sno
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::create_vm")

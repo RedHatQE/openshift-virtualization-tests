@@ -8,6 +8,8 @@ from tests.storage.memory_dump.utils import wait_for_memory_dump_status_removed
 
 
 @pytest.mark.tier3
+@pytest.mark.conformance
+@pytest.mark.windows
 @pytest.mark.polarion("CNV-8518")
 def test_windows_memory_dump(
     namespace,

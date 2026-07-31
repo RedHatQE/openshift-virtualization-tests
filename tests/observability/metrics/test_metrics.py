@@ -35,6 +35,7 @@ class TestMetricsLinux:
 
 
 @pytest.mark.tier3
+@pytest.mark.windows
 class TestMetricsWindows:
     @pytest.mark.polarion("CNV-11880")
     def test_cnv_vmi_monitoring_metrics_windows_vm(
@@ -80,6 +81,7 @@ class TestVMIMetricsLinuxVms:
 
 
 @pytest.mark.tier3
+@pytest.mark.windows
 class TestVMIMetricsWindowsVms:
     @pytest.mark.polarion("CNV-11861")
     def test_kubevirt_vmi_info_windows(self, prometheus, windows_vm_for_test, vmi_guest_os_kernel_release_info_windows):

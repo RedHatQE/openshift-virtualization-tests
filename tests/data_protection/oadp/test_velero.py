@@ -96,6 +96,7 @@ def test_backup_vm_data_volume_template_with_datamover(rhel_vm_with_data_volume_
 
 
 @pytest.mark.tier3
+@pytest.mark.windows
 @pytest.mark.polarion("CNV-8696")
 @pytest.mark.usefixtures("velero_restore_first_namespace_without_datamover")
 def test_backup_and_restore_windows_vm(windows_vm_with_data_volume_template):

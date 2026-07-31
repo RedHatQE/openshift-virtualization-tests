@@ -102,6 +102,7 @@ class TestRHELIOOptions:
 )
 @pytest.mark.special_infra
 @pytest.mark.high_resource_vm
+@pytest.mark.windows
 class TestWindowsIOOptions:
     @pytest.mark.parametrize(
         "disk_options_vm, expected_disk_io_option",

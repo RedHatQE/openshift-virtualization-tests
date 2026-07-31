@@ -126,6 +126,7 @@ class TestUpgradeVirt:
     @pytest.mark.ocp_upgrade
     @pytest.mark.sno
     @pytest.mark.high_resource_vm
+    @pytest.mark.windows
     @pytest.mark.polarion("CNV-7243")
     @pytest.mark.order(before=MIGRATION_BEFORE_UPGRADE_TEST_ORDERING)
     @pytest.mark.dependency(name=WINDOWS_VM_BEFORE_UPGRADE_TEST_NODE_ID)
@@ -252,6 +253,7 @@ class TestUpgradeVirt:
         after=[IMAGE_UPDATE_AFTER_UPGRADE_NODE_ID, VIRT_VMS_RUNNING_AFTER_UPGRADE_TEST_NODE_ID],
         before=AFTER_UPGRADE_STORAGE_ORDERING,
     )
+    @pytest.mark.windows
     @pytest.mark.dependency(
         depends=[IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID, WINDOWS_VM_BEFORE_UPGRADE_TEST_NODE_ID],
         scope=DEPENDENCY_SCOPE_SESSION,

@@ -125,5 +125,6 @@ def test_vm_fedora_oom(admin_client, fedora_oom_vm, fedora_oom_stress_started):
 )
 @pytest.mark.special_infra
 @pytest.mark.high_resource_vm
+@pytest.mark.windows
 def test_vm_windows_oom(admin_client, vm_with_memory_load, windows_oom_stress_started):
     verify_vm_not_crashed(vm=vm_with_memory_load, admin_client=admin_client)
