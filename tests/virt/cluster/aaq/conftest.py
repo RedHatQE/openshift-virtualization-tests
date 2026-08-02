@@ -192,8 +192,9 @@ def enabled_acrq_support(admin_client, hco_namespace, hyperconverged_resource_sc
 
 
 @pytest.fixture(scope="class")
-def application_aware_cluster_resource_quota():
+def application_aware_cluster_resource_quota(admin_client):
     with ApplicationAwareClusterResourceQuota(
+        client=admin_client,
         name="application-aware-cluster-resource-quota-for-aaq-test",
         quota={"hard": ACRQ_QUOTA_HARD_SPEC},
         selector={"labels": {"matchLabels": ACRQ_NAMESPACE_LABEL}},
@@ -204,7 +205,9 @@ def application_aware_cluster_resource_quota():
 @pytest.fixture(scope="class")
 def acrq_label_on_first_namespace(admin_client, namespace, application_aware_cluster_resource_quota):
     label_project(name=namespace.name, label=ACRQ_NAMESPACE_LABEL, admin_client=admin_client)
-    wait_for_aacrq_object_created(namespace=namespace, acrq_name=application_aware_cluster_resource_quota.name)
+    wait_for_aacrq_object_created(
+        admin_client=admin_client, namespace=namespace, acrq_name=application_aware_cluster_resource_quota.name
+    )
 
 
 @pytest.fixture(scope="class")
@@ -223,11 +226,12 @@ def removed_acrq_label_from_second_namespace(second_namespace_for_acrq_test):
 
 
 @pytest.fixture(scope="class")
-def vm_in_second_namespace_for_acrq_test(second_namespace_for_acrq_test):
+def vm_in_second_namespace_for_acrq_test(unprivileged_client, second_namespace_for_acrq_test):
     vm_name = "vm-another-namespace-for-acrq-test"
     with VirtualMachineForTests(
         name=vm_name,
         namespace=second_namespace_for_acrq_test.name,
+        client=unprivileged_client,
         cpu_cores=VM_CPU_CORES,
         memory_guest=VM_MEMORY_GUEST,
         body=fedora_vm_body(name=vm_name),
@@ -301,11 +305,14 @@ def hotplugged_target_pod(namespace, unprivileged_client, hotplug_vm_for_aaq_tes
 
 
 @pytest.fixture(scope="class")
-def vm_for_aaq_allocation_methods_test(namespace, cpu_for_migration, aaq_allocation_methods_matrix__class__):
+def vm_for_aaq_allocation_methods_test(
+    unprivileged_client, namespace, cpu_for_migration, aaq_allocation_methods_matrix__class__
+):
     vm_name = f"vm-aaq-test-{aaq_allocation_methods_matrix__class__.lower()}-allocation"
     with VirtualMachineForTests(
         name=vm_name,
         namespace=namespace.name,
+        client=unprivileged_client,
         cpu_limits=1,
         memory_limits="1Gi",
         memory_requests="1Gi",

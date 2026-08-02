@@ -5,11 +5,12 @@ from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 
 @pytest.fixture()
-def vm_with_cloud_init_disk(namespace):
+def vm_with_cloud_init_disk(unprivileged_client, namespace):
     name = "vm-with-cloud-init-disk"
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
+        client=unprivileged_client,
         body=fedora_vm_body(name=name),
         cloud_init_type=CLOUD_INIT_NO_CLOUD,
     ) as vm:

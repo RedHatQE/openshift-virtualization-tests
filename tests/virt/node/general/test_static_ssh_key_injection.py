@@ -21,8 +21,9 @@ NAME = "static-access-creds-injection"
 
 
 @pytest.fixture(scope="class")
-def ssh_secret(namespace):
+def ssh_secret(unprivileged_client, namespace):
     with Secret(
+        client=unprivileged_client,
         name=f"{NAME}-secret",
         namespace=namespace.name,
         data_dict={

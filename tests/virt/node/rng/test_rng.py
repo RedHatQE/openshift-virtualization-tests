@@ -16,6 +16,7 @@ def rng_vm(unprivileged_client, namespace):
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
+        client=unprivileged_client,
         body=fedora_vm_body(name=name),
     ) as vm:
         running_vm(vm=vm)

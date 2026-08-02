@@ -12,6 +12,7 @@ def vm_for_test_pvspinlock(
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
+        client=unprivileged_client,
         body=fedora_vm_body(name=name),
         pvspinlock_enabled=False,
     ) as vm:

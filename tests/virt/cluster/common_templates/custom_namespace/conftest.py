@@ -113,7 +113,7 @@ def edited_default_namespace_template(admin_client, hco_namespace, first_base_te
 
 @pytest.fixture()
 def opted_out_custom_template_namespace(
-    admin_client,
+    unprivileged_client,
     hco_namespace,
     custom_vm_template_namespace,
     hyperconverged_resource_scope_function,
@@ -127,7 +127,7 @@ def opted_out_custom_template_namespace(
     ).update()
     wait_for_ssp_custom_template_namespace(
         ssp_resource=ssp_resource_scope_function,
-        namespace=Namespace(name=NamespacesNames.OPENSHIFT),
+        namespace=Namespace(client=unprivileged_client, name=NamespacesNames.OPENSHIFT),
     )
 
 

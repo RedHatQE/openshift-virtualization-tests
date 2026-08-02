@@ -52,8 +52,9 @@ def assert_applied_migration_configuration(vmi, migration_policy):
     assert not wrong_values, f"Wrong values applied: \n{wrong_values}"
 
 
-def create_migration_policy(request):
+def create_migration_policy(request, admin_client):
     with MigrationPolicy(
+        client=admin_client,
         name=request.param.get("name", "migration-policy"),
         allow_auto_converge=request.param.get("allowAutoConverge"),
         bandwidth_per_migration=request.param.get("bandwidthPerMigration"),
@@ -77,18 +78,19 @@ def labeled_namespace(request, admin_client, namespace):
 
 
 @pytest.fixture()
-def migration_policy_a(request):
-    yield from create_migration_policy(request=request)
+def migration_policy_a(request, admin_client):
+    yield from create_migration_policy(request=request, admin_client=admin_client)
 
 
 @pytest.fixture()
-def migration_policy_b(request):
-    yield from create_migration_policy(request=request)
+def migration_policy_b(request, admin_client):
+    yield from create_migration_policy(request=request, admin_client=admin_client)
 
 
 @pytest.fixture()
 def vm_for_migration_policy_test(
     request,
+    unprivileged_client,
     namespace,
     cpu_for_migration,
 ):
@@ -96,6 +98,7 @@ def vm_for_migration_policy_test(
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
+        client=unprivileged_client,
         body=fedora_vm_body(name=name),
         additional_labels=request.param,
         cpu_model=cpu_for_migration,

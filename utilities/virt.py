@@ -30,7 +30,7 @@ from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.namespace import Namespace
 from ocp_resources.node import Node
 from ocp_resources.pod import Pod
-from ocp_resources.resource import Resource, ResourceEditor, get_client
+from ocp_resources.resource import Resource, ResourceEditor
 from ocp_resources.service import Service
 from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.template import Template
@@ -51,6 +51,7 @@ import utilities.cpu
 import utilities.data_utils
 import utilities.infra
 from libs.net.cluster import is_ipv6_single_stack_cluster
+from utilities.cluster import cache_admin_client
 from utilities.console import Console
 from utilities.constants import Images
 from utilities.constants.architecture import (
@@ -1107,6 +1108,7 @@ class VirtualMachineForTests(VirtualMachine):
         To use the service: custom_service.service_ip() and custom_service.service_port
         """
         self.custom_service = ServiceForVirtualMachineForTests(
+            client=self.client,
             name=f"{service_name}-{self.name}"[:63],
             namespace=self.namespace,
             vm=self,
@@ -1223,6 +1225,7 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
         name,
         namespace,
         client,
+        admin_client=None,
         eviction_strategy=None,
         labels=None,
         data_source=None,
@@ -1276,10 +1279,11 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
         additional_labels=None,
         vm_affinity=None,
     ):
-        """
-        VM creation using common templates.
+        """VM creation using common templates.
 
         Args:
+            admin_client (Client, optional): Admin client to use for processing templates.
+                Can be used in multi-cluster (CCLM) tests.
             eviction_strategy (str, optional): valid options("None", "LiveMigrate", "LiveMigrateIfPossible", "External")
                 Default value None here is same as Null and not the string "None" which is one of the valid options
             data_source (obj `DataSource`): DS object points to a golden image PVC.
@@ -1296,8 +1300,6 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
             non_existing_pvc(bool, default=False): If True, referenced PVC in DataSource is missing
             data_volume_template_from_vm_spec (bool, default=False): Use (and don't manipulate) VM's DataVolumeTemplates
             vm_affinity (dict, optional): Affinity rules for scheduling the VM on specific nodes
-        Returns:
-            obj `VirtualMachine`: VM resource
         """
         # Must be set here to set VM flavor (used to set username and password)
         self.template_labels = labels
@@ -1350,6 +1352,7 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
             vm_affinity=vm_affinity,
             os_flavor=self.os_flavor,
         )
+        self.admin_client = admin_client
         self.data_source = data_source
         self.data_volume_template = data_volume_template
         self.existing_data_volume = existing_data_volume
@@ -1481,7 +1484,10 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
         if self.template_params:
             template_kwargs.update(self.template_params)
 
-        resources_list = template_object.process(client=get_client(), **template_kwargs)
+        # Processing a Template (server-side substitution, nothing persisted) requires "create" on
+        # processedtemplates in the template's own namespace (e.g. "openshift"), which self.client
+        # (e.g. unprivileged_client) may not have. The VM object itself is still created with self.client.
+        resources_list = template_object.process(client=self.admin_client or cache_admin_client(), **template_kwargs)
         for resource in resources_list:
             if resource["kind"] == VirtualMachine.kind and resource["metadata"]["name"] == self.name:
                 return resource
@@ -1574,6 +1580,7 @@ def kubernetes_taint_exists(node):
 class ServiceForVirtualMachineForTests(Service):
     def __init__(
         self,
+        client,
         name,
         namespace,
         vm,
@@ -1586,6 +1593,7 @@ class ServiceForVirtualMachineForTests(Service):
         dry_run=None,
     ):
         super().__init__(
+            client=client,
             name=name,
             namespace=namespace,
             teardown=teardown,
