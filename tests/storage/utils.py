@@ -326,7 +326,12 @@ def assert_pvc_snapshot_clone_annotation(pvc, storage_class):
     )
 
 
-def assert_clone_type_on_pvcs(pvc_names, namespace, client, expected_clone_type):
+def assert_clone_type_on_pvcs(
+    pvc_names: list[str],
+    namespace: str,
+    client: DynamicClient,
+    expected_clone_type: str,
+) -> None:
     """Validate the clone annotation on each PVC.
 
     Args:
@@ -338,24 +343,13 @@ def assert_clone_type_on_pvcs(pvc_names, namespace, client, expected_clone_type)
     Raises:
         AssertionError: If any PVC has a different clone strategy.
     """
+    failures = []
     for pvc_name in pvc_names:
         pvc = PersistentVolumeClaim(name=pvc_name, namespace=namespace, client=client)
         clone_type = pvc.instance["metadata"].get("annotations", {}).get(_CLONE_TYPE_ANNOTATION)
-        assert clone_type == expected_clone_type, (
-            f"PVC {pvc_name}: {_CLONE_TYPE_ANNOTATION}={clone_type}, expected '{expected_clone_type}'"
-        )
-
-
-def data_source_ref(data_source):
-    """Build a DataVolume reference to a DataSource.
-
-    Args:
-        data_source: DataSource resource.
-
-    Returns:
-        A source reference containing the kind, name, and namespace.
-    """
-    return {"kind": data_source.kind, "name": data_source.name, "namespace": data_source.namespace}
+        if clone_type != expected_clone_type:
+            failures.append(f"PVC {pvc_name}: {_CLONE_TYPE_ANNOTATION}={clone_type}, expected '{expected_clone_type}'")
+    assert not failures, f"Clone type mismatch on {len(failures)} PVC(s):\n" + "\n".join(failures)
 
 
 def hpp_cr_suffix(is_hpp_cr_legacy):

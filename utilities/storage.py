@@ -678,6 +678,18 @@ def data_volume_template_dict_with_pvc_source(
     return dv.res
 
 
+def data_source_ref(data_source: DataSource) -> dict[str, str]:
+    """Build a DataVolume sourceRef pointing to a DataSource.
+
+    Args:
+        data_source: DataSource resource to reference.
+
+    Returns:
+        Dict with kind, name, and namespace suitable for DV sourceRef.
+    """
+    return {"kind": data_source.kind, "name": data_source.name, "namespace": data_source.namespace}
+
+
 def data_volume_template_with_source_ref_dict(
     data_source: DataSource, storage_class: str | None = None
 ) -> dict[str, Any]:
@@ -688,11 +700,7 @@ def data_volume_template_with_source_ref_dict(
         size=get_dv_size_from_datasource(data_source=data_source),
         storage_class=storage_class,
         api_name="storage",
-        source_ref={
-            "kind": data_source.kind,
-            "name": data_source.name,
-            "namespace": data_source.namespace,
-        },
+        source_ref=data_source_ref(data_source=data_source),
     )
     dv.to_dict()
     # dataVolumeTemplate is not required to have the namespace explicitly set

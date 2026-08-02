@@ -5,13 +5,13 @@ from ocp_resources.storage_profile import StorageProfile
 
 from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE
 from tests.storage.stop_status_utils import dv_stop_status_restart_threshold
-from tests.storage.utils import data_source_ref
 from utilities.constants import Images
-from utilities.constants.storage import REGISTRY_STR
+from utilities.constants.storage import HOST_ASSISTED_CLONE_STRATEGY, REGISTRY_STR
 from utilities.constants.timeouts import TIMEOUT_40MIN
 from utilities.constants.virt import WIN_2K22
 from utilities.storage import (
     create_dv,
+    data_source_ref,
     data_volume,
     get_dv_size_from_datasource,
 )
@@ -75,7 +75,7 @@ def fedora_dv_with_block_volume_mode(
 @pytest.fixture(scope="module")
 def storage_class_with_forced_host_assisted_clone(storage_class_name_scope_module, admin_client):
     storage_profile = StorageProfile(name=storage_class_name_scope_module, client=admin_client)
-    with ResourceEditor(patches={storage_profile: {"spec": {"cloneStrategy": "copy"}}}):
+    with ResourceEditor(patches={storage_profile: {"spec": {"cloneStrategy": HOST_ASSISTED_CLONE_STRATEGY}}}):
         yield storage_class_name_scope_module
 
 

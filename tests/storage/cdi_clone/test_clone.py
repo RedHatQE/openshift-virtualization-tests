@@ -14,11 +14,11 @@ from tests.storage.stop_status_utils import dv_stop_status_restart_threshold
 from tests.storage.utils import (
     assert_pvc_snapshot_clone_annotation,
     assert_use_populator,
-    data_source_ref,
 )
 from tests.utils import create_windows2022_vm_using_existing_dv
 from utilities.constants import Images
 from utilities.constants.images import OS_FLAVOR_FEDORA, OS_FLAVOR_WINDOWS
+from utilities.constants.storage import HOST_ASSISTED_CLONE_STRATEGY
 from utilities.constants.timeouts import TIMEOUT_1MIN
 from utilities.constants.virt import WIN_2K22
 from utilities.ssp import validate_os_info_vmi_vs_windows_os
@@ -26,13 +26,12 @@ from utilities.storage import (
     check_disk_count_in_vm,
     create_dv,
     create_vm_from_dv,
+    data_source_ref,
     get_dv_size_from_datasource,
     overhead_size_for_dv,
     sc_volume_binding_mode_is_wffc,
 )
 from utilities.virt import restart_vm_wait_for_running_vm
-
-HOST_ASSISTED_CLONE_STRATEGY = "copy"
 
 
 @pytest.mark.sno
@@ -220,7 +219,6 @@ def test_clone_from_fs_to_block_using_dv_template(
     """
     Test cloning a DV from filesystem to block volume mode via DV template.
 
-
     Preconditions:
         - Fedora DataVolume (sourced from Quay registry) with filesystem volume mode
         - Storage class supporting block volume mode
@@ -257,7 +255,6 @@ def test_clone_from_block_to_fs_using_dv_template(
     """
     Test cloning a DV from block to filesystem volume mode via DV template.
 
-
     Preconditions:
         - Fedora DataVolume (sourced from Quay registry) with block volume mode
         - Storage class supporting filesystem volume mode
@@ -285,7 +282,6 @@ def test_clone_from_block_to_fs_using_dv_template(
 
 @pytest.mark.conformance
 @pytest.mark.polarion("CNV-16335")
-@pytest.mark.s390x
 def test_clone_vm_with_4_disks_host_assisted(
     storage_class_with_forced_host_assisted_clone,
     fedora_source_dv_for_clone,
@@ -295,12 +291,9 @@ def test_clone_vm_with_4_disks_host_assisted(
     """
     Test that a VM with 4 host-assisted cloned disks boots successfully.
 
-
-    Host-assisted cloning is enforced via StorageProfile.spec.cloneStrategy=copy.
-
     Preconditions:
         - Fedora DataVolume as clone source (from golden image DataSource)
-        - StorageProfile patched to force host-assisted (copy) clone strategy
+        - Storage configured to enforce host-assisted clone strategy
 
     Steps:
         1. Create a VM with 4 DataVolume templates cloned from the source DV
@@ -309,11 +302,11 @@ def test_clone_vm_with_4_disks_host_assisted(
 
     Expected:
         - All 4 cloned disks are visible inside the running VM
-        - All PVCs have cdi.kubevirt.io/cloneType=copy annotation
+        - All PVCs confirm host-assisted clone strategy was used
     """
     create_vm_with_multi_clone_disks(
-        vm_name="vm-16335",
-        dv_name="vm-16335-clone",
+        vm_name="vm-4disk-host-assisted-clone",
+        dv_name="clone-host-assisted",
         namespace_name=namespace.name,
         source_dv=fedora_source_dv_for_clone,
         client=unprivileged_client,
