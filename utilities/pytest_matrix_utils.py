@@ -75,6 +75,15 @@ def immediate_matrix(matrix):
     return matrix_to_return
 
 
+def snapshot_import_cron_format_matrix(matrix):
+    matrix_to_return = []
+    for storage_class in matrix:
+        storage_class_name = [*storage_class][0]
+        if storage_class[storage_class_name].get("data_import_cron_source_format") == "snapshot":
+            matrix_to_return.append(storage_class)
+    return matrix_to_return
+
+
 def rwx_matrix(matrix: list[dict[str, dict[str, str]]]) -> list[dict[str, dict[str, str]]]:
     """Filter storage classes with ReadWriteMany access mode.
 
