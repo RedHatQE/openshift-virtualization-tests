@@ -2433,7 +2433,7 @@ def snapshot_storage_class_name_scope_module(
 def snapshot_import_cron_format_storage_class_name_scope_module(
     storage_class_matrix_snapshot_import_cron_format_matrix__module__,
 ):
-    return [*storage_class_matrix_snapshot_import_cron_format_matrix__module__][0]
+    return next(iter(storage_class_matrix_snapshot_import_cron_format_matrix__module__))
 
 
 @pytest.fixture(scope="class")
