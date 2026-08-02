@@ -1,10 +1,5 @@
 import pytest
-from ocp_resources.cluster_role import ClusterRole
-from ocp_resources.data_source import DataSource
-from ocp_resources.datavolume import DataVolume
-from ocp_resources.namespace import Namespace
 from ocp_resources.resource import Resource
-from ocp_resources.role_binding import RoleBinding
 from ocp_resources.validating_admission_policy import ValidatingAdmissionPolicy
 from ocp_resources.validating_admission_policy_binding import ValidatingAdmissionPolicyBinding
 from ocp_resources.virtual_machine_cluster_instancetype import (
@@ -13,28 +8,14 @@ from ocp_resources.virtual_machine_cluster_instancetype import (
 from ocp_resources.virtual_machine_cluster_preference import (
     VirtualMachineClusterPreference,
 )
-from pytest_testconfig import config as py_config
 
 from tests.infrastructure.instance_types.constants import WINDOWS_DEDICATED_CPU_MESSAGE, WINDOWS_VCPU_OVERCOMMIT_STR
-from utilities.artifactory import (
-    cleanup_artifactory_secret_and_config_map,
-    get_artifactory_config_map,
-    get_artifactory_secret,
-    get_test_artifact_server_url,
-)
-from utilities.constants import Images
 from utilities.constants.images import (
     OS_FLAVOR_RHEL,
     OS_FLAVOR_WIN_CONTAINER_DISK,
 )
-from utilities.constants.os_matrix import CONTAINER_DISK_IMAGE_PATH_STR
-from utilities.constants.timeouts import TIMEOUT_15MIN
 from utilities.storage import (
-    construct_datavolume_source_dict,
-    create_dummy_first_consumer_pod,
     data_volume_template_with_source_ref_dict,
-    generate_data_source_dict,
-    sc_volume_binding_mode_is_wffc,
 )
 from utilities.virt import VirtualMachineForTests
 
