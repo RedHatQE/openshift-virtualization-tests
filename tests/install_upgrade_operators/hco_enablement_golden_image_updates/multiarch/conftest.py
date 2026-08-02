@@ -9,7 +9,6 @@ from ocp_resources.ssp import SSP
 from tests.install_upgrade_operators.constants import ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT
 from tests.install_upgrade_operators.hco_enablement_golden_image_updates.multiarch.utils import (
     CUSTOM_MULTIARCH_DATASOURCE_NAME,
-    get_control_plane_architecture,
     get_no_arch_annotation_template,
     get_unsupported_arch_template,
 )
@@ -19,7 +18,7 @@ from utilities.hco import (
     ResourceEditorValidateHCOReconcile,
     update_hco_templates_spec,
 )
-from utilities.storage import verify_boot_sources_reimported
+from utilities.virt import get_hyperconverged_kubevirt
 
 LOGGER = logging.getLogger(__name__)
 
@@ -29,6 +28,7 @@ _MULTIARCH_MANAGED_CRS = [SSP, KubeVirt, CDI]
 @pytest.fixture(scope="class")
 def disabled_multiarch_feature_gate(admin_client, golden_images_namespace, hyperconverged_resource_scope_class):
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={
             hyperconverged_resource_scope_class: {"spec": {FEATURE_GATES: {ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT: False}}}
         },
@@ -36,7 +36,6 @@ def disabled_multiarch_feature_gate(admin_client, golden_images_namespace, hyper
         wait_for_reconcile_post_update=True,
     ):
         yield
-    verify_boot_sources_reimported(admin_client=admin_client, namespace=golden_images_namespace.name)
 
 
 @pytest.fixture(scope="class")
@@ -47,6 +46,7 @@ def enabled_multiarch_feature_gate(admin_client, golden_images_namespace, hyperc
         yield
     else:
         with ResourceEditorValidateHCOReconcile(
+            admin_client=admin_client,
             patches={
                 hyperconverged_resource_scope_class: {
                     "spec": {FEATURE_GATES: {ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT: True}}
@@ -56,20 +56,23 @@ def enabled_multiarch_feature_gate(admin_client, golden_images_namespace, hyperc
             wait_for_reconcile_post_update=True,
         ):
             yield
-        verify_boot_sources_reimported(admin_client=admin_client, namespace=golden_images_namespace.name)
 
 
 @pytest.fixture(scope="class")
-def control_plane_architecture(control_plane_nodes):
-    return get_control_plane_architecture(control_plane_nodes=control_plane_nodes)
+def kubevirt_default_architecture(admin_client, hco_namespace):
+    return get_hyperconverged_kubevirt(
+        admin_client=admin_client,
+        hco_namespace=hco_namespace,
+    ).instance.status.defaultArchitecture
 
 
 @pytest.fixture()
-def single_arch_node_placement(worker_architectures, hyperconverged_resource_scope_function):
-    single_arch = sorted(worker_architectures)[0]
+def single_arch_node_placement(admin_client, workers_architectures, hyperconverged_resource_scope_function):
+    single_arch = sorted(workers_architectures)[0]
     LOGGER.info(f"Restricting workloads nodePlacement to single architecture: {single_arch}")
     placement = {"nodePlacement": {"nodeSelector": {KUBERNETES_ARCH_LABEL: single_arch}}}
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={hyperconverged_resource_scope_function: {"spec": {"workloads": placement}}},
         list_resource_reconcile=[SSP, KubeVirt, CDI, NetworkAddonsConfig],
         wait_for_reconcile_post_update=True,

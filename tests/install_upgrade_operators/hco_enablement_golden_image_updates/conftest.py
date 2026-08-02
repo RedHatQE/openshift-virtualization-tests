@@ -124,21 +124,22 @@ def common_templates_scope_session(hyperconverged_status_scope_session):
 
 
 @pytest.fixture(scope="session")
-def worker_architectures(schedulable_nodes):
-    return {node.labels[KUBERNETES_ARCH_LABEL] for node in schedulable_nodes}
+def workers_architectures(workers):
+    return {worker.labels[KUBERNETES_ARCH_LABEL] for worker in workers}
 
 
 @pytest.fixture(scope="class")
-def default_common_template_hco_status(hyperconverged_status_templates_scope_class):
-    return get_templates_by_type_from_hco_status(
+def base_common_templates_related_resources(hyperconverged_status_templates_scope_class):
+    templates = get_templates_by_type_from_hco_status(
         hco_status_templates=hyperconverged_status_templates_scope_class, template_type=COMMON_TEMPLATE
     )
+    return get_templates_resources_names_dict(templates=templates)
 
 
 @pytest.fixture(scope="class")
-def default_common_templates_related_resources(
-    worker_architectures,
-    default_common_template_hco_status,
+def expected_common_templates_related_resources(
+    workers_architectures,
+    base_common_templates_related_resources,
     hyperconverged_resource_scope_class,
 ):
     """Return expected golden image resource names for the current cluster state.
@@ -149,25 +150,24 @@ def default_common_templates_related_resources(
         - ImageStreams: always base names
     When disabled: all base names.
     """
-    base_resources = get_templates_resources_names_dict(templates=default_common_template_hco_status)
-
     feature_gate_enabled = hyperconverged_resource_scope_class.instance.spec.get(FEATURE_GATES, {}).get(
         ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT, False
     )
 
     if not feature_gate_enabled:
-        return base_resources
+        return base_common_templates_related_resources
 
-    result = {}
-    for kind, base_names in base_resources.items():
-        arch_names = {f"{name}-{arch}" for name in base_names for arch in worker_architectures}
+    expected_resources = {}
+    for kind, base_names in base_common_templates_related_resources.items():
+        arch_names = {f"{name}-{arch}" for name in base_names for arch in workers_architectures}
+        # only DataImportCrons are replaced, DataSources are kept as pointers
         if kind == DataImportCron.kind:
-            result[kind] = arch_names
+            expected_resources[kind] = arch_names
         elif kind == DataSource.kind:
-            result[kind] = base_names | arch_names
+            expected_resources[kind] = base_names | arch_names
         else:
-            result[kind] = base_names
-    return result
+            expected_resources[kind] = base_names
+    return expected_resources
 
 
 @pytest.fixture()

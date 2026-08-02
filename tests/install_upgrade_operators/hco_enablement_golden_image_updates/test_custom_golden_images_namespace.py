@@ -9,11 +9,13 @@ from ocp_resources.image_stream import ImageStream
 from ocp_resources.resource import Resource
 from ocp_resources.ssp import SSP
 from ocp_resources.volume_snapshot import VolumeSnapshot
+from pytest_testconfig import config as py_config
 
 from tests.install_upgrade_operators.hco_enablement_golden_image_updates.utils import (
     verify_resource_in_ns,
     verify_resource_not_in_ns,
 )
+from utilities.constants.architecture import MULTIARCH
 from utilities.constants.pytest import QUARANTINED
 from utilities.constants.timeouts import TIMEOUT_3MIN, TIMEOUT_10MIN
 from utilities.hco import (
@@ -101,7 +103,7 @@ class TestDefaultCommonTemplates:
     @pytest.mark.parametrize(
         "common_templates",
         [
-            pytest.param("default_common_template_hco_status", marks=pytest.mark.polarion("CNV-11473")),
+            pytest.param("hyperconverged_status_templates_scope_function", marks=pytest.mark.polarion("CNV-11473")),
             pytest.param("ssp_spec_templates_scope_function", marks=pytest.mark.polarion("CNV-11677")),
         ],
     )
@@ -127,8 +129,9 @@ class TestDefaultCommonTemplates:
                 marks=(
                     pytest.mark.polarion("CNV-11476"),
                     pytest.mark.xfail(
+                        condition=py_config["cluster_type"] == MULTIARCH,
                         reason=f"{QUARANTINED}: Base-name pointer DataSources not created in custom namespace "
-                        f"on multiarch clusters; tracked in CNV-86247",
+                        f"on multiarch clusters; tracked in CNV-94361",
                         run=False,
                     ),
                 ),
@@ -139,12 +142,12 @@ class TestDefaultCommonTemplates:
         self,
         admin_client,
         custom_golden_images_namespace,
-        default_common_templates_related_resources,
+        expected_common_templates_related_resources,
         resource_type,
         ready_condition,
     ):
         verify_resource_in_ns(
-            expected_resource_names=default_common_templates_related_resources[resource_type.kind],
+            expected_resource_names=expected_common_templates_related_resources[resource_type.kind],
             namespace=custom_golden_images_namespace.name,
             client=admin_client,
             resource_type=resource_type,

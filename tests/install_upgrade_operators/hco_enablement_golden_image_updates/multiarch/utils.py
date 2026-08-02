@@ -1,10 +1,5 @@
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any
-
-from utilities.constants.cluster import KUBERNETES_ARCH_LABEL
-
-if TYPE_CHECKING:
-    from ocp_resources.node import Node
+from typing import Any
 
 KUBEVIRT_HCO_MULTI_ARCH_BOOT_IMAGES_ENABLED = "kubevirt_hco_multi_arch_boot_images_enabled"
 MULTIARCH_DICT_ANNOTATION = "ssp.kubevirt.io/dict.architectures"
@@ -21,20 +16,6 @@ KUBEVIRT_HCO_DATAIMPORTCRONTEMPLATE_WITH_ARCHITECTURE_ANNOTATION_QUERY = (
     "kubevirt_hco_dataimportcrontemplate_with_architecture_annotation"
     "{{data_import_cron_name='{cron_name}', managed_data_source_name='{ds_name}'}}"
 )
-
-
-def get_control_plane_architecture(control_plane_nodes: list[Node]) -> str:
-    """Return the architecture of the first control plane node.
-
-    Assumes all control plane nodes share the same architecture.
-
-    Args:
-        control_plane_nodes: List of control plane Node objects.
-
-    Returns:
-        str: Architecture label value (e.g. "amd64", "arm64").
-    """
-    return control_plane_nodes[0].labels[KUBERNETES_ARCH_LABEL]
 
 
 def get_modified_data_import_cron_template(

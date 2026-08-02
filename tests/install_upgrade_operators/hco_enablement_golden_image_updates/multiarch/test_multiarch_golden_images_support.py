@@ -49,7 +49,7 @@ class TestDisabledMultiarchGoldenImagesSupport:
         self,
         admin_client,
         golden_images_namespace,
-        worker_architectures,
+        base_common_templates_related_resources,
         subtests,
     ):
         """
@@ -58,25 +58,25 @@ class TestDisabledMultiarchGoldenImagesSupport:
 
         Steps:
             1. List DataImportCrons and DataSources in the golden images namespace.
-            2. Verify no resources have architecture suffix.
+            2. Verify no architecture-specific resources exist.
 
         Expected:
-            - No DataImportCron or DataSource resources exist with architecture suffix.
+            - No architecture-specific DataImportCron or DataSource resources exist.
         """
         for resource_type in (DataImportCron, DataSource):
-            if resource_type is DataSource and is_jira_open("CNV-68996"):
-                LOGGER.warning("CNV-68996: arch-specific DataSources not cleaned up after disabling multiarch")
+            if resource_type is DataSource and is_jira_open("CNV-94361"):
+                LOGGER.warning("CNV-94361: arch-specific DataSources not cleaned up after disabling multiarch")
                 continue
+            base_names = base_common_templates_related_resources[resource_type.kind]
             with subtests.test(msg=resource_type.kind):
-                resources = list(resource_type.get(client=admin_client, namespace=golden_images_namespace.name))
-                arch_specific = [
+                arch_specific_resources = [
                     resource.name
-                    for resource in resources
-                    if any(resource.name.endswith(f"-{arch}") for arch in worker_architectures)
+                    for resource in resource_type.get(client=admin_client, namespace=golden_images_namespace.name)
+                    if any(resource.name.startswith(f"{base_name}-") for base_name in base_names)
                 ]
-                assert not arch_specific, (
+                assert not arch_specific_resources, (
                     f"Architecture-specific {resource_type.kind} resources found when multiarch is disabled: "
-                    f"{arch_specific}"
+                    f"{arch_specific_resources}"
                 )
 
     @pytest.mark.polarion("CNV-15978")
@@ -84,7 +84,8 @@ class TestDisabledMultiarchGoldenImagesSupport:
         self,
         admin_client,
         golden_images_namespace,
-        default_common_templates_related_resources,
+        expected_common_templates_related_resources,
+        subtests,
     ):
         """
         Test that architecture-agnostic (pointer) DataSources remain available after
@@ -98,22 +99,23 @@ class TestDisabledMultiarchGoldenImagesSupport:
             - Architecture-agnostic DataSources reference a pvc/snapshot source.
         """
         verify_resource_in_ns(
-            expected_resource_names=default_common_templates_related_resources[DataSource.kind],
+            expected_resource_names=expected_common_templates_related_resources[DataSource.kind],
             namespace=golden_images_namespace.name,
             client=admin_client,
             resource_type=DataSource,
             ready_condition=DataSource.Condition.READY,
         )
-        for ds_name in default_common_templates_related_resources[DataSource.kind]:
-            data_source = DataSource(
-                name=ds_name,
-                namespace=golden_images_namespace.name,
-                client=admin_client,
-            )
-            source = data_source.instance.spec.source
-            assert source.get("pvc") or source.get("snapshot"), (
-                f"DataSource {ds_name} does not reference a pvc/snapshot source: {source}"
-            )
+        for ds_name in expected_common_templates_related_resources[DataSource.kind]:
+            with subtests.test(msg=ds_name):
+                data_source = DataSource(
+                    name=ds_name,
+                    namespace=golden_images_namespace.name,
+                    client=admin_client,
+                )
+                source = data_source.instance.spec.source
+                assert source.get("pvc") or source.get("snapshot"), (
+                    f"DataSource {ds_name} does not reference a pvc/snapshot source: {source}"
+                )
 
     @pytest.mark.polarion("CNV-15979")
     def test_kubevirt_hco_multi_arch_boot_images_enabled_metric(self, prometheus):
@@ -180,7 +182,7 @@ class TestEnabledMultiarchGoldenImagesSupport:
         self,
         admin_client,
         golden_images_namespace,
-        default_common_templates_related_resources,
+        expected_common_templates_related_resources,
         resource_type,
         expected_condition,
     ):
@@ -202,7 +204,7 @@ class TestEnabledMultiarchGoldenImagesSupport:
               architecture matching the workers architectures and in expected condition.
         """
         verify_resource_in_ns(
-            expected_resource_names=default_common_templates_related_resources[resource_type.kind],
+            expected_resource_names=expected_common_templates_related_resources[resource_type.kind],
             namespace=golden_images_namespace.name,
             client=admin_client,
             resource_type=resource_type,
@@ -214,8 +216,9 @@ class TestEnabledMultiarchGoldenImagesSupport:
         self,
         admin_client,
         golden_images_namespace,
-        default_common_template_hco_status,
-        control_plane_architecture,
+        base_common_templates_related_resources,
+        kubevirt_default_architecture,
+        subtests,
     ):
         """
         Test that architecture-agnostic (pointer) DataSources are referencing
@@ -223,32 +226,25 @@ class TestEnabledMultiarchGoldenImagesSupport:
 
         Steps:
             1. Get architecture-agnostic DataSources from golden images namespace.
-            2. Get control-plane architecture.
+            2. Get Kubevirt default architecture.
 
         Expected:
-            - DataSources in ready condition and referencing the control-plane
+            - DataSources in ready condition and referencing the Kubevirt default
               architecture-specific DataSource.
         """
-        base_ds_names = {template["spec"]["managedDataSource"] for template in default_common_template_hco_status}
-        verify_resource_in_ns(
-            expected_resource_names=base_ds_names,
-            namespace=golden_images_namespace.name,
-            client=admin_client,
-            resource_type=DataSource,
-            ready_condition=DataSource.Condition.READY,
-        )
-        for ds_name in base_ds_names:
-            data_source = DataSource(
-                name=ds_name,
-                namespace=golden_images_namespace.name,
-                client=admin_client,
-            )
-            expected_arch_ds_prefix = f"{ds_name}-{control_plane_architecture}"
-            assert data_source.source.name.startswith(expected_arch_ds_prefix), (
-                f"DataSource {ds_name} does not reference a control-plane "
-                f"architecture-specific DataSource (expected prefix: {expected_arch_ds_prefix}). "
-                f"Actual source: {data_source.source.name}"
-            )
+        for ds_name in base_common_templates_related_resources[DataSource.kind]:
+            with subtests.test(msg=ds_name):
+                data_source = DataSource(
+                    name=ds_name,
+                    namespace=golden_images_namespace.name,
+                    client=admin_client,
+                )
+                expected_arch_ds_prefix = f"{ds_name}-{kubevirt_default_architecture}"
+                assert data_source.source.name.startswith(expected_arch_ds_prefix), (
+                    f"DataSource {ds_name} does not reference a Kubevirt default "
+                    f"architecture-specific DataSource (expected prefix: {expected_arch_ds_prefix}). "
+                    f"Actual source: {data_source.source.name}"
+                )
 
 
 @pytest.mark.usefixtures("enabled_multiarch_feature_gate")

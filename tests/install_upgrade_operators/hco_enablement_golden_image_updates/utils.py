@@ -120,9 +120,9 @@ def get_data_import_crons_by_prefix(
         ResourceNotFoundError: If no matching DataImportCrons are found.
     """
     matching = [
-        dic
-        for dic in DataImportCron.get(client=admin_client, namespace=namespace)
-        if dic.name == cron_prefix or dic.name.startswith(f"{cron_prefix}-")
+        data_import_cron
+        for data_import_cron in DataImportCron.get(client=admin_client, namespace=namespace)
+        if data_import_cron.name == cron_prefix or data_import_cron.name.startswith(f"{cron_prefix}-")
     ]
     if not matching:
         raise ResourceNotFoundError(f"No DataImportCron with prefix '{cron_prefix}' found in namespace: {namespace}")
