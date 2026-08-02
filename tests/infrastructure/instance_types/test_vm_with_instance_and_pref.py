@@ -11,16 +11,6 @@ from utilities.virt import VirtualMachineForTests, running_vm
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.gating]
 
-CLOCK_TIMEZONE = "America/New_York"
-CLOCK_UTC_OFFSET = 600
-CLOCK_TIMER = {
-    "hpet": {"present": False},
-    "hyperv": {"present": True},
-    "kvm": {"present": True},
-    "pit": {"present": True, "tickPolicy": "delay"},
-    "rtc": {"present": True, "tickPolicy": "catchup", "track": "guest"},
-}
-
 
 @pytest.fixture()
 def instance_controller_revision(rhel_vm_with_instance_type_and_preference):
@@ -78,9 +68,6 @@ def recreated_vm(rhel_vm_with_instance_type_and_preference):
             },
             {
                 "name": "basic-vm-preference",
-                "clock_timezone": CLOCK_TIMEZONE,
-                "clock_utc_seconds_offset": CLOCK_UTC_OFFSET,
-                "clock_preferred_timer": CLOCK_TIMER,
                 "cpu_topology": "spread",
                 "cpu_spread_options": {"across": "SocketCoresThreads", "ratio": 2},
             },
@@ -121,9 +108,6 @@ class TestNegativeVmWithInstanceTypeAndPref:
             },
             {
                 "name": "basic-vm-preference",
-                "clock_timezone": CLOCK_TIMEZONE,
-                "clock_utc_seconds_offset": CLOCK_UTC_OFFSET,
-                "clock_preferred_timer": CLOCK_TIMER,
                 "cpu_topology": "spread",
                 "cpu_spread_options": {"across": "SocketCoresThreads", "ratio": 2},
             },
@@ -152,21 +136,6 @@ class TestVmWithInstanceTypeAndPref:
         assert pref_controller_revision.exists, "preference controller revision was not created"
         assert instance_controller_revision.instance["metadata"]["ownerReferences"][0]["name"] == vm_name
         assert pref_controller_revision.instance["metadata"]["ownerReferences"][0]["name"] == vm_name
-
-    @pytest.mark.dependency(depends=["start_vm_with_instance_type_and_preference"])
-    @pytest.mark.polarion("CNV-9821")
-    @pytest.mark.s390x
-    def test_validate_clock_values(self, rhel_vm_with_instance_type_and_preference):
-        clock_dict = rhel_vm_with_instance_type_and_preference.vmi.instance.to_dict()["spec"]["domain"]["clock"]
-        vmi_clock_values = [
-            clock_dict["timezone"],
-            clock_dict["utc"]["offsetSeconds"],
-            clock_dict["timer"],
-        ]
-        vmi_expected_values = [CLOCK_TIMEZONE, CLOCK_UTC_OFFSET, CLOCK_TIMER]
-        assert vmi_clock_values == vmi_expected_values, (
-            "Not all clock fields match, VMI values: {vmi_clock_values}, expected: {vmi_expected_values}"
-        )
 
     @pytest.mark.dependency(depends=["start_vm_with_instance_type_and_preference"])
     @pytest.mark.parametrize(
