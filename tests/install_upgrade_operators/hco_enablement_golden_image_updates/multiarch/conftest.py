@@ -42,7 +42,7 @@ def disabled_multiarch_feature_gate(admin_client, golden_images_namespace, hyper
 def enabled_multiarch_feature_gate(admin_client, golden_images_namespace, hyperconverged_resource_scope_class):
     feature_gates = hyperconverged_resource_scope_class.instance.spec.get(FEATURE_GATES, {})
     if feature_gates.get(ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT):
-        LOGGER.warning("Multiarch feature gate is already enabled")
+        LOGGER.info("Multiarch feature gate is already enabled")
         yield
     else:
         with ResourceEditorValidateHCOReconcile(

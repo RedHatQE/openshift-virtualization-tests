@@ -201,7 +201,7 @@ class TestEnabledMultiarchGoldenImagesSupport:
 
         Expected:
             - Architecture-specific golden image resources exist for each supported
-              architecture matching the workers architectures and in expected condition.
+              architecture matching the workers architectures and in ready condition.
         """
         verify_resource_in_ns(
             expected_resource_names=expected_common_templates_related_resources[resource_type.kind],
@@ -229,8 +229,7 @@ class TestEnabledMultiarchGoldenImagesSupport:
             2. Get Kubevirt default architecture.
 
         Expected:
-            - DataSources in ready condition and referencing the Kubevirt default
-              architecture-specific DataSource.
+            - DataSource is referencing architecture-specific DataSource matching the Kubevirt default architecture.
         """
         for ds_name in base_common_templates_related_resources[DataSource.kind]:
             with subtests.test(msg=ds_name):
