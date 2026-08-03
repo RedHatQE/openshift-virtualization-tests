@@ -103,7 +103,7 @@ class TestDefaultCommonTemplates:
     @pytest.mark.parametrize(
         "common_templates",
         [
-            pytest.param("hyperconverged_status_templates_scope_function", marks=pytest.mark.polarion("CNV-11473")),
+            pytest.param("common_templates_from_hco_status_scope_class", marks=pytest.mark.polarion("CNV-11473")),
             pytest.param("ssp_spec_templates_scope_function", marks=pytest.mark.polarion("CNV-11677")),
         ],
     )

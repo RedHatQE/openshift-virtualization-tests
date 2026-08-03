@@ -154,6 +154,16 @@ def get_templates_resources_names_dict(templates: list[dict[str, Any]]) -> dict[
 
 
 def verify_resource_not_in_ns(resource_type: type[Resource], namespace: str, client: DynamicClient) -> None:
+    """Assert that no resources of the given type exist in the namespace.
+
+    Args:
+        resource_type: OCP resource class to query.
+        namespace: Namespace to check.
+        client: OpenShift client.
+
+    Raises:
+        AssertionError: If any resources of the given type exist.
+    """
     resources = resource_type.get(client=client, namespace=namespace)
     resources_names = {resource.name for resource in resources}
     assert not resources_names, f"{resource_type.kind} resources shouldn't exist in {namespace}: {resources_names}"
@@ -166,7 +176,20 @@ def verify_resource_in_ns(
     resource_type: type[Resource],
     ready_condition: str | None = None,
 ) -> None:
-    """Verify that resources exist in namespace and optionally in ready condition."""
+    """Assert that expected resources exist in the namespace and optionally wait for readiness.
+
+    Args:
+        expected_resource_names: Set of resource names that must be present.
+        namespace: Namespace to check.
+        client: OpenShift client.
+        resource_type: OCP resource class to query.
+        ready_condition: If provided, waits up to 10 minutes for each expected
+            resource to reach this condition with status True.
+
+    Raises:
+        AssertionError: If any expected resources are missing.
+        TimeoutExpiredError: If a resource does not reach the ready condition in time.
+    """
     resources = list(resource_type.get(client=client, namespace=namespace))
     resources_names = {resource.name for resource in resources}
     missing_resources_names = expected_resource_names - resources_names

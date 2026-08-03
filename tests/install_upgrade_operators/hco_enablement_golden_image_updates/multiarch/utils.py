@@ -1,5 +1,10 @@
+from __future__ import annotations
+
 from copy import deepcopy
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Any
 
 KUBEVIRT_HCO_MULTI_ARCH_BOOT_IMAGES_ENABLED = "kubevirt_hco_multi_arch_boot_images_enabled"
 MULTIARCH_DICT_ANNOTATION = "ssp.kubevirt.io/dict.architectures"

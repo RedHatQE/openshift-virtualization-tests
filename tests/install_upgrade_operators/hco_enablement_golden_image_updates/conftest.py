@@ -129,11 +129,15 @@ def workers_architectures(workers):
 
 
 @pytest.fixture(scope="class")
-def base_common_templates_related_resources(hyperconverged_status_templates_scope_class):
-    templates = get_templates_by_type_from_hco_status(
+def common_templates_from_hco_status_scope_class(hyperconverged_status_templates_scope_class):
+    return get_templates_by_type_from_hco_status(
         hco_status_templates=hyperconverged_status_templates_scope_class, template_type=COMMON_TEMPLATE
     )
-    return get_templates_resources_names_dict(templates=templates)
+
+
+@pytest.fixture(scope="class")
+def base_common_templates_related_resources(common_templates_from_hco_status_scope_class):
+    return get_templates_resources_names_dict(templates=common_templates_from_hco_status_scope_class)
 
 
 @pytest.fixture(scope="class")
