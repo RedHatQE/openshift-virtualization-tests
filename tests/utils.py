@@ -715,6 +715,7 @@ def create_windows2022_vm_using_existing_dv(
     vm_name: str,
     cpu_model: str | None = None,
     existing_data_volume: DataVolume | None = None,
+    check_running_vm: bool = True,
 ) -> Generator[VirtualMachineForTests]:
     """
     Creates a Windows Server 2022 VM with vTPM using existing DataVolume.
@@ -725,9 +726,10 @@ def create_windows2022_vm_using_existing_dv(
         client: Kubernetes client
         vm_name: Name for the VirtualMachine
         cpu_model: CPU model specification (can be None)
+        check_running_vm: If True, start the VM and wait for Windows boot
 
     Yields:
-        VirtualMachineForTests: Running Windows 2022 VM with vTPM
+        VirtualMachineForTests: Windows 2022 VM with vTPM
     """
 
     with VirtualMachineForTests(
@@ -740,8 +742,9 @@ def create_windows2022_vm_using_existing_dv(
         data_volume=existing_data_volume,
         cpu_model=cpu_model,
     ) as vm:
-        running_vm(vm=vm)
-        wait_for_windows_vm(vm=vm, version="2022")
+        if check_running_vm:
+            running_vm(vm=vm)
+            wait_for_windows_vm(vm=vm, version="2022")
         yield vm
 
 
@@ -752,6 +755,7 @@ def create_windows2022_vm_with_data_volume_template(
     vm_name: str,
     cpu_model: str | None = None,
     dv_template: dict | None = None,
+    check_running_vm: bool = True,
 ) -> Generator[VirtualMachineForTests]:
     """
     Creates a Windows Server 2022 VM with vTPM with dv template.
@@ -762,9 +766,10 @@ def create_windows2022_vm_with_data_volume_template(
         client: Kubernetes client
         vm_name: Name for the VirtualMachine
         cpu_model: CPU model specification (can be None)
+        check_running_vm: If True, start the VM and wait for Windows boot
 
     Yields:
-        VirtualMachineForTests: Running Windows 2022 VM with vTPM
+        VirtualMachineForTests: Windows 2022 VM with vTPM
     """
 
     with VirtualMachineForTests(
@@ -777,6 +782,7 @@ def create_windows2022_vm_with_data_volume_template(
         data_volume_template=dv_template,
         cpu_model=cpu_model,
     ) as vm:
-        running_vm(vm=vm)
-        wait_for_windows_vm(vm=vm, version="2022")
+        if check_running_vm:
+            running_vm(vm=vm)
+            wait_for_windows_vm(vm=vm, version="2022")
         yield vm
