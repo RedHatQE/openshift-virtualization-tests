@@ -3,6 +3,16 @@ revision = 3
 requires-python = ">=3.14"
 
 [[package]]
+name = "ai-cli-runner"
+version = "0.5.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "python-simple-logger" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d0/84/e26cac819bd930f785d66bc61ae40025399bbbd45c78448c8985431d8f09/ai_cli_runner-0.5.0.tar.gz", hash = "sha256:cb41eaa9fdf729fe33751d716b9e7b4571b348e70970f6230f5e38050ccf469c", size = 50626, upload-time = "2026-05-15T11:10:12.934Z" }
+
+[[package]]
 name = "aiofile"
 version = "3.11.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1249,6 +1259,17 @@ wheels = [
 ]
 
 [[package]]
+name = "myk-pi-tools"
+version = "4.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "ai-cli-runner" },
+    { name = "beautifulsoup4" },
+    { name = "click" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/69/fb/a74d8d4258fb32169c0e4db8f6739a8746ab84bb3ab1ac526e3c397c996a/myk_pi_tools-4.2.0.tar.gz", hash = "sha256:71b642c044929fb58c324a60b8f1f7ea459f4301851f0712fe751766da39158f", size = 919378, upload-time = "2026-07-30T11:17:35.323Z" }
+
+[[package]]
 name = "netaddr"
 version = "1.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1353,6 +1374,7 @@ dependencies = [
     { name = "jira" },
     { name = "jsons" },
     { name = "kubernetes" },
+    { name = "myk-pi-tools" },
     { name = "netaddr" },
     { name = "openshift-python-utilities" },
     { name = "openshift-python-wrapper" },
@@ -1419,6 +1441,7 @@ requires-dist = [
     { name = "jira", specifier = ">=3.8.0" },
     { name = "jsons", specifier = ">=1.6.3" },
     { name = "kubernetes", specifier = ">=34.1.0" },
+    { name = "myk-pi-tools" },
     { name = "netaddr", specifier = ">=1.3.0" },
     { name = "openshift-python-utilities", specifier = ">=6.0.0" },
     { name = "openshift-python-wrapper", specifier = ">=11.0.132" },

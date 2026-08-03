@@ -120,6 +120,7 @@ dependencies = [
   "pytest-html>=4.1.1",
   "openshift-python-wrapper>=11.0.132",
   "cachetools>=6.2.2",
+  "myk-pi-tools",
   "dacite>=1.9.2",
   "python-dotenv>=1.2.1",
   "pytest-jira>=0.3.22",
@@ -140,6 +141,7 @@ utilities-test = [
 quarantine-dashboard = "scripts.quarantine_stats.generate_dashboard:main"
 pytest-marker-analyzer = "scripts.tests_analyzer.pytest_marker_analyzer:main"
 compare-coderabbit-decisions = "scripts.tests_analyzer.compare_coderabbit_decisions:main"
+coderabbit-rate-limit = "scripts.coderabbit_rate_limit.coderabbit_rate_limit:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["libs", "scripts", "tests", "utilities"]
