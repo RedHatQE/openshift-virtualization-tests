@@ -432,6 +432,7 @@ class TestConcurrentBackups:
 
 
 @pytest.mark.tier3
+@pytest.mark.windows
 class TestWindowsVMFullBackup:
     """
     Full backup and restore validation for Windows VMs.
@@ -483,6 +484,7 @@ class TestWindowsVMFullBackup:
 
 
 @pytest.mark.tier3
+@pytest.mark.windows
 class TestWindowsVMIncrementalBackup:
     """
     Incremental backup and restore validation for Windows VMs.

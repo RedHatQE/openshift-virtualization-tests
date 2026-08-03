@@ -16,8 +16,9 @@ CPU_SOCKET_HOTPLUG = 3
 
 
 @pytest.fixture()
-def resource_quota_for_auto_resource_limits_test(request, namespace):
+def resource_quota_for_auto_resource_limits_test(request, admin_client, namespace):
     with ResourceQuota(
+        client=admin_client,
         name="resource-quota-for-auto-resource-limits-test",
         namespace=namespace.name,
         hard=request.param,

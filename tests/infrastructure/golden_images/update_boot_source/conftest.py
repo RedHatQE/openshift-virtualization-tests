@@ -40,6 +40,11 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture()
+def data_source_by_name_scope_function(request, admin_client, golden_images_namespace):
+    return DataSource(client=admin_client, name=request.param, namespace=golden_images_namespace.name)
+
+
+@pytest.fixture()
 def enabled_common_boot_image_import_feature_gate_scope_function(
     admin_client,
     hyperconverged_resource_scope_function,
@@ -66,13 +71,16 @@ def enabled_common_boot_image_import_feature_gate_scope_class(
 
 
 @pytest.fixture()
-def updated_hco_with_custom_data_import_cron_scope_function(request, hyperconverged_resource_scope_function):
+def updated_hco_with_custom_data_import_cron_scope_function(
+    request, admin_client, hyperconverged_resource_scope_function
+):
     data_import_cron_dict = generate_data_import_cron_dict(
         name=request.param["data_import_cron_name"],
         source_url=request.param["data_import_cron_source_url"],
         managed_data_source_name=request.param["managed_data_source_name"],
     )
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={
             hyperconverged_resource_scope_function: {"spec": {"dataImportCronTemplates": [data_import_cron_dict]}}
         },

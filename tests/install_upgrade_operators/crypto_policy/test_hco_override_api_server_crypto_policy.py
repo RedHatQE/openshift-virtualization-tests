@@ -22,8 +22,9 @@ pytestmark = pytest.mark.tier3
 
 
 @pytest.fixture()
-def updated_hco_tls_custom_policy(hyperconverged_resource_scope_function):
+def updated_hco_tls_custom_policy(admin_client, hyperconverged_resource_scope_function):
     with set_hco_crypto_policy(
+        admin_client=admin_client,
         hco_resource=hyperconverged_resource_scope_function,
         tls_spec=TLS_CUSTOM_PROFILE,
     ):

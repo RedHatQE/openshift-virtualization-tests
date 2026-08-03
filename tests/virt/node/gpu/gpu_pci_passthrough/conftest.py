@@ -78,8 +78,9 @@ def fail_if_device_unbound_to_vfiopci_driver(workers_utility_pods, gpu_passthrou
 
 
 @pytest.fixture(scope="class")
-def hco_cr_with_permitted_hostdevices(hyperconverged_resource_scope_class, supported_gpu_device):
+def hco_cr_with_permitted_hostdevices(admin_client, hyperconverged_resource_scope_class, supported_gpu_device):
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={
             hyperconverged_resource_scope_class: {
                 "spec": {

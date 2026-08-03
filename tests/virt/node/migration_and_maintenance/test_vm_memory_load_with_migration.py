@@ -101,6 +101,7 @@ class TestMigrationVMWithMemoryLoad:
         ],
         indirect=True,
     )
+    @pytest.mark.windows
     @pytest.mark.polarion("CNV-9844")
     def test_windows_vm_migrate_with_memory_load(
         self,

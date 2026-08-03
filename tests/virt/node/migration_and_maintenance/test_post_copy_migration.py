@@ -58,8 +58,9 @@ def assert_same_pid_after_migration(orig_pid, vm):
 
 
 @pytest.fixture(scope="module")
-def created_post_copy_migration_policy():
+def created_post_copy_migration_policy(admin_client):
     with MigrationPolicy(
+        client=admin_client,
         name="post-copy-migration-mp",
         allow_auto_converge=True,
         bandwidth_per_migration="100Mi",
@@ -123,7 +124,7 @@ def drained_node_with_hotplugged_vm(admin_client, hco_namespace, compact_cluster
                 "additional_labels": VM_LABEL,
             },
             id="WIN-VM",
-            marks=[pytest.mark.special_infra, pytest.mark.high_resource_vm],
+            marks=[pytest.mark.special_infra, pytest.mark.high_resource_vm, pytest.mark.windows],
         ),
     ],
     indirect=True,

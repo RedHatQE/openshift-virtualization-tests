@@ -93,9 +93,11 @@ def parsed_metrics_command_data(vm):
 
 @pytest.fixture()
 def enabled_feature_gate_for_downward_metrics_scope_function(
+    admin_client,
     hyperconverged_resource_scope_function,
 ):
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={hyperconverged_resource_scope_function: {"spec": {"featureGates": {"downwardMetrics": True}}}},
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,
