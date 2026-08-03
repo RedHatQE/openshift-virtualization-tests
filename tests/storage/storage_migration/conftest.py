@@ -109,6 +109,7 @@ def target_storage_class(request, cluster_storage_classes_names):
 
 @pytest.fixture(scope="class")
 def vm_for_storage_class_migration_with_instance_type(
+    admin_client,
     unprivileged_client,
     namespace,
     golden_images_namespace,
@@ -126,8 +127,8 @@ def vm_for_storage_class_migration_with_instance_type(
         namespace=namespace.name,
         client=unprivileged_client,
         os_flavor=OS_FLAVOR_FEDORA,
-        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL, client=unprivileged_client),
-        vm_preference=VirtualMachineClusterPreference(name=OS_FLAVOR_FEDORA, client=unprivileged_client),
+        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL, client=admin_client),
+        vm_preference=VirtualMachineClusterPreference(name=OS_FLAVOR_FEDORA, client=admin_client),
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=golden_images_fedora_data_source,
             storage_class=source_storage_class,
@@ -299,14 +300,19 @@ def blank_disk_dvs_for_storage_migration(unprivileged_client, namespace, source_
 
 @pytest.fixture(scope="class")
 def fedora_vm_for_hotplug_and_storage_migration(
-    unprivileged_client, namespace, fedora_data_source_scope_module, source_storage_class, cpu_for_migration
+    admin_client,
+    unprivileged_client,
+    namespace,
+    fedora_data_source_scope_module,
+    source_storage_class,
+    cpu_for_migration,
 ):
     with VirtualMachineForTests(
         name="fedora-volume-hotplug-vm",
         namespace=namespace.name,
         client=unprivileged_client,
-        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL, client=unprivileged_client),
-        vm_preference=VirtualMachineClusterPreference(name=OS_FLAVOR_FEDORA, client=unprivileged_client),
+        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL, client=admin_client),
+        vm_preference=VirtualMachineClusterPreference(name=OS_FLAVOR_FEDORA, client=admin_client),
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=fedora_data_source_scope_module,
             storage_class=source_storage_class,
