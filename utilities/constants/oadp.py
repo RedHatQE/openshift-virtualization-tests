@@ -18,5 +18,4 @@ VELERO_BACKUP_HOOK_ANNOTATIONS = (
     "pre.hook.backup.velero.io/timeout",
     "post.hook.backup.velero.io/container",
     "post.hook.backup.velero.io/command",
-    "post.hook.backup.velero.io/timeout",
 )

@@ -29,7 +29,6 @@ class TestVeleroBackupHookOptOut:
     """
 
     @pytest.mark.polarion("CNV-16267")
-    @pytest.mark.s390x
     def test_backup_paused_vm_hooks_disabled(
         self,
         admin_client,
@@ -44,6 +43,7 @@ class TestVeleroBackupHookOptOut:
 
         Steps:
             1. Run Velero backup
+            2. Inspect virt-launcher pod for Velero hook annotations
 
         Expected:
             - No freeze/unfreeze hooks are injected on the virt-launcher pod
@@ -58,7 +58,6 @@ class TestVeleroBackupHookOptOut:
             LOGGER.info(f"Backup {backup.name} completed for paused VM with opt-out annotation")
 
     @pytest.mark.polarion("CNV-16268")
-    @pytest.mark.s390x
     def test_backup_running_vm_hooks_disabled(
         self,
         admin_client,
@@ -73,6 +72,7 @@ class TestVeleroBackupHookOptOut:
 
         Steps:
             1. Run Velero backup
+            2. Inspect virt-launcher pod for Velero hook annotations
 
         Expected:
             - No freeze/unfreeze hooks are injected on the virt-launcher pod
