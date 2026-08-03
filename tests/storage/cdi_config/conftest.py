@@ -17,7 +17,9 @@ def cdi_with_extra_non_existent_feature_gate(admin_client, cdi):
             cdi: {
                 "spec": {
                     "config": {
-                        "featureGates": cdi_feature_gate_list_with_added_feature(feature="ExtraNonExistentFeature")
+                        "featureGates": cdi_feature_gate_list_with_added_feature(
+                            feature="ExtraNonExistentFeature", client=admin_client
+                        )
                     }
                 },
             },

@@ -214,7 +214,7 @@ def upload_proxy_route(admin_client):
 
 
 @pytest.fixture()
-def uploadproxy_route_deleted(hco_namespace):
+def uploadproxy_route_deleted(admin_client, hco_namespace):
     """
     Delete uploadproxy route from kubevirt-hyperconverged namespace.
 
@@ -222,16 +222,16 @@ def uploadproxy_route_deleted(hco_namespace):
     Once the cdi-operator is terminated, route is deleted to perform the test.
     """
     ns = hco_namespace.name
-    deployment = Deployment(name=CDI_OPERATOR, namespace=ns)
+    deployment = Deployment(name=CDI_OPERATOR, namespace=ns, client=admin_client)
     try:
         deployment.scale_replicas(replica_count=0)
         deployment.wait_for_replicas(deployed=False)
-        Route(name=CDI_UPLOADPROXY, namespace=ns).delete(wait=True)
+        Route(name=CDI_UPLOADPROXY, namespace=ns, client=admin_client).delete(wait=True)
         yield
     finally:
         deployment.scale_replicas(replica_count=1)
         deployment.wait_for_replicas()
-        Route(name=CDI_UPLOADPROXY, namespace=ns).wait()
+        Route(name=CDI_UPLOADPROXY, namespace=ns, client=admin_client).wait()
 
 
 @pytest.fixture()

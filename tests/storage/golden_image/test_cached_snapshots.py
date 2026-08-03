@@ -7,6 +7,7 @@ from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.data_import_cron import DataImportCron
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
+from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.volume_snapshot import VolumeSnapshot
 
 from tests.os_params import RHEL_LATEST_LABELS
@@ -37,6 +38,16 @@ def get_rhel9_data_import_cron_template(common_templates):
             del updated_template["status"]
             return updated_template
     pytest.fail(f"{RHEL9_STR} system boot source template should exist on HCO")
+
+
+@pytest.fixture(scope="module")
+def skip_if_no_storage_profile_with_snapshot_import_cron_format(
+    admin_client,
+    snapshot_storage_class_name_scope_module,
+):
+    sc_storage_profile = StorageProfile(name=snapshot_storage_class_name_scope_module, client=admin_client)
+    if sc_storage_profile.instance.status.get("dataImportCronSourceFormat") != "snapshot":
+        pytest.skip(f"Cant create cached snapshot for {snapshot_storage_class_name_scope_module} storageclass")
 
 
 @pytest.fixture(scope="module")
@@ -72,7 +83,9 @@ def updated_templates_rhel9_data_import_cron(
             namespace=golden_images_namespace.name,
             client=admin_client,
         ).clean_up()
-        wait_for_succeeded_dv(namespace=golden_images_namespace.name, dv_name=rhel9_boot_source_name)
+        wait_for_succeeded_dv(
+            namespace=golden_images_namespace.name, dv_name=rhel9_boot_source_name, client=admin_client
+        )
         wait_for_auto_boot_config_stabilization(admin_client=admin_client, hco_namespace=hco_namespace)
 
 
@@ -117,15 +130,18 @@ def rhel9_boot_source_name(rhel9_data_source_scope_session):
 
 @pytest.fixture(scope="module")
 def rhel9_cached_snapshot(
+    admin_client,
     rhel9_boot_source_name,
     golden_images_namespace,
     updated_rhel9_boot_source,
 ):
     # wait for the snapshot to be created
     rhel9_volume_snapshot = wait_for_volume_snapshot_ready_to_use(
-        namespace=golden_images_namespace.name, name=rhel9_boot_source_name
+        namespace=golden_images_namespace.name, name=rhel9_boot_source_name, client=admin_client
     )
-    verify_dv_and_pvc_does_not_exist(name=rhel9_boot_source_name, namespace=golden_images_namespace.name)
+    verify_dv_and_pvc_does_not_exist(
+        name=rhel9_boot_source_name, namespace=golden_images_namespace.name, client=admin_client
+    )
     yield rhel9_volume_snapshot
 
 
