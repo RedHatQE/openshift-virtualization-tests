@@ -14,6 +14,7 @@ import subprocess
 import tempfile
 from bisect import bisect_left
 from collections import defaultdict
+from contextlib import ExitStack
 from datetime import UTC, datetime
 from signal import SIGINT, SIGTERM, getsignal, signal
 
@@ -2487,10 +2488,11 @@ def dvs_for_upgrade(
     updated_default_storage_class_ocs_virt,
     golden_images_namespace,
 ):
-    dvs_list = []
-    with artifactory_credentials(
-        namespace=golden_images_namespace.name, client=golden_images_namespace.client
-    ) as artifactory:
+    with ExitStack() as stack:
+        artifactory = stack.enter_context(
+            artifactory_credentials(namespace=golden_images_namespace.name, client=golden_images_namespace.client)
+        )
+        dvs_list = []
         for sc in py_config["storage_class_matrix"]:
             storage_class = [*sc][0]
             dv = DataVolume(
@@ -2509,14 +2511,12 @@ def dvs_for_upgrade(
                 api_name="storage",
             )
             dv.create()
+            stack.callback(callback=dv.clean_up)
             dvs_list.append(dv)
         for dv in dvs_list:
             dv.wait_for_dv_success()
 
         yield dvs_list
-
-        for dv in dvs_list:
-            dv.clean_up()
 
 
 @pytest.fixture(scope="class")
