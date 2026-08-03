@@ -2511,7 +2511,7 @@ def dvs_for_upgrade(
                 api_name="storage",
             )
             dv.create()
-            stack.callback(callback=dv.clean_up)
+            stack.callback(dv.clean_up)
             dvs_list.append(dv)
         for dv in dvs_list:
             dv.wait_for_dv_success()
