@@ -43,8 +43,11 @@ pytestmark = [
 ]
 
 
-def is_dv_migratable(dv):
-    return StorageProfile(name=dv.storage_class).first_claim_property_set_access_modes()[0] == DataVolume.AccessMode.RWX
+def is_dv_migratable(dv: DataVolume, client: DynamicClient) -> bool:
+    return (
+        StorageProfile(name=dv.storage_class, client=client).first_claim_property_set_access_modes()[0]
+        == DataVolume.AccessMode.RWX
+    )
 
 
 @pytest.fixture(scope="module")
@@ -206,7 +209,7 @@ class TestHotPlugWithPersist:
         blank_disk_dv_multi_storage_scope_class: DataVolume,
         fedora_vm_for_hotplug_scope_class: VirtualMachineForTests,
     ):
-        if is_dv_migratable(dv=blank_disk_dv_multi_storage_scope_class):
+        if is_dv_migratable(dv=blank_disk_dv_multi_storage_scope_class, client=admin_client):
             migrate_vm_and_verify(
                 vm=fedora_vm_for_hotplug_scope_class, client=admin_client, check_ssh_connectivity=True
             )
@@ -247,7 +250,7 @@ class TestHotPlugWithSerialPersist:
         blank_disk_dv_multi_storage_scope_class: DataVolume,
         fedora_vm_for_hotplug_scope_class: VirtualMachineForTests,
     ):
-        if is_dv_migratable(dv=blank_disk_dv_multi_storage_scope_class):
+        if is_dv_migratable(dv=blank_disk_dv_multi_storage_scope_class, client=admin_client):
             migrate_vm_and_verify(
                 vm=fedora_vm_for_hotplug_scope_class, client=admin_client, check_ssh_connectivity=True
             )
@@ -292,7 +295,7 @@ class TestHotPlugWindows:
         blank_disk_dv_multi_storage_scope_class: DataVolume,
         vm_instance_multi_storage_scope_class: VirtualMachineForTests,
     ):
-        if is_dv_migratable(dv=blank_disk_dv_multi_storage_scope_class):
+        if is_dv_migratable(dv=blank_disk_dv_multi_storage_scope_class, client=admin_client):
             migrate_vm_and_verify(
                 vm=vm_instance_multi_storage_scope_class,
                 client=admin_client,
