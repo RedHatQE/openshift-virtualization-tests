@@ -97,6 +97,7 @@ EXCLUDE_MARKER_FROM_TIER2_MARKER = [
     "cclm",
     "mtv",
     "multiarch",
+    "mixed_os_nodes",
 ]
 
 TEAM_MARKERS = {
