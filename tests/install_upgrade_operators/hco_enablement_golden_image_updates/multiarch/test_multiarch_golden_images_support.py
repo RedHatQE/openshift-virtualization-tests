@@ -6,7 +6,6 @@ https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main
 
 Preconditions:
     - Multi-architecture cluster with AMD64 and ARM64 worker nodes
-    - "enableMultiArchBootImageImport" feature gate enabled in HCO CR
     - Prometheus is installed and running
 """
 
@@ -23,6 +22,8 @@ from tests.install_upgrade_operators.hco_enablement_golden_image_updates.multiar
     KUBEVIRT_HCO_DATAIMPORTCRONTEMPLATE_WITH_ARCHITECTURE_ANNOTATION_QUERY,
     KUBEVIRT_HCO_DATAIMPORTCRONTEMPLATE_WITH_SUPPORTED_ARCHITECTURES_QUERY,
     KUBEVIRT_HCO_MULTI_ARCH_BOOT_IMAGES_ENABLED,
+    get_no_arch_annotation_template,
+    get_unsupported_arch_template,
 )
 from tests.install_upgrade_operators.hco_enablement_golden_image_updates.utils import verify_resource_in_ns
 from utilities.jira import is_jira_open
@@ -30,7 +31,7 @@ from utilities.monitoring import validate_metrics_value
 
 LOGGER = logging.getLogger(__name__)
 
-pytestmark = pytest.mark.multiarch
+pytestmark = [pytest.mark.multiarch, pytest.mark.post_upgrade]
 
 
 @pytest.mark.usefixtures("disabled_multiarch_feature_gate")
@@ -201,7 +202,8 @@ class TestEnabledMultiarchGoldenImagesSupport:
 
         Expected:
             - Architecture-specific golden image resources exist for each supported
-              architecture matching the workers architectures and in ready condition.
+              architecture matching the workers architectures and in the expected condition.
+              DataSources include both architecture-agnostic pointers and arch-specific names.
         """
         verify_resource_in_ns(
             expected_resource_names=expected_common_templates_related_resources[resource_type.kind],
@@ -256,10 +258,15 @@ class TestMultiarchGoldenImageAnnotationMetrics:
         - "enableMultiArchBootImageImport" feature gate enabled in HCO CR
     """
 
-    @pytest.mark.usefixtures("hco_with_custom_unsupported_arch_template")
+    @pytest.mark.parametrize(
+        "hco_with_custom_template",
+        [pytest.param(get_unsupported_arch_template, id="unsupported_arch")],
+        indirect=True,
+    )
     @pytest.mark.polarion("CNV-15983")
     def test_kubevirt_hco_dataimportcrontemplate_with_supported_architectures_metric(
         self,
+        hco_with_custom_template,
         prometheus,
     ):
         """
@@ -285,10 +292,15 @@ class TestMultiarchGoldenImageAnnotationMetrics:
             expected_value="0",
         )
 
-    @pytest.mark.usefixtures("hco_with_custom_no_arch_annotation_template")
+    @pytest.mark.parametrize(
+        "hco_with_custom_template",
+        [pytest.param(get_no_arch_annotation_template, id="no_arch_annotation")],
+        indirect=True,
+    )
     @pytest.mark.polarion("CNV-15984")
     def test_kubevirt_hco_dataimportcrontemplate_with_architecture_annotation_metric(
         self,
+        hco_with_custom_template,
         prometheus,
     ):
         """

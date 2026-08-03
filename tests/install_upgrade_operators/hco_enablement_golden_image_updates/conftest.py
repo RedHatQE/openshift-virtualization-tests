@@ -138,6 +138,7 @@ def base_common_templates_related_resources(hyperconverged_status_templates_scop
 
 @pytest.fixture(scope="class")
 def expected_common_templates_related_resources(
+    request,
     workers_architectures,
     base_common_templates_related_resources,
     hyperconverged_resource_scope_class,
