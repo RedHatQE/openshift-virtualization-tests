@@ -1106,7 +1106,9 @@ def wait_for_cdi_worker_pod(pod_name, storage_ns_name, admin_client):
         raise
 
 
-def get_storage_class_with_specified_volume_mode(volume_mode: str, sc_names: list[str], client: DynamicClient) -> str:
+def get_storage_class_with_specified_volume_mode(
+    volume_mode: str, sc_names: list[str], client: DynamicClient
+) -> str | None:
     sc_with_volume_mode = f"Storage class with volume mode '{volume_mode}'"
     for storage_class_name in sc_names:
         for claim_property_set in StorageProfile(name=storage_class_name, client=client).instance.status[
@@ -1115,7 +1117,8 @@ def get_storage_class_with_specified_volume_mode(volume_mode: str, sc_names: lis
             if claim_property_set["volumeMode"] == volume_mode:
                 LOGGER.info(f"{sc_with_volume_mode}: '{storage_class_name}'")
                 return storage_class_name
-    raise ValueError(f"No {sc_with_volume_mode} among {sc_names}")
+    LOGGER.error(f"No {sc_with_volume_mode} among {sc_names}")
+    return None
 
 
 @contextmanager
