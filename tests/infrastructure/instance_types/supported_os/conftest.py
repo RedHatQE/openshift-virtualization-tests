@@ -85,30 +85,36 @@ def golden_image_fedora_vm_with_instance_type(
 
 
 @pytest.fixture(scope="module")
+def windows_instance_type_artifactory_credentials(namespace):
+    with artifactory_credentials(namespace=namespace.name, client=namespace.client) as credentials:
+        yield credentials
+
+
+@pytest.fixture(scope="module")
 def windows_data_volume_template(
     unprivileged_client,
     namespace,
     windows_os_matrix__module__,
+    windows_instance_type_artifactory_credentials,
 ):
     os_matrix_key = [*windows_os_matrix__module__][0]
     os_params = windows_os_matrix__module__[os_matrix_key]
-    with artifactory_credentials(namespace=namespace.name, client=namespace.client) as artifactory:
-        win_dv = DataVolume(
-            client=unprivileged_client,
-            name=f"{os_matrix_key}-dv",
-            namespace=namespace.name,
-            api_name="storage",
-            source_dict=construct_datavolume_source_dict(
-                source="registry",
-                url=f"{get_test_artifact_server_url(schema='registry')}/{os_params[CONTAINER_DISK_IMAGE_PATH_STR]}",
-                secret_name=artifactory.secret_name,
-                cert_configmap_name=artifactory.cert_configmap_name,
-            ),
-            size=Images.Windows.CONTAINER_DISK_DV_SIZE,
-            storage_class=py_config["default_storage_class"],
-        )
-        win_dv.to_dict()
-        yield win_dv
+    win_dv = DataVolume(
+        client=unprivileged_client,
+        name=f"{os_matrix_key}-dv",
+        namespace=namespace.name,
+        api_name="storage",
+        source_dict=construct_datavolume_source_dict(
+            source="registry",
+            url=f"{get_test_artifact_server_url(schema='registry')}/{os_params[CONTAINER_DISK_IMAGE_PATH_STR]}",
+            secret_name=windows_instance_type_artifactory_credentials.secret_name,
+            cert_configmap_name=windows_instance_type_artifactory_credentials.cert_configmap_name,
+        ),
+        size=Images.Windows.CONTAINER_DISK_DV_SIZE,
+        storage_class=py_config["default_storage_class"],
+    )
+    win_dv.to_dict()
+    yield win_dv
 
 
 @pytest.fixture(scope="class")

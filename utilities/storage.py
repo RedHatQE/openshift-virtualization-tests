@@ -193,8 +193,10 @@ def create_dv(
 
     Context manager that constructs a DataVolume from either a pre-built ``source_dict``/``source_ref``
     or by building one via ``construct_datavolume_source_dict`` from the ``source`` parameter.
-    When ``use_artifactory`` is True for http/registry sources, creates namespace-scoped
-    Artifactory Secret and ConfigMap resources that are cleaned up on exit.
+    When ``use_artifactory`` is True for http/registry sources, creates only the
+    namespace-scoped Artifactory Secret and/or ConfigMap that the caller did not supply
+    via ``secret_name``/``cert_configmap_name``. Resources deployed by this call are
+    deleted on exit; pre-existing and caller-supplied resources are left in place.
 
     Args:
         dv_name: Name for the DataVolume resource.
