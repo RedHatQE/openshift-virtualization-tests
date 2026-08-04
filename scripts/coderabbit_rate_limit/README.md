@@ -57,3 +57,7 @@ uv run coderabbit-rate-limit trigger RedHatQE/openshift-virtualization-tests 586
 # 2b. If reviews paused — resume
 uv run coderabbit-rate-limit resume RedHatQE/openshift-virtualization-tests 5869
 ```
+
+## Credits
+
+Built on [myk-pi-tools](https://github.com/myk-org/pi-config) — all rate limit detection, wait time parsing, review triggering, and polling logic is provided by `myk_pi_tools.coderabbit`.
