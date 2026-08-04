@@ -42,7 +42,7 @@ from tests.storage.utils import (
     is_hpp_cr_legacy,
 )
 from tests.utils import create_cirros_vm
-from utilities.artifactory import get_artifactory_config_map, get_artifactory_secret
+from utilities.artifactory import artifactory_credentials
 from utilities.constants import Images
 from utilities.constants.cluster import CNV_TEST_SERVICE_ACCOUNT
 from utilities.constants.components import CDI_OPERATOR, CDI_UPLOADPROXY
@@ -364,19 +364,9 @@ def rhel_vm_name(request):
 
 
 @pytest.fixture(scope="module")
-def artifactory_secret_scope_module(namespace):
-    artifactory_secret = get_artifactory_secret(namespace=namespace.name)
-    yield artifactory_secret
-    if artifactory_secret:
-        artifactory_secret.clean_up()
-
-
-@pytest.fixture(scope="module")
-def artifactory_config_map_scope_module(namespace):
-    artifactory_config_map = get_artifactory_config_map(namespace=namespace.name)
-    yield artifactory_config_map
-    if artifactory_config_map:
-        artifactory_config_map.clean_up()
+def artifactory_credentials_scope_module(namespace):
+    with artifactory_credentials(namespace=namespace.name, client=namespace.client) as credentials:
+        yield credentials
 
 
 @pytest.fixture()

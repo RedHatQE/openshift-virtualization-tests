@@ -103,6 +103,8 @@ fcn_exclude_functions =
     mkdtemp,
     tempfile,
     urllib3,
+    enter_context,
+    callback,
 
 nit_exclude_imports =
     os_params,

@@ -3,7 +3,7 @@ import math
 import os
 import shlex
 from collections.abc import Collection, Generator
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from typing import Any
 
 import cachetools.func
@@ -34,7 +34,7 @@ import utilities.artifactory
 import utilities.infra
 import utilities.virt as virt_util
 from utilities import console
-from utilities.artifactory import get_test_artifact_server_url
+from utilities.artifactory import artifactory_credentials, get_test_artifact_server_url
 from utilities.constants import Images
 from utilities.constants.architecture import MULTIARCH
 from utilities.constants.components import HPP_POOL
@@ -196,8 +196,10 @@ def create_dv(
 
     Context manager that constructs a DataVolume from either a pre-built ``source_dict``/``source_ref``
     or by building one via ``construct_datavolume_source_dict`` from the ``source`` parameter.
-    When ``use_artifactory`` is True for http/registry sources, creates namespace-scoped
-    Artifactory Secret and ConfigMap resources that are cleaned up on exit.
+    When ``use_artifactory`` is True for http/registry sources, creates only the
+    namespace-scoped Artifactory Secret and/or ConfigMap that the caller did not supply
+    via ``secret_name``/``cert_configmap_name``. Resources deployed by this call are
+    deleted on exit; pre-existing and caller-supplied resources are left in place.
 
     Args:
         dv_name: Name for the DataVolume resource.
@@ -230,10 +232,7 @@ def create_dv(
     Raises:
         ValueError: If ``source`` is not provided when ``source_dict`` and ``source_ref`` are both None.
     """
-    artifactory_secret = None
-    artifactory_config_map = None
-
-    try:
+    with ExitStack() as stack:
         if source_dict is None and source_ref is None:
             if not source:
                 raise ValueError("'source' is required when 'source_dict' and 'source_ref' are not provided")
@@ -244,16 +243,21 @@ def create_dv(
                 LOGGER.info(f"Creating artifactory resources for DV '{dv_name}' in namespace '{namespace}'")
                 LOGGER.info(f"DV source is '{source}' with url: {url}")
 
-                if not secret_name:
-                    artifactory_secret = utilities.artifactory.get_artifactory_secret(
-                        namespace=namespace, client=client
+                if not secret_name or not cert_configmap_name:
+                    create_secret = not secret_name
+                    create_config_map = not cert_configmap_name
+                    artifactory = stack.enter_context(
+                        artifactory_credentials(
+                            namespace=namespace,
+                            client=client,
+                            create_secret=create_secret,
+                            create_config_map=create_config_map,
+                        )
                     )
-                    secret_name = artifactory_secret.name
-                if not cert_configmap_name:
-                    artifactory_config_map = utilities.artifactory.get_artifactory_config_map(
-                        namespace=namespace, client=client
-                    )
-                    cert_configmap_name = artifactory_config_map.name
+                    if create_secret:
+                        secret_name = artifactory.secret_name
+                    if create_config_map:
+                        cert_configmap_name = artifactory.cert_configmap_name
 
             source_dict = construct_datavolume_source_dict(
                 source=source,
@@ -264,30 +268,27 @@ def create_dv(
                 source_pvc_namespace=source_pvc_namespace,
             )
 
-        with DataVolume(
-            name=dv_name,
-            namespace=namespace,
-            client=client,
-            content_type=content_type,
-            size=size,
-            storage_class=storage_class,
-            access_modes=access_modes,
-            volume_mode=volume_mode,
-            annotations=annotations,
-            teardown=teardown,
-            preallocation=preallocation,
-            api_name=api_name,
-            source_ref=source_ref,
-            source_dict=source_dict,
-        ) as dv:
-            if storage_class and sc_volume_binding_mode_is_wffc(sc=storage_class, client=client) and consume_wffc:
-                create_dummy_first_consumer_pod(dv=dv)
-            yield dv
-
-    finally:
-        utilities.artifactory.cleanup_artifactory_secret_and_config_map(
-            artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
+        dv = stack.enter_context(
+            DataVolume(
+                name=dv_name,
+                namespace=namespace,
+                client=client,
+                content_type=content_type,
+                size=size,
+                storage_class=storage_class,
+                access_modes=access_modes,
+                volume_mode=volume_mode,
+                annotations=annotations,
+                teardown=teardown,
+                preallocation=preallocation,
+                api_name=api_name,
+                source_ref=source_ref,
+                source_dict=source_dict,
+            )
         )
+        if storage_class and sc_volume_binding_mode_is_wffc(sc=storage_class, client=client) and consume_wffc:
+            create_dummy_first_consumer_pod(dv=dv)
+        yield dv
 
 
 def data_volume(

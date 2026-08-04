@@ -17,9 +17,7 @@ from pytest_testconfig import config as py_config
 
 from tests.infrastructure.instance_types.constants import WINDOWS_DEDICATED_CPU_MESSAGE, WINDOWS_VCPU_OVERCOMMIT_STR
 from utilities.artifactory import (
-    cleanup_artifactory_secret_and_config_map,
-    get_artifactory_config_map,
-    get_artifactory_secret,
+    artifactory_credentials,
     get_test_artifact_server_url,
 )
 from utilities.constants import Images
@@ -152,7 +150,7 @@ def latest_windows_data_volume(
     admin_client,
     default_sc,
     windows_test_images_namespace_role_binding,
-    windows_namespace_artifactory_secret_and_configmap,
+    windows_namespace_artifactory_credentials,
 ):
     windows_data_volume = DataVolume(
         client=admin_client,
@@ -165,8 +163,8 @@ def latest_windows_data_volume(
                 f"{get_test_artifact_server_url(schema='registry')}/"
                 f"{py_config['latest_windows_os_dict'][CONTAINER_DISK_IMAGE_PATH_STR]}"
             ),
-            secret_name=windows_namespace_artifactory_secret_and_configmap["secret"].name,
-            cert_configmap_name=windows_namespace_artifactory_secret_and_configmap["config_map"].name,
+            secret_name=windows_namespace_artifactory_credentials.secret_name,
+            cert_configmap_name=windows_namespace_artifactory_credentials.cert_configmap_name,
         ),
         size=Images.Windows.CONTAINER_DISK_DV_SIZE,
         storage_class=default_sc.name,
@@ -241,11 +239,9 @@ def rhel_vm_for_dedicated_cpu(unprivileged_client, namespace, latest_rhel_data_s
 
 
 @pytest.fixture(scope="session")
-def windows_namespace_artifactory_secret_and_configmap(windows_test_images_namespace_role_binding):
-    secret = get_artifactory_secret(namespace=windows_test_images_namespace_role_binding.namespace)
-    cert = get_artifactory_config_map(namespace=windows_test_images_namespace_role_binding.namespace)
-    yield {"secret": secret, "config_map": cert}
-    cleanup_artifactory_secret_and_config_map(
-        artifactory_secret=secret,
-        artifactory_config_map=cert,
-    )
+def windows_namespace_artifactory_credentials(windows_test_images_namespace_role_binding):
+    with artifactory_credentials(
+        namespace=windows_test_images_namespace_role_binding.namespace,
+        client=windows_test_images_namespace_role_binding.client,
+    ) as credentials:
+        yield credentials

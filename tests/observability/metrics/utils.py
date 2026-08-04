@@ -29,9 +29,7 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_VMI_FILESYSTEM_BYTES_WITH_MOUNT_POINT,
 )
 from utilities.artifactory import (
-    cleanup_artifactory_secret_and_config_map,
-    get_artifactory_config_map,
-    get_artifactory_secret,
+    artifactory_credentials,
     get_test_artifact_server_url,
 )
 from utilities.constants import Images
@@ -655,53 +653,47 @@ def create_windows11_wsl2_vm(
         storage_class (str): The storage class to use for the DataVolume
     """
     windows_preference_name = "windows.11"
-    artifactory_secret = get_artifactory_secret(namespace=namespace)
-    artifactory_config_map = get_artifactory_config_map(namespace=namespace)
-    dv = DataVolume(
-        client=client,
-        name=dv_name,
-        namespace=namespace,
-        api_name="storage",
-        source_dict=construct_datavolume_source_dict(
-            source=REGISTRY_STR,
-            url=f"{get_test_artifact_server_url(schema=REGISTRY_STR)}/docker-local/windows-qe/win_11:virtio",
-            secret_name=artifactory_secret.name,
-            cert_configmap_name=artifactory_config_map.name,
-        ),
-        size=Images.Windows.CONTAINER_DISK_DV_SIZE,
-        storage_class=storage_class,
-    )
-    dv.to_dict()
-    base_preference = VirtualMachineClusterPreference(client=client, name=windows_preference_name)
-    base_spec = base_preference.instance.to_dict()["spec"]
-
-    with VirtualMachinePreference(
-        client=client,
-        namespace=namespace,
-        name=f"{vm_name}-{windows_preference_name}-preference",
-        cpu={"preferredCPUTopology": "cores"},
-        clock=base_spec.get("clock"),
-        devices=base_spec.get("devices"),
-        features=base_spec.get("features"),
-        firmware=base_spec.get("firmware"),
-        requirements=base_spec.get("requirements"),
-    ) as preference:
-        with VirtualMachineForTests(
-            os_flavor=OS_FLAVOR_WINDOWS,
-            name=vm_name,
-            namespace=namespace,
+    with artifactory_credentials(namespace=namespace, client=client) as artifactory:
+        dv = DataVolume(
             client=client,
-            vm_instance_type=VirtualMachineClusterInstancetype(client=client, name="u1.large"),
-            vm_preference=preference,
-            data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
-        ) as vm:
-            try:
+            name=dv_name,
+            namespace=namespace,
+            api_name="storage",
+            source_dict=construct_datavolume_source_dict(
+                source=REGISTRY_STR,
+                url=f"{get_test_artifact_server_url(schema=REGISTRY_STR)}/docker-local/windows-qe/win_11:virtio",
+                secret_name=artifactory.secret_name,
+                cert_configmap_name=artifactory.cert_configmap_name,
+            ),
+            size=Images.Windows.CONTAINER_DISK_DV_SIZE,
+            storage_class=storage_class,
+        )
+        dv.to_dict()
+        base_preference = VirtualMachineClusterPreference(client=client, name=windows_preference_name)
+        base_spec = base_preference.instance.to_dict()["spec"]
+
+        with VirtualMachinePreference(
+            client=client,
+            namespace=namespace,
+            name=f"{vm_name}-{windows_preference_name}-preference",
+            cpu={"preferredCPUTopology": "cores"},
+            clock=base_spec.get("clock"),
+            devices=base_spec.get("devices"),
+            features=base_spec.get("features"),
+            firmware=base_spec.get("firmware"),
+            requirements=base_spec.get("requirements"),
+        ) as preference:
+            with VirtualMachineForTests(
+                os_flavor=OS_FLAVOR_WINDOWS,
+                name=vm_name,
+                namespace=namespace,
+                client=client,
+                vm_instance_type=VirtualMachineClusterInstancetype(client=client, name="u1.large"),
+                vm_preference=preference,
+                data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
+            ) as vm:
                 running_vm(vm=vm, dv_wait_timeout=TIMEOUT_40MIN)
                 yield vm
-            finally:
-                cleanup_artifactory_secret_and_config_map(
-                    artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
-                )
 
 
 def get_vm_comparison_info_dict(vm: VirtualMachineForTests) -> dict[str, str]:

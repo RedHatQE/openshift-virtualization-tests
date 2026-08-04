@@ -19,11 +19,7 @@ from tests.virt.cluster.longevity_tests.constants import (
     WINDOWS_OS_PREFIX,
 )
 from tests.virt.utils import migrate_and_verify_multi_vms
-from utilities.artifactory import (
-    cleanup_artifactory_secret_and_config_map,
-    get_artifactory_config_map,
-    get_artifactory_secret,
-)
+from utilities.artifactory import artifactory_credentials
 from utilities.constants.timeouts import (
     TCP_TIMEOUT_30SEC,
     TIMEOUT_5MIN,
@@ -356,30 +352,26 @@ def create_dv_vms(
 
 def create_multi_dvs(namespace, client, dv_params):
     namespace_name = namespace.name
-    artifactory_secret = get_artifactory_secret(namespace=namespace_name)
-    artifactory_config_map = get_artifactory_config_map(namespace=namespace_name)
-    dvs = {}
-    for dv in dv_params:
-        dv_name = [*dv][0]
-        dvs[dv_name] = DataVolume(
-            name=dv_name,
-            client=client,
-            namespace=namespace_name,
-            source_dict=construct_datavolume_source_dict(
-                source="http",
-                url=f"{get_test_artifact_server_url()}{dv[dv_name].get('image_path')}",
-                secret_name=artifactory_secret.name,
-                cert_configmap_name=artifactory_config_map.name,
-            ),
-            size=dv[dv_name].get("dv_size"),
-            storage_class=dv[dv_name].get("storage_class"),
-            api_name="storage",
-        )
+    with artifactory_credentials(namespace=namespace_name, client=client) as artifactory:
+        dvs = {}
+        for dv in dv_params:
+            dv_name = [*dv][0]
+            dvs[dv_name] = DataVolume(
+                name=dv_name,
+                client=client,
+                namespace=namespace_name,
+                source_dict=construct_datavolume_source_dict(
+                    source="http",
+                    url=f"{get_test_artifact_server_url()}{dv[dv_name].get('image_path')}",
+                    secret_name=artifactory.secret_name,
+                    cert_configmap_name=artifactory.cert_configmap_name,
+                ),
+                size=dv[dv_name].get("dv_size"),
+                storage_class=dv[dv_name].get("storage_class"),
+                api_name="storage",
+            )
 
-    yield from deploy_and_wait_for_dvs(dv_dict=dvs)
-    cleanup_artifactory_secret_and_config_map(
-        artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
-    )
+        yield from deploy_and_wait_for_dvs(dv_dict=dvs)
 
 
 def create_multi_datasources(client, dvs):

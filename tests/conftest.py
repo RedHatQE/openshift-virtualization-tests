@@ -14,6 +14,7 @@ import subprocess
 import tempfile
 from bisect import bisect_left
 from collections import defaultdict
+from contextlib import ExitStack
 from datetime import UTC, datetime
 from signal import SIGINT, SIGTERM, getsignal, signal
 
@@ -74,7 +75,7 @@ from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster, sup
 from libs.net.ip import filter_link_local_addresses, random_cidr_addresses_by_family
 from libs.net.vmspec import lookup_iface_status
 from tests.utils import download_and_extract_tar
-from utilities.artifactory import get_artifactory_header, get_test_artifact_server_url
+from utilities.artifactory import artifactory_credentials, get_artifactory_header, get_test_artifact_server_url
 from utilities.cluster import cache_admin_client, get_oc_whoami_username
 from utilities.constants import Images
 from utilities.constants.aaq import (
@@ -2498,42 +2499,37 @@ def dvs_for_upgrade(
     worker_node1,
     rhel_latest_os_params,
     updated_default_storage_class_ocs_virt,
+    golden_images_namespace,
 ):
-    golden_images_namespace_name = py_config["golden_images_namespace"]
-    dvs_list = []
-    artifactory_secret = utilities.artifactory.get_artifactory_secret(namespace=golden_images_namespace_name)
-    artifactory_config_map = utilities.artifactory.get_artifactory_config_map(namespace=golden_images_namespace_name)
-
-    for sc in py_config["storage_class_matrix"]:
-        storage_class = [*sc][0]
-        dv = DataVolume(
-            client=admin_client,
-            name=f"dv-for-product-upgrade-{storage_class}",
-            namespace=golden_images_namespace_name,
-            source_dict=construct_datavolume_source_dict(
-                source="http",
-                url=rhel_latest_os_params["rhel_image_path"],
-                secret_name=artifactory_secret.name,
-                cert_configmap_name=artifactory_config_map.name,
-            ),
-            storage_class=storage_class,
-            size=rhel_latest_os_params["rhel_dv_size"],
-            annotations=BIND_IMMEDIATE_ANNOTATION,
-            api_name="storage",
+    with ExitStack() as stack:
+        artifactory = stack.enter_context(
+            artifactory_credentials(namespace=golden_images_namespace.name, client=golden_images_namespace.client)
         )
-        dv.create()
-        dvs_list.append(dv)
-    for dv in dvs_list:
-        dv.wait_for_dv_success()
+        dvs_list = []
+        for sc in py_config["storage_class_matrix"]:
+            storage_class = [*sc][0]
+            dv = DataVolume(
+                client=admin_client,
+                name=f"dv-for-product-upgrade-{storage_class}",
+                namespace=golden_images_namespace.name,
+                source_dict=construct_datavolume_source_dict(
+                    source="http",
+                    url=rhel_latest_os_params["rhel_image_path"],
+                    secret_name=artifactory.secret_name,
+                    cert_configmap_name=artifactory.cert_configmap_name,
+                ),
+                storage_class=storage_class,
+                size=rhel_latest_os_params["rhel_dv_size"],
+                annotations=BIND_IMMEDIATE_ANNOTATION,
+                api_name="storage",
+            )
+            dv.create()
+            stack.callback(dv.clean_up)
+            dvs_list.append(dv)
+        for dv in dvs_list:
+            dv.wait_for_dv_success()
 
-    yield dvs_list
-
-    for dv in dvs_list:
-        dv.clean_up()
-    utilities.artifactory.cleanup_artifactory_secret_and_config_map(
-        artifactory_secret=artifactory_secret,
-        artifactory_config_map=artifactory_config_map,
-    )
+        yield dvs_list
 
 
 @pytest.fixture(scope="class")
