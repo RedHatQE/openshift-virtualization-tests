@@ -1998,7 +1998,11 @@ def wait_for_migration_finished(migration: VirtualMachineInstanceMigration, time
     """
 
     sleep = TIMEOUT_10SEC
-    samples = TimeoutSampler(wait_timeout=timeout, sleep=sleep, func=lambda: migration.instance.status.phase)
+    samples = TimeoutSampler(
+        wait_timeout=timeout,
+        sleep=sleep,
+        func=lambda: (status := migration.instance.status) and status.phase,
+    )
     counter = 0
     sample = None
     try:
