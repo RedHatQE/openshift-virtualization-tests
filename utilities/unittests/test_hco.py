@@ -1031,7 +1031,9 @@ class TestUpdateHcoAnnotations:
         mock_editor.__exit__ = MagicMock(return_value=None)
         mock_editor_class.return_value = mock_editor
 
+        mock_client = MagicMock()
         with update_hco_annotations(
+            admin_client=mock_client,
             resource=mock_hco,
             path="machineType",
             value="pc-q35-rhel8.4.0",
@@ -1060,7 +1062,9 @@ class TestUpdateHcoAnnotations:
         mock_editor.__exit__ = MagicMock(return_value=None)
         mock_editor_class.return_value = mock_editor
 
+        mock_client = MagicMock()
         with update_hco_annotations(
+            admin_client=mock_client,
             resource=mock_hco,
             path="machineType",
             value="pc-q35-rhel8.4.0",
