@@ -201,7 +201,6 @@ def vmexport_download_path(tmp_path):
 
 @pytest.fixture()
 def rhel_vm_for_snapshot_with_content(
-    admin_client,
     unprivileged_client,
     namespace,
     latest_rhel_data_source,
@@ -212,10 +211,10 @@ def rhel_vm_for_snapshot_with_content(
         namespace=namespace.name,
         client=unprivileged_client,
         os_flavor=OS_FLAVOR_RHEL,
-        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL, client=admin_client),
+        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL, client=unprivileged_client),
         vm_preference=VirtualMachineClusterPreference(
             name=py_config["latest_instance_type_rhel_os_dict"][PREFERENCE_STR],
-            client=admin_client,
+            client=unprivileged_client,
         ),
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=latest_rhel_data_source,
