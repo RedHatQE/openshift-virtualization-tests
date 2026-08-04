@@ -11,8 +11,8 @@ Usage:
 
 from __future__ import annotations
 
-import json
 import sys
+from json import JSONDecodeError, loads
 
 import click
 from myk_pi_tools.coderabbit.rate_limit import run_check, run_trigger
@@ -51,8 +51,10 @@ def _run_resume(owner_repo: str, pr_number: int) -> int:
         return 1
 
     try:
-        comment_id = json.loads(stdout).get("id")
-    except json.JSONDecodeError, AttributeError:
+        comment_id = loads(stdout).get("id")
+    except JSONDecodeError:
+        comment_id = None
+    except AttributeError:
         comment_id = None
 
     LOGGER.info(f"Resume trigger posted (comment ID: {comment_id}).")
@@ -78,7 +80,13 @@ def check_command(owner_repo: str, pr_number: int) -> None:
 @main.command("trigger")
 @click.argument("owner_repo")
 @click.argument("pr_number", type=int)
-@click.option("--wait", "wait_seconds", type=int, default=0, help="Seconds to wait before posting review trigger.")
+@click.option(
+    "--wait",
+    "wait_seconds",
+    type=click.IntRange(min=0),
+    default=0,
+    help="Seconds to wait before posting review trigger.",
+)
 def trigger_command(owner_repo: str, pr_number: int, wait_seconds: int) -> None:
     """Wait and trigger a CodeRabbit review on a PR.
 

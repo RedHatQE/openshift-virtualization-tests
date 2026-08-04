@@ -5,12 +5,14 @@ CLI tool for detecting and recovering from CodeRabbit rate limiting and reviews-
 ## Prerequisites
 
 - `gh` CLI authenticated with a token that has `pull-requests:write` scope
+- `uv` for running the tool (`uv run coderabbit-rate-limit ...`)
+- `jq` (optional, used in the recovery workflow example)
 
 ## Commands
 
 ### check
 
-Detect rate limiting or reviews-paused state on a PR. Outputs JSON to stdout.
+Detect rate-limited or reviews-paused states on a PR. Outputs JSON to stdout.
 
 ```bash
 uv run coderabbit-rate-limit check <owner/repo> <pr_number>
