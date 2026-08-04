@@ -12,9 +12,10 @@ from tests.infrastructure.golden_images.utils import (
     assert_os_version_mismatch_in_vm,
 )
 from utilities.constants import Images
+from utilities.constants.architecture import MULTIARCH
 from utilities.constants.images import (
-    DEFAULT_FEDORA_REGISTRY_URL,
     OS_FLAVOR_FEDORA,
+    ArchImages,
 )
 from utilities.constants.storage import BIND_IMMEDIATE_ANNOTATION
 from utilities.constants.timeouts import (
@@ -84,13 +85,28 @@ def auto_update_boot_source_vm(
 
 
 @pytest.fixture()
-def vm_without_boot_source(unprivileged_client, namespace, fedora_data_source):
+def fedora_boot_source_data_source(unprivileged_client, golden_images_namespace):
+    data_source_name = (
+        f"{OS_FLAVOR_FEDORA}-{py_config['cpu_arch']}"
+        if py_config.get("cluster_type") == MULTIARCH
+        else OS_FLAVOR_FEDORA
+    )
+    return DataSource(
+        client=unprivileged_client,
+        name=data_source_name,
+        namespace=golden_images_namespace.name,
+        ensure_exists=True,
+    )
+
+
+@pytest.fixture()
+def vm_without_boot_source(unprivileged_client, namespace, fedora_boot_source_data_source):
     with VirtualMachineForTestsFromTemplate(
-        name=f"{fedora_data_source.name}-vm",
+        name=f"{fedora_boot_source_data_source.name}-vm",
         namespace=namespace.name,
         client=unprivileged_client,
         labels=template_labels(os=OS_FLAVOR_FEDORA),
-        data_source=fedora_data_source,
+        data_source=fedora_boot_source_data_source,
         non_existing_pvc=True,
     ) as vm:
         vm.start()
@@ -99,29 +115,30 @@ def vm_without_boot_source(unprivileged_client, namespace, fedora_data_source):
 
 
 @pytest.fixture()
-def opted_out_fedora_data_source(fedora_data_source):
-    LOGGER.info(f"Wait for DataSource {fedora_data_source.name} to opt out")
+def opted_out_fedora_data_source(fedora_boot_source_data_source):
+    LOGGER.info(f"Wait for DataSource {fedora_boot_source_data_source.name} to opt out")
     try:
         for sample in TimeoutSampler(
             wait_timeout=TIMEOUT_5MIN,
             sleep=TIMEOUT_5SEC,
-            func=lambda: fedora_data_source.source.name == OS_FLAVOR_FEDORA,
+            func=lambda: fedora_boot_source_data_source.source.name == fedora_boot_source_data_source.name,
         ):
             if sample:
                 return
     except TimeoutExpiredError:
-        LOGGER.error(f"{fedora_data_source.name} DataSource source was not updated.")
+        LOGGER.error(f"{fedora_boot_source_data_source.name} DataSource source was not updated.")
         raise
 
 
 @pytest.fixture()
-def imported_fedora_dv(admin_client, golden_images_namespace, fedora_data_source):
+def imported_fedora_dv(admin_client, golden_images_namespace, fedora_boot_source_data_source):
+    fedora_registry_url = f"docker://{getattr(ArchImages, py_config['cpu_arch'].upper()).Fedora.FEDORA_CONTAINER_IMAGE}"
     with DataVolume(
         client=admin_client,
-        name=fedora_data_source.name,
+        name=fedora_boot_source_data_source.name,
         namespace=golden_images_namespace.name,
         api_name="storage",
-        source_dict=construct_datavolume_source_dict(source="registry", url=DEFAULT_FEDORA_REGISTRY_URL),
+        source_dict=construct_datavolume_source_dict(source="registry", url=fedora_registry_url),
         size=Images.Fedora.DEFAULT_DV_SIZE,
         storage_class=py_config["default_storage_class"],
         annotations=BIND_IMMEDIATE_ANNOTATION,
@@ -130,6 +147,7 @@ def imported_fedora_dv(admin_client, golden_images_namespace, fedora_data_source
         yield dv
 
 
+@pytest.mark.arm64
 @pytest.mark.polarion("CNV-7586")
 def test_vm_from_auto_update_boot_source(
     auto_update_boot_source_vm,
@@ -159,6 +177,7 @@ def test_common_templates_boot_source_reference(base_templates):
     assert not failed_templates, f"Some templates do not use {source_ref_str}, templates: {failed_templates}"
 
 
+@pytest.mark.arm64
 @pytest.mark.polarion("CNV-7535")
 def test_vm_with_uploaded_golden_image_opt_out(
     admin_client,

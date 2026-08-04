@@ -194,6 +194,7 @@ def custom_windows_vm(
     ],
     indirect=True,
 )
+@pytest.mark.windows
 class TestCustomWindowsOptions:
     @pytest.mark.polarion("CNV-7496")
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::boot")

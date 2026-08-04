@@ -1,9 +1,13 @@
 import logging
 import os
+import pty
+import shlex
+import subprocess
 
 import pexpect
+import pexpect.fdpexpect
 from ocp_resources.virtual_machine import VirtualMachine
-from timeout_sampler import TimeoutSampler, retry
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 
 from utilities.constants.timeouts import (
     TIMEOUT_5MIN,
@@ -58,7 +62,8 @@ class Console:
             password or getattr(self.vm, "login_params", {}).get("password") or self.vm.password  # type: ignore[attr-defined]
         )
         self.timeout = timeout
-        self.child = None
+        self.child: pexpect.fdpexpect.fdspawn | None = None
+        self._proc: subprocess.Popen[bytes] | None = None
         self.login_prompt = "login:"
         self.prompt = prompt if prompt else [r"#", r"\$"]
         self.kubeconfig = kubeconfig
@@ -68,13 +73,14 @@ class Console:
     @retry(wait_timeout=TIMEOUT_5MIN, sleep=TIMEOUT_10SEC)
     def connect(self):
         LOGGER.info(f"Connect to {self.vm.name} console")
-        self.console_eof_sampler(func=pexpect.spawn, command=self.cmd, timeout=self.timeout)
-
         try:
+            self.console_eof_sampler()
             self._connect()
-        except Exception:
+        except TimeoutExpiredError, pexpect.exceptions.ExceptionPexpect:
             LOGGER.exception(f"Failed to connect to {self.vm.name} console.")
-            self.child.close()
+            if self.child is not None:
+                self.child.close()
+            self._terminate_proc()
             raise
 
         return self.child
@@ -95,8 +101,8 @@ class Console:
         LOGGER.info(f"{self.vm.name}: Got prompt {self.prompt}")
 
     def disconnect(self):
-        if self.child.terminated:
-            self.console_eof_sampler(func=pexpect.spawn, command=self.cmd, timeout=self.timeout)
+        if self._proc is not None and self._proc.poll() is not None:
+            self.console_eof_sampler()
 
         try:
             self.child.send("\n\n")
@@ -107,16 +113,63 @@ class Console:
                 self.child.expect("login:")
         finally:
             self.child.close()
+            self._terminate_proc()
 
-    def console_eof_sampler(self, func, command, timeout):
+    def _spawn_console(self) -> pexpect.fdpexpect.fdspawn:
+        """
+        Creates a pty pair and spawns virtctl via subprocess, returning an fdspawn
+        wrapping the master end.
+
+        Uses pty.openpty() + subprocess.Popen instead of pexpect.spawn to avoid
+        os.forkpty(), which is deprecated in multi-threaded processes (Python 3.12+).
+        """
+        self._terminate_proc()
+        master_fd, slave_fd = pty.openpty()
+        proc: subprocess.Popen[bytes] | None = None
+        try:
+            proc = subprocess.Popen(
+                shlex.split(self.cmd),
+                stdin=slave_fd,
+                stdout=slave_fd,
+                stderr=slave_fd,
+                start_new_session=True,
+            )
+            child = pexpect.fdpexpect.fdspawn(fd=master_fd, encoding="utf-8", timeout=self.timeout)
+        except OSError, ValueError, pexpect.exceptions.ExceptionPexpect:
+            if proc is not None:
+                proc.terminate()
+                try:
+                    proc.wait(timeout=TIMEOUT_10SEC)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                    proc.wait(timeout=TIMEOUT_10SEC)
+            os.close(master_fd)
+            raise
+        finally:
+            os.close(slave_fd)
+
+        self._proc = proc
+        return child
+
+    def _terminate_proc(self) -> None:
+        if self._proc is not None:
+            try:
+                if self._proc.poll() is None:
+                    self._proc.terminate()
+                self._proc.wait(timeout=TIMEOUT_10SEC)
+            except subprocess.TimeoutExpired:
+                LOGGER.warning(f"Force killing unresponsive console process for {self.vm.name}")
+                self._proc.kill()
+                self._proc.wait(timeout=TIMEOUT_10SEC)
+            finally:
+                self._proc = None
+
+    def console_eof_sampler(self) -> None:
         sampler = TimeoutSampler(
             wait_timeout=TIMEOUT_5MIN,
             sleep=5,
-            func=func,
+            func=self._spawn_console,
             exceptions_dict={pexpect.exceptions.EOF: []},
-            command=command,
-            timeout=timeout,
-            encoding="utf-8",
         )
         for sample in sampler:
             if sample:

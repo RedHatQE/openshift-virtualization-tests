@@ -31,7 +31,6 @@ from tests.observability.metrics.utils import (
     validate_vmi_sync_total_reported_and_positive,
     validate_vnic_info,
 )
-from tests.observability.utils import validate_metrics_value
 from utilities.constants.pytest import QUARANTINED
 from utilities.constants.storage import (
     CAPACITY,
@@ -44,7 +43,7 @@ from utilities.constants.timeouts import (
 )
 from utilities.constants.virt import MIGRATION_POLICY_VM_LABEL
 from utilities.infra import get_node_selector_dict
-from utilities.monitoring import get_metrics_value
+from utilities.monitoring import get_metrics_value, validate_metrics_value
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 LOGGER = logging.getLogger(__name__)
@@ -282,6 +281,7 @@ class TestVmiFileSystemMetricsLinux:
 
 
 @pytest.mark.tier3
+@pytest.mark.windows
 class TestVmiFileSystemMetricsWindows:
     @pytest.mark.parametrize(
         "capacity_or_used",
@@ -407,6 +407,7 @@ class TestVmDiskAllocatedSizeLinux:
 
 
 @pytest.mark.tier3
+@pytest.mark.windows
 class TestVmDiskAllocatedSizeWindows:
     @pytest.mark.polarion("CNV-11916")
     def test_metric_kubevirt_vm_disk_allocated_size_bytes_windows(self, prometheus, windows_vm_for_test):
@@ -446,6 +447,7 @@ class TestVmVnicInfo:
         )
 
     @pytest.mark.tier3
+    @pytest.mark.windows
     @pytest.mark.polarion("CNV-12224")
     def test_metric_kubevirt_vmi_vnic_info_windows(self, prometheus, windows_vm_for_test, vnic_info_from_vmi_windows):
         validate_vnic_info(
@@ -524,6 +526,7 @@ class TestVmiPhaseTransitionFromDeletion:
         ],
         indirect=True,
     )
+    @pytest.mark.windows
     def test_kubevirt_vmi_phase_transition_from_deletion_seconds_sum_windows(
         self, prometheus, initial_metric_value, windows_vm_for_test, deleted_windows_vmi
     ):

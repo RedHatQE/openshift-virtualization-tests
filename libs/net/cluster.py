@@ -8,6 +8,12 @@ LOGGER = logging.getLogger(__name__)
 
 
 @cache
+def supported_cluster_ip_versions() -> set[int]:
+    """Return the set of IP versions (4, 6) supported by the cluster."""
+    return {version for version, enabled in ((4, ipv4_supported_cluster()), (6, ipv6_supported_cluster())) if enabled}
+
+
+@cache
 def is_ipv6_single_stack_cluster() -> bool:
     ipv4_supported = ipv4_supported_cluster()
     ipv6_supported = ipv6_supported_cluster()

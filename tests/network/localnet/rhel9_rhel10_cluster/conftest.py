@@ -17,12 +17,13 @@ from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs import cloudinit
 from tests.network.libs import cluster_user_defined_network as libcudn
 from tests.network.libs.cloudinit import EthernetDevice
-from tests.network.libs.nodes import RHCOS9_WORKER_LABEL
-from tests.network.localnet.liblocalnet import (
+from tests.network.libs.localnet import (
     GUEST_2ND_IFACE_NAME,
     LOCALNET_BR_EX_INTERFACE,
+    localnet_cloudinit,
     localnet_vm,
 )
+from utilities.constants.cluster import RHCOS9_WORKER_LABEL
 
 _SERVER_HOST_ADDRESS: Final[int] = 1
 _CLIENT_HOST_ADDRESS: Final[int] = 2
@@ -47,12 +48,14 @@ def localnet_server_vm(
             Interface(name="default", masquerade={}),
             Interface(name=LOCALNET_BR_EX_INTERFACE, bridge={}),
         ],
-        network_data=cloudinit.NetworkData(
-            ethernets={
-                GUEST_2ND_IFACE_NAME: EthernetDevice(
-                    addresses=random_cidr_addresses_by_family(net_seed=0, host_address=_SERVER_HOST_ADDRESS)
-                )
-            }
+        cloud_init=localnet_cloudinit(
+            network_data=cloudinit.NetworkData(
+                ethernets={
+                    GUEST_2ND_IFACE_NAME: EthernetDevice(
+                        addresses=random_cidr_addresses_by_family(net_seed=0, host_address=_SERVER_HOST_ADDRESS)
+                    )
+                }
+            )
         ),
         affinity=new_node_affinity(key=RHCOS9_WORKER_LABEL, exists=True),
     ) as vm:
@@ -78,12 +81,14 @@ def localnet_client_vm(
             Interface(name="default", masquerade={}),
             Interface(name=LOCALNET_BR_EX_INTERFACE, bridge={}),
         ],
-        network_data=cloudinit.NetworkData(
-            ethernets={
-                GUEST_2ND_IFACE_NAME: EthernetDevice(
-                    addresses=random_cidr_addresses_by_family(net_seed=0, host_address=_CLIENT_HOST_ADDRESS)
-                )
-            }
+        cloud_init=localnet_cloudinit(
+            network_data=cloudinit.NetworkData(
+                ethernets={
+                    GUEST_2ND_IFACE_NAME: EthernetDevice(
+                        addresses=random_cidr_addresses_by_family(net_seed=0, host_address=_CLIENT_HOST_ADDRESS)
+                    )
+                }
+            )
         ),
         affinity=new_node_affinity(key=RHCOS9_WORKER_LABEL, exists=True),
     ) as vm:

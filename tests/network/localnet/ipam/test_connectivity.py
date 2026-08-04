@@ -2,7 +2,7 @@ import pytest
 
 from libs.net.traffic_generator import client_server_active_connection, is_tcp_connection
 from libs.vm.vm import BaseVirtualMachine
-from tests.network.localnet.liblocalnet import LOCALNET_IPAM_INTERFACE
+from tests.network.libs.localnet import LOCALNET_IPAM_INTERFACE
 
 
 @pytest.mark.ipv4

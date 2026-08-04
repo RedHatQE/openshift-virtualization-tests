@@ -7,7 +7,7 @@ from ocp_resources.virtual_machine import VirtualMachine
 from libs.net.cluster import is_ipv6_single_stack_cluster
 from tests.observability.metrics.constants import KUBEVIRT_VMI_NODE_CPU_AFFINITY
 from tests.observability.metrics.utils import validate_vmi_node_cpu_affinity_with_prometheus
-from tests.observability.utils import validate_metrics_value
+from utilities.monitoring import validate_metrics_value
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 KUBEVIRT_VM_TAG = f"{Resource.ApiGroup.KUBEVIRT_IO}/vm"
@@ -60,6 +60,7 @@ class TestVmiNodeCpuAffinityLinux:
 
 
 @pytest.mark.tier3
+@pytest.mark.windows
 class TestVmiNodeCpuAffinityWindows:
     @pytest.mark.polarion("CNV-11883")
     def test_kubevirt_vmi_node_cpu_affinity_windows_vm(self, admin_client, prometheus, windows_vm_for_test):

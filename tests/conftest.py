@@ -70,12 +70,11 @@ from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutSampler
 
 import utilities.hco
-from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
+from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster, supported_cluster_ip_versions
 from libs.net.ip import filter_link_local_addresses, random_cidr_addresses_by_family
 from libs.net.vmspec import lookup_iface_status
 from tests.utils import download_and_extract_tar
-from utilities.artifactory import get_artifactory_header, get_http_image_url, get_test_artifact_server_url
-from utilities.bitwarden import get_cnv_tests_secret_by_name
+from utilities.artifactory import get_artifactory_header, get_test_artifact_server_url
 from utilities.cluster import cache_admin_client, get_oc_whoami_username
 from utilities.constants import Images
 from utilities.constants.aaq import (
@@ -95,7 +94,6 @@ from utilities.constants.cluster import (
     NODE_TYPE_WORKER_LABEL,
     OC_ADM_LOGS_COMMAND,
     POD_SECURITY_NAMESPACE_LABELS,
-    RHSM_SECRET_NAME,
     UTILITY,
     WORKER_NODE_LABEL_KEY,
     WORKERS_TYPE,
@@ -108,6 +106,7 @@ from utilities.constants.components import (
     VIRTCTL_CLI_DOWNLOADS,
 )
 from utilities.constants.hco import (
+    DATA_SOURCE_NAME,
     FEATURE_GATES,
     HCO_SUBSCRIPTION,
     HOTFIX_STR,
@@ -152,7 +151,6 @@ from utilities.cpu import (
     get_nodes_cpu_model,
 )
 from utilities.data_utils import base64_encode_str, name_prefix
-from utilities.exceptions import MissingEnvironmentVariableError
 from utilities.infra import (
     ClusterHosts,
     ExecCommandOnPod,
@@ -918,6 +916,17 @@ def rhel10_data_source_scope_session(golden_images_namespace):
     )
 
 
+@pytest.fixture(scope="session")
+def latest_rhel_data_source(golden_images_namespace):
+    """Provide the DataSource for the latest RHEL version supported on this architecture."""
+    return DataSource(
+        client=golden_images_namespace.client,
+        name=py_config["latest_instance_type_rhel_os_dict"][DATA_SOURCE_NAME],
+        namespace=golden_images_namespace.name,
+        ensure_exists=True,
+    )
+
+
 """
 VM creation from template
 """
@@ -1156,6 +1165,7 @@ def golden_images_edit_rolebinding(
     golden_images_cluster_role_edit,
 ):
     with RoleBinding(
+        client=golden_images_namespace.client,
         name="role-bind-create-dv",
         namespace=golden_images_namespace.name,
         subjects_kind="User",
@@ -1363,13 +1373,13 @@ def hyperconverged_with_node_placement(request, admin_client, hco_namespace, hyp
 
 
 @pytest.fixture(scope="module")
-def hostpath_provisioner_scope_module():
-    yield HostPathProvisioner(name=HostPathProvisioner.Name.HOSTPATH_PROVISIONER)
+def hostpath_provisioner_scope_module(admin_client):
+    yield HostPathProvisioner(client=admin_client, name=HostPathProvisioner.Name.HOSTPATH_PROVISIONER)
 
 
 @pytest.fixture(scope="session")
-def hostpath_provisioner_scope_session():
-    yield HostPathProvisioner(name=HostPathProvisioner.Name.HOSTPATH_PROVISIONER)
+def hostpath_provisioner_scope_session(admin_client):
+    yield HostPathProvisioner(client=admin_client, name=HostPathProvisioner.Name.HOSTPATH_PROVISIONER)
 
 
 @pytest.fixture(scope="session")
@@ -1458,14 +1468,14 @@ def kmp_enabled_ns(admin_client, kmp_vm_label):
 
 @pytest.fixture(scope="session")
 def cdi(hco_namespace):
-    cdi = CDI(name=CDI_KUBEVIRT_HYPERCONVERGED)
+    cdi = CDI(client=hco_namespace.client, name=CDI_KUBEVIRT_HYPERCONVERGED)
     assert cdi.instance is not None
     yield cdi
 
 
 @pytest.fixture(scope="session")
-def cdi_config():
-    cdi_config = CDIConfig(name="config")
+def cdi_config(admin_client):
+    cdi_config = CDIConfig(client=admin_client, name="config")
     assert cdi_config.instance is not None
     return cdi_config
 
@@ -1696,9 +1706,7 @@ def running_vm_upgrade_a(
         eviction_strategy=ES_NONE,
     ) as vm:
         running_vm(vm=vm, wait_for_cloud_init=True)
-        ip_families = [
-            family for family, enabled in ((4, ipv4_supported_cluster()), (6, ipv6_supported_cluster())) if enabled
-        ]
+        ip_families = supported_cluster_ip_versions()
         lookup_iface_status(
             vm=vm,
             iface_name=upgrade_bridge_marker_nad.name,
@@ -1731,9 +1739,7 @@ def running_vm_upgrade_b(
         eviction_strategy=ES_NONE,
     ) as vm:
         running_vm(vm=vm, wait_for_cloud_init=True)
-        ip_families = [
-            family for family, enabled in ((4, ipv4_supported_cluster()), (6, ipv6_supported_cluster())) if enabled
-        ]
+        ip_families = supported_cluster_ip_versions()
         lookup_iface_status(
             vm=vm,
             iface_name=upgrade_bridge_marker_nad.name,
@@ -1799,7 +1805,7 @@ def determine_upgrade_stream(current_version, target_version):
             # Upgrade only if a newer CNV version is requested
             raise ValueError(
                 f"Cannot upgrade to older/identical versions,"
-                f"current: {cnv_current_version} target: {target_cnv_version}"
+                f"current: {current_cnv_version} target: {target_cnv_version}"
             )
         raise ValueError(
             f"Unknown upgrade stream. Current cnv version: {current_cnv_version}, "
@@ -1958,16 +1964,6 @@ def bin_directory_to_os_path(os_path_environment, bin_directory, virtctl_binary,
     os.environ["PATH"] = f"{bin_directory}:{os_path_environment}"
 
 
-@pytest.fixture(scope="session")
-def artifactory_setup(pytestconfig):
-    LOGGER.info("Checking for artifactory credentials:")
-    if pytestconfig.option.skip_artifactory_check:
-        LOGGER.warning("Explicitly skipping artifactory setup check due to use of --skip-artifactory-check")
-        return
-    if not (os.environ.get("ARTIFACTORY_TOKEN") and os.environ.get("ARTIFACTORY_USER")):
-        raise MissingEnvironmentVariableError("Please set ARTIFACTORY_USER and ARTIFACTORY_TOKEN environment variables")
-
-
 @pytest.fixture(autouse=True)
 def autouse_fixtures(
     leftovers_cleanup,  # Must be called first to avoid deleting created resources.
@@ -2003,11 +1999,6 @@ def generated_ssh_key_for_vm_access(ssh_key_tmpdir_scope_session):
     if os.path.isfile(vm_ssh_key_file):
         os.unlink(vm_ssh_key_file)
     del os.environ[CNV_VM_SSH_KEY_PATH]
-
-
-@pytest.fixture(scope="session")
-def rhel9_http_image_url():
-    return get_http_image_url(image_directory=Images.Rhel.DIR, image_name=Images.Rhel.RHEL9_4_IMG)
 
 
 @pytest.fixture(scope="session")
@@ -2132,6 +2123,7 @@ def fips_enabled_cluster(workers_utility_pods):
 def instance_type_for_test_scope_class(namespace, common_instance_type_param_dict):
     instance_type_param_dict = copy.deepcopy(common_instance_type_param_dict)
     instance_type_param_dict["namespace"] = namespace.name
+    instance_type_param_dict["client"] = namespace.client
     return VirtualMachineInstancetype(**instance_type_param_dict)
 
 
@@ -2171,6 +2163,8 @@ def common_instance_type_param_dict(request):
 def vm_preference_for_test(namespace, common_vm_preference_param_dict):
     vm_preference_param_dict = copy.deepcopy(common_vm_preference_param_dict)
     vm_preference_param_dict["namespace"] = namespace.name
+    if vm_preference_param_dict.get("client") is None:
+        vm_preference_param_dict["client"] = namespace.client
     return VirtualMachinePreference(**vm_preference_param_dict)
 
 
@@ -2255,11 +2249,12 @@ def vm_from_template_with_existing_dv(
 
 
 @pytest.fixture()
-def scaled_deployment(request, hco_namespace):
+def scaled_deployment(request, hco_namespace, admin_client):
     with scale_deployment_replicas(
         deployment_name=request.param["deployment_name"],
         replica_count=request.param["replicas"],
         namespace=hco_namespace.name,
+        client=admin_client,
     ):
         yield
 
@@ -2301,8 +2296,9 @@ def is_disconnected_cluster():
 
 
 @pytest.fixture()
-def migration_policy_with_bandwidth():
+def migration_policy_with_bandwidth(admin_client):
     with MigrationPolicy(
+        client=admin_client,
         name="migration-policy",
         bandwidth_per_migration="128Ki",
         vmi_selector=MIGRATION_POLICY_VM_LABEL,
@@ -2311,8 +2307,9 @@ def migration_policy_with_bandwidth():
 
 
 @pytest.fixture(scope="class")
-def migration_policy_with_bandwidth_scope_class():
+def migration_policy_with_bandwidth_scope_class(admin_client):
     with MigrationPolicy(
+        client=admin_client,
         name="migration-policy",
         bandwidth_per_migration="128Ki",
         vmi_selector=MIGRATION_POLICY_VM_LABEL,
@@ -2323,6 +2320,7 @@ def migration_policy_with_bandwidth_scope_class():
 @pytest.fixture(scope="session")
 def worker_machine1(worker_node1):
     machine = Machine(
+        client=worker_node1.client,
         name=worker_node1.machine_name,
         namespace=py_config["machine_api_namespace"],
     )
@@ -2371,10 +2369,11 @@ def vm_for_test(request, namespace, unprivileged_client):
 
 
 @pytest.fixture(scope="class")
-def migrated_vm_multiple_times(request, vm_for_migration_test):
+def migrated_vm_multiple_times(request, admin_client, vm_for_migration_test):
     vmim = []
     for migration_index in range(request.param):
         migration_obj = VirtualMachineInstanceMigration(
+            client=admin_client,
             name=f"{vm_for_migration_test.name}-{migration_index}",
             namespace=vm_for_migration_test.namespace,
             vmi_name=vm_for_migration_test.vmi.name,
@@ -2438,9 +2437,13 @@ def rhel_vm_with_cluster_instance_type_and_preference(namespace, unprivileged_cl
         namespace=namespace.name,
         client=unprivileged_client,
         vm_instance_type=VirtualMachineClusterInstancetype(
-            name=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[INSTANCE_TYPE_STR]
+            client=unprivileged_client,
+            name=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[INSTANCE_TYPE_STR],
         ),
-        vm_preference=VirtualMachineClusterPreference(name=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[PREFERENCE_STR]),
+        vm_preference=VirtualMachineClusterPreference(
+            client=unprivileged_client,
+            name=EXPECTED_CLUSTER_INSTANCE_TYPE_LABELS[PREFERENCE_STR],
+        ),
         os_flavor=OS_FLAVOR_RHEL,
     ) as vm:
         running_vm(
@@ -2565,8 +2568,8 @@ def ssp_resource_scope_class(admin_client, hco_namespace):
 
 
 @pytest.fixture(scope="session")
-def kube_system_namespace():
-    kube_system_ns = Namespace(name="kube-system")
+def kube_system_namespace(admin_client):
+    kube_system_ns = Namespace(client=admin_client, name="kube-system")
     if kube_system_ns.exists:
         return kube_system_ns
     raise ResourceNotFoundError(f"{kube_system_ns.name} namespace not found")
@@ -2638,24 +2641,6 @@ def rwx_fs_available_storage_classes_names(cluster_storage_classes_names):
 @pytest.fixture()
 def storage_class_name_scope_function(storage_class_matrix__function__):
     return [*storage_class_matrix__function__][0]
-
-
-@pytest.fixture(scope="session")
-def rhsm_credentials_from_bitwarden():
-    return get_cnv_tests_secret_by_name(secret_name="RHSM_CREDENTIALS")
-
-
-@pytest.fixture(scope="module")
-def rhsm_created_secret(rhsm_credentials_from_bitwarden, namespace):
-    with Secret(
-        name=RHSM_SECRET_NAME,
-        namespace=namespace.name,
-        data_dict={
-            "username": base64_encode_str(text=rhsm_credentials_from_bitwarden["user"]),
-            "password": base64_encode_str(text=rhsm_credentials_from_bitwarden["password"]),
-        },
-    ) as secret:
-        yield secret
 
 
 @pytest.fixture(scope="session")

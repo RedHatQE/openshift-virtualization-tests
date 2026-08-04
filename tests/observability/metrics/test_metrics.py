@@ -9,8 +9,8 @@ from tests.observability.metrics.utils import (
     assert_vm_metric_virt_handler_pod,
     compare_kubevirt_vmi_info_metric_with_vm_info,
 )
-from tests.observability.utils import validate_metrics_value
 from utilities.constants.monitoring import KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS
+from utilities.monitoring import validate_metrics_value
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
 
@@ -35,6 +35,7 @@ class TestMetricsLinux:
 
 
 @pytest.mark.tier3
+@pytest.mark.windows
 class TestMetricsWindows:
     @pytest.mark.polarion("CNV-11880")
     def test_cnv_vmi_monitoring_metrics_windows_vm(
@@ -80,6 +81,7 @@ class TestVMIMetricsLinuxVms:
 
 
 @pytest.mark.tier3
+@pytest.mark.windows
 class TestVMIMetricsWindowsVms:
     @pytest.mark.polarion("CNV-11861")
     def test_kubevirt_vmi_info_windows(self, prometheus, windows_vm_for_test, vmi_guest_os_kernel_release_info_windows):

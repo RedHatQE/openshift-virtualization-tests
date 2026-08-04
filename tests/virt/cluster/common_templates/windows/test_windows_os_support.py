@@ -15,10 +15,14 @@ from tests.virt.cluster.common_templates.utils import (
     validate_os_info_virtctl_vs_windows_os,
     validate_user_info_virtctl_vs_windows_os,
 )
-from tests.virt.utils import validate_pause_unpause_windows_vm
 from utilities.constants.images import OS_FLAVOR_WINDOWS
 from utilities.constants.pytest import QUARANTINED
-from utilities.guest_support import assert_windows_efi, check_vm_xml_hyperv, check_windows_vm_hvinfo
+from utilities.guest_support import (
+    assert_windows_efi,
+    check_vm_xml_hyperv,
+    check_windows_vm_hvinfo,
+    validate_pause_unpause_windows_vm,
+)
 from utilities.ssp import validate_os_info_vmi_vs_windows_os
 from utilities.virt import (
     check_vm_xml_smbios,
@@ -45,6 +49,7 @@ LOGGER = logging.getLogger(__name__)
 TESTS_CLASS_NAME = "TestCommonTemplatesWindows"
 
 
+@pytest.mark.windows
 class TestCommonTemplatesWindows:
     @pytest.mark.sno
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::create_vm")

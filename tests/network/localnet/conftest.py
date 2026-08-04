@@ -5,8 +5,13 @@ from kubernetes.dynamic import DynamicClient
 from ocp_resources.namespace import Namespace
 
 from libs.net import nodenetworkconfigurationpolicy as libnncp
-from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
-from libs.net.ip import filter_link_local_addresses, random_ipv4_address, random_ipv6_address
+from libs.net.cluster import supported_cluster_ip_versions
+from libs.net.ip import (
+    filter_cluster_unsupported_addresses,
+    filter_link_local_addresses,
+    random_ipv4_address,
+    random_ipv6_address,
+)
 from libs.net.traffic_generator import TcpServer, VMTcpClient, active_tcp_connections
 from libs.net.vmspec import lookup_iface_status
 from libs.vm.oper import run_vms
@@ -14,7 +19,7 @@ from libs.vm.spec import Interface, Multus, Network
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs import cloudinit
 from tests.network.libs import cluster_user_defined_network as libcudn
-from tests.network.localnet.liblocalnet import (
+from tests.network.libs.localnet import (
     GUEST_1ST_IFACE_NAME,
     GUEST_2ND_IFACE_NAME,
     LINK_STATE_DOWN,
@@ -28,6 +33,7 @@ from tests.network.localnet.liblocalnet import (
     LOCALNET_VM_ANTI_AFFINITY,
     create_nncp_localnet_on_secondary_node_nic,
     ip_addresses_from_pool,
+    localnet_cloudinit,
     localnet_cudn,
     localnet_vm,
 )
@@ -154,21 +160,23 @@ def vm_localnet_1(
             Interface(name=LOCALNET_BR_EX_INTERFACE, bridge={}),
             Interface(name=LOCALNET_BR_EX_INTERFACE_NO_VLAN, bridge={}),
         ],
-        network_data=cloudinit.NetworkData(
-            ethernets={
-                GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
-                    addresses=ip_addresses_from_pool(
-                        ipv4_pool=ipv4_localnet_address_pool,
-                        ipv6_pool=ipv6_localnet_address_pool,
+        cloud_init=localnet_cloudinit(
+            network_data=cloudinit.NetworkData(
+                ethernets={
+                    GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
+                        addresses=ip_addresses_from_pool(
+                            ipv4_pool=ipv4_localnet_address_pool,
+                            ipv6_pool=ipv6_localnet_address_pool,
+                        ),
                     ),
-                ),
-                GUEST_2ND_IFACE_NAME: cloudinit.EthernetDevice(
-                    addresses=ip_addresses_from_pool(
-                        ipv4_pool=ipv4_localnet_address_pool,
-                        ipv6_pool=ipv6_localnet_address_pool,
+                    GUEST_2ND_IFACE_NAME: cloudinit.EthernetDevice(
+                        addresses=ip_addresses_from_pool(
+                            ipv4_pool=ipv4_localnet_address_pool,
+                            ipv6_pool=ipv6_localnet_address_pool,
+                        ),
                     ),
-                ),
-            }
+                }
+            )
         ),
         affinity=LOCALNET_VM_ANTI_AFFINITY,
     ) as vm:
@@ -189,15 +197,17 @@ def vm_localnet_2(
         client=unprivileged_client,
         networks=[Network(name=LOCALNET_BR_EX_INTERFACE, multus=Multus(networkName=cudn_localnet.name))],
         interfaces=[Interface(name=LOCALNET_BR_EX_INTERFACE, bridge={})],
-        network_data=cloudinit.NetworkData(
-            ethernets={
-                GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
-                    addresses=ip_addresses_from_pool(
-                        ipv4_pool=ipv4_localnet_address_pool,
-                        ipv6_pool=ipv6_localnet_address_pool,
-                    ),
-                )
-            }
+        cloud_init=localnet_cloudinit(
+            network_data=cloudinit.NetworkData(
+                ethernets={
+                    GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
+                        addresses=ip_addresses_from_pool(
+                            ipv4_pool=ipv4_localnet_address_pool,
+                            ipv6_pool=ipv6_localnet_address_pool,
+                        ),
+                    )
+                }
+            )
         ),
         affinity=LOCALNET_VM_ANTI_AFFINITY,
     ) as vm:
@@ -210,15 +220,18 @@ def localnet_running_vms(
     vm_localnet_2: BaseVirtualMachine,
 ) -> tuple[BaseVirtualMachine, BaseVirtualMachine]:
     vm1, vm2 = run_vms(vms=(vm_localnet_1, vm_localnet_2))
-    ip_families = [
-        ip_family for ip_family, enabled in ((4, ipv4_supported_cluster()), (6, ipv6_supported_cluster())) if enabled
-    ]
+    ip_families = supported_cluster_ip_versions()
     for vm in (vm1, vm2):
         lookup_iface_status(
             vm=vm,
             iface_name=LOCALNET_BR_EX_INTERFACE,
             predicate=lambda interface: (
-                len(filter_link_local_addresses(ip_addresses=interface.get("ipAddresses", []))) == len(ip_families)
+                len(
+                    filter_cluster_unsupported_addresses(
+                        ip_addresses=filter_link_local_addresses(ip_addresses=interface.get("ipAddresses", []))
+                    )
+                )
+                == len(ip_families)
             ),
         )
     return vm1, vm2
@@ -257,15 +270,17 @@ def vm_ovs_bridge_localnet_link_down(
             Network(name=LOCALNET_OVS_BRIDGE_INTERFACE, multus=Multus(networkName=cudn_localnet_ovs_bridge.name))
         ],
         interfaces=[Interface(name=LOCALNET_OVS_BRIDGE_INTERFACE, bridge={}, state=LINK_STATE_DOWN)],
-        network_data=cloudinit.NetworkData(
-            ethernets={
-                GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
-                    addresses=ip_addresses_from_pool(
-                        ipv4_pool=ipv4_localnet_address_pool,
-                        ipv6_pool=ipv6_localnet_address_pool,
+        cloud_init=localnet_cloudinit(
+            network_data=cloudinit.NetworkData(
+                ethernets={
+                    GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
+                        addresses=ip_addresses_from_pool(
+                            ipv4_pool=ipv4_localnet_address_pool,
+                            ipv6_pool=ipv6_localnet_address_pool,
+                        )
                     )
-                )
-            }
+                }
+            )
         ),
         affinity=LOCALNET_VM_ANTI_AFFINITY,
     ) as vm:
@@ -288,15 +303,17 @@ def vm_ovs_bridge_localnet_1(
             Network(name=LOCALNET_OVS_BRIDGE_INTERFACE, multus=Multus(networkName=cudn_localnet_ovs_bridge.name))
         ],
         interfaces=[Interface(name=LOCALNET_OVS_BRIDGE_INTERFACE, bridge={})],
-        network_data=cloudinit.NetworkData(
-            ethernets={
-                GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
-                    addresses=ip_addresses_from_pool(
-                        ipv4_pool=ipv4_localnet_address_pool,
-                        ipv6_pool=ipv6_localnet_address_pool,
+        cloud_init=localnet_cloudinit(
+            network_data=cloudinit.NetworkData(
+                ethernets={
+                    GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
+                        addresses=ip_addresses_from_pool(
+                            ipv4_pool=ipv4_localnet_address_pool,
+                            ipv6_pool=ipv6_localnet_address_pool,
+                        )
                     )
-                )
-            }
+                }
+            )
         ),
         affinity=LOCALNET_VM_ANTI_AFFINITY,
     ) as vm:
@@ -319,15 +336,17 @@ def vm_ovs_bridge_localnet_2(
             Network(name=LOCALNET_OVS_BRIDGE_INTERFACE, multus=Multus(networkName=cudn_localnet_ovs_bridge.name))
         ],
         interfaces=[Interface(name=LOCALNET_OVS_BRIDGE_INTERFACE, bridge={})],
-        network_data=cloudinit.NetworkData(
-            ethernets={
-                GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
-                    addresses=ip_addresses_from_pool(
-                        ipv4_pool=ipv4_localnet_address_pool,
-                        ipv6_pool=ipv6_localnet_address_pool,
+        cloud_init=localnet_cloudinit(
+            network_data=cloudinit.NetworkData(
+                ethernets={
+                    GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
+                        addresses=ip_addresses_from_pool(
+                            ipv4_pool=ipv4_localnet_address_pool,
+                            ipv6_pool=ipv6_localnet_address_pool,
+                        )
                     )
-                )
-            }
+                }
+            )
         ),
         affinity=LOCALNET_VM_ANTI_AFFINITY,
     ) as vm:
@@ -355,15 +374,18 @@ def ovs_bridge_localnet_running_vms(
     vm_ovs_bridge_localnet_2: BaseVirtualMachine,
 ) -> Generator[tuple[BaseVirtualMachine, BaseVirtualMachine]]:
     vm1, vm2 = run_vms(vms=(vm_ovs_bridge_localnet_1, vm_ovs_bridge_localnet_2))
-    ip_families = [
-        ip_family for ip_family, enabled in ((4, ipv4_supported_cluster()), (6, ipv6_supported_cluster())) if enabled
-    ]
+    ip_families = supported_cluster_ip_versions()
     for vm in (vm1, vm2):
         lookup_iface_status(
             vm=vm,
             iface_name=LOCALNET_OVS_BRIDGE_INTERFACE,
             predicate=lambda interface: (
-                len(filter_link_local_addresses(ip_addresses=interface.get("ipAddresses", []))) == len(ip_families)
+                len(
+                    filter_cluster_unsupported_addresses(
+                        ip_addresses=filter_link_local_addresses(ip_addresses=interface.get("ipAddresses", []))
+                    )
+                )
+                == len(ip_families)
             ),
         )
     yield vm1, vm2
@@ -469,15 +491,17 @@ def vm1_ovs_bridge_localnet_jumbo_frame(
             )
         ],
         interfaces=[Interface(name=LOCALNET_OVS_BRIDGE_INTERFACE, bridge={})],
-        network_data=cloudinit.NetworkData(
-            ethernets={
-                GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
-                    addresses=ip_addresses_from_pool(
-                        ipv4_pool=ipv4_localnet_address_pool,
-                        ipv6_pool=ipv6_localnet_address_pool,
+        cloud_init=localnet_cloudinit(
+            network_data=cloudinit.NetworkData(
+                ethernets={
+                    GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
+                        addresses=ip_addresses_from_pool(
+                            ipv4_pool=ipv4_localnet_address_pool,
+                            ipv6_pool=ipv6_localnet_address_pool,
+                        )
                     )
-                )
-            }
+                }
+            )
         ),
         affinity=LOCALNET_VM_ANTI_AFFINITY,
     ) as vm:
@@ -502,15 +526,17 @@ def vm2_ovs_bridge_localnet_jumbo_frame(
             )
         ],
         interfaces=[Interface(name=LOCALNET_OVS_BRIDGE_INTERFACE, bridge={})],
-        network_data=cloudinit.NetworkData(
-            ethernets={
-                GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
-                    addresses=ip_addresses_from_pool(
-                        ipv4_pool=ipv4_localnet_address_pool,
-                        ipv6_pool=ipv6_localnet_address_pool,
+        cloud_init=localnet_cloudinit(
+            network_data=cloudinit.NetworkData(
+                ethernets={
+                    GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
+                        addresses=ip_addresses_from_pool(
+                            ipv4_pool=ipv4_localnet_address_pool,
+                            ipv6_pool=ipv6_localnet_address_pool,
+                        )
                     )
-                )
-            }
+                }
+            )
         ),
         affinity=LOCALNET_VM_ANTI_AFFINITY,
     ) as vm:
