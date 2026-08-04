@@ -20,10 +20,13 @@ from utilities.constants import (
     FILE_NAME_FOR_BACKUP,
     OS_FLAVOR_RHEL,
     OS_FLAVOR_WIN_CONTAINER_DISK,
+    RHEL10_PREFERENCE,
+    SKIP_BACKUP_HOOKS_ANNOTATION,
     TEXT_TO_TEST,
     TIMEOUT_8MIN,
     TIMEOUT_15MIN,
     U1_LARGE,
+    U1_SMALL,
     Images,
 )
 from utilities.infra import create_ns
@@ -38,6 +41,7 @@ from utilities.storage import (
     construct_datavolume_source_dict,
     create_dv,
     create_vm_from_dv,
+    data_volume_template_with_source_ref_dict,
     get_downloaded_artifact,
     virtctl_upload_dv,
     write_file,
@@ -369,3 +373,58 @@ def velero_restore_second_namespace_with_datamover(
         timeout=TIMEOUT_15MIN,
     ) as restore:
         yield restore
+
+
+@pytest.fixture()
+def namespace_for_hooks_backup(admin_client, unprivileged_client):
+    """Namespace for hooks opt-out tests, created with unprivileged RBAC."""
+    yield from create_ns(admin_client=admin_client, unprivileged_client=unprivileged_client, name="velero-hooks-ns")
+
+
+@pytest.fixture()
+def rhel_vm_with_hooks_opt_out(
+    unprivileged_client,
+    rhel10_data_source_scope_session,
+    snapshot_storage_class_name_scope_module,
+    namespace_for_hooks_backup,
+):
+    """Running RHEL VM with kubevirt.io/skip-backup-hooks annotation set to 'true'.
+
+    Creates a RHEL VM with the skip-backup-hooks annotation, waits for it to
+    reach a running state, and verifies the annotation is present before yielding.
+
+    Yields:
+        VirtualMachineForTests: Running VM with backup hooks opt-out annotation.
+    """
+    with VirtualMachineForTests(
+        name="vm-hooks-opt-out",
+        namespace=namespace_for_hooks_backup.name,
+        client=unprivileged_client,
+        os_flavor=OS_FLAVOR_RHEL,
+        vm_instance_type=VirtualMachineClusterInstancetype(client=unprivileged_client, name=U1_SMALL),
+        vm_preference=VirtualMachineClusterPreference(client=unprivileged_client, name=RHEL10_PREFERENCE),
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=rhel10_data_source_scope_session,
+            storage_class=snapshot_storage_class_name_scope_module,
+        ),
+        annotations={SKIP_BACKUP_HOOKS_ANNOTATION: "true"},
+    ) as vm:
+        running_vm(vm=vm)
+        assert vm.instance.metadata.annotations[SKIP_BACKUP_HOOKS_ANNOTATION] == "true", (
+            f"VM {vm.name} missing {SKIP_BACKUP_HOOKS_ANNOTATION} annotation"
+        )
+        yield vm
+
+
+@pytest.fixture()
+def paused_rhel_vm_with_hooks_opt_out(rhel_vm_with_hooks_opt_out):
+    """Paused RHEL VM with kubevirt.io/skip-backup-hooks annotation set to 'true'.
+
+    Pauses the running VM from rhel_vm_with_hooks_opt_out and yields it
+    in the paused state.
+
+    Yields:
+        VirtualMachineForTests: Paused VM with backup hooks opt-out annotation.
+    """
+    rhel_vm_with_hooks_opt_out.vmi.pause(wait=True)
+    yield rhel_vm_with_hooks_opt_out
