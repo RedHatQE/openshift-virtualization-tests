@@ -25,7 +25,7 @@ class TestVeleroBackupHookOptOut:
     annotation is set.
 
     Preconditions:
-        - VM with backup hooks disabled
+        - Under-test VM with ``kubevirt.io/skip-backup-hooks`` set to ``"true"``
     """
 
     @pytest.mark.polarion("CNV-16267")
@@ -39,7 +39,7 @@ class TestVeleroBackupHookOptOut:
         Test that backup of paused VM completes with hooks disabled.
 
         Preconditions:
-            - VM with backup hooks disabled, paused
+            - Under-test VM with ``kubevirt.io/skip-backup-hooks`` set to ``"true"``, paused
 
         Steps:
             1. Run Velero backup
@@ -68,7 +68,7 @@ class TestVeleroBackupHookOptOut:
         Test that backup of a running VM completes with hooks disabled.
 
         Preconditions:
-            - Running VM with backup hooks disabled
+            - Under-test VM with ``kubevirt.io/skip-backup-hooks`` set to ``"true"``, running
 
         Steps:
             1. Run Velero backup
