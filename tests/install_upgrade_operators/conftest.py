@@ -180,6 +180,7 @@ def updated_hco_cr(request, hyperconverged_resource_scope_function, admin_client
     This fixture updates HCO CR with values specified via request.param
     """
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={hyperconverged_resource_scope_function: request.param["patch"]},
         list_resource_reconcile=request.param.get("list_resource_reconcile", [NetworkAddonsConfig, CDI, KubeVirt]),
         wait_for_reconcile_post_update=True,
@@ -193,6 +194,7 @@ def updated_kubevirt_cr(request, kubevirt_resource, admin_client, hco_namespace)
     Attempts to update kubevirt CR
     """
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={kubevirt_resource: request.param["patch"]},
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,
@@ -294,6 +296,7 @@ def updated_resource(
         namespace=request.param.get(RESOURCE_NAMESPACE_STR),
     )
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={cr: request.param["patch"]},
         action="replace",
         list_resource_reconcile=request.param.get("list_resource_reconcile", [cr_kind]),

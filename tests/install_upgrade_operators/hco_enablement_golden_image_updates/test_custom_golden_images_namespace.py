@@ -97,12 +97,14 @@ def default_common_templates_related_resources(default_common_template_hco_statu
 
 @pytest.fixture(scope="class")
 def updated_common_template_custom_ns(
+    admin_client,
     unprivileged_client,
     golden_images_namespace,
     hyperconverged_resource_scope_class,
     custom_golden_images_namespace,
 ):
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={
             hyperconverged_resource_scope_class: {
                 "spec": {COMMON_BOOT_IMAGE_NAMESPACE_STR: custom_golden_images_namespace.name}
@@ -129,7 +131,10 @@ def updated_common_templates_non_existent_ns(
     hyperconverged_resource_scope_function,
 ):
     with ResourceEditorValidateHCOReconcile(
-        patches={hyperconverged_resource_scope_function: {"spec": {COMMON_BOOT_IMAGE_NAMESPACE_STR: "non-existent-ns"}}}
+        admin_client=admin_client,
+        patches={
+            hyperconverged_resource_scope_function: {"spec": {COMMON_BOOT_IMAGE_NAMESPACE_STR: "non-existent-ns"}}
+        },
     ):
         yield
     wait_for_hco_conditions(

@@ -14,8 +14,9 @@ from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 
 @pytest.fixture()
-def set_uninstall_strategy_remove_workloads(hyperconverged_resource_scope_function):
+def set_uninstall_strategy_remove_workloads(admin_client, hyperconverged_resource_scope_function):
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={hyperconverged_resource_scope_function: {"spec": {"uninstallStrategy": "RemoveWorkloads"}}},
         list_resource_reconcile=[CDI, KubeVirt],
         wait_for_reconcile_post_update=True,

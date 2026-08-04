@@ -49,9 +49,11 @@ def is_dv_migratable(dv):
 
 @pytest.fixture(scope="module")
 def enabled_feature_gate_for_declarative_hotplug_volumes(
+    admin_client,
     hyperconverged_resource_scope_module,
 ):
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={
             hyperconverged_resource_scope_module: {"spec": {"featureGates": {"declarativeHotplugVolumes": True}}},
         },

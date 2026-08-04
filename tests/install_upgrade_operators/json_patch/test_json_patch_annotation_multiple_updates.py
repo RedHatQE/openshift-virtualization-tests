@@ -60,6 +60,7 @@ def get_metadata():
 @pytest.fixture(scope="class")
 def multiple_json_patched(admin_client, hco_namespace, prometheus, hyperconverged_resource_scope_class):
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={
             hyperconverged_resource_scope_class: get_metadata(),
         },
