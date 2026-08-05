@@ -296,6 +296,7 @@ class VirtualMachineForTests(VirtualMachine):
         hugepages_page_size=None,
         vm_affinity=None,
         annotations=None,
+        label=None,
     ):
         """
         Virtual machine creation
@@ -377,6 +378,7 @@ class VirtualMachineForTests(VirtualMachine):
             hugepages_page_size (str, optional) defines the size of huge pages,Valid values are 2 Mi and 1 Gi
             vm_affinity (dict, optional): If affinity is specifies, obey all the affinity rules
             annotations (dict, optional): annotations to be added to the VM
+            label (dict, optional): labels to be added to VM metadata (not the VMI template)
         """
         # Sets VM unique name - replaces "." with "-" in the name to handle valid values.
 
@@ -390,6 +392,7 @@ class VirtualMachineForTests(VirtualMachine):
             node_selector=node_selector,
             node_selector_labels=node_selector_labels,
             yaml_file=yaml_file,
+            label=label,
         )
         self.body = body
         self.interfaces = interfaces or []
@@ -715,10 +718,15 @@ class VirtualMachineForTests(VirtualMachine):
         if self.body:
             if self.body.get("metadata"):
                 # We must set name in Template, since we use a unique name here we override it.
-                self.res["metadata"] = self.body["metadata"]
+                # deepcopy so label/annotation merges do not mutate the caller-owned body.
+                self.res["metadata"] = deepcopy(self.body["metadata"])
                 self.res["metadata"]["name"] = self.name
 
             self.res["spec"] = self.body["spec"]
+
+            # body metadata replaces self.res["metadata"]; re-apply caller-provided root metadata.
+            if self.label:
+                self.res["metadata"].setdefault("labels", {}).update(self.label)
 
             if self.annotations:
                 self.res["metadata"].setdefault("annotations", {}).update(self.annotations)
