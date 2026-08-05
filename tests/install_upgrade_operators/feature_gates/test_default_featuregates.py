@@ -82,8 +82,12 @@ def resource_object_value_by_key(request, admin_client):
 def test_default_featuregates_by_resource(
     expected_value,
     resource_object_value_by_key,
+    passt_enabled_in_hco_and_jira_92995_open,
 ):
     if isinstance(resource_object_value_by_key, list):
         resource_object_value_by_key = set(resource_object_value_by_key)
+    if passt_enabled_in_hco_and_jira_92995_open and expected_value is EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES:
+        expected_value = expected_value - {"PasstIPStackMigration"}
+        resource_object_value_by_key = resource_object_value_by_key - {"PasstIPStackMigration"}
     error_message = f"Expected featuregates: {expected_value}, actual: {resource_object_value_by_key}"
     assert expected_value == resource_object_value_by_key, error_message
