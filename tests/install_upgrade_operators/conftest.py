@@ -11,14 +11,20 @@ from ocp_resources.pod import Pod
 from pytest_testconfig import py_config
 
 from tests.install_upgrade_operators.constants import (
+    ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT,
+    EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES,
+    FG_ENABLED,
+    HCO_DEFAULT_FEATUREGATES,
     RESOURCE_NAME_STR,
     RESOURCE_NAMESPACE_STR,
     RESOURCE_TYPE_STR,
+    S390X_SPECIFIC_KUBEVIRT_FEATUREGATES,
 )
 from tests.install_upgrade_operators.utils import (
     get_network_addon_config,
     get_resource_by_name,
 )
+from utilities.constants.architecture import MULTIARCH
 from utilities.hco import ResourceEditorValidateHCOReconcile, get_hco_version
 from utilities.infra import (
     get_daemonsets,
@@ -195,6 +201,17 @@ def updated_resource(
         wait_for_reconcile_post_update=True,
     ):
         yield cr
+
+
+@pytest.fixture()
+def expected_value(request, is_s390x_cluster):
+    expected = request.param.copy()
+    if expected == EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES and is_s390x_cluster:
+        expected |= S390X_SPECIFIC_KUBEVIRT_FEATUREGATES
+    if expected == HCO_DEFAULT_FEATUREGATES:
+        if py_config["cluster_type"] == MULTIARCH:
+            expected[ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT] = FG_ENABLED
+    return expected
 
 
 @pytest.fixture(scope="session")

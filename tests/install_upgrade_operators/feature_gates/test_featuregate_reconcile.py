@@ -1,26 +1,25 @@
-import logging
-
 import pytest
 from ocp_resources.cdi import CDI
 from ocp_resources.kubevirt import KubeVirt
+from pytest_testconfig import config as py_config
 
 from tests.install_upgrade_operators.constants import (
     DEVELOPER_CONFIGURATION,
+    EXPECTED_CDI_HARDCODED_FEATUREGATES,
+    EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES,
     FEATUREGATES,
     KEY_PATH_SEPARATOR,
+    RESOURCE_NAME_STR,
+    RESOURCE_NAMESPACE_STR,
+    RESOURCE_TYPE_STR,
 )
 from tests.install_upgrade_operators.utils import get_resource_key_value
-from utilities.hco import ResourceEditorValidateHCOReconcile
-from utilities.virt import get_hyperconverged_kubevirt
-
-LOGGER = logging.getLogger(__name__)
+from utilities.constants.components import (
+    CDI_KUBEVIRT_HYPERCONVERGED,
+    KUBEVIRT_KUBEVIRT_HYPERCONVERGED,
+)
 
 pytestmark = [pytest.mark.sno, pytest.mark.s390x, pytest.mark.skip_must_gather_collection]
-
-KUBEVIRT_FEATUREGATES_KEY = (
-    f"configuration{KEY_PATH_SEPARATOR}{DEVELOPER_CONFIGURATION}{KEY_PATH_SEPARATOR}{FEATUREGATES}"
-)
-CDI_FEATUREGATES_KEY = f"config{KEY_PATH_SEPARATOR}{FEATUREGATES}"
 
 
 class TestHardcodedFeatureGates:
@@ -33,6 +32,7 @@ class TestHardcodedFeatureGates:
         LOGGER.info(f"KubeVirt featureGates before deletion: {expected}")
 
         with ResourceEditorValidateHCOReconcile(
+            admin_client=admin_client,
             patches={
                 kubevirt_resource: {"spec": {"configuration": {"developerConfiguration": {"featureGates": None}}}}
             },
@@ -40,7 +40,6 @@ class TestHardcodedFeatureGates:
             list_resource_reconcile=[KubeVirt],
             wait_for_reconcile_post_update=True,
         ):
-            kubevirt_resource.reload()
             actual = get_resource_key_value(resource=kubevirt_resource, key_name=KUBEVIRT_FEATUREGATES_KEY)
             if isinstance(actual, list):
                 actual = set(actual)
@@ -56,12 +55,12 @@ class TestHardcodedFeatureGates:
         LOGGER.info(f"CDI featureGates before deletion: {expected}")
 
         with ResourceEditorValidateHCOReconcile(
+            admin_client=admin_client,
             patches={cdi_resource_scope_function: {"spec": {}}},
             action="replace",
             list_resource_reconcile=[CDI],
             wait_for_reconcile_post_update=True,
         ):
-            cdi_resource_scope_function.reload()
             actual = get_resource_key_value(resource=cdi_resource_scope_function, key_name=CDI_FEATUREGATES_KEY)
             if isinstance(actual, list):
                 actual = set(actual)

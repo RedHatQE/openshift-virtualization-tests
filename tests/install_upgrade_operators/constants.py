@@ -23,6 +23,33 @@ RESOURCE_TYPE_STR = "resource_type"
 RESOURCE_NAME_STR = "resource_name"
 RESOURCE_NAMESPACE_STR = "resource_namespace"
 KEY_NAME_STR = "key_name"
+EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES = {
+    "CPUManager",
+    "DecentralizedLiveMigration",
+    "DeclarativeHotplugVolumes",
+    "HostDevices",
+    "HypervStrictCheck",
+    "KubevirtSeccompProfile",
+    "Snapshot",
+}
+S390X_SPECIFIC_KUBEVIRT_FEATUREGATES = {"SecureExecution"}
+EXPECTED_CDI_HARDCODED_FEATUREGATES = {
+    "DataVolumeClaimAdoption",
+    "HonorWaitForFirstConsumer",
+    "WebhookPvcRendering",
+}
+HCO_DEFAULT_FEATUREGATES = {
+    DEPLOY_KUBE_SECONDARY_DNS: FG_DISABLED,
+    PERSISTENT_RESERVATION: FG_DISABLED,
+    "alignCPUs": FG_DISABLED,
+    "downwardMetrics": FG_DISABLED,
+    ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT: FG_DISABLED,
+    "decentralizedLiveMigration": FG_ENABLED,
+    "declarativeHotplugVolumes": FG_ENABLED,
+    "objectGraph": FG_DISABLED,
+    "incrementalBackup": FG_DISABLED,
+    "containerPathVolumes": FG_DISABLED,
+}
 CUSTOM_DATASOURCE_NAME = "custom-datasource"
 WORKLOAD_UPDATE_STRATEGY_KEY_NAME = "workloadUpdateStrategy"
 KUBEMACPOOL_SERVICE = "kubemacpool-service"
