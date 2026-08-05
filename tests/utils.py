@@ -53,6 +53,7 @@ from utilities.constants.timeouts import (
     TIMEOUT_10SEC,
     TIMEOUT_15SEC,
     TIMEOUT_30MIN,
+    TIMEOUT_50MIN,
 )
 from utilities.constants.virt import DISK_SERIAL, NODE_HUGE_PAGES_1GI_KEY
 from utilities.data_collector import get_data_collector_dir, write_to_file
@@ -716,6 +717,7 @@ def create_windows2022_vm_using_existing_dv(
     cpu_model: str | None = None,
     existing_data_volume: DataVolume | None = None,
     check_running_vm: bool = True,
+    dv_wait_timeout: int = TIMEOUT_50MIN,
 ) -> Generator[VirtualMachineForTests]:
     """
     Creates a Windows Server 2022 VM with vTPM using existing DataVolume.
@@ -743,7 +745,7 @@ def create_windows2022_vm_using_existing_dv(
         cpu_model=cpu_model,
     ) as vm:
         if check_running_vm:
-            running_vm(vm=vm)
+            running_vm(vm=vm, dv_wait_timeout=dv_wait_timeout)
             wait_for_windows_vm(vm=vm, version="2022")
         yield vm
 
@@ -756,6 +758,7 @@ def create_windows2022_vm_with_data_volume_template(
     cpu_model: str | None = None,
     dv_template: dict | None = None,
     check_running_vm: bool = True,
+    dv_wait_timeout: int = TIMEOUT_50MIN,
 ) -> Generator[VirtualMachineForTests]:
     """
     Creates a Windows Server 2022 VM with vTPM with dv template.
@@ -783,6 +786,6 @@ def create_windows2022_vm_with_data_volume_template(
         cpu_model=cpu_model,
     ) as vm:
         if check_running_vm:
-            running_vm(vm=vm)
+            running_vm(vm=vm, dv_wait_timeout=dv_wait_timeout)
             wait_for_windows_vm(vm=vm, version="2022")
         yield vm
