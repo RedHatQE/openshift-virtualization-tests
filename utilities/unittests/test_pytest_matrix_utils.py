@@ -12,6 +12,7 @@ from utilities.pytest_matrix_utils import (
     immediate_matrix,
     online_resize_matrix,
     rwx_matrix,
+    snapshot_import_cron_format_matrix,
     snapshot_matrix,
     wffc_matrix,
     without_snapshot_capability_matrix,
@@ -292,6 +293,44 @@ class TestRwxMatrix:
             rwx_matrix(matrix)
 
 
+class TestSnapshotImportCronFormatMatrix:
+    """Test cases for snapshot_import_cron_format_matrix function"""
+
+    def test_snapshot_import_cron_format_matrix_with_snapshot_format(self):
+        """Test snapshot_import_cron_format_matrix filters storage classes with snapshot data import cron source format"""
+        matrix = [
+            {"sc-snapshot-format": {"data_import_cron_source_format": "snapshot", "other": "value"}},
+            {"sc-pvc-format": {"data_import_cron_source_format": "pvc", "other": "value"}},
+            {"sc-snapshot-format-2": {"data_import_cron_source_format": "snapshot", "other": "value"}},
+        ]
+
+        result = snapshot_import_cron_format_matrix(matrix)
+
+        assert len(result) == 2
+        assert {"sc-snapshot-format": {"data_import_cron_source_format": "snapshot", "other": "value"}} in result
+        assert {"sc-snapshot-format-2": {"data_import_cron_source_format": "snapshot", "other": "value"}} in result
+        assert {"sc-pvc-format": {"data_import_cron_source_format": "pvc", "other": "value"}} not in result
+
+    def test_snapshot_import_cron_format_matrix_empty_matrix(self):
+        """Test snapshot_import_cron_format_matrix with empty matrix"""
+        matrix = []
+
+        result = snapshot_import_cron_format_matrix(matrix)
+
+        assert result == []
+
+    def test_snapshot_import_cron_format_matrix_no_snapshot_format(self):
+        """Test snapshot_import_cron_format_matrix with no snapshot format storage classes"""
+        matrix = [
+            {"sc-pvc-1": {"data_import_cron_source_format": "pvc", "other": "value"}},
+            {"sc-pvc-2": {"data_import_cron_source_format": "pvc", "other": "value"}},
+        ]
+
+        result = snapshot_import_cron_format_matrix(matrix)
+
+        assert result == []
+
+
 class TestMatrixFunctionSignatures:
     """Test that all matrix functions accept only matrix argument"""
 
@@ -334,5 +373,12 @@ class TestMatrixFunctionSignatures:
         """Test rwx_matrix function signature"""
 
         sig = signature(rwx_matrix)
+        params = list(sig.parameters.keys())
+        assert params == ["matrix"]
+
+    def test_snapshot_import_cron_format_matrix_signature(self):
+        """Test snapshot_import_cron_format_matrix function signature"""
+
+        sig = signature(snapshot_import_cron_format_matrix)
         params = list(sig.parameters.keys())
         assert params == ["matrix"]

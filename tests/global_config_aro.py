@@ -17,6 +17,7 @@ storage_class_matrix = [
             "online_resize": True,
             "wffc": False,
             "default": True,
+            "data_import_cron_source_format": "snapshot",
         }
     },
 ]

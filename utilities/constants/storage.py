@@ -70,6 +70,7 @@ HPP_CAPABILITIES: dict[str, Any] = {
     "snapshot": False,
     "online_resize": False,
     "wffc": True,
+    "data_import_cron_source_format": "pvc",
 }
 
 # hotplug

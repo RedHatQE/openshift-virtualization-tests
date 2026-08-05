@@ -29,6 +29,7 @@ storage_class_matrix = [
             "snapshot": True,
             "online_resize": True,
             "wffc": False,
+            "data_import_cron_source_format": "snapshot",
         }
     },
     {
@@ -39,6 +40,7 @@ storage_class_matrix = [
             "online_resize": True,
             "wffc": True,
             "default": True,
+            "data_import_cron_source_format": "pvc",
         }
     },
     {HppCsiStorageClass.Name.HOSTPATH_CSI_BASIC: HPP_CAPABILITIES},
