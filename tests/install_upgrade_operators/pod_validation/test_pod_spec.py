@@ -15,6 +15,7 @@ from utilities.constants import (
     HOSTPATH_PROVISIONER_CSI,
     HPP_POOL,
     KUBEVIRT_MIGRATION_CONTROLLER,
+    PASST_BINDING_CNI,
 )
 
 pytestmark = [pytest.mark.sno, pytest.mark.arm64, pytest.mark.s390x]
@@ -35,9 +36,14 @@ def xfail_if_jira_75721_open_and_migration_controller_pod(jira_75721_open, cnv_p
 
 @pytest.mark.skip_must_gather_collection
 @pytest.mark.polarion("CNV-7261")
-def test_no_new_cnv_pods_added(cnv_pods, cnv_jobs):
+def test_no_new_cnv_pods_added(
+    cnv_pods, cnv_jobs, passt_enabled_in_hco_and_jira_92995_open, hostpath_provisioner_scope_session
+):
     all_pods = ALL_CNV_PODS.copy()
-    all_pods.append(HPP_POOL)
+    if hostpath_provisioner_scope_session.exists:
+        all_pods.append(HPP_POOL)
+    if passt_enabled_in_hco_and_jira_92995_open:
+        all_pods.append(PASST_BINDING_CNI)
 
     new_pods = [
         pod.name

@@ -1,6 +1,6 @@
 import pytest
 
-from utilities.constants import ALL_CNV_DAEMONSETS, HOSTPATH_PROVISIONER_CSI
+from utilities.constants import ALL_CNV_DAEMONSETS, HOSTPATH_PROVISIONER_CSI, PASST_BINDING_CNI
 from utilities.infra import get_daemonsets
 
 pytestmark = [
@@ -19,12 +19,13 @@ def cnv_daemonset_names(admin_client, hco_namespace):
 
 @pytest.mark.polarion("CNV-8509")
 # Not marked as `conformance` as this is a "utility" test to match against test matrix
-def test_no_new_cnv_daemonset_added(hpp_cr_installed, cnv_daemonset_names):
-    cnv_daemonsets = ALL_CNV_DAEMONSETS.copy()
+def test_no_new_cnv_daemonset_added(hpp_cr_installed, cnv_daemonset_names, passt_enabled_in_hco_and_jira_92995_open):
+    expected = set(ALL_CNV_DAEMONSETS)
     # Remove Hostpath Provisioner CSI daemonset if HPP CR is not installed
     if not hpp_cr_installed:
-        cnv_daemonsets.remove(HOSTPATH_PROVISIONER_CSI)
+        expected = expected - {HOSTPATH_PROVISIONER_CSI}
+    actual = set(cnv_daemonset_names)
+    if passt_enabled_in_hco_and_jira_92995_open:
+        actual = actual - {PASST_BINDING_CNI}
 
-    assert sorted(cnv_daemonset_names) == sorted(cnv_daemonsets), (
-        f"New cnv daemonsets found: {set(cnv_daemonset_names) - set(cnv_daemonsets)}"
-    )
+    assert actual == expected, f"New cnv daemonsets found: {actual - expected}"

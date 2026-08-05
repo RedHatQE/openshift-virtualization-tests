@@ -280,3 +280,10 @@ def expected_value(request, is_s390x_cluster):
     if request.param == EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES and is_s390x_cluster:
         return request.param | S390X_SPECIFIC_KUBEVIRT_FEATUREGATES
     return request.param
+
+
+@pytest.fixture(scope="session")
+def passt_enabled_in_hco_and_jira_92995_open(hyperconverged_resource_scope_session):
+    annotations = hyperconverged_resource_scope_session.instance.metadata.annotations or {}
+    hco_annotated = annotations.get("hco.kubevirt.io/deployPasstNetworkBinding") == "true"
+    return hco_annotated and is_jira_open(jira_id="CNV-92995")
