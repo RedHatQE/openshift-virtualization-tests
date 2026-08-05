@@ -100,6 +100,7 @@ def snapshot_restored_pci_topology_vm(admin_client, pci_topology_vm, initial_pci
     ],
     indirect=True,
 )
+@pytest.mark.arm64
 class TestPCITopologyStability:
     """
     Verify PCI device addresses remain stable across VM lifecycle operations.
