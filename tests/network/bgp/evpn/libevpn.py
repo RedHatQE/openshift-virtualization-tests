@@ -138,8 +138,10 @@ def _build_bridge_commands(
     return [
         f"ip link add {_BRIDGE_NAME} type bridge vlan_filtering 1 vlan_default_pvid 0",
         f"ip link set {_BRIDGE_NAME} up",
-        f"ip link add {_VXLAN_NAME} type vxlan dstport {_VXLAN_DEST_PORT} local {local_vtep_ip}"
-        " nolearning external vnifilter",
+        (
+            f"ip link add {_VXLAN_NAME} type vxlan dstport {_VXLAN_DEST_PORT} local {local_vtep_ip}"
+            " nolearning external vnifilter"
+        ),
         f"ip link set {_VXLAN_NAME} master {_BRIDGE_NAME}",
         f"bridge link set dev {_VXLAN_NAME} vlan_tunnel on neigh_suppress on learning off",
         f"ip link set {_VXLAN_NAME} up",
