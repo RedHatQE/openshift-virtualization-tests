@@ -26,9 +26,9 @@ from tests.storage.storage_migration.utils import (
     wait_for_storage_migration_completed,
 )
 from tests.storage.utils import create_windows_directory, get_storage_class_for_storage_migration
-from utilities.artifactory import get_http_image_url
+from tests.utils import create_windows2022_vm_with_data_volume_template
 from utilities.constants import Images
-from utilities.constants.images import OS_FLAVOR_FEDORA, OS_FLAVOR_RHEL, OS_FLAVOR_WINDOWS
+from utilities.constants.images import OS_FLAVOR_FEDORA, OS_FLAVOR_RHEL
 from utilities.constants.instance_types import U1_SMALL
 from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5SEC
 from utilities.infra import create_ns
@@ -376,34 +376,18 @@ def windows_vm_with_vtpm_for_storage_migration(
     namespace,
     modern_cpu_for_migration,
     source_storage_class,
-    artifactory_secret_scope_module,
-    artifactory_config_map_scope_module,
+    windows_validation_os_images_data_source_scope_session,
 ):
-    dv = DataVolume(
-        name="windows-11-dv",
-        namespace=namespace.name,
-        storage_class=source_storage_class,
-        source_dict=construct_datavolume_source_dict(
-            source="http",
-            # Using WSL image to avoid the issue of the Windows VM not being able to boot
-            url=get_http_image_url(image_directory=Images.Windows.DIR, image_name=Images.Windows.WIN11_WSL2_IMG),
-            secret_name=artifactory_secret_scope_module.name,
-            cert_configmap_name=artifactory_config_map_scope_module.name,
-        ),
-        size=Images.Windows.DEFAULT_DV_SIZE,
-        client=unprivileged_client,
-        api_name="storage",
-    )
-    dv.to_dict()
-    with VirtualMachineForTests(
-        os_flavor=OS_FLAVOR_WINDOWS,
-        name="windows-11-vm",
+    with create_windows2022_vm_with_data_volume_template(
         namespace=namespace.name,
         client=unprivileged_client,
-        vm_instance_type=VirtualMachineClusterInstancetype(name="u1.large"),
-        vm_preference=VirtualMachineClusterPreference(name="windows.11"),
-        data_volume_template={"metadata": dv.res["metadata"], "spec": dv.res["spec"]},
+        vm_name="windows-2022-vm",
         cpu_model=modern_cpu_for_migration,
+        dv_template=data_volume_template_with_source_ref_dict(
+            data_source=windows_validation_os_images_data_source_scope_session,
+            storage_class=source_storage_class,
+        ),
+        check_running_vm=False,
     ) as vm:
         vm.start()
         yield vm
