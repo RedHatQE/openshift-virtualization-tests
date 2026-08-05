@@ -1020,6 +1020,115 @@ class TestUpdateHcoAnnotations:
 
         mock_editor_class.assert_called_once()
 
+    @patch("utilities.hco.LOGGER")
+    @patch("utilities.hco.ResourceEditorValidateHCOReconcile")
+    def test_update_annotations_empty_array_existing(self, mock_editor_class, mock_logger):
+        """Test that existing '[]' annotation is not appended to — produces fresh patch, not '[,{...}]'"""
+        mock_hco = MagicMock()
+        mock_hco.instance.metadata = {"annotations": {"kubevirt.kubevirt.io/jsonpatch": "[]"}}
+
+        mock_editor = MagicMock()
+        mock_editor.__enter__ = MagicMock(return_value=mock_editor)
+        mock_editor.__exit__ = MagicMock(return_value=None)
+        mock_editor_class.return_value = mock_editor
+
+        with update_hco_annotations(
+            admin_client=MagicMock(),
+            resource=mock_hco,
+            path="migrations",
+            value={"disableTLS": True},
+        ):
+            pass
+
+        patches = mock_editor_class.call_args.kwargs["patches"]
+        annotation_value = patches[mock_hco]["metadata"]["annotations"]["kubevirt.kubevirt.io/jsonpatch"]
+        parsed = json.loads(annotation_value)
+        assert len(parsed) == 1
+        assert parsed[0]["path"] == "/spec/configuration/migrations"
+        mock_logger.warning.assert_not_called()
+
+    @patch("utilities.hco.LOGGER")
+    @patch("utilities.hco.ResourceEditorValidateHCOReconcile")
+    def test_update_annotations_invalid_json_existing(self, mock_editor_class, mock_logger):
+        """Test that invalid existing annotation produces warning and fresh patch"""
+        mock_hco = MagicMock()
+        mock_hco.instance.metadata = {"annotations": {"kubevirt.kubevirt.io/jsonpatch": "[,{invalid}"}}
+
+        mock_editor = MagicMock()
+        mock_editor.__enter__ = MagicMock(return_value=mock_editor)
+        mock_editor.__exit__ = MagicMock(return_value=None)
+        mock_editor_class.return_value = mock_editor
+
+        with update_hco_annotations(
+            admin_client=MagicMock(),
+            resource=mock_hco,
+            path="migrations",
+            value={"disableTLS": True},
+        ):
+            pass
+
+        patches = mock_editor_class.call_args.kwargs["patches"]
+        annotation_value = patches[mock_hco]["metadata"]["annotations"]["kubevirt.kubevirt.io/jsonpatch"]
+        parsed = json.loads(annotation_value)
+        assert len(parsed) == 1
+        mock_logger.warning.assert_called_once()
+
+    @patch("utilities.hco.ResourceEditorValidateHCOReconcile")
+    def test_update_annotations_valid_existing_merges_correctly(self, mock_editor_class):
+        """Test that valid non-empty existing annotation is merged via JSON list concat, not string slicing"""
+        mock_hco = MagicMock()
+        existing = json.dumps([{"op": "add", "path": "/spec/configuration/cpuModel", "value": "Haswell"}])
+        mock_hco.instance.metadata = {"annotations": {"kubevirt.kubevirt.io/jsonpatch": existing}}
+
+        mock_editor = MagicMock()
+        mock_editor.__enter__ = MagicMock(return_value=mock_editor)
+        mock_editor.__exit__ = MagicMock(return_value=None)
+        mock_editor_class.return_value = mock_editor
+
+        with update_hco_annotations(
+            admin_client=MagicMock(),
+            resource=mock_hco,
+            path="migrations",
+            value={"disableTLS": True},
+        ):
+            pass
+
+        patches = mock_editor_class.call_args.kwargs["patches"]
+        annotation_value = patches[mock_hco]["metadata"]["annotations"]["kubevirt.kubevirt.io/jsonpatch"]
+        parsed = json.loads(annotation_value)
+        assert len(parsed) == 2
+        assert parsed[0]["path"] == "/spec/configuration/cpuModel"
+        assert parsed[1]["path"] == "/spec/configuration/migrations"
+
+    @patch("utilities.hco.LOGGER")
+    @patch("utilities.hco.ResourceEditorValidateHCOReconcile")
+    def test_update_annotations_dict_existing(self, mock_editor_class, mock_logger):
+        """Test that existing annotation with valid JSON but non-list type (dict) produces warning and fresh patch"""
+        mock_hco = MagicMock()
+        mock_hco.instance.metadata = {
+            "annotations": {"kubevirt.kubevirt.io/jsonpatch": '{"op": "add", "path": "/spec/configuration/migrations"}'}
+        }
+
+        mock_editor = MagicMock()
+        mock_editor.__enter__ = MagicMock(return_value=mock_editor)
+        mock_editor.__exit__ = MagicMock(return_value=None)
+        mock_editor_class.return_value = mock_editor
+
+        with update_hco_annotations(
+            admin_client=MagicMock(),
+            resource=mock_hco,
+            path="migrations",
+            value={"disableTLS": True},
+        ):
+            pass
+
+        patches = mock_editor_class.call_args.kwargs["patches"]
+        annotation_value = patches[mock_hco]["metadata"]["annotations"]["kubevirt.kubevirt.io/jsonpatch"]
+        parsed = json.loads(annotation_value)
+        assert len(parsed) == 1
+        assert parsed[0]["path"] == "/spec/configuration/migrations"
+        mock_logger.warning.assert_called_once()
+
 
 class TestWaitForAutoBootConfigStabilization:
     """Test cases for wait_for_auto_boot_config_stabilization function"""

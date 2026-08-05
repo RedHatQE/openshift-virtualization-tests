@@ -117,8 +117,7 @@ def wait_for_hco_conditions(
     condition_key2="status",
     list_dependent_crs_to_check=None,
 ):
-    """
-    Checking HCO conditions.
+    """Checking HCO conditions.
 
     If list_dependent_crs_to_check information is passed, we would wait for them to
     stabilize first, before checking hco.status.conditions. Please note, EXPECTED_STATUS_CONDITIONS defines what all
@@ -182,7 +181,7 @@ def wait_for_dp(dp):
             status = sample.get("status")
             metadata = sample.get("metadata")
             if metadata.get("generation") == status.get("observedGeneration") and status.get("replicas") == status.get(
-                "updatedReplicas"
+                "updatedReplicas",
             ):
                 break
     except TimeoutExpiredError:
@@ -191,7 +190,12 @@ def wait_for_dp(dp):
 
 
 def apply_np_changes(
-    admin_client, hco, hco_namespace, infra_placement=None, workloads_placement=None, exclude_deployments=None
+    admin_client,
+    hco,
+    hco_namespace,
+    infra_placement=None,
+    workloads_placement=None,
+    exclude_deployments=None,
 ):
     current_infra = hco.instance.to_dict()["spec"].get("infra")
     current_workloads = hco.instance.to_dict()["spec"].get("workloads")
@@ -202,26 +206,28 @@ def apply_np_changes(
             "spec": {
                 "infra": target_infra or None,
                 "workloads": target_workloads or None,
-            }
+            },
         }
         LOGGER.info(f"Updating HCO with node placement. {patch}")
         editor = ResourceEditor(patches={hco: patch})
         editor.update(backup_resources=False)
         wait_for_hco_post_update_stable_state(
-            admin_client=admin_client, hco_namespace=hco_namespace, exclude_deployments=exclude_deployments
+            admin_client=admin_client,
+            hco_namespace=hco_namespace,
+            exclude_deployments=exclude_deployments,
         )
     else:
         LOGGER.info("No actual changes to node placement configuration, skipping")
 
 
 def wait_for_hco_post_update_stable_state(admin_client, hco_namespace, exclude_deployments=None):
-    """
-    Waits for hco to reach stable state post hco update
+    """Waits for hco to reach stable state post hco update
 
     Args:
         admin_client (DynamicClient): Dynamic client object
         hco_namespace (Namespace): Namespace object
         exclude_deployments (list): List of deployment names to exclude from verification
+
     """
     exclude_deployments = exclude_deployments or []
 
@@ -264,8 +270,7 @@ def wait_for_hco_post_update_stable_state(admin_client, hco_namespace, exclude_d
 
 
 def add_labels_to_nodes(nodes, node_labels):
-    """
-    Adds given labels to a list of nodes
+    """Adds given labels to a list of nodes
 
     Args:
         nodes (list): list of nodes
@@ -286,7 +291,8 @@ def add_labels_to_nodes(nodes, node_labels):
 
 def get_hco_spec(admin_client, hco_namespace):
     return utilities.infra.get_hyperconverged_resource(
-        client=admin_client, hco_ns_name=hco_namespace.name
+        client=admin_client,
+        hco_ns_name=hco_namespace.name,
     ).instance.to_dict()["spec"]
 
 
@@ -304,8 +310,7 @@ def get_installed_hco_csv(admin_client, hco_namespace):
 
 
 def get_hco_version(client, hco_ns_name):
-    """
-    Get current hco version
+    """Get current hco version
 
     Args:
         client (DynamicClient): Dynamic client object
@@ -313,6 +318,7 @@ def get_hco_version(client, hco_ns_name):
 
     Returns:
         str: hyperconverged operator version
+
     """
     return (
         utilities.infra
@@ -323,8 +329,7 @@ def get_hco_version(client, hco_ns_name):
 
 
 def wait_for_hco_version(client, hco_ns_name, cnv_version):
-    """
-    Wait for hco version to get updated.
+    """Wait for hco version to get updated.
 
     Args:
         client (DynamicClient): Dynamic client object
@@ -336,6 +341,7 @@ def wait_for_hco_version(client, hco_ns_name, cnv_version):
 
     Raises:
         TimeoutExpiredError: if hco resource is not updated with expected version string
+
     """
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_30MIN,
@@ -439,8 +445,8 @@ def get_json_patch_annotation_values(component, path, value=None, op="add"):
                 "op": op,
                 "path": f"/spec/{component_dict.get('config', '')}{path}",
                 "value": value,
-            }
-        ])
+            },
+        ]),
     }
 
 
@@ -448,8 +454,8 @@ def hco_cr_jsonpatch_annotations_dict(component, path, value=None, op="add"):
     # https://github.com/kubevirt/hyperconverged-cluster-operator/blob/main/docs/cluster-configuration.md#jsonpatch-annotations
     return {
         "metadata": {
-            "annotations": get_json_patch_annotation_values(component=component, path=path, value=value, op=op)
-        }
+            "annotations": get_json_patch_annotation_values(component=component, path=path, value=value, op=op),
+        },
     }
 
 
@@ -464,8 +470,7 @@ def update_hco_annotations(
     op="add",
     resource_list=None,
 ):
-    """
-    Update jsonpatch annotation in HCO CR.
+    """Update jsonpatch annotation in HCO CR.
 
     Args:
         admin_client (DynamicClient): Kubernetes admin client
@@ -496,10 +501,24 @@ def update_hco_annotations(
     # '[{"op": "add", "path": "/spec/configuration/machineType", "value": "pc-q35-rhel8.4.0"},
     # {"op": "add", "path": "/spec/configuration/cpuModel", "value": "Haswell-noTSX"}]]'
     if resource_existing_jsonpatch_annotation and not overwrite_patches:
-        hco_annotations_dict = hco_config_jsonpath_dict["metadata"]["annotations"]
-        hco_annotations_dict[jsonpatch_key] = (
-            f"{resource_existing_jsonpatch_annotation[:-1]},{hco_annotations_dict[jsonpatch_key][1:]}"
-        )
+        try:
+            existing_patches = json.loads(resource_existing_jsonpatch_annotation)
+        except json.JSONDecodeError, TypeError:
+            LOGGER.warning(
+                f"Existing jsonpatch annotation for key {jsonpatch_key!r} is not valid JSON "
+                f"({resource_existing_jsonpatch_annotation!r}); ignoring and overwriting.",
+            )
+            existing_patches = None
+        if isinstance(existing_patches, list) and existing_patches:
+            hco_annotations_dict = hco_config_jsonpath_dict["metadata"]["annotations"]
+            hco_annotations_dict[jsonpatch_key] = json.dumps(
+                existing_patches + json.loads(hco_annotations_dict[jsonpatch_key])
+            )
+        elif existing_patches is not None and not isinstance(existing_patches, list):
+            LOGGER.warning(
+                f"Existing jsonpatch annotation for key {jsonpatch_key!r} is not a list "
+                f"(got {type(existing_patches).__name__!r}); ignoring and overwriting.",
+            )
 
     with ResourceEditorValidateHCOReconcile(
         admin_client=admin_client,
@@ -554,7 +573,7 @@ def enabled_aaq_in_hco(client, hco_namespace, hyperconverged_resource, enable_ac
     patches = {hyperconverged_resource: {"spec": {"enableApplicationAwareQuota": True}}}
     if enable_acrq_support:
         patches[hyperconverged_resource]["spec"]["applicationAwareConfig"] = {
-            "allowApplicationAwareClusterResourceQuota": True
+            "allowApplicationAwareClusterResourceQuota": True,
         }
 
     with ResourceEditorValidateHCOReconcile(
