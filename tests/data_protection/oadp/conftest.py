@@ -1,14 +1,13 @@
 import pytest
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.namespace import Namespace
+from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
+from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 
 from tests.data_protection.oadp.utils import (
     VeleroRestore,
     is_storage_class_support_volume_mode,
 )
-from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
-from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
-
 from utilities.constants import (
     BACKUP_STORAGE_LOCATION,
     FILE_NAME_FOR_BACKUP,
