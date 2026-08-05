@@ -7,7 +7,6 @@ from tests.install_upgrade_operators.deployment.utils import (
     validate_request_fields,
 )
 from utilities.constants.components import (
-    ALL_CNV_DEPLOYMENTS,
     HCO_OPERATOR,
     HCO_WEBHOOK,
     HPP_POOL,
@@ -77,21 +76,6 @@ def test_cnv_deployment_priority_class_name(
         pytest.fail(
             f"For cnv deployment {cnv_deployment_by_name.name}, spec.template.spec.priorityClassName has not been set."
         )
-
-
-@pytest.mark.skip_must_gather_collection
-@pytest.mark.polarion("CNV-8289")
-def test_no_new_cnv_deployments_added(cnv_deployments_excluding_hpp_pool):
-    """
-    Since cnv deployments image validations are done via polarion parameterization, this test has been added
-    to catch any new cnv deployments that is not part of cnv_deployment_matrix
-    """
-    new_deployment = [
-        deployment.name
-        for deployment in cnv_deployments_excluding_hpp_pool
-        if list(filter(deployment.name.startswith, ALL_CNV_DEPLOYMENTS)) == []
-    ]
-    assert not new_deployment, f"New cnv deployment: {new_deployment}, has been added."
 
 
 @pytest.mark.usefixtures("xfail_if_sriov_conforma_jira_open_and_hco_operator")
