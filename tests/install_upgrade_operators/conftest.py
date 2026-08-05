@@ -283,11 +283,6 @@ def expected_value(request, is_s390x_cluster):
 
 
 @pytest.fixture(scope="session")
-def jira_87629_open():
-    return is_jira_open(jira_id="CNV-87629")
-
-
-@pytest.fixture(scope="session")
 def passt_enabled_in_hco_and_jira_92995_open(hyperconverged_resource_scope_session):
     annotations = hyperconverged_resource_scope_session.instance.metadata.annotations or {}
     hco_annotated = annotations.get("hco.kubevirt.io/deployPasstNetworkBinding") == "true"
