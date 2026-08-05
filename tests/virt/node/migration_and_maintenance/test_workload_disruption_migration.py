@@ -123,6 +123,7 @@ class TestRhelWorkloadMigration:
     # Chain root: migration mutates the shared class-scoped VM; subsequent tests verify cumulative side effects.
     @pytest.mark.dependency(name=f"{RHEL_CLASS_NAME}::migrate_vm")
     @pytest.mark.polarion("CNV-15225")
+    @pytest.mark.arm64
     def test_awd_migration_mode(
         self,
         vm_with_hotplug_support,
@@ -136,6 +137,7 @@ class TestRhelWorkloadMigration:
     # Node drain requires a successfully migrated VM; both mutate the shared VM and track PID survival.
     @pytest.mark.dependency(name=f"{RHEL_CLASS_NAME}::node_drain", depends=[f"{RHEL_CLASS_NAME}::migrate_vm"])
     @pytest.mark.polarion("CNV-15245")
+    @pytest.mark.arm64
     def test_awd_node_drain(
         self,
         vm_with_hotplug_support,
@@ -214,6 +216,7 @@ class TestWindowsWorkloadMigration:
     # Chain root: migration mutates the shared class-scoped VM; subsequent tests verify cumulative side effects.
     @pytest.mark.dependency(name=f"{WIN_CLASS_NAME}::migrate_vm")
     @pytest.mark.polarion("CNV-15246")
+    @pytest.mark.arm64
     def test_awd_migration_mode(
         self,
         vm_with_hotplug_support,
