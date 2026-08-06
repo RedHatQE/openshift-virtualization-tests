@@ -78,6 +78,9 @@ HOTPLUG_DISK_SERIAL = "1234567890"
 HOTPLUG_DISK_VIRTIO_BUS = "virtio"
 HOTPLUG_DISK_SCSI_BUS = "scsi"
 
+# Clone strategy annotation values
+HOST_ASSISTED_CLONE_STRATEGY = "copy"
+
 # DataVolume source type strings
 REGISTRY_STR = "registry"
 

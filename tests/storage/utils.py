@@ -12,6 +12,7 @@ from ocp_resources.config_map import ConfigMap
 from ocp_resources.daemonset import DaemonSet
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.hostpath_provisioner import HostPathProvisioner
+from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.resource import Resource
 from ocp_resources.role_binding import RoleBinding
 from ocp_resources.route import Route
@@ -313,14 +314,42 @@ def wait_for_dv_condition_message(dv: DataVolume, expected_message: str, timeout
     )
 
 
+_CLONE_TYPE_ANNOTATION = f"{Resource.ApiGroup.CDI_KUBEVIRT_IO}/cloneType"
+
+
 def assert_pvc_snapshot_clone_annotation(pvc, storage_class):
-    clone_type_annotation_str = f"{Resource.ApiGroup.CDI_KUBEVIRT_IO}/cloneType"
-    clone_type_annotation = pvc.instance["metadata"].get("annotations").get(clone_type_annotation_str)
+    clone_type_annotation = pvc.instance["metadata"].get("annotations").get(_CLONE_TYPE_ANNOTATION)
     # For snapshot capable storage, 'csi-clone' may be set in the StorageProfile
     expected_clone_type_annotation = StorageProfile(name=storage_class, client=pvc.client).instance.status.cloneStrategy
     assert clone_type_annotation == expected_clone_type_annotation, (
-        f"{clone_type_annotation_str}: {clone_type_annotation}, expected: '{expected_clone_type_annotation}'"
+        f"{_CLONE_TYPE_ANNOTATION}: {clone_type_annotation}, expected: '{expected_clone_type_annotation}'"
     )
+
+
+def assert_clone_type_on_pvcs(
+    pvc_names: list[str],
+    namespace: str,
+    client: DynamicClient,
+    expected_clone_type: str,
+) -> None:
+    """Validate the clone annotation on each PVC.
+
+    Args:
+        pvc_names: PVC names to validate.
+        namespace: PVC namespace.
+        client: Kubernetes client.
+        expected_clone_type: Expected CDI clone strategy.
+
+    Raises:
+        AssertionError: If any PVC has a different clone strategy.
+    """
+    failures = []
+    for pvc_name in pvc_names:
+        pvc = PersistentVolumeClaim(name=pvc_name, namespace=namespace, client=client)
+        clone_type = pvc.instance["metadata"].get("annotations", {}).get(_CLONE_TYPE_ANNOTATION)
+        if clone_type != expected_clone_type:
+            failures.append(f"PVC {pvc_name}: {_CLONE_TYPE_ANNOTATION}={clone_type}, expected '{expected_clone_type}'")
+    assert not failures, f"Clone type mismatch on {len(failures)} PVC(s):\n" + "\n".join(failures)
 
 
 def hpp_cr_suffix(is_hpp_cr_legacy):

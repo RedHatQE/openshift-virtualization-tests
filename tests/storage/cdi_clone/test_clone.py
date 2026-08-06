@@ -6,6 +6,10 @@ import pytest
 from ocp_resources.datavolume import DataVolume
 
 from tests.os_params import FEDORA_LATEST
+from tests.storage.cdi_clone.utils import (
+    create_vm_from_clone_dv_template,
+    create_vm_with_multi_clone_disks,
+)
 from tests.storage.stop_status_utils import dv_stop_status_restart_threshold
 from tests.storage.utils import (
     assert_pvc_snapshot_clone_annotation,
@@ -14,6 +18,7 @@ from tests.storage.utils import (
 from tests.utils import create_windows2022_vm_using_existing_dv
 from utilities.constants import Images
 from utilities.constants.images import OS_FLAVOR_FEDORA, OS_FLAVOR_WINDOWS
+from utilities.constants.storage import HOST_ASSISTED_CLONE_STRATEGY
 from utilities.constants.timeouts import TIMEOUT_1MIN
 from utilities.constants.virt import WIN_2K22
 from utilities.ssp import validate_os_info_vmi_vs_windows_os
@@ -21,44 +26,12 @@ from utilities.storage import (
     check_disk_count_in_vm,
     create_dv,
     create_vm_from_dv,
-    data_volume_template_dict_with_pvc_source,
+    data_source_ref,
     get_dv_size_from_datasource,
     overhead_size_for_dv,
     sc_volume_binding_mode_is_wffc,
 )
-from utilities.virt import (
-    VirtualMachineForTests,
-    restart_vm_wait_for_running_vm,
-    running_vm,
-)
-
-
-def create_vm_from_clone_dv_template(
-    vm_name,
-    dv_name,
-    namespace_name,
-    source_dv,
-    client,
-    volume_mode,
-    storage_class,
-    size=None,
-):
-    with VirtualMachineForTests(
-        name=vm_name,
-        namespace=namespace_name,
-        os_flavor=OS_FLAVOR_FEDORA,
-        client=client,
-        memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
-        data_volume_template=data_volume_template_dict_with_pvc_source(
-            target_dv_name=dv_name,
-            target_dv_namespace=namespace_name,
-            source_dv=source_dv,
-            volume_mode=volume_mode,
-            size=size,
-            storage_class=storage_class,
-        ),
-    ) as vm:
-        running_vm(vm=vm)
+from utilities.virt import restart_vm_wait_for_running_vm
 
 
 @pytest.mark.sno
@@ -80,11 +53,7 @@ def test_successful_vm_restart_with_cloned_dv(
         size=size,
         storage_class=storage_class_name_scope_module,
         consume_wffc=False,
-        source_ref={
-            "kind": fedora_data_source_scope_module.kind,
-            "name": fedora_data_source_scope_module.name,
-            "namespace": fedora_data_source_scope_module.namespace,
-        },
+        source_ref=data_source_ref(fedora_data_source_scope_module),
     ) as cdv:
         if sc_volume_binding_mode_is_wffc(sc=storage_class_name_scope_module, client=unprivileged_client):
             cdv.wait_for_status(status=DataVolume.Status.PENDING_POPULATION, timeout=TIMEOUT_1MIN)
@@ -237,6 +206,7 @@ def test_successful_snapshot_clone(
 
 
 @pytest.mark.gating
+@pytest.mark.conformance
 @pytest.mark.polarion("CNV-5607")
 @pytest.mark.s390x
 def test_clone_from_fs_to_block_using_dv_template(
@@ -246,6 +216,19 @@ def test_clone_from_fs_to_block_using_dv_template(
     fedora_dv_with_filesystem_volume_mode,
     storage_class_with_block_volume_mode,
 ):
+    """
+    Test cloning a DV from filesystem to block volume mode via DV template.
+
+    Preconditions:
+        - Fedora DataVolume (sourced from Quay registry) with filesystem volume mode
+        - Storage class supporting block volume mode
+
+    Steps:
+        1. Create a VM using a clone DataVolume template that clones the filesystem DV to block
+
+    Expected:
+        - VM boots successfully with the cloned block DV
+    """
     create_vm_from_clone_dv_template(
         vm_name="vm-5607",
         dv_name="dv-5607",
@@ -257,6 +240,7 @@ def test_clone_from_fs_to_block_using_dv_template(
     )
 
 
+@pytest.mark.conformance
 @pytest.mark.polarion("CNV-5608")
 @pytest.mark.smoke()
 @pytest.mark.s390x
@@ -268,6 +252,19 @@ def test_clone_from_block_to_fs_using_dv_template(
     storage_class_with_filesystem_volume_mode,
     default_fs_overhead,
 ):
+    """
+    Test cloning a DV from block to filesystem volume mode via DV template.
+
+    Preconditions:
+        - Fedora DataVolume (sourced from Quay registry) with block volume mode
+        - Storage class supporting filesystem volume mode
+
+    Steps:
+        1. Create a VM using a clone DataVolume template that clones the block DV to filesystem
+
+    Expected:
+        - VM boots successfully with the cloned filesystem DV
+    """
     create_vm_from_clone_dv_template(
         vm_name="vm-5608",
         dv_name="dv-5608",
@@ -275,10 +272,45 @@ def test_clone_from_block_to_fs_using_dv_template(
         source_dv=fedora_dv_with_block_volume_mode,
         client=unprivileged_client,
         volume_mode=DataVolume.VolumeMode.FILE,
-        # add fs overhead and round up the result
         size=overhead_size_for_dv(
             image_size=int(fedora_dv_with_block_volume_mode.size[:-2]),
             overhead_value=default_fs_overhead,
         ),
         storage_class=storage_class_with_filesystem_volume_mode,
+    )
+
+
+@pytest.mark.conformance
+@pytest.mark.polarion("CNV-16335")
+def test_clone_vm_with_4_disks_host_assisted(
+    storage_class_with_forced_host_assisted_clone,
+    fedora_source_dv_for_clone,
+    unprivileged_client,
+    namespace,
+):
+    """
+    Test that a VM with 4 host-assisted cloned disks boots successfully.
+
+    Preconditions:
+        - Fedora DataVolume as clone source (from golden image DataSource)
+        - Storage configured to enforce host-assisted clone strategy
+
+    Steps:
+        1. Create a VM with 4 DataVolume templates cloned from the source DV
+        2. Verify the VM boots and all 4 cloned disks are visible inside the guest
+        3. Verify PVC annotations confirm host-assisted (copy) clone strategy was used
+
+    Expected:
+        - All 4 cloned disks are visible inside the running VM
+        - All PVCs confirm host-assisted clone strategy was used
+    """
+    create_vm_with_multi_clone_disks(
+        vm_name="vm-4disk-host-assisted-clone",
+        dv_name="clone-host-assisted",
+        namespace_name=namespace.name,
+        source_dv=fedora_source_dv_for_clone,
+        client=unprivileged_client,
+        storage_class=storage_class_with_forced_host_assisted_clone,
+        num_disks=4,
+        expected_clone_type=HOST_ASSISTED_CLONE_STRATEGY,
     )
