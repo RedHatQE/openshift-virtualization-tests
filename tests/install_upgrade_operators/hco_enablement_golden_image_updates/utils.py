@@ -1,9 +1,13 @@
 import logging
 import re
+from typing import Any
 
 from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.data_import_cron import DataImportCron
+from ocp_resources.data_source import DataSource
+from ocp_resources.image_stream import ImageStream
+from ocp_resources.resource import Resource
 
 from tests.install_upgrade_operators.constants import CUSTOM_DATASOURCE_NAME
 from utilities.constants.hco import SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME
@@ -11,6 +15,7 @@ from utilities.constants.storage import (
     OUTDATED,
     WILDCARD_CRON_EXPRESSION,
 )
+from utilities.constants.timeouts import TIMEOUT_10MIN
 
 HCO_CR_DATA_IMPORT_SCHEDULE_KEY = "dataImportSchedule"
 RE_NAMED_GROUP_MINUTES = "minutes"
@@ -93,14 +98,109 @@ def get_templates_by_type_from_hco_status(hco_status_templates, template_type=CO
     ]
 
 
-def get_data_import_cron_by_name(namespace: str, cron_name: str, admin_client: DynamicClient) -> DataImportCron:
-    data_import_cron = DataImportCron(name=cron_name, namespace=namespace, client=admin_client)
-    if data_import_cron.exists:
-        return data_import_cron
-    raise ResourceNotFoundError(f"DataImportCron: {data_import_cron} not found in namespace: {namespace}")
+def get_data_import_crons_by_prefix(
+    namespace: str,
+    cron_prefix: str,
+    admin_client: DynamicClient,
+) -> list[DataImportCron]:
+    """Return all DataImportCrons matching a template base name prefix.
+
+    Matches exact name or name with architecture suffix (e.g. prefix "fedora"
+    matches "fedora", "fedora-amd64", "fedora-arm64").
+
+    Args:
+        namespace: Namespace to search in.
+        cron_prefix: HCO template base name to match against.
+        admin_client: Kubernetes client.
+
+    Returns:
+        List of matching DataImportCron resources.
+
+    Raises:
+        ResourceNotFoundError: If no matching DataImportCrons are found.
+    """
+    matching = [
+        data_import_cron
+        for data_import_cron in DataImportCron.get(client=admin_client, namespace=namespace)
+        if data_import_cron.name == cron_prefix or data_import_cron.name.startswith(f"{cron_prefix}-")
+    ]
+    if not matching:
+        raise ResourceNotFoundError(f"No DataImportCron with prefix '{cron_prefix}' found in namespace: {namespace}")
+    return matching
 
 
 def get_template_dict_by_name(template_name, templates):
     for template in templates:
         if template["metadata"]["name"] == template_name:
             return template
+
+
+def get_templates_resources_names_dict(templates: list[dict[str, Any]]) -> dict[str, set[str]]:
+    """Extract resource names from HCO DataImportCronTemplates, grouped by kind.
+
+    Returns:
+        dict[str, set[str]]: Mapping of resource kind to set of names.
+            Keys: DataImportCron.kind and DataSource.kind are always present;
+                  ImageStream.kind is present only when templates contain an image stream.
+    """
+    resource_dict: dict[str, set[str]] = {}
+    for template in templates:
+        image_stream_name = template["spec"]["template"]["spec"]["source"]["registry"].get("imageStream")
+        if image_stream_name:
+            resource_dict.setdefault(ImageStream.kind, set()).add(image_stream_name)
+        resource_dict.setdefault(DataImportCron.kind, set()).add(template["metadata"]["name"])
+        resource_dict.setdefault(DataSource.kind, set()).add(template["spec"]["managedDataSource"])
+    return resource_dict
+
+
+def verify_resource_not_in_ns(resource_type: type[Resource], namespace: str, client: DynamicClient) -> None:
+    """Assert that no resources of the given type exist in the namespace.
+
+    Args:
+        resource_type: OCP resource class to query.
+        namespace: Namespace to check.
+        client: OpenShift client.
+
+    Raises:
+        AssertionError: If any resources of the given type exist.
+    """
+    resources = resource_type.get(client=client, namespace=namespace)
+    resources_names = {resource.name for resource in resources}
+    assert not resources_names, f"{resource_type.kind} resources shouldn't exist in {namespace}: {resources_names}"
+
+
+def verify_resource_in_ns(
+    expected_resource_names: set[str],
+    namespace: str,
+    client: DynamicClient,
+    resource_type: type[Resource],
+    ready_condition: str | None = None,
+) -> None:
+    """Assert that expected resources exist in the namespace and optionally wait for readiness.
+
+    Args:
+        expected_resource_names: Set of resource names that must be present.
+        namespace: Namespace to check.
+        client: OpenShift client.
+        resource_type: OCP resource class to query.
+        ready_condition: If provided, waits up to 10 minutes for each expected
+            resource to reach this condition with status True.
+
+    Raises:
+        AssertionError: If any expected resources are missing.
+        TimeoutExpiredError: If a resource does not reach the ready condition in time.
+    """
+    resources = list(resource_type.get(client=client, namespace=namespace))
+    resources_names = {resource.name for resource in resources}
+    missing_resources_names = expected_resource_names - resources_names
+    assert not missing_resources_names, f"Missing {resource_type.kind} in {namespace}: {missing_resources_names}"
+
+    if ready_condition:
+        LOGGER.info(f"Verify that {expected_resource_names} are in {ready_condition} condition")
+        for resource in resources:
+            if resource.name in expected_resource_names:
+                resource.wait_for_condition(
+                    condition=ready_condition,
+                    status=resource.Condition.Status.TRUE,
+                    timeout=TIMEOUT_10MIN,
+                )
