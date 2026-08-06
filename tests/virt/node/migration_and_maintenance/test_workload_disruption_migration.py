@@ -49,9 +49,11 @@ def workload_disruption_migration_policy():
 
 
 @pytest.fixture(scope="class")
-def migration_mode(request, workload_disruption_migration_policy):
+def migration_mode(request, workload_disruption_migration_policy, is_postcopy_migration_bug_open):
     mode = request.param["mode"]
     if mode == "PostCopy":
+        if is_postcopy_migration_bug_open:
+            pytest.xfail(reason="CNV-84023: post-copy migration fails on RHCOS 10+ nodes")
         with ResourceEditor(patches={workload_disruption_migration_policy: {"spec": {"allowPostCopy": True}}}):
             yield mode
     else:
