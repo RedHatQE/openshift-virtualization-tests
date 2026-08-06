@@ -7,6 +7,7 @@ import pytest
 from ocp_resources.utils.constants import TIMEOUT_1MINUTE
 
 from libs.net.traffic_generator import is_tcp_connection
+from libs.net.udn import lookup_udn_pod_ip
 from libs.net.vmspec import lookup_iface_status_ip, lookup_primary_network
 from utilities.constants.networking import PUBLIC_DNS_SERVER_IP
 from utilities.constants.pytest import QUARANTINED
@@ -79,3 +80,8 @@ class TestPrimaryUdn:
     ):
         migrate_vm_and_verify(vm=server.vm, client=admin_client)
         assert is_tcp_connection(server=server, client=client)
+
+    @pytest.mark.polarion("CNV-11432")
+    def test_vm_to_pod_connectivity_on_udn(self, vma_udn, udn_pod):
+        pod_ip = lookup_udn_pod_ip(pod=udn_pod)
+        vma_udn.console(commands=[f"ping -c 3 {pod_ip}"], timeout=TIMEOUT_1MIN)
