@@ -96,6 +96,7 @@ from utilities.constants.timeouts import (
     TIMEOUT_12MIN,
     TIMEOUT_25MIN,
     TIMEOUT_30MIN,
+    TIMEOUT_30SEC,
 )
 from utilities.constants.virt import (
     CLOUD_INIT_DISK_NAME,
@@ -1998,7 +1999,11 @@ def wait_for_migration_finished(migration: VirtualMachineInstanceMigration, time
     """
 
     sleep = TIMEOUT_10SEC
-    samples = TimeoutSampler(wait_timeout=timeout, sleep=sleep, func=lambda: migration.instance.status.phase)
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_30SEC,
+        sleep=sleep,
+        func=lambda: migration.instance.status and migration.instance.status.phase,
+    )
     counter = 0
     sample = None
     try:
