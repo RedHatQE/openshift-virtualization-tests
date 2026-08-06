@@ -2,7 +2,7 @@ import contextlib
 import logging
 import re
 import time
-from ipaddress import ip_interface
+from ipaddress import IPv4Interface, IPv6Interface, ip_interface
 from typing import Final
 
 from kubernetes.dynamic import DynamicClient
@@ -93,13 +93,7 @@ def create_vm_with_secondary_interface_on_setup(
     cloud_init_data = compose_cloud_init_data_dict(
         network_data={
             "ethernets": {
-                "eth1": {
-                    "addresses": [
-                        f"{random_ipv4_address(net_seed=0, host_address=ipv4_address_suffix)}/{
-                            IPV4_ADDRESS_SUBNET_PREFIX_LENGTH
-                        }"
-                    ]
-                }
+                "eth1": {"addresses": [str(random_ipv4_address(net_seed=0, host_address=ipv4_address_suffix))]}
             }
         }
     )
@@ -348,7 +342,7 @@ def secondary_network_vm(
     client: DynamicClient,
     nad_name: str,
     secondary_iface_name: str,
-    secondary_iface_addresses: list[str],
+    secondary_iface_addresses: list[IPv4Interface | IPv6Interface],
     affinity: Affinity | None = None,
     labels: dict[str, str] | None = None,
 ) -> BaseVirtualMachine:
@@ -360,7 +354,7 @@ def secondary_network_vm(
         client: Kubernetes dynamic client.
         nad_name: NetworkAttachmentDefinition name for the secondary interface.
         secondary_iface_name: Name of the secondary network interface in the VM spec.
-        secondary_iface_addresses: CIDR addresses to assign to the secondary interface via cloud-init.
+        secondary_iface_addresses: IP interface objects for the secondary interface, one per supported IP family.
         affinity: Optional node or pod affinity rules for scheduling.
         labels: Optional labels to apply to the VM template metadata for pod scheduling.
     """

@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import asdict
+from ipaddress import IPv4Interface, IPv6Interface
 from typing import TYPE_CHECKING, Any
 
 import yaml
-from dacite import from_dict
+from dacite import Config, from_dict
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_instance import VirtualMachineInstance
@@ -175,6 +176,7 @@ class BaseVirtualMachine(VirtualMachine):
         return from_dict(
             data_class=cloudinit.NetworkData,
             data=yaml.safe_load(volumes[CLOUD_INIT_DISK_NAME].cloudInitNoCloud.networkData),
+            config=Config(cast=[IPv4Interface, IPv6Interface]),
         )
 
     def add_cloud_init(self, netdata: cloudinit.NetworkData) -> None:

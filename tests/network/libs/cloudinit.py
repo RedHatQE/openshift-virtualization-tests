@@ -1,4 +1,5 @@
 from dataclasses import asdict, dataclass, field
+from ipaddress import IPv4Interface, IPv6Interface
 from typing import Any, Final
 
 import yaml
@@ -28,7 +29,7 @@ class EthernetDevice:
 
     dhcp4: bool | None = None
     dhcp6: bool | None = None
-    addresses: list[str] | None = None
+    addresses: list[IPv4Interface | IPv6Interface] | None = None
     gateway4: str | None = None
     gateway6: str | None = None
 
@@ -104,7 +105,7 @@ def primary_iface_cloud_init() -> EthernetDevice | None:
     """
     if ipv6_supported_cluster():
         return EthernetDevice(
-            addresses=["fd10:0:2::2/120"],
+            addresses=[IPv6Interface("fd10:0:2::2/120")],
             gateway6="fd10:0:2::1",
             dhcp4=ipv4_supported_cluster(),
             dhcp6=False,
