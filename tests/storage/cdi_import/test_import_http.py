@@ -342,6 +342,8 @@ def test_blank_disk_import_validate_status(data_volume_multi_storage_scope_funct
                 "vm_name": f"vm-win-{LATEST_WINDOWS_OS_DICT.get('os_version')}",
                 "template_labels": LATEST_WINDOWS_OS_DICT.get("template_labels"),
                 "ssh": True,
+                "tpm_params": {"persistent": True},
+                "efi_params": {"persistent": True},
             },
             {"os_version": LATEST_WINDOWS_OS_DICT.get("os_version")},
             marks=pytest.mark.polarion("CNV-3637"),
