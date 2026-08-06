@@ -717,7 +717,6 @@ def create_windows2022_vm_using_existing_dv(
     cpu_model: str | None = None,
     existing_data_volume: DataVolume | None = None,
     check_running_vm: bool = True,
-    dv_wait_timeout: int = TIMEOUT_50MIN,
 ) -> Generator[VirtualMachineForTests]:
     """
     Creates a Windows Server 2022 VM with vTPM using existing DataVolume.
@@ -728,7 +727,6 @@ def create_windows2022_vm_using_existing_dv(
         client: Kubernetes client
         vm_name: Name for the VirtualMachine
         cpu_model: CPU model specification (can be None)
-        check_running_vm: If True, start the VM and wait for Windows boot
 
     Yields:
         VirtualMachineForTests: Windows 2022 VM with vTPM
@@ -745,7 +743,7 @@ def create_windows2022_vm_using_existing_dv(
         cpu_model=cpu_model,
     ) as vm:
         if check_running_vm:
-            running_vm(vm=vm, dv_wait_timeout=dv_wait_timeout)
+            running_vm(vm=vm)
             wait_for_windows_vm(vm=vm, version="2022")
         yield vm
 
