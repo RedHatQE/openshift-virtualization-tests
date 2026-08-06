@@ -144,7 +144,7 @@ def sysprep_vm(
             namespace=namespace.name,
             client=unprivileged_client,
             vm_instance_type=vm_instance_type,
-            vm_preference=VirtualMachineClusterPreference(name="windows.2k19"),
+            vm_preference=VirtualMachineClusterPreference(client=unprivileged_client, name="windows.2k19"),
             data_volume_template=golden_image_data_volume_template_for_test_scope_class,
             os_flavor=OS_FLAVOR_WINDOWS,
             disk_type=None,

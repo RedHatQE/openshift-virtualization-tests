@@ -69,11 +69,12 @@ class TestDataImportCronValidation:
 
     @pytest.mark.polarion("CNV-8032")
     @pytest.mark.s390x
-    def test_data_import_cron_blocked_update(self, golden_images_data_import_crons_scope_function):
+    def test_data_import_cron_blocked_update(self, admin_client, golden_images_data_import_crons_scope_function):
         first_data_import_cron = golden_images_data_import_crons_scope_function[0]
         LOGGER.info(f"Verify dataImportCron {first_data_import_cron.name} cannot be updated.")
         with pytest.raises(UnprocessibleEntityError, match=r".*Cannot update DataImportCron Spec.*"):
             with ResourceEditorValidateHCOReconcile(
+                admin_client=admin_client,
                 patches={first_data_import_cron: {"spec": {"managedDataSource": CUSTOM_DATA_SOURCE_NAME}}},
             ):
                 pytest.fail("Expected UnprocessibleEntityError was not raised")

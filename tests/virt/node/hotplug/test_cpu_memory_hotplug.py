@@ -49,6 +49,7 @@ def xfail_windows_memory_hotunplug(hotplugged_vm):
 @pytest.fixture(scope="class")
 def hotplug_vm_snapshot(hotplugged_vm):
     with VirtualMachineSnapshot(
+        client=hotplugged_vm.client,
         name=f"{hotplugged_vm.name}-snapshot",
         namespace=hotplugged_vm.namespace,
         vm_name=hotplugged_vm.name,

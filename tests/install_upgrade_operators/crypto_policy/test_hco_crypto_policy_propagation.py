@@ -33,10 +33,12 @@ def hco_crypto_policy(
 
 @pytest.fixture()
 def updated_hco_crypto_policy(
+    admin_client,
     hyperconverged_resource_scope_function,
     cnv_crypto_policy_matrix__function__,
 ):
     with set_hco_crypto_policy(
+        admin_client=admin_client,
         hco_resource=hyperconverged_resource_scope_function,
         tls_spec=CRYPTO_POLICY_SPEC_DICT[cnv_crypto_policy_matrix__function__],
     ):

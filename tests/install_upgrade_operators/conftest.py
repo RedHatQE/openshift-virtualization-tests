@@ -161,11 +161,6 @@ def cdi_resource_scope_function(admin_client):
 
 
 @pytest.fixture()
-def cdi_feature_gates(cdi_resource_scope_function):
-    return cdi_resource_scope_function.instance.spec.config.get("featureGates")
-
-
-@pytest.fixture()
 def cnao_resource(admin_client):
     return get_network_addon_config(admin_client=admin_client)
 
@@ -181,6 +176,7 @@ def updated_hco_cr(request, hyperconverged_resource_scope_function, admin_client
     This fixture updates HCO CR with values specified via request.param
     """
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={hyperconverged_resource_scope_function: request.param["patch"]},
         list_resource_reconcile=request.param.get("list_resource_reconcile", [NetworkAddonsConfig, CDI, KubeVirt]),
         wait_for_reconcile_post_update=True,
@@ -194,6 +190,7 @@ def updated_kubevirt_cr(request, kubevirt_resource, admin_client, hco_namespace)
     Attempts to update kubevirt CR
     """
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={kubevirt_resource: request.param["patch"]},
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,
@@ -298,17 +295,13 @@ def updated_resource(
         namespace=request.param.get(RESOURCE_NAMESPACE_STR),
     )
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={cr: request.param["patch"]},
         action="replace",
         list_resource_reconcile=request.param.get("list_resource_reconcile", [cr_kind]),
         wait_for_reconcile_post_update=True,
     ):
         yield cr
-
-
-@pytest.fixture(scope="session")
-def jira_76659_open():
-    return is_jira_open(jira_id="CNV-76659")
 
 
 @pytest.fixture(scope="session")
@@ -325,3 +318,8 @@ def expected_value(request, is_s390x_cluster):
         if py_config["cluster_type"] == MULTIARCH:
             expected[ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT] = FG_ENABLED
     return expected
+
+
+@pytest.fixture(scope="session")
+def jira_76659_open():
+    return is_jira_open(jira_id="CNV-76659")
