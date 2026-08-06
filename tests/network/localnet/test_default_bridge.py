@@ -102,3 +102,50 @@ def test_vmi_reports_ip_on_secondary_interface_without_vlan(
         f"IP addresses mismatch for interface {LOCALNET_BR_EX_INTERFACE_NO_VLAN} on VM {vm.name}, "
         f"Reported: {reported_ips}, Expected: {expected_ips}"
     )
+
+
+@pytest.mark.single_nic
+@pytest.mark.usefixtures("nncp_localnet")
+@pytest.mark.polarion("CNV-16555")
+def test_tcp_connectivity_between_shared_hostname_vms():
+    """Test that VMs sharing the same hostname can communicate over localnet.
+
+    OCPBUGS-99277: https://issues.redhat.com/browse/OCPBUGS-99277
+
+    Preconditions:
+        - 3 VMs with identical spec.template.spec.hostname connected to a localnet secondary network
+        - All 3 VMs Running with IPs assigned on the localnet interface
+
+    Steps:
+        1. For each pair of VMs, establish a TCP connection over the localnet interface
+
+    Expected:
+        - TCP connectivity succeeds between all VM pairs
+    """
+
+
+test_tcp_connectivity_between_shared_hostname_vms.__test__ = False
+
+
+@pytest.mark.single_nic
+@pytest.mark.usefixtures("nncp_localnet")
+@pytest.mark.polarion("CNV-16556")
+def test_tcp_connectivity_after_migration_of_shared_hostname_vm():
+    """Test that migration succeeds for a VM sharing its hostname with other VMs.
+
+    OCPBUGS-99277: https://issues.redhat.com/browse/OCPBUGS-99277
+
+    Preconditions:
+        - 3 VMs with identical spec.template.spec.hostname connected to a localnet secondary network
+        - All 3 VMs Running with IPs assigned on the localnet interface
+
+    Steps:
+        1. Migrate one of the shared-hostname VMs
+        2. Establish TCP connections from the migrated VM to each of the other VMs
+
+    Expected:
+        - TCP connectivity succeeds from the migrated VM to all other VMs
+    """
+
+
+test_tcp_connectivity_after_migration_of_shared_hostname_vm.__test__ = False
