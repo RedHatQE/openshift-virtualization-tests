@@ -186,7 +186,6 @@ from utilities.network import (
     network_device,
     network_nad,
     wait_for_node_marked_by_bridge,
-    wait_for_ovs_daemonset_resource,
     wait_for_ovs_status,
 )
 from utilities.operator import (
@@ -213,7 +212,6 @@ from utilities.virt import (
     fedora_vm_body,
     get_base_templates_list,
     get_hyperconverged_kubevirt,
-    get_hyperconverged_ovs_annotations,
     get_kubevirt_hyperconverged_spec,
     kubernetes_taint_exists,
     running_vm,
@@ -1260,16 +1258,6 @@ def kubevirt_feature_gates(kubevirt_config):
 @pytest.fixture(scope="module")
 def kubevirt_feature_gates_scope_module(kubevirt_config_scope_module):
     return kubevirt_config_scope_module["developerConfiguration"][FEATURE_GATES]
-
-
-@pytest.fixture(scope="class")
-def ovs_daemonset(admin_client, hco_namespace):
-    return wait_for_ovs_daemonset_resource(admin_client=admin_client, hco_namespace=hco_namespace)
-
-
-@pytest.fixture()
-def hyperconverged_ovs_annotations_fetched(hyperconverged_resource_scope_function):
-    return get_hyperconverged_ovs_annotations(hyperconverged=hyperconverged_resource_scope_function)
 
 
 @pytest.fixture(scope="session")
@@ -2416,6 +2404,13 @@ def snapshot_storage_class_name_scope_module(
     storage_class_matrix_snapshot_matrix__module__,
 ):
     return [*storage_class_matrix_snapshot_matrix__module__][0]
+
+
+@pytest.fixture(scope="module")
+def snapshot_import_cron_format_storage_class_name_scope_module(
+    storage_class_matrix_snapshot_import_cron_format_matrix__module__,
+):
+    return next(iter(storage_class_matrix_snapshot_import_cron_format_matrix__module__))
 
 
 @pytest.fixture(scope="class")
