@@ -305,7 +305,7 @@ def empty_pvc(
         if sc_volume_binding_mode_is_wffc(sc=storage_class_name_scope_module, client=namespace.client):
             # For PVC to bind on WFFC, it must be consumed
             # (this was previously solved by hard coding hostpath_node at all times)
-            create_dummy_first_consumer_pod(pvc=pvc)
+            create_dummy_first_consumer_pod(client=namespace.client, pvc=pvc)
         pvc.wait_for_status(status=PersistentVolumeClaim.Status.BOUND, timeout=60)
         yield pvc
 

@@ -194,6 +194,7 @@ def rhel8_image_stream_digest_update(rhel8_image_stream):
 
 @pytest.fixture()
 def second_object_cleanup(
+    admin_client,
     namespace,
     second_object_name,
     storage_with_import_cron_source_snapshot,
@@ -204,7 +205,7 @@ def second_object_cleanup(
         f"(DV/PVC or VolumeSnapshot) that was created by the DataImportCron"
     )
     resource_class = VolumeSnapshot if storage_with_import_cron_source_snapshot else DataVolume
-    resource_class(namespace=namespace.name, name=second_object_name).clean_up()
+    resource_class(namespace=namespace.name, name=second_object_name, client=admin_client).clean_up()
 
 
 @pytest.mark.polarion("CNV-7602")

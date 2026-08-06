@@ -73,15 +73,23 @@ LOGGER = logging.getLogger(__name__)
 _DEFAULT_DISK_SERIAL_COMMAND = shlex.split("sudo ls /dev/disk/by-id")
 
 
-def create_dummy_first_consumer_pod(volume_mode=DataVolume.VolumeMode.FILE, dv=None, pvc=None):
+def create_dummy_first_consumer_pod(
+    client: DynamicClient,
+    volume_mode: str = DataVolume.VolumeMode.FILE,
+    dv: DataVolume | None = None,
+    pvc: PersistentVolumeClaim | None = None,
+) -> None:
     """
-    Create a dummy pod that will become the PVCs first consumer
-    Triggers start of CDI worker pod
+    Create a dummy pod that will become the PVCs first consumer.
 
-    To consume PVCs that are not backed by DVs, just pass in pvc param
-    Otherwise, it is needed to pass in dv
+    Triggers start of CDI worker pod.
+
+    Args:
+        client: Kubernetes client to use for creating the pod.
+        volume_mode: Volume mode for the PVC mount.
+        dv: DataVolume to consume. Mutually exclusive with pvc.
+        pvc: PVC to consume directly. Mutually exclusive with dv.
     """
-
     if not (pvc or dv):
         raise ValueError("Exactly one of the args: (dv,pvc) must be passed")
     if dv:
@@ -98,13 +106,15 @@ def create_dummy_first_consumer_pod(volume_mode=DataVolume.VolumeMode.FILE, dv=N
         ):
             if sample:
                 break
-    pvc = pvc or dv.pvc
+        pvc = pvc or dv.pvc
+    if not pvc:
+        raise ValueError("Could not resolve PVC from provided arguments")
     with PodWithPVC(
         namespace=pvc.namespace,
         name=f"first-consumer-{pvc.name}",
         pvc_name=pvc.name,
         containers=get_containers_for_pods_with_pvc(volume_mode=volume_mode, pvc_name=pvc.name),
-        client=pvc.client,
+        client=client,
     ) as pod:
         LOGGER.info(
             f"Created dummy pod {pod.name} to be the first consumer of the PVC, "
@@ -279,7 +289,7 @@ def create_dv(
             source_dict=source_dict,
         ) as dv:
             if storage_class and sc_volume_binding_mode_is_wffc(sc=storage_class, client=client) and consume_wffc:
-                create_dummy_first_consumer_pod(dv=dv)
+                create_dummy_first_consumer_pod(client=client, dv=dv)
             yield dv
 
     finally:
