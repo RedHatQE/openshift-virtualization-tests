@@ -144,7 +144,7 @@ def sysprep_vm(
             namespace=namespace.name,
             client=unprivileged_client,
             vm_instance_type=vm_instance_type,
-            vm_preference=VirtualMachineClusterPreference(name="windows.2k19"),
+            vm_preference=VirtualMachineClusterPreference(client=unprivileged_client, name="windows.2k19"),
             data_volume_template=golden_image_data_volume_template_for_test_scope_class,
             os_flavor=OS_FLAVOR_WINDOWS,
             disk_type=None,
@@ -266,6 +266,7 @@ def detached_sysprep_resource_and_restarted_vm(sysprep_vm, attached_sysprep_volu
     ],
     indirect=True,
 )
+@pytest.mark.windows
 @pytest.mark.special_infra
 @pytest.mark.high_resource_vm
 @pytest.mark.usefixtures("sysprep_vm", "sealed_vm", "attached_sysprep_volume_to_vm")

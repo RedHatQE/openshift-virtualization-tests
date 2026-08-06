@@ -25,8 +25,9 @@ DISABLED_KUBEVIRT_FEATUREGATES_IN_SNO = ["LiveMigration", "SRIOVLiveMigration"]
 
 
 @pytest.fixture()
-def deleted_stanza_on_hco_cr(request, hyperconverged_resource_scope_function):
+def deleted_stanza_on_hco_cr(request, admin_client, hyperconverged_resource_scope_function):
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={hyperconverged_resource_scope_function: request.param["rpatch"]},
         action="replace",
         list_resource_reconcile=request.param.get("list_resource_reconcile"),
@@ -36,7 +37,7 @@ def deleted_stanza_on_hco_cr(request, hyperconverged_resource_scope_function):
 
 
 @pytest.fixture()
-def hco_cr_custom_values(hyperconverged_resource_scope_function):
+def hco_cr_custom_values(admin_client, hyperconverged_resource_scope_function):
     """
     This fixture updates HCO CR with custom values for spec.CertConfig, spec.liveMigrationConfig and
     spec.featureGates and cleans those up at the end.
@@ -47,6 +48,7 @@ def hco_cr_custom_values(hyperconverged_resource_scope_function):
 
     """
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={hyperconverged_resource_scope_function: CUSTOM_HCO_CR_SPEC.copy()},
         list_resource_reconcile=[CDI, KubeVirt, NetworkAddonsConfig],
         wait_for_reconcile_post_update=True,
@@ -55,12 +57,13 @@ def hco_cr_custom_values(hyperconverged_resource_scope_function):
 
 
 @pytest.fixture()
-def updated_cdi_cr(request, cdi_resource_scope_function):
+def updated_cdi_cr(request, admin_client, cdi_resource_scope_function):
     """
     Attempts to update cdi, however, since these changes get reconciled to values propagated by hco cr, we don't need
     to restore these.
     """
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={
             cdi_resource_scope_function: request.param["patch"],
         },
@@ -71,12 +74,13 @@ def updated_cdi_cr(request, cdi_resource_scope_function):
 
 
 @pytest.fixture()
-def updated_cnao_cr(request, cnao_resource):
+def updated_cnao_cr(request, admin_client, cnao_resource):
     """
     Attempts to update cnao, however, since these changes get reconciled to values propagated by hco cr, we don't need
     to restore these.
     """
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={cnao_resource: request.param["patch"]},
         list_resource_reconcile=[NetworkAddonsConfig],
         wait_for_reconcile_post_update=True,
@@ -85,12 +89,13 @@ def updated_cnao_cr(request, cnao_resource):
 
 
 @pytest.fixture()
-def updated_kv_with_feature_gates(request, kubevirt_resource):
+def updated_kv_with_feature_gates(request, admin_client, kubevirt_resource):
     kv_dict = kubevirt_resource.instance.to_dict()
     fgs = kv_dict["spec"]["configuration"]["developerConfiguration"]["featureGates"].copy()
     fgs.extend(request.param)
 
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={kubevirt_resource: {"spec": {"configuration": {"developerConfiguration": {"featureGates": fgs}}}}},
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,
@@ -99,11 +104,12 @@ def updated_kv_with_feature_gates(request, kubevirt_resource):
 
 
 @pytest.fixture()
-def updated_cdi_with_feature_gates(request, cdi_resource_scope_function):
+def updated_cdi_with_feature_gates(request, admin_client, cdi_resource_scope_function):
     cdi_dict = cdi_resource_scope_function.instance.to_dict()
     fgs = cdi_dict["spec"]["config"]["featureGates"].copy()
     fgs.extend(request.param)
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={cdi_resource_scope_function: {"spec": {"config": {"featureGates": fgs}}}},
         list_resource_reconcile=[CDI],
         wait_for_reconcile_post_update=True,
@@ -114,6 +120,7 @@ def updated_cdi_with_feature_gates(request, cdi_resource_scope_function):
 @pytest.fixture()
 def hco_with_non_default_feature_gates(
     request,
+    admin_client,
     hyperconverged_resource_scope_function,
 ):
     new_fgs = request.param["fgs"]
@@ -122,6 +129,7 @@ def hco_with_non_default_feature_gates(
     for fg in new_fgs:
         hco_fgs[fg] = True
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={hyperconverged_resource_scope_function: {"spec": {"featureGates": hco_fgs}}},
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,

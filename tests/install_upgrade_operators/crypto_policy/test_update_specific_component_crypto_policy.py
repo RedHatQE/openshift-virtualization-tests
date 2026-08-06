@@ -82,6 +82,7 @@ def updated_cr_with_custom_crypto_policy(
     value = request.param["value"]
     tls_policy = {**value, **TLS_POLICIES_WITHOUT_CUSTOM_POLICY}
     with update_hco_annotations(
+        admin_client=admin_client,
         resource=hyperconverged_resource_scope_function,
         path=request.param["key"],
         value=tls_policy,

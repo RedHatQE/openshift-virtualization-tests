@@ -157,6 +157,7 @@ class TestLatestRHEL:
 )
 @pytest.mark.special_infra
 @pytest.mark.high_resource_vm
+@pytest.mark.windows
 class TestLatestWindows:
     """
     Test networkInterfaceMultiqueue on latest Windows with different cpu core/socket/thread combinations.

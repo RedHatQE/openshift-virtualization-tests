@@ -11,7 +11,7 @@ from ocp_resources.hyperconverged import HyperConverged
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.namespace import Namespace
 from ocp_resources.network_addons_config import NetworkAddonsConfig
-from ocp_resources.resource import Resource, ResourceEditor, get_client
+from ocp_resources.resource import Resource, ResourceEditor
 from ocp_resources.ssp import SSP
 from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
@@ -71,15 +71,15 @@ HCO_JSONPATCH_ANNOTATION_COMPONENT_DICT = {
 class ResourceEditorValidateHCOReconcile(ResourceEditor):
     def __init__(
         self,
+        admin_client,
         hco_namespace="openshift-cnv",
         consecutive_checks_count=3,
         list_resource_reconcile=None,
         wait_for_reconcile_post_update=False,
-        admin_client=None,
         **kwargs,
     ):
         super().__init__(**kwargs)
-        self.admin_client = admin_client or get_client()
+        self.admin_client = admin_client
         self.hco_namespace = Namespace(client=self.admin_client, name=hco_namespace)
         self.wait_for_reconcile_post_update = wait_for_reconcile_post_update
         self._consecutive_checks_count = consecutive_checks_count
@@ -117,8 +117,7 @@ def wait_for_hco_conditions(
     condition_key2="status",
     list_dependent_crs_to_check=None,
 ):
-    """
-    Checking HCO conditions.
+    """Checking HCO conditions.
 
     If list_dependent_crs_to_check information is passed, we would wait for them to
     stabilize first, before checking hco.status.conditions. Please note, EXPECTED_STATUS_CONDITIONS defines what all
@@ -182,7 +181,7 @@ def wait_for_dp(dp):
             status = sample.get("status")
             metadata = sample.get("metadata")
             if metadata.get("generation") == status.get("observedGeneration") and status.get("replicas") == status.get(
-                "updatedReplicas"
+                "updatedReplicas",
             ):
                 break
     except TimeoutExpiredError:
@@ -191,7 +190,12 @@ def wait_for_dp(dp):
 
 
 def apply_np_changes(
-    admin_client, hco, hco_namespace, infra_placement=None, workloads_placement=None, exclude_deployments=None
+    admin_client,
+    hco,
+    hco_namespace,
+    infra_placement=None,
+    workloads_placement=None,
+    exclude_deployments=None,
 ):
     current_infra = hco.instance.to_dict()["spec"].get("infra")
     current_workloads = hco.instance.to_dict()["spec"].get("workloads")
@@ -202,26 +206,28 @@ def apply_np_changes(
             "spec": {
                 "infra": target_infra or None,
                 "workloads": target_workloads or None,
-            }
+            },
         }
         LOGGER.info(f"Updating HCO with node placement. {patch}")
         editor = ResourceEditor(patches={hco: patch})
         editor.update(backup_resources=False)
         wait_for_hco_post_update_stable_state(
-            admin_client=admin_client, hco_namespace=hco_namespace, exclude_deployments=exclude_deployments
+            admin_client=admin_client,
+            hco_namespace=hco_namespace,
+            exclude_deployments=exclude_deployments,
         )
     else:
         LOGGER.info("No actual changes to node placement configuration, skipping")
 
 
 def wait_for_hco_post_update_stable_state(admin_client, hco_namespace, exclude_deployments=None):
-    """
-    Waits for hco to reach stable state post hco update
+    """Waits for hco to reach stable state post hco update
 
     Args:
         admin_client (DynamicClient): Dynamic client object
         hco_namespace (Namespace): Namespace object
         exclude_deployments (list): List of deployment names to exclude from verification
+
     """
     exclude_deployments = exclude_deployments or []
 
@@ -264,8 +270,7 @@ def wait_for_hco_post_update_stable_state(admin_client, hco_namespace, exclude_d
 
 
 def add_labels_to_nodes(nodes, node_labels):
-    """
-    Adds given labels to a list of nodes
+    """Adds given labels to a list of nodes
 
     Args:
         nodes (list): list of nodes
@@ -286,7 +291,8 @@ def add_labels_to_nodes(nodes, node_labels):
 
 def get_hco_spec(admin_client, hco_namespace):
     return utilities.infra.get_hyperconverged_resource(
-        client=admin_client, hco_ns_name=hco_namespace.name
+        client=admin_client,
+        hco_ns_name=hco_namespace.name,
     ).instance.to_dict()["spec"]
 
 
@@ -304,8 +310,7 @@ def get_installed_hco_csv(admin_client, hco_namespace):
 
 
 def get_hco_version(client, hco_ns_name):
-    """
-    Get current hco version
+    """Get current hco version
 
     Args:
         client (DynamicClient): Dynamic client object
@@ -313,6 +318,7 @@ def get_hco_version(client, hco_ns_name):
 
     Returns:
         str: hyperconverged operator version
+
     """
     return (
         utilities.infra
@@ -323,8 +329,7 @@ def get_hco_version(client, hco_ns_name):
 
 
 def wait_for_hco_version(client, hco_ns_name, cnv_version):
-    """
-    Wait for hco version to get updated.
+    """Wait for hco version to get updated.
 
     Args:
         client (DynamicClient): Dynamic client object
@@ -336,6 +341,7 @@ def wait_for_hco_version(client, hco_ns_name, cnv_version):
 
     Raises:
         TimeoutExpiredError: if hco resource is not updated with expected version string
+
     """
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_30MIN,
@@ -386,7 +392,7 @@ def enable_common_boot_image_import_spec_wait_for_data_import_cron(
     namespace: Namespace,
     exclude_data_source_names: Collection[str] | None = None,
 ) -> None:
-    hco_namespace = Namespace(name=hco_resource.namespace)
+    hco_namespace = Namespace(client=admin_client, name=hco_resource.namespace)
     update_common_boot_image_import_spec(
         hco_resource=hco_resource,
         enable=True,
@@ -439,8 +445,8 @@ def get_json_patch_annotation_values(component, path, value=None, op="add"):
                 "op": op,
                 "path": f"/spec/{component_dict.get('config', '')}{path}",
                 "value": value,
-            }
-        ])
+            },
+        ]),
     }
 
 
@@ -448,13 +454,14 @@ def hco_cr_jsonpatch_annotations_dict(component, path, value=None, op="add"):
     # https://github.com/kubevirt/hyperconverged-cluster-operator/blob/main/docs/cluster-configuration.md#jsonpatch-annotations
     return {
         "metadata": {
-            "annotations": get_json_patch_annotation_values(component=component, path=path, value=value, op=op)
-        }
+            "annotations": get_json_patch_annotation_values(component=component, path=path, value=value, op=op),
+        },
     }
 
 
 @contextmanager
 def update_hco_annotations(
+    admin_client,
     resource,
     path,
     value=None,
@@ -463,10 +470,10 @@ def update_hco_annotations(
     op="add",
     resource_list=None,
 ):
-    """
-    Update jsonpatch annotation in HCO CR.
+    """Update jsonpatch annotation in HCO CR.
 
     Args:
+        admin_client (DynamicClient): Kubernetes admin client
         resource (HyperConverged): HCO resource object
         path (str): key path in KubeVirt CR
         value (any): key value
@@ -494,12 +501,27 @@ def update_hco_annotations(
     # '[{"op": "add", "path": "/spec/configuration/machineType", "value": "pc-q35-rhel8.4.0"},
     # {"op": "add", "path": "/spec/configuration/cpuModel", "value": "Haswell-noTSX"}]]'
     if resource_existing_jsonpatch_annotation and not overwrite_patches:
-        hco_annotations_dict = hco_config_jsonpath_dict["metadata"]["annotations"]
-        hco_annotations_dict[jsonpatch_key] = (
-            f"{resource_existing_jsonpatch_annotation[:-1]},{hco_annotations_dict[jsonpatch_key][1:]}"
-        )
+        try:
+            existing_patches = json.loads(resource_existing_jsonpatch_annotation)
+        except json.JSONDecodeError, TypeError:
+            LOGGER.warning(
+                f"Existing jsonpatch annotation for key {jsonpatch_key!r} is not valid JSON "
+                f"({resource_existing_jsonpatch_annotation!r}); ignoring and overwriting.",
+            )
+            existing_patches = None
+        if isinstance(existing_patches, list) and existing_patches:
+            hco_annotations_dict = hco_config_jsonpath_dict["metadata"]["annotations"]
+            hco_annotations_dict[jsonpatch_key] = json.dumps(
+                existing_patches + json.loads(hco_annotations_dict[jsonpatch_key])
+            )
+        elif existing_patches is not None and not isinstance(existing_patches, list):
+            LOGGER.warning(
+                f"Existing jsonpatch annotation for key {jsonpatch_key!r} is not a list "
+                f"(got {type(existing_patches).__name__!r}); ignoring and overwriting.",
+            )
 
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={resource: hco_config_jsonpath_dict},
         list_resource_reconcile=resource_list,
         wait_for_reconcile_post_update=True,
@@ -529,6 +551,7 @@ def update_hco_templates_spec(
     golden_images_namespace=None,
 ):
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={hyperconverged_resource: {"spec": {SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME: [updated_template]}}},
         list_resource_reconcile=[SSP, CDI],
         wait_for_reconcile_post_update=True,
@@ -550,13 +573,14 @@ def enabled_aaq_in_hco(client, hco_namespace, hyperconverged_resource, enable_ac
     patches = {hyperconverged_resource: {"spec": {"enableApplicationAwareQuota": True}}}
     if enable_acrq_support:
         patches[hyperconverged_resource]["spec"]["applicationAwareConfig"] = {
-            "allowApplicationAwareClusterResourceQuota": True
+            "allowApplicationAwareClusterResourceQuota": True,
         }
 
     with ResourceEditorValidateHCOReconcile(
         patches=patches,
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,
+        admin_client=client,
     ):
         yield
     # need to wait when all AAQ system pods removed

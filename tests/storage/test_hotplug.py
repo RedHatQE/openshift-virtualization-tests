@@ -49,9 +49,11 @@ def is_dv_migratable(dv):
 
 @pytest.fixture(scope="module")
 def enabled_feature_gate_for_declarative_hotplug_volumes(
+    admin_client,
     hyperconverged_resource_scope_module,
 ):
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={
             hyperconverged_resource_scope_module: {"spec": {"featureGates": {"declarativeHotplugVolumes": True}}},
         },
@@ -262,6 +264,8 @@ class TestHotPlugWithSerialPersist:
 )
 @pytest.mark.usefixtures("hotplug_volume_windows_scope_class")
 @pytest.mark.tier3
+@pytest.mark.conformance
+@pytest.mark.windows
 class TestHotPlugWindows:
     @pytest.mark.polarion("CNV-6525")
     @pytest.mark.dependency(name="test_windows_hotplug")

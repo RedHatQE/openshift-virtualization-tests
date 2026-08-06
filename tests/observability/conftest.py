@@ -17,6 +17,7 @@ def paused_ssp_operator(admin_client, hco_namespace, ssp_resource_scope_class):
     Pause ssp-operator to avoid from reconciling any related objects
     """
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={ssp_resource_scope_class: {"metadata": {"annotations": {"kubevirt.io/operator.paused": "true"}}}},
         list_resource_reconcile=[SSP],
     ):

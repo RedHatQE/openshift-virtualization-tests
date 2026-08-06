@@ -160,6 +160,7 @@ class TestHighPerformanceTemplatesRHEL:
 )
 @pytest.mark.high_resource_vm
 @pytest.mark.usefixtures("high_performance_vm", "cputune_is_in_dumpxml")
+@pytest.mark.windows
 class TestHighPerformanceTemplatesWindows:
     @pytest.mark.dependency(name=f"{WINDOWS_TESTS_CLASS_NAME}::win_cpu_request")
     @pytest.mark.polarion("CNV-6771")

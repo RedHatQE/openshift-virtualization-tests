@@ -555,8 +555,10 @@ def expected_metric_labels_and_values(
 ) -> None:
     mismatch = {
         label: {
-            f"{label} metric result: {values_from_prometheus.get(label)}, "
-            f"expected_label_results: {expected_label_results}"
+            (
+                f"{label} metric result: {values_from_prometheus.get(label)}, "
+                f"expected_label_results: {expected_label_results}"
+            )
         }
         for label, expected_label_results in expected_labels_and_values.items()
         if values_from_prometheus.get(label) != expected_label_results

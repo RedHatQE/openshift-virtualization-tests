@@ -16,6 +16,7 @@ LOGGER = logging.getLogger(__name__)
 TESTS_CLASS_NAME = "TestCommonPreferenceWindows"
 
 
+@pytest.mark.windows
 class TestCommonPreferenceWindows:
     """
     Tests for supporting Windows os when using a VM with instance types.

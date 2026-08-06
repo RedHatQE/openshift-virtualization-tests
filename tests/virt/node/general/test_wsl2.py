@@ -144,6 +144,7 @@ def migrated_wsl2_vm(admin_client: DynamicClient, windows_wsl2_vm: VirtualMachin
     ],
     indirect=True,
 )
+@pytest.mark.windows
 class TestWSL2:
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::wsl2_guest")
     @pytest.mark.polarion("CNV-6023")

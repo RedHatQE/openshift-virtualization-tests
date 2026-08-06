@@ -106,8 +106,10 @@ def initialize_and_format_windows_drive(vm, disk_number, partition_number, drive
             for cmd in [
                 f'powershell -command "initialize-disk -number {disk_number}"',
                 f'powershell -command "new-partition -disknumber {disk_number} -usemaximumsize"',
-                f'powershell -command "set-partition -disknumber {disk_number} -partitionnumber {partition_number} '
-                f'-newdriveletter {drive_letter}"',
+                (
+                    f'powershell -command "set-partition -disknumber {disk_number} '
+                    f'-partitionnumber {partition_number} -newdriveletter {drive_letter}"'
+                ),
                 f'powershell -command "format-volume -driveletter {drive_letter} -filesystem NTFS"',
             ]
         ],
@@ -194,6 +196,7 @@ def custom_windows_vm(
     ],
     indirect=True,
 )
+@pytest.mark.windows
 class TestCustomWindowsOptions:
     @pytest.mark.polarion("CNV-7496")
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::boot")

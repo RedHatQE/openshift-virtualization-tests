@@ -52,6 +52,7 @@ class TestTektonResources:
         )
 
 
+@pytest.mark.windows
 @pytest.mark.dependency(depends=["TestTektonResources"])
 class TestTektonEfiPipelineExecution:
     @pytest.mark.parametrize(

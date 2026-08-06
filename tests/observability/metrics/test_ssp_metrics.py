@@ -24,7 +24,8 @@ KUBEVIRT_SSP_OPERATOR_RECONCILE_SUCCEEDED_AGGREGATED = "kubevirt_ssp_operator_re
 @pytest.fixture()
 def template_modified(admin_client, base_templates):
     with ResourceEditorValidateHCOReconcile(
-        patches={base_templates[0]: {"metadata": {"annotations": {"description": "New Description"}}}}
+        admin_client=admin_client,
+        patches={base_templates[0]: {"metadata": {"annotations": {"description": "New Description"}}}},
     ):
         yield
 

@@ -47,6 +47,7 @@ def updated_kubevirt_cpus(
     hco_namespace,
 ):
     with update_hco_annotations(
+        admin_client=admin_client,
         resource=hyperconverged_resource_scope_function,
         path=OBSOLETE_CPU,
         value={cluster_common_node_cpu: True},

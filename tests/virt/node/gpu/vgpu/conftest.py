@@ -30,9 +30,11 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="class")
-def hco_cr_with_mdev_permitted_hostdevices(hyperconverged_resource_scope_class, supported_gpu_device):
+def hco_cr_with_mdev_permitted_hostdevices(admin_client, hyperconverged_resource_scope_class, supported_gpu_device):
     yield from patch_hco_cr_with_mdev_permitted_hostdevices(
-        hyperconverged_resource=hyperconverged_resource_scope_class, supported_gpu_device=supported_gpu_device
+        admin_client=admin_client,
+        hyperconverged_resource=hyperconverged_resource_scope_class,
+        supported_gpu_device=supported_gpu_device,
     )
 
 
@@ -54,11 +56,13 @@ def ready_node_with_grid_vgpu_config(nvidia_sandbox_validator_ds, node_labeled_w
 
 @pytest.fixture(scope="class")
 def hco_cr_with_node_specific_mdev_permitted_hostdevices(
+    admin_client,
     hyperconverged_resource_scope_class,
     supported_gpu_device,
     ready_node_with_grid_vgpu_config,
 ):
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={
             hyperconverged_resource_scope_class: {
                 "spec": {
@@ -86,7 +90,7 @@ def hco_cr_with_node_specific_mdev_permitted_hostdevices(
 
 
 @pytest.fixture(scope="package")
-def hco_with_disable_mdev_configuration(hyperconverged_resource_scope_session):
+def hco_with_disable_mdev_configuration(admin_client, hyperconverged_resource_scope_session):
     """
     Enable disableMDevConfiguration feature gate in HCO.
 
@@ -95,6 +99,7 @@ def hco_with_disable_mdev_configuration(hyperconverged_resource_scope_session):
     by NVIDIA GPU Operator).
     """
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={hyperconverged_resource_scope_session: {"spec": {FEATURE_GATES: {DISABLE_MDEV_CONFIGURATION: True}}}},
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,

@@ -30,7 +30,7 @@ from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.namespace import Namespace
 from ocp_resources.node import Node
 from ocp_resources.pod import Pod
-from ocp_resources.resource import Resource, ResourceEditor, get_client
+from ocp_resources.resource import Resource, ResourceEditor
 from ocp_resources.service import Service
 from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.template import Template
@@ -51,6 +51,7 @@ import utilities.cpu
 import utilities.data_utils
 import utilities.infra
 from libs.net.cluster import is_ipv6_single_stack_cluster
+from utilities.cluster import cache_admin_client
 from utilities.console import Console
 from utilities.constants import Images
 from utilities.constants.architecture import (
@@ -295,6 +296,7 @@ class VirtualMachineForTests(VirtualMachine):
         hugepages_page_size=None,
         vm_affinity=None,
         annotations=None,
+        label=None,
     ):
         """
         Virtual machine creation
@@ -376,6 +378,7 @@ class VirtualMachineForTests(VirtualMachine):
             hugepages_page_size (str, optional) defines the size of huge pages,Valid values are 2 Mi and 1 Gi
             vm_affinity (dict, optional): If affinity is specifies, obey all the affinity rules
             annotations (dict, optional): annotations to be added to the VM
+            label (dict, optional): labels to be added to VM metadata (not the VMI template)
         """
         # Sets VM unique name - replaces "." with "-" in the name to handle valid values.
 
@@ -389,6 +392,7 @@ class VirtualMachineForTests(VirtualMachine):
             node_selector=node_selector,
             node_selector_labels=node_selector_labels,
             yaml_file=yaml_file,
+            label=label,
         )
         self.body = body
         self.interfaces = interfaces or []
@@ -714,10 +718,15 @@ class VirtualMachineForTests(VirtualMachine):
         if self.body:
             if self.body.get("metadata"):
                 # We must set name in Template, since we use a unique name here we override it.
-                self.res["metadata"] = self.body["metadata"]
+                # deepcopy so label/annotation merges do not mutate the caller-owned body.
+                self.res["metadata"] = deepcopy(self.body["metadata"])
                 self.res["metadata"]["name"] = self.name
 
             self.res["spec"] = self.body["spec"]
+
+            # body metadata replaces self.res["metadata"]; re-apply caller-provided root metadata.
+            if self.label:
+                self.res["metadata"].setdefault("labels", {}).update(self.label)
 
             if self.annotations:
                 self.res["metadata"].setdefault("annotations", {}).update(self.annotations)
@@ -1107,6 +1116,7 @@ class VirtualMachineForTests(VirtualMachine):
         To use the service: custom_service.service_ip() and custom_service.service_port
         """
         self.custom_service = ServiceForVirtualMachineForTests(
+            client=self.client,
             name=f"{service_name}-{self.name}"[:63],
             namespace=self.namespace,
             vm=self,
@@ -1223,6 +1233,7 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
         name,
         namespace,
         client,
+        admin_client=None,
         eviction_strategy=None,
         labels=None,
         data_source=None,
@@ -1276,10 +1287,11 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
         additional_labels=None,
         vm_affinity=None,
     ):
-        """
-        VM creation using common templates.
+        """VM creation using common templates.
 
         Args:
+            admin_client (Client, optional): Admin client to use for processing templates.
+                Can be used in multi-cluster (CCLM) tests.
             eviction_strategy (str, optional): valid options("None", "LiveMigrate", "LiveMigrateIfPossible", "External")
                 Default value None here is same as Null and not the string "None" which is one of the valid options
             data_source (obj `DataSource`): DS object points to a golden image PVC.
@@ -1296,8 +1308,6 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
             non_existing_pvc(bool, default=False): If True, referenced PVC in DataSource is missing
             data_volume_template_from_vm_spec (bool, default=False): Use (and don't manipulate) VM's DataVolumeTemplates
             vm_affinity (dict, optional): Affinity rules for scheduling the VM on specific nodes
-        Returns:
-            obj `VirtualMachine`: VM resource
         """
         # Must be set here to set VM flavor (used to set username and password)
         self.template_labels = labels
@@ -1350,6 +1360,7 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
             vm_affinity=vm_affinity,
             os_flavor=self.os_flavor,
         )
+        self.admin_client = admin_client
         self.data_source = data_source
         self.data_volume_template = data_volume_template
         self.existing_data_volume = existing_data_volume
@@ -1481,7 +1492,10 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
         if self.template_params:
             template_kwargs.update(self.template_params)
 
-        resources_list = template_object.process(client=get_client(), **template_kwargs)
+        # Processing a Template (server-side substitution, nothing persisted) requires "create" on
+        # processedtemplates in the template's own namespace (e.g. "openshift"), which self.client
+        # (e.g. unprivileged_client) may not have. The VM object itself is still created with self.client.
+        resources_list = template_object.process(client=self.admin_client or cache_admin_client(), **template_kwargs)
         for resource in resources_list:
             if resource["kind"] == VirtualMachine.kind and resource["metadata"]["name"] == self.name:
                 return resource
@@ -1574,6 +1588,7 @@ def kubernetes_taint_exists(node):
 class ServiceForVirtualMachineForTests(Service):
     def __init__(
         self,
+        client,
         name,
         namespace,
         vm,
@@ -1586,6 +1601,7 @@ class ServiceForVirtualMachineForTests(Service):
         dry_run=None,
     ):
         super().__init__(
+            client=client,
             name=name,
             namespace=namespace,
             teardown=teardown,
@@ -2309,10 +2325,6 @@ def get_kubevirt_hyperconverged_spec(admin_client, hco_namespace):
     ]
 
 
-def get_hyperconverged_ovs_annotations(hyperconverged):
-    return (hyperconverged.instance.to_dict()["metadata"].get("annotations", {})).get("deployOVS")
-
-
 def get_base_templates_list(client: DynamicClient) -> list[Template]:
     """
     Return base templates list.
@@ -2338,12 +2350,15 @@ def get_base_templates_list(client: DynamicClient) -> list[Template]:
 
 
 def get_template_by_labels(admin_client, template_labels):
+    selector_labels = [label for label in template_labels if OS_FLAVOR_FEDORA not in label]
+    if cpu_arch := py_config.get("cpu_arch"):
+        selector_labels.append(f"{Template.Labels.ARCHITECTURE}={cpu_arch}")
     template = list(
         Template.get(
             client=admin_client,
             singular_name=Template.singular_name,
             namespace="openshift",
-            label_selector=",".join([label for label in template_labels if OS_FLAVOR_FEDORA not in label]),
+            label_selector=",".join(selector_labels),
         ),
     )
     if any(

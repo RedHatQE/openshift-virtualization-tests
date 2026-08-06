@@ -325,6 +325,7 @@ def test_blank_disk_import_validate_status(data_volume_multi_storage_scope_funct
 
 
 @pytest.mark.tier3
+@pytest.mark.windows
 @pytest.mark.parametrize(
     "data_volume_multi_storage_scope_function,"
     "vm_instance_from_template_multi_storage_scope_function,"
