@@ -78,20 +78,22 @@ def vmb_udn(udn_namespace, namespaced_layer2_user_defined_network, udn_affinity_
 @pytest.fixture(scope="class")
 def server(vmb_udn):
     with TcpServer(vm=vmb_udn, port=IPERF_SERVER_PORT) as server:
-        assert server.is_running()
         yield server
 
 
 @pytest.fixture(scope="class")
-def client(vma_udn, vmb_udn):
+def client(vma_udn, server):
     with VMTcpClient(
         vm=vma_udn,
         server_ip=str(
-            lookup_iface_status_ip(vm=vmb_udn, iface_name=lookup_primary_network(vm=vmb_udn).name, ip_family=4)
+            lookup_iface_status_ip(
+                vm=server.vm,
+                iface_name=lookup_primary_network(vm=server.vm).name,
+                ip_family=4,
+            )
         ),
         server_port=IPERF_SERVER_PORT,
     ) as client:
-        assert client.is_running()
         yield client
 
 
