@@ -41,8 +41,8 @@ def _fill_vm_spec_defaults(spec: VMSpec | None) -> VMSpec:
 
     vmi_spec = spec.template.spec
 
-    if not vmi_spec.architecture:
-        vmi_spec.architecture = get_multiarch_cpu_arch()
+    if not vmi_spec.architecture and (cpu_arch := get_multiarch_cpu_arch()):
+        vmi_spec.architecture = cpu_arch
     vmi_spec.domain.devices = vmi_spec.domain.devices or Devices(rng={})
     vmi_spec.domain.devices.disks = vmi_spec.domain.devices.disks or []
     vmi_spec.volumes = vmi_spec.volumes or []
