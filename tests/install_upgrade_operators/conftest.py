@@ -11,10 +11,13 @@ from ocp_resources.pod import Pod
 from pytest_testconfig import py_config
 
 from tests.install_upgrade_operators.constants import (
+    DEVELOPER_CONFIGURATION,
     ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT,
     EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES,
+    FEATUREGATES,
     FG_ENABLED,
     HCO_DEFAULT_FEATUREGATES,
+    KEY_PATH_SEPARATOR,
     RESOURCE_NAME_STR,
     RESOURCE_NAMESPACE_STR,
     RESOURCE_TYPE_STR,
@@ -23,6 +26,7 @@ from tests.install_upgrade_operators.constants import (
 from tests.install_upgrade_operators.utils import (
     get_network_addon_config,
     get_resource_by_name,
+    get_resource_key_value,
 )
 from utilities.constants.architecture import MULTIARCH
 from utilities.hco import ResourceEditorValidateHCOReconcile, get_hco_version
@@ -40,6 +44,10 @@ from utilities.pytest_utils import exit_pytest_execution
 from utilities.storage import get_hyperconverged_cdi
 from utilities.virt import get_hyperconverged_kubevirt
 
+KUBEVIRT_FEATUREGATES_KEY = (
+    f"configuration{KEY_PATH_SEPARATOR}{DEVELOPER_CONFIGURATION}{KEY_PATH_SEPARATOR}{FEATUREGATES}"
+)
+CDI_FEATUREGATES_KEY = f"config{KEY_PATH_SEPARATOR}{FEATUREGATES}"
 LOGGER = logging.getLogger(__name__)
 
 
@@ -217,3 +225,63 @@ def expected_value(request, is_s390x_cluster):
 @pytest.fixture(scope="session")
 def jira_76659_open():
     return is_jira_open(jira_id="CNV-76659")
+
+
+@pytest.fixture()
+def initial_kubevirt_fg(kubevirt_resource_scope_class):
+    initial_featuregate = get_resource_key_value(
+        resource=kubevirt_resource_scope_class, key_name=KUBEVIRT_FEATUREGATES_KEY
+    )
+    assert initial_featuregate, "KubeVirt featureGates are empty before reconciliation test"
+    LOGGER.info(f"KubeVirt featureGates before deletion: {initial_featuregate}")
+    return set(initial_featuregate)
+
+
+@pytest.fixture()
+def removed_kubevirt_fg(admin_client, kubevirt_resource_scope_class):
+    with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
+        patches={
+            kubevirt_resource_scope_class: {
+                "spec": {"configuration": {"developerConfiguration": {"featureGates": None}}}
+            }
+        },
+        action="replace",
+        list_resource_reconcile=[KubeVirt],
+        wait_for_reconcile_post_update=True,
+    ):
+        yield
+
+
+@pytest.fixture()
+def kubevirt_fg_after_removed(kubevirt_resource_scope_class):
+    actual = get_resource_key_value(resource=kubevirt_resource_scope_class, key_name=KUBEVIRT_FEATUREGATES_KEY)
+    if isinstance(actual, list):
+        return set(actual)
+
+
+@pytest.fixture()
+def initial_cdi_fg(cdi_resource_scope_function):
+    initial_featuregate = get_resource_key_value(resource=cdi_resource_scope_function, key_name=CDI_FEATUREGATES_KEY)
+    assert initial_featuregate, "CDI featureGates are empty before reconciliation test"
+    LOGGER.info(f"CDI featureGates before deletion: {initial_featuregate}")
+    return set(initial_featuregate)
+
+
+@pytest.fixture()
+def removed_cdi_fg(admin_client, cdi_resource_scope_function):
+    with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
+        patches={cdi_resource_scope_function: {"spec": {}}},
+        action="replace",
+        list_resource_reconcile=[CDI],
+        wait_for_reconcile_post_update=True,
+    ):
+        yield
+
+
+@pytest.fixture()
+def cdi_fg_after_removed(cdi_resource_scope_function):
+    actual = get_resource_key_value(resource=cdi_resource_scope_function, key_name=CDI_FEATUREGATES_KEY)
+    if isinstance(actual, list):
+        return set(actual)
