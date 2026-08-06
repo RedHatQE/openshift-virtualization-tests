@@ -8,6 +8,8 @@ from ocp_resources.deployment import Deployment
 from utilities.constants.components import (
     ALL_CNV_DEPLOYMENTS,
     HPP_POOL,
+    VIRT_TEMPLATE_APISERVER,
+    VIRT_TEMPLATE_CONTROLLER,
 )
 
 REQUIRED_SCC_ANNOTATION = "openshift.io/required-scc"
@@ -39,11 +41,11 @@ def required_scc_deployment_check(admin_client, hco_namespace):
 
 
 @pytest.mark.polarion("CNV-11964")
-def test_deployments_missing_required_scc_annotation(required_scc_deployment_check):
-    assert not required_scc_deployment_check["missing_required_scc_annotation"], (
-        f"Deployments missing {REQUIRED_SCC_ANNOTATION} annotation: "
-        f"{required_scc_deployment_check['missing_required_scc_annotation']}"
-    )
+def test_deployments_missing_required_scc_annotation(required_scc_deployment_check, jira_94717_open):
+    missing = required_scc_deployment_check["missing_required_scc_annotation"]
+    if missing and set(missing) <= {VIRT_TEMPLATE_APISERVER, VIRT_TEMPLATE_CONTROLLER} and jira_94717_open:
+        pytest.xfail(f"virt-template deployments missing {REQUIRED_SCC_ANNOTATION} annotation due to CNV-94717 bug")
+    assert not missing, f"Deployments missing {REQUIRED_SCC_ANNOTATION} annotation: {missing}"
 
 
 @pytest.mark.polarion("CNV-11965")
