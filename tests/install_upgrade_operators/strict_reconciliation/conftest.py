@@ -129,21 +129,6 @@ def hco_with_non_default_feature_gates(
 
 
 @pytest.fixture()
-def cr_func_map(
-    hco_spec,
-    kubevirt_hyperconverged_spec_scope_function,
-    cdi_spec,
-    network_addons_config_scope_session,
-):
-    yield {
-        "hco": hco_spec,
-        "kubevirt": kubevirt_hyperconverged_spec_scope_function,
-        "cdi": cdi_spec,
-        "cnao": network_addons_config_scope_session.instance.to_dict(),
-    }
-
-
-@pytest.fixture()
 def hco_status_related_objects_scope_function(hyperconverged_resource_scope_function):
     """
     Gets HCO.status.relatedObjects list
