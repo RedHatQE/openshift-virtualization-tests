@@ -1577,6 +1577,12 @@ def kubevirt_resource_scope_session(admin_client, installing_cnv, hco_namespace)
         return get_hyperconverged_kubevirt(admin_client=admin_client, hco_namespace=hco_namespace)
 
 
+@pytest.fixture(scope="class")
+def kubevirt_resource_scope_class(admin_client, installing_cnv, hco_namespace):
+    if not installing_cnv:
+        return get_hyperconverged_kubevirt(admin_client=admin_client, hco_namespace=hco_namespace)
+
+
 @pytest.fixture(scope="session")
 def junitxml_plugin(request, record_testsuite_property):
     return record_testsuite_property if request.config.pluginmanager.has_plugin("junitxml") else None
