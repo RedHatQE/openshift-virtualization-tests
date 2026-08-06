@@ -4,19 +4,20 @@ import pkgutil
 import re
 
 import pytest
-from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.cdi import CDI
-from ocp_resources.deployment import Deployment
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.network_addons_config import NetworkAddonsConfig
-from ocp_resources.storage_class import StorageClass
+from ocp_resources.pod import Pod
 from pytest_testconfig import py_config
 
 from tests.install_upgrade_operators.constants import (
+    DEVELOPER_CONFIGURATION,
     ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT,
     EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES,
+    FEATUREGATES,
     FG_ENABLED,
     HCO_DEFAULT_FEATUREGATES,
+    KEY_PATH_SEPARATOR,
     RESOURCE_NAME_STR,
     RESOURCE_NAMESPACE_STR,
     RESOURCE_TYPE_STR,
@@ -25,19 +26,13 @@ from tests.install_upgrade_operators.constants import (
 from tests.install_upgrade_operators.utils import (
     get_network_addon_config,
     get_resource_by_name,
-    get_resource_from_module_name,
+    get_resource_key_value,
 )
 from utilities.constants.architecture import MULTIARCH
-from utilities.constants.components import (
-    HCO_OPERATOR,
-    HOSTPATH_PROVISIONER_CSI,
-    HPP_POOL,
-)
 from utilities.hco import ResourceEditorValidateHCOReconcile, get_hco_version
 from utilities.infra import (
-    get_daemonset_by_name,
-    get_deployment_by_name,
-    get_pod_by_name_prefix,
+    get_daemonsets,
+    get_deployments,
     wait_for_version_explorer_response,
 )
 from utilities.jira import is_jira_open
@@ -49,7 +44,29 @@ from utilities.pytest_utils import exit_pytest_execution
 from utilities.storage import get_hyperconverged_cdi
 from utilities.virt import get_hyperconverged_kubevirt
 
+KUBEVIRT_FEATUREGATES_KEY = (
+    f"configuration{KEY_PATH_SEPARATOR}{DEVELOPER_CONFIGURATION}{KEY_PATH_SEPARATOR}{FEATUREGATES}"
+)
+CDI_FEATUREGATES_KEY = f"config{KEY_PATH_SEPARATOR}{FEATUREGATES}"
 LOGGER = logging.getLogger(__name__)
+
+
+@pytest.fixture(scope="session")
+def discovered_cnv_deployments(admin_client, hco_namespace):
+    """Discover all CNV deployments from the cluster."""
+    return get_deployments(admin_client=admin_client, namespace=hco_namespace.name)
+
+
+@pytest.fixture(scope="session")
+def discovered_cnv_pods(admin_client, hco_namespace):
+    """Discover all CNV pods from the cluster."""
+    return list(Pod.get(client=admin_client, namespace=hco_namespace.name))
+
+
+@pytest.fixture(scope="session")
+def discovered_cnv_daemonsets(admin_client, hco_namespace):
+    """Discover all CNV daemonsets from the cluster."""
+    return get_daemonsets(admin_client=admin_client, namespace=hco_namespace.name)
 
 
 @pytest.fixture(scope="session")
@@ -74,65 +91,6 @@ def iib_build_info(cnv_source, cnv_image_url, admin_client):
             log_message=f"Version Explorer returned empty response for IIB {iib_number}.",
         )
     return {}
-
-
-@pytest.fixture()
-def cnv_deployment_by_name(admin_client, hco_namespace, hpp_cr_installed, cnv_deployment_matrix__function__):
-    deployment_name = cnv_deployment_matrix__function__
-    if deployment_name == HPP_POOL:
-        if not hpp_cr_installed:
-            pytest.xfail(f"{deployment_name} deployment shouldn't be present on the cluster if HPP CR is not installed")
-        hpp_pool_deployments = list(
-            Deployment.get(
-                client=admin_client,
-                namespace=hco_namespace.name,
-                label_selector=f"{StorageClass.Provisioner.HOSTPATH_CSI}/storagePool=hpp-csi-pvc-block-hpp",
-            )
-        )
-        assert hpp_pool_deployments, "HPP pool deployment not found on this cluster"
-        return hpp_pool_deployments[0]
-
-    return get_deployment_by_name(
-        namespace_name=hco_namespace.name,
-        deployment_name=deployment_name,
-        admin_client=admin_client,
-    )
-
-
-@pytest.fixture()
-def cnv_daemonset_by_name(
-    admin_client,
-    hco_namespace,
-    hpp_cr_installed,
-    cnv_daemonset_matrix__function__,
-):
-    daemonset_name = cnv_daemonset_matrix__function__
-    if daemonset_name == HOSTPATH_PROVISIONER_CSI and not hpp_cr_installed:
-        pytest.xfail(f"{daemonset_name} daemonset shouldn't be present on the cluster if HPP CR is not installed")
-    return get_daemonset_by_name(
-        admin_client=admin_client,
-        namespace_name=hco_namespace.name,
-        daemonset_name=daemonset_name,
-    )
-
-
-@pytest.fixture()
-def cnv_pods_by_type(
-    admin_client,
-    hco_namespace,
-    hpp_cr_installed,
-    cnv_pod_matrix__function__,
-):
-    pod_prefix = cnv_pod_matrix__function__
-    if pod_prefix.startswith((HOSTPATH_PROVISIONER_CSI, HPP_POOL)) and not hpp_cr_installed:
-        pytest.xfail(f"{pod_prefix} pods shouldn't be present on the cluster if HPP CR is not installed")
-    pod_list = get_pod_by_name_prefix(
-        client=admin_client,
-        namespace=hco_namespace.name,
-        pod_prefix=pod_prefix,
-        get_all=True,
-    )
-    return pod_list
 
 
 @pytest.fixture(scope="session")
@@ -207,25 +165,6 @@ def hco_spec_scope_module(hyperconverged_resource_scope_module):
     return hyperconverged_resource_scope_module.instance.to_dict()["spec"]
 
 
-@pytest.fixture()
-def xfail_if_sriov_conforma_jira_open_and_hco_operator(admin_client, hco_namespace, request):
-    try:
-        is_hco_operator = request.getfixturevalue("cnv_deployment_by_name").name == HCO_OPERATOR
-    except pytest.FixtureLookupError:
-        is_hco_operator = any(pod.name.startswith(HCO_OPERATOR) for pod in request.getfixturevalue("cnv_pods_by_type"))
-    if not is_hco_operator:
-        return
-    hco_version = get_hco_version(client=admin_client, hco_ns_name=hco_namespace.name)
-    if hco_version.startswith("4.23") and is_jira_open(jira_id="CNV-92888"):
-        pytest.xfail(
-            "hco-operator image check xfailed: nightly sriov-dp-admission-controller triggers upstream registry violation (CNV-92888)"
-        )
-    if hco_version.startswith("5.0") and is_jira_open(jira_id="CNV-92889"):
-        pytest.xfail(
-            "hco-operator image check xfailed: nightly sriov-dp-admission-controller triggers upstream registry violation (CNV-92889)"
-        )
-
-
 @pytest.fixture(scope="class")
 def hco_version_scope_class(admin_client, hco_namespace):
     return get_hco_version(client=admin_client, hco_ns_name=hco_namespace.name)
@@ -248,34 +187,6 @@ def cnv_image_url(pytestconfig):
 @pytest.fixture(scope="module")
 def machine_config_pools_conditions_scope_module(machine_config_pools):
     return get_machine_config_pools_conditions(machine_config_pools=machine_config_pools)
-
-
-@pytest.fixture()
-def ocp_resource_by_name(admin_client, ocp_resources_submodule_list, related_object_from_hco_status):
-    return get_resource_from_module_name(
-        related_obj=related_object_from_hco_status,
-        ocp_resources_submodule_list=ocp_resources_submodule_list,
-        admin_client=admin_client,
-    )
-
-
-@pytest.fixture()
-def related_object_from_hco_status(
-    hco_status_related_objects,
-    cnv_related_object_matrix__function__,
-):
-    LOGGER.info(cnv_related_object_matrix__function__)
-    kind_name = list(cnv_related_object_matrix__function__.values())[0]
-    related_object_name = list(cnv_related_object_matrix__function__.keys())[0]
-
-    LOGGER.info(f"Looking for related object {related_object_name}, kind {kind_name}")
-    for obj in hco_status_related_objects:
-        if obj.name == related_object_name and obj.kind == kind_name:
-            return obj
-    raise ResourceNotFoundError(
-        f"Related object {related_object_name}, kind {kind_name} not found in "
-        f"hco.status.relatedObjects: {hco_status_related_objects}"
-    )
 
 
 @pytest.fixture()
@@ -314,3 +225,63 @@ def expected_value(request, is_s390x_cluster):
 @pytest.fixture(scope="session")
 def jira_76659_open():
     return is_jira_open(jira_id="CNV-76659")
+
+
+@pytest.fixture()
+def initial_kubevirt_fg(kubevirt_resource_scope_class):
+    initial_featuregate = get_resource_key_value(
+        resource=kubevirt_resource_scope_class, key_name=KUBEVIRT_FEATUREGATES_KEY
+    )
+    assert initial_featuregate, "KubeVirt featureGates are empty before reconciliation test"
+    LOGGER.info(f"KubeVirt featureGates before deletion: {initial_featuregate}")
+    return set(initial_featuregate)
+
+
+@pytest.fixture()
+def removed_kubevirt_fg(admin_client, kubevirt_resource_scope_class):
+    with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
+        patches={
+            kubevirt_resource_scope_class: {
+                "spec": {"configuration": {"developerConfiguration": {"featureGates": None}}}
+            }
+        },
+        action="replace",
+        list_resource_reconcile=[KubeVirt],
+        wait_for_reconcile_post_update=True,
+    ):
+        yield
+
+
+@pytest.fixture()
+def kubevirt_fg_after_removed(kubevirt_resource_scope_class):
+    actual = get_resource_key_value(resource=kubevirt_resource_scope_class, key_name=KUBEVIRT_FEATUREGATES_KEY)
+    if isinstance(actual, list):
+        return set(actual)
+
+
+@pytest.fixture()
+def initial_cdi_fg(cdi_resource_scope_function):
+    initial_featuregate = get_resource_key_value(resource=cdi_resource_scope_function, key_name=CDI_FEATUREGATES_KEY)
+    assert initial_featuregate, "CDI featureGates are empty before reconciliation test"
+    LOGGER.info(f"CDI featureGates before deletion: {initial_featuregate}")
+    return set(initial_featuregate)
+
+
+@pytest.fixture()
+def removed_cdi_fg(admin_client, cdi_resource_scope_function):
+    with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
+        patches={cdi_resource_scope_function: {"spec": {}}},
+        action="replace",
+        list_resource_reconcile=[CDI],
+        wait_for_reconcile_post_update=True,
+    ):
+        yield
+
+
+@pytest.fixture()
+def cdi_fg_after_removed(cdi_resource_scope_function):
+    actual = get_resource_key_value(resource=cdi_resource_scope_function, key_name=CDI_FEATUREGATES_KEY)
+    if isinstance(actual, list):
+        return set(actual)
