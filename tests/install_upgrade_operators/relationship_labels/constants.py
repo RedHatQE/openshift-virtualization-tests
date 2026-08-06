@@ -84,12 +84,6 @@ AUTOPILOT_STR = "autopilot"
 MANAGED_BY_LABEL_KEY = f"{Resource.ApiGroup.APP_KUBERNETES_IO}/managed-by"
 COMPONENT_LABEL_KEY = f"{Resource.ApiGroup.APP_KUBERNETES_IO}/component"
 PART_OF_LABEL_KEY = f"{Resource.ApiGroup.APP_KUBERNETES_IO}/part-of"
-ALL_LABEL_KEYS = [
-    MANAGED_BY_LABEL_KEY,
-    VERSION_LABEL_KEY,
-    COMPONENT_LABEL_KEY,
-    PART_OF_LABEL_KEY,
-]
 # Daemonset expected labels
 EXPECTED_VIRT_DAEMONSETS_LABELS_DICT_MAP = {
     BRIDGE_MARKER: {
