@@ -25,7 +25,7 @@ from tests.storage.utils import (
 )
 from utilities.constants import Images
 from utilities.constants.pytest import QUARANTINED
-from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_2MIN, TIMEOUT_5MIN
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_2MIN, TIMEOUT_5MIN, TIMEOUT_50MIN
 from utilities.ssp import validate_os_info_vmi_vs_windows_os
 from utilities.storage import (
     ErrorMsg,
@@ -344,6 +344,7 @@ def test_blank_disk_import_validate_status(data_volume_multi_storage_scope_funct
                 "ssh": True,
                 "tpm_params": {"persistent": True},
                 "efi_params": {"persistent": True},
+                "dv_wait_timeout": TIMEOUT_50MIN,
             },
             {"os_version": LATEST_WINDOWS_OS_DICT.get("os_version")},
             marks=pytest.mark.polarion("CNV-3637"),
