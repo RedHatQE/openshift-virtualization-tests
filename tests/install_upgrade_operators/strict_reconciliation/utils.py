@@ -3,17 +3,6 @@ import logging
 from dictdiffer import diff
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.install_upgrade_operators.constants import (
-    HCO_CR_CERT_CONFIG_CA_KEY,
-    HCO_CR_CERT_CONFIG_DURATION_KEY,
-    HCO_CR_CERT_CONFIG_RENEW_BEFORE_KEY,
-    HCO_CR_CERT_CONFIG_SERVER_KEY,
-)
-from tests.install_upgrade_operators.strict_reconciliation.constants import (
-    CERTC_DEFAULT_12H,
-    CERTC_DEFAULT_24H,
-    CERTC_DEFAULT_48H,
-)
 from tests.install_upgrade_operators.utils import (
     get_function_name,
     get_network_addon_config,
@@ -104,19 +93,6 @@ def compare_expected_with_cr(expected, actual):
             list(diff(expected, actual)),
         )
     )
-
-
-def expected_certconfig_stanza():
-    return {
-        HCO_CR_CERT_CONFIG_CA_KEY: {
-            HCO_CR_CERT_CONFIG_DURATION_KEY: CERTC_DEFAULT_48H,
-            HCO_CR_CERT_CONFIG_RENEW_BEFORE_KEY: CERTC_DEFAULT_24H,
-        },
-        HCO_CR_CERT_CONFIG_SERVER_KEY: {
-            HCO_CR_CERT_CONFIG_DURATION_KEY: CERTC_DEFAULT_24H,
-            HCO_CR_CERT_CONFIG_RENEW_BEFORE_KEY: CERTC_DEFAULT_12H,
-        },
-    }
 
 
 def wait_for_fg_update(admin_client, hco_namespace, expected_fg, validate_func):
