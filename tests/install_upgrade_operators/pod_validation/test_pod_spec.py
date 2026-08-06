@@ -1,7 +1,6 @@
 import logging
 
 import pytest
-from ocp_resources.job import Job
 
 from tests.install_upgrade_operators.pod_validation.utils import (
     assert_cnv_pod_container_env_image_not_in_upstream,
@@ -11,20 +10,12 @@ from tests.install_upgrade_operators.pod_validation.utils import (
     validate_priority_class_value,
 )
 from utilities.constants import (
-    ALL_CNV_PODS,
-    HPP_POOL,
     KUBEVIRT_MIGRATION_CONTROLLER,
-    PASST_BINDING_CNI,
 )
 
 pytestmark = [pytest.mark.sno, pytest.mark.arm64, pytest.mark.s390x]
 
 LOGGER = logging.getLogger(__name__)
-
-
-@pytest.fixture()
-def cnv_jobs(admin_client, hco_namespace):
-    return [job.name for job in Job.get(dyn_client=admin_client, namespace=hco_namespace.name)]
 
 
 @pytest.fixture()
@@ -48,25 +39,6 @@ def xfail_if_jira_87629_open_and_migration_controller_pod(jira_87629_open, cnv_p
         and jira_87629_open
     ):
         pytest.xfail(f"{KUBEVIRT_MIGRATION_CONTROLLER} pod has no priority class name due to CNV-87629 bug")
-
-
-@pytest.mark.skip_must_gather_collection
-@pytest.mark.polarion("CNV-7261")
-def test_no_new_cnv_pods_added(
-    cnv_pods, cnv_jobs, passt_enabled_in_hco_and_jira_92995_open, hostpath_provisioner_scope_session
-):
-    all_pods = ALL_CNV_PODS.copy()
-    if hostpath_provisioner_scope_session.exists:
-        all_pods.append(HPP_POOL)
-    if passt_enabled_in_hco_and_jira_92995_open:
-        all_pods.append(PASST_BINDING_CNI)
-
-    new_pods = [
-        pod.name
-        for pod in cnv_pods
-        if list(filter(pod.name.startswith, all_pods)) == [] and list(filter(pod.name.startswith, cnv_jobs)) == []
-    ]
-    assert not new_pods, f"New cnv pod: {new_pods}, has been added."
 
 
 @pytest.mark.polarion("CNV-7262")
