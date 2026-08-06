@@ -58,6 +58,7 @@ from utilities.pytest_utils import (
     deploy_run_in_progress_namespace,
     filter_hpp_tests,
     filter_multiarch_tests,
+    filter_post_test_alerts_tests,
     get_artifactory_server_url,
     get_base_matrix_name,
     get_cnv_version_explorer_url,
@@ -108,13 +109,13 @@ EXCLUDE_MARKER_FROM_TIER2_MARKER = [
 
 TEAM_MARKERS = {
     "chaos": ["chaos", "deprecated_api"],
-    "virt": ["virt", "deprecated_api"],
-    "network": ["network", "deprecated_api"],
-    "storage": ["storage", "deprecated_api"],
-    "iuo": ["install_upgrade_operators", "deprecated_api"],
-    "observability": ["observability", "deprecated_api"],
-    "infrastructure": ["infrastructure", "deprecated_api"],
-    "data_protection": ["data_protection", "deprecated_api"],
+    "virt": ["virt", "deprecated_api", "post_test_alerts"],
+    "network": ["network", "deprecated_api", "post_test_alerts"],
+    "storage": ["storage", "deprecated_api", "post_test_alerts"],
+    "iuo": ["install_upgrade_operators", "deprecated_api", "post_test_alerts"],
+    "observability": ["observability", "deprecated_api", "post_test_alerts"],
+    "infrastructure": ["infrastructure", "deprecated_api", "post_test_alerts"],
+    "data_protection": ["data_protection", "deprecated_api", "post_test_alerts"],
 }
 NAMESPACE_COLLECTION = {
     "storage": [NamespacesNames.OPENSHIFT_STORAGE],
@@ -144,6 +145,7 @@ def pytest_addoption(parser):
     ci_group = parser.getgroup(name="CI")
     component_sanity_group = parser.getgroup(name="ComponentSanity")
     ai_insights_group = parser.getgroup(name="ai-job-insight")
+    post_test_alerts_group = parser.getgroup(name="PostTestAlerts")
 
     # Upgrade addoption
     install_upgrade_group.addoption(
@@ -309,6 +311,13 @@ def pytest_addoption(parser):
     deprecate_api_test_group.addoption(
         "--skip-deprecated-api-test",
         help="By default test_deprecation_audit_logs will always run, pass this flag to skip it",
+        action="store_true",
+    )
+
+    # Post test alerts group
+    post_test_alerts_group.addoption(
+        "--skip-post-test-alerts",
+        help="By default test_no_critical_alerts_after_tests will always run, pass this flag to skip it",
         action="store_true",
     )
 
@@ -582,6 +591,11 @@ def pytest_configure(config):
     if file_or_dir and deprecation_tests_dir_path not in file_or_dir and file_or_dir != ["tests"]:
         config.option.file_or_dir.append(deprecation_tests_dir_path)
 
+    # post_test_alerts tests should always run regardless the path that passed to pytest.
+    post_test_alerts_dir_path = "tests/post_test_alerts"
+    if file_or_dir and post_test_alerts_dir_path not in file_or_dir and file_or_dir != ["tests"]:
+        config.option.file_or_dir.append(post_test_alerts_dir_path)
+
     if conformance_storage_class := config.getoption("conformance_storage_class"):
         py_config["storage_class_matrix"] = StorageClassConfig(
             name=conformance_storage_class
@@ -643,12 +657,17 @@ def pytest_collection_modifyitems(session, config, items):
 
         # All tests are verified on amd64 platforms, adding `amd64` to all tests
         item.add_marker(marker=AMD_64)
-    #  Collect only 'upgrade_custom' tests when running pytest with --upgrade_custom
+    # Collect only 'upgrade_custom' tests when running pytest with --upgrade_custom
+    # post_test_alerts tests run on all lanes; preserve them across upgrade filtering
+    post_test_alerts_items = [item for item in items if "post_test_alerts" in item.keywords]
     keep, discard = filter_upgrade_tests(items=items, config=config)
+    keep.extend(item for item in post_test_alerts_items if item not in keep)
+    discard = [item for item in discard if item not in post_test_alerts_items]
     items[:] = keep
     if discard:
         config.hook.pytest_deselected(items=discard)
     items[:] = filter_deprecated_api_tests(items=items, config=config)
+    items[:] = filter_post_test_alerts_tests(items=items, config=config)
     items[:] = filter_sno_only_tests(items=items, config=config)
     items[:] = filter_multiarch_tests(items=items, config=config)
     items[:] = filter_hpp_tests(items=items, config=config)
