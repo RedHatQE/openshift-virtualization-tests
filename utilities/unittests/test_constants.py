@@ -89,6 +89,10 @@ from utilities.constants.virt import (
     WIN_10,
     WIN_11,
 )
+from utilities.constants.vm_template import (
+    VALID_VM_TEMPLATE_PARAMETERS,
+    VALID_VM_TEMPLATE_VIRTUAL_MACHINE,
+)
 
 
 class TestConstants:
@@ -211,6 +215,14 @@ class TestConstants:
         assert FILE_NAME_FOR_BACKUP == "file_before_backup.txt"
         assert TEXT_TO_TEST == "text"
         assert BACKUP_STORAGE_LOCATION == "dpa-1"
+
+    def test_vm_template_constants(self):
+        """Test VirtualMachineTemplate parameter and spec constants are defined."""
+        param_names = [param["name"] for param in VALID_VM_TEMPLATE_PARAMETERS]
+        assert param_names == ["NAME", "INSTANCETYPE", "PREFERENCE"]
+        assert VALID_VM_TEMPLATE_VIRTUAL_MACHINE["metadata"] == {"name": "${NAME}"}
+        assert "instancetype" in VALID_VM_TEMPLATE_VIRTUAL_MACHINE["spec"]
+        assert "preference" in VALID_VM_TEMPLATE_VIRTUAL_MACHINE["spec"]
 
     def test_tekton_constants(self):
         """Test Tekton pipeline and task name constants are defined."""
