@@ -226,12 +226,12 @@ def removed_acrq_label_from_second_namespace(second_namespace_for_acrq_test):
 
 
 @pytest.fixture(scope="class")
-def vm_in_second_namespace_for_acrq_test(unprivileged_client, second_namespace_for_acrq_test):
+def vm_in_second_namespace_for_acrq_test(admin_client, second_namespace_for_acrq_test):
     vm_name = "vm-another-namespace-for-acrq-test"
     with VirtualMachineForTests(
         name=vm_name,
         namespace=second_namespace_for_acrq_test.name,
-        client=unprivileged_client,
+        client=admin_client,
         cpu_cores=VM_CPU_CORES,
         memory_guest=VM_MEMORY_GUEST,
         body=fedora_vm_body(name=vm_name),
