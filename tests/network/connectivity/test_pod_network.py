@@ -17,7 +17,6 @@ from utilities.virt import VirtualMachineForTests, fedora_vm_body, vm_console_ru
 def pod_net_vma(
     namespace,
     unprivileged_client,
-    nic_models_matrix__module__,
     cloud_init_ipv6_network_data,
     schedulable_nodes,
 ):
@@ -28,7 +27,7 @@ def pod_net_vma(
         name=name,
         node_selector=get_node_selector_dict(node_selector=node_selector),
         client=unprivileged_client,
-        network_model=nic_models_matrix__module__,
+        network_model="virtio",
         body=fedora_vm_body(name=name),
         cloud_init_data=cloud_init_ipv6_network_data,
     ) as vm:
@@ -40,7 +39,6 @@ def pod_net_vma(
 def pod_net_vmb(
     namespace,
     unprivileged_client,
-    nic_models_matrix__module__,
     cloud_init_ipv6_network_data,
     schedulable_nodes,
 ):
@@ -51,7 +49,7 @@ def pod_net_vmb(
         name=name,
         node_selector=get_node_selector_dict(node_selector=node_selector),
         client=unprivileged_client,
-        network_model=nic_models_matrix__module__,
+        network_model="virtio",
         body=fedora_vm_body(name=name),
         cloud_init_data=cloud_init_ipv6_network_data,
     ) as vm:
