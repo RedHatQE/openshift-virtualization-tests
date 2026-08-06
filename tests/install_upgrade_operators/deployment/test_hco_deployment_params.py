@@ -78,7 +78,7 @@ def test_cnv_deployment_priority_class_name(subtests, discovered_cnv_deployments
     for deployment in discovered_cnv_deployments:
         with subtests.test(msg=deployment.name):
             if deployment.name.startswith(HPP_POOL):
-                LOGGER.info(f"Skipping HPP pool deployment {deployment.name}: no priorityClassName expected")
+                LOGGER.warning(f"Skipping HPP pool deployment {deployment.name}: no priorityClassName expected")
                 continue
             if deployment.name == KUBEVIRT_MIGRATION_CONTROLLER and jira_76659_open:
                 pytest.xfail(f"{KUBEVIRT_MIGRATION_CONTROLLER} deployment is not running due to CNV-76659 bug")

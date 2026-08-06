@@ -28,7 +28,6 @@ from utilities.constants.components import (
     BRIDGE_MARKER,
     CLUSTER_NETWORK_ADDONS_OPERATOR,
     KUBE_CNI_LINUX_BRIDGE_PLUGIN,
-    KUBEMACPOOL_MAC_CONTROLLER_MANAGER,
 )
 from utilities.constants.hco import VM_CRD
 from utilities.constants.namespaces import NamespacesNames
