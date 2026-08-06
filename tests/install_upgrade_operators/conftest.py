@@ -32,6 +32,7 @@ from utilities.constants.components import (
     HCO_OPERATOR,
     HOSTPATH_PROVISIONER_CSI,
     HPP_POOL,
+    VIRT_NETWORK_RESOURCES_INJECTOR,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile, get_hco_version
 from utilities.infra import (
@@ -211,21 +212,24 @@ def hco_spec_scope_module(hyperconverged_resource_scope_module):
 
 
 @pytest.fixture()
-def xfail_if_sriov_conforma_jira_open_and_hco_operator(admin_client, hco_namespace, request):
+def xfail_if_sriov_conforma_jira_open(admin_client, hco_namespace, request):
     try:
-        is_hco_operator = request.getfixturevalue("cnv_deployment_by_name").name == HCO_OPERATOR
+        deployment_name = request.getfixturevalue("cnv_deployment_by_name").name
     except pytest.FixtureLookupError:
-        is_hco_operator = any(pod.name.startswith(HCO_OPERATOR) for pod in request.getfixturevalue("cnv_pods_by_type"))
-    if not is_hco_operator:
+        deployment_name = next(
+            (pod.name for pod in request.getfixturevalue("cnv_pods_by_type") if pod.name.startswith(HCO_OPERATOR)),
+            None,
+        )
+    if deployment_name not in (HCO_OPERATOR, VIRT_NETWORK_RESOURCES_INJECTOR):
         return
     hco_version = get_hco_version(client=admin_client, hco_ns_name=hco_namespace.name)
     if hco_version.startswith("4.23") and is_jira_open(jira_id="CNV-92888"):
         pytest.xfail(
-            "hco-operator image check xfailed: nightly sriov-dp-admission-controller triggers upstream registry violation (CNV-92888)"
+            f"{deployment_name} image check xfailed: nightly sriov-dp-admission-controller triggers upstream registry violation (CNV-92888)"
         )
     if hco_version.startswith("5.0") and is_jira_open(jira_id="CNV-92889"):
         pytest.xfail(
-            "hco-operator image check xfailed: nightly sriov-dp-admission-controller triggers upstream registry violation (CNV-92889)"
+            f"{deployment_name} image check xfailed: nightly sriov-dp-admission-controller triggers upstream registry violation (CNV-92889)"
         )
 
 
