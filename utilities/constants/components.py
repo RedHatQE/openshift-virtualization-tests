@@ -43,6 +43,7 @@ VIRT_PLATFORM_AUTOPILOT = "virt-platform-autopilot"
 VIRT_SYNCHRONIZATION_CONTROLLER = "virt-synchronization-controller"
 VIRT_TEMPLATE_APISERVER = "virt-template-apiserver"
 VIRT_TEMPLATE_CONTROLLER = "virt-template-controller"
+VIRT_NETWORK_RESOURCES_INJECTOR = "virt-network-resources-injector"
 KUBEVIRT_MIGRATION_CONTROLLER = "kubevirt-migration-controller"
 CDI_APISERVER = "cdi-apiserver"
 CDI_DEPLOYMENT = "cdi-deployment"
@@ -244,6 +245,7 @@ ALL_CNV_DEPLOYMENTS = [
     VIRT_SYNCHRONIZATION_CONTROLLER,
     VIRT_TEMPLATE_APISERVER,
     VIRT_TEMPLATE_CONTROLLER,
+    VIRT_NETWORK_RESOURCES_INJECTOR,
 ]
 ALL_CNV_DAEMONSETS = [
     BRIDGE_MARKER,
