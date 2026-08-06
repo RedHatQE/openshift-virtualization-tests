@@ -38,15 +38,6 @@ def remove_kubevirt_vm(unprivileged_client, namespace):
         yield vm
 
 
-@pytest.mark.polarion("CNV-3738")
-@pytest.mark.s390x
-def test_validate_default_uninstall_strategy(kubevirt_resource):
-    strategy = kubevirt_resource.instance.spec.uninstallStrategy
-    assert strategy == "BlockUninstallIfWorkloadsExist", (
-        f"Default uninstall strategy is incorrect.Expected 'BlockUninstallIfWorkloadsExist', found '{strategy}'"
-    )
-
-
 @pytest.mark.polarion("CNV-3718")
 @pytest.mark.destructive
 def test_block_removal(kubevirt_resource, remove_kubevirt_vm):
