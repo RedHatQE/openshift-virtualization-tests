@@ -41,6 +41,8 @@ from utilities.constants.cluster import WORKER_NODE_LABEL_KEY
 from utilities.infra import create_ns
 from utilities.virt import migrate_vm_and_verify
 
+SHARED_HOSTNAME = "shared-localnet-vm"
+
 
 @pytest.fixture(scope="module")
 def nncp_localnet(
@@ -549,3 +551,120 @@ def ovs_bridge_localnet_running_jumbo_frame_vms(
 ) -> Generator[tuple[BaseVirtualMachine, BaseVirtualMachine]]:
     vm1, vm2 = run_vms(vms=(vm1_ovs_bridge_localnet_jumbo_frame, vm2_ovs_bridge_localnet_jumbo_frame))
     yield vm1, vm2
+
+
+@pytest.fixture(scope="module")
+def shared_hostname_vm_1(
+    unprivileged_client: DynamicClient,
+    ipv4_localnet_address_pool: Generator[str],
+    ipv6_localnet_address_pool: Generator[str],
+    namespace_localnet_1: Namespace,
+    cudn_localnet: libcudn.ClusterUserDefinedNetwork,
+) -> Generator[BaseVirtualMachine]:
+    with localnet_vm(
+        namespace=namespace_localnet_1.name,
+        name="shared-hostname-vm1",
+        client=unprivileged_client,
+        networks=[Network(name=LOCALNET_BR_EX_INTERFACE, multus=Multus(networkName=cudn_localnet.name))],
+        interfaces=[Interface(name=LOCALNET_BR_EX_INTERFACE, bridge={})],
+        cloud_init=localnet_cloudinit(
+            network_data=cloudinit.NetworkData(
+                ethernets={
+                    GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
+                        addresses=ip_addresses_from_pool(
+                            ipv4_pool=ipv4_localnet_address_pool,
+                            ipv6_pool=ipv6_localnet_address_pool,
+                        ),
+                    )
+                }
+            )
+        ),
+        hostname=SHARED_HOSTNAME,
+    ) as vm:
+        yield vm
+
+
+@pytest.fixture(scope="module")
+def shared_hostname_vm_2(
+    unprivileged_client: DynamicClient,
+    ipv4_localnet_address_pool: Generator[str],
+    ipv6_localnet_address_pool: Generator[str],
+    namespace_localnet_1: Namespace,
+    cudn_localnet: libcudn.ClusterUserDefinedNetwork,
+) -> Generator[BaseVirtualMachine]:
+    with localnet_vm(
+        namespace=namespace_localnet_1.name,
+        name="shared-hostname-vm2",
+        client=unprivileged_client,
+        networks=[Network(name=LOCALNET_BR_EX_INTERFACE, multus=Multus(networkName=cudn_localnet.name))],
+        interfaces=[Interface(name=LOCALNET_BR_EX_INTERFACE, bridge={})],
+        cloud_init=localnet_cloudinit(
+            network_data=cloudinit.NetworkData(
+                ethernets={
+                    GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
+                        addresses=ip_addresses_from_pool(
+                            ipv4_pool=ipv4_localnet_address_pool,
+                            ipv6_pool=ipv6_localnet_address_pool,
+                        ),
+                    )
+                }
+            )
+        ),
+        hostname=SHARED_HOSTNAME,
+    ) as vm:
+        yield vm
+
+
+@pytest.fixture(scope="module")
+def shared_hostname_vm_3(
+    unprivileged_client: DynamicClient,
+    ipv4_localnet_address_pool: Generator[str],
+    ipv6_localnet_address_pool: Generator[str],
+    namespace_localnet_1: Namespace,
+    cudn_localnet: libcudn.ClusterUserDefinedNetwork,
+) -> Generator[BaseVirtualMachine]:
+    with localnet_vm(
+        namespace=namespace_localnet_1.name,
+        name="shared-hostname-vm3",
+        client=unprivileged_client,
+        networks=[Network(name=LOCALNET_BR_EX_INTERFACE, multus=Multus(networkName=cudn_localnet.name))],
+        interfaces=[Interface(name=LOCALNET_BR_EX_INTERFACE, bridge={})],
+        cloud_init=localnet_cloudinit(
+            network_data=cloudinit.NetworkData(
+                ethernets={
+                    GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
+                        addresses=ip_addresses_from_pool(
+                            ipv4_pool=ipv4_localnet_address_pool,
+                            ipv6_pool=ipv6_localnet_address_pool,
+                        ),
+                    )
+                }
+            )
+        ),
+        hostname=SHARED_HOSTNAME,
+    ) as vm:
+        yield vm
+
+
+@pytest.fixture(scope="module")
+def running_shared_hostname_vms(
+    shared_hostname_vm_1: BaseVirtualMachine,
+    shared_hostname_vm_2: BaseVirtualMachine,
+    shared_hostname_vm_3: BaseVirtualMachine,
+) -> list[BaseVirtualMachine]:
+    running_vms = run_vms(vms=(shared_hostname_vm_1, shared_hostname_vm_2, shared_hostname_vm_3))
+    ip_families = supported_cluster_ip_versions()
+    for vm in running_vms:
+        lookup_iface_status(
+            vm=vm,
+            iface_name=LOCALNET_BR_EX_INTERFACE,
+            predicate=lambda interface: (
+                len(
+                    filter_cluster_unsupported_addresses(
+                        ip_addresses=filter_link_local_addresses(ip_addresses=interface.get("ipAddresses", []))
+                    )
+                )
+                == len(ip_families)
+            ),
+        )
+    return list(running_vms)
