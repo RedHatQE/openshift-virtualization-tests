@@ -258,11 +258,12 @@ def cdi_config_upload_proxy_overridden(
 
 
 @pytest.fixture()
-def new_route_created(hco_namespace):
-    existing_route = Route(name=CDI_UPLOADPROXY, namespace=hco_namespace.name)
+def new_route_created(admin_client, hco_namespace):
+    existing_route = Route(name=CDI_UPLOADPROXY, namespace=hco_namespace.name, client=admin_client)
     route = Route(
         name="newuploadroute-cdi",
         namespace=hco_namespace.name,
+        client=admin_client,
         destination_ca_cert=existing_route.ca_cert,
         service=CDI_UPLOADPROXY,
     )
