@@ -2417,6 +2417,13 @@ def snapshot_storage_class_name_scope_module(
     return [*storage_class_matrix_snapshot_matrix__module__][0]
 
 
+@pytest.fixture(scope="module")
+def snapshot_import_cron_format_storage_class_name_scope_module(
+    storage_class_matrix_snapshot_import_cron_format_matrix__module__,
+):
+    return next(iter(storage_class_matrix_snapshot_import_cron_format_matrix__module__))
+
+
 @pytest.fixture(scope="class")
 def rhel_vm_with_cluster_instance_type_and_preference(namespace, unprivileged_client):
     with VirtualMachineForTests(
