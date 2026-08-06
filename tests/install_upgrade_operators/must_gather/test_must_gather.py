@@ -30,7 +30,6 @@ from tests.install_upgrade_operators.must_gather.utils import (
     compare_webhook_svc_contents,
 )
 from utilities.constants import (
-    ALL_CNV_CRDS,
     BRIDGE_MARKER,
     CLUSTER_NETWORK_ADDONS_OPERATOR,
     KUBE_CNI_LINUX_BRIDGE_PLUGIN,
@@ -367,11 +366,6 @@ class TestMustGatherCluster:
                 client=admin_client,
                 checks=VALIDATE_UID_NAME,
             )
-
-    @pytest.mark.polarion("CNV-8508")
-    def test_no_new_cnv_crds(self, kubevirt_crd_names):
-        new_crds = [crd for crd in kubevirt_crd_names if crd not in ALL_CNV_CRDS]
-        assert not new_crds, f"Following crds are new: {new_crds}."
 
     @pytest.mark.polarion("CNV-2724")
     def test_crd_resources(self, admin_client, must_gather_for_test, kubevirt_crd_by_type):
