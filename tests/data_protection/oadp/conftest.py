@@ -341,7 +341,7 @@ def uploaded_rhel_dv(
         insecure=True,
     ) as res:
         check_upload_virtctl_result(result=res)
-        yield DataVolume(namespace=namespace_for_backup2.name, name=dv_name)
+        yield DataVolume(namespace=namespace_for_backup2.name, name=dv_name, client=namespace_for_backup2.client)
 
 
 @pytest.fixture()

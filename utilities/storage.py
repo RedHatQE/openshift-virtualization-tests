@@ -1188,7 +1188,7 @@ def verify_dv_and_pvc_does_not_exist(name: str, namespace: str, client: DynamicC
         raise
 
 
-def wait_for_volume_snapshot_ready_to_use(namespace: str, name: str, client: DynamicClient):
+def wait_for_volume_snapshot_ready_to_use(namespace: str, name: str, client: DynamicClient) -> VolumeSnapshot:
     ready_to_use_status = "readyToUse"
     LOGGER.info(f"Wait for VolumeSnapshot '{name}' in '{namespace}' to be '{ready_to_use_status}'")
     volume_snapshot = VolumeSnapshot(namespace=namespace, name=name, client=client)

@@ -122,6 +122,7 @@ def cirros_pvc_on_hpp(cirros_vm_for_node_placement_tests):
     return PersistentVolumeClaim(
         namespace=cirros_vm_for_node_placement_tests.namespace,
         name=cirros_vm_for_node_placement_tests.data_volume_template["metadata"]["name"],
+        client=cirros_vm_for_node_placement_tests.client,
     )
 
 
