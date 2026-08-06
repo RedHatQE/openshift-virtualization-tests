@@ -4,11 +4,11 @@ VM to VM connectivity
 
 import pytest
 
-from utilities.constants.networking import IPV4_STR, IPV6_STR
+from libs.net.vmspec import lookup_iface_status
+from tests.network.libs.connectivity import build_ping_command
 from utilities.infra import get_node_selector_dict
 from utilities.network import (
     compose_cloud_init_data_dict,
-    get_ip_from_vm_or_virt_handler_pod,
 )
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, vm_console_run_commands
 
@@ -76,32 +76,13 @@ def cloud_init_ipv6_network_data(ipv6_primary_interface_cloud_init_data):
     return compose_cloud_init_data_dict(ipv6_network_data=ipv6_primary_interface_cloud_init_data)
 
 
-@pytest.mark.parametrize(
-    "ip_family",
-    [
-        pytest.param(
-            IPV4_STR,
-            marks=[
-                pytest.mark.polarion("CNV-2332"),
-                pytest.mark.ipv4,
-            ],
-        ),
-        pytest.param(
-            IPV6_STR,
-            marks=[
-                pytest.mark.polarion("CNV-11845"),
-                pytest.mark.ipv6,
-            ],
-        ),
-    ],
-    indirect=False,
-)
+@pytest.mark.polarion("CNV-11845")
 @pytest.mark.gating
 @pytest.mark.single_nic
 @pytest.mark.s390x
 # conformance candidate
 def test_connectivity_over_pod_network(
-    ip_family,
+    subtests,
     pod_net_vma,
     pod_net_vmb,
     pod_net_running_vma,
@@ -111,8 +92,9 @@ def test_connectivity_over_pod_network(
     """
     Check connectivity
     """
-    dst_ip = get_ip_from_vm_or_virt_handler_pod(family=ip_family, vm=pod_net_running_vmb)
-    assert dst_ip, f"Cannot get valid IP address from {pod_net_running_vmb.vmi.name}."
-
-    ping_cmd = f"ping -c 3 {dst_ip}"
-    vm_console_run_commands(vm=pod_net_running_vma, commands=[ping_cmd])
+    target_vm_iface_name = pod_net_running_vmb.vmi.interfaces[0].name
+    target_vm_ip_addresses = lookup_iface_status(vm=pod_net_running_vmb, iface_name=target_vm_iface_name)["ipAddresses"]
+    for target_vm_ip in target_vm_ip_addresses:
+        with subtests.test(msg=f"Testing connectivity to {target_vm_ip}"):
+            ping_cmd = build_ping_command(dst_ip=target_vm_ip, count=3, timeout=10)
+            vm_console_run_commands(vm=pod_net_running_vma, commands=[ping_cmd])
