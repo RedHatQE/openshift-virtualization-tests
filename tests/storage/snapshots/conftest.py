@@ -86,6 +86,7 @@ def windows_snapshot(
         name="windows-snapshot",
         namespace=windows_vm_with_vtpm_for_snapshot.namespace,
         vm_name=windows_vm_with_vtpm_for_snapshot.name,
+        client=windows_vm_with_vtpm_for_snapshot.client,
     ) as snapshot:
         yield snapshot
 

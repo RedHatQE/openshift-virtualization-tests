@@ -93,7 +93,7 @@ def dv_cloned_from_datasource(
 
 
 @pytest.fixture()
-def data_volume_clone_settings(destination_namespace, dv_cloned_from_datasource):
+def data_volume_clone_settings(unprivileged_client, destination_namespace, dv_cloned_from_datasource):
     storage_class = dv_cloned_from_datasource.storage_class
     dv = DataVolume(
         name=f"{TARGET_DV}-{storage_class}",
@@ -106,6 +106,7 @@ def data_volume_clone_settings(destination_namespace, dv_cloned_from_datasource)
         size=dv_cloned_from_datasource.size,
         storage_class=storage_class,
         api_name="storage",
+        client=unprivileged_client,
     )
     dv.to_dict()
     return dv
