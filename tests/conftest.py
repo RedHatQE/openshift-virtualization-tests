@@ -42,7 +42,6 @@ from ocp_resources.machine import Machine
 from ocp_resources.migration_policy import MigrationPolicy
 from ocp_resources.mutating_webhook_config import MutatingWebhookConfiguration
 from ocp_resources.namespace import Namespace
-from ocp_resources.network_addons_config import NetworkAddonsConfig
 from ocp_resources.node import Node
 from ocp_resources.node_network_state import NodeNetworkState
 from ocp_resources.oauth import OAuth
@@ -1265,13 +1264,6 @@ def kubevirt_feature_gates(kubevirt_config):
 @pytest.fixture(scope="module")
 def kubevirt_feature_gates_scope_module(kubevirt_config_scope_module):
     return kubevirt_config_scope_module["developerConfiguration"][FEATURE_GATES]
-
-
-@pytest.fixture(scope="session")
-def network_addons_config_scope_session(admin_client):
-    nac = list(NetworkAddonsConfig.get(client=admin_client))
-    assert nac, "There should be one NetworkAddonsConfig CR."
-    return nac[0]
 
 
 @pytest.fixture(scope="session")
