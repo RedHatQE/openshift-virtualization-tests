@@ -1,39 +1,51 @@
 """
-Concurrent VM boot with multiple disks per VM.
+Concurrent VM Boot Tests
 
-Validates the ability to spin up 20 VMs simultaneously, each with 1 golden image
-boot volume (PVC clone) + 1 cloud-init disk + 3 blank data volumes
-(5 disk devices total in the VMI spec).
+Validates booting 20 virtual machines simultaneously, each with a multi-disk
+configuration: one cloned boot volume, one cloud-init disk, and three blank
+data volumes (five disk devices total in the VMI spec).
 
 Jira: https://redhat.atlassian.net/browse/CNV-88906  # <skip-jira-utils-check>
 
-Preconditions:
-    - Fedora golden image DataSource available in openshift-virtualization-os-images
-    - Storage class supporting dynamic provisioning and CSI volume cloning
-    - Sufficient cluster resources to schedule 20 VMs simultaneously
+Markers:
+    - tier3
+    - conformance
 """
 
 import pytest
 
+__test__ = False
 
-@pytest.mark.tier3
-@pytest.mark.conformance
-@pytest.mark.polarion("CNV-16335")
-def test_concurrent_vms_boot_with_four_disks():
+
+class TestConcurrentVMBoot:
     """
-    Test that 20 VMs boot simultaneously, each reporting the expected number of disk devices.
+    Tests for booting multiple VMs simultaneously with multi-disk configurations.
 
     Preconditions:
-        - 20 VMs created, each with 1 golden image boot volume, 1 cloud-init disk,
-          and 3 blank data volumes
-        - All 20 VMs started simultaneously and reached Running state
-
-    Steps:
-        1. For each VM, verify the number of disk devices reported in the VMI spec
-
-    Expected:
-        - All 20 VMs report 5 disk devices each in the VMI spec
+        - Fedora golden image DataSource available in the openshift-virtualization-os-images namespace
+        - Storage class supporting dynamic provisioning and CSI volume cloning
+        - Sufficient cluster resources to schedule 20 VMs simultaneously
     """
 
+    @pytest.mark.tier3
+    @pytest.mark.conformance
+    @pytest.mark.polarion("CNV-16335")
+    def test_concurrent_vms_boot_with_five_disks(self):
+        """
+        Test that 20 VMs boot simultaneously with five disk devices each and all reach Running state.
 
-test_concurrent_vms_boot_with_four_disks.__test__ = False
+        Preconditions:
+            - Fedora golden image DataSource available in the openshift-virtualization-os-images namespace
+            - Storage class supporting dynamic provisioning and CSI volume cloning
+            - Sufficient cluster resources to schedule 20 VMs simultaneously
+
+        Steps:
+            1. Create 20 VMs, each with one golden image boot volume (PVC clone via DataSource),
+               one cloud-init disk, and three blank data volumes
+            2. Start all 20 VMs simultaneously
+            3. Wait for all 20 VMs to reach Running state
+            4. For each VM, inspect the disk devices reported in the VMI spec
+
+        Expected:
+            - All 20 VMs report exactly five disk devices each in the VMI spec
+        """
