@@ -10,6 +10,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from utilities import console
 from utilities.constants.components import VIRT_HANDLER
+from utilities.constants.hco import HCOv1Spec
 from utilities.constants.timeouts import TIMEOUT_3MIN, TIMEOUT_5SEC
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import get_daemonset_by_name
@@ -43,8 +44,8 @@ def configure_hco_live_migration_network(
         yield
         return
 
-    LOGGER.info("Adding live migration network configuration to HCO spec patch")
-    spec_patch = {"liveMigrationConfig": {"network": network_for_live_migration.name}}
+    LOGGER.info("Adding live migration network configuration to HCO virtualization spec")
+    hco_patch = HCOv1Spec.virtualization(liveMigrationConfig={"network": network_for_live_migration.name})
 
     virt_handler_daemonset = get_daemonset_by_name(
         admin_client=client,
@@ -53,7 +54,7 @@ def configure_hco_live_migration_network(
     )
 
     with ResourceEditorValidateHCOReconcile(
-        patches={hyperconverged_resource: {"spec": spec_patch}},
+        patches={hyperconverged_resource: hco_patch},
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,
         admin_client=client,

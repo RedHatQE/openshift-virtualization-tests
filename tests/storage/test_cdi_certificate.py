@@ -17,6 +17,7 @@ from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutSampler
 
 from utilities.constants import Images
+from utilities.constants.hco import HCOv1Spec
 from utilities.constants.pytest import QUARANTINED
 from utilities.constants.storage import CDI_SECRETS
 from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_3MIN, TIMEOUT_5SEC, TIMEOUT_10MIN
@@ -268,8 +269,8 @@ def test_upload_after_validate_aggregated_api_cert(
 @pytest.fixture()
 def certificate_exists(cdi_spec, hco_spec):
     # Verify CDI and HCO spec for cert configuration
-    for spec in (cdi_spec, hco_spec):
-        assert spec.get("certConfig"), "No certConfig found in spec."
+    assert cdi_spec.get("certConfig"), "No certConfig found in CDI spec."
+    assert HCOv1Spec.security.read(spec=hco_spec, default={}).get("certConfig"), "No certConfig found in HCO spec."
 
 
 @pytest.fixture()
@@ -278,14 +279,12 @@ def updated_certconfig_in_hco_cr(admin_client, hyperconverged_resource_scope_fun
     with ResourceEditorValidateHCOReconcile(
         admin_client=admin_client,
         patches={
-            hyperconverged_resource_scope_function: {
-                "spec": {
-                    "certConfig": {
-                        "ca": {"duration": "1h20m0s", "renewBefore": "1h10m0s"},
-                        "server": {"duration": "1h10m0s", "renewBefore": "1h5m0s"},
-                    }
+            hyperconverged_resource_scope_function: HCOv1Spec.security(
+                certConfig={
+                    "ca": {"duration": "1h20m0s", "renewBefore": "1h10m0s"},
+                    "server": {"duration": "1h10m0s", "renewBefore": "1h5m0s"},
                 }
-            }
+            )
         },
         list_resource_reconcile=[CDI, NetworkAddonsConfig],
     ):
