@@ -9,6 +9,7 @@ from ocp_resources.resource import Resource, ResourceEditor
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.utils import create_vms
+from utilities.constants.hco import HCOv1Spec
 from utilities.constants.timeouts import (
     TIMEOUT_5MIN,
     TIMEOUT_30SEC,
@@ -103,9 +104,9 @@ def ksm_enabled_in_hco(admin_client, hyperconverged_resource_scope_class):
     with ResourceEditorValidateHCOReconcile(
         admin_client=admin_client,
         patches={
-            hyperconverged_resource_scope_class: {
-                "spec": {"ksmConfiguration": {"nodeLabelSelector": {"matchLabels": KERNEL_SAMEPAGE_MERGING_TEST_LABEL}}}
-            }
+            hyperconverged_resource_scope_class: HCOv1Spec.virtualization(
+                ksmConfiguration={"nodeLabelSelector": {"matchLabels": KERNEL_SAMEPAGE_MERGING_TEST_LABEL}},
+            )
         },
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,

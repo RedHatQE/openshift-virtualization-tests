@@ -6,6 +6,7 @@ from ocp_resources.resource import ResourceEditor
 from timeout_sampler import TimeoutSampler
 
 from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS
+from utilities.constants.hco import HCOv1Spec
 from utilities.constants.timeouts import (
     TIMEOUT_3MIN,
     TIMEOUT_5MIN,
@@ -68,7 +69,7 @@ def hco_cr_with_evictionstrategy_none(
 ):
     with ResourceEditorValidateHCOReconcile(
         admin_client=admin_client,
-        patches={hyperconverged_resource_scope_function: {"spec": {EVICTIONSTRATEGY: "None"}}},
+        patches={hyperconverged_resource_scope_function: HCOv1Spec.virtualization(**{EVICTIONSTRATEGY: "None"})},
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,
     ):

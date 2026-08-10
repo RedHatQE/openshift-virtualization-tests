@@ -18,7 +18,7 @@ from tests.virt.node.gpu.utils import (
 from tests.virt.upgrade.utils import vm_from_template
 from tests.virt.utils import build_node_affinity_dict, verify_gpu_device_exists_on_node
 from utilities.artifactory import get_test_artifact_server_url
-from utilities.constants.hco import DISABLE_MDEV_CONFIGURATION, FEATURE_GATES
+from utilities.constants.hco import DISABLE_MDEV_CONFIGURATION, HCOv1Spec
 from utilities.constants.timeouts import TIMEOUT_30MIN
 from utilities.constants.virt import ES_NONE
 from utilities.hco import ResourceEditorValidateHCOReconcile
@@ -102,7 +102,7 @@ def hco_with_disable_mdev_configuration_session_scope(admin_client, hyperconverg
     """
     with ResourceEditorValidateHCOReconcile(
         admin_client=admin_client,
-        patches={hyperconverged_resource_scope_session: {"spec": {FEATURE_GATES: {DISABLE_MDEV_CONFIGURATION: True}}}},
+        patches={hyperconverged_resource_scope_session: HCOv1Spec.feature_gates(**{DISABLE_MDEV_CONFIGURATION: True})},
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,
     ):

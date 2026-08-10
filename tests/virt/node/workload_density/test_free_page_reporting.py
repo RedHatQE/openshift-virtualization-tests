@@ -2,6 +2,7 @@ import pytest
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.resource import ResourceEditor
 
+from utilities.constants.hco import HCOv1Spec
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.virt import (
     VirtualMachineForTests,
@@ -74,11 +75,7 @@ def disabled_free_page_reporting_in_hco_cr(
 ):
     with ResourceEditorValidateHCOReconcile(
         admin_client=admin_client,
-        patches={
-            hyperconverged_resource_scope_function: {
-                "spec": {"virtualMachineOptions": {"disableFreePageReporting": True}}
-            }
-        },
+        patches={hyperconverged_resource_scope_function: HCOv1Spec.vm_options(disableFreePageReporting=True)},
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,
     ):
@@ -103,9 +100,8 @@ class TestFreePageReporting:
     def test_free_page_reporting_enabled_by_default(
         self, admin_client, free_page_reporting_vm, hyperconverged_resource_scope_function
     ):
-        assert not hyperconverged_resource_scope_function.instance.to_dict()["spec"]["virtualMachineOptions"][
-            "disableFreePageReporting"
-        ]
+        spec = hyperconverged_resource_scope_function.instance.to_dict()["spec"]
+        assert not HCOv1Spec.vm_options.read(spec=spec)["disableFreePageReporting"]
         assert_vmi_free_page_reporting(
             vm=free_page_reporting_vm,
             expected_free_page_reporting="on",
