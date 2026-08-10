@@ -34,6 +34,7 @@ from utilities.artifactory import (
 )
 from utilities.constants import Images
 from utilities.constants.cluster import RHSM_SECRET_NAME
+from utilities.constants.hco import HCOv1Spec
 from utilities.constants.images import (
     OS_FLAVOR_WIN_CONTAINER_DISK,
     OS_FLAVOR_WINDOWS,
@@ -504,7 +505,7 @@ def download_and_extract_tar(tarfile_url, dest_path):
 def update_hco_with_persistent_storage_config(admin_client, hco_cr, storage_class):
     with ResourceEditorValidateHCOReconcile(
         admin_client=admin_client,
-        patches={hco_cr: {"spec": {"vmStateStorageClass": storage_class}}},
+        patches={hco_cr: HCOv1Spec.storage(vmStateStorageClass=storage_class)},
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,
     ):
