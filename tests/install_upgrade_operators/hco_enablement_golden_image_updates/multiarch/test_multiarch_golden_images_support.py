@@ -128,7 +128,8 @@ class TestDisabledMultiarchGoldenImagesSupport:
             1. Query the metric.
 
         Expected:
-            - Metric value is 0.
+            - Metric value is 0. This metric is the underlying signal for the
+              corresponding alert.
         """
         validate_metrics_value(
             prometheus=prometheus,
@@ -153,7 +154,8 @@ class TestDisabledMultiarchGoldenImagesSupport:
             1. Query the metric.
 
         Expected:
-            - Metric is not emitted.
+            - Metric is not emitted. This metric is the underlying signal for the
+              corresponding alert.
         """
         validate_metrics_value(
             prometheus=prometheus,
@@ -233,18 +235,28 @@ class TestEnabledMultiarchGoldenImagesSupport:
         Expected:
             - DataSource is referencing architecture-specific DataSource matching the Kubevirt default architecture.
         """
+        verify_resource_in_ns(
+            expected_resource_names=base_common_templates_related_resources[DataSource.kind],
+            namespace=golden_images_namespace.name,
+            client=admin_client,
+            resource_type=DataSource,
+            ready_condition=DataSource.Condition.READY,
+        )
         for ds_name in base_common_templates_related_resources[DataSource.kind]:
+            expected_arch_ds = f"{ds_name}-{kubevirt_default_architecture}"
             with subtests.test(msg=ds_name):
                 data_source = DataSource(
                     name=ds_name,
                     namespace=golden_images_namespace.name,
                     client=admin_client,
                 )
-                expected_arch_ds_prefix = f"{ds_name}-{kubevirt_default_architecture}"
-                assert data_source.source.name.startswith(expected_arch_ds_prefix), (
+                assert (source := data_source.instance.spec.source.get("dataSource")), (
+                    f"DataSource {ds_name} does not reference an architecture-specific DataSource."
+                )
+                assert source.name == expected_arch_ds, (
                     f"DataSource {ds_name} does not reference a Kubevirt default "
-                    f"architecture-specific DataSource (expected prefix: {expected_arch_ds_prefix}). "
-                    f"Actual source: {data_source.source.name}"
+                    f"architecture-specific DataSource (expected: {expected_arch_ds}). "
+                    f"Actual source: {source.name}"
                 )
 
 
@@ -281,7 +293,8 @@ class TestMultiarchGoldenImageAnnotationMetrics:
             1. Query the metric.
 
         Expected:
-            - Metric value is 0.
+            - Metric value is 0. This metric is the underlying signal for the
+              corresponding alert.
         """
         validate_metrics_value(
             prometheus=prometheus,
@@ -315,7 +328,8 @@ class TestMultiarchGoldenImageAnnotationMetrics:
             1. Query the metric.
 
         Expected:
-            - Metric value is 0.
+            - Metric value is 0. This metric is the underlying signal for the
+              corresponding alert.
         """
         validate_metrics_value(
             prometheus=prometheus,

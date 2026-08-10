@@ -148,6 +148,9 @@ def expected_common_templates_related_resources(
 ):
     """Return expected golden image resource names for the current cluster state.
 
+    Relies on the class-level feature-gate fixture (applied via @pytest.mark.usefixtures
+    on the test class) being resolved before this fixture reads the HCO spec.
+
     When enableMultiArchBootImageImport is enabled:
         - DataImportCrons: arch-specific only (base names are replaced)
         - DataSources: both arch-specific and agnostic pointers
