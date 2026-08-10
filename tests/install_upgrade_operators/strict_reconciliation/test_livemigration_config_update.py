@@ -7,6 +7,7 @@ from tests.install_upgrade_operators.strict_reconciliation.constants import (
     KUBEVIRT_CR_MIGRATIONS_KEY,
     LIVE_MIGRATION_CONFIG_KEY,
 )
+from utilities.constants.hco import HCOv1Spec
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.gating, pytest.mark.arm64, pytest.mark.s390x]
 EXPECTED_VALUE = True
@@ -20,7 +21,9 @@ class TestLiveMigrationConfigUpdate:
         [
             pytest.param(
                 {
-                    PATCH_STR: {SPEC_STR: {LIVE_MIGRATION_CONFIG_KEY: {ALLOW_AUTO_CONVERGE: EXPECTED_VALUE}}},
+                    PATCH_STR: {
+                        SPEC_STR: {"virtualization": {LIVE_MIGRATION_CONFIG_KEY: {ALLOW_AUTO_CONVERGE: EXPECTED_VALUE}}}
+                    },
                 },
                 ALLOW_AUTO_CONVERGE,
                 marks=pytest.mark.polarion("CNV-9674"),
@@ -28,7 +31,9 @@ class TestLiveMigrationConfigUpdate:
             ),
             pytest.param(
                 {
-                    PATCH_STR: {SPEC_STR: {LIVE_MIGRATION_CONFIG_KEY: {ALLOW_POST_COPY: EXPECTED_VALUE}}},
+                    PATCH_STR: {
+                        SPEC_STR: {"virtualization": {LIVE_MIGRATION_CONFIG_KEY: {ALLOW_POST_COPY: EXPECTED_VALUE}}}
+                    },
                 },
                 ALLOW_POST_COPY,
                 marks=pytest.mark.polarion("CNV-9675"),
@@ -44,7 +49,7 @@ class TestLiveMigrationConfigUpdate:
         hco_spec,
         kubevirt_hyperconverged_spec_scope_function,
     ):
-        hco_value = hco_spec[LIVE_MIGRATION_CONFIG_KEY].get(expected)
+        hco_value = HCOv1Spec.virtualization.read(spec=hco_spec, default={})[LIVE_MIGRATION_CONFIG_KEY].get(expected)
         kubevirt_value = kubevirt_hyperconverged_spec_scope_function[KUBEVIRT_CR_CONFIGURATION_KEY][
             KUBEVIRT_CR_MIGRATIONS_KEY
         ].get(expected)

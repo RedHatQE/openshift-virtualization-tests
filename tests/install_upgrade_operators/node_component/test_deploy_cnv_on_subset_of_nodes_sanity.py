@@ -20,6 +20,7 @@ from tests.install_upgrade_operators.node_component.utils import (
     verify_all_components_on_node,
     verify_no_components_on_nodes,
 )
+from utilities.constants.hco import HCOv1Spec
 from utilities.hco import ResourceEditorValidateHCOReconcile
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.gating, pytest.mark.arm64, pytest.mark.s390x]
@@ -165,7 +166,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         try:
             with ResourceEditorValidateHCOReconcile(
                 admin_client=admin_client,
-                patches={hyperconverged_resource_scope_function: {"spec": {"workloads": WORK_LABEL_1}}},
+                patches={hyperconverged_resource_scope_function: HCOv1Spec.node_placements(workload=WORK_LABEL_1)},
             ):
                 LOGGER.info("Expected ability to change workloads label {WORK_LABEL_1} while VM/Workload is present.")
         except ForbiddenError:

@@ -21,6 +21,7 @@ from tests.install_upgrade_operators.must_gather.utils import (
     get_must_gather_dir,
 )
 from tests.utils import create_vms
+from utilities.constants.hco import HCOv1Spec
 from utilities.constants.networking import LINUX_BRIDGE
 from utilities.constants.timeouts import TIMEOUT_40MIN
 from utilities.exceptions import MissingResourceException
@@ -639,14 +640,10 @@ def must_gather_vm_files_path(collected_vm_details_must_gather, vm_for_migration
 
 @pytest.fixture(scope="class")
 def updated_disable_serial_console_log_false(admin_client, hyperconverged_resource_scope_class):
-    if hyperconverged_resource_scope_class.instance.spec.virtualMachineOptions.disableSerialConsoleLog:
+    if hyperconverged_resource_scope_class.instance.spec.virtualization.virtualMachineOptions.disableSerialConsoleLog:
         with ResourceEditorValidateHCOReconcile(
             admin_client=admin_client,
-            patches={
-                hyperconverged_resource_scope_class: {
-                    "spec": {"virtualMachineOptions": {"disableSerialConsoleLog": False}}
-                }
-            },
+            patches={hyperconverged_resource_scope_class: HCOv1Spec.vm_options(disableSerialConsoleLog=False)},
         ):
             yield
     else:

@@ -12,7 +12,7 @@ from tests.install_upgrade_operators.crypto_policy.utils import (
     assert_crypto_policy_propagated_to_components,
     set_hco_crypto_policy,
 )
-from utilities.constants.hco import TLS_SECURITY_PROFILE
+from utilities.constants.hco import TLS_SECURITY_PROFILE, HCOv1Spec
 
 LOGGER = logging.getLogger(__name__)
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.s390x]
@@ -22,13 +22,13 @@ pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.s390x]
 def hco_crypto_policy(
     hyperconverged_resource_scope_function, updated_hco_crypto_policy, cnv_crypto_policy_matrix__function__
 ):
-    tls_profile = hyperconverged_resource_scope_function.instance.spec.get(TLS_SECURITY_PROFILE)
+    spec = hyperconverged_resource_scope_function.instance.to_dict()["spec"]
+    tls_profile = HCOv1Spec.security.read(spec=spec, default={}).get(TLS_SECURITY_PROFILE)
     if not tls_profile:
         return None
-    tls_dict = tls_profile.to_dict()
     # OCP 4.22+ API adds empty profile-type keys (e.g. old: {}, custom: {}) as CRD defaults
     expected = CRYPTO_POLICY_SPEC_DICT[cnv_crypto_policy_matrix__function__]
-    return {policy_key: policy_value for policy_key, policy_value in tls_dict.items() if policy_key in expected}
+    return {policy_key: policy_value for policy_key, policy_value in tls_profile.items() if policy_key in expected}
 
 
 @pytest.fixture()

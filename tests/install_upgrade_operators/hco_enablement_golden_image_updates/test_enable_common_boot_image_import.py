@@ -6,6 +6,7 @@ from utilities.constants.hco import (
     COMMON_TEMPLATES_KEY_NAME,
     ENABLE_COMMON_BOOT_IMAGE_IMPORT,
     SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
+    HCOv1Spec,
 )
 from utilities.hco import wait_for_auto_boot_config_stabilization
 
@@ -33,6 +34,7 @@ def test_enable_and_delete_spec_enable_common_boot_image_import_hco_cr(
     hyperconverged_resource_scope_function,
 ):
     wait_for_auto_boot_config_stabilization(admin_client=admin_client, hco_namespace=hco_namespace)
-    assert not hyperconverged_resource_scope_function.instance.spec[ENABLE_COMMON_BOOT_IMAGE_IMPORT], (
+    spec = hyperconverged_resource_scope_function.instance.to_dict()["spec"]
+    assert not HCOv1Spec.workload_sources.read(spec=spec, default={}).get(ENABLE_COMMON_BOOT_IMAGE_IMPORT, True), (
         f"Spec {ENABLE_COMMON_BOOT_IMAGE_IMPORT} was not disabled in HCO."
     )
