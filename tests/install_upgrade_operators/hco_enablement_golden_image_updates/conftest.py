@@ -162,7 +162,7 @@ def expected_common_templates_related_resources(
     )
 
     if not feature_gate_enabled:
-        return base_common_templates_related_resources
+        return {kind: set(names) for kind, names in base_common_templates_related_resources.items()}
 
     expected_resources = {}
     for kind, base_names in base_common_templates_related_resources.items():

@@ -51,7 +51,7 @@ def get_modified_data_import_cron_template(
 
 
 def get_unsupported_arch_template(common_templates: list[dict[str, Any]]) -> dict[str, Any]:
-    """Return a custom template annotated with an architecture not supported by any cluster."""
+    """Return a custom template annotated with an architecture unsupported by the cluster."""
     return get_modified_data_import_cron_template(
         common_templates=common_templates,
         name=CUSTOM_UNSUPPORTED_ARCH_CRON_NAME,

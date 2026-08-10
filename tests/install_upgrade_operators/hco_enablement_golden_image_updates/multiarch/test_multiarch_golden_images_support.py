@@ -90,11 +90,12 @@ class TestDisabledMultiarchGoldenImagesSupport:
     ):
         """
         Test that architecture-agnostic DataSources remain available after
-        disabling multi-architecture golden images support, and pointing to a pvc/snapshot source.
+        disabling multi-architecture golden images support, and point to a pvc/snapshot source.
 
         Steps:
             1. Get architecture-agnostic DataSources from golden images namespace.
             2. Wait for them to be in ready condition.
+            3. Check the source reference of each DataSource.
 
         Expected:
             - Architecture-agnostic DataSources reference a pvc/snapshot source.
@@ -205,7 +206,8 @@ class TestEnabledMultiarchGoldenImagesSupport:
         Expected:
             - Architecture-specific golden image resources exist for each supported
               architecture matching the workers architectures and in the expected condition.
-              DataSources include both architecture-agnostic pointers and arch-specific names.
+              For DataImportCrons, only arch-specific names are expected (base names are replaced).
+              For DataSources, both architecture-agnostic pointers and arch-specific names are expected.
         """
         verify_resource_in_ns(
             expected_resource_names=expected_common_templates_related_resources[resource_type.kind],
@@ -282,8 +284,8 @@ class TestMultiarchGoldenImageAnnotationMetrics:
         prometheus,
     ):
         """
-        [NEGATIVE] Test that a misconfiguration metric is reported when a golden
-        image is annotated with an architecture not supported by the cluster.
+        [NEGATIVE] Test that a misconfiguration metric indicates an unsupported
+        architecture annotation on a golden image.
 
         Preconditions:
             - HCO CR is patched with a custom DataImportCronTemplate annotated
@@ -293,8 +295,8 @@ class TestMultiarchGoldenImageAnnotationMetrics:
             1. Query the metric.
 
         Expected:
-            - Metric value is 0. This metric is the underlying signal for the
-              corresponding alert.
+            - Metric is emitted with value 0, indicating the misconfiguration is
+              detected. This metric is the underlying signal for the corresponding alert.
         """
         validate_metrics_value(
             prometheus=prometheus,
@@ -317,19 +319,19 @@ class TestMultiarchGoldenImageAnnotationMetrics:
         prometheus,
     ):
         """
-        [NEGATIVE] Test that a misconfiguration metric is reported when a golden
-        image lacks an architecture annotation on a multi-architecture cluster.
+        [NEGATIVE] Test that a misconfiguration metric indicates a missing
+        architecture annotation on a golden image.
 
         Preconditions:
-            - HCO CR is patched with a custom DataImportCronTemplate annotated without
+            - HCO CR is patched with a custom DataImportCronTemplate without
               architecture annotation.
 
         Steps:
             1. Query the metric.
 
         Expected:
-            - Metric value is 0. This metric is the underlying signal for the
-              corresponding alert.
+            - Metric is emitted with value 0, indicating the misconfiguration is
+              detected. This metric is the underlying signal for the corresponding alert.
         """
         validate_metrics_value(
             prometheus=prometheus,

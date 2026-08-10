@@ -122,7 +122,7 @@ class TestDefaultCommonTemplates:
         "resource_type, ready_condition",
         [
             pytest.param(ImageStream, None, marks=pytest.mark.polarion("CNV-11474")),
-            pytest.param(DataImportCron, "UpToDate", marks=pytest.mark.polarion("CNV-11475")),
+            pytest.param(DataImportCron, DataImportCron.Condition.UP_TO_DATE, marks=pytest.mark.polarion("CNV-11475")),
             pytest.param(
                 DataSource,
                 DataSource.Condition.READY,

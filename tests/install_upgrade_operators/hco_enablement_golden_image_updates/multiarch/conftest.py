@@ -6,7 +6,11 @@ from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.network_addons_config import NetworkAddonsConfig
 from ocp_resources.ssp import SSP
 
-from tests.install_upgrade_operators.constants import ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT
+from tests.install_upgrade_operators.constants import (
+    ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT,
+    FG_DISABLED,
+    FG_ENABLED,
+)
 from tests.install_upgrade_operators.hco_enablement_golden_image_updates.multiarch.utils import (
     CUSTOM_MULTIARCH_DATASOURCE_NAME,
 )
@@ -25,7 +29,9 @@ def disabled_multiarch_feature_gate(admin_client, hyperconverged_resource_scope_
     with ResourceEditorValidateHCOReconcile(
         admin_client=admin_client,
         patches={
-            hyperconverged_resource_scope_class: {"spec": {FEATURE_GATES: {ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT: False}}}
+            hyperconverged_resource_scope_class: {
+                "spec": {FEATURE_GATES: {ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT: FG_DISABLED}}
+            }
         },
         list_resource_reconcile=_MULTIARCH_MANAGED_CRS,
         wait_for_reconcile_post_update=True,
@@ -44,7 +50,7 @@ def enabled_multiarch_feature_gate(admin_client, hyperconverged_resource_scope_c
             admin_client=admin_client,
             patches={
                 hyperconverged_resource_scope_class: {
-                    "spec": {FEATURE_GATES: {ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT: True}}
+                    "spec": {FEATURE_GATES: {ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT: FG_ENABLED}}
                 }
             },
             list_resource_reconcile=_MULTIARCH_MANAGED_CRS,
