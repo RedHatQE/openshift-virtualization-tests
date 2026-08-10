@@ -17,6 +17,7 @@ from tests.infrastructure.golden_images.update_boot_source.utils import (
     get_all_release_versions_from_docs,
 )
 from utilities.constants import Images
+from utilities.constants.hco import HCOv1Spec
 from utilities.constants.images import DEFAULT_FEDORA_REGISTRY_URL
 from utilities.constants.storage import BIND_IMMEDIATE_ANNOTATION
 from utilities.constants.timeouts import (
@@ -82,7 +83,9 @@ def updated_hco_with_custom_data_import_cron_scope_function(
     with ResourceEditorValidateHCOReconcile(
         admin_client=admin_client,
         patches={
-            hyperconverged_resource_scope_function: {"spec": {"dataImportCronTemplates": [data_import_cron_dict]}}
+            hyperconverged_resource_scope_function: HCOv1Spec.workload_sources(
+                dataImportCronTemplates=[data_import_cron_dict]
+            )
         },
         list_resource_reconcile=[SSP, CDI],
     ):
@@ -170,9 +173,9 @@ def updated_data_import_cron(
     )
     with ResourceEditor(
         patches={
-            hyperconverged_resource_scope_function: {
-                "spec": {"dataImportCronTemplates": [updated_hco_with_custom_data_import_cron_scope_function]}
-            }
+            hyperconverged_resource_scope_function: HCOv1Spec.workload_sources(
+                dataImportCronTemplates=[updated_hco_with_custom_data_import_cron_scope_function],
+            )
         }
     ):
         yield
