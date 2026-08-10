@@ -11,6 +11,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.virt.node.descheduler.constants import (
     DESCHEDULER_DEPLOYMENT_NAME,
+    DESCHEDULER_PREFER_NO_EVICTION_ANNOTATION,
     DESCHEDULER_SOFT_TAINT_KEY,
     DESCHEDULING_INTERVAL_120SEC,
 )
@@ -51,7 +52,7 @@ class VirtualMachineForDeschedulerTest(VirtualMachineForTests):
         cpu_model,
         body,
         cpu_cores,
-        descheduler_eviction=True,
+        prefer_no_eviction=False,
         node_selector_labels=None,
         vm_affinity=None,
     ):
@@ -67,14 +68,14 @@ class VirtualMachineForDeschedulerTest(VirtualMachineForTests):
             run_strategy=VirtualMachine.RunStrategy.ALWAYS,
             vm_affinity=vm_affinity,
         )
-        self.descheduler_eviction = descheduler_eviction
+        self.prefer_no_eviction = prefer_no_eviction
 
     def to_dict(self):
         super().to_dict()
-        metadata = self.res["spec"]["template"]["metadata"]
-        metadata.setdefault("annotations", {})
-        if self.descheduler_eviction:
-            metadata["annotations"]["descheduler.alpha.kubernetes.io/evict"] = "true"
+        if self.prefer_no_eviction:
+            metadata = self.res["spec"]["template"]["metadata"]
+            metadata.setdefault("annotations", {})
+            metadata["annotations"][DESCHEDULER_PREFER_NO_EVICTION_ANNOTATION] = "true"
 
 
 def calculate_vm_deployment(
@@ -156,7 +157,7 @@ def deploy_vms(
     cpu_model,
     vm_count,
     deployment_size,
-    descheduler_eviction,
+    prefer_no_eviction=False,
     node_selector_labels=None,
     vm_affinity=None,
 ):
@@ -170,7 +171,7 @@ def deploy_vms(
             cpu_cores=deployment_size["cpu"],
             memory_guest=deployment_size["memory"].bytes,
             cpu_model=cpu_model,
-            descheduler_eviction=descheduler_eviction,
+            prefer_no_eviction=prefer_no_eviction,
             body=fedora_vm_body(name=vm_name),
             node_selector_labels=node_selector_labels,
             vm_affinity=vm_affinity,

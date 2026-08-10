@@ -13,9 +13,6 @@ pytestmark = [
     pytest.mark.descheduler,
     pytest.mark.post_upgrade,
     pytest.mark.data_collector_scope(scope="module"),
-    pytest.mark.usefixtures(
-        "descheduler_long_lifecycle_profile",
-    ),
 ]
 
 
@@ -25,8 +22,7 @@ pytestmark = [
         pytest.param(
             0.30,
             {
-                "vm_prefix": "with-annotation-imbalance",
-                "descheduler_eviction": True,
+                "vm_prefix": "evictable-imbalance",
             },
         )
     ],
@@ -69,16 +65,16 @@ class TestDeschedulerEvictsVMFromUtilizationImbalance:
         pytest.param(
             0.80,
             {
-                "vm_prefix": "no-annotation-imbalance",
-                "descheduler_eviction": False,
+                "vm_prefix": "prefer-no-eviction-imbalance",
+                "prefer_no_eviction": True,
             },
         )
     ],
     indirect=True,
 )
-class TestDeschedulerDoesNotEvictVMWithNoAnnotationFromUtilizationImbalance:
+class TestDeschedulerDoesNotEvictVMWithPreferNoEvictionFromUtilizationImbalance:
     @pytest.mark.polarion("CNV-8920")
-    def test_descheduler_does_not_evict_vm_with_no_annotation_from_utilization_imbalance(
+    def test_descheduler_does_not_evict_vm_with_prefer_no_eviction_from_utilization_imbalance(
         self,
         node_with_min_memory_labeled_for_descheduler_test,
         deployed_vms_for_utilization_imbalance,
