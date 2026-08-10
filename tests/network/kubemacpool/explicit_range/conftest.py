@@ -11,6 +11,7 @@ from libs.vm.factory import base_vmspec, fedora_vm
 from libs.vm.spec import Interface, Multus, Network
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs.mac import random_mac_range
+from utilities.constants.hco import HCOv1Spec
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.network import MacPool
 
@@ -54,14 +55,12 @@ def kubemacpool_random_range_config_hco(
 
     with ResourceEditorValidateHCOReconcile(
         patches={
-            hyperconverged_resource_scope_function: {
-                "spec": {
-                    "kubeMacPoolConfiguration": {
-                        "rangeStart": rand_range_start,
-                        "rangeEnd": rand_range_end,
-                    }
+            hyperconverged_resource_scope_function: HCOv1Spec.networking(
+                kubeMacPoolConfiguration={
+                    "rangeStart": rand_range_start,
+                    "rangeEnd": rand_range_end,
                 }
-            }
+            )
         },
         list_resource_reconcile=[NetworkAddonsConfig],
         wait_for_reconcile_post_update=True,
@@ -76,9 +75,10 @@ def custom_range_hco_mac_pool(
     hyperconverged_resource_scope_function: HyperConverged,
 ) -> MacPool:
     hco_instance = hyperconverged_resource_scope_function.instance
+    kmp_config = hco_instance.spec.networking.kubeMacPoolConfiguration
     kmp_range_from_hco = {
-        "RANGE_START": hco_instance.spec.kubeMacPoolConfiguration.rangeStart,
-        "RANGE_END": hco_instance.spec.kubeMacPoolConfiguration.rangeEnd,
+        "RANGE_START": kmp_config.rangeStart,
+        "RANGE_END": kmp_config.rangeEnd,
     }
 
     return MacPool(kmp_range=kmp_range_from_hco)
