@@ -110,6 +110,7 @@ from utilities.constants.hco import (
     HCO_SUBSCRIPTION,
     HOTFIX_STR,
     SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
+    HCOv1Spec,
     UpgradeStreams,
 )
 from utilities.constants.images import OS_FLAVOR_RHEL
@@ -1235,6 +1236,11 @@ def hyperconverged_resource_scope_session(admin_client, hco_namespace, installin
         return get_hyperconverged_resource(client=admin_client, hco_ns_name=hco_namespace.name)
 
 
+@pytest.fixture(scope="session")
+def hco_fg_phases(admin_client):
+    return utilities.hco.parse_hco_fg_phases(admin_client=admin_client)
+
+
 @pytest.fixture()
 def kubevirt_hyperconverged_spec_scope_function(admin_client, hco_namespace, installing_cnv):
     if not installing_cnv:
@@ -1304,8 +1310,10 @@ def hyperconverged_with_node_placement(request, admin_client, hco_namespace, hyp
     workloads_placement = request.param["workloads"]
 
     LOGGER.info("Fetching HCO to save its initial node placement configuration ")
-    initial_infra = hyperconverged_resource_scope_class.instance.to_dict()["spec"].get("infra", {})
-    initial_workloads = hyperconverged_resource_scope_class.instance.to_dict()["spec"].get("workloads", {})
+    spec = hyperconverged_resource_scope_class.instance.to_dict()["spec"]
+    node_placements = HCOv1Spec.node_placements.read(spec=spec, default={})
+    initial_infra = node_placements.get("infra", {})
+    initial_workloads = node_placements.get("workload", {})
     yield utilities.hco.apply_np_changes(
         admin_client=admin_client,
         hco=hyperconverged_resource_scope_class,
