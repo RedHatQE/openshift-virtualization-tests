@@ -39,6 +39,7 @@ if "utilities.hco" in sys.modules:
     del sys.modules["utilities.hco"]
 
 # Import after setting up mocks to avoid circular dependency
+from utilities.constants.hco import HCOv1Spec
 from utilities.hco import (
     CDI,
     DEFAULT_HCO_PROGRESSING_CONDITIONS,
@@ -58,6 +59,7 @@ from utilities.hco import (
     get_json_patch_annotation_values,
     hco_cr_jsonpatch_annotations_dict,
     is_hco_tainted,
+    parse_hco_fg_phases,
     update_common_boot_image_import_spec,
     update_hco_annotations,
     update_hco_templates_spec,
@@ -238,14 +240,18 @@ class TestGetHcoSpec:
 
         mock_hco = MagicMock()
         mock_hco.instance.to_dict.return_value = {
-            "spec": {"infra": {}, "workloads": {}, "featureGates": {"enableCommonBootImageImport": True}}
+            "spec": {
+                "deployment": {"nodePlacements": {"infra": {}, "workload": {}}},
+                "workloadSources": {"enableCommonBootImageImport": True},
+                "featureGates": [],
+            }
         }
         mock_get_hco.return_value = mock_hco
 
         result = get_hco_spec(mock_admin_client, mock_namespace)
 
-        assert "infra" in result
-        assert "workloads" in result
+        assert "deployment" in result
+        assert "workloadSources" in result
         assert "featureGates" in result
         mock_get_hco.assert_called_once_with(client=mock_admin_client, hco_ns_name="openshift-cnv")
 
@@ -538,7 +544,9 @@ class TestApplyNpChanges:
         mock_hco = MagicMock()
         mock_namespace = MagicMock()
 
-        mock_hco.instance.to_dict.return_value = {"spec": {"infra": None, "workloads": None}}
+        mock_hco.instance.to_dict.return_value = {
+            "spec": {"deployment": {"nodePlacements": {"infra": None, "workload": None}}}
+        }
 
         new_infra_placement = {"nodeSelector": {"node-role.kubernetes.io/worker": ""}}
 
@@ -557,7 +565,9 @@ class TestApplyNpChanges:
         mock_namespace = MagicMock()
 
         existing_placement = {"nodeSelector": {"node-role.kubernetes.io/worker": ""}}
-        mock_hco.instance.to_dict.return_value = {"spec": {"infra": existing_placement, "workloads": None}}
+        mock_hco.instance.to_dict.return_value = {
+            "spec": {"deployment": {"nodePlacements": {"infra": existing_placement, "workload": None}}}
+        }
 
         apply_np_changes(mock_admin_client, mock_hco, mock_namespace, infra_placement=existing_placement)
 
@@ -754,7 +764,7 @@ class TestDisableCommonBootImageImportHcoSpec:
         """Test disabling common boot image import when it's enabled"""
         mock_admin_client = MagicMock()
         mock_hco = MagicMock()
-        mock_hco.instance.spec = {"enableCommonBootImageImport": True}
+        mock_hco.instance.to_dict.return_value = {"spec": {"workloadSources": {"enableCommonBootImageImport": True}}}
         mock_namespace = MagicMock()
         mock_dics = [MagicMock()]
 
@@ -784,7 +794,7 @@ class TestDisableCommonBootImageImportHcoSpec:
         """Test that exclude_data_source_names is forwarded to the teardown call"""
         mock_admin_client = MagicMock()
         mock_hco = MagicMock()
-        mock_hco.instance.spec = {"enableCommonBootImageImport": True}
+        mock_hco.instance.to_dict.return_value = {"spec": {"workloadSources": {"enableCommonBootImageImport": True}}}
         mock_namespace = MagicMock()
         mock_dics = [MagicMock()]
         exclude_names = {"custom-datasource"}
@@ -813,7 +823,7 @@ class TestDisableCommonBootImageImportHcoSpec:
         """Test context manager when common boot image import is already disabled"""
         mock_admin_client = MagicMock()
         mock_hco = MagicMock()
-        mock_hco.instance.spec = {"enableCommonBootImageImport": False}
+        mock_hco.instance.to_dict.return_value = {"spec": {"workloadSources": {"enableCommonBootImageImport": False}}}
         mock_namespace = MagicMock()
         mock_dics = [MagicMock()]
 
@@ -911,7 +921,7 @@ class TestUpdateCommonBootImageImportSpec:
     def test_update_spec_enable(self, mock_editor_class, mock_sampler):
         """Test enabling common boot image import spec"""
         mock_hco = MagicMock()
-        mock_hco.instance.spec = {"enableCommonBootImageImport": True}
+        mock_hco.instance.to_dict.return_value = {"spec": {"workloadSources": {"enableCommonBootImageImport": True}}}
 
         mock_editor = MagicMock()
         mock_editor_class.return_value = mock_editor
@@ -930,7 +940,7 @@ class TestUpdateCommonBootImageImportSpec:
     def test_update_spec_timeout(self, mock_editor_class, mock_sampler):
         """Test timeout when spec doesn't update"""
         mock_hco = MagicMock()
-        mock_hco.instance.spec = {"enableCommonBootImageImport": False}
+        mock_hco.instance.to_dict.return_value = {"spec": {"workloadSources": {"enableCommonBootImageImport": False}}}
 
         mock_editor = MagicMock()
         mock_editor_class.return_value = mock_editor
@@ -1252,7 +1262,7 @@ class TestEnabledAaqInHco:
         call_args = mock_editor_class.call_args
         patches = call_args[1]["patches"]
         assert mock_hco in patches
-        assert patches[mock_hco]["spec"]["enableApplicationAwareQuota"] is True
+        assert patches[mock_hco]["spec"]["deployment"]["applicationAwareConfig"] == {"enable": True}
 
     @patch("utilities.hco.TimeoutSampler")
     @patch("utilities.hco.utilities.infra.get_pod_by_name_prefix")
@@ -1279,8 +1289,9 @@ class TestEnabledAaqInHco:
         # Verify ACRQ support is included
         call_args = mock_editor_class.call_args
         patches = call_args[1]["patches"]
-        assert patches[mock_hco]["spec"]["applicationAwareConfig"] == {
-            "allowApplicationAwareClusterResourceQuota": True
+        assert patches[mock_hco]["spec"]["deployment"]["applicationAwareConfig"] == {
+            "enable": True,
+            "allowApplicationAwareClusterResourceQuota": True,
         }
 
     @patch("utilities.hco.TimeoutSampler")
@@ -1338,3 +1349,209 @@ class TestEnabledAaqInHco:
             pass
 
         mock_logger.info.assert_called_with("AAQ system PODs removed.")
+
+
+class TestHCOv1Spec:
+    """Test cases for HCOv1Spec class"""
+
+    def test_feature_gates_single_enable(self):
+        """Test feature_gates with a single enabled gate"""
+        result = HCOv1Spec.feature_gates(downwardMetrics=True)
+
+        assert result == {"spec": {"featureGates": [{"name": "downwardMetrics"}]}}
+
+    def test_feature_gates_single_disable(self):
+        """Test feature_gates with a single disabled gate"""
+        result = HCOv1Spec.feature_gates(hotplugNICs=False)
+
+        assert result == {"spec": {"featureGates": [{"name": "hotplugNICs", "state": "Disabled"}]}}
+
+    def test_feature_gates_multiple_gates(self):
+        """Test feature_gates with multiple gates of mixed states"""
+        result = HCOv1Spec.feature_gates(downwardMetrics=True, hotplugNICs=False, deployKubeSecondaryDNS=True)
+
+        fg_list = result["spec"]["featureGates"]
+        assert len(fg_list) == 3
+        fg_by_name = {fg["name"]: fg for fg in fg_list}
+        assert fg_by_name["downwardMetrics"] == {"name": "downwardMetrics"}
+        assert fg_by_name["hotplugNICs"] == {"name": "hotplugNICs", "state": "Disabled"}
+        assert fg_by_name["deployKubeSecondaryDNS"] == {"name": "deployKubeSecondaryDNS"}
+
+    def test_is_fg_enabled_explicitly_enabled(self):
+        """Test is_fg_enabled returns True for a gate explicitly present without Disabled state"""
+        fg_list = [{"name": "downwardMetrics"}]
+        fg_phases = {"downwardMetrics": "beta"}
+
+        assert HCOv1Spec.is_fg_enabled(feature_gates=fg_list, name="downwardMetrics", fg_phases=fg_phases) is True
+
+    def test_is_fg_enabled_explicitly_disabled(self):
+        """Test is_fg_enabled returns False for a gate explicitly disabled"""
+        fg_list = [{"name": "hotplugNICs", "state": "Disabled"}]
+        fg_phases = {"hotplugNICs": "alpha"}
+
+        assert HCOv1Spec.is_fg_enabled(feature_gates=fg_list, name="hotplugNICs", fg_phases=fg_phases) is False
+
+    def test_is_fg_enabled_absent_beta_defaults_true(self):
+        """Test is_fg_enabled returns True for absent beta gate (beta default is enabled)"""
+        fg_list = []
+        fg_phases = {"downwardMetrics": "beta"}
+
+        assert HCOv1Spec.is_fg_enabled(feature_gates=fg_list, name="downwardMetrics", fg_phases=fg_phases) is True
+
+    def test_is_fg_enabled_absent_alpha_defaults_false(self):
+        """Test is_fg_enabled returns False for absent alpha gate (alpha default is disabled)"""
+        fg_list = []
+        fg_phases = {"hotplugNICs": "alpha"}
+
+        assert HCOv1Spec.is_fg_enabled(feature_gates=fg_list, name="hotplugNICs", fg_phases=fg_phases) is False
+
+    def test_is_fg_enabled_unknown_gate_raises_key_error(self):
+        """Test is_fg_enabled raises KeyError for unknown gate not in fg_phases"""
+        fg_list = []
+        fg_phases = {"downwardMetrics": "beta"}
+
+        with pytest.raises(KeyError, match="unknownGate"):
+            HCOv1Spec.is_fg_enabled(feature_gates=fg_list, name="unknownGate", fg_phases=fg_phases)
+
+    def test_virtualization_spec_group(self):
+        """Test virtualization spec group builder produces correct nested dict"""
+        live_migration_config = {"completionTimeoutPerGiB": 800}
+        result = HCOv1Spec.virtualization(liveMigrationConfig=live_migration_config)
+
+        assert result == {"spec": {"virtualization": {"liveMigrationConfig": {"completionTimeoutPerGiB": 800}}}}
+
+    def test_node_placements_spec_group(self):
+        """Test node_placements spec group builder produces correct nested dict"""
+        infra_placement = {"nodeSelector": {"node-role.kubernetes.io/infra": ""}}
+        result = HCOv1Spec.node_placements(infra=infra_placement, workload=None)
+
+        assert result == {
+            "spec": {
+                "deployment": {
+                    "nodePlacements": {
+                        "infra": {"nodeSelector": {"node-role.kubernetes.io/infra": ""}},
+                        "workload": None,
+                    }
+                }
+            }
+        }
+
+    def test_workload_sources_spec_group(self):
+        """Test workload_sources spec group builder produces correct nested dict"""
+        result = HCOv1Spec.workload_sources(enableCommonBootImageImport=True)
+
+        assert result == {"spec": {"workloadSources": {"enableCommonBootImageImport": True}}}
+
+    def test_aaq_config_spec_group(self):
+        """Test aaq_config spec group builder produces correct nested dict"""
+        result = HCOv1Spec.aaq_config(enable=True, allowApplicationAwareClusterResourceQuota=True)
+
+        assert result == {
+            "spec": {
+                "deployment": {
+                    "applicationAwareConfig": {
+                        "enable": True,
+                        "allowApplicationAwareClusterResourceQuota": True,
+                    }
+                }
+            }
+        }
+
+
+class TestParseHcoFgPhases:
+    """Test cases for parse_hco_fg_phases function"""
+
+    @patch("utilities.hco.CustomResourceDefinition")
+    def test_parses_phases_correctly(self, mock_crd_class):
+        """Test parse_hco_fg_phases extracts feature gate phases from CRD description"""
+        mock_admin_client = MagicMock()
+        fg_description = (
+            "* downwardMetrics: Enables exposing downward metrics to guests. Phase: beta\n"
+            "* hotplugNICs: Enables hotplugging network interfaces. Phase: alpha\n"
+            "* deployKubeSecondaryDNS: Deploy KubeSecondaryDNS. Phase: deprecated"
+        )
+        mock_crd = MagicMock()
+        mock_crd.instance.to_dict.return_value = {
+            "spec": {
+                "versions": [
+                    {
+                        "name": "v1",
+                        "schema": {
+                            "openAPIV3Schema": {
+                                "properties": {
+                                    "spec": {
+                                        "properties": {
+                                            "featureGates": {
+                                                "description": fg_description,
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                    }
+                ]
+            }
+        }
+        mock_crd_class.return_value = mock_crd
+
+        result = parse_hco_fg_phases(admin_client=mock_admin_client)
+
+        assert result == {
+            "downwardMetrics": "beta",
+            "hotplugNICs": "alpha",
+            "deployKubeSecondaryDNS": "deprecated",
+        }
+        mock_crd_class.assert_called_once_with(
+            client=mock_admin_client,
+            name="hyperconvergeds.hco.kubevirt.io",
+        )
+
+    @patch("utilities.hco.CustomResourceDefinition")
+    def test_raises_value_error_when_no_phases_found(self, mock_crd_class):
+        """Test parse_hco_fg_phases raises ValueError when description has no phase matches"""
+        mock_admin_client = MagicMock()
+        mock_crd = MagicMock()
+        mock_crd.instance.to_dict.return_value = {
+            "spec": {
+                "versions": [
+                    {
+                        "name": "v1",
+                        "schema": {
+                            "openAPIV3Schema": {
+                                "properties": {
+                                    "spec": {
+                                        "properties": {
+                                            "featureGates": {
+                                                "description": "No feature gate phases here",
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                    }
+                ]
+            }
+        }
+        mock_crd_class.return_value = mock_crd
+
+        with pytest.raises(ValueError, match="Failed to parse FG phases"):
+            parse_hco_fg_phases(admin_client=mock_admin_client)
+
+    @patch("utilities.hco.CustomResourceDefinition")
+    def test_raises_value_error_when_v1_schema_missing(self, mock_crd_class):
+        """Test parse_hco_fg_phases raises ValueError when CRD has no v1 version"""
+        mock_admin_client = MagicMock()
+        mock_crd = MagicMock()
+        mock_crd.instance.to_dict.return_value = {
+            "spec": {
+                "versions": [
+                    {"name": "v1beta1", "schema": {}},
+                ]
+            }
+        }
+        mock_crd_class.return_value = mock_crd
+
+        with pytest.raises(ValueError, match="HCO CRD does not have a v1 version"):
+            parse_hco_fg_phases(admin_client=mock_admin_client)
