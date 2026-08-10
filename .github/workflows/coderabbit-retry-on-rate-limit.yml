@@ -1,0 +1,57 @@
+# description: Automatically retry CodeRabbit reviews that hit rate limits.
+# Runs every 20 minutes. Scans up to 200 recent open non-draft, non-WIP,
+# non-stale, non-conflicting PRs for CodeRabbit rate-limit comments.
+# Triggers re-review immediately when the wait period has elapsed.
+# Only checks PRs updated in the last 2 days.
+#
+# Safety limits:
+#   - Processes eligible PRs concurrently (MAX_WORKERS threads)
+#   - Skips PRs where @coderabbitai review or resume was already posted
+#   - Per-PR API/parse failures are logged and skipped (fail-safe)
+#
+# Uses myk-pi-tools (https://github.com/myk-org/pi-config) for rate-limit
+# detection. Uses PyGithub for GitHub API interactions.
+
+name: CodeRabbit Retry on Rate Limit
+
+on:
+  schedule:
+    - cron: '*/20 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: coderabbit-retry
+  # Never cancel a scan in progress: the run has no resume state, so a
+  # cancelled run silently drops the remaining PRs.
+  cancel-in-progress: false
+
+jobs:
+  retry-rate-limited-reviews:
+    name: Retry rate-limited CodeRabbit reviews
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout retry script
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/coderabbit_retry
+            pyproject.toml
+            uv.lock
+          sparse-checkout-cone-mode: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v8.3.2
+
+      - name: Install myk-pi-tools
+        run: pipx install "myk-pi-tools==4.2.1"
+
+      - name: Scan and retry rate-limited PRs
+        env:
+          GH_TOKEN: ${{ secrets.BOT3_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: uv run python3 scripts/coderabbit_retry/coderabbit_retry.py
