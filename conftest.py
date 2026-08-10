@@ -197,7 +197,6 @@ def pytest_addoption(parser):
     )
     # Matrix addoption
     matrix_group.addoption("--storage-class-matrix", help="Storage class matrix to use")
-    matrix_group.addoption("--bridge-device-matrix", help="Bridge device matrix to use")
     matrix_group.addoption("--rhel-os-matrix", help="RHEL OS matrix to use")
     matrix_group.addoption("--windows-os-matrix", help="Windows OS matrix to use")
     matrix_group.addoption("--fedora-os-matrix", help="Fedora OS matrix to use")

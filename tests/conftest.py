@@ -42,7 +42,6 @@ from ocp_resources.machine import Machine
 from ocp_resources.migration_policy import MigrationPolicy
 from ocp_resources.mutating_webhook_config import MutatingWebhookConfiguration
 from ocp_resources.namespace import Namespace
-from ocp_resources.network_addons_config import NetworkAddonsConfig
 from ocp_resources.node import Node
 from ocp_resources.node_network_state import NodeNetworkState
 from ocp_resources.oauth import OAuth
@@ -167,7 +166,6 @@ from utilities.infra import (
     get_infrastructure,
     get_node_selector_dict,
     get_nodes_with_label,
-    get_pods,
     get_subscription,
     get_utility_pods_from_nodes,
     label_nodes,
@@ -175,18 +173,15 @@ from utilities.infra import (
     login_with_user_password,
     run_virtctl_command,
     scale_deployment_replicas,
-    wait_for_pods_deletion,
 )
 from utilities.network import (
     EthernetNetworkConfigurationPolicy,
     MacPool,
     cloud_init_network_data,
-    enable_hyperconverged_ovs_annotations,
     get_cluster_cni_type,
     network_device,
     network_nad,
     wait_for_node_marked_by_bridge,
-    wait_for_ovs_status,
 )
 from utilities.operator import (
     disable_default_sources_in_operatorhub,
@@ -1261,13 +1256,6 @@ def kubevirt_feature_gates_scope_module(kubevirt_config_scope_module):
 
 
 @pytest.fixture(scope="session")
-def network_addons_config_scope_session(admin_client):
-    nac = list(NetworkAddonsConfig.get(client=admin_client))
-    assert nac, "There should be one NetworkAddonsConfig CR."
-    return nac[0]
-
-
-@pytest.fixture(scope="session")
 def ocs_storage_class(cluster_storage_classes):
     """
     Get the OCS storage class if configured
@@ -1284,31 +1272,6 @@ def skip_test_if_no_ocs_sc(ocs_storage_class):
     """
     if not ocs_storage_class:
         pytest.skip("Skipping test, OCS storage class is not deployed")
-
-
-@pytest.fixture(scope="session")
-def hyperconverged_ovs_annotations_enabled_scope_session(
-    admin_client,
-    hco_namespace,
-    hyperconverged_resource_scope_session,
-    network_addons_config_scope_session,
-):
-    yield from enable_hyperconverged_ovs_annotations(
-        admin_client=admin_client,
-        hco_namespace=hco_namespace,
-        hyperconverged_resource=hyperconverged_resource_scope_session,
-        network_addons_config=network_addons_config_scope_session,
-    )
-
-    # Make sure all ovs pods are deleted:
-    wait_for_ovs_status(network_addons_config=network_addons_config_scope_session, status=False)
-    wait_for_pods_deletion(
-        pods=get_pods(
-            client=admin_client,
-            namespace=hco_namespace,
-            label="app=ovs-cni",
-        )
-    )
 
 
 @pytest.fixture(scope="session")
