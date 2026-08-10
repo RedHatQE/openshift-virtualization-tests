@@ -6,5 +6,6 @@ DESCHEDULER_LABEL_VALUE = "test"
 DESCHEDULER_TEST_LABEL = {DESCHEDULER_LABEL_KEY: DESCHEDULER_LABEL_VALUE}
 
 DESCHEDULER_DEPLOYMENT_NAME = "descheduler"
+DESCHEDULER_PREFER_NO_EVICTION_ANNOTATION = "descheduler.alpha.kubernetes.io/prefer-no-eviction"
 
 DESCHEDULER_SOFT_TAINT_KEY = "nodeutilization.descheduler.openshift.io"
