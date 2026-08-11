@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from utilities.architecture import get_cluster_architecture
+from utilities.architecture import get_cluster_architecture, get_multiarch_cpu_arch
 from utilities.exceptions import UnsupportedCPUArchitectureError
 
 
@@ -165,3 +165,21 @@ class TestGetClusterArchitecture:
             assert result == {"amd64"}
             mock_cache_client.assert_not_called()
             mock_node_class.get.assert_not_called()
+
+
+class TestGetMultiarchCpuArch:
+    @patch.dict("utilities.architecture.py_config", {"cpu_arch": "arm64", "cluster_type": "multiarch"})
+    def test_returns_arch_on_multiarch_cluster_with_single_arch(self):
+        assert get_multiarch_cpu_arch() == "arm64"
+
+    @patch.dict("utilities.architecture.py_config", {"cpu_arch": "arm64", "cluster_type": "standard"})
+    def test_returns_none_on_non_multiarch_cluster(self):
+        assert get_multiarch_cpu_arch() is None
+
+    @patch.dict("utilities.architecture.py_config", {"cluster_type": "multiarch"})
+    def test_returns_none_when_cpu_arch_not_set(self):
+        assert get_multiarch_cpu_arch() is None
+
+    @patch.dict("utilities.architecture.py_config", {})
+    def test_returns_none_when_no_config(self):
+        assert get_multiarch_cpu_arch() is None

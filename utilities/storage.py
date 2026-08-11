@@ -34,9 +34,9 @@ import utilities.artifactory
 import utilities.infra
 import utilities.virt as virt_util
 from utilities import console
+from utilities.architecture import get_multiarch_cpu_arch
 from utilities.artifactory import get_test_artifact_server_url
 from utilities.constants import Images
-from utilities.constants.architecture import MULTIARCH
 from utilities.constants.components import HPP_POOL
 from utilities.constants.images import OS_FLAVOR_WINDOWS
 from utilities.constants.networking import POD_CONTAINER_SPEC
@@ -139,10 +139,7 @@ def construct_datavolume_source_dict(
         source_spec: dict[str, Any] = {"http": {"url": url}}
     elif source == "registry":
         registry_spec: dict[str, Any] = {"url": url}
-        # For multi-arch cluster and single --cpu-arch=ARCH, explicitly set the registry platform architecture
-        # For --cpu-arch=ARCH1,ARCH2, py_config["cpu_arch"] is never set
-        cpu_arch = py_config.get("cpu_arch")
-        if cpu_arch and py_config.get("cluster_type") == MULTIARCH:
+        if cpu_arch := get_multiarch_cpu_arch():
             registry_spec["platform"] = {"architecture": cpu_arch}
         source_spec = {"registry": registry_spec}
     elif source == "pvc":
