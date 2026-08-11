@@ -404,6 +404,7 @@ CREATING_VIRTUAL_MACHINE_FROM_VOLUME = "creating-virtual-machine-from-volume"
 UPLOAD_BOOT_SOURCE = "upload-boot-source"
 GRAFANA_DASHBOARD_KUBEVIRT_TOP_CONSUMERS = "grafana-dashboard-kubevirt-top-consumers"
 RHEL9_STR = "rhel9"
+RHEL10_STR = "rhel10"
 RHEL8_GUEST = "rhel8-guest"
 RHEL9_GUEST = "rhel9-guest"
 RHEL10_GUEST = "rhel10-guest"
@@ -953,6 +954,17 @@ ADP_NAMESPACE = "openshift-adp"
 FILE_NAME_FOR_BACKUP = "file_before_backup.txt"
 TEXT_TO_TEST = "text"
 BACKUP_STORAGE_LOCATION = "dpa-1"
+SKIP_BACKUP_HOOKS_ANNOTATION = "kubevirt.io/skip-backup-hooks"
+
+# Velero hook annotations injected on virt-launcher when backup hooks are enabled.
+# See kubevirt pkg/storage/velero and pkg/storage/pod/annotations/generator.go
+VELERO_BACKUP_HOOK_ANNOTATIONS = (
+    "pre.hook.backup.velero.io/container",
+    "pre.hook.backup.velero.io/command",
+    "pre.hook.backup.velero.io/timeout",
+    "post.hook.backup.velero.io/container",
+    "post.hook.backup.velero.io/command",
+)
 
 # AAQ
 AAQ_NAMESPACE_LABEL = {"application-aware-quota/enable-gating": ""}

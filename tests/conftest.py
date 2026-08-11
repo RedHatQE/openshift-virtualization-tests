@@ -105,6 +105,7 @@ from utilities.constants import (
     PREFERENCE_STR,
     RHEL9_PREFERENCE,
     RHEL9_STR,
+    RHEL10_STR,
     RHEL_WITH_INSTANCETYPE_AND_PREFERENCE,
     RHSM_SECRET_NAME,
     S390X,
@@ -899,6 +900,16 @@ def rhel9_data_source_scope_session(golden_images_namespace):
         client=golden_images_namespace.client,
         name=RHEL9_STR,
         namespace=golden_images_namespace.name,
+        ensure_exists=True,
+    )
+
+
+@pytest.fixture(scope="session")
+def rhel10_data_source_scope_session(golden_images_namespace):
+    return DataSource(
+        namespace=golden_images_namespace.name,
+        name=RHEL10_STR,
+        client=golden_images_namespace.client,
         ensure_exists=True,
     )
 
