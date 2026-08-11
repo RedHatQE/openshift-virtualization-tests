@@ -42,7 +42,6 @@ from ocp_resources.machine import Machine
 from ocp_resources.migration_policy import MigrationPolicy
 from ocp_resources.mutating_webhook_config import MutatingWebhookConfiguration
 from ocp_resources.namespace import Namespace
-from ocp_resources.network_addons_config import NetworkAddonsConfig
 from ocp_resources.node import Node
 from ocp_resources.node_network_state import NodeNetworkState
 from ocp_resources.oauth import OAuth
@@ -65,7 +64,7 @@ from ocp_resources.virtual_machine_instance_migration import (
 from ocp_resources.virtual_machine_instancetype import VirtualMachineInstancetype
 from ocp_resources.virtual_machine_preference import VirtualMachinePreference
 from ocp_utilities.monitoring import Prometheus
-from packaging.version import parse
+from packaging.version import Version, parse
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutSampler
 
@@ -167,7 +166,6 @@ from utilities.infra import (
     get_infrastructure,
     get_node_selector_dict,
     get_nodes_with_label,
-    get_pods,
     get_subscription,
     get_utility_pods_from_nodes,
     label_nodes,
@@ -175,18 +173,16 @@ from utilities.infra import (
     login_with_user_password,
     run_virtctl_command,
     scale_deployment_replicas,
-    wait_for_pods_deletion,
 )
+from utilities.jira import is_jira_open
 from utilities.network import (
     EthernetNetworkConfigurationPolicy,
     MacPool,
     cloud_init_network_data,
-    enable_hyperconverged_ovs_annotations,
     get_cluster_cni_type,
     network_device,
     network_nad,
     wait_for_node_marked_by_bridge,
-    wait_for_ovs_status,
 )
 from utilities.operator import (
     disable_default_sources_in_operatorhub,
@@ -502,6 +498,33 @@ def workers(nodes):
 @pytest.fixture(scope="session")
 def control_plane_nodes(nodes):
     return get_nodes_with_label(nodes=nodes, label=f"{NODE_ROLE_KUBERNETES_IO}/control-plane")
+
+
+@pytest.fixture(scope="session")
+def workers_rhcos_version(schedulable_nodes):
+    """Returns a dict mapping each schedulable node name to its RHCOS version.
+
+    Returns:
+        dict[str, str]: Node name to RHCOS version (e.g. {"node-1": "10.2.20260408", ...}).
+    """
+    rhcos_version_re = re.compile(r"CoreOS\s+([\d.]+)")
+    versions = {}
+    for node in schedulable_nodes:
+        os_image = node.instance.status.nodeInfo.osImage
+        match = rhcos_version_re.search(string=os_image)
+        assert match, f"Failed to parse RHCOS version from osImage '{os_image}' on node '{node.name}'"
+        versions[node.name] = match.group(1)
+    return versions
+
+
+@pytest.fixture(scope="session")
+def cluster_has_rhcos10_or_above(workers_rhcos_version):
+    return any(Version(ver) >= Version("10") for ver in workers_rhcos_version.values())
+
+
+@pytest.fixture(scope="session")
+def is_postcopy_migration_bug_open(cluster_has_rhcos10_or_above):
+    return cluster_has_rhcos10_or_above and is_jira_open(jira_id="CNV-84023")
 
 
 @pytest.fixture(scope="session")
@@ -864,17 +887,6 @@ def data_volume_scope_class(request, namespace):
         namespace=namespace,
         storage_class=request.param["storage_class"],
         client=namespace.client,
-    )
-
-
-@pytest.fixture(scope="module")
-def golden_image_data_volume_scope_module(request, admin_client, golden_images_namespace):
-    yield from data_volume(
-        request=request,
-        namespace=golden_images_namespace,
-        storage_class=request.param["storage_class"],
-        check_dv_exists=True,
-        client=admin_client,
     )
 
 
@@ -1272,13 +1284,6 @@ def kubevirt_feature_gates_scope_module(kubevirt_config_scope_module):
 
 
 @pytest.fixture(scope="session")
-def network_addons_config_scope_session(admin_client):
-    nac = list(NetworkAddonsConfig.get(client=admin_client))
-    assert nac, "There should be one NetworkAddonsConfig CR."
-    return nac[0]
-
-
-@pytest.fixture(scope="session")
 def ocs_storage_class(cluster_storage_classes):
     """
     Get the OCS storage class if configured
@@ -1295,31 +1300,6 @@ def skip_test_if_no_ocs_sc(ocs_storage_class):
     """
     if not ocs_storage_class:
         pytest.skip("Skipping test, OCS storage class is not deployed")
-
-
-@pytest.fixture(scope="session")
-def hyperconverged_ovs_annotations_enabled_scope_session(
-    admin_client,
-    hco_namespace,
-    hyperconverged_resource_scope_session,
-    network_addons_config_scope_session,
-):
-    yield from enable_hyperconverged_ovs_annotations(
-        admin_client=admin_client,
-        hco_namespace=hco_namespace,
-        hyperconverged_resource=hyperconverged_resource_scope_session,
-        network_addons_config=network_addons_config_scope_session,
-    )
-
-    # Make sure all ovs pods are deleted:
-    wait_for_ovs_status(network_addons_config=network_addons_config_scope_session, status=False)
-    wait_for_pods_deletion(
-        pods=get_pods(
-            client=admin_client,
-            namespace=hco_namespace,
-            label="app=ovs-cni",
-        )
-    )
 
 
 @pytest.fixture(scope="session")
@@ -2415,6 +2395,13 @@ def snapshot_storage_class_name_scope_module(
     storage_class_matrix_snapshot_matrix__module__,
 ):
     return [*storage_class_matrix_snapshot_matrix__module__][0]
+
+
+@pytest.fixture(scope="module")
+def snapshot_import_cron_format_storage_class_name_scope_module(
+    storage_class_matrix_snapshot_import_cron_format_matrix__module__,
+):
+    return next(iter(storage_class_matrix_snapshot_import_cron_format_matrix__module__))
 
 
 @pytest.fixture(scope="class")
