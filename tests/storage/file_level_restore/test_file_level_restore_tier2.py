@@ -4,7 +4,7 @@ File-Level Restore End-to-End Tests
 Python Tier 2 P0 scenarios only; remaining Tier 2 priorities are follow-up work.
 
 STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
-Jira: VIRTSTRAT-480
+Jira: https://redhat.atlassian.net/browse/VIRTSTRAT-480 # <skip-jira-utils-check>
 """
 
 import pytest

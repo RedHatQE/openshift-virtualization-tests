@@ -4,12 +4,14 @@ File-Level Restore Windows Guest Tests
 Python Tier 3 P0 scenarios only; remaining Tier 3 priorities are follow-up work.
 
 STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
-Jira: VIRTSTRAT-480
+Jira: https://redhat.atlassian.net/browse/VIRTSTRAT-480 # <skip-jira-utils-check>
 """
 
 import pytest
 
 
+@pytest.mark.tier3
+@pytest.mark.windows
 class TestFileRestoreWindowsGuestFileCount:
     """
     Tests for file count reporting accuracy on Windows VM guests.
@@ -46,6 +48,8 @@ class TestFileRestoreWindowsGuestFileCount:
         """
 
 
+@pytest.mark.tier3
+@pytest.mark.windows
 class TestFileRestoreWindowsNTFSMetadata:
     """
     Tests for NTFS metadata preservation on Windows VM file restore.
@@ -100,6 +104,8 @@ class TestFileRestoreWindowsNTFSMetadata:
         """
 
 
+@pytest.mark.tier3
+@pytest.mark.windows
 class TestFileRestoreWindowsDriveRoot:
     """
     Tests for Windows file restore from drive root paths.
