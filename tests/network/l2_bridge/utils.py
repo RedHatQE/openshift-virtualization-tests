@@ -4,14 +4,13 @@ import logging
 import re
 import time
 from ipaddress import IPv4Address
-from typing import cast
 
 from kubernetes.dynamic.client import ResourceField
 from ocp_resources.resource import ResourceEditor
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 
 from libs.net.ip import random_ipv4_address
-from libs.net.vmspec import VMInterfaceStatusNotFoundError, lookup_iface_status, lookup_iface_status_ip, wait_for_missing_iface_status
+from libs.net.vmspec import VMInterfaceStatusNotFoundError, lookup_iface_status, wait_for_missing_iface_status
 from tests.network.libs.guest import read_guest_interface_ipv4
 from tests.network.utils import update_cloud_init_extra_user_data
 from utilities import console
@@ -26,8 +25,8 @@ from utilities.constants import (
 )
 from utilities.infra import get_pod_by_name_prefix, is_jira_open
 from utilities.network import (
-    IpNotFound,
     IfaceNotFound,
+    IpNotFound,
     compose_cloud_init_data_dict,
     get_vmi_ip_v4_by_name,
     network_device,
@@ -39,6 +38,7 @@ LOGGER = logging.getLogger(__name__)
 
 class GuestInterfaceNotFoundError(Exception):
     pass
+
 
 NETWORK_MANAGER_UNMANAGE_RUNCMD = [
     'sudo echo -e "[main]\nno-auto-default=*\nignore-carrier=*" > /etc/NetworkManager/conf.d/no-nm-ownership.conf',
