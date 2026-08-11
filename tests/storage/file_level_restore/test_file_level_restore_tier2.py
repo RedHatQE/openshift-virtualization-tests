@@ -25,7 +25,7 @@ class TestFileRestoreBackupVendorWorkflow:
     __test__ = False
 
     @pytest.mark.polarion("CNV-16767")
-    def test_restore_workflow_from_backup_vendor_api(self):
+    def test_restore_workflow_from_api(self):
         """
         Test that the end-to-end restore workflow from request creation to file verification succeeds.
 

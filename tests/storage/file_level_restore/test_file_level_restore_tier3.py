@@ -18,12 +18,13 @@ class TestFileRestoreWindowsGuestFileCount:
 
     Markers:
         - tier3
+        - windows
 
     Preconditions:
         - vm-file-restore-operator deployed and running in openshift-cnv namespace
         - Running Windows VM with OpenSSH Server installed
         - filerestore user configured in Windows VM with operator SSH public key
-        - Backup volume with exactly 11 known files on NTFS filesystem
+        - Backup volume with a known number of files on NTFS filesystem
     """
 
     __test__ = False
@@ -35,16 +36,16 @@ class TestFileRestoreWindowsGuestFileCount:
 
         Preconditions:
             - Running Windows VM with guest helper installed and filerestore user SSH-configured
-            - Backup PVC containing exactly 11 known NTFS files
+            - Backup PVC containing a known NTFS files
 
         Steps:
-            1. Create VMFileRestore requesting 11 Windows files
+            1. Create VMFileRestore requesting a known number of Windows files
             2. Wait for VMFileRestore to reach Succeeded phase
             3. Read status.fileCount from the VMFileRestore resource
             4. Count files at target paths inside the Windows VM
 
         Expected:
-            - status.fileCount equals 11
+            - File count in VMFileRestore status equals the actual number of files restored in the Windows VM
         """
 
 
@@ -56,6 +57,7 @@ class TestFileRestoreWindowsNTFSMetadata:
 
     Markers:
         - tier3
+        - windows
 
     Preconditions:
         - vm-file-restore-operator deployed and running in openshift-cnv namespace
@@ -112,6 +114,7 @@ class TestFileRestoreWindowsDriveRoot:
 
     Markers:
         - tier3
+        - windows
 
     Preconditions:
         - vm-file-restore-operator deployed and running in openshift-cnv namespace
