@@ -22,6 +22,7 @@ from tests.install_upgrade_operators.constants import (
     RESOURCE_TYPE_STR,
     S390X_SPECIFIC_KUBEVIRT_FEATUREGATES,
 )
+from tests.install_upgrade_operators.relationship_labels.constants import PART_OF_LABEL_KEY
 from tests.install_upgrade_operators.utils import (
     get_network_addon_config,
     get_resource_by_name,
@@ -30,6 +31,7 @@ from tests.install_upgrade_operators.utils import (
 from utilities.constants.architecture import MULTIARCH
 from utilities.constants.components import (
     HCO_OPERATOR,
+    HCO_PART_OF_LABEL_VALUE,
     HOSTPATH_PROVISIONER_CSI,
     HPP_POOL,
 )
@@ -50,6 +52,22 @@ from utilities.storage import get_hyperconverged_cdi
 from utilities.virt import get_hyperconverged_kubevirt
 
 LOGGER = logging.getLogger(__name__)
+
+
+@pytest.fixture(scope="session")
+def discovered_cnv_deployments(admin_client, hco_namespace):
+    """Discover CNV deployments in the HCO namespace.
+
+    Returns:
+        tuple[Deployment, ...]: Deployments matching the HCO part-of label.
+    """
+    return tuple(
+        Deployment.get(
+            client=admin_client,
+            namespace=hco_namespace.name,
+            label_selector=f"{PART_OF_LABEL_KEY}={HCO_PART_OF_LABEL_VALUE}",
+        )
+    )
 
 
 @pytest.fixture(scope="session")
