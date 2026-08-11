@@ -5,7 +5,6 @@ import logging
 import pytest
 from ocp_resources.infrastructure import Infrastructure
 from ocp_resources.pod import Pod
-from packaging.version import parse
 from pytest_testconfig import config as py_config
 
 from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
@@ -13,7 +12,6 @@ from utilities.constants.architecture import S390X
 from utilities.constants.cluster import NODE_TYPE_WORKER_LABEL
 from utilities.infra import (
     get_cluster_platform,
-    get_clusterversion,
     get_infrastructure,
     label_nodes,
     run_virtctl_command,
@@ -117,13 +115,3 @@ def machine_config_pools(admin_client):
 @pytest.fixture(scope="module")
 def cnv_pods(admin_client, hco_namespace):
     yield list(Pod.get(client=admin_client, namespace=hco_namespace.name))
-
-
-@pytest.fixture(scope="session")
-def openshift_current_version(admin_client):
-    return get_clusterversion(client=admin_client).instance.status.history[0].version
-
-
-@pytest.fixture(scope="session")
-def ocp_current_version(openshift_current_version):
-    return parse(version=openshift_current_version.split("-")[0])

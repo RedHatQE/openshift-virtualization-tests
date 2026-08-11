@@ -19,7 +19,7 @@ from utilities.constants.cluster import (
     WORKERS_TYPE,
 )
 from utilities.constants.virt import NODE_HUGE_PAGES_1GI_KEY
-from utilities.infra import ClusterHosts, ExecCommandOnPod, get_nodes_with_label, get_utility_pods_from_nodes
+from utilities.infra import ClusterHosts, ExecCommandOnPod, get_nodes_with_label
 from utilities.virt import kubernetes_taint_exists
 
 LOGGER = logging.getLogger(__name__)
@@ -111,38 +111,6 @@ def worker_machine1(worker_node1):
     if machine.exists:
         return machine
     raise ResourceNotFoundError(f"Machine object for {worker_node1.name} doesn't exists")
-
-
-@pytest.fixture(scope="session")
-def workers_utility_pods(admin_client, workers, utility_daemonset, installing_cnv):
-    """
-    Get utility pods from worker nodes.
-    When the tests start we deploy a pod on every worker node in the cluster using a daemonset.
-    These pods have a label of cnv-test=utility and they are privileged pods with hostnetwork=true
-    """
-    if installing_cnv:
-        return
-    return get_utility_pods_from_nodes(
-        nodes=workers,
-        admin_client=admin_client,
-        label_selector="cnv-test=utility",
-    )
-
-
-@pytest.fixture(scope="session")
-def control_plane_utility_pods(admin_client, installing_cnv, control_plane_nodes, utility_daemonset):
-    """
-    Get utility pods from control plane nodes.
-    When the tests start we deploy a pod on every control plane node in the cluster using a daemonset.
-    These pods have a label of cnv-test=utility and they are privileged pods with hostnetwork=true
-    """
-    if installing_cnv:
-        return
-    return get_utility_pods_from_nodes(
-        nodes=control_plane_nodes,
-        admin_client=admin_client,
-        label_selector="cnv-test=utility",
-    )
 
 
 @pytest.fixture(scope="session")

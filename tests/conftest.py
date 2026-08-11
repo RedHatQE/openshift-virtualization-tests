@@ -110,6 +110,7 @@ from utilities.data_utils import name_prefix
 from utilities.infra import (
     ExecCommandOnPod,
     create_ns,
+    get_clusterversion,
     get_hyperconverged_resource,
     get_node_selector_dict,
     get_subscription,
@@ -213,6 +214,16 @@ def session_start_time() -> datetime:
         datetime: UTC timestamp when test session began (timezone-naive)
     """
     return datetime.now(UTC).replace(tzinfo=None)
+
+
+@pytest.fixture(scope="session")
+def openshift_current_version(admin_client):
+    return get_clusterversion(client=admin_client).instance.status.history[0].version
+
+
+@pytest.fixture(scope="session")
+def ocp_current_version(openshift_current_version):
+    return parse(version=openshift_current_version.split("-")[0])
 
 
 @pytest.fixture(scope="session")

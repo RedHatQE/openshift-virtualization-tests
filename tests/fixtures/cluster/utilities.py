@@ -15,6 +15,7 @@ from utilities.infra import (
     add_scc_to_service_account,
     generate_openshift_pull_secret_file,
     get_daemonset_yaml_file_with_image_hash,
+    get_utility_pods_from_nodes,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -121,3 +122,35 @@ def leftovers_cleanup(admin_client, cnv_tests_utilities_namespace, identity_prov
         }
     )
     r_editor.update()
+
+
+@pytest.fixture(scope="session")
+def workers_utility_pods(admin_client, workers, utility_daemonset, installing_cnv):
+    """
+    Get utility pods from worker nodes.
+    When the tests start we deploy a pod on every worker node in the cluster using a daemonset.
+    These pods have a label of cnv-test=utility and they are privileged pods with hostnetwork=true
+    """
+    if installing_cnv:
+        return None
+    return get_utility_pods_from_nodes(
+        nodes=workers,
+        admin_client=admin_client,
+        label_selector="cnv-test=utility",
+    )
+
+
+@pytest.fixture(scope="session")
+def control_plane_utility_pods(admin_client, installing_cnv, control_plane_nodes, utility_daemonset):
+    """
+    Get utility pods from control plane nodes.
+    When the tests start we deploy a pod on every control plane node in the cluster using a daemonset.
+    These pods have a label of cnv-test=utility and they are privileged pods with hostnetwork=true
+    """
+    if installing_cnv:
+        return None
+    return get_utility_pods_from_nodes(
+        nodes=control_plane_nodes,
+        admin_client=admin_client,
+        label_selector="cnv-test=utility",
+    )
