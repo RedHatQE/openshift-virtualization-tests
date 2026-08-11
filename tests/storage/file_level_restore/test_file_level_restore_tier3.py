@@ -1,8 +1,6 @@
 """
 File-Level Restore Windows Guest Tests
 
-Python Tier 3 P0 scenarios only; remaining Tier 3 priorities are follow-up work.
-
 STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
 Jira: https://redhat.atlassian.net/browse/VIRTSTRAT-480 # <skip-jira-utils-check>
 """
@@ -22,8 +20,7 @@ class TestFileRestoreWindowsGuestFileCount:
 
     Preconditions:
         - vm-file-restore-operator deployed and running in openshift-cnv namespace
-        - Running Windows VM with OpenSSH Server installed
-        - filerestore user configured in Windows VM with operator SSH public key
+        - Running Windows VM with OpenSSH Server and guest helper installed, and filerestore user SSH-configured
         - Backup volume with a known number of files on NTFS filesystem
     """
 
@@ -34,15 +31,17 @@ class TestFileRestoreWindowsGuestFileCount:
         """
         Test that the restored file count in status matches actual files transferred on a Windows VM.
 
+        Priority: P0
+
         Preconditions:
-            - Running Windows VM with guest helper installed and filerestore user SSH-configured
-            - Backup PVC containing a known NTFS files
+            - Running Windows VM with OpenSSH Server and guest helper installed, and filerestore user SSH-configured
+            - Backup volume containing a known number of NTFS files
 
         Steps:
-            1. Create VMFileRestore requesting a known number of Windows files
+            1. Create VMFileRestore for the backup volume with a known number of files
             2. Wait for VMFileRestore to reach Succeeded phase
-            3. Read status.fileCount from the VMFileRestore resource
-            4. Count files at target paths inside the Windows VM
+            3. Check the file count reported by the restore resource
+            4. Count the restored files inside the Windows VM
 
         Expected:
             - File count in VMFileRestore status equals the actual number of files restored in the Windows VM
@@ -61,8 +60,7 @@ class TestFileRestoreWindowsNTFSMetadata:
 
     Preconditions:
         - vm-file-restore-operator deployed and running in openshift-cnv namespace
-        - Running Windows VM with OpenSSH Server and filerestore user configured
-        - Backup volumes with NTFS files having known ACLs and owner SID recorded (icacls + Get-Acl baseline)
+        - Running Windows VM with OpenSSH Server and guest helper installed, and filerestore user SSH-configured
     """
 
     __test__ = False
@@ -72,14 +70,16 @@ class TestFileRestoreWindowsNTFSMetadata:
         """
         Test that file restore on Windows VM from a backup PVC preserves NTFS metadata and ACLs.
 
+        Priority: P0
+
         Preconditions:
-            - Running Windows VM with guest helper installed
+            - Running Windows VM with OpenSSH Server and guest helper installed, and filerestore user SSH-configured
             - NTFS backup PVC with files having known ACLs and owner SID recorded
 
         Steps:
             1. Create VMFileRestore from Windows NTFS backup PVC
             2. Wait for VMFileRestore to reach Succeeded phase
-            3. Run icacls and Get-Acl on the restored file inside the Windows VM
+            3. Verify NTFS ACL entries and owner information on the restored file inside the Windows VM
 
         Expected:
             - NTFS ACL entries on the restored file match the recorded baseline
@@ -91,14 +91,16 @@ class TestFileRestoreWindowsNTFSMetadata:
         """
         Test that file restore on Windows VM from a volume snapshot preserves NTFS metadata and ACLs.
 
+        Priority: P0
+
         Preconditions:
-            - Running Windows VM with guest helper installed
+            - Running Windows VM with OpenSSH Server and guest helper installed, and filerestore user SSH-configured
             - VolumeSnapshot of Windows NTFS data disk with files having known ACLs and owner SID recorded
 
         Steps:
             1. Create VMFileRestore from Windows NTFS VolumeSnapshot
             2. Wait for VMFileRestore to reach Succeeded phase
-            3. Run icacls and Get-Acl on the restored file inside the Windows VM
+            3. Verify NTFS ACL entries and owner information on the restored file inside the Windows VM
 
         Expected:
             - NTFS ACL entries on the restored file match the snapshot baseline
@@ -118,8 +120,8 @@ class TestFileRestoreWindowsDriveRoot:
 
     Preconditions:
         - vm-file-restore-operator deployed and running in openshift-cnv namespace
-        - Running Windows VM with OpenSSH Server and filerestore user configured
-        - Backup volume with a file at a Windows drive root path (e.g., E:\\file.txt)
+        - Running Windows VM with OpenSSH Server and guest helper installed, and filerestore user SSH-configured
+        - Backup volume with a file at a Windows drive root path
     """
 
     __test__ = False
@@ -129,16 +131,17 @@ class TestFileRestoreWindowsDriveRoot:
         """
         Test that file restore on Windows VM succeeds when the source file is at a drive root.
 
+        Priority: P0
+
         Preconditions:
-            - Running Windows VM with guest helper installed
-            - Backup volume containing a file at drive root E:\\file.txt with known content
+            - Running Windows VM with OpenSSH Server and guest helper installed, and filerestore user SSH-configured
+            - Backup volume containing a file at a Windows drive root path with known content
 
         Steps:
-            1. Create VMFileRestore with drive-root source path (E:\\file.txt) and target path (C:\\restored\\file.txt)
+            1. Create VMFileRestore with a drive-root source path
             2. Wait for VMFileRestore to reach Succeeded phase
-            3. Check file presence at target path inside Windows VM using Test-Path
-            4. Read file content and compare with source
+            3. Read the restored file content inside the Windows VM and compare with source
 
         Expected:
-            - File exists at C:\\restored\\file.txt with content equal to the source
+            - Restored file content matches the source
         """
