@@ -280,10 +280,12 @@ def golden_images_scale_dvs(keep_resources, admin_client, golden_images_namespac
                     size=dv_info["size"],
                     client=admin_client,
                 )
-                golden_images_scale_dv.deploy()
                 dvs_list.append(golden_images_scale_dv)
+                golden_images_scale_dv.deploy()
         for dv in dvs_list:
             dv.wait_for_status(status=DataVolume.Status.SUCCEEDED, timeout=TIMEOUT_30MIN)
+        if keep_resources:
+            stack.pop_all()
         yield dvs_list
 
 
