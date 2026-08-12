@@ -76,6 +76,14 @@ from utilities.pytest_utils import (
 )
 
 pytest_plugins = [
+    "tests.fixtures.cluster.auth",
+    "tests.fixtures.cluster.binaries",
+    "tests.fixtures.cluster.cpu",
+    "tests.fixtures.cluster.infrastructure",
+    "tests.fixtures.cluster.namespaces",
+    "tests.fixtures.cluster.nodes",
+    "tests.fixtures.cluster.sanity",
+    "tests.fixtures.cluster.utilities",
     "tests.fixtures.network.l2_bridge",
     "tests.fixtures.network.cluster",
     "tests.fixtures.images.validation_os_images",
