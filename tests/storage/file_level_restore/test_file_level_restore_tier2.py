@@ -14,9 +14,8 @@ class TestFileRestoreBackupVendorWorkflow:
 
     Preconditions:
         - vm-file-restore-operator deployed and running in openshift-cnv namespace
-        - VolumeSnapshot-capable StorageClass available
         - Running Linux VM with guest helper installed and filerestore user SSH-configured
-        - VolumeSnapshot of VM data disk available as backup source
+        - Backup PVC available as restore source
         - Target file content recorded before deletion (for comparison after restore)
     """
 
@@ -31,15 +30,15 @@ class TestFileRestoreBackupVendorWorkflow:
 
         Preconditions:
             - Running Linux VM with guest helper installed and filerestore user SSH-configured
-            - VolumeSnapshot of VM data disk available as backup source
+            - Backup PVC available as restore source
             - Target file content recorded before deletion (for comparison after restore)
-            - Target file deleted from VM data disk after snapshot taken (restore scenario triggered)
+            - Target file deleted from VM data disk (restore scenario triggered)
 
         Steps:
-            1. Create VMFileRestore referencing the target VM and VolumeSnapshot backup
+            1. Create VMFileRestore referencing the target VM and backup PVC, and the deleted file's path
             2. Wait for VMFileRestore to reach Succeeded phase
-            3. Compare restored file content against original content
-            4. Check the restore resource's reported status
+            3. Check the restore resource's reported status
+            4. Compare restored file content against original content
             5. Check the namespace for any temporary resources left over from the restore operation
 
         Expected:

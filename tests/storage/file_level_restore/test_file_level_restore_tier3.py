@@ -8,8 +8,6 @@ Jira: https://redhat.atlassian.net/browse/VIRTSTRAT-480 # <skip-jira-utils-check
 import pytest
 
 
-@pytest.mark.tier3
-@pytest.mark.windows
 class TestFileRestoreWindowsGuestFileCount:
     """
     Tests for file count reporting accuracy on Windows VM guests.
@@ -36,6 +34,7 @@ class TestFileRestoreWindowsGuestFileCount:
         Preconditions:
             - Running Windows VM with OpenSSH Server and guest helper installed, and filerestore user SSH-configured
             - Backup volume containing a known number of NTFS files
+            - Target files deleted from the Windows VM data disk
 
         Steps:
             1. Create VMFileRestore for the backup volume with a known number of files
@@ -48,8 +47,6 @@ class TestFileRestoreWindowsGuestFileCount:
         """
 
 
-@pytest.mark.tier3
-@pytest.mark.windows
 class TestFileRestoreWindowsNTFSMetadata:
     """
     Tests for NTFS metadata preservation on Windows VM file restore.
@@ -60,6 +57,7 @@ class TestFileRestoreWindowsNTFSMetadata:
 
     Preconditions:
         - vm-file-restore-operator deployed and running in openshift-cnv namespace
+        - VolumeSnapshot-capable StorageClass available
         - Running Windows VM with OpenSSH Server and guest helper installed, and filerestore user SSH-configured
     """
 
@@ -75,6 +73,7 @@ class TestFileRestoreWindowsNTFSMetadata:
         Preconditions:
             - Running Windows VM with OpenSSH Server and guest helper installed, and filerestore user SSH-configured
             - NTFS backup PVC with files having known ACLs and owner SID recorded
+            - Target file deleted from the Windows VM data disk
 
         Steps:
             1. Create VMFileRestore from Windows NTFS backup PVC
@@ -94,8 +93,10 @@ class TestFileRestoreWindowsNTFSMetadata:
         Priority: P0
 
         Preconditions:
+            - VolumeSnapshot-capable StorageClass available
             - Running Windows VM with OpenSSH Server and guest helper installed, and filerestore user SSH-configured
             - VolumeSnapshot of Windows NTFS data disk with files having known ACLs and owner SID recorded
+            - Target file deleted from the Windows VM data disk
 
         Steps:
             1. Create VMFileRestore from Windows NTFS VolumeSnapshot
@@ -108,8 +109,6 @@ class TestFileRestoreWindowsNTFSMetadata:
         """
 
 
-@pytest.mark.tier3
-@pytest.mark.windows
 class TestFileRestoreWindowsDriveRoot:
     """
     Tests for Windows file restore from drive root paths.
@@ -136,6 +135,7 @@ class TestFileRestoreWindowsDriveRoot:
         Preconditions:
             - Running Windows VM with OpenSSH Server and guest helper installed, and filerestore user SSH-configured
             - Backup volume containing a file at a Windows drive root path with known content
+            - Target file deleted from the Windows VM
 
         Steps:
             1. Create VMFileRestore with a drive-root source path
