@@ -90,10 +90,6 @@ class TestUpgradeStorage:
                 expected_result="file not found",
             )
 
-    @pytest.mark.xfail(
-        reason=f"{QUARANTINED}: Flaky UEFI boot failure after DV clone on upgrade cluster; CNV-95012",
-        run=False,
-    )
     @pytest.mark.sno
     @pytest.mark.polarion("CNV-5995")
     @pytest.mark.order(before=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
@@ -128,10 +124,6 @@ class TestUpgradeStorage:
 
     """ Post-upgrade tests """
 
-    @pytest.mark.xfail(
-        reason=f"{QUARANTINED}: Depends on quarantined pre-upgrade snapshot test; CNV-95012",
-        run=False,
-    )
     @pytest.mark.sno
     @pytest.mark.polarion("CNV-5994")
     @pytest.mark.order(after=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
@@ -162,10 +154,6 @@ class TestUpgradeStorage:
             expected_result="file not found",
         )
 
-    @pytest.mark.xfail(
-        reason=f"{QUARANTINED}: Depends on quarantined pre-upgrade snapshot test; CNV-95012",
-        run=False,
-    )
     @pytest.mark.sno
     @pytest.mark.polarion("CNV-5996")
     @pytest.mark.order(after=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
