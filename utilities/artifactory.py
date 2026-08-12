@@ -152,6 +152,13 @@ def get_artifactory_secret(
     Raises:
         KeyError: If ARTIFACTORY_USER or ARTIFACTORY_TOKEN environment variables are not set.
     """
+    existing_secret = Secret(
+        name=ARTIFACTORY_SECRET_NAME,
+        namespace=namespace,
+        client=client,
+    )
+    if existing_secret.exists:
+        return existing_secret, False
     artifactory_secret = Secret(
         name=ARTIFACTORY_SECRET_NAME,
         namespace=namespace,
@@ -159,8 +166,6 @@ def get_artifactory_secret(
         secretkey=base64_encode_str(os.environ["ARTIFACTORY_TOKEN"]),
         client=client,
     )
-    if artifactory_secret.exists:
-        return artifactory_secret, False
     artifactory_secret.deploy()
     return artifactory_secret, True
 
@@ -188,14 +193,19 @@ def get_artifactory_config_map(
         KeyError: If server_url is not found in py_config.
         OSError: If SSL connection to the server fails.
     """
+    existing_cm = ConfigMap(
+        name=ARTIFACTORY_CONFIG_MAP_NAME,
+        namespace=namespace,
+        client=client,
+    )
+    if existing_cm.exists:
+        return existing_cm, False
     artifactory_cm = ConfigMap(
         name=ARTIFACTORY_CONFIG_MAP_NAME,
         namespace=namespace,
         data={"tlsregistry.crt": ssl.get_server_certificate(addr=(py_config["server_url"], 443))},
         client=client,
     )
-    if artifactory_cm.exists:
-        return artifactory_cm, False
     artifactory_cm.deploy()
     return artifactory_cm, True
 

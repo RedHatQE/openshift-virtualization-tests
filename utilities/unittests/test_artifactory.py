@@ -290,8 +290,14 @@ class TestGetArtifactorySecret:
 
             secret, created = get_artifactory_secret(namespace="test-namespace", client=mock_client)
 
-            # Verify Secret was created with correct parameters
-            mock_secret_class.assert_called_once_with(
+            # Verify Secret was checked and created with correct parameters
+            assert mock_secret_class.call_count == 2
+            mock_secret_class.assert_any_call(
+                name=ARTIFACTORY_SECRET_NAME,
+                namespace="test-namespace",
+                client=mock_client,
+            )
+            mock_secret_class.assert_any_call(
                 name=ARTIFACTORY_SECRET_NAME,
                 namespace="test-namespace",
                 accesskeyid="base64_test-user",
@@ -348,6 +354,10 @@ class TestGetArtifactorySecret:
     @patch("utilities.artifactory.Secret")
     def test_get_artifactory_secret_raises_key_error_if_user_not_set(self, mock_secret_class):
         """Test raises KeyError if ARTIFACTORY_USER not set"""
+        mock_secret_instance = MagicMock()
+        mock_secret_instance.exists = False
+        mock_secret_class.return_value = mock_secret_instance
+
         with patch.dict(os.environ, {"ARTIFACTORY_TOKEN": "test-token"}, clear=True):
             with pytest.raises(KeyError):
                 get_artifactory_secret(namespace="test-namespace", client=MagicMock())
@@ -355,6 +365,10 @@ class TestGetArtifactorySecret:
     @patch("utilities.artifactory.Secret")
     def test_get_artifactory_secret_raises_key_error_if_token_not_set(self, mock_secret_class):
         """Test raises KeyError if ARTIFACTORY_TOKEN not set"""
+        mock_secret_instance = MagicMock()
+        mock_secret_instance.exists = False
+        mock_secret_class.return_value = mock_secret_instance
+
         with patch.dict(os.environ, {"ARTIFACTORY_USER": "test-user"}, clear=True):
             with pytest.raises(KeyError):
                 get_artifactory_secret(namespace="test-namespace", client=MagicMock())
@@ -398,8 +412,14 @@ class TestGetArtifactoryConfigMap:
 
         config_map, created = get_artifactory_config_map(namespace="test-namespace", client=mock_client)
 
-        # Verify ConfigMap was created with correct parameters
-        mock_cm_class.assert_called_once_with(
+        # Verify ConfigMap was checked and created with correct parameters
+        assert mock_cm_class.call_count == 2
+        mock_cm_class.assert_any_call(
+            name="artifactory-configmap",
+            namespace="test-namespace",
+            client=mock_client,
+        )
+        mock_cm_class.assert_any_call(
             name="artifactory-configmap",
             namespace="test-namespace",
             data={"tlsregistry.crt": mock_cert},
@@ -453,10 +473,13 @@ class TestGetArtifactoryConfigMap:
         assert created is False
 
     @patch("utilities.artifactory.ConfigMap")
-    @patch("utilities.artifactory.ssl.get_server_certificate")
     @patch("utilities.artifactory.py_config", {})
-    def test_get_artifactory_config_map_raises_key_error_if_server_url_missing(self, mock_get_cert, mock_cm_class):
+    def test_get_artifactory_config_map_raises_key_error_if_server_url_missing(self, mock_cm_class):
         """Test raises KeyError if server_url not in py_config"""
+        mock_cm_instance = MagicMock()
+        mock_cm_instance.exists = False
+        mock_cm_class.return_value = mock_cm_instance
+
         with pytest.raises(KeyError):
             get_artifactory_config_map(namespace="test-namespace", client=MagicMock())
 
@@ -465,6 +488,10 @@ class TestGetArtifactoryConfigMap:
     @patch("utilities.artifactory.py_config", {"server_url": "test.artifactory.com"})
     def test_get_artifactory_config_map_ssl_connection_failure(self, mock_get_cert, mock_cm_class):
         """Test OSError is raised on SSL connection failure"""
+        mock_cm_instance = MagicMock()
+        mock_cm_instance.exists = False
+        mock_cm_class.return_value = mock_cm_instance
+
         # Mock SSL connection failure
         mock_get_cert.side_effect = OSError("Connection refused")
 

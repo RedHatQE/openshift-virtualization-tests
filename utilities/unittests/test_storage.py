@@ -196,14 +196,14 @@ class TestCreateDvArtifactory:
     def test_create_dv_creates_both_artifactory_resources(
         self,
         mock_artifactory_credentials,
-        mock_excluded,
-        mock_validate,
+        _mock_excluded,
+        _mock_validate,
         mock_data_volume_class,
-        mock_wffc,
+        _mock_wffc,
     ):
         credentials = self._credentials()
         mock_client = MagicMock()
-        mock_artifactory_credentials.side_effect = lambda **kwargs: self._artifactory_cm(credentials)
+        mock_artifactory_credentials.side_effect = lambda **_kwargs: self._artifactory_cm(credentials)
         mock_dv = self._mock_data_volume(mock_data_volume_class)
 
         with create_dv(
@@ -234,14 +234,14 @@ class TestCreateDvArtifactory:
     def test_create_dv_creates_only_missing_secret(
         self,
         mock_artifactory_credentials,
-        mock_excluded,
-        mock_validate,
+        _mock_excluded,
+        _mock_validate,
         mock_data_volume_class,
-        mock_wffc,
+        _mock_wffc,
     ):
         credentials = self._credentials(secret_name="created-secret")
         mock_client = MagicMock()
-        mock_artifactory_credentials.side_effect = lambda **kwargs: self._artifactory_cm(credentials)
+        mock_artifactory_credentials.side_effect = lambda **_kwargs: self._artifactory_cm(credentials)
         self._mock_data_volume(mock_data_volume_class)
 
         with create_dv(
@@ -273,14 +273,14 @@ class TestCreateDvArtifactory:
     def test_create_dv_creates_only_missing_config_map(
         self,
         mock_artifactory_credentials,
-        mock_excluded,
-        mock_validate,
+        _mock_excluded,
+        _mock_validate,
         mock_data_volume_class,
-        mock_wffc,
+        _mock_wffc,
     ):
         credentials = self._credentials(config_map_name="created-cm")
         mock_client = MagicMock()
-        mock_artifactory_credentials.side_effect = lambda **kwargs: self._artifactory_cm(credentials)
+        mock_artifactory_credentials.side_effect = lambda **_kwargs: self._artifactory_cm(credentials)
         self._mock_data_volume(mock_data_volume_class)
 
         with create_dv(
@@ -312,10 +312,10 @@ class TestCreateDvArtifactory:
     def test_create_dv_skips_artifactory_when_both_names_provided(
         self,
         mock_artifactory_credentials,
-        mock_excluded,
-        mock_validate,
+        _mock_excluded,
+        _mock_validate,
         mock_data_volume_class,
-        mock_wffc,
+        _mock_wffc,
     ):
         self._mock_data_volume(mock_data_volume_class)
 
@@ -344,16 +344,16 @@ class TestCreateDvArtifactory:
     def test_create_dv_unwinds_artifactory_on_data_volume_failure(
         self,
         mock_artifactory_credentials,
-        mock_excluded,
-        mock_validate,
+        _mock_excluded,
+        _mock_validate,
         mock_data_volume_class,
-        mock_wffc,
+        _mock_wffc,
     ):
         credentials = self._credentials()
         exit_mock = MagicMock(return_value=None)
 
         @contextmanager
-        def artifactory_cm(**kwargs):
+        def artifactory_cm(**_kwargs):
             try:
                 yield credentials
             finally:

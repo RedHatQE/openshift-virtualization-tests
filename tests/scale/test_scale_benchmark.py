@@ -5,6 +5,7 @@ import re
 import shlex
 import time
 from collections import Counter
+from contextlib import ExitStack
 
 import pytest
 import yaml
@@ -250,18 +251,16 @@ def vms_info(scale_test_param):
 
 
 @pytest.fixture(scope="class")
-def golden_images_scale_dvs(request, keep_resources, admin_client, golden_images_namespace, dvs_info):
+def golden_images_scale_dvs(keep_resources, admin_client, golden_images_namespace, dvs_info):
     dvs_list = []
 
-    def _delete_resources():
-        delete_resources(resources=dvs_list)
+    with ExitStack() as stack:
+        artifactory = stack.enter_context(
+            artifactory_credentials(namespace=golden_images_namespace.name, client=golden_images_namespace.client)
+        )
+        if not keep_resources:
+            stack.callback(delete_resources, resources=dvs_list)
 
-    if not keep_resources:
-        request.addfinalizer(_delete_resources)
-
-    with artifactory_credentials(
-        namespace=golden_images_namespace.name, client=golden_images_namespace.client
-    ) as artifactory:
         for os_name, dv_info in dvs_info.items():
             storage_types_used = [
                 storage_type_key for storage_type_key in SCALE_STORAGE_TYPES if dv_info[storage_type_key]
