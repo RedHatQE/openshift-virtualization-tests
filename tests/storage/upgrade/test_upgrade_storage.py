@@ -17,7 +17,7 @@ from tests.upgrade_params import (
     SNAPSHOT_RESTORE_CREATE_AFTER_UPGRADE,
     STORAGE_NODE_ID_PREFIX,
 )
-from utilities.constants import DEPENDENCY_SCOPE_SESSION, HOTPLUG_DISK_VIRTIO_BUS
+from utilities.constants import DEPENDENCY_SCOPE_SESSION, HOTPLUG_DISK_VIRTIO_BUS, QUARANTINED
 from utilities.storage import (
     assert_disk_serial,
     assert_hotplugvolume_nonexist,
@@ -76,6 +76,10 @@ class TestUpgradeStorage:
                 expected_result="file not found",
             )
 
+    @pytest.mark.xfail(
+        reason=f"{QUARANTINED}: Flaky UEFI boot failure after DV clone on upgrade cluster; CNV-95012",
+        run=False,
+    )
     @pytest.mark.sno
     @pytest.mark.polarion("CNV-5995")
     @pytest.mark.order(before=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
