@@ -223,6 +223,20 @@ class TestHotPlugWithPersist:
 @pytest.mark.gating
 @pytest.mark.usefixtures("hotplug_volume_scope_class")
 class TestHotPlugWithSerialPersist:
+    """
+    Test hotplug volume persistence with serial identification, migration, and reboot survival.
+
+    Jira: https://issues.redhat.com/browse/CNV-88910  # <skip-jira-utils-check>
+
+    Parametrize:
+        - 1-disk [Markers: gating, sno, s390x]: one blank DV hotplugged and persisted to the VM spec
+        - 3-hotplugged [Markers: conformance, tier3]: three blank DVs hotplugged and persisted to the VM spec
+
+    Preconditions:
+        - Running Fedora VM
+        - N blank DataVolumes hotplugged to the VM with persistence enabled and a unique serial per disk
+    """
+
     @pytest.mark.sno
     @pytest.mark.polarion("CNV-6425")
     @pytest.mark.dependency(name="test_hotplug_volume_with_persist")
@@ -232,6 +246,19 @@ class TestHotPlugWithSerialPersist:
         blank_disk_dv_multi_storage_scope_class,
         fedora_vm_for_hotplug_scope_class,
     ):
+        """
+        Verify that persisted hotplugged disks are visible with correct serials and converted to regular disks.
+
+        Preconditions:
+            - Running Fedora VM with hotplugged disks persisted to the VM spec
+
+        Steps:
+            1. Verify all disk serials are visible inside the guest
+            2. Verify none of the volumes still carry a hotplug marker
+
+        Expected:
+            - All disk serials are visible and all hotplugged volumes are converted to regular disks
+        """
         wait_for_vm_volume_ready(
             vm=fedora_vm_for_hotplug_scope_class, volume_name=blank_disk_dv_multi_storage_scope_class.name
         )
@@ -247,10 +274,50 @@ class TestHotPlugWithSerialPersist:
         blank_disk_dv_multi_storage_scope_class: DataVolume,
         fedora_vm_for_hotplug_scope_class: VirtualMachineForTests,
     ):
+        """
+        Verify that disk serials remain visible after live migrating a VM with persisted hotplugged disks.
+
+        Preconditions:
+            - Running Fedora VM with hotplugged disks persisted to the VM spec
+            - All hotplugged DataVolumes support RWX access mode (required for live migration)
+
+        Steps:
+            1. Live migrate the VM
+            2. Verify each persisted volume is ready after migration
+            3. Verify all disk serials are visible inside the guest
+
+        Expected:
+            - All hotplugged volumes are ready and their disk serials are visible after migration
+        """
         if is_dv_migratable(dv=blank_disk_dv_multi_storage_scope_class):
             migrate_vm_and_verify(
                 vm=fedora_vm_for_hotplug_scope_class, client=admin_client, check_ssh_connectivity=True
             )
+
+
+class TestHotPlugPersistAfterReboot:
+    """STD placeholder — implementation in the next commit."""
+
+    __test__ = False
+
+    @pytest.mark.polarion("CNV-16331")
+    def test_hotplug_volume_with_serial_and_persist_after_reboot(self):
+        """
+        Test that hotplugged persistent disks survive VM reboot.
+
+        Jira: https://issues.redhat.com/browse/CNV-92782  # <skip-jira-utils-check>
+
+        Preconditions:
+            - Running Fedora VM with hotplugged disks persisted to VM spec
+
+        Steps:
+            1. Restart the VM and wait for it to reach Running state
+            2. Verify each hotplugged volume is ready on the VM
+            3. Verify all disk serials are visible inside the guest
+
+        Expected:
+            - All hotplugged volumes are ready and their disk serials are visible after reboot
+        """
 
 
 @pytest.mark.parametrize(
