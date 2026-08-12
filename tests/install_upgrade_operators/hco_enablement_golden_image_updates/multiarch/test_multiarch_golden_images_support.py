@@ -9,8 +9,6 @@ Preconditions:
     - Prometheus is installed and running
 """
 
-import logging
-
 import pytest
 from ocp_resources.data_import_cron import DataImportCron
 from ocp_resources.data_source import DataSource
@@ -26,10 +24,7 @@ from tests.install_upgrade_operators.hco_enablement_golden_image_updates.multiar
     get_unsupported_arch_template,
 )
 from tests.install_upgrade_operators.hco_enablement_golden_image_updates.utils import verify_resource_in_ns
-from utilities.jira import is_jira_open
 from utilities.monitoring import validate_metrics_value
-
-LOGGER = logging.getLogger(__name__)
 
 pytestmark = [pytest.mark.multiarch, pytest.mark.post_upgrade]
 
@@ -46,39 +41,50 @@ class TestDisabledMultiarchGoldenImagesSupport:
     """
 
     @pytest.mark.polarion("CNV-15977")
+    @pytest.mark.parametrize(
+        "resource_type",
+        [
+            pytest.param(DataImportCron, id="DataImportCron"),
+            pytest.param(
+                DataSource,
+                id="DataSource",
+                marks=pytest.mark.jira("CNV-68996", run=False),
+            ),
+        ],
+    )
     def test_no_architecture_specific_golden_image_resources_exist(
         self,
         admin_client,
         golden_images_namespace,
         base_common_templates_related_resources,
-        subtests,
+        resource_type,
     ):
         """
         Test that no architecture-specific golden image resources exist
         after disabling multi-architecture golden images support.
 
+        Parametrize:
+            - resource_type:
+                - DataImportCron
+                - DataSource [Markers: jira(CNV-94361)]
+
         Steps:
-            1. List DataImportCrons and DataSources in the golden images namespace.
+            1. List parametrized resources in the golden images namespace.
             2. Verify no architecture-specific resources exist.
 
         Expected:
-            - No architecture-specific DataImportCron or DataSource resources exist.
+            - No architecture-specific resources of the parametrized type exist.
         """
-        for resource_type in (DataImportCron, DataSource):
-            if resource_type is DataSource and is_jira_open("CNV-94361"):
-                LOGGER.warning("CNV-94361: arch-specific DataSources not cleaned up after disabling multiarch")
-                continue
-            base_names = base_common_templates_related_resources[resource_type.kind]
-            with subtests.test(msg=resource_type.kind):
-                arch_specific_resources = [
-                    resource.name
-                    for resource in resource_type.get(client=admin_client, namespace=golden_images_namespace.name)
-                    if any(resource.name.startswith(f"{base_name}-") for base_name in base_names)
-                ]
-                assert not arch_specific_resources, (
-                    f"Architecture-specific {resource_type.kind} resources found when multiarch is disabled: "
-                    f"{arch_specific_resources}"
-                )
+        base_names = base_common_templates_related_resources[resource_type.kind]
+        arch_specific_resources = [
+            resource.name
+            for resource in resource_type.get(client=admin_client, namespace=golden_images_namespace.name)
+            if any(resource.name.startswith(f"{base_name}-") for base_name in base_names)
+        ]
+        assert not arch_specific_resources, (
+            f"Architecture-specific {resource_type.kind} resources found when multiarch is disabled: "
+            f"{arch_specific_resources}"
+        )
 
     @pytest.mark.polarion("CNV-15978")
     def test_architecture_agnostic_data_sources_rollback(

@@ -178,6 +178,10 @@ def verify_resource_in_ns(
 ) -> None:
     """Assert that expected resources exist in the namespace and optionally wait for readiness.
 
+    DataSources use a subset check (expected ⊆ actual) because they retain
+    architecture-agnostic pointers alongside arch-specific entries.
+    All other resource types use an exact-match check (expected == actual).
+
     Args:
         expected_resource_names: Set of resource names that must be present.
         namespace: Namespace to check.
@@ -187,13 +191,18 @@ def verify_resource_in_ns(
             resource to reach this condition with status True.
 
     Raises:
-        AssertionError: If any expected resources are missing.
+        AssertionError: If any expected resources are missing, or if unexpected
+            resources exist (for non-DataSource types).
         TimeoutExpiredError: If a resource does not reach the ready condition in time.
     """
     resources = list(resource_type.get(client=client, namespace=namespace))
     resources_names = {resource.name for resource in resources}
     missing_resources_names = expected_resource_names - resources_names
     assert not missing_resources_names, f"Missing {resource_type.kind} in {namespace}: {missing_resources_names}"
+
+    if resource_type is not DataSource:
+        extra_resources_names = resources_names - expected_resource_names
+        assert not extra_resources_names, f"Unexpected {resource_type.kind} in {namespace}: {extra_resources_names}"
 
     if ready_condition:
         LOGGER.info(f"Verify that {expected_resource_names} are in {ready_condition} condition")

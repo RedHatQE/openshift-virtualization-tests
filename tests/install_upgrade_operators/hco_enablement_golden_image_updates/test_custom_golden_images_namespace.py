@@ -16,7 +16,6 @@ from tests.install_upgrade_operators.hco_enablement_golden_image_updates.utils i
     verify_resource_not_in_ns,
 )
 from utilities.constants.architecture import MULTIARCH
-from utilities.constants.pytest import QUARANTINED
 from utilities.constants.timeouts import TIMEOUT_3MIN, TIMEOUT_10MIN
 from utilities.hco import (
     ResourceEditorValidateHCOReconcile,
@@ -128,12 +127,7 @@ class TestDefaultCommonTemplates:
                 DataSource.Condition.READY,
                 marks=(
                     pytest.mark.polarion("CNV-11476"),
-                    pytest.mark.xfail(
-                        condition=py_config["cluster_type"] == MULTIARCH,
-                        reason=f"{QUARANTINED}: Base-name pointer DataSources not created in custom namespace "
-                        f"on multiarch clusters; tracked in CNV-94361",
-                        run=False,
-                    ),
+                    *((pytest.mark.jira("CNV-94362", run=False),) if py_config["cluster_type"] == MULTIARCH else ()),
                 ),
             ),
         ],
