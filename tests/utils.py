@@ -27,9 +27,8 @@ from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 
 from utilities.artifactory import (
-    get_artifactory_config_map,
+    artifactory_credentials,
     get_artifactory_header,
-    get_artifactory_secret,
     get_http_image_url,
 )
 from utilities.constants import Images
@@ -558,41 +557,39 @@ def create_cirros_vm(
     cpu_model: str | None = None,
     annotations: dict[str, str] | None = None,
 ) -> Generator[VirtualMachineForTests]:
-    artifactory_secret = get_artifactory_secret(namespace=namespace)
-    artifactory_config_map = get_artifactory_config_map(namespace=namespace)
-
-    dv = DataVolume(
-        client=client,
-        name=dv_name,
-        namespace=namespace,
-        source_dict=construct_datavolume_source_dict(
-            source="http",
-            url=get_http_image_url(image_directory=Images.Cirros.DIR, image_name=Images.Cirros.QCOW2_IMG),
-            secret_name=artifactory_secret.name,
-            cert_configmap_name=artifactory_config_map.name,
-        ),
-        storage_class=storage_class,
-        size=Images.Cirros.DEFAULT_DV_SIZE,
-        api_name="storage",
-        volume_mode=volume_mode,
-    )
-    dv.to_dict()
-    dv_metadata = dv.res["metadata"]
-    with VirtualMachineForTests(
-        client=client,
-        name=vm_name,
-        namespace=dv_metadata["namespace"],
-        os_flavor=Images.Cirros.OS_FLAVOR,
-        memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
-        data_volume_template={"metadata": dv_metadata, "spec": dv.res["spec"]},
-        node_selector=node,
-        run_strategy=VirtualMachine.RunStrategy.ALWAYS,
-        cpu_model=cpu_model,
-        annotations=annotations,
-    ) as vm:
-        if wait_running:
-            running_vm(vm=vm, wait_for_interfaces=False)
-        yield vm
+    with artifactory_credentials(namespace=namespace, client=client) as artifactory:
+        dv = DataVolume(
+            client=client,
+            name=dv_name,
+            namespace=namespace,
+            source_dict=construct_datavolume_source_dict(
+                source="http",
+                url=get_http_image_url(image_directory=Images.Cirros.DIR, image_name=Images.Cirros.QCOW2_IMG),
+                secret_name=artifactory.secret_name,
+                cert_configmap_name=artifactory.cert_configmap_name,
+            ),
+            storage_class=storage_class,
+            size=Images.Cirros.DEFAULT_DV_SIZE,
+            api_name="storage",
+            volume_mode=volume_mode,
+        )
+        dv.to_dict()
+        dv_metadata = dv.res["metadata"]
+        with VirtualMachineForTests(
+            client=client,
+            name=vm_name,
+            namespace=dv_metadata["namespace"],
+            os_flavor=Images.Cirros.OS_FLAVOR,
+            memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
+            data_volume_template={"metadata": dv_metadata, "spec": dv.res["spec"]},
+            node_selector=node,
+            run_strategy=VirtualMachine.RunStrategy.ALWAYS,
+            cpu_model=cpu_model,
+            annotations=annotations,
+        ) as vm:
+            if wait_running:
+                running_vm(vm=vm, wait_for_interfaces=False)
+            yield vm
 
 
 def start_stress_on_vm(vm: VirtualMachineForTests, stress_command: str) -> None:

@@ -18,15 +18,14 @@ def chaos_dv_rhel9_for_snapshot(
     chaos_namespace,
     storage_class_matrix_snapshot_matrix__function__,
     rhel9_http_image_url,
-    artifactory_secret_chaos_namespace_scope_module,
-    artifactory_config_map_chaos_namespace_scope_module,
+    artifactory_credentials_chaos_namespace_scope_module,
 ):
     yield DataVolume(
         source_dict=construct_datavolume_source_dict(
             source="http",
             url=rhel9_http_image_url,
-            secret_name=artifactory_secret_chaos_namespace_scope_module.name,
-            cert_configmap_name=artifactory_config_map_chaos_namespace_scope_module.name,
+            secret_name=artifactory_credentials_chaos_namespace_scope_module.secret_name,
+            cert_configmap_name=artifactory_credentials_chaos_namespace_scope_module.cert_configmap_name,
         ),
         name="chaos-dv",
         api_name="storage",

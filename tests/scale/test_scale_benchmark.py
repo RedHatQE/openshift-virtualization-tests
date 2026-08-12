@@ -5,6 +5,7 @@ import re
 import shlex
 import time
 from collections import Counter
+from contextlib import ExitStack
 
 import pytest
 import yaml
@@ -26,11 +27,7 @@ from tests.os_params import (
     WINDOWS_LATEST,
     WINDOWS_LATEST_LABELS,
 )
-from utilities.artifactory import (
-    cleanup_artifactory_secret_and_config_map,
-    get_artifactory_config_map,
-    get_artifactory_secret,
-)
+from utilities.artifactory import artifactory_credentials
 from utilities.constants.cluster import NODE_STR
 from utilities.constants.images import (
     OS_FLAVOR_FEDORA,
@@ -254,44 +251,42 @@ def vms_info(scale_test_param):
 
 
 @pytest.fixture(scope="class")
-def golden_images_scale_dvs(request, keep_resources, admin_client, golden_images_namespace, dvs_info):
+def golden_images_scale_dvs(keep_resources, admin_client, golden_images_namespace, dvs_info):
     dvs_list = []
 
-    def _delete_resources():
-        delete_resources(resources=dvs_list)
+    with ExitStack() as stack:
+        artifactory = stack.enter_context(
+            artifactory_credentials(namespace=golden_images_namespace.name, client=golden_images_namespace.client)
+        )
+        if not keep_resources:
+            stack.callback(delete_resources, resources=dvs_list)
 
-    if not keep_resources:
-        request.addfinalizer(_delete_resources)
-
-    artifactory_secret = get_artifactory_secret(namespace=golden_images_namespace.name)
-    artifactory_config_map = get_artifactory_config_map(namespace=golden_images_namespace.name)
-
-    for os_name, dv_info in dvs_info.items():
-        storage_types_used = [storage_type_key for storage_type_key in SCALE_STORAGE_TYPES if dv_info[storage_type_key]]
-        for storage_type in storage_types_used:
-            golden_images_scale_dv = DataVolume(
-                name=f"{os_name}-{storage_type}-dv",
-                namespace=golden_images_namespace.name,
-                storage_class=SCALE_STORAGE_TYPES[storage_type],
-                api_name="storage",
-                source_dict=construct_datavolume_source_dict(
-                    source="http",
-                    url=f"{get_test_artifact_server_url()}{dv_info['url']}",
-                    secret_name=artifactory_secret.name,
-                    cert_configmap_name=artifactory_config_map.name,
-                ),
-                size=dv_info["size"],
-                client=admin_client,
-            )
-            golden_images_scale_dv.deploy()
-            dvs_list.append(golden_images_scale_dv)
-    for dv in dvs_list:
-        dv.wait_for_status(status=DataVolume.Status.SUCCEEDED, timeout=TIMEOUT_30MIN)
-    yield dvs_list
-
-    cleanup_artifactory_secret_and_config_map(
-        artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
-    )
+        for os_name, dv_info in dvs_info.items():
+            storage_types_used = [
+                storage_type_key for storage_type_key in SCALE_STORAGE_TYPES if dv_info[storage_type_key]
+            ]
+            for storage_type in storage_types_used:
+                golden_images_scale_dv = DataVolume(
+                    name=f"{os_name}-{storage_type}-dv",
+                    namespace=golden_images_namespace.name,
+                    storage_class=SCALE_STORAGE_TYPES[storage_type],
+                    api_name="storage",
+                    source_dict=construct_datavolume_source_dict(
+                        source="http",
+                        url=f"{get_test_artifact_server_url()}{dv_info['url']}",
+                        secret_name=artifactory.secret_name,
+                        cert_configmap_name=artifactory.cert_configmap_name,
+                    ),
+                    size=dv_info["size"],
+                    client=admin_client,
+                )
+                dvs_list.append(golden_images_scale_dv)
+                golden_images_scale_dv.deploy()
+        for dv in dvs_list:
+            dv.wait_for_status(status=DataVolume.Status.SUCCEEDED, timeout=TIMEOUT_30MIN)
+        if keep_resources:
+            stack.pop_all()
+        yield dvs_list
 
 
 @pytest.fixture(scope="class")

@@ -165,8 +165,7 @@ def vm_for_storage_class_migration_from_template_with_dv(
     source_storage_class,
     cpu_for_migration,
     rhel_latest_os_params,
-    artifactory_secret_scope_module,
-    artifactory_config_map_scope_module,
+    artifactory_credentials_scope_module,
 ):
     dv = DataVolume(
         name="dv-rhel-imported",
@@ -174,8 +173,8 @@ def vm_for_storage_class_migration_from_template_with_dv(
         source_dict=construct_datavolume_source_dict(
             source="http",
             url=rhel_latest_os_params["rhel_image_path"],
-            secret_name=artifactory_secret_scope_module.name,
-            cert_configmap_name=artifactory_config_map_scope_module.name,
+            secret_name=artifactory_credentials_scope_module.secret_name,
+            cert_configmap_name=artifactory_credentials_scope_module.cert_configmap_name,
         ),
         size=Images.Rhel.DEFAULT_DV_SIZE,
         storage_class=source_storage_class,

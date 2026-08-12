@@ -8,9 +8,7 @@ from ocp_resources.utils.constants import TIMEOUT_1MINUTE
 from pytest_testconfig import config as py_config
 
 from utilities.artifactory import (
-    cleanup_artifactory_secret_and_config_map,
-    get_artifactory_config_map,
-    get_artifactory_secret,
+    artifactory_credentials,
     get_test_artifact_server_url,
 )
 from utilities.constants import Images
@@ -100,31 +98,27 @@ def windows_validation_os_images_data_volume_scope_session(
         " Self-validation requires the Windows image to be pre-created."
     )
 
-    artifactory_secret = get_artifactory_secret(
-        namespace=validation_os_images_role_binding.namespace, client=validation_os_images_role_binding.client
-    )
-    artifactory_config_map = get_artifactory_config_map(
-        namespace=validation_os_images_role_binding.namespace, client=validation_os_images_role_binding.client
-    )
+    with artifactory_credentials(
+        namespace=validation_os_images_role_binding.namespace,
+        client=validation_os_images_role_binding.client,
+    ) as artifactory:
+        win_dv.storage_class = py_config["default_storage_class"]
+        win_dv.source_dict = construct_datavolume_source_dict(
+            source=REGISTRY_STR,
+            url=(
+                f"{get_test_artifact_server_url(schema=REGISTRY_STR)}/"
+                f"{get_windows_container_disk_path(os_value=WIN_2K22)}"
+            ),
+            secret_name=artifactory.secret_name,
+            cert_configmap_name=artifactory.cert_configmap_name,
+        )
+        win_dv.size = Images.Windows.CONTAINER_DISK_DV_SIZE
+        win_dv.api_name = "storage"
+        win_dv.annotations = BIND_IMMEDIATE_ANNOTATION
 
-    win_dv.storage_class = py_config["default_storage_class"]
-    win_dv.source_dict = construct_datavolume_source_dict(
-        source=REGISTRY_STR,
-        url=f"{get_test_artifact_server_url(schema=REGISTRY_STR)}/{get_windows_container_disk_path(os_value=WIN_2K22)}",
-        secret_name=artifactory_secret.name,
-        cert_configmap_name=artifactory_config_map.name,
-    )
-    win_dv.size = Images.Windows.CONTAINER_DISK_DV_SIZE
-    win_dv.api_name = "storage"
-    win_dv.annotations = BIND_IMMEDIATE_ANNOTATION
-
-    with win_dv as wdv:
-        wdv.wait_for_dv_success(timeout=TIMEOUT_50MIN)
-        yield wdv
-    cleanup_artifactory_secret_and_config_map(
-        artifactory_secret=artifactory_secret,
-        artifactory_config_map=artifactory_config_map,
-    )
+        with win_dv as wdv:
+            wdv.wait_for_dv_success(timeout=TIMEOUT_50MIN)
+            yield wdv
 
 
 @pytest.fixture(scope="session")
