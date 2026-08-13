@@ -59,7 +59,7 @@ class TestFileRestoreWindowsGuestFileCount:
     Preconditions:
         - vm-file-restore-operator deployed and running in openshift-cnv namespace
         - Running Windows VM with OpenSSH Server and guest helper installed, and filerestore user SSH-configured
-        - Backup volume with a known number of files on NTFS filesystem
+        - Backup volume (PVC or VolumeSnapshot) with a known number of files on NTFS filesystem
     """
 
     __test__ = False
@@ -73,7 +73,7 @@ class TestFileRestoreWindowsGuestFileCount:
 
         Preconditions:
             - Running Windows VM with OpenSSH Server and guest helper installed, and filerestore user SSH-configured
-            - Backup volume containing a known number of NTFS files
+            - Backup volume (PVC or VolumeSnapshot) containing a known number of NTFS files
             - Target files deleted from the Windows VM data disk
 
         Steps:
@@ -87,9 +87,9 @@ class TestFileRestoreWindowsGuestFileCount:
         """
 
 
-class TestFileRestoreWindowsNTFSMetadata:
+class TestFileRestoreWindowsNTFSACLsAndOwnership:
     """
-    Tests for NTFS metadata preservation on Windows VM file restore.
+    Tests for NTFS ACLs and ownership preservation on Windows VM file restore.
 
     Markers:
         - tier3
@@ -104,9 +104,9 @@ class TestFileRestoreWindowsNTFSMetadata:
     __test__ = False
 
     @pytest.mark.polarion("CNV-16768")
-    def test_windows_vm_restore_from_backup_pvc_preserves_ntfs_metadata(self):
+    def test_windows_vm_restore_from_backup_pvc_preserves_ntfs_acls_and_ownership(self):
         """
-        Test that file restore on Windows VM from a backup PVC preserves NTFS metadata and ACLs.
+        Test that file restore on Windows VM from a backup PVC preserves NTFS ACLs and ownership.
 
         Priority: P0
 
@@ -126,9 +126,9 @@ class TestFileRestoreWindowsNTFSMetadata:
         """
 
     @pytest.mark.polarion("CNV-16769")
-    def test_windows_vm_restore_from_snapshot_preserves_ntfs_metadata(self):
+    def test_windows_vm_restore_from_snapshot_preserves_ntfs_acls_and_ownership(self):
         """
-        Test that file restore on Windows VM from a volume snapshot preserves NTFS metadata and ACLs.
+        Test that file restore on Windows VM from a volume snapshot preserves NTFS ACLs and ownership.
 
         Priority: P0
 
