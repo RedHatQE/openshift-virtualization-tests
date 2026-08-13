@@ -90,6 +90,12 @@ pytest_plugins = [
     "tests.fixtures.network.multiarch",
     "tests.fixtures.credentials.artifacts",
     "tests.fixtures.credentials.rhsm",
+    "tests.fixtures.operator.aaq",
+    "tests.fixtures.operator.cdi",
+    "tests.fixtures.operator.csv",
+    "tests.fixtures.operator.hco",
+    "tests.fixtures.operator.kubevirt",
+    "tests.fixtures.operator.ssp",
 ]
 
 LOGGER = logging.getLogger(__name__)
