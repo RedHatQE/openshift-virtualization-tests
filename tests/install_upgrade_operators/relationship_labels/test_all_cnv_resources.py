@@ -5,8 +5,7 @@ import pytest
 
 from tests.install_upgrade_operators.relationship_labels.constants import ALL_LABEL_KEYS
 from tests.install_upgrade_operators.utils import (
-    get_ocp_resource_module_name,
-    get_resource,
+    get_resource_from_related_object,
 )
 from utilities.exceptions import ResourceValueError
 from utilities.infra import is_jira_open
@@ -107,16 +106,13 @@ def test_relationship_labels_all_cnv_resources(
                 LOGGER.debug(f"{kind}, {name} is allowlisted")
                 continue
             LOGGER.debug(f"Looking at element: {name}, kind: {kind}")
-            resource_obj = get_resource(
+            resource_obj = get_resource_from_related_object(
                 related_obj={
                     "kind": kind,
                     "name": name,
                     "namespace": hco_namespace.name,
                 },
-                module_name=get_ocp_resource_module_name(
-                    related_object_kind=kind,
-                    list_submodules=ocp_resources_submodule_list,
-                ),
+                ocp_resources_submodule_list=ocp_resources_submodule_list,
                 admin_client=admin_client,
             )
             if resource_obj.exists:
