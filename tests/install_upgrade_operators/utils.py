@@ -205,74 +205,39 @@ def get_resource_container_env_image_mismatch(container):
     ]
 
 
-def get_ocp_resource_module_name(related_object_kind, list_submodules):
-    """
-    From a list of ocp_resources submodule, based on kubernetes 'kind' name pick the right module name
+def get_resource_from_related_object(
+    related_obj: dict[str, str],
+    ocp_resources_submodule_list: list[str],
+    admin_client: DynamicClient,
+) -> Resource:
+    """Gets a resource object for an HCO related object by finding its ocp_resources class.
+
+    Iterates ocp_resources submodules to find the class matching the related object's kind,
+    then instantiates it with the object's name and namespace.
 
     Args:
-        related_object_kind (str): Kubernetes kind name of a resource
-        list_submodules (list): list of ocp_resources submodule names
+        related_obj: HCO status related object dict with kind, name, namespace keys.
+        ocp_resources_submodule_list: List of ocp_resources submodule names.
+        admin_client: Kubernetes dynamic client.
 
     Returns:
-        str: Name of the ocp_resources submodule
+        Instantiated resource object for the related object.
 
     Raises:
-        ModuleNotFoundError: if a module associated with related object kind is not found
+        ModuleNotFoundError: If no ocp_resources module contains the related object's kind.
     """
-    for module_name in list_submodules:
-        expected_module_name = module_name.replace("_", "")
-        if related_object_kind.lower() == expected_module_name:
-            return module_name
-    raise ModuleNotFoundError(f"{related_object_kind} module not found in ocp_resources")
-
-
-def get_resource(related_obj, admin_client, module_name):
-    """
-    Gets CR based on associated HCO.status.relatedObject entry and ocp_reources module name
-
-    Args:
-        related_obj (dict): Associated HCO.status.relatedObject dict
-        admin_client (DynamicClient): Dynamic client object
-        module_name (str): Associated ocp_reources module name to be used
-
-    Returns:
-        Resource: Associated cr object
-
-    Raises:
-        AssertionError: if a related object kind is not in module name
-    """
-    kwargs = {"client": admin_client, "name": related_obj["name"]}
-    if related_obj["namespace"]:
+    kind = related_obj["kind"]
+    kwargs: dict[str, Any] = {"client": admin_client, "name": related_obj["name"]}
+    if related_obj.get("namespace"):
         kwargs["namespace"] = related_obj["namespace"]
 
-    module = importlib.import_module(f"ocp_resources.{module_name}")
-    cls_related_obj = getattr(module, related_obj["kind"], None)
-    assert cls_related_obj, f"class {related_obj['kind']} is not in {module_name}"
-    LOGGER.debug(f"reading class {related_obj['kind']} from module {module_name}")
-    return cls_related_obj(**kwargs)
+    for module_name in ocp_resources_submodule_list:
+        module = importlib.import_module(f"ocp_resources.{module_name}")
+        resource_class = getattr(module, kind, None)
+        if resource_class and isinstance(resource_class, type) and getattr(resource_class, "kind", None) == kind:
+            return resource_class(**kwargs)
 
-
-def get_resource_from_module_name(related_obj, ocp_resources_submodule_list, admin_client):
-    """
-    Gets resource object based on module name
-
-    Args:
-        related_obj (dict): Related object Dictionary
-        ocp_resources_submodule_list (list): list of submudule names associated with ocp_resources package
-        admin_client (DynamicClient): Dynamic client object
-
-    Returns:
-        Resource: Associated cr object
-    """
-    module_name = get_ocp_resource_module_name(
-        related_object_kind=related_obj["kind"],
-        list_submodules=ocp_resources_submodule_list,
-    )
-    return get_resource(
-        admin_client=admin_client,
-        related_obj=related_obj,
-        module_name=module_name,
-    )
+    raise ModuleNotFoundError(f"{kind} module not found in ocp_resources")
 
 
 def get_resource_by_name(
