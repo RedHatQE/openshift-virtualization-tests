@@ -26,6 +26,7 @@ jobs:
     env:
       FEDORA_VERSION: ${{ needs.prepare.outputs.fedora_version }}
       FEDORA_IMAGE_BASE: ${{ needs.prepare.outputs.fedora_image_base }}
+      FEDORA_CHECKSUM_BASE: ${{ needs.prepare.outputs.fedora_checksum_base }}
       CPU_ARCH: ${{ matrix.arch }}
       FULL_EMULATION: "true"
       DEBIAN_FRONTEND: noninteractive
@@ -51,9 +52,30 @@ jobs:
 
       - name: Fetch base Fedora image
         working-directory: ./containers/fedora
+        env:
+          FEDORA_URL: ${{ matrix.fedora_url }}
+          URL_ARCH: ${{ matrix.url_arch }}
         run: |
-          FEDORA_IMAGE="${FEDORA_IMAGE_BASE}.${{ matrix.url_arch }}.qcow2"
-          wget -q "${{ matrix.fedora_url }}/${FEDORA_IMAGE}"
+          fedora_image="${FEDORA_IMAGE_BASE}.${URL_ARCH}.qcow2"
+          wget -q "${FEDORA_URL}/${fedora_image}"
+          fedora_checksum="${FEDORA_CHECKSUM_BASE}-${URL_ARCH}-CHECKSUM"
+          wget -q "${FEDORA_URL}/${fedora_checksum}" -O CHECKSUM
+
+      - name: Verify Fedora image checksum
+        working-directory: ./containers/fedora
+        env:
+          URL_ARCH: ${{ matrix.url_arch }}
+        run: |
+          FEDORA_IMAGE="${FEDORA_IMAGE_BASE}.${URL_ARCH}.qcow2"
+          # Extract the SHA256 line for the exact artifact and verify it.
+          # The Fedora CHECKSUM file uses the format: SHA256 (filename) = <digest>
+          # sha256sum expects: <digest>  <filename>
+          grep "SHA256 (${FEDORA_IMAGE})" CHECKSUM \
+            | sed 's/SHA256 (\(.*\)) = \(.*\)/\2  \1/' \
+            | sha256sum --check --status \
+            || { echo "ERROR: SHA256 digest mismatch for ${FEDORA_IMAGE}"; exit 1; }
+          echo "Checksum verified for ${FEDORA_IMAGE}"
+          rm CHECKSUM
 
       - name: Install uv
         uses: astral-sh/setup-uv@v10.0.1
