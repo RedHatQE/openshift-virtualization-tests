@@ -309,7 +309,7 @@ def _lookup_hotplugged_iface_via_console(
         f"falling back to console lookup by MAC {vmi_iface['macAddress']}."
     )
     cmd = "ip -j addr show"
-    output = vm_console_run_commands(vm=vm, commands=[cmd], timeout=30)
+    output = vm_console_run_commands(vm=vm, commands=[cmd])
     guest_interfaces = json.loads(output[cmd][1])
 
     visible_ifaces = [{"ifname": iface.get("ifname"), "address": iface.get("address")} for iface in guest_interfaces]
