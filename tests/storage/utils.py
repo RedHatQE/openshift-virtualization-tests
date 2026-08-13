@@ -410,6 +410,24 @@ def create_windows_directory(windows_vm: VirtualMachineForTests, directory_path:
     )
 
 
+def expected_hotplug_serials(count: int, serial: str) -> list[str]:
+    """Build the expected serial list for hotplugged disks.
+
+    Single-disk uses the bare serial; multi-disk appends an index suffix to distinguish disks,
+    matching the indexed assignment done in the hotplugged_dvs_scope_class fixture.
+
+    Args:
+        count: Number of hotplugged disks.
+        serial: Base serial string.
+
+    Returns:
+        List of expected serial strings.
+    """
+    if count == 1:
+        return [serial]
+    return [f"{serial}-{idx}" for idx in range(count)]
+
+
 def assert_disk_bus(vm: VirtualMachineForTests, volume: DataVolume, expected_bus: str) -> None:
     """Assert that a hotplugged volume has the expected disk bus type.
 

@@ -800,18 +800,37 @@ def run_command_on_vm_and_check_output(
     )
 
 
-def assert_disk_serial(vm, command=_DEFAULT_DISK_SERIAL_COMMAND):
-    assert (
-        HOTPLUG_DISK_SERIAL
-        in run_ssh_commands(host=vm.ssh_exec, commands=command, wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC)[0]
-    ), f"hotplug disk serial id {HOTPLUG_DISK_SERIAL} is not in VM"
+def assert_disk_serial(
+    vm: virt_util.VirtualMachineForTests,
+    serials: list[str] | None = None,
+    command: list[str] = _DEFAULT_DISK_SERIAL_COMMAND,
+) -> None:
+    """Assert that hotplug disk serial(s) are visible inside the VM.
+
+    Args:
+        vm: Virtual machine instance to inspect.
+        serials: Serial strings to verify. Defaults to [HOTPLUG_DISK_SERIAL].
+        command: Shell command whose output is searched for the serial strings.
+    """
+    if serials is None:
+        serials = [HOTPLUG_DISK_SERIAL]
+    output = run_ssh_commands(host=vm.ssh_exec, commands=command, wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC)[0]
+    missing = [serial for serial in serials if serial not in output]
+    assert not missing, f"Disk serial(s) {missing} not found in VM, output: {output}"
 
 
-def assert_hotplugvolume_nonexist(vm):
-    volume_status = vm.vmi.instance.status.volumeStatus[0]
-    assert HOTPLUG_VOLUME not in volume_status, (
-        f"{HOTPLUG_VOLUME} in {volume_status}, hotplug disk should become a regular disk for VM"
-    )
+def assert_hotplugvolume_nonexist(vm: virt_util.VirtualMachineForTests) -> None:
+    """Assert no volume in the VM still carries a hotplugVolume marker.
+
+    After a hotplugged disk is persisted the marker must be removed from every
+    volumeStatus entry; a leftover indicates the disk was not fully converted
+    to a regular disk.
+
+    Args:
+        vm: Virtual machine instance to inspect.
+    """
+    hotplug_statuses = [status for status in vm.vmi.instance.status.volumeStatus if HOTPLUG_VOLUME in status]
+    assert not hotplug_statuses, f"Hotplug disk was not converted to a regular disk in {hotplug_statuses}"
 
 
 def wait_for_vm_volume_ready(
