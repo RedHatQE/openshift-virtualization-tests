@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'containers/fedora/**'
+      - '.github/component-builder-config.json'
+      - '.github/workflows/component-builder-prepare.yml'
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
