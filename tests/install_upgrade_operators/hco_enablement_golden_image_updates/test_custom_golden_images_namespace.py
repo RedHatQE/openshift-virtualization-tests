@@ -12,6 +12,7 @@ from ocp_resources.volume_snapshot import VolumeSnapshot
 from pytest_testconfig import config as py_config
 
 from tests.install_upgrade_operators.hco_enablement_golden_image_updates.utils import (
+    verify_common_template_namespace_updated,
     verify_resource_in_ns,
     verify_resource_not_in_ns,
 )
@@ -28,17 +29,6 @@ LOGGER = logging.getLogger(__name__)
 COMMON_BOOT_IMAGE_NAMESPACE_STR = "commonBootImageNamespace"
 
 pytestmark = [pytest.mark.arm64, pytest.mark.s390x]
-
-
-def verify_common_template_namespace_updated(common_templates, namespace_name):
-    non_updated_templates = []
-    for template in common_templates:
-        if template["metadata"].get("namespace") != namespace_name:
-            non_updated_templates.append(
-                f"{template['metadata']['name']} expected namespace: {namespace_name} "
-                f"actual: {template['metadata'].get('namespace')}\n"
-            )
-    assert not non_updated_templates, non_updated_templates
 
 
 @pytest.fixture(scope="module")

@@ -13,6 +13,7 @@ from tests.install_upgrade_operators.constants import (
 )
 from tests.install_upgrade_operators.hco_enablement_golden_image_updates.multiarch.utils import (
     CUSTOM_MULTIARCH_DATASOURCE_NAME,
+    MULTIARCH_MANAGED_CRS,
 )
 from utilities.constants.cluster import KUBERNETES_ARCH_LABEL
 from utilities.constants.hco import FEATURE_GATES
@@ -20,8 +21,6 @@ from utilities.hco import ResourceEditorValidateHCOReconcile, update_hco_templat
 from utilities.virt import get_hyperconverged_kubevirt
 
 LOGGER = logging.getLogger(__name__)
-
-_MULTIARCH_MANAGED_CRS = [SSP, KubeVirt, CDI]
 
 
 @pytest.fixture(scope="class")
@@ -33,7 +32,7 @@ def disabled_multiarch_feature_gate(admin_client, hyperconverged_resource_scope_
                 "spec": {FEATURE_GATES: {ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT: FG_DISABLED}}
             }
         },
-        list_resource_reconcile=_MULTIARCH_MANAGED_CRS,
+        list_resource_reconcile=MULTIARCH_MANAGED_CRS,
         wait_for_reconcile_post_update=True,
     ):
         yield
@@ -53,7 +52,7 @@ def enabled_multiarch_feature_gate(admin_client, hyperconverged_resource_scope_c
                     "spec": {FEATURE_GATES: {ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT: FG_ENABLED}}
                 }
             },
-            list_resource_reconcile=_MULTIARCH_MANAGED_CRS,
+            list_resource_reconcile=MULTIARCH_MANAGED_CRS,
             wait_for_reconcile_post_update=True,
         ):
             yield

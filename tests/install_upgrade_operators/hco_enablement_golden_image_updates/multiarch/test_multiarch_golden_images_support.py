@@ -44,37 +44,40 @@ class TestDisabledMultiarchGoldenImagesSupport:
     @pytest.mark.parametrize(
         "resource_type",
         [
-            pytest.param(DataImportCron, id="DataImportCron"),
-            pytest.param(
-                DataSource,
-                id="DataSource",
-                marks=pytest.mark.jira("CNV-68996", run=False),
-            ),
+            pytest.param(DataImportCron),
+            pytest.param(DataSource, marks=pytest.mark.jira("CNV-68996", run=False)),
         ],
     )
-    def test_no_architecture_specific_golden_image_resources_exist(
+    def test_only_base_golden_image_resources_exist(
         self,
         admin_client,
         golden_images_namespace,
         base_common_templates_related_resources,
+        expected_common_templates_related_resources,
         resource_type,
     ):
         """
-        Test that no architecture-specific golden image resources exist
+        Test that only base golden image resources exist
         after disabling multi-architecture golden images support.
 
         Parametrize:
             - resource_type:
                 - DataImportCron
-                - DataSource [Markers: jira(CNV-94361)]
+                - DataSource [Markers: jira(CNV-68996)]
 
         Steps:
-            1. List parametrized resources in the golden images namespace.
+            1. Verify expected base resources exist in the golden images namespace.
             2. Verify no architecture-specific resources exist.
 
         Expected:
-            - No architecture-specific resources of the parametrized type exist.
+            - Only base resources of the parametrized type exist.
         """
+        verify_resource_in_ns(
+            expected_resource_names=expected_common_templates_related_resources[resource_type.kind],
+            namespace=golden_images_namespace.name,
+            client=admin_client,
+            resource_type=resource_type,
+        )
         base_names = base_common_templates_related_resources[resource_type.kind]
         arch_specific_resources = [
             resource.name

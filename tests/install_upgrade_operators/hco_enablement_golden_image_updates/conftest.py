@@ -10,7 +10,7 @@ from tests.install_upgrade_operators.hco_enablement_golden_image_updates.utils i
     COMMON_TEMPLATE,
     CUSTOM_TEMPLATE,
     HCO_CR_DATA_IMPORT_SCHEDULE_KEY,
-    get_modifed_common_template_names,
+    get_modified_common_template_names,
     get_random_minutes_hours_fields_from_data_import_schedule,
     get_templates_by_type_from_hco_status,
     get_templates_resources_names_dict,
@@ -108,7 +108,7 @@ def default_custom_templates_scope_session(
 
 @pytest.fixture(scope="session")
 def modified_common_templates_scope_session(hyperconverged_resource_scope_session):
-    return get_modifed_common_template_names(hyperconverged=hyperconverged_resource_scope_session)
+    return get_modified_common_template_names(hyperconverged=hyperconverged_resource_scope_session)
 
 
 @pytest.fixture()

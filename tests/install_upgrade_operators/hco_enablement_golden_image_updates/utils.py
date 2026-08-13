@@ -79,7 +79,7 @@ def get_random_minutes_hours_fields_from_data_import_schedule(target_string):
     return re_result.group(RE_NAMED_GROUP_MINUTES), re_result.group(RE_NAMED_GROUP_HOURS)
 
 
-def get_modifed_common_template_names(hyperconverged):
+def get_modified_common_template_names(hyperconverged):
     return [
         template["metadata"]["name"]
         for template in get_templates_by_type_from_hco_status(
@@ -129,10 +129,31 @@ def get_data_import_crons_by_prefix(
     return matching
 
 
-def get_template_dict_by_name(template_name, templates):
+def verify_common_template_namespace_updated(common_templates: list[dict[str, Any]], namespace_name: str) -> None:
+    """Assert that all templates have the expected namespace in their metadata.
+
+    Args:
+        common_templates: List of common templates from HCO status.
+        namespace_name: Expected namespace name.
+
+    Raises:
+        AssertionError: If any template has a different namespace.
+    """
+    non_updated_templates = []
+    for template in common_templates:
+        if template["metadata"].get("namespace") != namespace_name:
+            non_updated_templates.append(
+                f"{template['metadata']['name']} expected namespace: {namespace_name} "
+                f"actual: {template['metadata'].get('namespace')}\n"
+            )
+    assert not non_updated_templates, non_updated_templates
+
+
+def get_template_dict_by_name(template_name: str, templates: list[dict[str, Any]]) -> dict[str, Any] | None:
     for template in templates:
         if template["metadata"]["name"] == template_name:
             return template
+    return None
 
 
 def get_templates_resources_names_dict(templates: list[dict[str, Any]]) -> dict[str, set[str]]:

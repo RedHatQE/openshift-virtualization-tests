@@ -11,7 +11,7 @@ from ocp_resources.ssp import SSP
 from tests.install_upgrade_operators.constants import KEY_PATH_SEPARATOR
 from tests.install_upgrade_operators.hco_enablement_golden_image_updates.utils import (
     get_data_import_crons_by_prefix,
-    get_modifed_common_template_names,
+    get_modified_common_template_names,
     get_template_dict_by_name,
 )
 from utilities.constants.hco import (
@@ -112,7 +112,9 @@ def updated_common_template(
     ):
         yield updated_templates
 
-    modified_common_templates = get_modifed_common_template_names(hyperconverged=hyperconverged_resource_scope_function)
+    modified_common_templates = get_modified_common_template_names(
+        hyperconverged=hyperconverged_resource_scope_function
+    )
     assert not modified_common_templates, f"Following templates were not reverted back: {modified_common_templates}"
 
 

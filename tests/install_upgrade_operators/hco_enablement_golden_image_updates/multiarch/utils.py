@@ -6,8 +6,13 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Any
 
+from ocp_resources.cdi import CDI
+from ocp_resources.kubevirt import KubeVirt
+from ocp_resources.ssp import SSP
+
 KUBEVIRT_HCO_MULTI_ARCH_BOOT_IMAGES_ENABLED = "kubevirt_hco_multi_arch_boot_images_enabled"
 MULTIARCH_DICT_ANNOTATION = "ssp.kubevirt.io/dict.architectures"
+MULTIARCH_MANAGED_CRS = [SSP, KubeVirt, CDI]
 
 CUSTOM_MULTIARCH_DATASOURCE_NAME = "custom-multiarch-datasource"
 CUSTOM_UNSUPPORTED_ARCH_CRON_NAME = "custom-unsupported-arch-cron"
