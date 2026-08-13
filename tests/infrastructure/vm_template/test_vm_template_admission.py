@@ -14,19 +14,23 @@ Markers:
 
 import pytest
 
-__test__ = False
+from tests.infrastructure.vm_template.utils import process_and_create_vm
 
 
-class TestVMTemplateAdmission:
+@pytest.mark.smoke
+class TestVMTemplateAdmissionPositive:
     """
-    Tests for VirtualMachineTemplate admission behavior under defaulted parameters.
+    Positive tests for VirtualMachineTemplate admission behavior under defaulted parameters.
 
     Preconditions:
-        - OpenShift Virtualization cluster with common instance types deployed
+        - OpenShift Virtualization cluster with enabled Template feature gate
+
+    Markers:
+        - smoke
     """
 
     @pytest.mark.polarion("CNV-16314")
-    def test_valid_template_with_defaulted_parameters_accepted(self):
+    def test_valid_template_with_defaulted_parameters_accepted(self, valid_vm_template):
         """
         Test that a VirtualMachineTemplate whose default parameter values resolve to a
         valid VM definition is accepted by the cluster.
@@ -40,22 +44,47 @@ class TestVMTemplateAdmission:
 
         Expected:
             - VirtualMachineTemplate is created successfully
-
-        Markers:
-            - smoke
         """
+        assert valid_vm_template.exists, (
+            f"VirtualMachineTemplate {valid_vm_template.name} should have been created successfully"
+        )
 
-    @pytest.mark.polarion("CNV-16315")
-    def test_invalid_by_default_template_rejected(self):
+    @pytest.mark.polarion("CNV-16336")
+    def test_vm_created_from_valid_template(self, valid_vm_template):
         """
-        [NEGATIVE] Test that a VirtualMachineTemplate whose default parameter values would
-        always produce an invalid VM definition is rejected by the admission webhook.
+        Test that a VirtualMachine can be created using the spec defined in a valid
+        VirtualMachineTemplate.
+
+        Preconditions:
+            - A valid VirtualMachineTemplate exists on the cluster
 
         Steps:
-            1. Submit a VirtualMachineTemplate resource whose defaulted parameters produce
-               an invalid VM definition
+            1. Create a VirtualMachine using the instance type and preference parameters
+               defined as defaults in the valid VirtualMachineTemplate
 
         Expected:
-            - VirtualMachineTemplate creation is rejected with an admission error indicating
-              the template would always produce an invalid VM
+            - VirtualMachine is created successfully
         """
+        process_and_create_vm(vmt=valid_vm_template)
+
+
+@pytest.mark.polarion("CNV-16315")
+def test_invalid_by_default_template_rejected():
+    """
+    [NEGATIVE] Test that a VirtualMachineTemplate whose default parameter values would
+    always produce an invalid VM definition is rejected by the admission webhook.
+
+    Preconditions:
+        - OpenShift Virtualization cluster with enabled Template feature gate
+
+    Steps:
+        1. Submit a VirtualMachineTemplate resource whose defaulted parameters produce
+           an invalid VM definition
+
+    Expected:
+        - VirtualMachineTemplate creation is rejected with an admission error indicating
+          the template would always produce an invalid VM
+    """
+
+
+test_invalid_by_default_template_rejected.__test__ = False

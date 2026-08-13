@@ -90,6 +90,7 @@ pytest_plugins = [
     "tests.fixtures.network.multiarch",
     "tests.fixtures.credentials.artifacts",
     "tests.fixtures.credentials.rhsm",
+    "tests.fixtures.infrastructure.vm_template",
 ]
 
 LOGGER = logging.getLogger(__name__)
