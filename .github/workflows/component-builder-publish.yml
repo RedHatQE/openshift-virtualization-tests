@@ -1,123 +1,42 @@
 name: "Component Builder Publish"
-permissions:
-  contents: read
-env:
-  REMOTE_REPOSITORY: "quay.io/openshift-cnv/qe-cnv-tests-fedora-staging"
 on:
   push:
     paths:
       - 'containers/fedora/**'
       - '.github/component-builder-config.json'
       - '.github/workflows/component-builder-prepare.yml'
+      - '.github/workflows/component-builder-build.yml'
     branches:
       - 'main'
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+env:
+  REMOTE_REPOSITORY: "quay.io/openshift-cnv/qe-cnv-tests-fedora-staging"
+
 jobs:
   prepare:
     uses: ./.github/workflows/component-builder-prepare.yml
 
   build-images:
-    runs-on: ubuntu-latest
     needs: prepare
-    permissions:
-      contents: read
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
-    env:
-      FEDORA_VERSION: ${{ needs.prepare.outputs.fedora_version }}
-      FEDORA_IMAGE_BASE: ${{ needs.prepare.outputs.fedora_image_base }}
-      FEDORA_CHECKSUM_BASE: ${{ needs.prepare.outputs.fedora_checksum_base }}
-      CPU_ARCH: ${{ matrix.arch }}
-      FULL_EMULATION: "true"
-      DEBIAN_FRONTEND: noninteractive
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-
-      - name: Install dependencies for VM build
-        env:
-          QEMU_PACKAGE: ${{ matrix.qemu_package }}
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            "$QEMU_PACKAGE" \
-            libvirt-daemon-system \
-            virtinst cloud-image-utils \
-            libguestfs-tools
-
-      - name: Tweak hosted runner to enable 'virt-sysprep'
-        # https://bugs.launchpad.net/ubuntu/+source/linux/+bug/759725
-        run: sudo chmod 0644 /boot/vmlinuz*
-
-      - name: Fetch base Fedora image
-        working-directory: ./containers/fedora
-        env:
-          FEDORA_URL: ${{ matrix.fedora_url }}
-          URL_ARCH: ${{ matrix.url_arch }}
-        run: |
-          fedora_image="${FEDORA_IMAGE_BASE}.${URL_ARCH}.qcow2"
-          wget -q "${FEDORA_URL}/${fedora_image}"
-          fedora_checksum="${FEDORA_CHECKSUM_BASE}-${URL_ARCH}-CHECKSUM"
-          wget -q "${FEDORA_URL}/${fedora_checksum}" -O CHECKSUM
-
-      - name: Verify Fedora image checksum
-        working-directory: ./containers/fedora
-        env:
-          URL_ARCH: ${{ matrix.url_arch }}
-        run: |
-          FEDORA_IMAGE="${FEDORA_IMAGE_BASE}.${URL_ARCH}.qcow2"
-          # Extract the SHA256 line for the exact artifact and verify it.
-          # The Fedora CHECKSUM file uses the format: SHA256 (filename) = <digest>
-          # sha256sum expects: <digest>  <filename>
-          grep "SHA256 (${FEDORA_IMAGE})" CHECKSUM \
-            | sed 's/SHA256 (\(.*\)) = \(.*\)/\2  \1/' \
-            | sha256sum --check --status \
-            || { echo "ERROR: SHA256 digest mismatch for ${FEDORA_IMAGE}"; exit 1; }
-          echo "Checksum verified for ${FEDORA_IMAGE}"
-          rm CHECKSUM
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v10.0.1
-        with:
-          version: "0.12.5"
-      - name: Install Bitwarden Secrets Manager CLI
-        env:
-          BWS_VERSION: "2.1.0"
-        run: |
-          curl -fsSL "https://github.com/bitwarden/sdk-sm/releases/download/bws-v${BWS_VERSION}/bws-x86_64-unknown-linux-gnu-${BWS_VERSION}.zip" -o bws.zip
-          unzip -o bws.zip -d /usr/local/bin
-          chmod +x /usr/local/bin/bws
-          rm bws.zip
-          bws --version
-      - name: Create VM
-        working-directory: ./containers/fedora
-        env:
-          PYTHONPATH: ${{ github.workspace }}
-          ORGANIZATION_ID: ${{ secrets.BITWARDEN_ORGANIZATION_ID }}
-          ACCESS_TOKEN: ${{ secrets.BITWARDEN_ACCESS_TOKEN }}
-          FEDORA_IMAGE: "${{ env.FEDORA_IMAGE_BASE }}.${{ matrix.url_arch }}.qcow2"
-        run: ./build.sh
-
-      - name: Logging to quay.io
-        env:
-          QUAY_USER: ${{ secrets.QUAY_USER }}
-          QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
-        run: printf '%s' "$QUAY_TOKEN" | podman login -u "$QUAY_USER" --password-stdin quay.io
-
-      - name: Tag & Push image to staging
-        env:
-          local_repository: "localhost/fedora"
-          arch_tag: "${{ env.FEDORA_VERSION }}-${{ env.CPU_ARCH }}"
-          REMOTE_REPOSITORY: ${{ env.REMOTE_REPOSITORY }}
-        run: |
-          podman tag "${local_repository}":"${arch_tag}" "${REMOTE_REPOSITORY}":"${arch_tag}"
-          podman push "${REMOTE_REPOSITORY}":"${arch_tag}"
+    uses: ./.github/workflows/component-builder-build.yml
+    with:
+      fedora_version: ${{ needs.prepare.outputs.fedora_version }}
+      fedora_image_base: ${{ needs.prepare.outputs.fedora_image_base }}
+      fedora_checksum_base: ${{ needs.prepare.outputs.fedora_checksum_base }}
+      matrix: ${{ needs.prepare.outputs.matrix }}
+      remote_repository: "quay.io/openshift-cnv/qe-cnv-tests-fedora-staging"
+      push_image: true
+    secrets:
+      BITWARDEN_ORGANIZATION_ID: ${{ secrets.BITWARDEN_ORGANIZATION_ID }}
+      BITWARDEN_ACCESS_TOKEN: ${{ secrets.BITWARDEN_ACCESS_TOKEN }}
+      QUAY_USER: ${{ secrets.QUAY_USER }}
+      QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
 
   create-manifest:
     runs-on: ubuntu-latest
