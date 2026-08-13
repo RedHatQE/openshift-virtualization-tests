@@ -28,7 +28,7 @@ from utilities.constants.components import (
     CDI_KUBEVIRT_HYPERCONVERGED,
     KUBEVIRT_HCO_NAME,
 )
-from utilities.constants.hco import RESOURCE_REQUIREMENTS_KEY_HCO_CR
+from utilities.constants.hco import RESOURCE_REQUIREMENTS_KEY_HCO_CR, HCOv1Spec
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.arm64, pytest.mark.s390x]
 
@@ -78,11 +78,9 @@ class TestHCONonDefaultFields:
             ),
             pytest.param(
                 {
-                    "rpatch": {
-                        "spec": {
-                            SCRATCH_SPACE_STORAGE_CLASS_KEY: SCRATCH_SPACE_STORAGE_CLASS_VALUE,
-                        }
-                    },
+                    "rpatch": HCOv1Spec.storage(
+                        scratchSpaceStorageClass=SCRATCH_SPACE_STORAGE_CLASS_VALUE,
+                    ),
                     "list_resource_reconcile": [CDI],
                 },
                 {"resource_class": CDI, "resource_name": CDI_KUBEVIRT_HYPERCONVERGED},
@@ -93,11 +91,9 @@ class TestHCONonDefaultFields:
             ),
             pytest.param(
                 {
-                    "rpatch": {
-                        "spec": {
-                            OBSOLETE_CPUS_KEY: OBSOLETE_CPUS_VALUE_HCO_CR,
-                        }
-                    },
+                    "rpatch": HCOv1Spec.virtualization(
+                        obsoleteCPUs=OBSOLETE_CPUS_VALUE_HCO_CR,
+                    ),
                     "list_resource_reconcile": [KubeVirt],
                 },
                 {"resource_class": KubeVirt, "resource_name": KUBEVIRT_HCO_NAME},
@@ -108,11 +104,9 @@ class TestHCONonDefaultFields:
             ),
             pytest.param(
                 {
-                    "rpatch": {
-                        "spec": {
-                            STORAGE_IMPORT_KEY_HCO_CR: STORAGE_IMPORT_VALUE,
-                        }
-                    },
+                    "rpatch": HCOv1Spec.storage(
+                        storageImport=STORAGE_IMPORT_VALUE,
+                    ),
                     "list_resource_reconcile": [CDI],
                 },
                 {"resource_class": CDI, "resource_name": CDI_KUBEVIRT_HYPERCONVERGED},
@@ -123,11 +117,9 @@ class TestHCONonDefaultFields:
             ),
             pytest.param(
                 {
-                    "rpatch": {
-                        "spec": {
-                            NP_INFRA_KEY: NP_INFRA_VALUE_HCO_CR,
-                        }
-                    },
+                    "rpatch": HCOv1Spec.node_placements(
+                        infra=NP_INFRA_VALUE_HCO_CR,
+                    ),
                     "list_resource_reconcile": [CDI, KubeVirt],
                     "wait_for_reconcile": False,
                 },
@@ -139,11 +131,9 @@ class TestHCONonDefaultFields:
             ),
             pytest.param(
                 {
-                    "rpatch": {
-                        "spec": {
-                            NP_WORKLOADS_KEY_HCO_CR: NP_WORKLOADS_VALUE_HCO_CR,
-                        }
-                    },
+                    "rpatch": HCOv1Spec.node_placements(
+                        workload=NP_WORKLOADS_VALUE_HCO_CR,
+                    ),
                     "list_resource_reconcile": [CDI, KubeVirt],
                     "wait_for_reconcile": False,
                 },

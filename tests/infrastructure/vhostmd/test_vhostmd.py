@@ -14,6 +14,7 @@ from pytest_testconfig import config as py_config
 from tests.os_params import RHEL_LATEST_LABELS
 from utilities.artifactory import get_artifactory_header
 from utilities.constants.architecture import S390X
+from utilities.constants.hco import HCOv1Spec
 from utilities.constants.timeouts import (
     TIMEOUT_3MIN,
     TIMEOUT_5SEC,
@@ -57,7 +58,7 @@ def download_and_install_vm_dump_metrics(vm, rpm_file_name):
 def enabled_downward_metrics_hco_featuregate(admin_client, hyperconverged_resource_scope_module):
     with ResourceEditorValidateHCOReconcile(
         admin_client=admin_client,
-        patches={hyperconverged_resource_scope_module: {"spec": {"featureGates": {"downwardMetrics": True}}}},
+        patches={hyperconverged_resource_scope_module: HCOv1Spec.feature_gates(downwardMetrics=True)},
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,
     ):

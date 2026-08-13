@@ -10,6 +10,7 @@ from tests.storage.upgrade.utils import (
     create_snapshot_for_upgrade,
     create_vm_for_snapshot_upgrade_tests,
 )
+from utilities.constants.hco import HCOv1Spec
 from utilities.constants.storage import HOTPLUG_DISK_SERIAL, HOTPLUG_DISK_VIRTIO_BUS
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.storage import create_dv, virtctl_volume
@@ -101,7 +102,7 @@ def enabled_feature_gate_for_declarative_hotplug_volumes_upg(
     with ResourceEditorValidateHCOReconcile(
         admin_client=admin_client,
         patches={
-            hyperconverged_resource_scope_session: {"spec": {"featureGates": {"declarativeHotplugVolumes": True}}},
+            hyperconverged_resource_scope_session: HCOv1Spec.feature_gates(declarativeHotplugVolumes=True),
         },
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,

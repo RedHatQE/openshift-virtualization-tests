@@ -22,7 +22,7 @@ from tests.virt.node.gpu.utils import (
     wait_for_nvidia_vgpu_manager,
 )
 from tests.virt.utils import patch_hco_cr_with_mdev_permitted_hostdevices
-from utilities.constants.hco import DISABLE_MDEV_CONFIGURATION, FEATURE_GATES
+from utilities.constants.hco import DISABLE_MDEV_CONFIGURATION, HCOv1Spec
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import label_nodes
 
@@ -64,24 +64,22 @@ def hco_cr_with_node_specific_mdev_permitted_hostdevices(
     with ResourceEditorValidateHCOReconcile(
         admin_client=admin_client,
         patches={
-            hyperconverged_resource_scope_class: {
-                "spec": {
-                    "permittedHostDevices": {
-                        "mediatedDevices": [
-                            {
-                                "externalResourceProvider": True,
-                                "mdevNameSelector": supported_gpu_device[MDEV_NAME_STR],
-                                "resourceName": supported_gpu_device[VGPU_DEVICE_NAME_STR],
-                            },
-                            {
-                                "externalResourceProvider": True,
-                                "mdevNameSelector": supported_gpu_device[MDEV_GRID_NAME_STR],
-                                "resourceName": supported_gpu_device[VGPU_GRID_NAME_STR],
-                            },
-                        ]
-                    },
+            hyperconverged_resource_scope_class: HCOv1Spec.virtualization(
+                permittedHostDevices={
+                    "mediatedDevices": [
+                        {
+                            "externalResourceProvider": True,
+                            "mdevNameSelector": supported_gpu_device[MDEV_NAME_STR],
+                            "resourceName": supported_gpu_device[VGPU_DEVICE_NAME_STR],
+                        },
+                        {
+                            "externalResourceProvider": True,
+                            "mdevNameSelector": supported_gpu_device[MDEV_GRID_NAME_STR],
+                            "resourceName": supported_gpu_device[VGPU_GRID_NAME_STR],
+                        },
+                    ]
                 }
-            }
+            )
         },
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,
@@ -100,7 +98,7 @@ def hco_with_disable_mdev_configuration(admin_client, hyperconverged_resource_sc
     """
     with ResourceEditorValidateHCOReconcile(
         admin_client=admin_client,
-        patches={hyperconverged_resource_scope_session: {"spec": {FEATURE_GATES: {DISABLE_MDEV_CONFIGURATION: True}}}},
+        patches={hyperconverged_resource_scope_session: HCOv1Spec.feature_gates(**{DISABLE_MDEV_CONFIGURATION: True})},
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,
     ):

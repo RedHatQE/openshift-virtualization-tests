@@ -22,6 +22,7 @@ from tests.virt.upgrade.utils import (
 from tests.virt.utils import get_boot_time_for_multiple_vms
 from utilities.artifactory import get_test_artifact_server_url
 from utilities.constants import Images
+from utilities.constants.hco import HCOv1Spec
 from utilities.constants.images import OS_FLAVOR_RHEL
 from utilities.constants.timeouts import (
     TIMEOUT_30MIN,
@@ -365,11 +366,9 @@ def parallel_live_migrations_increased(admin_client, hyperconverged_resource_sco
     with ResourceEditorValidateHCOReconcile(
         admin_client=admin_client,
         patches={
-            hyperconverged_resource_scope_session: {
-                "spec": {
-                    "liveMigrationConfig": {"parallelOutboundMigrationsPerNode": 5},
-                }
-            }
+            hyperconverged_resource_scope_session: HCOv1Spec.virtualization(
+                liveMigrationConfig={"parallelOutboundMigrationsPerNode": 5}
+            )
         },
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,

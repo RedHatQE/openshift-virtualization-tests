@@ -76,7 +76,7 @@ class TestLauncherUpdateNegative:
         wait_for_spec_change(
             expected=CUSTOM_WORKLOAD_UPDATE_STRATEGY,
             get_spec_func=lambda: get_hco_spec(admin_client=admin_client, hco_namespace=hco_namespace),
-            base_path=[WORKLOAD_UPDATE_STRATEGY_KEY_NAME],
+            base_path=["virtualization", WORKLOAD_UPDATE_STRATEGY_KEY_NAME],
         )
         wait_for_spec_change(
             expected=CUSTOM_WORKLOAD_UPDATE_STRATEGY,

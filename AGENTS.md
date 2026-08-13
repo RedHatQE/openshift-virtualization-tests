@@ -218,6 +218,51 @@ When reviewing quarantine PRs, verify the **quarantine mechanism matches the fai
 - **Use identity for None** - `if x is None:` NOT `if x == None:`
 - **NEVER compare to True/False** - `if flag:` NOT `if flag == True:`
 
+### HCO v1 API Usage (MANDATORY)
+
+All HCO spec patches and reads MUST use the v1 grouped API structure. Use `HCOv1Spec` builders from `utilities.constants.hco` to construct patches.
+
+**Available builders:**
+- `HCOv1Spec.virtualization(field=value)` — virtualization fields (live migration, CPU, etc.)
+- `HCOv1Spec.security(field=value)` — security fields (TLS profiles, etc.)
+- `HCOv1Spec.storage(field=value)` — storage fields
+- `HCOv1Spec.deployment(field=value)` — deployment fields
+- `HCOv1Spec.workload_sources(field=value)` — workload source fields
+- `HCOv1Spec.networking(field=value)` — networking fields
+- `HCOv1Spec.node_placements(infra=..., workload=...)` — node placement
+- `HCOv1Spec.vm_options(field=value)` — virtualMachineOptions
+- `HCOv1Spec.aaq_config(field=value)` — applicationAwareConfig
+
+**Rules:**
+
+1. **HCO spec patches MUST use v1 grouped structure** — use `HCOv1Spec` builders, NEVER construct raw nested dicts manually
+2. **Feature gates MUST use v1 list format** — use `HCOv1Spec.feature_gates(name=True/False)`, NEVER dict format `{"featureGates": {"name": true}}`
+3. **NEVER use v1beta1 flat spec paths** — `spec.liveMigrationConfig` is wrong, `spec.virtualization.liveMigrationConfig` is correct. See `HCOv1Spec` group builders in `utilities/constants/hco.py` for the complete mapping
+4. **FG state reads MUST use `HCOv1Spec.is_fg_enabled()`** with the `hco_fg_phases` fixture, not direct list searching. For deprecated FGs, read the dedicated spec field instead
+5. **`spec.workloads` is renamed to `workload` (singular)** in v1 under `spec.deployment.nodePlacements.workload`
+
+**Before (v1beta1 -- WRONG):**
+```python
+# Flat spec path -- WRONG
+patch = {"spec": {"liveMigrationConfig": {"parallelOutboundMigrationsPerNode": 5}}}
+hco_resource.update(resource_dict=patch)
+
+# Dict feature gate -- WRONG
+fg_patch = {"spec": {"featureGates": {"withHostPassthroughCPU": True}}}
+```
+
+**After (v1 -- CORRECT):**
+```python
+from utilities.constants.hco import HCOv1Spec
+
+# Grouped spec path
+patch = HCOv1Spec.virtualization(liveMigrationConfig={"parallelOutboundMigrationsPerNode": 5})
+hco_resource.update(resource_dict=patch)
+
+# List feature gate
+fg_patch = HCOv1Spec.feature_gates(withHostPassthroughCPU=True)
+```
+
 ### Tests Directory Organization
 
 - **Feature subdirectories REQUIRED** - each feature MUST have its own subdirectory under component (e.g., `tests/network/ipv6/`)

@@ -124,10 +124,12 @@ def hco_with_non_default_feature_gates(
     hyperconverged_resource_scope_function,
 ):
     new_fgs = request.param["fgs"]
-    hco_fgs = hyperconverged_resource_scope_function.instance.to_dict()["spec"]["featureGates"]
+    hco_fgs = list(hyperconverged_resource_scope_function.instance.to_dict()["spec"].get("featureGates", []))
+    existing_names = {fg["name"] for fg in hco_fgs}
 
-    for fg in new_fgs:
-        hco_fgs[fg] = True
+    for fg_name in new_fgs:
+        if fg_name not in existing_names:
+            hco_fgs.append({"name": fg_name})
     with ResourceEditorValidateHCOReconcile(
         admin_client=admin_client,
         patches={hyperconverged_resource_scope_function: {"spec": {"featureGates": hco_fgs}}},

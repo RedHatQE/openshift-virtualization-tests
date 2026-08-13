@@ -15,6 +15,7 @@ from tests.virt.node.gpu.constants import (
     NVIDIA_VFIO_MANAGER_DS,
 )
 from tests.virt.node.gpu.utils import wait_for_ds_ready
+from utilities.constants.hco import HCOv1Spec
 from utilities.constants.namespaces import NamespacesNames
 from utilities.constants.timeouts import (
     TIMEOUT_1MIN,
@@ -82,18 +83,16 @@ def hco_cr_with_permitted_hostdevices(admin_client, hyperconverged_resource_scop
     with ResourceEditorValidateHCOReconcile(
         admin_client=admin_client,
         patches={
-            hyperconverged_resource_scope_class: {
-                "spec": {
-                    "permittedHostDevices": {
-                        "pciHostDevices": [
-                            {
-                                "pciDeviceSelector": supported_gpu_device[DEVICE_ID_STR],
-                                "resourceName": supported_gpu_device[GPU_DEVICE_NAME_STR],
-                            }
-                        ]
-                    }
+            hyperconverged_resource_scope_class: HCOv1Spec.virtualization(
+                permittedHostDevices={
+                    "pciHostDevices": [
+                        {
+                            "pciDeviceSelector": supported_gpu_device[DEVICE_ID_STR],
+                            "resourceName": supported_gpu_device[GPU_DEVICE_NAME_STR],
+                        }
+                    ]
                 }
-            }
+            )
         },
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,

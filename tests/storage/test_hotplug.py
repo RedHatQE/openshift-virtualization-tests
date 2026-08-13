@@ -15,6 +15,7 @@ from ocp_resources.storage_profile import StorageProfile
 
 from tests.storage.utils import assert_disk_bus
 from tests.utils import create_windows2022_vm_with_data_volume_template
+from utilities.constants.hco import HCOv1Spec
 from utilities.constants.storage import HOTPLUG_DISK_SCSI_BUS, HOTPLUG_DISK_SERIAL, HOTPLUG_DISK_VIRTIO_BUS
 from utilities.constants.virt import WIN_2K22
 from utilities.hco import ResourceEditorValidateHCOReconcile
@@ -55,7 +56,7 @@ def enabled_feature_gate_for_declarative_hotplug_volumes(
     with ResourceEditorValidateHCOReconcile(
         admin_client=admin_client,
         patches={
-            hyperconverged_resource_scope_module: {"spec": {"featureGates": {"declarativeHotplugVolumes": True}}},
+            hyperconverged_resource_scope_module: HCOv1Spec.feature_gates(declarativeHotplugVolumes=True),
         },
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,

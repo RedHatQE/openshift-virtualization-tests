@@ -25,7 +25,7 @@ from tests.virt.node.gpu.constants import (
     VGPU_PRETTY_NAME_STR,
 )
 from utilities.artifactory import get_test_artifact_server_url
-from utilities.constants.hco import DEFAULT_HCO_CONDITIONS
+from utilities.constants.hco import DEFAULT_HCO_CONDITIONS, HCOv1Spec
 from utilities.constants.images import OS_FLAVOR_WINDOWS
 from utilities.constants.os_matrix import DATA_SOURCE_STR
 from utilities.constants.timeouts import (
@@ -250,19 +250,17 @@ def patch_hco_cr_with_mdev_permitted_hostdevices(admin_client, hyperconverged_re
     with ResourceEditorValidateHCOReconcile(
         admin_client=admin_client,
         patches={
-            hyperconverged_resource: {
-                "spec": {
-                    "permittedHostDevices": {
-                        "mediatedDevices": [
-                            {
-                                "externalResourceProvider": True,
-                                "mdevNameSelector": supported_gpu_device[MDEV_NAME_STR],
-                                "resourceName": supported_gpu_device[VGPU_DEVICE_NAME_STR],
-                            }
-                        ]
-                    },
+            hyperconverged_resource: HCOv1Spec.virtualization(
+                permittedHostDevices={
+                    "mediatedDevices": [
+                        {
+                            "externalResourceProvider": True,
+                            "mdevNameSelector": supported_gpu_device[MDEV_NAME_STR],
+                            "resourceName": supported_gpu_device[VGPU_DEVICE_NAME_STR],
+                        }
+                    ]
                 }
-            }
+            )
         },
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,

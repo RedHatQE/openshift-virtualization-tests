@@ -7,6 +7,8 @@ Not here:
 - HCO-managed component deployment/pod name strings → ``components.py``
 """
 
+from typing import Any
+
 from ocp_resources.aaq import AAQ
 from ocp_resources.cdi import CDI
 from ocp_resources.data_import_cron import DataImportCron
@@ -48,6 +50,86 @@ class UpgradeStreams:
     X_STREAM = "x-stream"
     Y_STREAM = "y-stream"
     Z_STREAM = "z-stream"
+
+
+class _SpecGroup:
+    def __init__(self, path: str | tuple[str, ...]) -> None:
+        self._path = (path,) if isinstance(path, str) else path
+
+    def __call__(self, **fields: Any) -> dict:
+        result: dict = fields
+        for key in reversed(self._path):
+            result = {key: result}
+        return {"spec": result}
+
+    def read(self, spec: dict, default: Any = None) -> Any:
+        """Navigate a v1 HCO spec dict to read this group's content."""
+        current = spec
+        for key in self._path:
+            if not isinstance(current, dict):
+                return default
+            current = current.get(key, default)
+        return current
+
+
+class HCOv1Spec:
+    """HCO v1 API spec patch builders and feature gate helpers."""
+
+    virtualization = _SpecGroup(path="virtualization")
+    security = _SpecGroup(path="security")
+    storage = _SpecGroup(path="storage")
+    deployment = _SpecGroup(path="deployment")
+    workload_sources = _SpecGroup(path="workloadSources")
+    networking = _SpecGroup(path="networking")
+    node_placements = _SpecGroup(path=("deployment", "nodePlacements"))
+    vm_options = _SpecGroup(path=("virtualization", "virtualMachineOptions"))
+    aaq_config = _SpecGroup(path=("deployment", "applicationAwareConfig"))
+
+    @staticmethod
+    def feature_gates(**gates: bool) -> dict:
+        """Build a v1 featureGates spec patch.
+
+        Args:
+            **gates: Feature gate names mapped to enabled (True) or disabled (False).
+
+        Returns:
+            Patch dict with v1 list format at spec.featureGates.
+        """
+        fg_list = []
+        for name, enabled in gates.items():
+            entry: dict[str, str] = {"name": name}
+            if not enabled:
+                entry["state"] = "Disabled"
+            fg_list.append(entry)
+        return {"spec": {"featureGates": fg_list}}
+
+    @staticmethod
+    def is_fg_enabled(
+        feature_gates: list[dict[str, str]],
+        name: str,
+        fg_phases: dict[str, str],
+    ) -> bool:
+        """Check if a feature gate is effectively enabled.
+
+        In v1, FGs at their phase default are absent from the spec.featureGates list.
+        Uses fg_phases to determine the default when absent:
+        beta = enabled by default, alpha/deprecated = disabled by default.
+
+        Args:
+            feature_gates: The spec.featureGates list from the HCO CR.
+            name: Feature gate name.
+            fg_phases: Phase mapping from parse_hco_fg_phases().
+
+        Returns:
+            True if the feature gate is effectively enabled, False otherwise.
+
+        Raises:
+            KeyError: If name is not in fg_phases (unknown feature gate).
+        """
+        for fg in feature_gates:
+            if fg["name"] == name:
+                return fg.get("state", "Enabled") == "Enabled"
+        return fg_phases[name] == "beta"
 
 
 TLS_OLD_POLICY = "old"

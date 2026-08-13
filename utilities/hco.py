@@ -1,11 +1,13 @@
 import json
 import logging
+import re
 from collections.abc import Collection, Iterator
 from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
 from kubernetes.dynamic.exceptions import NotFoundError, ResourceNotFoundError
 from ocp_resources.cdi import CDI
+from ocp_resources.custom_resource_definition import CustomResourceDefinition
 from ocp_resources.data_source import DataSource
 from ocp_resources.hyperconverged import HyperConverged
 from ocp_resources.kubevirt import KubeVirt
@@ -24,6 +26,7 @@ from utilities.constants.hco import (
     HCO_SUBSCRIPTION,
     IMAGE_CRON_STR,
     SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
+    HCOv1Spec,
 )
 from utilities.constants.storage import StorageClassNames
 from utilities.constants.timeouts import (
@@ -66,6 +69,43 @@ HCO_JSONPATCH_ANNOTATION_COMPONENT_DICT = {
         "api_group_prefix": "ssp",
     },
 }
+
+
+_FG_PHASE_RE = re.compile(r"\*\s+(\w+):\s.*?Phase:\s+(\w+)", re.DOTALL)
+
+
+def parse_hco_fg_phases(admin_client: DynamicClient) -> dict[str, str]:
+    """Parse feature gate phases from the HCO v1 CRD schema on the cluster.
+
+    Returns:
+        Mapping of feature gate name to phase ("alpha", "beta", "deprecated").
+
+    Raises:
+        ValueError: If v1 schema is not found or the description format changed.
+    """
+    crd = CustomResourceDefinition(
+        client=admin_client,
+        name="hyperconvergeds.hco.kubevirt.io",
+    )
+    crd_dict = crd.instance.to_dict()
+    v1_version = next(
+        (v for v in crd_dict["spec"]["versions"] if v["name"] == "v1"),
+        None,
+    )
+    if not v1_version:
+        raise ValueError("HCO CRD does not have a v1 version")
+
+    fg_description = v1_version["schema"]["openAPIV3Schema"]["properties"]["spec"]["properties"]["featureGates"].get(
+        "description", ""
+    )
+    phases = dict(_FG_PHASE_RE.findall(fg_description))
+    if not phases:
+        raise ValueError(
+            f"Failed to parse FG phases from HCO CRD — format may have changed. "
+            f"Description starts with: {fg_description[:200]!r}"
+        )
+    LOGGER.info(f"Parsed {len(phases)} feature gate phases from HCO CRD: {phases}")
+    return phases
 
 
 class ResourceEditorValidateHCOReconcile(ResourceEditor):
@@ -197,17 +237,17 @@ def apply_np_changes(
     workloads_placement=None,
     exclude_deployments=None,
 ):
-    current_infra = hco.instance.to_dict()["spec"].get("infra")
-    current_workloads = hco.instance.to_dict()["spec"].get("workloads")
+    spec = hco.instance.to_dict()["spec"]
+    node_placements = HCOv1Spec.node_placements.read(spec=spec, default={})
+    current_infra = node_placements.get("infra")
+    current_workloads = node_placements.get("workload")
     target_infra = infra_placement if infra_placement is not None else current_infra
     target_workloads = workloads_placement if workloads_placement is not None else current_workloads
     if target_workloads != current_workloads or target_infra != current_infra:
-        patch = {
-            "spec": {
-                "infra": target_infra or None,
-                "workloads": target_workloads or None,
-            },
-        }
+        patch = HCOv1Spec.node_placements(
+            infra=target_infra or None,
+            workload=target_workloads or None,
+        )
         LOGGER.info(f"Updating HCO with node placement. {patch}")
         editor = ResourceEditor(patches={hco: patch})
         editor.update(backup_resources=False)
@@ -368,7 +408,8 @@ def disable_common_boot_image_import_hco_spec(
     golden_images_data_import_crons: list[DataImportCron],
     exclude_data_source_names: Collection[str] | None = None,
 ) -> Iterator[None]:
-    if hco_resource.instance.spec[ENABLE_COMMON_BOOT_IMAGE_IMPORT]:
+    spec = hco_resource.instance.to_dict()["spec"]
+    if HCOv1Spec.workload_sources.read(spec=spec, default={}).get(ENABLE_COMMON_BOOT_IMAGE_IMPORT, True):
         update_common_boot_image_import_spec(
             hco_resource=hco_resource,
             enable=False,
@@ -415,7 +456,12 @@ def update_common_boot_image_import_spec(hco_resource, enable):
             for sample in TimeoutSampler(
                 wait_timeout=TIMEOUT_2MIN,
                 sleep=5,
-                func=lambda: _hco_resource.instance.spec[ENABLE_COMMON_BOOT_IMAGE_IMPORT] == _enable,
+                func=lambda: (
+                    HCOv1Spec.workload_sources.read(spec=_hco_resource.instance.to_dict()["spec"], default={}).get(
+                        ENABLE_COMMON_BOOT_IMAGE_IMPORT
+                    )
+                    == _enable
+                ),
             ):
                 if sample:
                     return
@@ -423,8 +469,9 @@ def update_common_boot_image_import_spec(hco_resource, enable):
             LOGGER.error(f"{ENABLE_COMMON_BOOT_IMAGE_IMPORT} was not updated to {_enable}")
             raise
 
+    patch = HCOv1Spec.workload_sources(**{ENABLE_COMMON_BOOT_IMAGE_IMPORT: enable})
     editor = ResourceEditor(
-        patches={hco_resource: {"spec": {ENABLE_COMMON_BOOT_IMAGE_IMPORT: enable}}},
+        patches={hco_resource: patch},
     )
     editor.update(backup_resources=True)
     _wait_for_spec_update(_hco_resource=hco_resource, _enable=enable)
@@ -552,7 +599,11 @@ def update_hco_templates_spec(
 ):
     with ResourceEditorValidateHCOReconcile(
         admin_client=admin_client,
-        patches={hyperconverged_resource: {"spec": {SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME: [updated_template]}}},
+        patches={
+            hyperconverged_resource: HCOv1Spec.workload_sources(**{
+                SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME: [updated_template]
+            })
+        },
         list_resource_reconcile=[SSP, CDI],
         wait_for_reconcile_post_update=True,
     ):
@@ -570,11 +621,10 @@ def update_hco_templates_spec(
 
 @contextmanager
 def enabled_aaq_in_hco(client, hco_namespace, hyperconverged_resource, enable_acrq_support=False):
-    patches = {hyperconverged_resource: {"spec": {"enableApplicationAwareQuota": True}}}
+    aaq_config = {"enable": True}
     if enable_acrq_support:
-        patches[hyperconverged_resource]["spec"]["applicationAwareConfig"] = {
-            "allowApplicationAwareClusterResourceQuota": True,
-        }
+        aaq_config["allowApplicationAwareClusterResourceQuota"] = True
+    patches = {hyperconverged_resource: HCOv1Spec.aaq_config(**aaq_config)}
 
     with ResourceEditorValidateHCOReconcile(
         patches=patches,
