@@ -65,10 +65,6 @@ from utilities.pytest_utils import (
     stop_if_run_in_progress,
 )
 
-pytest_plugins = [
-    "tests.fixtures.images.validation_os_images",
-]
-
 LOGGER = logging.getLogger(__name__)
 BASIC_LOGGER = logging.getLogger("basic")
 
