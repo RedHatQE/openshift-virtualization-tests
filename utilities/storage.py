@@ -34,6 +34,7 @@ import utilities.artifactory
 import utilities.infra
 import utilities.virt as virt_util
 from utilities import console
+from utilities.architecture import get_multiarch_cpu_arch
 from utilities.artifactory import get_test_artifact_server_url
 from utilities.constants import (
     BIND_IMMEDIATE_ANNOTATION,
@@ -134,7 +135,10 @@ def construct_datavolume_source_dict(
             validate_file_exists_in_url(url=url)
         source_spec: dict[str, Any] = {"http": {"url": url}}
     elif source == "registry":
-        source_spec = {"registry": {"url": url}}
+        registry_spec: dict[str, Any] = {"url": url}
+        if cpu_arch := get_multiarch_cpu_arch():
+            registry_spec["platform"] = {"architecture": cpu_arch}
+        source_spec = {"registry": registry_spec}
     elif source == "pvc":
         pvc_spec: dict[str, Any] = {"name": source_pvc_name}
         if source_pvc_namespace is not None:
