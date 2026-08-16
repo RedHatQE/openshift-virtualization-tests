@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING
 
 import pytest
 from ocp_resources.datavolume import DataVolume
-from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.storage_profile import StorageProfile
 
 from tests.storage.constants import BLANK_DV_SIZE, NUM_HOTPLUG_DISKS
@@ -19,7 +18,6 @@ from tests.storage.utils import assert_disk_bus, expected_hotplug_serials
 from tests.utils import create_windows2022_vm_with_data_volume_template
 from utilities.constants.storage import HOTPLUG_DISK_SCSI_BUS, HOTPLUG_DISK_SERIAL, HOTPLUG_DISK_VIRTIO_BUS
 from utilities.constants.virt import WIN_2K22
-from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.storage import (
     assert_disk_serial,
     assert_hotplugvolume_nonexist,
@@ -41,7 +39,6 @@ if TYPE_CHECKING:
 LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
-    pytest.mark.usefixtures("enabled_feature_gate_for_declarative_hotplug_volumes"),
     pytest.mark.post_upgrade,
 ]
 
@@ -51,22 +48,6 @@ def is_dv_migratable(dv: DataVolume, client: DynamicClient) -> bool:
         StorageProfile(name=dv.storage_class, client=client).first_claim_property_set_access_modes()[0]
         == DataVolume.AccessMode.RWX
     )
-
-
-@pytest.fixture(scope="module")
-def enabled_feature_gate_for_declarative_hotplug_volumes(
-    admin_client,
-    hyperconverged_resource_scope_module,
-):
-    with ResourceEditorValidateHCOReconcile(
-        admin_client=admin_client,
-        patches={
-            hyperconverged_resource_scope_module: {"spec": {"featureGates": {"declarativeHotplugVolumes": True}}},
-        },
-        list_resource_reconcile=[KubeVirt],
-        wait_for_reconcile_post_update=True,
-    ):
-        yield
 
 
 @pytest.fixture(scope="class")

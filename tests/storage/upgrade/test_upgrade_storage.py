@@ -107,7 +107,6 @@ class TestUpgradeStorage:
     def test_vm_with_hotplug_before_upgrade(
         self,
         skip_if_config_default_storage_class_access_mode_rwo,
-        enabled_feature_gate_for_declarative_hotplug_volumes_upg,
         upgrade_namespace_scope_session,
         blank_disk_dv_with_default_sc,
         fedora_vm_for_hotplug_upg,
