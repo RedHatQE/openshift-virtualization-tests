@@ -72,7 +72,9 @@ def updated_templates_rhel9_data_import_cron(
             namespace=golden_images_namespace.name,
             client=admin_client,
         ).clean_up()
-        wait_for_succeeded_dv(namespace=golden_images_namespace.name, dv_name=rhel9_boot_source_name)
+        wait_for_succeeded_dv(
+            namespace=golden_images_namespace.name, dv_name=rhel9_boot_source_name, client=admin_client
+        )
         wait_for_auto_boot_config_stabilization(admin_client=admin_client, hco_namespace=hco_namespace)
 
 
@@ -117,15 +119,18 @@ def rhel9_boot_source_name(rhel9_data_source_scope_session):
 
 @pytest.fixture(scope="module")
 def rhel9_cached_snapshot(
+    admin_client,
     rhel9_boot_source_name,
     golden_images_namespace,
     updated_rhel9_boot_source,
 ):
     # wait for the snapshot to be created
     rhel9_volume_snapshot = wait_for_volume_snapshot_ready_to_use(
-        namespace=golden_images_namespace.name, name=rhel9_boot_source_name
+        namespace=golden_images_namespace.name, name=rhel9_boot_source_name, client=admin_client
     )
-    verify_dv_and_pvc_does_not_exist(name=rhel9_boot_source_name, namespace=golden_images_namespace.name)
+    verify_dv_and_pvc_does_not_exist(
+        name=rhel9_boot_source_name, namespace=golden_images_namespace.name, client=admin_client
+    )
     yield rhel9_volume_snapshot
 
 

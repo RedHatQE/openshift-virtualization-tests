@@ -47,8 +47,8 @@ def wait_for_upload_response_code(token, data, response_code, asynchronous=False
 
 @pytest.mark.polarion("CNV-2318")
 @pytest.mark.s390x
-def test_cdi_uploadproxy_route_owner_references(hco_namespace):
-    route = Route(name=CDI_UPLOADPROXY, namespace=hco_namespace.name)
+def test_cdi_uploadproxy_route_owner_references(admin_client, hco_namespace):
+    route = Route(name=CDI_UPLOADPROXY, namespace=hco_namespace.name, client=admin_client)
     assert route.instance
     assert route.instance["metadata"]["ownerReferences"][0]["name"] == "cdi-deployment"
     assert route.instance["metadata"]["ownerReferences"][0]["kind"] == "Deployment"
@@ -295,6 +295,7 @@ def _upload_image(dv_name, namespace, storage_class, local_name, client):
     indirect=True,
 )
 def test_successful_concurrent_uploads(
+    admin_client,
     unprivileged_client,
     upload_file_path,
     namespace,
@@ -302,7 +303,7 @@ def test_successful_concurrent_uploads(
 ):
     dvs_processes = []
     storage_class = [*storage_class_matrix__module__][0]
-    available_pv = PersistentVolume(name=namespace).max_available_pvs
+    available_pv = PersistentVolume(name=namespace, client=admin_client).max_available_pvs
     for dv in range(available_pv):
         dv_process = multiprocessing.Process(
             target=_upload_image,

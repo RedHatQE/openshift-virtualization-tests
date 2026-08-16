@@ -57,7 +57,9 @@ def blank_dv_wffc_scope_function(request, unprivileged_client, namespace, wffc_s
 
 
 @pytest.fixture()
-def blank_dv_template_wffc_scope_function(request, namespace, wffc_storage_class_name_scope_module):
+def blank_dv_template_wffc_scope_function(
+    request, unprivileged_client, namespace, wffc_storage_class_name_scope_module
+):
     blank_dv_template = DataVolume(
         name=f"dv-{request.param['dv_name']}",
         namespace=namespace.name,
@@ -65,6 +67,7 @@ def blank_dv_template_wffc_scope_function(request, namespace, wffc_storage_class
         size=DEFAULT_BLANK_DV_SIZE,
         storage_class=wffc_storage_class_name_scope_module,
         api_name="storage",
+        client=unprivileged_client,
     )
     blank_dv_template.to_dict()
     return blank_dv_template.res

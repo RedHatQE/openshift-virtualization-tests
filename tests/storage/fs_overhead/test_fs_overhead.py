@@ -86,15 +86,15 @@ def uploaded_cirros_dv(
         volume_mode=DataVolume.VolumeMode.FILE,
         insecure=True,
     ):
-        yield DataVolume(name=dv_name, namespace=namespace.name)
+        yield DataVolume(name=dv_name, namespace=namespace.name, client=namespace.client)
 
 
 @pytest.mark.polarion("CNV-8635")
-def test_import_vm_with_specify_fs_overhead(updated_fs_overhead_20_with_hco, vm_for_fs_overhead_test):
+def test_import_vm_with_specify_fs_overhead(admin_client, updated_fs_overhead_20_with_hco, vm_for_fs_overhead_test):
     vm_metadata = vm_for_fs_overhead_test.data_volume_template["metadata"]
     assert_fs_overhead_added(
         actual_size=get_pvc_size_gib(
-            pvc=PersistentVolumeClaim(name=vm_metadata["name"], namespace=vm_metadata["namespace"])
+            pvc=PersistentVolumeClaim(name=vm_metadata["name"], namespace=vm_metadata["namespace"], client=admin_client)
         ),
         requested_size=bitmath.GiB(
             int(

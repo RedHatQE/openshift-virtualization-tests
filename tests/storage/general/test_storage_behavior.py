@@ -49,7 +49,7 @@ def test_pvc_recreates_after_deletion(fedora_data_volume, namespace, storage_cla
     pvc.delete()
     wait_for_pvc_recreate(pvc=pvc, pvc_creation_timestamp=pvc_original_timestamp)
     if sc_volume_binding_mode_is_wffc(sc=storage_class_name_scope_function, client=namespace.client):
-        create_dummy_first_consumer_pod(pvc=pvc)
+        create_dummy_first_consumer_pod(client=namespace.client, pvc=pvc)
     fedora_data_volume.wait_for_dv_success()
 
 

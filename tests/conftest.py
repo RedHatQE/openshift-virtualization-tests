@@ -1272,9 +1272,9 @@ def available_storage_classes_names():
 
 
 @pytest.fixture(scope="session")
-def storage_class_with_filesystem_volume_mode(available_storage_classes_names):
+def storage_class_with_filesystem_volume_mode(admin_client, available_storage_classes_names):
     yield get_storage_class_with_specified_volume_mode(
-        volume_mode=DataVolume.VolumeMode.FILE, sc_names=available_storage_classes_names
+        volume_mode=DataVolume.VolumeMode.FILE, sc_names=available_storage_classes_names, client=admin_client
     )
 
 
@@ -1285,10 +1285,11 @@ def skip_test_if_no_block_sc(storage_class_with_block_volume_mode):
 
 
 @pytest.fixture(scope="session")
-def storage_class_with_block_volume_mode(available_storage_classes_names):
+def storage_class_with_block_volume_mode(admin_client, available_storage_classes_names):
     yield get_storage_class_with_specified_volume_mode(
         volume_mode=DataVolume.VolumeMode.BLOCK,
         sc_names=available_storage_classes_names,
+        client=admin_client,
     )
 
 

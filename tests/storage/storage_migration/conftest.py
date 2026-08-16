@@ -126,8 +126,8 @@ def vm_for_storage_class_migration_with_instance_type(
         namespace=namespace.name,
         client=unprivileged_client,
         os_flavor=OS_FLAVOR_FEDORA,
-        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL),
-        vm_preference=VirtualMachineClusterPreference(name=OS_FLAVOR_FEDORA),
+        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL, client=unprivileged_client),
+        vm_preference=VirtualMachineClusterPreference(name=OS_FLAVOR_FEDORA, client=unprivileged_client),
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=golden_images_fedora_data_source,
             storage_class=source_storage_class,
@@ -180,6 +180,7 @@ def vm_for_storage_class_migration_from_template_with_dv(
         size=Images.Rhel.DEFAULT_DV_SIZE,
         storage_class=source_storage_class,
         api_name="storage",
+        client=unprivileged_client,
     )
     dv.to_dict()
     with VirtualMachineForTests(

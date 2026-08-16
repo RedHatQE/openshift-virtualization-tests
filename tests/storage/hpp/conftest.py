@@ -122,11 +122,13 @@ def cirros_pvc_on_hpp(cirros_vm_for_node_placement_tests):
     return PersistentVolumeClaim(
         namespace=cirros_vm_for_node_placement_tests.namespace,
         name=cirros_vm_for_node_placement_tests.data_volume_template["metadata"]["name"],
+        client=cirros_vm_for_node_placement_tests.client,
     )
 
 
 @pytest.fixture()
-def cirros_pv_on_hpp(cirros_pvc_on_hpp):
+def cirros_pv_on_hpp(admin_client, cirros_pvc_on_hpp):
     return PersistentVolume(
         name=cirros_pvc_on_hpp.instance.spec.volumeName,
+        client=admin_client,
     )
