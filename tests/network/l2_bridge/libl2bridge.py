@@ -9,6 +9,8 @@ from typing import Final, cast
 from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.client import ResourceField
 from ocp_resources.resource import ResourceEditor
+from ocp_utilities.exceptions import CommandExecFailed
+from pexpect.exceptions import EOF
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 
 from libs.net.ip import random_ipv4_address
@@ -275,12 +277,14 @@ def hot_plug_interface_and_set_address(
 
 @retry(
     wait_timeout=120,
-    sleep=5,
+    sleep=10,
     exceptions_dict={
         VMInterfaceStatusNotFoundError: [],
         GuestInterfaceNotFoundError: [],
         json.JSONDecodeError: [],
         IndexError: [],
+        CommandExecFailed: [],
+        EOF: [],
     },
 )
 def _lookup_hotplugged_iface_via_console(
