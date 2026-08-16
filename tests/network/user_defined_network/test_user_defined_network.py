@@ -8,6 +8,7 @@ from ocp_resources.utils.constants import TIMEOUT_1MINUTE
 
 from libs.net.traffic_generator import is_tcp_connection
 from libs.net.vmspec import lookup_iface_status_ip, lookup_primary_network
+from tests.network.user_defined_network.libudn import lookup_default_pod_ip
 from utilities.constants.networking import PUBLIC_DNS_SERVER_IP
 from utilities.constants.pytest import QUARANTINED
 from utilities.constants.timeouts import TIMEOUT_1MIN
@@ -79,3 +80,9 @@ class TestPrimaryUdn:
     ):
         migrate_vm_and_verify(vm=server.vm, client=admin_client)
         assert is_tcp_connection(server=server, client=client)
+
+    @pytest.mark.polarion("CNV-11432")
+    def test_vm_to_pod_connectivity_on_udn(self, vma_udn, udn_pod):
+        """Jira: https://redhat.atlassian.net/browse/CNV-51404 # <skip-jira-utils-check>"""
+        pod_ip = lookup_default_pod_ip(pod=udn_pod)
+        vma_udn.console(commands=[f"ping -c 3 {pod_ip}"], timeout=TIMEOUT_1MIN)
