@@ -8,6 +8,7 @@ from ocp_resources.data_import_cron import DataImportCron
 from ocp_resources.data_source import DataSource
 from ocp_resources.image_stream import ImageStream
 from ocp_resources.resource import Resource
+from utilities.constants.timeouts import TIMEOUT_10MIN
 
 from tests.install_upgrade_operators.constants import CUSTOM_DATASOURCE_NAME
 from utilities.constants import (
@@ -15,7 +16,6 @@ from utilities.constants import (
     SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
     WILDCARD_CRON_EXPRESSION,
 )
-from utilities.constants.timeouts import TIMEOUT_10MIN
 
 HCO_CR_DATA_IMPORT_SCHEDULE_KEY = "dataImportSchedule"
 RE_NAMED_GROUP_MINUTES = "minutes"

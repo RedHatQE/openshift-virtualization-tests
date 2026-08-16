@@ -5,6 +5,8 @@ from ocp_resources.cdi import CDI
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.network_addons_config import NetworkAddonsConfig
 from ocp_resources.ssp import SSP
+from utilities.constants.cluster import KUBERNETES_ARCH_LABEL
+from utilities.constants.hco import FEATURE_GATES
 
 from tests.install_upgrade_operators.constants import (
     ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT,
@@ -15,8 +17,6 @@ from tests.install_upgrade_operators.hco_enablement_golden_image_updates.multiar
     CUSTOM_MULTIARCH_DATASOURCE_NAME,
     MULTIARCH_MANAGED_CRS,
 )
-from utilities.constants.cluster import KUBERNETES_ARCH_LABEL
-from utilities.constants.hco import FEATURE_GATES
 from utilities.hco import ResourceEditorValidateHCOReconcile, update_hco_templates_spec
 from utilities.virt import get_hyperconverged_kubevirt
 
