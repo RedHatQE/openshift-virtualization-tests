@@ -35,7 +35,7 @@ jobs:
 
     steps:
       - name: Checkout retry script
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
           sparse-checkout: |
@@ -45,7 +45,7 @@ jobs:
           sparse-checkout-cone-mode: false
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v8.3.2
+        uses: astral-sh/setup-uv@v10.0.1
 
       - name: Install myk-pi-tools
         run: pipx install "myk-pi-tools==4.2.1"
