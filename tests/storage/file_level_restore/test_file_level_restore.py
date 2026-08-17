@@ -35,13 +35,13 @@ class TestFileRestoreBackupVendorWorkflow:
         Steps:
             1. Create VMFileRestore referencing the target VM and backup PVC, and the deleted file's path
             2. Wait for VMFileRestore to reach Succeeded phase
-            3. Check the restore resource's reported status
+            3. Review the restore operation status for transferred file accounting and error reporting
             4. Compare restored file content against original content
             5. Check the namespace for any temporary resources left over from the restore operation
 
         Expected:
             - Restored file content equals the original recorded content
-            - The restore operation reports successful completion
+            - The restore status reports a restored-file count equal to the number of files requested for restore
             - Temporary resources created during the restore operation are cleaned up upon completion
         """
 
