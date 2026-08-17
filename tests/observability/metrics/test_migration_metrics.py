@@ -10,7 +10,6 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_VMI_MIGRATION_DATA_PROCESSED_BYTES,
     KUBEVIRT_VMI_MIGRATION_DATA_REMAINING_BYTES,
     KUBEVIRT_VMI_MIGRATION_DIRTY_MEMORY_RATE_BYTES,
-    KUBEVIRT_VMI_MIGRATION_MEMORY_TRANSFER_RATE_BYTES,
 )
 from tests.observability.metrics.utils import (
     get_metric_sum_value,
@@ -19,7 +18,6 @@ from tests.observability.metrics.utils import (
 )
 from tests.observability.utils import validate_metrics_value
 from utilities.constants import MIGRATION_POLICY_VM_LABEL, TIMEOUT_2MIN, TIMEOUT_3MIN, TIMEOUT_5MIN
-from utilities.infra import is_jira_open
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 
@@ -183,10 +181,6 @@ class TestKubevirtVmiMigrationMetrics:
                 marks=(pytest.mark.polarion("CNV-11600")),
             ),
             pytest.param(
-                KUBEVIRT_VMI_MIGRATION_MEMORY_TRANSFER_RATE_BYTES,
-                marks=(pytest.mark.polarion("CNV-11598")),
-            ),
-            pytest.param(
                 KUBEVIRT_VMI_MIGRATION_DIRTY_MEMORY_RATE_BYTES,
                 marks=(pytest.mark.polarion("CNV-11599")),
             ),
@@ -202,8 +196,6 @@ class TestKubevirtVmiMigrationMetrics:
         vm_migration_metrics_vmim_scope_function,
         query,
     ):
-        if query == KUBEVIRT_VMI_MIGRATION_MEMORY_TRANSFER_RATE_BYTES and is_jira_open(jira_id="CNV-84901"):
-            pytest.xfail(f"CNV-84901: metric {query} not triggered")
         wait_for_non_empty_metrics_value(
             prometheus=prometheus,
             metric_name=query.format(vm_name=vm_for_migration_metrics_test.name),
