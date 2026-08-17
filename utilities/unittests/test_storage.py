@@ -107,8 +107,8 @@ class TestConstructDatavolumeSourceDictRegistry:
             }
         }
 
-    @patch.dict("utilities.storage.py_config", {"cpu_arch": "arm64", "cluster_type": "multiarch"})
-    def test_registry_source_multiarch_with_cpu_arch(self):
+    @patch("utilities.storage.get_multiarch_cpu_arch", return_value="arm64")
+    def test_registry_source_multiarch_with_cpu_arch(self, _mock_get_arch):
         result = construct_datavolume_source_dict(source="registry", url="docker://registry.example.com/image:latest")
         assert result == {
             "registry": {
@@ -117,14 +117,8 @@ class TestConstructDatavolumeSourceDictRegistry:
             }
         }
 
-    @patch.dict("utilities.storage.py_config", {"cpu_arch": "arm64", "cluster_type": "standard"})
-    def test_registry_source_non_multiarch_no_platform(self):
-        result = construct_datavolume_source_dict(source="registry", url="docker://registry.example.com/image:latest")
-        assert result == {"registry": {"url": "docker://registry.example.com/image:latest"}}
-        assert "platform" not in result["registry"]
-
-    @patch.dict("utilities.storage.py_config", {"cluster_type": "multiarch"})
-    def test_registry_source_multiarch_no_cpu_arch_no_platform(self):
+    @patch("utilities.storage.get_multiarch_cpu_arch", return_value=None)
+    def test_registry_source_non_multiarch_no_platform(self, _mock_get_arch):
         result = construct_datavolume_source_dict(source="registry", url="docker://registry.example.com/image:latest")
         assert result == {"registry": {"url": "docker://registry.example.com/image:latest"}}
         assert "platform" not in result["registry"]

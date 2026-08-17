@@ -59,6 +59,7 @@ def test_migration_storm_linux_vms(
     ],
     indirect=True,
 )
+@pytest.mark.windows
 def test_migration_storm_windows_vms(
     admin_client: DynamicClient, windows_vms_with_pids: dict[str, dict[str, VirtualMachineForTests]]
 ):

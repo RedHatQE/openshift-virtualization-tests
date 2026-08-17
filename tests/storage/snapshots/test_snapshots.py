@@ -442,6 +442,8 @@ def test_fail_to_snapshot_with_unprivileged_client_dv_permissions(
 
 
 @pytest.mark.tier3
+@pytest.mark.conformance
+@pytest.mark.windows
 @pytest.mark.parametrize(
     "windows_vm_with_vtpm_for_snapshot",
     [
@@ -462,6 +464,7 @@ def test_online_windows_vm_successful_restore(
         namespace=windows_vm_with_vtpm_for_snapshot.namespace,
         vm_name=windows_vm_with_vtpm_for_snapshot.name,
         snapshot_name=windows_snapshot.name,
+        client=windows_vm_with_vtpm_for_snapshot.client,
     ) as restore:
         start_windows_vm_after_restore(vm_restore=restore, windows_vm=windows_vm_with_vtpm_for_snapshot)
         assert_windows_directory_existence(
@@ -472,6 +475,8 @@ def test_online_windows_vm_successful_restore(
 
 
 @pytest.mark.tier3
+@pytest.mark.conformance
+@pytest.mark.windows
 @pytest.mark.parametrize(
     "windows_vm_with_vtpm_for_snapshot",
     [
@@ -492,5 +497,6 @@ def test_write_to_file_while_snapshot(
         namespace=windows_vm_with_vtpm_for_snapshot.namespace,
         vm_name=windows_vm_with_vtpm_for_snapshot.name,
         snapshot_name=windows_snapshot.name,
+        client=windows_vm_with_vtpm_for_snapshot.client,
     ) as restore:
         start_windows_vm_after_restore(vm_restore=restore, windows_vm=windows_vm_with_vtpm_for_snapshot)

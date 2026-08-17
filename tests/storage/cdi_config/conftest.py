@@ -10,13 +10,16 @@ from utilities.storage import cdi_feature_gate_list_with_added_feature
 
 
 @pytest.fixture()
-def cdi_with_extra_non_existent_feature_gate(cdi):
+def cdi_with_extra_non_existent_feature_gate(admin_client, cdi):
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={
             cdi: {
                 "spec": {
                     "config": {
-                        "featureGates": cdi_feature_gate_list_with_added_feature(feature="ExtraNonExistentFeature")
+                        "featureGates": cdi_feature_gate_list_with_added_feature(
+                            feature="ExtraNonExistentFeature", client=admin_client
+                        )
                     }
                 },
             },

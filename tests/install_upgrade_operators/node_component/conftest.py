@@ -2,6 +2,9 @@ import logging
 
 import pytest
 from ocp_resources.node import Node
+from ocp_utilities.exceptions import NodesNotHealthyConditionError
+from ocp_utilities.infra import assert_nodes_in_healthy_condition
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.install_upgrade_operators.node_component.utils import (
     SELECTORS,
@@ -27,7 +30,7 @@ from utilities.constants.hco import (
     HCO_SUBSCRIPTION,
     IMAGE_CRON_STR,
 )
-from utilities.constants.timeouts import TIMEOUT_5MIN
+from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5MIN, TIMEOUT_10SEC
 from utilities.hco import add_labels_to_nodes, apply_np_changes, wait_for_hco_conditions
 from utilities.infra import (
     get_daemonset_by_name,
@@ -228,11 +231,35 @@ def hyperconverged_resource_before_np(admin_client, hco_namespace, hyperconverge
 
 
 @pytest.fixture()
+def healthy_nodes(nodes):
+    """Wait for all nodes to be healthy before node-placement changes.
+
+    Raises:
+        TimeoutExpiredError: If nodes remain unhealthy after two minutes.
+    """
+    try:
+        for sample in TimeoutSampler(
+            wait_timeout=TIMEOUT_2MIN,
+            sleep=TIMEOUT_10SEC,
+            func=assert_nodes_in_healthy_condition,
+            exceptions_dict={NodesNotHealthyConditionError: []},
+            nodes=nodes,
+            healthy_node_condition_type=None,
+        ):
+            if sample is None:
+                break
+    except TimeoutExpiredError:
+        LOGGER.error("Nodes are not healthy after 2 minutes; node-placement changes were not applied")
+        raise
+
+
+@pytest.fixture()
 def alter_np_configuration(
     request,
     admin_client,
     hco_namespace,
     hyperconverged_resource_scope_function,
+    healthy_nodes,
 ):
     """
     Update HCO CR with infrastructure and workloads spec.

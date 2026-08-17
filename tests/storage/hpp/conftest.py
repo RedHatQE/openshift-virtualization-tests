@@ -26,6 +26,7 @@ from utilities.infra import (
 def utility_daemonset_for_hpp_test(
     generated_pulled_secret,
     cnv_tests_utilities_service_account,
+    admin_client,
 ):
     """
     Deploy utility daemonset into the cnv_tests_utilities_namespace namespace.
@@ -37,6 +38,7 @@ def utility_daemonset_for_hpp_test(
         generated_pulled_secret=generated_pulled_secret,
         cnv_tests_utilities_service_account=cnv_tests_utilities_service_account,
         label=utility_pods_for_hpp_test,
+        client=admin_client,
     )
 
 
@@ -120,11 +122,13 @@ def cirros_pvc_on_hpp(cirros_vm_for_node_placement_tests):
     return PersistentVolumeClaim(
         namespace=cirros_vm_for_node_placement_tests.namespace,
         name=cirros_vm_for_node_placement_tests.data_volume_template["metadata"]["name"],
+        client=cirros_vm_for_node_placement_tests.client,
     )
 
 
 @pytest.fixture()
-def cirros_pv_on_hpp(cirros_pvc_on_hpp):
+def cirros_pv_on_hpp(admin_client, cirros_pvc_on_hpp):
     return PersistentVolume(
         name=cirros_pvc_on_hpp.instance.spec.volumeName,
+        client=admin_client,
     )

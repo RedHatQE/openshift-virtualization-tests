@@ -88,8 +88,10 @@ def start_nc_response_on_vm(flat_l2_port, vm, num_connections):
     vm_console_run_commands(
         vm=vm,
         commands=[
-            f'for i in {{1..{num_connections}}}; do echo -e "{HTTP_SUCCESS_RESPONSE_STR}-$i\n\n" | nc '
-            f"-lp {flat_l2_port}; done &"
+            (
+                f'for i in {{1..{num_connections}}}; do echo -e "{HTTP_SUCCESS_RESPONSE_STR}-$i\n\n" | nc '
+                f"-lp {flat_l2_port}; done &"
+            )
         ],
         return_code_validation=False,
     )

@@ -50,6 +50,7 @@ def check_windows_vm_tablet_device(vm, driver_state):
     [pytest.param({"os_dict": WINDOWS_LATEST})],
     indirect=True,
 )
+@pytest.mark.windows
 class TestWindowsTabletDevice:
     @pytest.mark.parametrize(
         "tablet_device_vm",

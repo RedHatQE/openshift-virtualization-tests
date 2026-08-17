@@ -10,7 +10,7 @@ from libs.net.ip import random_ipv4_address
 from libs.vm.oper import run_vms
 from libs.vm.spec import Interface, Multus, Network
 from libs.vm.vm import BaseVirtualMachine
-from tests.network.localnet.liblocalnet import (
+from tests.network.libs.localnet import (
     LOCALNET_IPAM_INTERFACE,
     LOCALNET_OVS_BRIDGE_NETWORK,
     LOCALNET_VM_ANTI_AFFINITY,

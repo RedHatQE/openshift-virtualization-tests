@@ -1,17 +1,25 @@
 from collections.abc import Generator
+from typing import TYPE_CHECKING
 
 import pytest
 from kubernetes.dynamic import DynamicClient
+from ocp_resources.pod import Pod
 from ocp_resources.user_defined_network import Layer2UserDefinedNetwork
 
 from libs.net.ip import random_ipv4_address
+from libs.net.traffic_generator import IPERF_SERVER_PORT, TcpServer, VMTcpClient
 from libs.net.udn import UDN_BINDING_DEFAULT_PLUGIN_NAME
+from libs.net.vmspec import lookup_iface_status_ip, lookup_primary_network
 from libs.vm import affinity
 from libs.vm.oper import run_vms
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs.vm_factory import udn_vm
 from utilities.constants.architecture import AMD_64, ARM_64
+from utilities.constants.networking import POD_CONTAINER_SPEC
 from utilities.infra import create_ns
+
+if TYPE_CHECKING:
+    from ocp_resources.namespace import Namespace
 
 
 @pytest.fixture(scope="module")
@@ -43,6 +51,56 @@ def namespaced_layer2_user_defined_network(admin_client, udn_namespace):
 @pytest.fixture(scope="module")
 def udn_affinity_label():
     return affinity.new_label(key_prefix="udn")
+
+
+@pytest.fixture(scope="class")
+def vma_udn(udn_namespace, namespaced_layer2_user_defined_network, udn_affinity_label, admin_client):
+    with udn_vm(
+        namespace_name=udn_namespace.name,
+        name="vma-udn",
+        client=admin_client,
+        binding=UDN_BINDING_DEFAULT_PLUGIN_NAME,
+        template_labels=dict((udn_affinity_label,)),
+    ) as vm:
+        vm.start(wait=True)
+        vm.wait_for_agent_connected()
+        yield vm
+
+
+@pytest.fixture(scope="class")
+def vmb_udn(udn_namespace, namespaced_layer2_user_defined_network, udn_affinity_label, admin_client):
+    with udn_vm(
+        namespace_name=udn_namespace.name,
+        name="vmb-udn",
+        client=admin_client,
+        binding=UDN_BINDING_DEFAULT_PLUGIN_NAME,
+        template_labels=dict((udn_affinity_label,)),
+    ) as vm:
+        vm.start(wait=True)
+        vm.wait_for_agent_connected()
+        yield vm
+
+
+@pytest.fixture(scope="class")
+def server(vmb_udn):
+    with TcpServer(vm=vmb_udn, port=IPERF_SERVER_PORT) as server:
+        yield server
+
+
+@pytest.fixture(scope="class")
+def client(vma_udn, server):
+    with VMTcpClient(
+        vm=vma_udn,
+        server_ip=str(
+            lookup_iface_status_ip(
+                vm=server.vm,
+                iface_name=lookup_primary_network(vm=server.vm).name,
+                ip_family=4,
+            )
+        ),
+        server_port=IPERF_SERVER_PORT,
+    ) as client:
+        yield client
 
 
 @pytest.fixture(scope="class")
@@ -93,3 +151,19 @@ def running_amd_and_arm_vms(
     """
     amd64_vm, arm64_vm = run_vms(vms=(amd64_udn_vm, arm64_udn_vm))
     return amd64_vm, arm64_vm
+
+
+@pytest.fixture(scope="class")
+def udn_pod(
+    admin_client: DynamicClient,
+    udn_namespace: Namespace,
+    namespaced_layer2_user_defined_network: Layer2UserDefinedNetwork,
+) -> Generator[Pod]:
+    with Pod(
+        name="udn-pod",
+        namespace=udn_namespace.name,
+        containers=[{**POD_CONTAINER_SPEC, "name": "udn-container"}],
+        client=admin_client,
+    ) as pod:
+        pod.wait_for_status(status=Pod.Status.RUNNING)
+        yield pod

@@ -144,6 +144,7 @@ def downscaled_storage_provisioner_deployment(request, admin_client):
         deployment_name=deployment.name,
         namespace=deployment.namespace,
         replica_count=0,
+        client=admin_client,
     ):
         yield {"deployment": deployment, "initial_replicas": initial_replicas}
 
@@ -318,6 +319,7 @@ def label_migration_target_node_for_chaos(workers, vm_with_nginx_service):
 def utility_daemonset_for_chaos_tests(
     generated_pulled_secret,
     cnv_tests_utilities_service_account,
+    admin_client,
 ):
     """
     Deploy utility daemonset into the cnv-tests-utilities namespace.
@@ -328,6 +330,7 @@ def utility_daemonset_for_chaos_tests(
         generated_pulled_secret=generated_pulled_secret,
         cnv_tests_utilities_service_account=cnv_tests_utilities_service_account,
         label=CHAOS_LABEL_KEY,
+        client=admin_client,
         node_selector_label=CHAOS_LABEL,
         delete_pod_resources_limit=True,
     )
@@ -369,7 +372,7 @@ def artifactory_config_map_chaos_namespace_scope_module(chaos_namespace):
 
 @pytest.fixture(scope="class")
 def chaos_vms_instancetype_list(request, admin_client, chaos_namespace):
-    required_instancetype = get_instance_type(name=U1_SMALL)
+    required_instancetype = get_instance_type(name=U1_SMALL, client=admin_client)
 
     vms_list = []
     for idx in range(request.param["number_of_vms"]):

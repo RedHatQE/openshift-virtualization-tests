@@ -226,6 +226,7 @@ class TestNodeMaintenanceRHEL:
 @pytest.mark.ibm_bare_metal
 @pytest.mark.usefixtures("no_migration_job")
 class TestNodeCordonAndDrain:
+    @pytest.mark.windows
     @pytest.mark.polarion("CNV-2048")
     def test_node_drain_template_windows(
         self,
@@ -243,6 +244,7 @@ class TestNodeCordonAndDrain:
             vm=vm,
         )
 
+    @pytest.mark.windows
     @pytest.mark.polarion("CNV-4906")
     def test_node_cordon_template_windows(
         self,

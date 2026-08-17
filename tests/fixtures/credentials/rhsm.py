@@ -18,6 +18,7 @@ def rhsm_credentials_from_bitwarden():
 @pytest.fixture(scope="module")
 def rhsm_created_secret(rhsm_credentials_from_bitwarden, namespace):
     with Secret(
+        client=namespace.client,
         name=RHSM_SECRET_NAME,
         namespace=namespace.name,
         data_dict={
