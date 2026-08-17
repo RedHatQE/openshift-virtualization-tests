@@ -10,7 +10,7 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.storage_profile import StorageProfile
 
-from tests.utils import create_windows2022_vm_with_data_volume_template
+from tests.utils import create_windows2022_vm
 from utilities.constants import HOTPLUG_DISK_SERIAL, WIN_2K22
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.storage import (
@@ -79,8 +79,8 @@ def vm_instance_multi_storage_scope_class(
     storage_class_name_scope_class,
 ):
     """Creates a Windows 2022 VM with vTPM from the session-scoped Windows DataSource."""
-    with create_windows2022_vm_with_data_volume_template(
-        dv_template=data_volume_template_with_source_ref_dict(
+    with create_windows2022_vm(
+        data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=windows_validation_os_images_data_source_scope_session,
             storage_class=storage_class_name_scope_class,
         ),
