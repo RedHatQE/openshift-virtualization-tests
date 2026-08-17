@@ -734,6 +734,13 @@ def create_windows2022_vm(
         VirtualMachineForTests: Windows 2022 VM with vTPM
     """
 
+    assert data_volume is not None or data_volume_template is not None, (
+        "Must provide exactly one of data_volume or data_volume_template"
+    )
+    assert data_volume is None or data_volume_template is None, (
+        "Must provide exactly one of data_volume or data_volume_template, not both"
+    )
+
     with VirtualMachineForTests(
         name=vm_name,
         namespace=namespace,
