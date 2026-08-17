@@ -26,8 +26,6 @@ class TestFileRestoreBackupVendorWorkflow:
         """
         Test that the end-to-end restore workflow from request creation to file verification succeeds.
 
-        Priority: P0
-
         Preconditions:
             - Running Linux VM with guest helper installed and filerestore user SSH-configured
             - Backup PVC available as restore source
@@ -43,7 +41,7 @@ class TestFileRestoreBackupVendorWorkflow:
 
         Expected:
             - Restored file content equals the original recorded content
-            - The restore operation reports successful completion with all files accounted for in its status
+            - The restore operation reports successful completion
             - Temporary resources created during the restore operation are cleaned up upon completion
         """
 
@@ -68,8 +66,6 @@ class TestFileRestoreWindowsGuestFileCount:
     def test_file_count_matches_transferred_on_windows_vm(self):
         """
         Test that the restored file count in status matches actual files transferred on a Windows VM.
-
-        Priority: P0
 
         Preconditions:
             - Running Windows VM with OpenSSH Server and guest helper installed, and filerestore user SSH-configured
@@ -108,8 +104,6 @@ class TestFileRestoreWindowsNTFSACLsAndOwnership:
         """
         Test that file restore on Windows VM from a backup PVC preserves NTFS ACLs and ownership.
 
-        Priority: P0
-
         Preconditions:
             - Running Windows VM with OpenSSH Server and guest helper installed, and filerestore user SSH-configured
             - NTFS backup PVC with files having known ACLs and owner SID recorded
@@ -129,8 +123,6 @@ class TestFileRestoreWindowsNTFSACLsAndOwnership:
     def test_windows_vm_restore_from_snapshot_preserves_ntfs_acls_and_ownership(self):
         """
         Test that file restore on Windows VM from a volume snapshot preserves NTFS ACLs and ownership.
-
-        Priority: P0
 
         Preconditions:
             - VolumeSnapshot-capable StorageClass available
@@ -169,8 +161,6 @@ class TestFileRestoreWindowsDriveRoot:
     def test_windows_vm_restore_from_drive_root_path(self):
         """
         Test that file restore on Windows VM succeeds when the source file is at a drive root.
-
-        Priority: P0
 
         Preconditions:
             - Running Windows VM with OpenSSH Server and guest helper installed, and filerestore user SSH-configured
