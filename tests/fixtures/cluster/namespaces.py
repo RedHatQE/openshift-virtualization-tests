@@ -65,13 +65,3 @@ def kube_system_namespace(admin_client):
     if kube_system_ns.exists:
         return kube_system_ns
     raise ResourceNotFoundError(f"{kube_system_ns.name} namespace not found")
-
-
-@pytest.fixture(scope="session")
-def nmstate_namespace(admin_client):
-    try:
-        return Namespace(client=admin_client, name=NamespacesNames.OPENSHIFT_NMSTATE, ensure_exists=True)
-
-    except ResourceNotFoundError:
-        LOGGER.info(f"Namespace '{NamespacesNames.OPENSHIFT_NMSTATE}' not found.")
-        return None

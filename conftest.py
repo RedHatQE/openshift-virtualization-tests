@@ -96,6 +96,10 @@ pytest_plugins = [
     "tests.fixtures.operator.hco",
     "tests.fixtures.operator.kubevirt",
     "tests.fixtures.operator.ssp",
+    "tests.fixtures.network.node_nics",
+    "tests.fixtures.network.mac_pool",
+    "tests.fixtures.network.nmstate",
+    "tests.fixtures.network.sriov",
 ]
 
 LOGGER = logging.getLogger(__name__)
