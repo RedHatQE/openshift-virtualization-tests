@@ -18,7 +18,7 @@ from tests.storage.utils import (
     create_windows_directory,
     set_permissions,
 )
-from tests.utils import create_windows2022_vm_with_data_volume_template
+from tests.utils import create_windows2022_vm
 from utilities.constants.pytest import UNPRIVILEGED_USER
 from utilities.constants.timeouts import (
     TIMEOUT_2MIN,
@@ -59,8 +59,8 @@ def windows_vm_with_vtpm_for_snapshot(
     windows_validation_os_images_data_source_scope_session,
     storage_class_matrix_snapshot_matrix__module__,
 ):
-    with create_windows2022_vm_with_data_volume_template(
-        dv_template=data_volume_template_with_source_ref_dict(
+    with create_windows2022_vm(
+        data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=windows_validation_os_images_data_source_scope_session,
             storage_class=next(iter(storage_class_matrix_snapshot_matrix__module__)),
         ),
