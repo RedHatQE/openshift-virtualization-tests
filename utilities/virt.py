@@ -1857,6 +1857,7 @@ def running_vm(
     ssh_timeout=TIMEOUT_2MIN,
     wait_for_cloud_init=False,
     dv_wait_timeout=TIMEOUT_30MIN,
+    wait_until_running_timeout=TIMEOUT_4MIN,
 ):
     """
     Wait for the VMI to be in Running state.
@@ -1868,6 +1869,7 @@ def running_vm(
         ssh_timeout (int): how much time to wait for SSH connectivity
         wait_for_cloud_init (bool): Is waiting for cloud-init required.
         dv_wait_timeout (int): dv success timeout.
+        wait_until_running_timeout (int): how much time to wait for VMI to reach Running state.
 
     Returns:
         VirtualMachine: VM object.
@@ -1912,6 +1914,7 @@ def running_vm(
         )
     wait_for_running_vm(
         vm=vm,
+        wait_until_running_timeout=wait_until_running_timeout,
         wait_for_interfaces=wait_for_interfaces,
         check_ssh_connectivity=check_ssh_connectivity,
         ssh_timeout=ssh_timeout,
