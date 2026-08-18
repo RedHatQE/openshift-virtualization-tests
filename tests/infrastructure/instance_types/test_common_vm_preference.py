@@ -1,13 +1,20 @@
+import logging
+
 import pytest
 from ocp_resources.virtual_machine_cluster_preference import (
     VirtualMachineClusterPreference,
 )
+from pytest_testconfig import config as py_config
 
 from tests.infrastructure.instance_types.utils import assert_mismatch_vendor_label
 from tests.infrastructure.instance_types.vm_preference_list import VM_PREFERENCES_LIST
 from utilities.constants import Images
+from utilities.constants.architecture import SUPPORTED_CPU_ARCHITECTURES
 from utilities.constants.components import VIRT_OPERATOR
+from utilities.constants.virt import VIRTIO
 from utilities.virt import VirtualMachineForTests, running_vm
+
+LOGGER = logging.getLogger(__name__)
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
 
@@ -54,14 +61,36 @@ def start_vm_with_cluster_preference(client, preference_name, namespace_name):
 
 
 def run_general_vm_preferences(client, namespace, preferences):
+    """Create, start and delete a VM for each preference applicable to the cluster architecture.
+
+    Preferences containing 'virtio' or targeting a different CPU architecture are skipped.
+
+    Args:
+        client: Kubernetes client for resource operations.
+        namespace: Namespace object where VMs are created.
+        preferences: List of VirtualMachineClusterPreference names to validate.
+    """
+    cluster_arch = py_config["cpu_arch"]
+
+    runnable_preferences = []
+    skipped_preferences = []
     for preference_name in preferences:
-        # TODO remove arm64 skip when openshift-virtualization-tests support arm64
-        if all(suffix not in preference_name for suffix in ["virtio", "arm64"]):
-            start_vm_with_cluster_preference(
-                client=client,
-                preference_name=preference_name,
-                namespace_name=namespace.name,
-            )
+        if VIRTIO in preference_name or any(
+            suffix in preference_name for suffix in SUPPORTED_CPU_ARCHITECTURES - {cluster_arch}
+        ):
+            skipped_preferences.append(preference_name)
+        else:
+            runnable_preferences.append(preference_name)
+
+    if skipped_preferences:
+        LOGGER.info(f"Skipping preferences not applicable to cluster arch {cluster_arch}: {skipped_preferences}")
+
+    for preference_name in runnable_preferences:
+        start_vm_with_cluster_preference(
+            client=client,
+            preference_name=preference_name,
+            namespace_name=namespace.name,
+        )
 
 
 @pytest.fixture()
