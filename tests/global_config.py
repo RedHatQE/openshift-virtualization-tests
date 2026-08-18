@@ -14,7 +14,6 @@ from utilities.constants.aaq import (
 )
 from utilities.constants.architecture import MULTIARCH
 from utilities.constants.components import (
-    CNV_OPERATORS,
     CNV_PROMETHEUS_RULES,
     HCO_CATALOG_SOURCE,
     VM_CONSOLE_PROXY_CLUSTER_RESOURCES,
@@ -198,7 +197,6 @@ data_import_cron_matrix = [
 cnv_crypto_policy_matrix = [TLS_OLD_POLICY, TLS_CUSTOM_POLICY]
 
 cnv_prometheus_rules_matrix = CNV_PROMETHEUS_RULES
-cnv_operators_matrix = CNV_OPERATORS
 cnv_vm_console_proxy_cluster_resource_matrix = VM_CONSOLE_PROXY_CLUSTER_RESOURCES
 cnv_vm_console_proxy_namespace_resource_matrix = VM_CONSOLE_PROXY_NAMESPACE_RESOURCES
 
