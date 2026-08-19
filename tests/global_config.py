@@ -118,11 +118,6 @@ cnv_vm_resources_limits_matrix = [
     "cpu",
     "memory",
 ]
-nic_models_matrix = [
-    "virtio",
-    "e1000e",
-]
-
 cnv_must_gather_matrix = [
     "cnv-gather",
     "all-images",
