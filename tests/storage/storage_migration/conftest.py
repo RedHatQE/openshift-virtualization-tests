@@ -26,7 +26,7 @@ from tests.storage.storage_migration.utils import (
     wait_for_storage_migration_completed,
 )
 from tests.storage.utils import create_windows_directory, get_storage_class_for_storage_migration
-from tests.utils import create_windows2022_vm_with_data_volume_template
+from tests.utils import create_windows2022_vm
 from utilities.constants import Images
 from utilities.constants.images import OS_FLAVOR_FEDORA, OS_FLAVOR_RHEL
 from utilities.constants.instance_types import U1_SMALL
@@ -379,12 +379,12 @@ def windows_vm_with_vtpm_for_storage_migration(
     source_storage_class,
     windows_validation_os_images_data_source_scope_session,
 ):
-    with create_windows2022_vm_with_data_volume_template(
+    with create_windows2022_vm(
         namespace=namespace.name,
         client=unprivileged_client,
         vm_name="windows-2022-vm",
         cpu_model=modern_cpu_for_migration,
-        dv_template=data_volume_template_with_source_ref_dict(
+        data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=windows_validation_os_images_data_source_scope_session,
             storage_class=source_storage_class,
         ),

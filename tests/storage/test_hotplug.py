@@ -15,7 +15,7 @@ from ocp_resources.storage_profile import StorageProfile
 
 from tests.storage.constants import BLANK_DV_SIZE, NUM_HOTPLUG_DISKS
 from tests.storage.utils import assert_disk_bus, expected_hotplug_serials
-from tests.utils import create_windows2022_vm_with_data_volume_template
+from tests.utils import create_windows2022_vm
 from utilities.constants.storage import HOTPLUG_DISK_SCSI_BUS, HOTPLUG_DISK_SERIAL, HOTPLUG_DISK_VIRTIO_BUS
 from utilities.constants.virt import WIN_2K22
 from utilities.storage import (
@@ -75,8 +75,8 @@ def vm_instance_multi_storage_scope_class(
     storage_class_name_scope_class,
 ):
     """Creates a Windows 2022 VM with vTPM from the session-scoped Windows DataSource."""
-    with create_windows2022_vm_with_data_volume_template(
-        dv_template=data_volume_template_with_source_ref_dict(
+    with create_windows2022_vm(
+        data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=windows_validation_os_images_data_source_scope_session,
             storage_class=storage_class_name_scope_class,
         ),
