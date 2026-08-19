@@ -110,6 +110,7 @@ from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
     get_base_templates_list,
+    get_hyperconverged_kubevirt,
     running_vm,
     start_and_fetch_processid_on_linux_vm,
     vm_instance_from_template,
@@ -470,6 +471,12 @@ def ocs_current_version(ocs_storage_class, admin_client):
             label_selector=f"{ClusterServiceVersion.ApiGroup.OPERATORS_COREOS_COM}/ocs-operator.openshift-storage",
         ):
             return csv.instance.spec.version
+
+
+@pytest.fixture(scope="class")
+def kubevirt_resource_scope_class(admin_client, installing_cnv, hco_namespace):
+    if not installing_cnv:
+        return get_hyperconverged_kubevirt(admin_client=admin_client, hco_namespace=hco_namespace)
 
 
 @pytest.fixture(scope="session")
