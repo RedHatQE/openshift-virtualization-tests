@@ -511,7 +511,9 @@ def filter_upgrade_tests(
     upgrade_markers_to_collect = chosen_upgrade_markers or upgrade_markers
 
     for item in items:
-        if upgrade_markers_to_collect.intersection(set(item.keywords)):
+        if "post_test_alerts" in item.keywords:
+            non_upgrade_tests.append(item)
+        elif upgrade_markers_to_collect.intersection(set(item.keywords)):
             upgrade_tests.append(item)
         else:
             non_upgrade_tests.append(item)
@@ -654,12 +656,8 @@ def pytest_collection_modifyitems(session, config, items):
 
         # All tests are verified on amd64 platforms, adding `amd64` to all tests
         item.add_marker(marker=AMD_64)
-    # Collect only 'upgrade_custom' tests when running pytest with --upgrade_custom
-    # post_test_alerts tests run on all lanes; preserve them across upgrade filtering
-    post_test_alerts_items = [item for item in items if "post_test_alerts" in item.keywords]
+    #  Collect only 'upgrade_custom' tests when running pytest with --upgrade_custom
     keep, discard = filter_upgrade_tests(items=items, config=config)
-    keep.extend(item for item in post_test_alerts_items if item not in keep)
-    discard = [item for item in discard if item not in post_test_alerts_items]
     items[:] = keep
     if discard:
         config.hook.pytest_deselected(items=discard)
