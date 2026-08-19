@@ -10,9 +10,12 @@ from typing import TYPE_CHECKING
 import pytest
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.role_binding import RoleBinding
+from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
+from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_resources.virtual_machine_restore import VirtualMachineRestore
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 from pyhelper_utils.shell import run_ssh_commands
+from pytest_testconfig import config as py_config
 
 from tests.storage.snapshots.constants import (
     BLANK_DV_SIZE,
@@ -26,7 +29,9 @@ from tests.storage.utils import (
     set_permissions,
 )
 from tests.utils import create_windows2022_vm
+from utilities.constants.architecture import AMD_64
 from utilities.constants.images import OS_FLAVOR_FEDORA
+from utilities.constants.instance_types import U1_SMALL
 from utilities.constants.pytest import UNPRIVILEGED_USER
 from utilities.constants.timeouts import (
     TIMEOUT_2MIN,
@@ -188,11 +193,15 @@ def _create_vm_with_4_disks(
     Returns:
         Running VirtualMachineForTests with 4 disk devices.
     """
+    cpu_arch = py_config["cpu_arch"]
+    preference_name = f"{OS_FLAVOR_FEDORA}.{cpu_arch}" if cpu_arch and cpu_arch != AMD_64 else OS_FLAVOR_FEDORA
     vm = VirtualMachineForTests(
         name=vm_name,
         namespace=namespace_name,
         client=client,
         os_flavor=OS_FLAVOR_FEDORA,
+        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL, client=client),
+        vm_preference=VirtualMachineClusterPreference(name=preference_name, client=client),
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=data_source,
             storage_class=storage_class_name,
