@@ -710,6 +710,18 @@ def data_volume_template_with_source_ref_dict(
     return dv.res
 
 
+def data_source_ref(data_source: DataSource) -> dict[str, str]:
+    """Build a DataVolume sourceRef pointing to a DataSource.
+
+    Args:
+        data_source: DataSource resource to reference.
+
+    Returns:
+        Dict with kind, name, and namespace suitable for DV sourceRef.
+    """
+    return {"kind": data_source.kind, "name": data_source.name, "namespace": data_source.namespace}
+
+
 def overhead_size_for_dv(image_size, overhead_value):
     """
     Calculate the size of the dv to include overhead and rounds up

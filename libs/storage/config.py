@@ -22,6 +22,7 @@ class StorageClass:
     snapshot: bool
     online_resize: bool
     wffc: bool
+    data_import_cron_source_format: str = "snapshot"
 
 
 class StorageClassConfig:
