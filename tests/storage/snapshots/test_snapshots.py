@@ -519,10 +519,8 @@ class TestRestoreMultiDiskPerformance:
         - Fedora golden image DataSource available
     """
 
-    __test__ = False
-
     @pytest.mark.polarion("CNV-16400")
-    def test_restore_vm_with_4_disks_completes_within_five_minutes(self):
+    def test_restore_vm_with_4_disks_completes_within_five_minutes(self, restored_vm_with_4_disks):
         """
         Test that restoring a snapshot of a VM with 4 disks completes within 5 minutes.
 
@@ -538,9 +536,12 @@ class TestRestoreMultiDiskPerformance:
         Expected:
             - Restore completes successfully within 5 minutes
         """
+        assert restored_vm_with_4_disks.instance.status.complete, (
+            "Restore did not complete successfully within 5 minutes"
+        )
 
     @pytest.mark.polarion("CNV-16401")
-    def test_restore_four_vms_with_4_disks_completes_within_five_minutes(self):
+    def test_restore_four_vms_with_4_disks_completes_within_five_minutes(self, restored_four_vms):
         """
         Test that restoring snapshots of 4 VMs (each with 4 disks) in parallel completes within 5 minutes.
 
@@ -556,3 +557,7 @@ class TestRestoreMultiDiskPerformance:
         Expected:
             - All 4 restores complete successfully within 5 minutes total
         """
+        for restore in restored_four_vms:
+            assert restore.instance.status.complete, (
+                f"Restore {restore.name} did not complete successfully within 5 minutes"
+            )
