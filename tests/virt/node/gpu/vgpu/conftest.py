@@ -55,7 +55,7 @@ def ready_node_with_grid_vgpu_config(nvidia_sandbox_validator_ds, node_labeled_w
 
 
 @pytest.fixture(scope="class")
-def hco_cr_with_node_specific_mdev_permitted_hostdevices(
+def hco_cr_with_node_specific_vgpu_permitted_hostdevices(
     admin_client,
     hyperconverged_resource_scope_class,
     supported_gpu_device,
