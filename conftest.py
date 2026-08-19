@@ -314,7 +314,7 @@ def pytest_addoption(parser):
     # Post test alerts group
     post_test_alerts_group.addoption(
         "--skip-post-test-alerts",
-        help="By default test_no_critical_alerts_after_tests will always run, pass this flag to skip it",
+        help="By default test_no_deprecated_api_alert_after_tests will always run, pass this flag to skip it",
         action="store_true",
     )
 
