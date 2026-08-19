@@ -37,7 +37,7 @@ def aggregation_disabled(admin_client, hyperconverged_resource_scope_class):
         wait_for_reconcile_post_update=True,
         admin_client=admin_client,
     ):
-        wait_for_aggregation_labels(admin_client=admin_client, expected_present=False)
+        wait_for_aggregation_labels(admin_client=admin_client, should_be_present=False)
         yield
 
 
