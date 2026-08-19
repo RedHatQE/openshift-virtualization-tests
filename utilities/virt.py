@@ -2674,7 +2674,7 @@ def run_os_command(vm: VirtualMachineForTests, command: str) -> Optional[str]:
         return run_ssh_commands(
             host=vm.ssh_exec,
             commands=shlex.split(command),
-            timeout=5,
+            timeout=15,
             tcp_timeout=TCP_TIMEOUT_30SEC,
         )[0]
     except ProxyCommandFailure:
