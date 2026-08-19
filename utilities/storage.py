@@ -760,7 +760,9 @@ def write_file(
         vm.stop(wait=True)
 
 
-def write_file_via_ssh(vm: virt_util.VirtualMachineForTests, filename: str, content: str) -> None:
+def write_file_via_ssh(
+    vm: virt_util.VirtualMachineForTests, filename: str, content: str, use_sudo: bool = False
+) -> None:
     """
     Write content to a file in VM using SSH connection with retry.
 
@@ -768,8 +770,15 @@ def write_file_via_ssh(vm: virt_util.VirtualMachineForTests, filename: str, cont
         vm: VirtualMachine instance with SSH connectivity
         filename: Path to the file to write in the VM
         content: Content to write to the file
+        use_sudo: Write via "sudo tee" instead of shell redirection. Required for paths the
+            unprivileged SSH user cannot write directly, e.g. raw block devices.
     """
-    cmd = shlex.split(f"echo {shlex.quote(content)} > {shlex.quote(filename)} && sync")
+    quoted_content = shlex.quote(s=content)
+    quoted_filename = shlex.quote(s=filename)
+    if use_sudo:
+        cmd = shlex.split(f"echo {quoted_content} | sudo tee {quoted_filename} && sync")
+    else:
+        cmd = shlex.split(f"echo {quoted_content} > {quoted_filename} && sync")
     run_ssh_commands(host=vm.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC)
 
 
