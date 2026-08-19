@@ -7,14 +7,12 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_VMI_MIGRATION_DATA_REMAINING_BYTES,
     KUBEVIRT_VMI_MIGRATION_DATA_TOTAL_BYTES,
     KUBEVIRT_VMI_MIGRATION_DIRTY_MEMORY_RATE_BYTES,
-    KUBEVIRT_VMI_MIGRATION_MEMORY_TRANSFER_RATE_BYTES,
 )
 from tests.observability.metrics.utils import (
     timestamp_to_seconds,
     wait_for_non_empty_metrics_value,
 )
 from tests.observability.utils import validate_metrics_value
-from utilities.infra import is_jira_open
 
 LOGGER = logging.getLogger(__name__)
 
@@ -27,10 +25,6 @@ class TestKubevirtVmiMigrationMetrics:
             pytest.param(
                 KUBEVIRT_VMI_MIGRATION_DATA_REMAINING_BYTES,
                 marks=(pytest.mark.polarion("CNV-11600")),
-            ),
-            pytest.param(
-                KUBEVIRT_VMI_MIGRATION_MEMORY_TRANSFER_RATE_BYTES,
-                marks=(pytest.mark.polarion("CNV-11598")),
             ),
             pytest.param(
                 KUBEVIRT_VMI_MIGRATION_DIRTY_MEMORY_RATE_BYTES,
@@ -53,8 +47,6 @@ class TestKubevirtVmiMigrationMetrics:
         vm_migration_metrics_vmim_scope_function,
         query,
     ):
-        if query == KUBEVIRT_VMI_MIGRATION_MEMORY_TRANSFER_RATE_BYTES and is_jira_open(jira_id="CNV-84890"):
-            pytest.xfail(f"Bug is still open for metric {query}")
         wait_for_non_empty_metrics_value(
             prometheus=prometheus,
             metric_name=query.format(vm_name=vm_for_migration_metrics_test.name),
