@@ -15,9 +15,6 @@ on:
 permissions:
   contents: read
 
-env:
-  REMOTE_REPOSITORY: "quay.io/openshift-cnv/qe-cnv-tests-fedora-staging"
-
 jobs:
   prepare:
     uses: ./.github/workflows/component-builder-prepare.yml
@@ -30,7 +27,7 @@ jobs:
       fedora_image_base: ${{ needs.prepare.outputs.fedora_image_base }}
       fedora_checksum_base: ${{ needs.prepare.outputs.fedora_checksum_base }}
       matrix: ${{ needs.prepare.outputs.matrix }}
-      remote_repository: "quay.io/openshift-cnv/qe-cnv-tests-fedora-staging"
+      remote_repository: ${{ needs.prepare.outputs.remote_repository }}
       push_image: true
     secrets:
       BITWARDEN_ORGANIZATION_ID: ${{ secrets.BITWARDEN_ORGANIZATION_ID }}
@@ -58,7 +55,7 @@ jobs:
       - name: Create and push manifest
         env:
           FEDORA_VERSION: ${{ needs.prepare.outputs.fedora_version }}
-          REMOTE_REPOSITORY: ${{ env.REMOTE_REPOSITORY }}
+          REMOTE_REPOSITORY: ${{ needs.prepare.outputs.remote_repository }}
         run: |
           set -euo pipefail
           if [ -z "${ARCHITECTURES// /}" ]; then
