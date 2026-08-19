@@ -9,7 +9,12 @@ from pytest_testconfig import config as py_config
 
 from utilities.constants.storage import PVC
 from utilities.constants.timeouts import TIMEOUT_20MIN
-from utilities.storage import ErrorMsg, create_dv, get_dv_size_from_datasource
+from utilities.storage import (
+    ErrorMsg,
+    create_dummy_first_consumer_pod,
+    create_dv,
+    get_dv_size_from_datasource,
+)
 
 pytestmark = pytest.mark.post_upgrade
 
@@ -45,6 +50,7 @@ def golden_image_dv_from_fedora_datasource_scope_module(
 @pytest.fixture
 def dv_created_by_unprivileged_user_with_rolebinding(
     request,
+    admin_client,
     golden_images_namespace,
     golden_images_edit_rolebinding,
     unprivileged_client,
@@ -58,12 +64,14 @@ def dv_created_by_unprivileged_user_with_rolebinding(
         namespace=golden_images_namespace.name,
         size=size,
         storage_class=storage_class_name_scope_function,
+        consume_wffc=False,
         source_ref={
             "kind": fedora_data_source_scope_module.kind,
             "name": fedora_data_source_scope_module.name,
             "namespace": fedora_data_source_scope_module.namespace,
         },
     ) as dv:
+        create_dummy_first_consumer_pod(client=admin_client, dv=dv)
         yield dv
 
 
