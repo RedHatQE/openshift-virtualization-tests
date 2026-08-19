@@ -30,7 +30,7 @@ class TestPrimaryUdn:
     Tests for a VM connected to a primary user-defined network (UDN).
 
     Preconditions:
-        - UDN namespace (with UDN annotation) with KubeMacPool enabled.
+        - UDN namespace (with UDN annotation).
         - Primary UDN resource with an IP range defined.
         - Running under-test VM attached to the primary UDN network.
     """
@@ -134,25 +134,6 @@ class TestPrimaryUdn:
         """
 
     test_tcp_connectivity_via_cluster_ip_service_on_primary_udn.__test__ = False
-
-    @pytest.mark.polarion("CNV-16773")
-    def test_kubemacpool_assigns_mac_on_primary_udn_interface(self):
-        """
-        Test that KubeMacPool assigns a MAC address from its pool to a VM's primary UDN interface.
-
-        No STP exists for this scenario - tracked via Jira: https://redhat.atlassian.net/browse/CNV-94228 # <skip-jira-utils-check>
-
-        Preconditions:
-            - Running under-test VM attached to the primary UDN network.
-
-        Steps:
-            1. Read the MAC address assigned to the VM primary UDN interface from the VM object.
-
-        Expected:
-            - The primary UDN interface MAC address is within the KubeMacPool range.
-        """
-
-    test_kubemacpool_assigns_mac_on_primary_udn_interface.__test__ = False
 
     @pytest.mark.polarion("CNV-11435")
     def test_network_policy_enforcement_on_primary_udn_interface(self):
