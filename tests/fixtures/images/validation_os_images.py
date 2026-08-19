@@ -1,3 +1,5 @@
+from contextlib import ExitStack
+
 import pytest
 from ocp_resources.cluster_role import ClusterRole
 from ocp_resources.data_source import DataSource
@@ -72,18 +74,19 @@ def validation_os_images_role_binding(admin_client, validation_os_images_namespa
         role_ref_name=VALIDATION_OS_IMAGES_CLONE_ROLE,
     )
 
-    if clone_role.exists and role_binding.exists:
-        role_ref = role_binding.instance.roleRef
-        assert role_ref.name == VALIDATION_OS_IMAGES_CLONE_ROLE, (
-            f"RoleBinding {role_binding.name} roleRef name is {role_ref.name},"
-            f" expected {VALIDATION_OS_IMAGES_CLONE_ROLE}"
-        )
-        yield role_binding
-        return
+    # A RoleBinding created by an older revision of this fixture may still point to a different
+    # ClusterRole. Remove it (independently of the clone_role state) so it can be recreated with
+    # the correct roleRef; otherwise recreating it below fails with a 409 AlreadyExists conflict.
+    if role_binding.exists and role_binding.instance.roleRef.name != VALIDATION_OS_IMAGES_CLONE_ROLE:
+        role_binding.clean_up(wait=True)
 
-    with clone_role:
-        with role_binding as rb:
-            yield rb
+    # Create only the resources that are missing so pre-existing ones are left untouched.
+    with ExitStack() as stack:
+        if not clone_role.exists:
+            stack.enter_context(clone_role)
+        if not role_binding.exists:
+            stack.enter_context(role_binding)
+        yield role_binding
 
 
 @pytest.fixture(scope="session")
