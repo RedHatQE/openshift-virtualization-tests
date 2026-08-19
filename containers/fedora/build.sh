@@ -27,6 +27,16 @@ if [ -z $IMAGE_BUILD_CMD ]; then
 fi
 
 RUN_TMP_DIR=$(mktemp -d)
+cleanup_build_resources() {
+    if [ -n "${CONSOLE_PID:-}" ]; then
+        kill "${CONSOLE_PID}" 2>/dev/null || true
+    fi
+    rm -f -- "${BLS_ENTRY_TMP:-}" "${CONSOLE_LOG:-}" \
+        "${AARCH64_VARS:-}" "${WORK_IMAGE:-}"
+    rm -rf -- "${RUN_TMP_DIR:?}"
+    cleanup
+}
+trap cleanup_build_resources EXIT
 case "$CPU_ARCH" in
     "amd64")
         CPU_ARCH_CODE="x86_64"
@@ -51,6 +61,7 @@ case "$CPU_ARCH" in
             echo "ERROR: No aarch64 UEFI vars template found. Install qemu-efi-aarch64."
             exit 1
         fi
+        chmod 0660 "${AARCH64_VARS}"
         BOOT_OPTS="--boot uefi,nvram=${AARCH64_VARS}"
  ;;
     "s390x")
@@ -147,9 +158,11 @@ if virsh domstate "${NAME}" &>/dev/null; then
 fi
 
 CONSOLE_LOG="${RUN_TMP_DIR}/console-${NAME}.log"
-# Pre-create the log file so everyone can write to it
+# Pre-create the log file. QEMU runs as the same user invoking this script
+# (qemu:///session, the libvirt default when no --connect is specified), so
+# owner rw access is sufficient; group rw is kept for headroom.
 touch "${CONSOLE_LOG}"
-chmod 666 "${CONSOLE_LOG}"
+chmod 0660 "${CONSOLE_LOG}"
 echo "Run the VM (ctrl+] to exit)"
 # shellcheck disable=SC2086
 virt-install \
@@ -172,8 +185,6 @@ virt-install \
 # tail -f works without a TTY and streams as lines are written by the guest.
 tail -f "${CONSOLE_LOG}" &
 CONSOLE_PID=$!
-# Clean up on every exit path, including the timeout and set -e aborts.
-trap 'kill "${CONSOLE_PID}" 2>/dev/null || true; rm -rf "${CONSOLE_LOG}" "${AARCH64_VARS:-}" "${WORK_IMAGE}" "${RUN_TMP_DIR}"; cleanup' EXIT
 
 # Wait for cloud-init to finish (user-data issues 'shutdown' as its last step).
 # virsh domstate exits non-zero for unknown domains, so we treat that as "shut off" too.
