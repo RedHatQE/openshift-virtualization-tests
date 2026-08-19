@@ -505,14 +505,14 @@ def filter_upgrade_tests(
     items: list[Item],
     config: Config,
 ) -> tuple[list[Item], list[Item]]:
-    upgrade_tests, non_upgrade_tests = [], []
+    upgrade_tests, non_upgrade_tests, always_keep = [], [], []
     upgrade_markers = {"upgrade", "upgrade_custom"}
     chosen_upgrade_markers = {marker for marker in upgrade_markers if config.getoption(f"--{marker}")}
     upgrade_markers_to_collect = chosen_upgrade_markers or upgrade_markers
 
     for item in items:
         if "post_test_alerts" in item.keywords:
-            non_upgrade_tests.append(item)
+            always_keep.append(item)
         elif upgrade_markers_to_collect.intersection(set(item.keywords)):
             upgrade_tests.append(item)
         else:
@@ -524,10 +524,10 @@ def filter_upgrade_tests(
             cnv_source=config.getoption("--cnv-source"),
             upgrade_tests=upgrade_tests,
         )
-        return upgrade_tests, [*non_upgrade_tests, *discard]
+        return [*upgrade_tests, *always_keep], [*non_upgrade_tests, *discard]
 
     # If no upgrade marker in config, discard all upgrade tests.
-    return non_upgrade_tests, upgrade_tests
+    return [*non_upgrade_tests, *always_keep], upgrade_tests
 
 
 def remove_upgrade_tests_based_on_config(
