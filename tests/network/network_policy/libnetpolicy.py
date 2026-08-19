@@ -15,9 +15,14 @@ class ApplyNetworkPolicy(NetworkPolicy):
         client: DynamicClient,
         ports: list[int] | None = None,
         teardown: bool = True,
+        pod_selector: dict | None = None,
+        ingress_from_pod_selector: dict | None = None,
     ) -> None:
-        super().__init__(name=name, namespace=namespace, client=client, teardown=teardown, pod_selector={})
+        super().__init__(
+            name=name, namespace=namespace, client=client, teardown=teardown, pod_selector=pod_selector or {}
+        )
         self.ports = ports
+        self.ingress_from_pod_selector = ingress_from_pod_selector
 
     def to_dict(self) -> None:
         super().to_dict()
@@ -28,8 +33,14 @@ class ApplyNetworkPolicy(NetworkPolicy):
 
         self.res["spec"]["policyTypes"] = ["Ingress"]
 
-        # Default deny all ingress traffic if no ports specified
-        self.res["spec"]["ingress"] = [{"ports": _ports}] if _ports else []
+        ingress_rule: dict = {}
+        if self.ingress_from_pod_selector is not None:
+            ingress_rule["from"] = [{"podSelector": {"matchLabels": self.ingress_from_pod_selector}}]
+        if _ports:
+            ingress_rule["ports"] = _ports
+
+        # Default deny all ingress traffic if no source selector or ports specified
+        self.res["spec"]["ingress"] = [ingress_rule] if ingress_rule else []
 
 
 def format_curl_command(ip_address: str, port: int, head: bool = False) -> str:
