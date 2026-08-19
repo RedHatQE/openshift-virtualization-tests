@@ -1,5 +1,3 @@
-from contextlib import ExitStack
-
 import pytest
 from ocp_resources.cluster_role import ClusterRole
 from ocp_resources.data_source import DataSource
@@ -16,7 +14,7 @@ from utilities.artifactory import (
     get_test_artifact_server_url,
 )
 from utilities.constants import Images
-from utilities.constants.storage import BIND_IMMEDIATE_ANNOTATION, REGISTRY_STR
+from utilities.constants.storage import BIND_IMMEDIATE_ANNOTATION, OS_IMAGES_EDIT_CLUSTER_ROLE, REGISTRY_STR
 from utilities.constants.timeouts import TIMEOUT_10MIN, TIMEOUT_50MIN
 from utilities.constants.virt import WIN_2K22
 from utilities.os_utils import get_windows_container_disk_path
@@ -36,34 +34,13 @@ def validation_os_images_namespace(admin_client):
             yield ns
 
 
-VALIDATION_OS_IMAGES_CLONE_ROLE = "validation-os-images-clone"
-
-
 @pytest.fixture(scope="session")
 def validation_os_images_role_binding(admin_client, validation_os_images_namespace):
-    """Grants view and datavolumes/source permissions so unprivileged clients can clone from this namespace."""
-    clone_role = ClusterRole(
-        client=admin_client,
-        name=VALIDATION_OS_IMAGES_CLONE_ROLE,
-        rules=[
-            {
-                "apiGroups": [""],
-                "resources": ["pods", "persistentvolumeclaims", "services", "endpoints", "configmaps", "secrets"],
-                "verbs": ["get", "list", "watch"],
-            },
-            {
-                "apiGroups": [DataVolume.api_group],
-                "resources": ["datavolumes", "datasources"],
-                "verbs": ["get", "list", "watch"],
-            },
-            {
-                "apiGroups": [DataVolume.api_group],
-                "resources": ["datavolumes/source"],
-                "verbs": ["create"],
-            },
-        ],
-    )
+    """Grants unprivileged clients the same clone permissions as the golden-images namespace.
 
+    Binds the built-in ``os-images.kubevirt.io:edit`` ClusterRole to ``system:authenticated`` in the
+    validation-os-images namespace so cross-namespace (host-assisted) clones from this namespace succeed.
+    """
     role_binding = RoleBinding(
         client=admin_client,
         name="validation-os-images-view",
@@ -71,22 +48,22 @@ def validation_os_images_role_binding(admin_client, validation_os_images_namespa
         subjects_kind="Group",
         subjects_name="system:authenticated",
         role_ref_kind=ClusterRole.kind,
-        role_ref_name=VALIDATION_OS_IMAGES_CLONE_ROLE,
+        role_ref_name=OS_IMAGES_EDIT_CLUSTER_ROLE,
     )
 
     # A RoleBinding created by an older revision of this fixture may still point to a different
-    # ClusterRole. Remove it (independently of the clone_role state) so it can be recreated with
-    # the correct roleRef; otherwise recreating it below fails with a 409 AlreadyExists conflict.
-    if role_binding.exists and role_binding.instance.roleRef.name != VALIDATION_OS_IMAGES_CLONE_ROLE:
+    # ClusterRole (e.g. "view"). A RoleBinding's roleRef is immutable, so a stale binding must be
+    # deleted and recreated with the correct roleRef; otherwise recreating it below fails with a
+    # 409 AlreadyExists conflict.
+    if role_binding.exists and role_binding.instance.roleRef.name != OS_IMAGES_EDIT_CLUSTER_ROLE:
         role_binding.clean_up(wait=True)
 
-    # Create only the resources that are missing so pre-existing ones are left untouched.
-    with ExitStack() as stack:
-        if not clone_role.exists:
-            stack.enter_context(clone_role)
-        if not role_binding.exists:
-            stack.enter_context(role_binding)
+    if role_binding.exists:
         yield role_binding
+        return
+
+    with role_binding as rb:
+        yield rb
 
 
 @pytest.fixture(scope="session")

@@ -67,7 +67,7 @@ from utilities.constants.instance_types import (
     PREFERENCE_STR,
 )
 from utilities.constants.networking import LINUX_BRIDGE
-from utilities.constants.storage import BIND_IMMEDIATE_ANNOTATION, StorageClassNames
+from utilities.constants.storage import BIND_IMMEDIATE_ANNOTATION, OS_IMAGES_EDIT_CLUSTER_ROLE, StorageClassNames
 from utilities.constants.timeouts import (
     TIMEOUT_3MIN,
     TIMEOUT_5MIN,
@@ -374,7 +374,7 @@ def golden_images_cluster_role_edit(
     admin_client,
 ):
     for cluster_role in ClusterRole.get(
-        name="os-images.kubevirt.io:edit",
+        name=OS_IMAGES_EDIT_CLUSTER_ROLE,
         client=admin_client,
     ):
         return cluster_role
