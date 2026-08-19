@@ -24,6 +24,7 @@ from utilities.constants.images import (
 from utilities.constants.timeouts import (
     TCP_TIMEOUT_30SEC,
     TIMEOUT_1MIN,
+    TIMEOUT_2MIN,
     TIMEOUT_15SEC,
     TIMEOUT_90SEC,
 )
@@ -51,7 +52,7 @@ def vm_os_version(vm):
     grep_cmd = os_name.title() if "fedora" in vm.os_flavor else os.replace("-", ".")
     command = shlex.split(f"cat /etc/{os_name}-release | grep {grep_cmd}")
 
-    run_ssh_commands(host=vm.ssh_exec, commands=command)
+    run_ssh_commands(host=vm.ssh_exec, commands=command, wait_timeout=TIMEOUT_2MIN)
 
 
 # Guest agent data comparison functions.
@@ -169,7 +170,12 @@ def validate_user_info_virtctl_vs_windows_os(vm, admin_client):
         return int(re.search(r".*, [-]?(\d+)", vm_timezone_diff).group(1))
 
     virtctl_info = get_virtctl_user_info(vm=vm)
-    windows_info = run_ssh_commands(host=vm.ssh_exec, commands=["quser"], tcp_timeout=TCP_TIMEOUT_30SEC)[0]
+    windows_info = run_ssh_commands(
+        host=vm.ssh_exec,
+        commands=["quser"],
+        tcp_timeout=TCP_TIMEOUT_30SEC,
+        wait_timeout=TIMEOUT_2MIN,
+    )[0]
     # Match timezone to VM's timezone and not use UTC
     virtctl_time = virtctl_info["loginTime"] - _get_vm_timezone_diff()
     data_mismatch = []
@@ -296,7 +302,7 @@ def get_libvirt_fs_info(vm, admin_client):
 
 def get_linux_fs_info(ssh_exec):
     cmd = shlex.split("df -TB1 | grep /dev/vd")
-    out = run_ssh_commands(host=ssh_exec, commands=cmd)[0]
+    out = run_ssh_commands(host=ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN)[0]
     disks = out.strip().split()
     return {
         "name": disks[0].split("/dev/")[1],
@@ -311,13 +317,30 @@ def get_linux_fs_info(ssh_exec):
 
 def get_windows_fs_info(ssh_exec):
     disk_name_cmd = shlex.split("fsutil volume list")
-    disk_name = run_ssh_commands(host=ssh_exec, commands=disk_name_cmd, tcp_timeout=TCP_TIMEOUT_30SEC)[0]
+    disk_name = run_ssh_commands(
+        host=ssh_exec,
+        commands=disk_name_cmd,
+        tcp_timeout=TCP_TIMEOUT_30SEC,
+        wait_timeout=TIMEOUT_2MIN,
+    )[0]
     disk_space_cmd = shlex.split("fsutil volume diskfree C:")
     disk_space = (
-        run_ssh_commands(host=ssh_exec, commands=disk_space_cmd, tcp_timeout=TCP_TIMEOUT_30SEC)[0].strip().split("\r\n")
+        run_ssh_commands(
+            host=ssh_exec,
+            commands=disk_space_cmd,
+            tcp_timeout=TCP_TIMEOUT_30SEC,
+            wait_timeout=TIMEOUT_2MIN,
+        )[0]
+        .strip()
+        .split("\r\n")
     )
     fs_type_cmd = shlex.split("fsutil fsinfo volumeinfo C:")
-    fs_type = run_ssh_commands(host=ssh_exec, commands=fs_type_cmd, tcp_timeout=TCP_TIMEOUT_30SEC)[0]
+    fs_type = run_ssh_commands(
+        host=ssh_exec,
+        commands=fs_type_cmd,
+        tcp_timeout=TCP_TIMEOUT_30SEC,
+        wait_timeout=TIMEOUT_2MIN,
+    )[0]
 
     windows_info = f"{disk_name} {windows_disk_space_parser(disk_space)} {fs_type}"
     windows_fs_info = re.search(
@@ -375,12 +398,28 @@ def get_linux_user_info(vm):
     if any(os_version in vm.name for os_version in ["rhel-7", "rhel-8", "centos-8"]):
         # Older versions use lastlog and who to get the login time
         cmd = shlex.split("lastlog | grep tty; who | awk \"'{print$3}'\"")
-        output = run_ssh_commands(host=ssh_exec, commands=cmd)[0].strip().split()
+        output = (
+            run_ssh_commands(
+                host=ssh_exec,
+                commands=cmd,
+                wait_timeout=TIMEOUT_2MIN,
+            )[0]
+            .strip()
+            .split()
+        )
         date = datetime.strptime(f"{output[7]}-{output[3]}-{output[4]} {output[5]}", "%Y-%b-%d %H:%M:%S")
     else:
         # Newer versions use last -w --time-format iso to get the login time
         cmd = shlex.split("last -w --time-format iso | grep 'tty.*still logged in'")
-        output = run_ssh_commands(host=ssh_exec, commands=cmd)[0].strip().split()
+        output = (
+            run_ssh_commands(
+                host=ssh_exec,
+                commands=cmd,
+                wait_timeout=TIMEOUT_2MIN,
+            )[0]
+            .strip()
+            .split()
+        )
         date = datetime.fromisoformat(output[2])
 
     timestamp = date.replace(tzinfo=timezone(timedelta(seconds=int(ssh_exec.os.timezone.offset) * 36))).timestamp()

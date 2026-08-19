@@ -20,7 +20,7 @@ from tests.utils import verify_wsl2_guest_works
 from tests.virt.constants import WINDOWS_10_WSL, WINDOWS_11_WSL
 from utilities.constants import Images
 from utilities.constants.images import OS_FLAVOR_WINDOWS
-from utilities.constants.timeouts import TCP_TIMEOUT_30SEC
+from utilities.constants.timeouts import TCP_TIMEOUT_30SEC, TIMEOUT_2MIN
 from utilities.virt import (
     VirtualMachineForTests,
     migrate_vm_and_verify,
@@ -48,6 +48,7 @@ def get_windows_vm_resource_usage(vm):
         host=vm.ssh_exec,
         commands=shlex.split("python C:\\\\tools\\\\cpu_mem_usage.py"),
         tcp_timeout=TCP_TIMEOUT_30SEC,
+        wait_timeout=TIMEOUT_2MIN,
     )[0]
     LOGGER.info(f"Windows VM CPU and Memory usage: {usage}")
     out = re.search(r".*CPU usage: (?P<cpu>.*),.*\(RAM\):(?P<ram>.*)", usage)
