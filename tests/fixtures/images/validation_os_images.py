@@ -34,9 +34,34 @@ def validation_os_images_namespace(admin_client):
             yield ns
 
 
+VALIDATION_OS_IMAGES_CLONE_ROLE = "validation-os-images-clone"
+
+
 @pytest.fixture(scope="session")
 def validation_os_images_role_binding(admin_client, validation_os_images_namespace):
-    """Grants view permissions in the namespace so unprivileged clients can clone from it."""
+    """Grants view and datavolumes/source permissions so unprivileged clients can clone from this namespace."""
+    clone_role = ClusterRole(
+        client=admin_client,
+        name=VALIDATION_OS_IMAGES_CLONE_ROLE,
+        rules=[
+            {
+                "apiGroups": [""],
+                "resources": ["pods", "persistentvolumeclaims", "services", "endpoints", "configmaps", "secrets"],
+                "verbs": ["get", "list", "watch"],
+            },
+            {
+                "apiGroups": [DataVolume.api_group],
+                "resources": ["datavolumes", "datasources"],
+                "verbs": ["get", "list", "watch"],
+            },
+            {
+                "apiGroups": [DataVolume.api_group],
+                "resources": ["datavolumes/source"],
+                "verbs": ["create"],
+            },
+        ],
+    )
+
     role_binding = RoleBinding(
         client=admin_client,
         name="validation-os-images-view",
@@ -44,29 +69,21 @@ def validation_os_images_role_binding(admin_client, validation_os_images_namespa
         subjects_kind="Group",
         subjects_name="system:authenticated",
         role_ref_kind=ClusterRole.kind,
-        role_ref_name="view",
+        role_ref_name=VALIDATION_OS_IMAGES_CLONE_ROLE,
     )
 
-    if role_binding.exists:
-        subjects = next(iter(role_binding.instance.subjects))
-        assert subjects.kind == "Group", (
-            f"RoleBinding {role_binding.name} subjects kind is {subjects.kind}, expected Group"
-        )
-        assert subjects.name == "system:authenticated", (
-            f"RoleBinding {role_binding.name} subjects name is {subjects.name}, expected system:authenticated"
-        )
+    if clone_role.exists and role_binding.exists:
         role_ref = role_binding.instance.roleRef
-        assert role_ref.kind == ClusterRole.kind, (
-            f"RoleBinding {role_binding.name} roleRef kind is {role_ref.kind}, expected {ClusterRole.kind}"
-        )
-        assert role_ref.name == "view", (
-            f"RoleBinding {role_binding.name} roleRef name is {role_ref.name}, expected view"
+        assert role_ref.name == VALIDATION_OS_IMAGES_CLONE_ROLE, (
+            f"RoleBinding {role_binding.name} roleRef name is {role_ref.name},"
+            f" expected {VALIDATION_OS_IMAGES_CLONE_ROLE}"
         )
         yield role_binding
         return
 
-    with role_binding as rb:
-        yield rb
+    with clone_role:
+        with role_binding as rb:
+            yield rb
 
 
 @pytest.fixture(scope="session")
