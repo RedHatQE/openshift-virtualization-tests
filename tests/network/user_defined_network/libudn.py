@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import TYPE_CHECKING
 
 from ocp_resources.resource import Resource
@@ -26,3 +27,22 @@ def lookup_default_pod_ip(pod: Pod) -> str:
     if not default_entry["ips"]:
         raise IpNotFound(f"No IPs assigned to default UDN entry on pod {pod.name}")
     return str(default_entry["ips"][0])
+
+
+def packet_loss_percent_from_ping_output(ping_output: str) -> float:
+    """Return the packet-loss percentage parsed from ping summary output.
+
+    Args:
+        ping_output: The full output of a ping command.
+
+    Returns:
+        The packet-loss percentage (0-100) reported in the statistics line.
+    """
+    match = re.search(pattern=r"(\d+(?:\.\d+)?)% packet loss", string=ping_output)
+    if not match:
+        raise PacketLossSummaryNotFoundError(f"No packet-loss summary found in ping output: {ping_output}")
+    return float(match.group(1))
+
+
+class PacketLossSummaryNotFoundError(Exception):
+    """Raised when ping output does not contain a packet-loss summary line."""

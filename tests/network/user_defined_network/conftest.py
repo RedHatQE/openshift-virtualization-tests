@@ -1,5 +1,5 @@
 from collections.abc import Generator
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 import pytest
 from kubernetes.dynamic import DynamicClient
@@ -14,12 +14,15 @@ from libs.vm import affinity
 from libs.vm.oper import run_vms
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs.vm_factory import udn_vm
+from tests.network.network_policy.libnetpolicy import ApplyNetworkPolicy
 from utilities.constants.architecture import AMD_64, ARM_64
 from utilities.constants.networking import POD_CONTAINER_SPEC
 from utilities.infra import create_ns
 
 if TYPE_CHECKING:
     from ocp_resources.namespace import Namespace
+
+ALLOWED_POD_LABEL: Final[dict[str, str]] = {"udn": "allowed"}
 
 
 @pytest.fixture(scope="module")
@@ -164,6 +167,35 @@ def udn_pod(
         namespace=udn_namespace.name,
         containers=[{**POD_CONTAINER_SPEC, "name": "udn-container"}],
         client=admin_client,
+        label=ALLOWED_POD_LABEL,
     ) as pod:
         pod.wait_for_status(status=Pod.Status.RUNNING)
         yield pod
+
+
+@pytest.fixture()
+def denied_pod(
+    admin_client: DynamicClient,
+    udn_namespace: Namespace,
+    namespaced_layer2_user_defined_network: Layer2UserDefinedNetwork,
+) -> Generator[Pod]:
+    with Pod(
+        name="udn-denied-pod",
+        namespace=udn_namespace.name,
+        containers=[{**POD_CONTAINER_SPEC, "name": "udn-container"}],
+        client=admin_client,
+    ) as pod:
+        pod.wait_for_status(status=Pod.Status.RUNNING)
+        yield pod
+
+
+@pytest.fixture()
+def udn_network_policy(admin_client, udn_namespace, udn_affinity_label):
+    with ApplyNetworkPolicy(
+        name="udn-network-policy",
+        namespace=udn_namespace.name,
+        client=admin_client,
+        pod_selector={"matchLabels": dict((udn_affinity_label,))},
+        ingress_from_pod_selector=ALLOWED_POD_LABEL,
+    ) as np:
+        yield np
