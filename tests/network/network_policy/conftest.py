@@ -1,6 +1,6 @@
 import pytest
 
-from tests.network.network_policy.libnetpolicy import TEST_PORTS, ApplyNetworkPolicy
+from tests.network.libs.netpolicy import TEST_PORTS, ApplyNetworkPolicy
 from utilities.infra import create_ns, get_node_selector_dict
 from utilities.network import compose_cloud_init_data_dict
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, prepare_cloud_init_user_data

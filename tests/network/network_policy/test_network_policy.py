@@ -4,7 +4,7 @@ import pytest
 from pyhelper_utils.exceptions import CommandExecFailed
 from pyhelper_utils.shell import run_ssh_commands
 
-from tests.network.network_policy.libnetpolicy import TEST_PORTS, format_curl_command
+from tests.network.libs.netpolicy import TEST_PORTS, format_curl_command
 
 pytestmark = pytest.mark.sno
 
