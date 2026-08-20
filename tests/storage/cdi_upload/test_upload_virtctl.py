@@ -15,6 +15,7 @@ from pytest_testconfig import config as py_config
 from libs.net.cluster import is_ipv6_single_stack_cluster
 from tests.os_params import RHEL_LATEST
 from tests.storage.cdi_upload.utils import get_storage_profile_minimum_supported_pvc_size
+from tests.storage.stop_status_utils import dv_stop_status_restart_threshold
 from tests.storage.utils import assert_use_populator, create_windows_vm_validate_guest_agent_info
 from utilities.constants import Images
 from utilities.constants.components import CDI_UPLOADPROXY
@@ -179,7 +180,7 @@ def test_virtctl_image_upload_dv(
     ) as res:
         check_upload_virtctl_result(result=res)
         dv = DataVolume(namespace=namespace.name, name=dv_name, client=unprivileged_client)
-        dv.wait_for_dv_success(timeout=TIMEOUT_1MIN)
+        dv.wait_for_dv_success(timeout=TIMEOUT_1MIN, stop_status_func=dv_stop_status_restart_threshold, dv=dv)
         create_vm_from_dv(client=unprivileged_client, dv=dv, start=True)
 
 
@@ -267,7 +268,9 @@ def test_virtctl_image_upload_pvc(download_image, namespace, storage_class_name_
 class TestVirtctlUploadExistingDV:
     @pytest.mark.polarion("CNV-3725")
     def test_virtctl_image_upload_to_existing_dv_and_create_vm(self, unprivileged_client, uploaded_dv_scope_class):
-        uploaded_dv_scope_class.wait_for_dv_success()
+        uploaded_dv_scope_class.wait_for_dv_success(
+            stop_status_func=dv_stop_status_restart_threshold, dv=uploaded_dv_scope_class
+        )
         with create_vm_from_dv(dv=uploaded_dv_scope_class, client=unprivileged_client, start=True):
             pass
 
@@ -457,7 +460,7 @@ def test_virtctl_image_upload_dv_in_pudn_namespace(
     ) as res:
         check_upload_virtctl_result(result=res)
         dv = DataVolume(namespace=udn_namespace_for_dv_upload.name, name=dv_name, client=admin_client)
-        dv.wait_for_dv_success(timeout=TIMEOUT_1MIN)
+        dv.wait_for_dv_success(timeout=TIMEOUT_1MIN, stop_status_func=dv_stop_status_restart_threshold, dv=dv)
 
 
 @pytest.mark.tier3
