@@ -2164,10 +2164,13 @@ def vm_instance_from_template(
         machine_type=params.get("machine_type"),
         eviction_strategy=params.get("eviction_strategy"),
         vm_affinity=vm_affinity,
+        tpm_params=params.get("tpm_params"),
+        efi_params=params.get("efi_params"),
     ) as vm:
         if params.get("start_vm", True):
             running_vm(
                 vm=vm,
+                dv_wait_timeout=params.get("dv_wait_timeout", TIMEOUT_30MIN),
                 wait_for_interfaces=params.get("guest_agent", True),
                 check_ssh_connectivity=vm.ssh,
             )
