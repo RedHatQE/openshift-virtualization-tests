@@ -1,5 +1,6 @@
 import logging
 from collections.abc import Generator
+from ipaddress import IPv4Interface, IPv6Interface
 
 import pytest
 from kubernetes.dynamic import DynamicClient
@@ -37,8 +38,8 @@ def localnet_stuntime_server_vm(
     nncp_localnet_on_secondary_node_nic: libnncp.NodeNetworkConfigurationPolicy,
     cudn_localnet_ovs_bridge: libcudn.ClusterUserDefinedNetwork,
     namespace_localnet_1: Namespace,
-    ipv4_localnet_address_pool: Generator[str],
-    ipv6_localnet_address_pool: Generator[str],
+    ipv4_localnet_address_pool: Generator[IPv4Interface],
+    ipv6_localnet_address_pool: Generator[IPv6Interface],
 ) -> Generator[BaseVirtualMachine]:
     with localnet_vm(
         namespace=namespace_localnet_1.name,
@@ -52,10 +53,13 @@ def localnet_stuntime_server_vm(
             network_data=cloudinit.NetworkData(
                 ethernets={
                     GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
-                        addresses=ip_addresses_from_pool(
-                            ipv4_pool=ipv4_localnet_address_pool,
-                            ipv6_pool=ipv6_localnet_address_pool,
-                        )
+                        addresses=[
+                            str(addr)
+                            for addr in ip_addresses_from_pool(
+                                ipv4_pool=ipv4_localnet_address_pool,
+                                ipv6_pool=ipv6_localnet_address_pool,
+                            )
+                        ]
                     )
                 }
             )
@@ -72,8 +76,8 @@ def localnet_stuntime_client_vm(
     unprivileged_client: DynamicClient,
     cudn_localnet_ovs_bridge: libcudn.ClusterUserDefinedNetwork,
     namespace_localnet_1: Namespace,
-    ipv4_localnet_address_pool: Generator[str],
-    ipv6_localnet_address_pool: Generator[str],
+    ipv4_localnet_address_pool: Generator[IPv4Interface],
+    ipv6_localnet_address_pool: Generator[IPv6Interface],
     localnet_stuntime_server_vm: BaseVirtualMachine,
 ) -> Generator[BaseVirtualMachine]:
     with localnet_vm(
@@ -88,10 +92,13 @@ def localnet_stuntime_client_vm(
             network_data=cloudinit.NetworkData(
                 ethernets={
                     GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
-                        addresses=ip_addresses_from_pool(
-                            ipv4_pool=ipv4_localnet_address_pool,
-                            ipv6_pool=ipv6_localnet_address_pool,
-                        )
+                        addresses=[
+                            str(addr)
+                            for addr in ip_addresses_from_pool(
+                                ipv4_pool=ipv4_localnet_address_pool,
+                                ipv6_pool=ipv6_localnet_address_pool,
+                            )
+                        ]
                     )
                 }
             )

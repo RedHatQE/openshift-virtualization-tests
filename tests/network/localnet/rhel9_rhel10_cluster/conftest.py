@@ -36,6 +36,7 @@ def localnet_server_vm(
     cudn_localnet: libcudn.ClusterUserDefinedNetwork,
     nncp_localnet: libnncp.NodeNetworkConfigurationPolicy,
 ) -> Generator[BaseVirtualMachine]:
+    addresses = random_cidr_addresses_by_family(net_seed=0, host_address=_SERVER_HOST_ADDRESS)
     with localnet_vm(
         namespace=namespace_localnet_1.name,
         name="server-vm",
@@ -50,11 +51,7 @@ def localnet_server_vm(
         ],
         cloud_init=localnet_cloudinit(
             network_data=cloudinit.NetworkData(
-                ethernets={
-                    GUEST_2ND_IFACE_NAME: EthernetDevice(
-                        addresses=random_cidr_addresses_by_family(net_seed=0, host_address=_SERVER_HOST_ADDRESS)
-                    )
-                }
+                ethernets={GUEST_2ND_IFACE_NAME: EthernetDevice(addresses=[str(addr) for addr in addresses])}
             )
         ),
         affinity=new_node_affinity(key=RHCOS9_WORKER_LABEL, exists=True),
@@ -69,6 +66,7 @@ def localnet_client_vm(
     cudn_localnet: libcudn.ClusterUserDefinedNetwork,
     nncp_localnet: libnncp.NodeNetworkConfigurationPolicy,
 ) -> Generator[BaseVirtualMachine]:
+    addresses = random_cidr_addresses_by_family(net_seed=0, host_address=_CLIENT_HOST_ADDRESS)
     with localnet_vm(
         namespace=namespace_localnet_1.name,
         name="client-vm",
@@ -83,11 +81,7 @@ def localnet_client_vm(
         ],
         cloud_init=localnet_cloudinit(
             network_data=cloudinit.NetworkData(
-                ethernets={
-                    GUEST_2ND_IFACE_NAME: EthernetDevice(
-                        addresses=random_cidr_addresses_by_family(net_seed=0, host_address=_CLIENT_HOST_ADDRESS)
-                    )
-                }
+                ethernets={GUEST_2ND_IFACE_NAME: EthernetDevice(addresses=[str(addr) for addr in addresses])}
             )
         ),
         affinity=new_node_affinity(key=RHCOS9_WORKER_LABEL, exists=True),

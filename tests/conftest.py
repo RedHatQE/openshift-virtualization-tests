@@ -561,7 +561,13 @@ def running_vm_upgrade_a(
 ):
     name = "vm-upgrade-a"
     cloud_init_data = cloud_init_network_data(
-        data={"ethernets": {"eth1": {"addresses": random_cidr_addresses_by_family(net_seed=0, host_address=1)}}}
+        data={
+            "ethernets": {
+                "eth1": {
+                    "addresses": [str(addr) for addr in random_cidr_addresses_by_family(net_seed=0, host_address=1)]
+                }
+            }
+        }
     )
     with VirtualMachineForTests(
         name=name,
@@ -594,7 +600,13 @@ def running_vm_upgrade_b(
 ):
     name = "vm-upgrade-b"
     cloud_init_data = cloud_init_network_data(
-        data={"ethernets": {"eth1": {"addresses": random_cidr_addresses_by_family(net_seed=0, host_address=2)}}}
+        data={
+            "ethernets": {
+                "eth1": {
+                    "addresses": [str(addr) for addr in random_cidr_addresses_by_family(net_seed=0, host_address=2)]
+                }
+            }
+        }
     )
     with VirtualMachineForTests(
         name=name,

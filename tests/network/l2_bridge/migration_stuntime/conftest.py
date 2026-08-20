@@ -57,8 +57,8 @@ def stuntime_server_vm(
         nad_name=l2_bridge_stuntime_nad.name,
         secondary_iface_name=STUNTIME_BRIDGE_IFACE_NAME,
         secondary_iface_addresses=[
-            f"{random_ipv4_address(net_seed=0, host_address=1)}/24",
-            f"{random_ipv6_address(net_seed=0, host_address=1)}/64",
+            random_ipv4_address(net_seed=0, host_address=1),
+            random_ipv6_address(net_seed=0, host_address=1),
         ],
         labels=dict([SERVER_VM_LABEL]),
     ) as server_vm:
@@ -81,8 +81,8 @@ def stuntime_client_vm(
         nad_name=l2_bridge_stuntime_nad.name,
         secondary_iface_name=STUNTIME_BRIDGE_IFACE_NAME,
         secondary_iface_addresses=[
-            f"{random_ipv4_address(net_seed=0, host_address=2)}/24",
-            f"{random_ipv6_address(net_seed=0, host_address=2)}/64",
+            random_ipv4_address(net_seed=0, host_address=2),
+            random_ipv6_address(net_seed=0, host_address=2),
         ],
         affinity=new_pod_affinity(label=SERVER_VM_LABEL),
         labels=dict([CLIENT_VM_LABEL]),

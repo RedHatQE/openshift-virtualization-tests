@@ -70,8 +70,8 @@ def ref_vm_localnet(
         cloud_init=localnet_cloudinit(
             network_data=cloudinit.NetworkData(
                 ethernets={
-                    GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(addresses=iface_a_ips),
-                    GUEST_2ND_IFACE_NAME: cloudinit.EthernetDevice(addresses=iface_b_ips),
+                    GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(addresses=[str(addr) for addr in iface_a_ips]),
+                    GUEST_2ND_IFACE_NAME: cloudinit.EthernetDevice(addresses=[str(addr) for addr in iface_b_ips]),
                 }
             ),
             runcmd=ARP_ISOLATION_SYSCTL_CMD,
@@ -80,8 +80,8 @@ def ref_vm_localnet(
         run_vm(
             vm=vm,
             ip_addresses_by_spec_net_name={
-                IFACE_A_NAME: [addr.split("/")[0] for addr in iface_a_ips],
-                IFACE_B_NAME: [addr.split("/")[0] for addr in iface_b_ips],
+                IFACE_A_NAME: [str(addr.ip) for addr in iface_a_ips],
+                IFACE_B_NAME: [str(addr.ip) for addr in iface_b_ips],
             },
         )
         yield vm
@@ -102,14 +102,16 @@ def under_test_vm_localnet(
         interfaces=[Interface(name=IFACE_A_NAME, bridge={})],
         cloud_init=localnet_cloudinit(
             network_data=cloudinit.NetworkData(
-                ethernets={GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(addresses=iface_a_ips)}
+                ethernets={
+                    GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(addresses=[str(addr) for addr in iface_a_ips])
+                }
             ),
         ),
     ) as vm:
         run_vm(
             vm=vm,
             ip_addresses_by_spec_net_name={
-                IFACE_A_NAME: [addr.split("/")[0] for addr in iface_a_ips],
+                IFACE_A_NAME: [str(addr.ip) for addr in iface_a_ips],
             },
         )
         yield vm

@@ -51,7 +51,7 @@ GENEVE_HEADER = 16
 UDP_HEADER = 8
 IPV4_HEADER = 20
 ETHERNET_HEADER = 14
-SPECIFIC_HOST_MASK = "32"
+SPECIFIC_HOST_MASK = 32
 
 
 @pytest.fixture(scope="module")
@@ -351,7 +351,7 @@ def vmb_ingress_multi_network_policy(
         network_name=flat_overlay_vma_vmb_nad.name,
         policy_types=["Ingress"],
         ingress=create_ip_block(
-            ip_address=f"{random_ipv4_address(net_seed=0, host_address=123)}/{SPECIFIC_HOST_MASK}",
+            ip_address=str(random_ipv4_address(net_seed=0, host_address=123, subnet_length=SPECIFIC_HOST_MASK)),
         ),
         client=admin_client,
     ) as mnp:
