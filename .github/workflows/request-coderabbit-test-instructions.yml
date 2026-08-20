@@ -1,6 +1,6 @@
-# description: Add comment for CodeRabbit to add test instructions. An inline informational test-plan comment will be added.
+# description: Request CodeRabbit test execution plan. A regular PR comment with checkboxes will be posted.
 
-name: Request CodeRabbit tests instructions
+name: Request CodeRabbit test execution plan
 
 on:
   pull_request_target:
@@ -11,6 +11,10 @@ on:
 permissions:
   pull-requests: write
   contents: read
+
+concurrency:
+  group: coderabbit-test-plan-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: true
 
 jobs:
   comment-on-commit:
@@ -26,6 +30,7 @@ jobs:
         !endsWith(github.event.comment.user.login, '[bot]')
       )
     runs-on: ubuntu-latest
+    timeout-minutes: 5
 
     steps:
       - name: Check team membership
@@ -47,14 +52,8 @@ jobs:
             <details>
               <summary>Test execution plan request details</summary>
 
-              CRITICAL: You MUST post an inline review comment on the first changed line of the first file.
-              The inline comment should contain the full Test Execution Plan (smoke decision, gating decision, and specific affected tests).
-              Do NOT submit a blocking review event (REQUEST_CHANGES/APPROVE).
-              Post a single inline PR comment on Files Changed (non-blocking COMMENT flow).
-
               As an expert software testing engineer, analyze all modified files in this PR and create a targeted test execution plan.
-              You will post an inline review comment with the test execution plan on the first changed file.
-              If you fail to run or post a comment, retry.
+              Post the test execution plan as your reply to this comment. Do NOT use inline review comments, API calls, or shell scripts to post — just include the plan directly in your response text.
 
               **Analysis Requirements:**
 
@@ -108,13 +107,14 @@ jobs:
               **Output rules:**
               Do NOT include analysis step numbers (1-8) in your visible output.
 
-              **Your deliverable:**
-              Your inline informational comment will be based on the following requirements:
+              **Your deliverable — use this EXACT format (including HTML comment markers and checkbox):**
 
+              <!-- test-execution-plan-start -->
               **Test Execution Plan**
 
               - **Run smoke tests: True / False** — If True, state the dependency path (test → fixture → changed symbol). True ONLY with a verified path.
               - **Run gating tests: True / False** — If True, state the dependency path. True if any gating-marked test is in the affected set.
+
               - **Affected tests to run** _(required when utilities/, libs/, or shared conftest changes — list concrete paths even when smoke is False)_
 
               Use these formats:
@@ -149,6 +149,11 @@ jobs:
               Expected: session starts normally
               ```
 
+              <!-- test-execution-plan-end -->
+
+              Authors record what they ran in the **Test verification** section of the PR description
+              (added automatically after you post this plan). Do not add acknowledgment checkboxes here.
+
               **Guidelines:**
 
               - Include tests affected directly OR via fixture setup/teardown, `yield from` cleanup, or transitive utility call chains (caller calls modified helper)
@@ -168,21 +173,15 @@ jobs:
 
               **CRITICAL WORKFLOW COMPLETION RULES:**
 
-              When responding to this test execution plan request, you MUST follow these rules EXACTLY:
+              1. **YOUR ONLY DELIVERABLE**: Reply to this comment with the test execution plan using the exact format above
+              2. **THEN STOP IMMEDIATELY** — no follow-up comments
+              3. You MUST include the `<!-- test-execution-plan-start -->` and `<!-- test-execution-plan-end -->` HTML markers
+              4. Do NOT post inline review comments — reply as a regular PR comment only
 
-              1. **YOUR ONLY DELIVERABLE**: Post one non-blocking inline comment containing the test execution plan on the first changed line
-              2. **THEN STOP IMMEDIATELY** - Do NOT generate any additional response
-              3. **FALLBACK ONLY**: If inline comment API calls fail after retrying, post as a regular PR comment
-              4. **SILENCE = SUCCESS**: After successfully submitting the review, your task is complete. No confirmation needed.
-
-              **ABSOLUTE PROHIBITIONS** (violating these creates empty/meaningless reviews):
-              - ❌ Do NOT post acknowledgment messages like "Test execution plan posted", "Review posted successfully", "I've successfully posted"
-              - ❌ Do NOT mention review IDs, URLs, or confirmation of posting in the PR thread
-              - ❌ Do NOT add any follow-up comments after submitting the review
-              - ❌ Do NOT reply to confirm task completion
-              - ❌ Do NOT explain what you did - just do it and stop
-
-              **Remember**: The pull request review is visible to users. Additional comments are redundant noise.
+              **ABSOLUTE PROHIBITIONS:**
+              - ❌ Do NOT post acknowledgment messages like "Test execution plan posted"
+              - ❌ Do NOT add any follow-up comments after the test plan
+              - ❌ Do NOT use shell scripts or API calls to post the plan — just include it in your reply text
 
               CRITICAL — Verification rules for smoke and gating decisions:
                 - For each True decision, you must have traced a concrete path: test file → fixture → utility function → modified symbol.
