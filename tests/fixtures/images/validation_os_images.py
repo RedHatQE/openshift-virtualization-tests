@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 from ocp_resources.cluster_role import ClusterRole
 from ocp_resources.data_source import DataSource
@@ -19,6 +21,8 @@ from utilities.constants.timeouts import TIMEOUT_10MIN, TIMEOUT_50MIN
 from utilities.constants.virt import WIN_2K22
 from utilities.os_utils import get_windows_container_disk_path
 from utilities.storage import construct_datavolume_source_dict, generate_data_source_dict
+
+LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="session")
@@ -56,12 +60,29 @@ def validation_os_images_role_binding(admin_client, validation_os_images_namespa
     # deleted and recreated with the correct roleRef; otherwise recreating it below fails with a
     # 409 AlreadyExists conflict.
     if role_binding.exists and role_binding.instance.roleRef.name != OS_IMAGES_EDIT_CLUSTER_ROLE:
+        LOGGER.info(
+            f"Deleting stale RoleBinding {role_binding.name} in {role_binding.namespace} "
+            f"pointing to {role_binding.instance.roleRef.name}, expected {OS_IMAGES_EDIT_CLUSTER_ROLE}"
+        )
         role_binding.clean_up(wait=True)
 
     if role_binding.exists:
+        # roleRef is guaranteed correct here (a mismatch was cleaned up above); validate the subjects
+        # of the pre-existing binding so a misconfigured one fails fast instead of silently not granting.
+        subjects = next(iter(role_binding.instance.subjects))
+        assert subjects.kind == "Group", (
+            f"RoleBinding {role_binding.name} subjects kind is {subjects.kind}, expected Group"
+        )
+        assert subjects.name == "system:authenticated", (
+            f"RoleBinding {role_binding.name} subjects name is {subjects.name}, expected system:authenticated"
+        )
         yield role_binding
         return
 
+    LOGGER.info(
+        f"Creating RoleBinding {role_binding.name} in {role_binding.namespace} "
+        f"binding {OS_IMAGES_EDIT_CLUSTER_ROLE} to system:authenticated"
+    )
     with role_binding as rb:
         yield rb
 
