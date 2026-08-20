@@ -3,7 +3,6 @@ from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.virtual_machine import VirtualMachine
 
 from tests.install_upgrade_operators.role_aggregation.utils import (
-    ensure_aggregation_enabled,
     unprivileged_role_binding,
     wait_for_aggregation_labels,
 )
@@ -28,7 +27,7 @@ def view_role_binding(admin_client, namespace):
     yield from unprivileged_role_binding(admin_client=admin_client, namespace_name=namespace.name, role_name="view")
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="function")
 def aggregation_disabled(admin_client, hyperconverged_resource_scope_class):
     """HCO with roleAggregationStrategy set to Manual and aggregation labels removed."""
     with ResourceEditorValidateHCOReconcile(
@@ -41,13 +40,16 @@ def aggregation_disabled(admin_client, hyperconverged_resource_scope_class):
         yield
 
 
-@pytest.fixture()
+@pytest.fixture(scope="function")
 def aggregation_reenabled(admin_client, hyperconverged_resource_scope_class):
     """HCO with roleAggregationStrategy at AggregateToDefault and aggregation labels present."""
-    ensure_aggregation_enabled(
-        admin_client=admin_client,
-        hyperconverged_resource=hyperconverged_resource_scope_class,
+    current_strategy = hyperconverged_resource_scope_class.instance.spec.get(
+        "roleAggregationStrategy", "AggregateToDefault"
     )
+    assert current_strategy == "AggregateToDefault", (
+        f"roleAggregationStrategy is {current_strategy}, expected AggregateToDefault"
+    )
+    wait_for_aggregation_labels(admin_client=admin_client, should_be_present=True)
 
 
 @pytest.fixture()

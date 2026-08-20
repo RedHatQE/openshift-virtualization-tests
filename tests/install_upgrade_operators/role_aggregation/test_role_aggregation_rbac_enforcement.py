@@ -19,7 +19,7 @@ from tests.install_upgrade_operators.role_aggregation.utils import wait_for_vm_l
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.arm64]
 
 
-@pytest.mark.usefixtures("aggregation_disabled", "admin_role_binding")
+@pytest.mark.usefixtures("admin_role_binding")
 class TestRoleAggregationAdmin:
     """
     Tests for admin role RBAC behavior across aggregation state changes.
@@ -28,18 +28,21 @@ class TestRoleAggregationAdmin:
     failed, the aggregation state may be inconsistent for the re-enabled flow.
 
     Preconditions:
-        - HyperConverged CR spec.roleAggregationStrategy set to "Manual"
-          (role aggregation disabled)
         - RoleBinding granting the unprivileged user the admin ClusterRole
-          in the namespace, created while aggregation is disabled
+          in the namespace
     """
 
     @pytest.mark.polarion("CNV-16028")
     @pytest.mark.dependency(name="test_disabled_admin")
+    @pytest.mark.usefixtures("aggregation_disabled")
     def test_admin_forbidden_when_aggregation_disabled(self, unprivileged_client, namespace):
         """
         [NEGATIVE] Test that an unprivileged user with the admin role is forbidden
         from listing virtualization resources when role aggregation is disabled.
+
+        Preconditions:
+            - HyperConverged CR spec.roleAggregationStrategy set to "Manual"
+              (role aggregation disabled)
 
         Steps:
             1. Attempt to list VirtualMachine resources in the namespace using
@@ -76,7 +79,7 @@ class TestRoleAggregationAdmin:
         )
 
 
-@pytest.mark.usefixtures("aggregation_disabled", "edit_role_binding")
+@pytest.mark.usefixtures("edit_role_binding")
 class TestRoleAggregationEdit:
     """
     Tests for edit role RBAC behavior across aggregation state changes.
@@ -85,18 +88,21 @@ class TestRoleAggregationEdit:
     failed, the aggregation state may be inconsistent for the re-enabled flow.
 
     Preconditions:
-        - HyperConverged CR spec.roleAggregationStrategy set to "Manual"
-          (role aggregation disabled)
         - RoleBinding granting the unprivileged user the edit ClusterRole
-          in the namespace, created while aggregation is disabled
+          in the namespace
     """
 
     @pytest.mark.polarion("CNV-16262")
     @pytest.mark.dependency(name="test_disabled_edit")
+    @pytest.mark.usefixtures("aggregation_disabled")
     def test_edit_forbidden_when_aggregation_disabled(self, unprivileged_client, namespace):
         """
         [NEGATIVE] Test that an unprivileged user with the edit role is forbidden
         from listing virtualization resources when role aggregation is disabled.
+
+        Preconditions:
+            - HyperConverged CR spec.roleAggregationStrategy set to "Manual"
+              (role aggregation disabled)
 
         Steps:
             1. Attempt to list VirtualMachine resources in the namespace using
@@ -129,7 +135,7 @@ class TestRoleAggregationEdit:
         dry_run_vm.create()
 
 
-@pytest.mark.usefixtures("aggregation_disabled", "view_role_binding")
+@pytest.mark.usefixtures("view_role_binding")
 class TestRoleAggregationView:
     """
     Tests for view role RBAC behavior across aggregation state changes.
@@ -138,18 +144,21 @@ class TestRoleAggregationView:
     failed, the aggregation state may be inconsistent for the re-enabled flow.
 
     Preconditions:
-        - HyperConverged CR spec.roleAggregationStrategy set to "Manual"
-          (role aggregation disabled)
         - RoleBinding granting the unprivileged user the view ClusterRole
-          in the namespace, created while aggregation is disabled
+          in the namespace
     """
 
     @pytest.mark.polarion("CNV-16263")
     @pytest.mark.dependency(name="test_disabled_view")
+    @pytest.mark.usefixtures("aggregation_disabled")
     def test_view_forbidden_when_aggregation_disabled(self, unprivileged_client, namespace):
         """
         [NEGATIVE] Test that an unprivileged user with the view role is forbidden
         from listing virtualization resources when role aggregation is disabled.
+
+        Preconditions:
+            - HyperConverged CR spec.roleAggregationStrategy set to "Manual"
+              (role aggregation disabled)
 
         Steps:
             1. Attempt to list VirtualMachine resources in the namespace using

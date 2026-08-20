@@ -11,12 +11,10 @@ from ocp_resources.virtual_machine import VirtualMachine
 from timeout_sampler import TimeoutSampler
 
 from utilities.constants.pytest import UNPRIVILEGED_USER
-from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_5MIN, TIMEOUT_5SEC
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_5MIN, TIMEOUT_5SEC, TIMEOUT_10SEC
 
 if TYPE_CHECKING:
     from kubernetes.dynamic import DynamicClient
-    from ocp_resources.hyperconverged import HyperConverged
-
 LOGGER = logging.getLogger(__name__)
 
 KUBEVIRT_AGGREGATION_LEVELS = ("admin", "edit", "view")
@@ -38,7 +36,7 @@ def get_kubevirt_aggregation_roles(admin_client: DynamicClient) -> dict[str, str
     for level in KUBEVIRT_AGGREGATION_LEVELS:
         built_in_role = ClusterRole(name=level, client=admin_client)
         selectors = built_in_role.instance.aggregationRule.clusterRoleSelectors
-        label_key = next(iter(selectors[0].matchLabels))
+        label_key, _ = next(iter(selectors[0].matchLabels))
         roles[f"kubevirt.io:{level}"] = label_key
     return roles
 
@@ -78,7 +76,7 @@ def wait_for_aggregation_labels(admin_client: DynamicClient, should_be_present: 
     LOGGER.info(f"Waiting for aggregation labels: should_be_present={should_be_present}")
     for sample in TimeoutSampler(
         wait_timeout=TIMEOUT_5MIN,
-        sleep=10,
+        sleep=TIMEOUT_10SEC,
         func=aggregation_labels_match_expected_state,
         admin_client=admin_client,
         should_be_present=should_be_present,
@@ -153,17 +151,3 @@ def unprivileged_role_binding(
         role_ref_name=role_name,
     ):
         yield
-
-
-def ensure_aggregation_enabled(admin_client: DynamicClient, hyperconverged_resource: HyperConverged) -> None:
-    """Verify roleAggregationStrategy is AggregateToDefault and aggregation labels are present.
-
-    Args:
-        admin_client: Admin DynamicClient for API access.
-        hyperconverged_resource: HyperConverged CR to check and patch.
-    """
-    current_strategy = hyperconverged_resource.instance.spec.get("roleAggregationStrategy", "AggregateToDefault")
-    assert current_strategy == "AggregateToDefault", (
-        f"roleAggregationStrategy is {current_strategy}, expected AggregateToDefault"
-    )
-    wait_for_aggregation_labels(admin_client=admin_client, should_be_present=True)
