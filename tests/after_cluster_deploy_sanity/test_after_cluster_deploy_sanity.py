@@ -109,6 +109,7 @@ def test_boot_volume_health(hco_managed_data_import_crons, data_import_cron_mana
         datasource.wait_for_condition(
             condition=datasource.Condition.READY,
             status=datasource.Condition.Status.TRUE,
+            timeout=TIMEOUT_10MIN,
         )
 
 
