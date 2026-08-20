@@ -3,14 +3,15 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from kubernetes.utils.quantity import parse_quantity
 from ocp_resources.virtual_machine_export import VirtualMachineExport
-from timeout_sampler import TimeoutSampler
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.storage.cbt.constants import CBT_BACKUP_CONDITION_FAILED
 from utilities.constants.timeouts import TIMEOUT_5SEC, TIMEOUT_10MIN
+from utilities.constants.virt import CLOUD_INIT_DISK_NAME, DV_DISK
 
 if TYPE_CHECKING:
     from kubernetes.dynamic import DynamicClient
@@ -29,22 +30,100 @@ def cbt_pvc_size_with_headroom(source_disk_size: str, headroom_gib: int = 10) ->
     return f"{source_gib + headroom_gib}Gi"
 
 
-def assert_backup_includes_volumes(
-    backup: VirtualMachineBackup,
+def cbt_pvc_size_for_vm(vm: VirtualMachine, headroom_gib: int = 10) -> str:
+    """Return a backup/staging PVC size covering every VM dataVolumeTemplate plus headroom.
+
+    Args:
+        vm: VM whose dataVolumeTemplates sizes are summed.
+        headroom_gib: Extra capacity in Gi added after rounding the disk total up.
+
+    Returns:
+        str: PVC size such as ``42Gi``.
+    """
+    templates = vm.instance.to_dict()["spec"]["dataVolumeTemplates"]
+    total_bytes = sum(
+        parse_quantity(quantity=template["spec"]["storage"]["resources"]["requests"]["storage"])
+        for template in templates
+    )
+    total_gib = int((total_bytes + BYTES_PER_GIB - 1) // BYTES_PER_GIB)
+    return cbt_pvc_size_with_headroom(source_disk_size=f"{total_gib}Gi", headroom_gib=headroom_gib)
+
+
+def data_disk_name(index: int, unique_suffix: str) -> str:
+    """Name of the Nth (1-indexed) additional blank data disk DataVolume/disk/volume for a CBT test VM."""
+    return f"cbt-datadisk-{index}-{unique_suffix}"
+
+
+def guest_volume_target(vm: VirtualMachine, volume_name: str) -> str | None:
+    """Guest device name (for example ``vdc``) for a volume, from VMI volumeStatus."""
+    for volume_status in vm.vmi.instance.status.volumeStatus:
+        if volume_status.get("name") == volume_name:
+            return volume_status.get("target")
+    return None
+
+
+def guest_device_path_for_volume(vm: VirtualMachine, volume_name: str) -> str:
+    """Guest ``/dev`` path for a named volume, taken from VMI ``volumeStatus.target``.
+
+    Side effects:
+        Polls the VMI until the volume reports a guest device name.
+
+    Raises:
+        TimeoutExpiredError: If the volume never reports a guest device name within the timeout.
+    """
+    LOGGER.info(f"Waiting for guest device of volume {volume_name} on VM {vm.name}")
+    for target in TimeoutSampler(
+        wait_timeout=TIMEOUT_10MIN,
+        sleep=TIMEOUT_5SEC,
+        func=guest_volume_target,
+        vm=vm,
+        volume_name=volume_name,
+    ):
+        if target:
+            return f"/dev/{target}"
+    raise TimeoutExpiredError(f"Volume {volume_name} on VM {vm.name} never reported a guest device name")
+
+
+def attached_data_disk_names(vm: VirtualMachine) -> list[str]:
+    """Names of additional data disk volumes attached to a VM.
+
+    Args:
+        vm: VM to inspect.
+
+    Returns:
+        list[str]: Sorted names of attached data disk volumes, excluding the boot disk and cloud-init disk.
+    """
+    volumes = vm.instance.to_dict()["spec"]["template"]["spec"]["volumes"]
+    excluded_names = {DV_DISK, CLOUD_INIT_DISK_NAME}
+    return sorted(volume["name"] for volume in volumes if volume["name"] not in excluded_names)
+
+
+def incremental_test_data(index: int) -> str:
+    """Content written to the VM before the Nth (1-indexed) incremental backup in a backup chain."""
+    return f"cbt-incremental-{index}-backup-test-data"
+
+
+def incremental_test_data_file(index: int) -> str:
+    """Guest file path written before the Nth (1-indexed) incremental backup in a backup chain."""
+    return f"/tmp/cbt-incremental-{index}-test-data.txt"
+
+
+def assert_backup_status_includes_volumes(
+    backup_name: str | None,
+    backup_status: Any,
     expected_volume_names: list[str],
     expected_backup_type: str | None = None,
 ) -> None:
-    """Assert a ready backup includes the expected volumes (and optional type)."""
-    backup_status = backup.instance.status
+    """Assert a backup status includes the expected volumes (and optional type)."""
     included_volumes = backup_status["includedVolumes"]
     actual_volume_names = [volume["volumeName"] for volume in included_volumes]
     assert sorted(actual_volume_names) == sorted(expected_volume_names), (
-        f"Backup {backup.name} included volumes {actual_volume_names}, "
+        f"Backup {backup_name} included volumes {actual_volume_names}, "
         f"expected {expected_volume_names}: {included_volumes}"
     )
     if expected_backup_type is not None:
         assert backup_status["type"] == expected_backup_type, (
-            f"Backup {backup.name} type is {backup_status['type']!r}, expected {expected_backup_type!r}"
+            f"Backup {backup_name} type is {backup_status['type']!r}, expected {expected_backup_type!r}"
         )
 
 
