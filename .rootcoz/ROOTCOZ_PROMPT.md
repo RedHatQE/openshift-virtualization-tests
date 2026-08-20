@@ -192,47 +192,7 @@ When uncertain:
 
 ### Upstream Causality Chain (MANDATORY for Timeout/Migration/Network Failures)
 
-When a test failure involves a timeout waiting for a condition (e.g., migration
-phase, pod status, network connectivity), treat the timeout as a SECONDARY symptom.
-The timeout tells you WHAT didn't happen — you must find WHY it didn't happen.
-
-**Required investigation order:**
-
-1. **Identify the timed-out condition.** What was the test waiting for?
-   (e.g., migration to complete, pod to reach Running, SSH to connect)
-2. **Find the component responsible for that condition.** Which controller/handler
-   should have made it happen? (e.g., virt-handler for migration execution,
-   virt-controller for migration scheduling)
-3. **Search that component's logs for ERROR-level entries** during the failure
-   window (from operation start to the observed failure).
-4. **Follow the causal chain upstream.** If you find a network-level error
-   (e.g., "Connection reset by peer"), that is still a SYMPTOM — search for
-   what caused the connection to reset (proxy failure, socket error, filesystem
-   error, etc.)
-5. **Pursue the deepest available causal evidence.** Prefer component ERROR logs
-   over K8s events, and syscall-level or configuration-level errors when present.
-   If the component logs show a clear product-path defect (e.g., a logic error,
-   race condition, or incorrect state transition) without a syscall-level error,
-   that is a valid root cause — do not force deeper digging when the causal
-   chain is already clear.
-
-**Anti-pattern — DO NOT DO THIS:**
-- ❌ Report "migration failed with Connection reset by peer" as the root cause
-- ❌ Stop at the K8s Event level without reading component logs
-- ❌ Classify based on the test's `TimeoutExpiredError` without finding what timed out
-
-**Correct pattern:**
-- ✅ Read the relevant component logs on ALL involved nodes → find the ERROR-level
-  entry that preceded the K8s event → identify the syscall or component error that
-  caused the downstream symptom → trace that error to a specific code path,
-  configuration, or environmental condition.
-
-  Example depth: A K8s event reporting a network-level error
-  (e.g., connection reset, timeout) is layer 2 — it tells you the connection
-  broke, not why. The component log on the node where the operation was
-  executing — showing the specific syscall failure, path resolution error,
-  or resource exhaustion that preceded the network symptom — is layer 1.
-  Your analysis must reach layer 1 and explain the underlying cause.
+Treat any timeout/connectivity error as a SECONDARY symptom: it tells you WHAT didn't happen, not WHY. A K8s event reporting a network-level error (connection reset, timeout) is a symptom — the root cause is the component ERROR log entry that preceded it. Your analysis MUST reach the deepest causal layer (component log / syscall / config / product logic error) on ALL involved nodes, not stop at the test's `TimeoutExpiredError` or a K8s event. The STEP 0 `must-gather-analyzer` agent performs this causal-chain investigation — use its output; do not restate the symptom as the root cause.
 
 ### Exception and Pattern Signals
 
@@ -285,37 +245,7 @@ Pattern guidance:
 - **DataVolume/CDI failure:** Wrong source URL, bad storage class reference, or
   insufficient PVC size in test is `CODE ISSUE`; valid import/upload/clone rejected
   or stuck by CDI controller is `PRODUCT BUG`; storage backend outage is `INFRASTRUCTURE`
-- **Post-operation validation:** Wrong expected values or stale assertions are
-  `CODE ISSUE`; a VM with wrong CPU topology, missing disks, or broken networking
-  after a valid operation is `PRODUCT BUG`
-- **Hot-plug failure (disk or NIC):** Wrong device specification in test is `CODE ISSUE`;
-  valid hot-plug request rejected or causing VM crash is `PRODUCT BUG`
-- **Snapshot/restore failure:** Wrong snapshot configuration in test is `CODE ISSUE`;
-  valid snapshot or restore operation producing corrupt VM state is `PRODUCT BUG`
-- **Metrics/alerts failure:** Wrong PromQL query or assertion threshold in test is
-  `CODE ISSUE`; metric not exposed or alert not firing with valid conditions is
-  `PRODUCT BUG`
-- **Install/upgrade failure:** Wrong HCO CR configuration or missing prerequisites
-  in test is `CODE ISSUE`; valid upgrade path failing in operator reconciliation is
-  `PRODUCT BUG`
-- **Resource cleanup failure:** Missing cleanup or bad fixture ownership is `CODE ISSUE`;
-  product finalizer or controller cleanup failure is `PRODUCT BUG`; namespace or cluster
-  cleanup blocked by infrastructure is `INFRASTRUCTURE`
-- **Console access failure:** Wrong `pexpect` patterns or timeouts in test is
-  `CODE ISSUE`; `virtctl console` unable to connect to a healthy VMI is `PRODUCT BUG`
-- **Timeout mismatch with product code:** When a test uses `TimeoutSampler` or
-  `wait_for_status` to wait for a product-initiated operation (e.g., pod creation by
-  `virtctl`, DataVolume import by CDI), compare the test's timeout against the
-  product's own internal timeout for the SAME operation. If the product allows a
-  significantly longer wait (e.g., product waits 500s but test waits 60s), the test
-  timeout is too aggressive — classify as `CODE ISSUE`, not `PRODUCT BUG`. The product
-  defines what is a reasonable wait time for its own operations. To verify: read the
-  product source code for the operation being tested and find its timeout constant.
-  Example: `virtctl guestfs` internally waits 500s for the libguestfs pod to reach
-  Running (`pkg/virtctl/guestfs/guestfs.go`), but a test that only waits 60s
-  (`TIMEOUT_1MIN`) for the same pod is a test timeout issue — the pod may need time
-  for image pull, scheduling, or volume attach, all within the product's expected
-  tolerance.
+- For all other patterns (hot-plug, snapshot/restore, metrics/alerts, install/upgrade, cleanup, console, timeout-vs-product-timeout), apply the same rule: wrong test setup/config/assertion = CODE ISSUE; valid input + product misbehavior = PRODUCT BUG; environment outage = INFRASTRUCTURE.
 
 ### Jira Search Keyword Guidance
 
@@ -472,49 +402,11 @@ never completed. Investigate it explicitly before ruling it out.
 
 ### 3b. Must-Gather Artifact Scanning (MANDATORY for PRODUCT BUG Classification)
 
-When build-artifacts contain must-gather data, you MUST scan component logs —
-not just K8s events. Events are downstream symptoms; component logs contain
-the actual errors.
-
-**Log priority for root cause identification:**
-
-1. **ERROR-level component logs** — the ACTUAL error
-2. **K8s Events** — the REPORTED error (often a downstream symptom)
-3. **Pod status/phase transitions** — WHEN things failed
-4. **Test output/console** — HOW the test observed the failure
-
-**If your analysis only references layers 2-4, you have NOT found the root
-cause.** Go back and read layer 1 logs. Exception: if `must-gather-analyzer`
-reports no artifacts, note this in `missing_information` and proceed with
-layers 2-4 evidence — do not require layer 1 logs that do not exist.
-
-The STEP 0 agent `must-gather-analyzer` provides structured evidence from
-must-gather artifacts (artifact discovery, component log scanning, and
-causal chain tracing — all in one pass).
-Use its output as input for your classification — do not repeat its
-investigation, but verify its conclusions against your own reading of the
-artifacts.
+For PRODUCT BUG, you MUST base root cause on layer-1 ERROR-level component logs, not just K8s events/pod status/test output (layers 2-4). The STEP 0 `must-gather-analyzer` agent scans component logs and traces the causal chain — use its output and verify its conclusions. If it reports no artifacts, note this in `missing_information` and proceed with layers 2-4.
 
 ### 3c. Regression Detection (MANDATORY for Product Bugs with Behavioral-Change or Recent-Onset Signals)
 
-When a product bug failure shows signs of a behavioral change or recent onset,
-investigate whether it is a regression before finalizing your classification.
-
-The STEP 0 agents `regression-detector` and `recent-changes-scanner` provide
-version correlation, behavioral change evidence, and recent change analysis.
-Use their output alongside your own analysis. **Important:** these agents do
-not have access to history tools — their regression assessment may be
-`INSUFFICIENT DATA`. Cross-reference with `get_failure_history` results: if
-history shows the test was previously passing, override the agent's assessment
-and treat it as a regression candidate regardless of what the agent reported.
-
-If regression evidence is found, include it in your `details` field (the
-`pattern` field should remain `NEW` for initial analysis — `classify_test_pattern`
-will consider your evidence when choosing the final pattern). If all available
-checks complete without evidence, state "Regression investigation: no evidence
-of a recent behavioral change in [component]". If the required history or
-artifacts are unavailable, state "Regression investigation: insufficient data
-to assess a recent behavioral change in [component]".
+When a product bug shows behavioral-change or recent-onset signals, investigate regression before finalizing. The STEP 0 `regression-detector` and `recent-changes-scanner` agents provide version correlation and change evidence — but they lack history access, so cross-reference `get_failure_history`: if history shows the test was previously passing, treat as a regression candidate regardless of the agent assessment. Record regression evidence in `details`; keep `pattern` as `NEW` for initial analysis.
 
 ## 4. Missing Information Guidance
 
@@ -537,34 +429,16 @@ to assess a recent behavioral change in [component]".
   `oc logs -n openshift-cnv deployment/virt-controller`
 - `virt-handler` logs (on the affected node):
   `oc logs -n openshift-cnv pod/<virt-handler-pod> -c virt-handler`
-- `virt-api` logs:
-  `oc logs -n openshift-cnv deployment/virt-api`
-- `virt-launcher` logs (per-VM):
-  `oc logs -n <namespace> pod/<virt-launcher-pod>`
-- VirtualMachine CR status:
-  `oc get vm <name> -n <namespace> -o yaml`
-- VirtualMachineInstance CR status:
-  `oc get vmi <name> -n <namespace> -o yaml`
+- VirtualMachine / VirtualMachineInstance CR status:
+  `oc get vm <name> -n <namespace> -o yaml` / `oc get vmi <name> -n <namespace> -o yaml`
 - VirtualMachineInstanceMigration status:
   `oc get vmim -n <namespace> -o yaml`
 - DataVolume and PVC status for storage issues:
   `oc get dv,pvc -n <namespace> -o yaml`
-- CDI controller logs:
-  `oc logs -n openshift-cnv deployment/cdi-controller`
-- CDI importer/uploader pod logs:
-  `oc logs -n <namespace> pod/<importer-pod>`
-- HyperConverged CR status:
-  `oc get hyperconverged kubevirt-hyperconverged -n openshift-cnv -o yaml`
 - Must-gather data:
   `oc adm must-gather --image=registry.redhat.io/container-native-virtualization/cnv-must-gather-rhel9:v4.x`
-- Events in the target namespace:
-  `oc get events -n <namespace> --sort-by='.lastTimestamp'`
-- Node conditions and status:
-  `oc describe node <node-name>`
-- Network attachment definitions:
-  `oc get net-attach-def -n <namespace> -o yaml`
-- NodeNetworkConfigurationPolicy status:
-  `oc get nncp -o yaml`
+
+Full command catalog: see the `must-gather-analyzer` agent file.
 
 ### For `INFRASTRUCTURE`, suggest collecting
 
@@ -576,16 +450,10 @@ to assess a recent behavioral change in [component]".
   `oc version`
 - CNV operator version:
   `oc get csv -n openshift-cnv`
-- KubeVirt CR status:
-  `oc get kubevirt -n openshift-cnv -o yaml`
 - Storage class availability:
   `oc get sc`
-- Node hardware and capacity:
-  `oc describe nodes | grep -A 10 "Capacity\|Allocatable"`
-- SR-IOV network node state (if applicable):
-  `oc get sriovnetworknodestates -n openshift-sriov-network-operator -o yaml`
-- Provider endpoint health, DNS reachability, storage backend health, and other external
-  dependency status that could explain a lab or infrastructure outage
+
+Full command catalog: see the `must-gather-analyzer` agent file.
 
 ## 5. Key Components and Test Stack
 
@@ -629,80 +497,41 @@ Required steps for EVERY failure:
 
 Only AFTER reading the code should you classify the failure.
 
-### MANDATORY: Eliminate CODE ISSUE Before Declaring PRODUCT BUG (Timeout/Connectivity Failures)
+### MANDATORY: Before Declaring PRODUCT BUG
 
-**For any failure involving a timeout, connectivity error, or SSH error**, you MUST
-explicitly argue why the failure is NOT a `CODE ISSUE` before classifying as
-`PRODUCT BUG`. This step is mandatory because artifact-level symptoms (slow VM boot,
-SSH banner errors, timeout expiry) look identical whether the root cause is a product
-defect or a test that skipped necessary wait steps.
+Artifact-level symptoms (slow VM boot, SSH banner errors, timeout expiry) look
+identical whether the root cause is a product defect or a test that skipped necessary
+wait steps. Before classifying any failure as `PRODUCT BUG`, you MUST eliminate
+`CODE ISSUE` and verify the product code actually has the defect you're claiming.
+Include the following in your `details`:
 
-Required elimination checklist (include in your `details`):
+1. **List every wait/readiness call in the test path** (trace from the test function
+   through all helpers and fixtures) with its parameters, e.g.
+   `running_vm(vm=vm, wait_for_interfaces=False)` — skips interface readiness. If any
+   `wait_for_*` parameter is `False`, justify why skipping that wait is safe for this
+   scenario; if you cannot, classify as `CODE ISSUE`.
+2. **Verify timeout values are sufficient.** Compare the test's timeout against the
+   expected operation duration (boot + network + SSH). If too low, classify as
+   `CODE ISSUE`.
+3. **State your CODE-ISSUE counter-argument.** Write one sentence giving the strongest
+   argument for `CODE ISSUE` and why you reject it. If you cannot articulate one,
+   reconsider your classification.
+4. **Read the product/operator source and trace the error to a specific code path.**
+   Follow the error from the test failure into the KubeVirt/CDI/HCO or dependent
+   operator source (see Section 6 for repos), and show the specific code that is
+   malfunctioning. Reference specific product source files, functions, or code paths
+   in your evidence — not just test-side error messages.
+5. **Include a `Product code investigation:` evidence block in `details`:**
 
-1. **List every wait/readiness call in the test path.** Trace from the test function
-   through all helpers and fixtures. For each VM startup or readiness helper, list
-   the call with its parameters. Example:
-   `running_vm(vm=vm, wait_for_interfaces=False)` — skips interface readiness.
-2. **Verify each wait parameter is correct.** If any `wait_for_*` parameter is `False`,
-   explain why skipping that wait is safe for this test scenario. If you cannot justify
-   it, classify as `CODE ISSUE`.
-3. **Verify timeout values are sufficient.** Compare the test's timeout against the
-   expected duration of the operation. If the test allows 120s but the operation
-   (boot + network + SSH) typically needs longer, classify as `CODE ISSUE`.
-4. **State your counter-argument.** Write one sentence explaining the strongest
-   argument for `CODE ISSUE` and why you are rejecting it. If you cannot articulate
-   a counter-argument, reconsider your classification.
+   ```text
+   Product code investigation:
+   - Examined [component] source at [repo]/[path/to/file.go]
+   - The [function/handler] at [file:line] is responsible for [behavior]
+   - The code shows [specific observation about why this is a product defect]
+   ```
 
-If you skip this checklist for a timeout/connectivity failure, your analysis is
-incomplete and may be rejected.
-
-### MANDATORY: Verify Product Behavior Before Declaring PRODUCT BUG
-
-**Before classifying any failure as `PRODUCT BUG`, you MUST verify that the product
-code actually has the defect you're claiming.**
-
-Required steps before declaring PRODUCT BUG:
-
-1. **Read the product source code.** If the error points to a KubeVirt, CDI, or HCO
-   component, read the relevant source code in the upstream repositories to understand
-   the expected behavior:
-   - KubeVirt: [kubevirt/kubevirt][kubevirt-repo]
-   - CDI: [kubevirt/containerized-data-importer][cdi-repo]
-   - HCO: [kubevirt/hyperconverged-cluster-operator][hco-repo]
-2. **Read the operator code.** If the failure involves a dependent operator, read its
-   source code to verify the defect exists there:
-   - NMState: [kubernetes-nmstate][nmstate-repo]
-   - SR-IOV: [sriov-network-operator][sriov-repo]
-   - MTV (Forklift): [forklift][mtv-repo]
-   - Node Health Check: [node-healthcheck-operator][nhc-repo]
-   - OADP: [oadp-operator][oadp-repo]
-3. **Trace the error to product code.** Follow the error path from the test failure
-   into the product/operator source. Show the specific product code that is
-   malfunctioning.
-4. **Provide code-level evidence.** Your `archive_evidence` and `evidence` fields must
-   reference specific product source files, functions, or code paths — not just
-   error messages from the test side.
-
-If you cannot trace the failure to a specific defect in the product or operator source
-code, reconsider whether it is truly a `PRODUCT BUG` or if it is a `CODE ISSUE` in
-the test infrastructure.
-
-### Show Your Work: Product Code Investigation
-
-When classifying as `PRODUCT BUG`, your analysis MUST include evidence that you
-investigated the product source code. In your `details` field, include a section like:
-
-```text
-Product code investigation:
-- Examined [component] source at [repo]/[path/to/file.go]
-- The [function/handler] at [file:line] is responsible for [behavior]
-- The code shows [specific observation about why this is a product defect]
-```
-
-This proves the classification is based on actual product code analysis, not just
-symptoms observed from the test side. If the product code is not accessible or the
-relevant code path cannot be identified, state this explicitly and lower confidence
-to `medium` or `low`.
+If you cannot identify the specific product/operator code path, reconsider whether it
+is truly a `PRODUCT BUG` or a `CODE ISSUE`, and lower confidence to `medium` or `low`.
 
 Key locations in the repository:
 
@@ -712,23 +541,7 @@ Key locations in the repository:
 - Shared utilities: `utilities/virt.py`, `utilities/storage.py`, `utilities/network.py`
 - Configuration: `tests/global_config.py` — test configuration values
 
-Key product and runtime components to inspect:
-
-| Component                              | Role in failure analysis                       | First place to inspect             |
-|----------------------------------------|------------------------------------------------|------------------------------------|
-| `virt-controller`                      | VM lifecycle management (start, stop, migrate) | Pod logs in `openshift-cnv`        |
-| `virt-handler`                         | Per-node VM operations (domain management)     | Pod logs on affected worker node   |
-| `virt-api`                             | API server, `virtctl port-forward` proxy       | Pod logs in `openshift-cnv`        |
-| `virt-launcher`                        | Per-VM process (QEMU/libvirt)                  | Pod logs in VM namespace           |
-| `cdi-controller`                       | DataVolume/PVC import/upload/clone workflows   | Pod logs in `openshift-cnv`        |
-| `cdi-importer` / `cdi-uploader`        | Data transfer execution                        | Pod logs in target namespace       |
-| `HCO` (HyperConverged operator)        | Operator lifecycle, feature gates              | HyperConverged CR status           |
-| `SSP` (Scheduling, Scale, Performance) | Templates, instance types, common templates    | SSP CR status                      |
-| `nmstate`                              | Node network configuration                     | NodeNetworkConfigurationPolicy CR  |
-| `kubemacpool`                          | MAC address management                         | Pod logs in `openshift-cnv`        |
-| VirtualMachine / VMI CRs               | Declarative VM state                           | `status`, `conditions`, `phase`    |
-| DataVolume / PVC                       | Storage lifecycle                              | `status`, `conditions`, CDI events |
-| VirtualMachineInstanceMigration        | Migration state tracking                       | `status`, `conditions`             |
+Component-to-log mapping (which component owns which behavior, where to find its logs): see the `must-gather-analyzer` agent file.
 
 
 ## 6. Reference Links
@@ -766,12 +579,6 @@ If `build-artifacts/run-info.json` does not contain a needed component version,
 check `build-artifacts/` for version evidence (CSV names, operator pod image
 tags, log output). If not found there, check `additional_repos` for the
 component's source repo context.
-
-## FINAL REMINDER — READ THIS LAST
-
-**You MUST include ALL component versions from `run-info.json` in the
-`details` Environment block. Not just the relevant ones — ALL of them.
-If you only included 3 versions, go back and add the rest NOW.**
 
 [ocp-virt-doc]: https://docs.redhat.com/en/documentation/red_hat_openshift_virtualization/
 [kubevirt-repo]: https://github.com/kubevirt/kubevirt

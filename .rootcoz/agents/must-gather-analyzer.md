@@ -115,6 +115,82 @@ rather than a longstanding defect, or "None observed"]
 [Expected logs that were missing from the must-gather, or "None"]
 ```
 
+## Reference: Component-to-Log Mapping and Collection Commands
+
+### Component-to-Log Mapping
+
+Which component owns which behavior, and where to find its logs:
+
+| Component                              | Role in failure analysis                       | First place to inspect             |
+|----------------------------------------|------------------------------------------------|------------------------------------|
+| `virt-controller`                      | VM lifecycle management (start, stop, migrate) | Pod logs in `openshift-cnv`        |
+| `virt-handler`                         | Per-node VM operations (domain management)     | Pod logs on affected worker node   |
+| `virt-api`                             | API server, `virtctl port-forward` proxy       | Pod logs in `openshift-cnv`        |
+| `virt-launcher`                        | Per-VM process (QEMU/libvirt)                  | Pod logs in VM namespace           |
+| `cdi-controller`                       | DataVolume/PVC import/upload/clone workflows   | Pod logs in `openshift-cnv`        |
+| `cdi-importer` / `cdi-uploader`        | Data transfer execution                        | Pod logs in target namespace       |
+| `HCO` (HyperConverged operator)        | Operator lifecycle, feature gates              | HyperConverged CR status           |
+| `SSP` (Scheduling, Scale, Performance) | Templates, instance types, common templates    | SSP CR status                      |
+| `nmstate`                              | Node network configuration                     | NodeNetworkConfigurationPolicy CR  |
+| `kubemacpool`                          | MAC address management                         | Pod logs in `openshift-cnv`        |
+| VirtualMachine / VMI CRs               | Declarative VM state                           | `status`, `conditions`, `phase`    |
+| DataVolume / PVC                       | Storage lifecycle                              | `status`, `conditions`, CDI events |
+| VirtualMachineInstanceMigration        | Migration state tracking                       | `status`, `conditions`             |
+
+### PRODUCT BUG collection commands
+
+- `virt-controller` logs:
+  `oc logs -n openshift-cnv deployment/virt-controller`
+- `virt-handler` logs (on the affected node):
+  `oc logs -n openshift-cnv pod/<virt-handler-pod> -c virt-handler`
+- `virt-api` logs:
+  `oc logs -n openshift-cnv deployment/virt-api`
+- `virt-launcher` logs (per-VM):
+  `oc logs -n <namespace> pod/<virt-launcher-pod>`
+- VirtualMachine CR status:
+  `oc get vm <name> -n <namespace> -o yaml`
+- VirtualMachineInstance CR status:
+  `oc get vmi <name> -n <namespace> -o yaml`
+- VirtualMachineInstanceMigration status:
+  `oc get vmim -n <namespace> -o yaml`
+- DataVolume and PVC status for storage issues:
+  `oc get dv,pvc -n <namespace> -o yaml`
+- CDI controller logs:
+  `oc logs -n openshift-cnv deployment/cdi-controller`
+- CDI importer/uploader pod logs:
+  `oc logs -n <namespace> pod/<importer-pod>`
+- HyperConverged CR status:
+  `oc get hyperconverged kubevirt-hyperconverged -n openshift-cnv -o yaml`
+- Must-gather data:
+  `oc adm must-gather --image=registry.redhat.io/container-native-virtualization/cnv-must-gather-rhel9:v4.x`
+- Events in the target namespace:
+  `oc get events -n <namespace> --sort-by='.lastTimestamp'`
+- Node conditions and status:
+  `oc describe node <node-name>`
+- Network attachment definitions:
+  `oc get net-attach-def -n <namespace> -o yaml`
+- NodeNetworkConfigurationPolicy status:
+  `oc get nncp -o yaml`
+
+### INFRASTRUCTURE collection commands
+
+- Cluster node status:
+  `oc get nodes`
+- Cluster operator status:
+  `oc get co`
+- OpenShift version:
+  `oc version`
+- CNV operator version:
+  `oc get csv -n openshift-cnv`
+- KubeVirt CR status:
+  `oc get kubevirt -n openshift-cnv -o yaml`
+- Storage class availability:
+  `oc get sc`
+- Node hardware and capacity:
+  `oc describe nodes | grep -A 10 "Capacity\|Allocatable"`
+- SR-IOV network node state (if applicable):
+  `oc get sriovnetworknodestates -n openshift-sriov-network-operator -o yaml`
+
 ## Rules
 
 - Do NOT classify the failure — only provide evidence for the main AI
