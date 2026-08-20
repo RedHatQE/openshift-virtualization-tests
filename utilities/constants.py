@@ -743,6 +743,7 @@ class StorageClassNames:
     RH_INTERNAL_NFS = "rh-internal-nfs"
     TRIDENT_CSI_FSX = "trident-csi-fsx"
     TRIDENT_CSI_NFS = "trident-csi-nfs"
+    TRIDENT_CSI_ISCSI_ECONOMY = "trident-csi-iscsi-economy"
     IO2_CSI = "io2-csi"
     GPFS = "ibm-spectrum-scale-sample"
     OCI = "oci-bv"
