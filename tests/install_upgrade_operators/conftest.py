@@ -53,6 +53,18 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="session")
+def discovered_cnv_deployments(admin_client, hco_namespace):
+    """Discover all CNV deployments from the cluster."""
+    return list(
+        Deployment.get(
+            client=admin_client,
+            namespace=hco_namespace.name,
+            label_selector="app.kubernetes.io/part-of=hyperconverged-cluster",
+        )
+    )
+
+
+@pytest.fixture(scope="session")
 def iib_build_info(cnv_source, cnv_image_url, admin_client):
     """Queries Version Explorer for IIB build info.
 
