@@ -689,7 +689,6 @@ def get_all_console_links(console_cli_downloads_spec_links):
         requests.exceptions.SSLError: [],
         requests.exceptions.ConnectionError: [],
         requests.exceptions.Timeout: [],
-        requests.exceptions.HTTPError: [],
     },
 )
 def _download_file(url: str, local_file_name: str) -> str:

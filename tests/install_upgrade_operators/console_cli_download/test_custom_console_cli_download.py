@@ -2,9 +2,9 @@ import pytest
 
 from tests.install_upgrade_operators.console_cli_download.utils import (
     CUSTOMIZED_VIRT_DL,
+    download_custom_cli_archive,
     validate_custom_cli_downloads_urls_updated,
 )
-from utilities.infra import download_and_extract_file_from_cluster
 
 
 @pytest.mark.parametrize(
@@ -39,8 +39,6 @@ class TestCustomConsoleCliDownload:
         all_virtctl_urls_scope_function,
     ):
         invalid_urls = [
-            url
-            for url in all_virtctl_urls_scope_function
-            if not download_and_extract_file_from_cluster(tmpdir=tmpdir, url=url)
+            url for url in all_virtctl_urls_scope_function if not download_custom_cli_archive(tmpdir=tmpdir, url=url)
         ]
         assert not invalid_urls, f"Some urls are not valid, {invalid_urls}"

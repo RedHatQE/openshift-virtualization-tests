@@ -1,14 +1,17 @@
 import logging
 
+import requests
 from kubernetes.dynamic import DynamicClient
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from utilities.constants.components import VIRTCTL_CLI_DOWNLOADS
 from utilities.constants.timeouts import (
     TIMEOUT_1MIN,
+    TIMEOUT_2MIN,
     TIMEOUT_5SEC,
+    TIMEOUT_10SEC,
 )
-from utilities.infra import get_console_spec_links
+from utilities.infra import download_and_extract_file_from_cluster, get_console_spec_links
 
 LOGGER = logging.getLogger(__name__)
 CUSTOMIZED_VIRT_DL = "customized-virt-dl"
@@ -82,3 +85,30 @@ def validate_custom_cli_downloads_urls_updated(
                 f"There are urls that are not updated with new hostname: {urls_not_updated_with_new_hostname}"
             )
         raise
+
+
+def download_custom_cli_archive(tmpdir: str, url: str) -> list[str]:
+    """Downloads and extracts a console CLI archive, retrying on transient HTTP errors.
+
+    Args:
+        tmpdir: Temporary directory for downloaded files.
+        url: URL to download from.
+
+    Returns:
+        list: List of extracted filenames.
+    """
+    try:
+        for sample in TimeoutSampler(
+            wait_timeout=TIMEOUT_2MIN,
+            sleep=TIMEOUT_10SEC,
+            func=download_and_extract_file_from_cluster,
+            exceptions_dict={requests.exceptions.HTTPError: []},
+            tmpdir=tmpdir,
+            url=url,
+        ):
+            if sample:
+                return sample
+    except TimeoutExpiredError:
+        LOGGER.error(f"Failed to download custom CLI archive from {url} after retrying on HTTP errors")
+        raise
+    return []
