@@ -18,15 +18,13 @@ from tests.infrastructure.golden_images.constants import (
 from tests.infrastructure.golden_images.update_boot_source.utils import (
     fedora_dv_for_data_source,
     wait_for_data_source_unchanged_referenced_volume,
+    wait_for_data_source_updated_referenced_volume,
 )
 from tests.utils import get_parameters_from_template
 from utilities.constants.hco import DATA_SOURCE_NAME
 from utilities.constants.images import DEFAULT_FEDORA_REGISTRY_URL
 from utilities.constants.pytest import QUARANTINED
-from utilities.constants.timeouts import (
-    TIMEOUT_5MIN,
-    TIMEOUT_10MIN,
-)
+from utilities.constants.timeouts import TIMEOUT_5MIN
 from utilities.ssp import wait_for_condition_message_value
 
 LOGGER = logging.getLogger(__name__)
@@ -40,41 +38,6 @@ pytestmark = pytest.mark.post_upgrade
 
 def opt_in_status_str(opt_in):
     return f"opt-{'in' if opt_in else 'out'}"
-
-
-def wait_for_data_source_reconciliation_after_update(
-    data_source, opt_in, volume_name_before_reconcile=DUMMY_VOLUME_NAME
-):
-    LOGGER.info(f"{opt_in_status_str(opt_in=opt_in)}: Verify DataSource {data_source.name} is reconciled after update.")
-    try:
-        for sample in TimeoutSampler(
-            wait_timeout=TIMEOUT_10MIN,
-            sleep=5,
-            func=lambda: data_source.source.name != volume_name_before_reconcile,
-        ):
-            if sample:
-                return
-    except TimeoutExpiredError:
-        LOGGER.error(f"dataSource {data_source.name} was not reconciled")
-        raise
-
-
-def wait_for_data_source_updated_referenced_volume(data_source, volume_name):
-    try:
-        for sample in TimeoutSampler(
-            wait_timeout=TIMEOUT_10MIN,
-            sleep=5,
-            func=lambda: data_source.source.name == volume_name,
-        ):
-            if sample:
-                return
-    except TimeoutExpiredError:
-        LOGGER.error(
-            f"dataSource {data_source.name} volume reference was not updated, "
-            f"expected {volume_name}, "
-            f"spec: {data_source.instance.spec}"
-        )
-        raise
 
 
 def delete_data_source_and_wait_for_reconciliation(data_source, opt_in):
@@ -251,6 +214,7 @@ def opted_out_data_source_scope_class(
     ):
         wait_for_data_source_updated_referenced_volume(
             data_source=data_source_by_name_scope_class,
+            match_volume_name=True,
             volume_name=created_dv_for_data_import_cron_managed_data_source_scope_class.name,
         )
         yield
@@ -352,8 +316,10 @@ def test_opt_in_data_source_reconciles_after_deletion(
 def test_opt_in_data_source_reconciles_after_update(
     updated_opted_in_data_source_scope_function,
 ):
-    wait_for_data_source_reconciliation_after_update(
-        data_source=updated_opted_in_data_source_scope_function, opt_in=True
+    wait_for_data_source_updated_referenced_volume(
+        data_source=updated_opted_in_data_source_scope_function,
+        match_volume_name=False,
+        volume_name=DUMMY_VOLUME_NAME,
     )
 
 
@@ -405,8 +371,10 @@ def test_opt_out_data_source_reconciles_after_update(
     disabled_common_boot_image_import_hco_spec_scope_function,
     updated_opted_out_data_source_scope_function,
 ):
-    wait_for_data_source_reconciliation_after_update(
-        data_source=updated_opted_out_data_source_scope_function, opt_in=False
+    wait_for_data_source_updated_referenced_volume(
+        data_source=updated_opted_out_data_source_scope_function,
+        match_volume_name=False,
+        volume_name=DUMMY_VOLUME_NAME,
     )
 
 
@@ -513,6 +481,7 @@ class TestDataSourcesOptInLabel:
         LOGGER.info("Verify DataSource is managed by DataImportCron after labelled and a PVC exists.")
         wait_for_data_source_updated_referenced_volume(
             data_source=data_source_by_name_scope_class,
+            match_volume_name=True,
             volume_name=data_source_referenced_volume_scope_class,
         )
 
@@ -521,9 +490,10 @@ class TestDataSourcesOptInLabel:
     def test_opt_in_label_data_source_reconciles_after_update_with_existing_pvc(
         self, updated_data_source_with_existing_pvc_scope_function
     ):
-        wait_for_data_source_reconciliation_after_update(
+        wait_for_data_source_updated_referenced_volume(
             data_source=updated_data_source_with_existing_pvc_scope_function,
-            opt_in=True,
+            match_volume_name=False,
+            volume_name=DUMMY_VOLUME_NAME,
         )
         wait_for_data_import_cron_label_in_data_source_when_opt_in(
             data_source=updated_data_source_with_existing_pvc_scope_function,
@@ -578,9 +548,10 @@ class TestDataSourcesOptOutLabel:
     def test_opt_out_label_data_source_reconciles_after_update_with_existing_pvc(
         self, updated_data_source_with_existing_pvc_scope_function
     ):
-        wait_for_data_source_reconciliation_after_update(
+        wait_for_data_source_updated_referenced_volume(
             data_source=updated_data_source_with_existing_pvc_scope_function,
-            opt_in=False,
+            match_volume_name=False,
+            volume_name=DUMMY_VOLUME_NAME,
         )
         wait_for_data_import_cron_label_in_data_source_when_opt_in(
             data_source=updated_data_source_with_existing_pvc_scope_function,
@@ -608,8 +579,8 @@ class TestDataSourcesOptOutLabel:
         wait_for_data_import_cron_label_in_data_source_when_opt_in(
             data_source=data_source_by_name_scope_class, opt_in=True
         )
-        wait_for_data_source_reconciliation_after_update(
+        wait_for_data_source_updated_referenced_volume(
             data_source=data_source_by_name_scope_class,
-            opt_in=True,
-            volume_name_before_reconcile=created_dv_for_data_import_cron_managed_data_source_scope_class.name,
+            match_volume_name=False,
+            volume_name=created_dv_for_data_import_cron_managed_data_source_scope_class.name,
         )
