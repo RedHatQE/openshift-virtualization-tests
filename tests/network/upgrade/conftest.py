@@ -1,7 +1,10 @@
 from ipaddress import IPv4Interface, IPv6Interface
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 import pytest
+from ocp_resources.cluster_role import ClusterRole
+from ocp_resources.resource import Resource
+from ocp_resources.user_defined_network import Layer2UserDefinedNetwork
 from ocp_resources.virtual_machine import VirtualMachine
 
 if TYPE_CHECKING:
@@ -9,6 +12,7 @@ if TYPE_CHECKING:
 
     from kubernetes.dynamic import DynamicClient
     from ocp_resources.namespace import Namespace
+    from ocp_resources.role_binding import RoleBinding
 
     from libs.vm.vm import BaseVirtualMachine
     from tests.network.libs.cluster_user_defined_network import ClusterUserDefinedNetwork
@@ -16,6 +20,7 @@ if TYPE_CHECKING:
 from libs.net import nodenetworkconfigurationpolicy as libnncp
 from libs.net.cluster import cluster_vlans, ipv4_supported_cluster, ipv6_supported_cluster
 from libs.net.ip import filter_link_local_addresses, random_ipv4_address, random_ipv6_address
+from libs.net.udn import UDN_BINDING_DEFAULT_PLUGIN_NAME
 from libs.net.vmspec import lookup_iface_status
 from libs.vm.oper import run_vms
 from libs.vm.spec import Interface, Multus, Network
@@ -35,12 +40,15 @@ from tests.network.libs.localnet import (
     localnet_cudn,
     localnet_vm,
 )
+from tests.network.libs.vm_factory import udn_vm
 from tests.network.upgrade.libupgrade import KMP_DISABLED_LABEL
 from utilities.constants.cluster import WORKER_NODE_LABEL_KEY
 from utilities.constants.networking import KMP_VM_ASSIGNMENT_LABEL, LINUX_BRIDGE
+from utilities.constants.pytest import UNPRIVILEGED_USER
 from utilities.constants.virt import ES_NONE
 from utilities.infra import create_ns, get_node_selector_dict
 from utilities.network import cloud_init, network_nad
+from utilities.rbac import create_role_binding
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 NAD_MAC_SPOOF_NAME = "brspoofupgrade"
@@ -381,3 +389,111 @@ def ipv4_dedicated_nic_bridge_localnet_address_pool_upgrade() -> Generator[IPv4I
 @pytest.fixture(scope="session")
 def ipv6_dedicated_nic_bridge_localnet_address_pool_upgrade() -> Generator[IPv6Interface]:
     return (random_ipv6_address(net_seed=1, host_address=host) for host in range(1, 254))
+
+
+@pytest.fixture(scope="session")
+def udn_upgrade_namespace(admin_client: DynamicClient) -> Generator[Namespace]:
+    yield from create_ns(
+        admin_client=admin_client,
+        name="upgrade-udn-ns",
+        labels={"k8s.ovn.org/primary-user-defined-network": ""},
+    )
+
+
+@pytest.fixture(scope="session")
+def udn_upgrade_layer2(
+    admin_client: DynamicClient,
+    udn_upgrade_namespace: Namespace,
+) -> Generator[Layer2UserDefinedNetwork]:
+    # Provision subnets per the families the cluster supports: a dual-stack
+    # cluster yields both addresses to the VM, a single-stack cluster yields one.
+    subnets: list[str] = []
+    if ipv4_supported_cluster():
+        subnets.append(str(random_ipv4_address(net_seed=2, host_address=0)))
+    if ipv6_supported_cluster():
+        subnets.append(str(random_ipv6_address(net_seed=2, host_address=0)))
+    with Layer2UserDefinedNetwork(
+        name="upgrade-udn",
+        namespace=udn_upgrade_namespace.name,
+        role="Primary",
+        subnets=subnets,
+        ipam={"lifecycle": "Persistent"},
+        client=admin_client,
+    ) as udn:
+        udn.wait_for_condition(
+            condition="NetworkAllocationSucceeded",
+            status=udn.Condition.Status.TRUE,
+        )
+        yield udn
+
+
+UDN_UPGRADE_VM_ANTI_AFFINITY_LABEL: Final[dict[str, str]] = {"upgrade-udn-vm": "true"}
+
+
+@pytest.fixture(scope="session")
+def udn_upgrade_unprivileged_user_role_binding(
+    admin_client: DynamicClient,
+    udn_upgrade_namespace: Namespace,
+    udn_upgrade_layer2: Layer2UserDefinedNetwork,
+) -> Generator[RoleBinding]:
+    # Admin owns creating the isolated UDN namespace and its primary UDN; from that point the
+    # unprivileged user must be able to create anything they need in it (VMs, services, ...).
+    # Binding the user to the standard "admin" cluster role grants that full namespaced access.
+    with create_role_binding(
+        client=admin_client,
+        name="upgrade-udn-unprivileged-user-admin",
+        namespace=udn_upgrade_namespace.name,
+        subjects_kind="User",
+        subjects_name=UNPRIVILEGED_USER,
+        subjects_api_group=Resource.ApiGroup.RBAC_AUTHORIZATION_K8S_IO,
+        role_ref_kind=ClusterRole.kind,
+        role_ref_name="admin",
+    ) as role_binding:
+        yield role_binding
+
+
+@pytest.fixture(scope="session")
+def vma_udn_upgrade(
+    fail_when_no_unprivileged_client_available_scope_session: None,
+    unprivileged_client: DynamicClient,
+    udn_upgrade_namespace: Namespace,
+    udn_upgrade_layer2: Layer2UserDefinedNetwork,
+    udn_upgrade_unprivileged_user_role_binding: RoleBinding,
+) -> Generator[BaseVirtualMachine]:
+    with udn_vm(
+        namespace_name=udn_upgrade_namespace.name,
+        name="upgrade-udn-vm-a",
+        client=unprivileged_client,
+        binding=UDN_BINDING_DEFAULT_PLUGIN_NAME,
+        template_labels=UDN_UPGRADE_VM_ANTI_AFFINITY_LABEL,
+        anti_affinity_namespaces=[udn_upgrade_namespace.name],
+    ) as vm:
+        yield vm
+
+
+@pytest.fixture(scope="session")
+def vmb_udn_upgrade(
+    fail_when_no_unprivileged_client_available_scope_session: None,
+    unprivileged_client: DynamicClient,
+    udn_upgrade_namespace: Namespace,
+    udn_upgrade_layer2: Layer2UserDefinedNetwork,
+    udn_upgrade_unprivileged_user_role_binding: RoleBinding,
+) -> Generator[BaseVirtualMachine]:
+    with udn_vm(
+        namespace_name=udn_upgrade_namespace.name,
+        name="upgrade-udn-vm-b",
+        client=unprivileged_client,
+        binding=UDN_BINDING_DEFAULT_PLUGIN_NAME,
+        template_labels=UDN_UPGRADE_VM_ANTI_AFFINITY_LABEL,
+        anti_affinity_namespaces=[udn_upgrade_namespace.name],
+    ) as vm:
+        yield vm
+
+
+@pytest.fixture(scope="session")
+def running_udn_vms_upgrade(
+    vma_udn_upgrade: BaseVirtualMachine,
+    vmb_udn_upgrade: BaseVirtualMachine,
+) -> tuple[BaseVirtualMachine, BaseVirtualMachine]:
+    vm_a, vm_b = run_vms(vms=(vma_udn_upgrade, vmb_udn_upgrade))
+    return vm_a, vm_b

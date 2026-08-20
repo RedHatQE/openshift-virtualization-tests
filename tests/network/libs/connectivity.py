@@ -1,4 +1,5 @@
 import ipaddress
+import re
 from typing import Final
 
 from timeout_sampler import TimeoutExpiredError, retry
@@ -31,6 +32,28 @@ def build_ping_command(dst_ip: str, count: int, timeout: int) -> str:
     ip = ipaddress.ip_address(address=dst_ip)
     ping_ipv6_flag = " -6" if ip.version == 6 else ""
     return f"ping{ping_ipv6_flag} {dst_ip} -c {count} -w {timeout}"
+
+
+class PacketLossSummaryNotFoundError(Exception):
+    """Raised when ping output does not contain a packet-loss summary line."""
+
+
+def packet_loss_percent_from_ping_output(ping_output: str) -> float:
+    """Return the packet-loss percentage parsed from ping summary output.
+
+    Args:
+        ping_output: The full output of a ping command.
+
+    Returns:
+        The packet-loss percentage (0-100) reported in the statistics line.
+
+    Raises:
+        PacketLossSummaryNotFoundError: If no packet-loss summary line is found in the output.
+    """
+    match = re.search(pattern=r"(\d+(?:\.\d+)?)% packet loss", string=ping_output)
+    if not match:
+        raise PacketLossSummaryNotFoundError(f"No packet-loss summary found in ping output: {ping_output}")
+    return float(match.group(1))
 
 
 @retry(wait_timeout=60, sleep=5, exceptions_dict={})
