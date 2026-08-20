@@ -1,0 +1,58 @@
+name: "Component Builder Prepare"
+on:
+  workflow_call:
+    outputs:
+      matrix:
+        description: "JSON matrix consumed by build jobs via fromJson()"
+        value: ${{ jobs.prepare.outputs.matrix }}
+      fedora_version:
+        description: "Fedora version string (e.g. '43')"
+        value: ${{ jobs.prepare.outputs.fedora_version }}
+      fedora_image_base:
+        description: "Base name of the Fedora cloud image"
+        value: ${{ jobs.prepare.outputs.fedora_image_base }}
+      fedora_checksum_base:
+        description: "Base name of the Fedora checksum file"
+        value: ${{ jobs.prepare.outputs.fedora_checksum_base }}
+      architectures:
+        description: "Space-separated list of architectures (e.g. 'amd64 arm64 s390x')"
+        value: ${{ jobs.prepare.outputs.architectures }}
+      remote_repository:
+        description: "Remote container repository used for tagging and pushing (e.g. quay.io/org/repo)"
+        value: ${{ jobs.prepare.outputs.remote_repository }}
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      matrix: ${{ steps.component-builder-config.outputs.matrix }}
+      fedora_version: ${{ steps.component-builder-config.outputs.fedora_version }}
+      fedora_image_base: ${{ steps.component-builder-config.outputs.fedora_image_base }}
+      fedora_checksum_base: ${{ steps.component-builder-config.outputs.fedora_checksum_base }}
+      architectures: ${{ steps.component-builder-config.outputs.architectures }}
+      remote_repository: ${{ steps.component-builder-config.outputs.remote_repository }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Read component builder config
+        id: component-builder-config
+        run: |
+          set -euo pipefail
+          config=".github/component-builder-config.json"
+          fedora_version=$(jq -re '.fedora_version' "${config}")
+
+          jq -e --arg fedora_version "${fedora_version}" '
+            .matrix.include
+            | all(.[]; .fedora_url | contains("/" + $fedora_version + "/"))
+          ' "${config}" > /dev/null
+          echo "matrix=$(jq -ce '.matrix' "${config}")" >> "${GITHUB_OUTPUT}"
+          echo "fedora_version=${fedora_version}" >> "${GITHUB_OUTPUT}"
+          echo "fedora_image_base=$(jq -re '.fedora_image_base' "${config}")" >> "${GITHUB_OUTPUT}"
+          echo "fedora_checksum_base=$(jq -re '.fedora_checksum_base' "${config}")" >> "${GITHUB_OUTPUT}"
+          echo "architectures=$(jq -re '[.matrix.include[].arch] | join(" ")' "${config}")" >> "${GITHUB_OUTPUT}"
+          echo "remote_repository=$(jq -re '.remote_repository' "${config}")" >> "${GITHUB_OUTPUT}"
