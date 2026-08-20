@@ -27,7 +27,7 @@ def view_role_binding(admin_client, namespace):
     yield from unprivileged_role_binding(admin_client=admin_client, namespace_name=namespace.name, role_name="view")
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 def aggregation_disabled(admin_client, hyperconverged_resource_scope_class):
     """HCO with roleAggregationStrategy set to Manual and aggregation labels removed."""
     with ResourceEditorValidateHCOReconcile(
@@ -40,7 +40,7 @@ def aggregation_disabled(admin_client, hyperconverged_resource_scope_class):
         yield
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 def aggregation_reenabled(admin_client, hyperconverged_resource_scope_class):
     """HCO with roleAggregationStrategy at AggregateToDefault and aggregation labels present."""
     current_strategy = hyperconverged_resource_scope_class.instance.spec.get(
