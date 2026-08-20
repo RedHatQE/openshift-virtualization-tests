@@ -43,7 +43,7 @@ def validation_os_images_role_binding(admin_client, validation_os_images_namespa
     """Grants unprivileged clients the same clone permissions as the golden-images namespace.
 
     Binds the built-in ``os-images.kubevirt.io:edit`` ClusterRole to ``system:authenticated`` in the
-    validation-os-images namespace so cross-namespace (host-assisted) clones from this namespace succeed.
+    validation-os-images namespace so cross-namespace clones from this namespace succeed.
     """
     role_binding = RoleBinding(
         client=admin_client,
@@ -55,26 +55,20 @@ def validation_os_images_role_binding(admin_client, validation_os_images_namespa
         role_ref_name=OS_IMAGES_EDIT_CLUSTER_ROLE,
     )
 
-    # A RoleBinding created by an older revision of this fixture may still point to a different
-    # ClusterRole (e.g. "view"). A RoleBinding's roleRef is immutable, so a stale binding must be
-    # deleted and recreated with the correct roleRef; otherwise recreating it below fails with a
-    # 409 AlreadyExists conflict.
-    if role_binding.exists and role_binding.instance.roleRef.name != OS_IMAGES_EDIT_CLUSTER_ROLE:
-        LOGGER.info(
-            f"Deleting stale RoleBinding {role_binding.name} in {role_binding.namespace} "
-            f"pointing to {role_binding.instance.roleRef.name}, expected {OS_IMAGES_EDIT_CLUSTER_ROLE}"
-        )
-        role_binding.clean_up(wait=True)
-
     if role_binding.exists:
-        # roleRef is guaranteed correct here (a mismatch was cleaned up above); validate the subjects
-        # of the pre-existing binding so a misconfigured one fails fast instead of silently not granting.
         subjects = next(iter(role_binding.instance.subjects))
         assert subjects.kind == "Group", (
             f"RoleBinding {role_binding.name} subjects kind is {subjects.kind}, expected Group"
         )
         assert subjects.name == "system:authenticated", (
             f"RoleBinding {role_binding.name} subjects name is {subjects.name}, expected system:authenticated"
+        )
+        role_ref = role_binding.instance.roleRef
+        assert role_ref.kind == ClusterRole.kind, (
+            f"RoleBinding {role_binding.name} roleRef kind is {role_ref.kind}, expected {ClusterRole.kind}"
+        )
+        assert role_ref.name == OS_IMAGES_EDIT_CLUSTER_ROLE, (
+            f"RoleBinding {role_binding.name} roleRef name is {role_ref.name}, expected {OS_IMAGES_EDIT_CLUSTER_ROLE}"
         )
         yield role_binding
         return
