@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ipaddress
+import shlex
 from typing import TYPE_CHECKING
 
 import pytest
@@ -8,7 +9,7 @@ from ocp_resources.utils.constants import TIMEOUT_1MINUTE
 
 from libs.net.traffic_generator import is_tcp_connection
 from libs.net.vmspec import lookup_iface_status_ip, lookup_primary_network
-from tests.network.user_defined_network.libudn import lookup_default_pod_ip
+from tests.network.user_defined_network.libudn import lookup_default_pod_ip, packet_loss_percent_from_ping_output
 from utilities.constants.networking import PUBLIC_DNS_SERVER_IP
 from utilities.constants.pytest import QUARANTINED
 from utilities.constants.timeouts import TIMEOUT_1MIN
@@ -136,7 +137,8 @@ class TestPrimaryUdn:
     test_tcp_connectivity_via_cluster_ip_service_on_primary_udn.__test__ = False
 
     @pytest.mark.polarion("CNV-11435")
-    def test_network_policy_enforcement_on_primary_udn_interface(self):
+    @pytest.mark.usefixtures("udn_network_policy")
+    def test_network_policy_enforcement_on_primary_udn_interface(self, vma_udn, udn_pod, denied_pod):
         """
         Test that a network policy is enforced on the VM primary UDN interface: traffic from
         an allowed pod is permitted while traffic from a denied pod is blocked.
@@ -160,8 +162,18 @@ class TestPrimaryUdn:
             - Ping from the allowed pod succeeds with 0% packet loss.
             - Ping from the denied pod fails with 100% packet loss.
         """
-
-    test_network_policy_enforcement_on_primary_udn_interface.__test__ = False
+        udn_vm_ip = str(
+            lookup_iface_status_ip(vm=vma_udn, iface_name=lookup_primary_network(vm=vma_udn).name, ip_family=4)
+        )
+        ping_command = f"ping -c 3 {udn_vm_ip}"
+        allowed_ping_output = udn_pod.execute(command=shlex.split(ping_command), timeout=15, ignore_rc=True)
+        assert packet_loss_percent_from_ping_output(ping_output=allowed_ping_output) == 0, (
+            f"Ping from allowed pod to {udn_vm_ip} did not report 0% packet loss: {allowed_ping_output}"
+        )
+        denied_ping_output = denied_pod.execute(command=shlex.split(ping_command), timeout=15, ignore_rc=True)
+        assert packet_loss_percent_from_ping_output(ping_output=denied_ping_output) == 100, (
+            f"Ping from denied pod to {udn_vm_ip} was not blocked (expected 100% packet loss): {denied_ping_output}"
+        )
 
     @pytest.mark.order("last")
     @pytest.mark.usefixtures("vma_udn")
