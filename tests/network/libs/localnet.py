@@ -3,6 +3,7 @@ import copy
 import logging
 import uuid
 from collections.abc import Generator
+from ipaddress import IPv4Interface, IPv6Interface
 from typing import Final
 
 from kubernetes.dynamic import DynamicClient
@@ -43,19 +44,19 @@ LOGGER = logging.getLogger(__name__)
 
 
 def ip_addresses_from_pool(
-    ipv4_pool: Generator[str],
-    ipv6_pool: Generator[str],
-) -> list[str]:
-    """Draw IP addresses from pools according to the cluster network IP stack.
+    ipv4_pool: Generator[IPv4Interface],
+    ipv6_pool: Generator[IPv6Interface],
+) -> list[IPv4Interface | IPv6Interface]:
+    """Draw IP interface objects from pools according to the cluster network IP stack.
 
     Args:
-        ipv4_pool: Generator yielding IPv4 address.
-        ipv6_pool: Generator yielding IPv6 address.
+        ipv4_pool: Generator yielding IPv4Interface addresses.
+        ipv6_pool: Generator yielding IPv6Interface addresses.
 
     Returns:
-        List of IP addresses, one per IP family supported by the cluster.
+        List of IPv4Interface/IPv6Interface objects, one per supported IP family.
     """
-    addresses = []
+    addresses: list[IPv4Interface | IPv6Interface] = []
     if ipv4_supported_cluster():
         addresses.append(next(ipv4_pool))
     if ipv6_supported_cluster():

@@ -39,8 +39,8 @@ def ref_vm(
         run_vm(
             vm=vm,
             ip_addresses_by_spec_net_name={
-                LINUX_BRIDGE_IFACE_NAME_1: [addr.split("/")[0] for addr in iface_a_ips],
-                LINUX_BRIDGE_IFACE_NAME_2: [addr.split("/")[0] for addr in iface_b_ips],
+                LINUX_BRIDGE_IFACE_NAME_1: [str(addr.ip) for addr in iface_a_ips],
+                LINUX_BRIDGE_IFACE_NAME_2: [str(addr.ip) for addr in iface_b_ips],
             },
         )
         yield vm
@@ -66,8 +66,8 @@ def under_test_vm_two_ifaces(
         run_vm(
             vm=vm,
             ip_addresses_by_spec_net_name={
-                LINUX_BRIDGE_IFACE_NAME_1: [addr.split("/")[0] for addr in iface_a_ips],
-                LINUX_BRIDGE_IFACE_NAME_2: [addr.split("/")[0] for addr in iface_b_ips],
+                LINUX_BRIDGE_IFACE_NAME_1: [str(addr.ip) for addr in iface_a_ips],
+                LINUX_BRIDGE_IFACE_NAME_2: [str(addr.ip) for addr in iface_b_ips],
             },
         )
         yield vm
@@ -100,7 +100,7 @@ def non_migratable_under_test_vm(
         run_vm(
             vm=vm,
             ip_addresses_by_spec_net_name={
-                LINUX_BRIDGE_IFACE_NAME_1: [addr.split("/")[0] for addr in iface_a_ips],
+                LINUX_BRIDGE_IFACE_NAME_1: [str(addr.ip) for addr in iface_a_ips],
             },
         )
         yield vm

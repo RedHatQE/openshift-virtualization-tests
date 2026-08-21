@@ -16,6 +16,7 @@ from utilities.virt import migrate_vm_and_verify
 
 if TYPE_CHECKING:
     from kubernetes.dynamic import DynamicClient
+    from ocp_resources.user_defined_network import Layer2UserDefinedNetwork
 
     from libs.net.traffic_generator import TcpServer, VMTcpClient
     from libs.vm.vm import BaseVirtualMachine
@@ -29,7 +30,7 @@ class TestPrimaryUdn:
     Tests for a VM connected to a primary user-defined network (UDN).
 
     Preconditions:
-        - UDN namespace (with UDN annotation) with KubeMacPool enabled.
+        - UDN namespace (with UDN annotation).
         - Primary UDN resource with an IP range defined.
         - Running under-test VM attached to the primary UDN network.
     """
@@ -134,25 +135,6 @@ class TestPrimaryUdn:
 
     test_tcp_connectivity_via_cluster_ip_service_on_primary_udn.__test__ = False
 
-    @pytest.mark.polarion("CNV-16773")
-    def test_kubemacpool_assigns_mac_on_primary_udn_interface(self):
-        """
-        Test that KubeMacPool assigns a MAC address from its pool to a VM's primary UDN interface.
-
-        No STP exists for this scenario - tracked via Jira: https://redhat.atlassian.net/browse/CNV-94228 # <skip-jira-utils-check>
-
-        Preconditions:
-            - Running under-test VM attached to the primary UDN network.
-
-        Steps:
-            1. Read the MAC address assigned to the VM primary UDN interface from the VM object.
-
-        Expected:
-            - The primary UDN interface MAC address is within the KubeMacPool range.
-        """
-
-    test_kubemacpool_assigns_mac_on_primary_udn_interface.__test__ = False
-
     @pytest.mark.polarion("CNV-11435")
     def test_network_policy_enforcement_on_primary_udn_interface(self):
         """
@@ -181,10 +163,18 @@ class TestPrimaryUdn:
 
     test_network_policy_enforcement_on_primary_udn_interface.__test__ = False
 
+    @pytest.mark.order("last")
+    @pytest.mark.usefixtures("vma_udn")
     @pytest.mark.polarion("CNV-11451")
-    def test_udn_cannot_be_deleted_while_vm_connected(self):
+    def test_udn_cannot_be_deleted_while_vm_connected(
+        self, namespaced_layer2_user_defined_network: Layer2UserDefinedNetwork
+    ):
         """
         [NEGATIVE] Test that a primary UDN cannot be removed while a VM is connected to it.
+
+        This test runs last since it issues a DELETE against the primary UDN shared by the other
+        tests. If deletion protection is broken (a bug), running it earlier would remove that
+        network and break the tests sharing it.
 
         No STP exists for this scenario - tracked via Jira: https://redhat.atlassian.net/browse/CNV-94228 # <skip-jira-utils-check>
 
@@ -197,5 +187,6 @@ class TestPrimaryUdn:
         Expected:
             - The primary UDN resource still exists (deletion is blocked while the VM is connected).
         """
-
-    test_udn_cannot_be_deleted_while_vm_connected.__test__ = False
+        assert not namespaced_layer2_user_defined_network.delete(wait=True, timeout=20), (
+            "UDN was deleted despite having a connected VM."
+        )

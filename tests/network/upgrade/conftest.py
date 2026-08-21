@@ -1,3 +1,4 @@
+from ipaddress import IPv4Interface, IPv6Interface
 from typing import TYPE_CHECKING
 
 import pytest
@@ -76,7 +77,7 @@ def vma_upgrade_mac_spoof(worker_node1, unprivileged_client, upgrade_linux_macsp
         networks=vm_nad_networks_data,
         interfaces=sorted(vm_nad_networks_data.keys()),
         client=unprivileged_client,
-        cloud_init_data=cloud_init(ip_address=random_ipv4_address(net_seed=0, host_address=1)),
+        cloud_init_data=cloud_init(ip_address=random_ipv4_address(net_seed=0, host_address=1).ip),
         body=fedora_vm_body(name=name),
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
@@ -94,7 +95,7 @@ def vmb_upgrade_mac_spoof(worker_node1, unprivileged_client, upgrade_linux_macsp
         networks=vm_nad_networks_data,
         interfaces=sorted(vm_nad_networks_data.keys()),
         client=unprivileged_client,
-        cloud_init_data=cloud_init(ip_address=random_ipv4_address(net_seed=0, host_address=2)),
+        cloud_init_data=cloud_init(ip_address=random_ipv4_address(net_seed=0, host_address=2).ip),
         body=fedora_vm_body(name=name),
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
@@ -202,13 +203,13 @@ def cudn_localnet_upgrade(
 
 
 @pytest.fixture(scope="session")
-def ipv4_localnet_address_pool_upgrade() -> Generator[str]:
-    return (f"{random_ipv4_address(net_seed=0, host_address=host)}/24" for host in range(1, 254))
+def ipv4_localnet_address_pool_upgrade() -> Generator[IPv4Interface]:
+    return (random_ipv4_address(net_seed=0, host_address=host) for host in range(1, 254))
 
 
 @pytest.fixture(scope="session")
-def ipv6_localnet_address_pool_upgrade() -> Generator[str]:
-    return (f"{random_ipv6_address(net_seed=0, host_address=host)}/64" for host in range(1, 254))
+def ipv6_localnet_address_pool_upgrade() -> Generator[IPv6Interface]:
+    return (random_ipv6_address(net_seed=0, host_address=host) for host in range(1, 254))
 
 
 @pytest.fixture(scope="session")
@@ -217,10 +218,10 @@ def vm_localnet_upgrade_a(
     namespace_localnet_upgrade: Namespace,
     cudn_localnet_upgrade: ClusterUserDefinedNetwork,
     cudn_dedicated_nic_bridge_localnet_upgrade: ClusterUserDefinedNetwork,
-    ipv4_localnet_address_pool_upgrade: Generator[str],
-    ipv6_localnet_address_pool_upgrade: Generator[str],
-    ipv4_dedicated_nic_bridge_localnet_address_pool_upgrade: Generator[str],
-    ipv6_dedicated_nic_bridge_localnet_address_pool_upgrade: Generator[str],
+    ipv4_localnet_address_pool_upgrade: Generator[IPv4Interface],
+    ipv6_localnet_address_pool_upgrade: Generator[IPv6Interface],
+    ipv4_dedicated_nic_bridge_localnet_address_pool_upgrade: Generator[IPv4Interface],
+    ipv6_dedicated_nic_bridge_localnet_address_pool_upgrade: Generator[IPv6Interface],
 ) -> Generator[BaseVirtualMachine]:
     with localnet_vm(
         namespace=namespace_localnet_upgrade.name,
@@ -241,16 +242,22 @@ def vm_localnet_upgrade_a(
             network_data=cloudinit.NetworkData(
                 ethernets={
                     GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
-                        addresses=ip_addresses_from_pool(
-                            ipv4_pool=ipv4_localnet_address_pool_upgrade,
-                            ipv6_pool=ipv6_localnet_address_pool_upgrade,
-                        ),
+                        addresses=[
+                            str(addr)
+                            for addr in ip_addresses_from_pool(
+                                ipv4_pool=ipv4_localnet_address_pool_upgrade,
+                                ipv6_pool=ipv6_localnet_address_pool_upgrade,
+                            )
+                        ],
                     ),
                     GUEST_2ND_IFACE_NAME: cloudinit.EthernetDevice(
-                        addresses=ip_addresses_from_pool(
-                            ipv4_pool=ipv4_dedicated_nic_bridge_localnet_address_pool_upgrade,
-                            ipv6_pool=ipv6_dedicated_nic_bridge_localnet_address_pool_upgrade,
-                        ),
+                        addresses=[
+                            str(addr)
+                            for addr in ip_addresses_from_pool(
+                                ipv4_pool=ipv4_dedicated_nic_bridge_localnet_address_pool_upgrade,
+                                ipv6_pool=ipv6_dedicated_nic_bridge_localnet_address_pool_upgrade,
+                            )
+                        ],
                     ),
                 }
             )
@@ -266,10 +273,10 @@ def vm_localnet_upgrade_b(
     namespace_localnet_upgrade: Namespace,
     cudn_localnet_upgrade: ClusterUserDefinedNetwork,
     cudn_dedicated_nic_bridge_localnet_upgrade: ClusterUserDefinedNetwork,
-    ipv4_localnet_address_pool_upgrade: Generator[str],
-    ipv6_localnet_address_pool_upgrade: Generator[str],
-    ipv4_dedicated_nic_bridge_localnet_address_pool_upgrade: Generator[str],
-    ipv6_dedicated_nic_bridge_localnet_address_pool_upgrade: Generator[str],
+    ipv4_localnet_address_pool_upgrade: Generator[IPv4Interface],
+    ipv6_localnet_address_pool_upgrade: Generator[IPv6Interface],
+    ipv4_dedicated_nic_bridge_localnet_address_pool_upgrade: Generator[IPv4Interface],
+    ipv6_dedicated_nic_bridge_localnet_address_pool_upgrade: Generator[IPv6Interface],
 ) -> Generator[BaseVirtualMachine]:
     with localnet_vm(
         namespace=namespace_localnet_upgrade.name,
@@ -290,16 +297,22 @@ def vm_localnet_upgrade_b(
             network_data=cloudinit.NetworkData(
                 ethernets={
                     GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
-                        addresses=ip_addresses_from_pool(
-                            ipv4_pool=ipv4_localnet_address_pool_upgrade,
-                            ipv6_pool=ipv6_localnet_address_pool_upgrade,
-                        ),
+                        addresses=[
+                            str(addr)
+                            for addr in ip_addresses_from_pool(
+                                ipv4_pool=ipv4_localnet_address_pool_upgrade,
+                                ipv6_pool=ipv6_localnet_address_pool_upgrade,
+                            )
+                        ],
                     ),
                     GUEST_2ND_IFACE_NAME: cloudinit.EthernetDevice(
-                        addresses=ip_addresses_from_pool(
-                            ipv4_pool=ipv4_dedicated_nic_bridge_localnet_address_pool_upgrade,
-                            ipv6_pool=ipv6_dedicated_nic_bridge_localnet_address_pool_upgrade,
-                        ),
+                        addresses=[
+                            str(addr)
+                            for addr in ip_addresses_from_pool(
+                                ipv4_pool=ipv4_dedicated_nic_bridge_localnet_address_pool_upgrade,
+                                ipv6_pool=ipv6_dedicated_nic_bridge_localnet_address_pool_upgrade,
+                            )
+                        ],
                     ),
                 }
             )
@@ -361,10 +374,10 @@ def cudn_dedicated_nic_bridge_localnet_upgrade(
 
 
 @pytest.fixture(scope="session")
-def ipv4_dedicated_nic_bridge_localnet_address_pool_upgrade() -> Generator[str]:
-    return (f"{random_ipv4_address(net_seed=1, host_address=host)}/24" for host in range(1, 254))
+def ipv4_dedicated_nic_bridge_localnet_address_pool_upgrade() -> Generator[IPv4Interface]:
+    return (random_ipv4_address(net_seed=1, host_address=host) for host in range(1, 254))
 
 
 @pytest.fixture(scope="session")
-def ipv6_dedicated_nic_bridge_localnet_address_pool_upgrade() -> Generator[str]:
-    return (f"{random_ipv6_address(net_seed=1, host_address=host)}/64" for host in range(1, 254))
+def ipv6_dedicated_nic_bridge_localnet_address_pool_upgrade() -> Generator[IPv6Interface]:
+    return (random_ipv6_address(net_seed=1, host_address=host) for host in range(1, 254))

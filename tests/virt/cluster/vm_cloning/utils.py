@@ -13,6 +13,7 @@ from tests.virt.cluster.vm_cloning.constants import (
 )
 from utilities.constants.timeouts import (
     TIMEOUT_1SEC,
+    TIMEOUT_2MIN,
     TIMEOUT_10SEC,
 )
 
@@ -37,6 +38,7 @@ def check_if_files_present_after_cloning(vm):
             shlex.split(f"sudo mount {SECOND_DISK_PATH} /mnt"),
             shlex.split(f"sudo cat {SECOND_DISK_TEST_FILE_STR}"),
         ],
+        wait_timeout=TIMEOUT_2MIN,
     )
 
 
