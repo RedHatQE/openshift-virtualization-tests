@@ -299,7 +299,7 @@ class VirtualMachineForTests(VirtualMachine):
         vm_affinity=None,
         annotations=None,
         label=None,
-        exclude_from_descheduler=None,
+        exclude_from_descheduler: bool | None = None,
     ):
         """
         Virtual machine creation
@@ -536,7 +536,7 @@ class VirtualMachineForTests(VirtualMachine):
 
         self._set_descheduler_exclusion()
 
-    def _set_descheduler_exclusion(self):
+    def _set_descheduler_exclusion(self) -> None:
         if self.exclude_from_descheduler is False:
             return
 
@@ -1305,7 +1305,7 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
         tpm_params=None,
         additional_labels=None,
         vm_affinity=None,
-        exclude_from_descheduler=None,
+        exclude_from_descheduler: bool | None = None,
     ):
         """VM creation using common templates.
 
@@ -2137,7 +2137,7 @@ def vm_instance_from_template(
     host_device_name=None,
     gpu_name=None,
     vm_affinity=None,
-    exclude_from_descheduler=None,
+    exclude_from_descheduler: bool | None = None,
 ):
     """Create a VM from template and start it (start step could be skipped by setting
     request.param['start_vm'] to False.
