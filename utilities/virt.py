@@ -2137,6 +2137,7 @@ def vm_instance_from_template(
     host_device_name=None,
     gpu_name=None,
     vm_affinity=None,
+    exclude_from_descheduler=None,
 ):
     """Create a VM from template and start it (start step could be skipped by setting
     request.param['start_vm'] to False.
@@ -2187,6 +2188,7 @@ def vm_instance_from_template(
         machine_type=params.get("machine_type"),
         eviction_strategy=params.get("eviction_strategy"),
         vm_affinity=vm_affinity,
+        exclude_from_descheduler=exclude_from_descheduler,
     ) as vm:
         if params.get("start_vm", True):
             running_vm(
