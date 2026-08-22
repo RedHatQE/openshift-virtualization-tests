@@ -46,6 +46,7 @@ def vm_with_memory_load(
         data_volume_template=golden_image_data_volume_template_for_test_scope_function,
         vm_cpu_model=modern_cpu_for_migration,
         vm_cpu_flags=vm_cpu_flags,
+        exclude_from_descheduler=True,
     ) as vm:
         yield vm
 

@@ -163,6 +163,7 @@ def vms_for_ksm_test(namespace, cpu_for_migration):
         namespace_name=namespace.name,
         node_selector_labels=KERNEL_SAMEPAGE_MERGING_TEST_LABEL,
         cpu_model=cpu_for_migration,
+        exclude_from_descheduler=True,
     )
     for vm in vms_list:
         running_vm(vm=vm)

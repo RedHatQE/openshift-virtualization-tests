@@ -89,6 +89,7 @@ def create_vms(
     ssh=True,
     node_selector_labels=None,
     cpu_model=None,
+    exclude_from_descheduler: bool | None = None,
 ):
     """
     Create n number of fedora vms.
@@ -118,6 +119,7 @@ def create_vms(
             ssh=ssh,
             client=client,
             cpu_model=cpu_model,
+            exclude_from_descheduler=exclude_from_descheduler,
         ) as vm:
             vms_list.append(vm)
     return vms_list
