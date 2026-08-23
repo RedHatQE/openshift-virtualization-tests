@@ -100,6 +100,9 @@ pytest_plugins = [
     "tests.fixtures.network.mac_pool",
     "tests.fixtures.network.nmstate",
     "tests.fixtures.network.sriov",
+    "tests.fixtures.storage.storage_classes",
+    "tests.fixtures.images.golden_images",
+    "tests.fixtures.storage.data_volumes",
 ]
 
 LOGGER = logging.getLogger(__name__)

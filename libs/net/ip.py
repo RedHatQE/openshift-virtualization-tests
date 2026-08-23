@@ -1,6 +1,7 @@
 import ipaddress
 import random
 from functools import cache
+from ipaddress import IPv4Interface, IPv6Interface
 from typing import Final
 
 from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster, supported_cluster_ip_versions
@@ -15,8 +16,8 @@ _IPV6_HEADER_SIZE: Final[int] = 40
 ICMP_HEADER_SIZE: Final[int] = 8
 
 
-def random_cidr_addresses_by_family(net_seed: int, host_address: int) -> list[str]:
-    """Return CIDR-formatted addresses for each IP family supported by the cluster.
+def random_cidr_addresses_by_family(net_seed: int, host_address: int) -> list[IPv4Interface | IPv6Interface]:
+    """Return IP interface objects for each IP family supported by the cluster.
 
     This library uses /24 for IPv4 and /64 for IPv6 VM subnets, matching the
     subnet definitions in this module. VMs with the same net_seed share the
@@ -28,50 +29,38 @@ def random_cidr_addresses_by_family(net_seed: int, host_address: int) -> list[st
         host_address: Host portion of the address — must be unique per VM in the test.
 
     Returns:
-        List of CIDR strings (e.g. ["192.168.1.1/24", "fd00::1/64"]).
+        List of IPv4Interface/IPv6Interface objects (e.g. [IPv4Interface("172.16.1.1/24")]).
     """
-    return [
-        f"{ip}/64" if ipaddress.ip_address(ip).version == 6 else f"{ip}/24"
-        for ip in random_ip_addresses_by_family(net_seed=net_seed, host_address=host_address)
-    ]
-
-
-def random_ip_addresses_by_family(
-    net_seed: int,
-    host_address: int,
-) -> list[str]:
-    """Generate IP addresses for each IP family supported by the cluster network stack.
-
-    Args:
-        net_seed: Seed index for selecting the random network portion of the address.
-        host_address: Host portion of the address, used to place VMs on the same subnet.
-
-    Returns:
-        List of IP address strings, one per IP family supported by the cluster.
-    """
-    ips = []
+    addresses: list[IPv4Interface | IPv6Interface] = []
     if ipv4_supported_cluster():
-        ips.append(random_ipv4_address(net_seed=net_seed, host_address=host_address))
+        addresses.append(random_ipv4_address(net_seed=net_seed, host_address=host_address))
     if ipv6_supported_cluster():
-        ips.append(random_ipv6_address(net_seed=net_seed, host_address=host_address))
-    return ips
+        addresses.append(random_ipv6_address(net_seed=net_seed, host_address=host_address))
+    return addresses
 
 
-def random_ipv4_address(net_seed: int, host_address: int) -> str:
+def random_ipv4_address(net_seed: int, host_address: int, subnet_length: int = 24) -> IPv4Interface:
     """Construct a random IPv4 address using a cached list of random third octets.
 
     Uses a pre-defined network address, a cached random third octet and the given
     host address to generate deterministic yet randomized IPv4 addresses.
+    /24 is used for the default subnet.
 
     Args:
         net_seed (int): The index used to select a random third octet from the cached list.
         host_address (int): The last (fourth) octet of the IPv4 address.
+        subnet_length (int): Prefix length to embed in the interface (24–32). Defaults to 24.
 
     Returns:
-        str: A string representing a randomized IPv4 address.
+        IPv4Interface with the randomized address and embedded prefix length.
+
+    Raises:
+        ValueError: If subnet_length is not in the range [24, 32].
     """
+    if not 24 <= subnet_length <= 32:
+        raise ValueError(f"subnet_length must be between 24 and 32, got {subnet_length}")
     third_octets = _random_octets(count=_MAX_NUM_OF_RANDOM_OCTETS_PER_SESSION)
-    return f"{_IPV4_ADDRESS_SUBNET_PREFIX_VMI}.{third_octets[net_seed]}.{host_address}"
+    return IPv4Interface(f"{_IPV4_ADDRESS_SUBNET_PREFIX_VMI}.{third_octets[net_seed]}.{host_address}/{subnet_length}")
 
 
 @cache
@@ -90,21 +79,30 @@ def _random_octets(count: int) -> list[int]:
     return random.sample(range(1, 254), count)
 
 
-def random_ipv6_address(net_seed: int, host_address: int) -> str:
+def random_ipv6_address(net_seed: int, host_address: int, subnet_length: int = 64) -> IPv6Interface:
     """Construct a random IPv6 address using a cached list of random seventh hextets.
 
     Uses a pre-defined network prefix, a cached random seventh hextet and the given
     host address to generate deterministic yet randomized IPv6 addresses.
+    /64 is used for the default subnet.
 
     Args:
         net_seed (int): The index used to select a random seventh hextet from the cached list.
         host_address (int): The last (eighth) hextet of the IPv6 address.
+        subnet_length (int): Prefix length to embed in the interface (64–128). Defaults to 64.
 
     Returns:
-        str: A string representing a randomized IPv6 address.
+        IPv6Interface with the randomized address and embedded prefix length.
+
+    Raises:
+        ValueError: If subnet_length is not in the range [64, 128].
     """
+    if not 64 <= subnet_length <= 128:
+        raise ValueError(f"subnet_length must be between 64 and 128, got {subnet_length}")
     seventh_hextets = _random_hextets(count=_MAX_NUM_OF_RANDOM_HEXTETS_PER_SESSION)
-    return f"{_IPV6_ADDRESS_SUBNET_PREFIX_VMI}::{seventh_hextets[net_seed]:x}:{host_address:x}"
+    return IPv6Interface(
+        f"{_IPV6_ADDRESS_SUBNET_PREFIX_VMI}::{seventh_hextets[net_seed]:x}:{host_address:x}/{subnet_length}"
+    )
 
 
 @cache

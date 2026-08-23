@@ -26,6 +26,7 @@ from utilities.artifactory import (
 )
 from utilities.constants.timeouts import (
     TCP_TIMEOUT_30SEC,
+    TIMEOUT_2MIN,
     TIMEOUT_5MIN,
     TIMEOUT_30MIN,
     TIMEOUT_40MIN,
@@ -116,6 +117,7 @@ def start_win_upgrade_multi_vms(vm_list):
         run_ssh_commands(
             host=vm.ssh_exec,
             commands=shlex.split(f'netsh interface ipv4 set subinterface "{interface_name}" mtu=1400 store=persistent'),
+            wait_timeout=TIMEOUT_2MIN,
         )
 
     def _prepare_win_upgrade(vm):
@@ -134,7 +136,11 @@ def start_win_upgrade_multi_vms(vm_list):
                 rf'-DestinationPath {ADMIN_DOWNLOADS_FOLDER_PATH}\PSExec"'
             ),
         ]
-        run_ssh_commands(host=vm.ssh_exec, commands=win_upgrade_prepare_cmds)
+        run_ssh_commands(
+            host=vm.ssh_exec,
+            commands=win_upgrade_prepare_cmds,
+            wait_timeout=TIMEOUT_2MIN,
+        )
 
     def _start_win_upgrade(vm):
         LOGGER.info(f"VM {vm.name}: Starting upgrade process")
@@ -220,7 +226,11 @@ def verify_windows_upgraded_recently_multi_vms(vm_list):
 
     failed_vms_list = []
     for vm in vm_list:
-        if not run_ssh_commands(host=vm.ssh_exec, commands=get_upgrade_history_cmd)[0]:
+        if not run_ssh_commands(
+            host=vm.ssh_exec,
+            commands=get_upgrade_history_cmd,
+            wait_timeout=TIMEOUT_2MIN,
+        )[0]:
             failed_vms_list.append(vm.name)
 
     assert not failed_vms_list, f"Some VMs failed to upgrade! Falied VMs: {failed_vms_list}"
