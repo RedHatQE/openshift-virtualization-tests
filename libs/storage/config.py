@@ -71,6 +71,14 @@ class StorageClassConfig:
                 wffc=False,
             ),
             StorageClass(
+                name=StorageClassNames.TRIDENT_CSI_ISCSI_ECONOMY,
+                volume_mode=DataVolume.VolumeMode.BLOCK,
+                access_mode=DataVolume.AccessMode.RWX,
+                snapshot=True,
+                online_resize=True,
+                wffc=False,
+            ),
+            StorageClass(
                 name=StorageClassNames.GCP,
                 volume_mode=DataVolume.VolumeMode.BLOCK,
                 access_mode=DataVolume.AccessMode.RWX,
