@@ -31,7 +31,6 @@ from utilities.constants.timeouts import (
     TIMEOUT_40MIN,
     TIMEOUT_60MIN,
 )
-from utilities.constants.virt import WIN_10
 from utilities.storage import construct_datavolume_source_dict, get_test_artifact_server_url
 from utilities.virt import (
     VirtualMachineForTests,
@@ -112,10 +111,11 @@ def reboot_vm(vm):
 
 def start_win_upgrade_multi_vms(vm_list):
     def _set_interface_mtu(vm):
-        interface_name = "Ethernet 2" if WIN_10 in vm.name else "Ethernet Instance 0"
         run_ssh_commands(
             host=vm.ssh_exec,
-            commands=shlex.split(f'netsh interface ipv4 set subinterface "{interface_name}" mtu=1400 store=persistent'),
+            commands=shlex.split(
+                'netsh interface ipv4 set subinterface "Ethernet Instance 0" mtu=1400 store=persistent'
+            ),
         )
 
     def _prepare_win_upgrade(vm):

@@ -1734,15 +1734,15 @@ class TestGenerateCommonTemplateMatrixDicts:
         mock_generate_latest,
     ):
         """Test generating Windows OS matrix from windows_os_list"""
-        sample_windows_matrix = [{"win-10": {"os_version": "10", "latest_released": True}}]
+        sample_windows_matrix = [{"win-11": {"os_version": "11", "latest_released": True}}]
         mock_generate_os_matrix.return_value = sample_windows_matrix
-        mock_generate_latest.return_value = sample_windows_matrix[0]["win-10"]
+        mock_generate_latest.return_value = sample_windows_matrix[0]["win-11"]
 
-        os_dict = {"windows_os_list": ["win-10"]}
+        os_dict = {"windows_os_list": ["win-11"]}
         generate_common_template_matrix_dicts(os_dict=os_dict)
 
         mock_generate_os_matrix.assert_called_once_with(
-            os_name="windows", supported_operating_systems=["win-10"], arch=None
+            os_name="windows", supported_operating_systems=["win-11"], arch=None
         )
         assert mock_py_config["windows_os_matrix"] == sample_windows_matrix
 
@@ -2062,7 +2062,7 @@ class TestUpdateLatestOsConfig:
         """Test that windows_os_matrix is saved to system_windows_os_matrix"""
         mock_session_config = MagicMock()
         mock_session_config.getoption.return_value = False
-        windows_matrix = [{"win-10": {"os_version": "10"}}]
+        windows_matrix = [{"win-11": {"os_version": "11"}}]
         mock_py_config["windows_os_matrix"] = windows_matrix
 
         update_latest_os_config(session_config=mock_session_config)
@@ -2106,7 +2106,7 @@ class TestUpdateLatestOsConfig:
         mock_session_config = MagicMock()
         mock_session_config.getoption.side_effect = lambda opt: opt == "latest_windows"
         mock_py_config["windows_os_matrix"] = [
-            {"win-10": {"os_version": "10"}},
+            {"win-11": {"os_version": "11"}},
             {"win-2025": {"os_version": "2025", "latest_released": True}},
         ]
         mock_py_config["latest_windows_os_dict"] = {"os_version": "2025", "latest_released": True}
@@ -2170,7 +2170,7 @@ class TestUpdateLatestOsConfig:
         """Test fallback to default values when latest_windows_os_dict is missing"""
         mock_session_config = MagicMock()
         mock_session_config.getoption.side_effect = lambda opt: opt == "latest_windows"
-        mock_py_config["windows_os_matrix"] = [{"win-10": {"os_version": "10"}}]
+        mock_py_config["windows_os_matrix"] = [{"win-11": {"os_version": "11"}}]
 
         update_latest_os_config(session_config=mock_session_config)
 
