@@ -82,13 +82,23 @@ class Console(object):
     def _connect(self):
         self.child.send("\n\n")
         if self.username:
-            self.child.expect(self.login_prompt)
-            LOGGER.info(f"{self.vm.name}: Using username {self.username}")
-            self.child.sendline(self.username)
-            if self.password:
-                self.child.expect("Password:")
-                LOGGER.info(f"{self.vm.name}: Using password {self.password}")
-                self.child.sendline(self.password)
+            # Wait for either "login:" or a shell prompt (e.g., "$" or "#")
+            patterns = [self.login_prompt] + (self.prompt if isinstance(self.prompt, list) else [self.prompt])
+            matched_index = self.child.expect(patterns)
+
+            # Index 0 = login prompt, other indices = shell prompt
+            if matched_index == 0:
+                # Need to login
+                LOGGER.info(f"{self.vm.name}: Using username {self.username}")
+                self.child.sendline(self.username)
+                if self.password:
+                    self.child.expect("Password:")
+                    LOGGER.info(f"{self.vm.name}: Using password {self.password}")
+                    self.child.sendline(self.password)
+            else:
+                # Already logged in, skip login sequence
+                LOGGER.info(f"{self.vm.name}: Already at shell prompt, skipping login")
+                return
 
         LOGGER.info(f"{self.vm.name}: waiting for terminal prompt '{self.prompt}'")
         self.child.expect(self.prompt)
