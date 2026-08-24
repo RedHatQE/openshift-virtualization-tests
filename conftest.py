@@ -595,8 +595,10 @@ def pytest_configure(config):
     if file_or_dir and post_test_alerts_dir_path not in file_or_dir and file_or_dir != ["tests"]:
         config.option.file_or_dir.append(post_test_alerts_dir_path)
 
-    # Ensure post_test_alerts tests survive -m filtering on any lane
-    if not config.getoption("--skip-post-test-alerts") and not config.getoption("--install"):
+    # Bypass -m deselection for post_test_alerts on upgrade lanes (built-in filter runs after always_keep).
+    if (config.getoption("--upgrade") or config.getoption("--upgrade_custom")) and not config.getoption(
+        "--skip-post-test-alerts"
+    ):
         markexpr = config.option.markexpr
         if markexpr and "post_test_alerts" not in markexpr:
             config.option.markexpr = f"({markexpr}) or post_test_alerts"
