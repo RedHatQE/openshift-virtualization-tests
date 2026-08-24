@@ -9,6 +9,7 @@ from pytest_testconfig import config as py_config
 
 from utilities.constants.components import RHEL9_STR
 from utilities.constants.hco import DATA_SOURCE_NAME
+from utilities.constants.storage import OS_IMAGES_EDIT_CLUSTER_ROLE
 from utilities.ssp import get_data_import_crons
 from utilities.storage import create_or_update_data_source, data_volume
 
@@ -31,7 +32,7 @@ def golden_images_cluster_role_edit(
     admin_client,
 ):
     for cluster_role in ClusterRole.get(
-        name="os-images.kubevirt.io:edit",
+        name=OS_IMAGES_EDIT_CLUSTER_ROLE,
         client=admin_client,
     ):
         return cluster_role
