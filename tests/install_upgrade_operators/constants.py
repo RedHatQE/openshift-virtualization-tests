@@ -27,10 +27,12 @@ EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES = {
     "CPUManager",
     "DecentralizedLiveMigration",
     "DeclarativeHotplugVolumes",
+    "ExternalNetResourceInjection",
     "HostDevices",
     "HypervStrictCheck",
     "KubevirtSeccompProfile",
     "Snapshot",
+    "Template",
 }
 S390X_SPECIFIC_KUBEVIRT_FEATUREGATES = {"SecureExecution"}
 EXPECTED_CDI_HARDCODED_FEATUREGATES = {
