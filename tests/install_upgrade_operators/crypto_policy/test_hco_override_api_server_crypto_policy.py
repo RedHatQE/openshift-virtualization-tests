@@ -12,7 +12,7 @@ from tests.install_upgrade_operators.crypto_policy.utils import (
     set_hco_crypto_policy,
     update_apiserver_crypto_policy,
 )
-from utilities.constants import TIMEOUT_2MIN, TIMEOUT_10SEC
+from utilities.constants import QUARANTINED, TIMEOUT_2MIN, TIMEOUT_10SEC
 
 LOGGER = logging.getLogger(__name__)
 pytestmark = pytest.mark.tier3
@@ -50,6 +50,10 @@ def updated_apiserver_with_tls_old_profile(
         yield
 
 
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: CNV-91966 — crypto-policy teardown leaves cluster unhealthy on bare metal, CNV-95836",
+    run=False,
+)
 @pytest.mark.jira("RHSTOR-6566", run=False)  # <skip-jira-utils-check>
 @pytest.mark.polarion("CNV-9368")
 def test_hco_overriding_apiserver_crypto_policy(
