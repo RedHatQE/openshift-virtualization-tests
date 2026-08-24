@@ -595,6 +595,12 @@ def pytest_configure(config):
     if file_or_dir and post_test_alerts_dir_path not in file_or_dir and file_or_dir != ["tests"]:
         config.option.file_or_dir.append(post_test_alerts_dir_path)
 
+    # Ensure post_test_alerts tests survive -m filtering on any lane
+    if not config.getoption("--skip-post-test-alerts") and not config.getoption("--install"):
+        markexpr = config.option.markexpr
+        if markexpr and "post_test_alerts" not in markexpr:
+            config.option.markexpr = f"({markexpr}) or post_test_alerts"
+
     if conformance_storage_class := config.getoption("conformance_storage_class"):
         py_config["storage_class_matrix"] = StorageClassConfig(
             name=conformance_storage_class
