@@ -7,7 +7,7 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from pytest_testconfig import config as py_config
 
-from utilities.constants.storage import PVC
+from utilities.constants.storage import BIND_IMMEDIATE_ANNOTATION, PVC
 from utilities.constants.timeouts import TIMEOUT_20MIN
 from utilities.storage import ErrorMsg, create_dv, get_dv_size_from_datasource
 
@@ -58,6 +58,8 @@ def dv_created_by_unprivileged_user_with_rolebinding(
         namespace=golden_images_namespace.name,
         size=size,
         storage_class=storage_class_name_scope_function,
+        consume_wffc=False,
+        annotations=BIND_IMMEDIATE_ANNOTATION,
         source_ref={
             "kind": fedora_data_source_scope_module.kind,
             "name": fedora_data_source_scope_module.name,
