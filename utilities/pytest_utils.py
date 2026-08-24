@@ -585,6 +585,18 @@ def ocs_storage_class_in_matrix() -> bool:
 
 
 def filter_ocs_tests(items: list[pytest.Item], config: pytest.Config) -> list[pytest.Item]:
+    """Deselect OCS-marked tests when OCS is not selected or configured.
+
+    Args:
+        items: Collected pytest items.
+        config: Pytest configuration used for marker selection and deselection reporting.
+
+    Returns:
+        The retained pytest items.
+
+    Side Effects:
+        Reports removed OCS-marked items through ``pytest_deselected``.
+    """
     marker_expression = config.getoption("-m")
     ocs_marker_requested = bool(marker_expression) and "ocs" in marker_expression
     if ocs_marker_requested or ocs_storage_class_in_matrix():

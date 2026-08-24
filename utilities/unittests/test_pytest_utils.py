@@ -2795,17 +2795,17 @@ OCS_STORAGE_CLASS = "ocs-storagecluster-ceph-rbd-virtualization"
 class TestOcsStorageClassInMatrix:
     """Test cases for ocs_storage_class_in_matrix function."""
 
-    @patch("utilities.pytest_utils.py_config", {"storage_class_matrix": [{OCS_STORAGE_CLASS: {}}]})
+    @patch(target="utilities.pytest_utils.py_config", new={"storage_class_matrix": [{OCS_STORAGE_CLASS: {}}]})
     def test_true_when_ocs_storage_class_in_matrix(self):
         """Returns True when the OCS storage class is in the storage class matrix."""
         assert ocs_storage_class_in_matrix() is True
 
-    @patch("utilities.pytest_utils.py_config", {"storage_class_matrix": [{"some-other-sc": {}}]})
+    @patch(target="utilities.pytest_utils.py_config", new={"storage_class_matrix": [{"some-other-sc": {}}]})
     def test_false_when_ocs_storage_class_not_in_matrix(self):
         """Returns False when the OCS storage class is not in the storage class matrix."""
         assert ocs_storage_class_in_matrix() is False
 
-    @patch("utilities.pytest_utils.py_config", {})
+    @patch(target="utilities.pytest_utils.py_config", new={})
     def test_false_when_matrix_missing(self):
         """Returns False when the storage class matrix is not configured."""
         assert ocs_storage_class_in_matrix() is False
@@ -2814,7 +2814,7 @@ class TestOcsStorageClassInMatrix:
 class TestFilterOcsTests:
     """Test cases for filter_ocs_tests function."""
 
-    @patch("utilities.pytest_utils.py_config", {})
+    @patch(target="utilities.pytest_utils.py_config", new={})
     def test_removes_ocs_tests_when_no_marker_expression(self):
         """OCS tests are filtered out when no -m option is set and OCS storage class is absent."""
         item_ocs = MagicMock()
@@ -2829,7 +2829,7 @@ class TestFilterOcsTests:
         assert result == [item_other]
         config.hook.pytest_deselected.assert_called_once_with(items=[item_ocs])
 
-    @patch("utilities.pytest_utils.py_config", {})
+    @patch(target="utilities.pytest_utils.py_config", new={})
     def test_removes_ocs_tests_when_marker_does_not_include_ocs(self):
         """OCS tests are filtered out when -m is set but does not contain 'ocs'."""
         item_ocs = MagicMock()
@@ -2844,7 +2844,7 @@ class TestFilterOcsTests:
         assert result == [item_other]
         config.hook.pytest_deselected.assert_called_once_with(items=[item_ocs])
 
-    @patch("utilities.pytest_utils.py_config", {})
+    @patch(target="utilities.pytest_utils.py_config", new={})
     def test_keeps_ocs_tests_when_marker_includes_ocs(self):
         """All tests are kept when -m includes 'ocs'."""
         item_ocs = MagicMock()
@@ -2860,7 +2860,7 @@ class TestFilterOcsTests:
         assert result == items
         config.hook.pytest_deselected.assert_not_called()
 
-    @patch("utilities.pytest_utils.py_config", {})
+    @patch(target="utilities.pytest_utils.py_config", new={})
     def test_keeps_ocs_tests_when_marker_contains_ocs_in_expression(self):
         """All tests are kept when -m contains 'ocs' as part of a larger expression."""
         item_ocs = MagicMock()
@@ -2874,7 +2874,7 @@ class TestFilterOcsTests:
         assert result == items
         config.hook.pytest_deselected.assert_not_called()
 
-    @patch("utilities.pytest_utils.py_config", {})
+    @patch(target="utilities.pytest_utils.py_config", new={})
     def test_empty_marker_expression_filters_ocs(self):
         """OCS tests are filtered out when -m is an empty string and OCS storage class is absent."""
         item_ocs = MagicMock()
@@ -2887,7 +2887,7 @@ class TestFilterOcsTests:
         assert result == []
         config.hook.pytest_deselected.assert_called_once_with(items=[item_ocs])
 
-    @patch("utilities.pytest_utils.py_config", {"storage_class_matrix": [{OCS_STORAGE_CLASS: {}}]})
+    @patch(target="utilities.pytest_utils.py_config", new={"storage_class_matrix": [{OCS_STORAGE_CLASS: {}}]})
     def test_keeps_ocs_tests_when_ocs_storage_class_in_matrix(self):
         """All tests are kept when the OCS storage class is in the matrix, even without -m ocs."""
         item_ocs = MagicMock()
