@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 from ocp_resources.cluster_role import ClusterRole
 from ocp_resources.data_source import DataSource
@@ -13,9 +15,19 @@ from utilities.artifactory import (
     get_artifactory_secret,
     get_test_artifact_server_url,
 )
-from utilities.constants import BIND_IMMEDIATE_ANNOTATION, REGISTRY_STR, TIMEOUT_10MIN, TIMEOUT_50MIN, WIN_2K22, Images
+from utilities.constants import (
+    BIND_IMMEDIATE_ANNOTATION,
+    OS_IMAGES_EDIT_CLUSTER_ROLE,
+    REGISTRY_STR,
+    TIMEOUT_10MIN,
+    TIMEOUT_50MIN,
+    WIN_2K22,
+    Images,
+)
 from utilities.os_utils import get_windows_container_disk_path
 from utilities.storage import construct_datavolume_source_dict, generate_data_source_dict
+
+LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="session")
@@ -33,7 +45,11 @@ def validation_os_images_namespace(admin_client):
 
 @pytest.fixture(scope="session")
 def validation_os_images_role_binding(admin_client, validation_os_images_namespace):
-    """Grants view permissions in the namespace so unprivileged clients can clone from it."""
+    """Grants unprivileged clients the same clone permissions as the golden-images namespace.
+
+    Binds the built-in ``os-images.kubevirt.io:edit`` ClusterRole to ``system:authenticated`` in the
+    validation-os-images namespace so cross-namespace clones from this namespace succeed.
+    """
     role_binding = RoleBinding(
         client=admin_client,
         name="validation-os-images-view",
@@ -41,7 +57,7 @@ def validation_os_images_role_binding(admin_client, validation_os_images_namespa
         subjects_kind="Group",
         subjects_name="system:authenticated",
         role_ref_kind=ClusterRole.kind,
-        role_ref_name="view",
+        role_ref_name=OS_IMAGES_EDIT_CLUSTER_ROLE,
     )
 
     if role_binding.exists:
@@ -56,12 +72,16 @@ def validation_os_images_role_binding(admin_client, validation_os_images_namespa
         assert role_ref.kind == ClusterRole.kind, (
             f"RoleBinding {role_binding.name} roleRef kind is {role_ref.kind}, expected {ClusterRole.kind}"
         )
-        assert role_ref.name == "view", (
-            f"RoleBinding {role_binding.name} roleRef name is {role_ref.name}, expected view"
+        assert role_ref.name == OS_IMAGES_EDIT_CLUSTER_ROLE, (
+            f"RoleBinding {role_binding.name} roleRef name is {role_ref.name}, expected {OS_IMAGES_EDIT_CLUSTER_ROLE}"
         )
         yield role_binding
         return
 
+    LOGGER.info(
+        f"Creating RoleBinding {role_binding.name} in {role_binding.namespace} "
+        f"binding {OS_IMAGES_EDIT_CLUSTER_ROLE} to system:authenticated"
+    )
     with role_binding as rb:
         yield rb
 

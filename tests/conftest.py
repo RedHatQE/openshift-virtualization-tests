@@ -105,6 +105,7 @@ from utilities.constants import (
     NODE_TYPE_WORKER_LABEL,
     OC_ADM_LOGS_COMMAND,
     OS_FLAVOR_RHEL,
+    OS_IMAGES_EDIT_CLUSTER_ROLE,
     OVS_BRIDGE,
     POD_SECURITY_NAMESPACE_LABELS,
     PREFERENCE_STR,
@@ -1099,7 +1100,7 @@ def golden_images_cluster_role_edit(
     admin_client,
 ):
     for cluster_role in ClusterRole.get(
-        name="os-images.kubevirt.io:edit",
+        name=OS_IMAGES_EDIT_CLUSTER_ROLE,
         client=admin_client,
     ):
         return cluster_role
