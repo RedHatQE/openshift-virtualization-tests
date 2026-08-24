@@ -50,7 +50,6 @@ class TestConnectivityLinuxBridge:
     @pytest.mark.post_upgrade
     @pytest.mark.polarion("CNV-11125")
     @pytest.mark.ipv6
-    @pytest.mark.jira("CNV-58530", run=True)
     def test_ipv6_linux_bridge(
         self,
         fail_if_not_ipv6_supported_cluster,
@@ -145,7 +144,6 @@ class TestConnectivityOVSBridge:
     @pytest.mark.post_upgrade
     @pytest.mark.polarion("CNV-11128")
     @pytest.mark.ipv6
-    @pytest.mark.jira("CNV-58530", run=True)
     def test_ipv6_ovs_bridge(
         self,
         fail_if_not_ipv6_supported_cluster,
