@@ -90,7 +90,9 @@ def valid_aggregated_api_client_cert(kube_system_namespace):
     """
     aggregated_cm = "extension-apiserver-authentication"
     cert_end = "-----END CERTIFICATE-----\n"
-    cm_data = ConfigMap(namespace=kube_system_namespace.name, name=aggregated_cm).instance["data"]
+    cm_data = ConfigMap(
+        namespace=kube_system_namespace.name, name=aggregated_cm, client=kube_system_namespace.client
+    ).instance["data"]
     for cert_attr, cert_data in cm_data.items():
         if "ca-file" not in cert_attr:
             continue
@@ -260,7 +262,7 @@ def test_upload_after_validate_aggregated_api_cert(
         insecure=True,
     ) as res:
         check_upload_virtctl_result(result=res)
-        dv = DataVolume(namespace=namespace.name, name=dv_name)
+        dv = DataVolume(namespace=namespace.name, name=dv_name, client=unprivileged_client)
         dv.wait_for_dv_success(timeout=TIMEOUT_1MIN)
         create_vm_from_dv(client=unprivileged_client, dv=dv)
 

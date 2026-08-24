@@ -1,6 +1,7 @@
 import ipaddress
 import logging
 from collections.abc import Iterator
+from ipaddress import IPv4Interface, IPv6Interface
 
 from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.resource import ResourceField
@@ -60,13 +61,11 @@ def secondary_network_vm(
 
 
 def secondary_iface_cloud_init(host_address: int) -> cloudinit.EthernetDevice:
-    ips = secondary_iface_ips(host_address=host_address)
-    addresses = [f"{ip}/64" if ipaddress.ip_address(ip).version == 6 else f"{ip}/24" for ip in ips]
-    return cloudinit.EthernetDevice(addresses=addresses)
+    return cloudinit.EthernetDevice(addresses=[str(addr) for addr in secondary_iface_ips(host_address=host_address)])
 
 
-def secondary_iface_ips(host_address: int) -> list[str]:
-    ips = []
+def secondary_iface_ips(host_address: int) -> list[IPv4Interface | IPv6Interface]:
+    ips: list[IPv4Interface | IPv6Interface] = []
     if ipv4_supported_cluster():
         ips.append(random_ipv4_address(net_seed=0, host_address=host_address))
     if ipv6_supported_cluster():

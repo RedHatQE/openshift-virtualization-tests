@@ -118,13 +118,15 @@ def windows_validation_os_images_data_volume_scope_session(
     win_dv.api_name = "storage"
     win_dv.annotations = BIND_IMMEDIATE_ANNOTATION
 
-    with win_dv as wdv:
-        wdv.wait_for_dv_success(timeout=TIMEOUT_50MIN)
-        yield wdv
-    cleanup_artifactory_secret_and_config_map(
-        artifactory_secret=artifactory_secret,
-        artifactory_config_map=artifactory_config_map,
-    )
+    try:
+        with win_dv as wdv:
+            wdv.wait_for_dv_success(timeout=TIMEOUT_50MIN)
+            yield wdv
+    finally:
+        cleanup_artifactory_secret_and_config_map(
+            artifactory_secret=artifactory_secret,
+            artifactory_config_map=artifactory_config_map,
+        )
 
 
 @pytest.fixture(scope="session")

@@ -35,9 +35,9 @@ from utilities.network import (
 #       |.......|---eth4:172.16.4.1    : mpls test :                               172.16.4.2:eth4---|........|
 
 
-VMA_MPLS_LOOPBACK_IP = f"{random_ipv4_address(net_seed=5, host_address=1)}/32"
+VMA_MPLS_LOOPBACK_IP = str(random_ipv4_address(net_seed=5, host_address=1, subnet_length=32))
 VMA_MPLS_ROUTE_TAG = 100
-VMB_MPLS_LOOPBACK_IP = f"{random_ipv4_address(net_seed=6, host_address=1)}/32"
+VMB_MPLS_LOOPBACK_IP = str(random_ipv4_address(net_seed=6, host_address=1, subnet_length=32))
 VMB_MPLS_ROUTE_TAG = 200
 
 
@@ -183,10 +183,10 @@ def l2_bridge_running_vm_a(
     }
 
     interface_ip_addresses = [
-        random_ipv4_address(net_seed=0, host_address=1),
-        random_ipv4_address(net_seed=2, host_address=1),
-        random_ipv4_address(net_seed=3, host_address=1),
-        random_ipv4_address(net_seed=4, host_address=1),
+        random_ipv4_address(net_seed=0, host_address=1).ip,
+        random_ipv4_address(net_seed=2, host_address=1).ip,
+        random_ipv4_address(net_seed=3, host_address=1).ip,
+        random_ipv4_address(net_seed=4, host_address=1).ip,
     ]
     with bridge_attached_vm(
         name="vm-fedora-1",
@@ -198,7 +198,7 @@ def l2_bridge_running_vm_a(
         mpls_local_ip=VMA_MPLS_LOOPBACK_IP,
         mpls_dest_ip=VMB_MPLS_LOOPBACK_IP,
         mpls_dest_tag=VMB_MPLS_ROUTE_TAG,
-        mpls_route_next_hop=random_ipv4_address(net_seed=4, host_address=2),
+        mpls_route_next_hop=random_ipv4_address(net_seed=4, host_address=2).ip,
         client=unprivileged_client,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         dhcp_interface_config={"addresses": [f"{interface_ip_addresses[2]}/24"]},
@@ -211,10 +211,10 @@ def l2_bridge_running_vm_a(
 @pytest.fixture(scope="class")
 def l2_bridge_running_vm_b(namespace, worker_node2, l2_bridge_all_nads, unprivileged_client):
     interface_ip_addresses = [
-        random_ipv4_address(net_seed=0, host_address=2),
-        random_ipv4_address(net_seed=2, host_address=2),
-        random_ipv4_address(net_seed=3, host_address=2),
-        random_ipv4_address(net_seed=4, host_address=2),
+        random_ipv4_address(net_seed=0, host_address=2).ip,
+        random_ipv4_address(net_seed=2, host_address=2).ip,
+        random_ipv4_address(net_seed=3, host_address=2).ip,
+        random_ipv4_address(net_seed=4, host_address=2).ip,
     ]
     with bridge_attached_vm(
         name="vm-fedora-2",
@@ -225,7 +225,7 @@ def l2_bridge_running_vm_b(namespace, worker_node2, l2_bridge_all_nads, unprivil
         mpls_local_ip=VMB_MPLS_LOOPBACK_IP,
         mpls_dest_ip=VMA_MPLS_LOOPBACK_IP,
         mpls_dest_tag=VMA_MPLS_ROUTE_TAG,
-        mpls_route_next_hop=random_ipv4_address(net_seed=4, host_address=1),
+        mpls_route_next_hop=random_ipv4_address(net_seed=4, host_address=1).ip,
         client=unprivileged_client,
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
         dhcp_interface_config={"dhcp4": False},

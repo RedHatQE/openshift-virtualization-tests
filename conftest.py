@@ -76,12 +76,33 @@ from utilities.pytest_utils import (
 )
 
 pytest_plugins = [
+    "tests.fixtures.cluster.auth",
+    "tests.fixtures.cluster.binaries",
+    "tests.fixtures.cluster.cpu",
+    "tests.fixtures.cluster.infrastructure",
+    "tests.fixtures.cluster.namespaces",
+    "tests.fixtures.cluster.nodes",
+    "tests.fixtures.cluster.sanity",
+    "tests.fixtures.cluster.utilities",
     "tests.fixtures.network.l2_bridge",
     "tests.fixtures.network.cluster",
     "tests.fixtures.images.validation_os_images",
     "tests.fixtures.network.multiarch",
     "tests.fixtures.credentials.artifacts",
     "tests.fixtures.credentials.rhsm",
+    "tests.fixtures.operator.aaq",
+    "tests.fixtures.operator.cdi",
+    "tests.fixtures.operator.csv",
+    "tests.fixtures.operator.hco",
+    "tests.fixtures.operator.kubevirt",
+    "tests.fixtures.operator.ssp",
+    "tests.fixtures.network.node_nics",
+    "tests.fixtures.network.mac_pool",
+    "tests.fixtures.network.nmstate",
+    "tests.fixtures.network.sriov",
+    "tests.fixtures.storage.storage_classes",
+    "tests.fixtures.images.golden_images",
+    "tests.fixtures.storage.data_volumes",
 ]
 
 LOGGER = logging.getLogger(__name__)

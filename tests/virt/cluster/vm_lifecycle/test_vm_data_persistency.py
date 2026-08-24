@@ -99,7 +99,11 @@ def restarted_persistence_vm(request, persistence_vm):
 
 
 def get_linux_timezone(ssh_exec):
-    return run_ssh_commands(host=ssh_exec, commands=shlex.split("timedatectl show | grep -i timezone"))[0]
+    return run_ssh_commands(
+        host=ssh_exec,
+        commands=shlex.split("timedatectl show | grep -i timezone"),
+        wait_timeout=TIMEOUT_2MIN,
+    )[0]
 
 
 def get_timezone(vm, os):

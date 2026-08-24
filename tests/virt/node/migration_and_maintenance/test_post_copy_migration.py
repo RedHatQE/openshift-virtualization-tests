@@ -40,7 +40,7 @@ if TYPE_CHECKING:
 
 pytestmark = [
     pytest.mark.rwx_default_storage,
-    pytest.mark.usefixtures("created_post_copy_migration_policy"),
+    pytest.mark.usefixtures("postcopy_migration_quarantine", "created_post_copy_migration_policy"),
     pytest.mark.data_collector_scope(scope="module"),
 ]
 
@@ -55,6 +55,12 @@ def assert_same_pid_after_migration(orig_pid, vm):
     else:
         new_pid = fetch_pid_from_linux_vm(vm=vm, process_name="ping")
     assert new_pid == orig_pid, f"PID mismatch after migration! orig_pid: {orig_pid}; new_pid: {new_pid}"
+
+
+@pytest.fixture(scope="module")
+def postcopy_migration_quarantine(is_postcopy_migration_bug_open):
+    if is_postcopy_migration_bug_open:
+        pytest.xfail(reason="CNV-84023: post-copy migration fails on RHCOS 10+ nodes")
 
 
 @pytest.fixture(scope="module")

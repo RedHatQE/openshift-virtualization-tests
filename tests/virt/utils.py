@@ -289,6 +289,7 @@ def get_num_gpu_devices_in_rhel_vm(vm):
                 "-c",
                 '/sbin/lspci -nnk | grep -E "controller.+NVIDIA" | wc -l',
             ],
+            wait_timeout=TIMEOUT_2MIN,
         )[0].strip()
     )
 
@@ -298,6 +299,7 @@ def get_gpu_device_name_from_windows_vm(vm):
         host=vm.ssh_exec,
         commands=[shlex.split("wmic path win32_VideoController get name")],
         tcp_timeout=TCP_TIMEOUT_30SEC,
+        wait_timeout=TIMEOUT_2MIN,
     )[0]
 
 
