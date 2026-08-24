@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from kubernetes.dynamic import DynamicClient
+from kubernetes.dynamic.exceptions import NotFoundError
 from ocp_resources.pod import Pod
 from ocp_resources.user_defined_network import Layer2UserDefinedNetwork
 
@@ -33,19 +34,28 @@ def udn_namespace(admin_client):
 
 @pytest.fixture(scope="module")
 def namespaced_layer2_user_defined_network(admin_client, udn_namespace):
-    with Layer2UserDefinedNetwork(
+    udn = Layer2UserDefinedNetwork(
         name="layer2-udn",
         namespace=udn_namespace.name,
         role="Primary",
         subnets=[str(random_ipv4_address(net_seed=0, host_address=0))],
         ipam={"lifecycle": "Persistent"},
         client=admin_client,
-    ) as udn:
+    )
+    try:
+        udn.deploy()
         udn.wait_for_condition(
             condition="NetworkAllocationSucceeded",
             status=udn.Condition.Status.TRUE,
         )
         yield udn
+    finally:
+        # In case an attempt to delete the UDN is triggered while a VM/pod is connected to it, the UDN adds finalizers and
+        # self-deletes once that resource is gone. This can lead to a race condition in clean_up().
+        try:
+            udn.clean_up()
+        except NotFoundError:
+            pass
 
 
 @pytest.fixture(scope="module")
