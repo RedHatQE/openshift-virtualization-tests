@@ -25,7 +25,7 @@ from tests.install_upgrade_operators.constants import (
 from tests.install_upgrade_operators.utils import (
     get_network_addon_config,
     get_resource_by_name,
-    get_resource_from_module_name,
+    get_resource_from_related_object,
 )
 from utilities.constants import HOSTPATH_PROVISIONER_CSI, HPP_POOL, MULTIARCH
 from utilities.hco import ResourceEditorValidateHCOReconcile, get_hco_version
@@ -226,7 +226,7 @@ def machine_config_pools_conditions_scope_module(machine_config_pools):
 
 @pytest.fixture()
 def ocp_resource_by_name(admin_client, ocp_resources_submodule_list, related_object_from_hco_status):
-    return get_resource_from_module_name(
+    return get_resource_from_related_object(
         related_obj=related_object_from_hco_status,
         ocp_resources_submodule_list=ocp_resources_submodule_list,
         admin_client=admin_client,
