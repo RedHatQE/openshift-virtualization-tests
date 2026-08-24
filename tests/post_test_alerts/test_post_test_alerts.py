@@ -13,6 +13,8 @@ import pytest
 
 from utilities.constants.monitoring import FIRING_STATE
 
+pytestmark = [pytest.mark.post_test_alerts]
+
 LOGGER = logging.getLogger(__name__)
 
 DEPRECATED_API_ALERT = "KubeVirtDeprecatedAPIRequested"
