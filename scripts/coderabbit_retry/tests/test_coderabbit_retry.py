@@ -113,6 +113,58 @@ class TestCheckRateLimit:
         mock_run.return_value = make_completed_process(returncode=1, stderr="error")
         assert check_rate_limit(repo_name=REPO, pr_number=PR_NUMBER) is None
 
+    @patch("scripts.coderabbit_retry.coderabbit_retry.LOGGER")
+    @patch(SUBPROCESS_PATH)
+    def test_benign_missing_summary_logs_info_not_warning(self, mock_run: MagicMock, mock_logger: MagicMock) -> None:
+        mock_run.return_value = make_completed_process(
+            returncode=1, stdout="Error: No CodeRabbit summary comment found on this PR", stderr=""
+        )
+        assert check_rate_limit(repo_name=REPO, pr_number=PR_NUMBER) is None
+        mock_logger.info.assert_called_once()
+        mock_logger.warning.assert_not_called()
+
+    @patch("scripts.coderabbit_retry.coderabbit_retry.LOGGER")
+    @patch(SUBPROCESS_PATH)
+    def test_benign_missing_summary_on_stderr_also_handled(self, mock_run: MagicMock, mock_logger: MagicMock) -> None:
+        mock_run.return_value = make_completed_process(
+            returncode=1, stdout="", stderr="Error: No CodeRabbit summary comment found on this PR"
+        )
+        assert check_rate_limit(repo_name=REPO, pr_number=PR_NUMBER) is None
+        mock_logger.info.assert_called_once()
+        mock_logger.warning.assert_not_called()
+
+    @patch("scripts.coderabbit_retry.coderabbit_retry.LOGGER")
+    @patch(SUBPROCESS_PATH)
+    def test_genuine_error_logs_warning(self, mock_run: MagicMock, mock_logger: MagicMock) -> None:
+        mock_run.return_value = make_completed_process(returncode=1, stderr="some other real error")
+        assert check_rate_limit(repo_name=REPO, pr_number=PR_NUMBER) is None
+        mock_logger.warning.assert_called_once()
+        mock_logger.info.assert_not_called()
+
+    @patch("scripts.coderabbit_retry.coderabbit_retry.LOGGER")
+    @patch(SUBPROCESS_PATH)
+    def test_genuine_error_includes_both_streams(self, mock_run: MagicMock, mock_logger: MagicMock) -> None:
+        mock_run.return_value = make_completed_process(returncode=1, stdout="stdout detail", stderr="stderr detail")
+        assert check_rate_limit(repo_name=REPO, pr_number=PR_NUMBER) is None
+        mock_logger.warning.assert_called_once()
+        logged_message = mock_logger.warning.call_args.args[0]
+        assert "stdout detail" in logged_message
+        assert "stderr detail" in logged_message
+
+    @patch("scripts.coderabbit_retry.coderabbit_retry.LOGGER")
+    @patch(SUBPROCESS_PATH)
+    def test_benign_missing_summary_split_across_streams(self, mock_run: MagicMock, mock_logger: MagicMock) -> None:
+        # The benign phrase is split across stdout and stderr; whitespace
+        # normalization must still detect it and log INFO, not WARNING.
+        mock_run.return_value = make_completed_process(
+            returncode=1,
+            stdout="Error: No CodeRabbit summary",
+            stderr="comment found on this PR",
+        )
+        assert check_rate_limit(repo_name=REPO, pr_number=PR_NUMBER) is None
+        mock_logger.info.assert_called_once()
+        mock_logger.warning.assert_not_called()
+
     @patch(SUBPROCESS_PATH)
     def test_returns_none_on_invalid_json(self, mock_run: MagicMock) -> None:
         mock_run.return_value = make_completed_process(stdout="not json")
