@@ -1,3 +1,11 @@
+"""
+Tests for virtual machines connected to a primary user-defined network (UDN).
+
+Preconditions:
+    - UDN namespace (with UDN annotation).
+    - Primary UDN resource with an IP range defined.
+"""
+
 from __future__ import annotations
 
 import ipaddress
@@ -23,6 +31,40 @@ if TYPE_CHECKING:
 
 
 @pytest.mark.ipv4
+@pytest.mark.single_nic
+class TestPrimaryUdnClusterIpService:
+    """
+    Tests for reaching a VM on a primary user-defined network (UDN) through a ClusterIP service.
+
+    Preconditions:
+        - Running server VM attached to the primary UDN network.
+        - Running client VM attached to the same primary UDN network.
+    """
+
+    @pytest.mark.polarion("CNV-11462")
+    def test_tcp_connectivity_via_cluster_ip_service_on_primary_udn(self):
+        """
+        Test that a VM's primary UDN interface is reachable through a ClusterIP service.
+
+        No STP exists for this scenario - tracked via Jira: https://redhat.atlassian.net/browse/CNV-94228 # <skip-jira-utils-check>
+
+        Preconditions:
+            - Running server VM attached to the primary UDN network.
+            - ClusterIP service targeting the server VM primary UDN interface.
+            - Running client VM attached to the same primary UDN network.
+
+        Steps:
+            1. Start a TCP server on the server VM.
+            2. Establish a TCP connection from the client VM to the ClusterIP service address.
+
+        Expected:
+            - The TCP connection to the server VM through the ClusterIP service succeeds.
+        """
+
+    test_tcp_connectivity_via_cluster_ip_service_on_primary_udn.__test__ = False
+
+
+@pytest.mark.ipv4
 @pytest.mark.s390x
 @pytest.mark.single_nic
 class TestPrimaryUdn:
@@ -30,8 +72,6 @@ class TestPrimaryUdn:
     Tests for a VM connected to a primary user-defined network (UDN).
 
     Preconditions:
-        - UDN namespace (with UDN annotation).
-        - Primary UDN resource with an IP range defined.
         - Running under-test VM attached to the primary UDN network.
     """
 
@@ -112,28 +152,6 @@ class TestPrimaryUdn:
         """
         pod_ip = lookup_default_pod_ip(pod=udn_pod)
         vma_udn.console(commands=[f"ping -c 3 {pod_ip}"], timeout=TIMEOUT_1MIN)
-
-    @pytest.mark.polarion("CNV-11462")
-    def test_tcp_connectivity_via_cluster_ip_service_on_primary_udn(self):
-        """
-        Test that a VM's primary UDN interface is reachable through a ClusterIP service.
-
-        No STP exists for this scenario - tracked via Jira: https://redhat.atlassian.net/browse/CNV-94228 # <skip-jira-utils-check>
-
-        Preconditions:
-            - Running server VM attached to the primary UDN network.
-            - ClusterIP service targeting the server VM primary UDN interface.
-            - Running client VM attached to the same primary UDN network.
-
-        Steps:
-            1. Start a TCP server on the server VM.
-            2. Establish a TCP connection from the client VM to the ClusterIP service address.
-
-        Expected:
-            - The TCP connection to the server VM through the ClusterIP service succeeds.
-        """
-
-    test_tcp_connectivity_via_cluster_ip_service_on_primary_udn.__test__ = False
 
     @pytest.mark.polarion("CNV-11435")
     def test_network_policy_enforcement_on_primary_udn_interface(self):

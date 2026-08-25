@@ -53,7 +53,7 @@ def udn_affinity_label():
     return affinity.new_label(key_prefix="udn")
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="module")
 def vma_udn(udn_namespace, namespaced_layer2_user_defined_network, udn_affinity_label, admin_client):
     with udn_vm(
         namespace_name=udn_namespace.name,
@@ -67,7 +67,7 @@ def vma_udn(udn_namespace, namespaced_layer2_user_defined_network, udn_affinity_
         yield vm
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="module")
 def vmb_udn(udn_namespace, namespaced_layer2_user_defined_network, udn_affinity_label, admin_client):
     with udn_vm(
         namespace_name=udn_namespace.name,
