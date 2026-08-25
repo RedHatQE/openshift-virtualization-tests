@@ -114,7 +114,9 @@ def start_win_upgrade_multi_vms(vm_list):
     def _set_interface_mtu(vm):
         run_ssh_commands(
             host=vm.ssh_exec,
-            commands=shlex.split(f'netsh interface ipv4 set subinterface "{interface_name}" mtu=1400 store=persistent'),
+            commands=shlex.split(
+                'netsh interface ipv4 set subinterface "Ethernet Instance 0" mtu=1400 store=persistent'
+            ),
             wait_timeout=TIMEOUT_2MIN,
         )
 
