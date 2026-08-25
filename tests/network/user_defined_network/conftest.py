@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 import pytest
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.pod import Pod
+from ocp_resources.service import Service
 from ocp_resources.user_defined_network import Layer2UserDefinedNetwork
 
 from libs.net.ip import random_ipv4_address
@@ -167,3 +168,18 @@ def udn_pod(
     ) as pod:
         pod.wait_for_status(status=Pod.Status.RUNNING)
         yield pod
+
+
+@pytest.fixture()
+def clusterip_service_for_vmb_udn(
+    admin_client: DynamicClient, udn_namespace: Namespace, vmb_udn: BaseVirtualMachine
+) -> Generator[Service]:
+    """A ClusterIP service targeting the primary-UDN server VM."""
+    with Service(
+        name="udn-clusterip-svc",
+        namespace=udn_namespace.name,
+        selector={"vmi.kubevirt.io/id": vmb_udn.name},
+        ports=[{"port": IPERF_SERVER_PORT}],
+        client=admin_client,
+    ) as svc:
+        yield svc

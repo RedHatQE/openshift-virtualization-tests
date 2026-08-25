@@ -2,7 +2,7 @@
 Tests for virtual machines connected to a primary user-defined network (UDN).
 
 Preconditions:
-    - UDN namespace (with UDN annotation).
+    - UDN namespace (with UDN label).
     - Primary UDN resource with an IP range defined.
 """
 
@@ -16,6 +16,7 @@ from ocp_resources.utils.constants import TIMEOUT_1MINUTE
 
 from libs.net.traffic_generator import is_tcp_connection
 from libs.net.vmspec import lookup_iface_status_ip, lookup_primary_network
+from tests.network.libs.connectivity import poll_tcp_connectivity
 from tests.network.user_defined_network.libudn import lookup_default_pod_ip
 from utilities.constants.networking import PUBLIC_DNS_SERVER_IP
 from utilities.constants.pytest import QUARANTINED
@@ -24,6 +25,7 @@ from utilities.virt import migrate_vm_and_verify
 
 if TYPE_CHECKING:
     from kubernetes.dynamic import DynamicClient
+    from ocp_resources.service import Service
     from ocp_resources.user_defined_network import Layer2UserDefinedNetwork
 
     from libs.net.traffic_generator import TcpServer, VMTcpClient
@@ -42,11 +44,16 @@ class TestPrimaryUdnClusterIpService:
     """
 
     @pytest.mark.polarion("CNV-11462")
-    def test_tcp_connectivity_via_cluster_ip_service_on_primary_udn(self):
+    def test_tcp_connectivity_via_cluster_ip_service_on_primary_udn(
+        self,
+        vma_udn: BaseVirtualMachine,
+        vmb_udn: BaseVirtualMachine,
+        clusterip_service_for_vmb_udn: Service,
+    ):
         """
         Test that a VM's primary UDN interface is reachable through a ClusterIP service.
 
-        No STP exists for this scenario - tracked via Jira: https://redhat.atlassian.net/browse/CNV-94228 # <skip-jira-utils-check>
+        No STP exists for this scenario - tracked via Jira: https://redhat.atlassian.net/browse/CNV-52879 # <skip-jira-utils-check>
 
         Preconditions:
             - Running server VM attached to the primary UDN network.
@@ -60,8 +67,15 @@ class TestPrimaryUdnClusterIpService:
         Expected:
             - The TCP connection to the server VM through the ClusterIP service succeeds.
         """
-
-    test_tcp_connectivity_via_cluster_ip_service_on_primary_udn.__test__ = False
+        server_ip = str(
+            lookup_iface_status_ip(vm=vmb_udn, iface_name=lookup_primary_network(vm=vmb_udn).name, ip_family=4)
+        )
+        poll_tcp_connectivity(
+            client_vm=vma_udn,
+            server_vm=vmb_udn,
+            server_ip=server_ip,
+            client_target_ip=clusterip_service_for_vmb_udn.instance.spec.clusterIP,
+        )
 
 
 @pytest.mark.ipv4
