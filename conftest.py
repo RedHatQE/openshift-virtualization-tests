@@ -600,7 +600,7 @@ def pytest_configure(config):
         "--skip-post-test-alerts"
     ):
         markexpr = config.option.markexpr
-        if markexpr and "post_test_alerts" not in markexpr:
+        if markexpr:
             config.option.markexpr = f"({markexpr}) or post_test_alerts"
 
     if conformance_storage_class := config.getoption("conformance_storage_class"):
