@@ -27,6 +27,7 @@ def test_positive_egress_multi_network_policy(
     )
 
 
+@pytest.mark.jira("CNV-88747", run=False)
 @pytest.mark.polarion("CNV-10645")
 @pytest.mark.s390x
 def test_negative_ingress_multi_network_policy(
