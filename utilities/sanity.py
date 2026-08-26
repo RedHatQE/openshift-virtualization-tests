@@ -18,7 +18,7 @@ from timeout_sampler import TimeoutExpiredError
 from utilities.constants.hco import IMAGE_CRON_STR
 from utilities.constants.monitoring import KUBELET_READY_CONDITION
 from utilities.exceptions import ClusterSanityError, StorageSanityError
-from utilities.hco import wait_for_hco_conditions
+from utilities.hco import is_hco_tainted, wait_for_hco_conditions
 from utilities.infra import LOGGER, wait_for_pods_running
 from utilities.pytest_utils import exit_pytest_execution
 
@@ -247,6 +247,7 @@ def cluster_sanity(
         - --cluster-sanity-skip-storage-check: Skip storage class validation
         - --cluster-sanity-skip-nodes-check: Skip node health validation
         - --cluster-sanity-skip-webhook-check: Skip webhook health validation
+        - --cluster-sanity-skip-hco-taint-check: Skip HCO TaintedConfiguration validation
         - -m cluster_health_check: Skip sanity when running cluster health tests
     """
     if "cluster_health_check" in request.config.getoption("-m"):
@@ -257,6 +258,7 @@ def cluster_sanity(
     skip_storage_classes_check = "--cluster-sanity-skip-storage-check"
     skip_nodes_check = "--cluster-sanity-skip-nodes-check"
     skip_webhook_check = "--cluster-sanity-skip-webhook-check"
+    skip_hco_taint_check = "--cluster-sanity-skip-hco-taint-check"
     exceptions_filename = "cluster_sanity_failure.txt"
     try:
         if request.session.config.getoption(skip_cluster_sanity_check):
@@ -314,6 +316,15 @@ def cluster_sanity(
             admin_client=admin_client,
             hco_namespace=hco_namespace,
         )
+
+        if request.session.config.getoption(skip_hco_taint_check):
+            LOGGER.warning(f"Skipping HCO taint check, got {skip_hco_taint_check}")
+        else:
+            LOGGER.info(
+                f"Check HCO TaintedConfiguration. (To skip HCO taint check pass {skip_hco_taint_check} to pytest)"
+            )
+            if taint_conditions := is_hco_tainted(admin_client=admin_client, hco_namespace=hco_namespace.name):
+                raise ClusterSanityError(err_str=f"HCO has TaintedConfiguration: {taint_conditions}.")
 
     except (ClusterSanityError, NodeUnschedulableError, NodeNotReadyError, StorageSanityError) as ex:
         exit_pytest_execution(

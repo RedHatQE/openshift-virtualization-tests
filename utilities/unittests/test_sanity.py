@@ -145,13 +145,14 @@ class TestClusterSanity:
         warning_calls = list(mock_logger.warning.call_args_list)
         assert any("Skipping cluster sanity check" in str(call) for call in warning_calls)
 
+    @patch("utilities.sanity.is_hco_tainted", return_value=[])
     @patch("utilities.sanity.check_webhook_endpoints_health")
     @patch("utilities.sanity.check_vm_creation_capability")
     @patch("utilities.sanity.storage_sanity_check")
     @patch("utilities.sanity.wait_for_hco_conditions")
     @patch("utilities.sanity.LOGGER")
     def test_cluster_sanity_skip_storage_check(
-        self, mock_logger, _mock_wait_hco, mock_storage_sanity, _mock_check_vm, _mock_check_webhook
+        self, mock_logger, _mock_wait_hco, mock_storage_sanity, _mock_check_vm, _mock_check_webhook, _mock_taint
     ):
         """Test skip storage check when --cluster-sanity-skip-storage-check flag is set"""
 
@@ -172,6 +173,7 @@ class TestClusterSanity:
         warning_calls = list(mock_logger.warning.call_args_list)
         assert any("Skipping storage classes check" in str(call) for call in warning_calls)
 
+    @patch("utilities.sanity.is_hco_tainted", return_value=[])
     @patch("utilities.sanity.py_config", {"storage_class_matrix": []})
     @patch("utilities.sanity.check_webhook_endpoints_health")
     @patch("utilities.sanity.check_vm_creation_capability")
@@ -191,6 +193,7 @@ class TestClusterSanity:
         mock_storage_sanity,
         _mock_check_vm,
         _mock_check_webhook,
+        _mock_taint,
     ):
         """Test skip nodes check when --cluster-sanity-skip-nodes-check flag is set"""
 
@@ -214,6 +217,7 @@ class TestClusterSanity:
         warning_calls = list(mock_logger.warning.call_args_list)
         assert any("Skipping nodes check" in str(call) for call in warning_calls)
 
+    @patch("utilities.sanity.is_hco_tainted", return_value=[])
     @patch("utilities.sanity.check_webhook_endpoints_health")
     @patch("utilities.sanity.check_vm_creation_capability")
     @patch("utilities.sanity.storage_sanity_check")
@@ -232,6 +236,7 @@ class TestClusterSanity:
         mock_storage_sanity,
         mock_check_vm,
         mock_check_webhook,
+        _mock_taint,
     ):
         """Test successful full sanity check (all checks pass)"""
 
@@ -464,6 +469,7 @@ class TestClusterSanity:
         assert "Timed out waiting for all pods" in call_args[1]["log_message"]
         assert "test-namespace" in call_args[1]["log_message"]
 
+    @patch("utilities.sanity.is_hco_tainted", return_value=[])
     @patch("utilities.sanity.check_webhook_endpoints_health")
     @patch("utilities.sanity.check_vm_creation_capability")
     @patch("utilities.sanity.storage_sanity_check")
@@ -482,6 +488,7 @@ class TestClusterSanity:
         mock_storage_sanity,
         mock_check_vm,
         mock_check_webhook,
+        _mock_taint,
     ):
         """Test all components called in correct order (storage, nodes, webhook, HCO)"""
 
@@ -533,6 +540,7 @@ class TestClusterSanity:
         # Verify the order: storage -> healthy -> schedulable -> pods -> webhook -> vm -> hco
         assert call_order == ["storage", "healthy", "schedulable", "pods", "webhook", "vm", "hco"]
 
+    @patch("utilities.sanity.is_hco_tainted", return_value=[])
     @patch("utilities.sanity.check_webhook_endpoints_health")
     @patch("utilities.sanity.check_vm_creation_capability")
     @patch("utilities.sanity.storage_sanity_check")
@@ -552,6 +560,7 @@ class TestClusterSanity:
         mock_storage_sanity,
         _mock_check_vm,
         _mock_check_webhook,
+        _mock_taint,
     ):
         """Test assert_nodes_in_healthy_condition called with correct parameters"""
 
@@ -572,6 +581,7 @@ class TestClusterSanity:
 
         mock_assert_healthy.assert_called_once_with(nodes=mock_nodes, healthy_node_condition_type="Ready")
 
+    @patch("utilities.sanity.is_hco_tainted", return_value=[])
     @patch("utilities.sanity.check_webhook_endpoints_health")
     @patch("utilities.sanity.check_vm_creation_capability")
     @patch("utilities.sanity.storage_sanity_check")
@@ -590,6 +600,7 @@ class TestClusterSanity:
         mock_storage_sanity,
         _mock_check_vm,
         _mock_check_webhook,
+        _mock_taint,
     ):
         """Test assert_nodes_schedulable called"""
 
@@ -610,6 +621,7 @@ class TestClusterSanity:
 
         mock_assert_schedulable.assert_called_once_with(nodes=mock_nodes)
 
+    @patch("utilities.sanity.is_hco_tainted", return_value=[])
     @patch("utilities.sanity.check_webhook_endpoints_health")
     @patch("utilities.sanity.check_vm_creation_capability")
     @patch("utilities.sanity.storage_sanity_check")
@@ -629,6 +641,7 @@ class TestClusterSanity:
         mock_storage_sanity,
         _mock_check_vm,
         _mock_check_webhook,
+        _mock_taint,
     ):
         """Test wait_for_pods_running called with correct namespace and filter"""
 
@@ -654,6 +667,7 @@ class TestClusterSanity:
             filter_pods_by_name="cron-job",
         )
 
+    @patch("utilities.sanity.is_hco_tainted", return_value=[])
     @patch("utilities.sanity.check_webhook_endpoints_health")
     @patch("utilities.sanity.check_vm_creation_capability")
     @patch("utilities.sanity.storage_sanity_check")
@@ -672,6 +686,7 @@ class TestClusterSanity:
         mock_storage_sanity,
         _mock_check_vm,
         _mock_check_webhook,
+        _mock_taint,
     ):
         """Test wait_for_hco_conditions called"""
 
@@ -739,13 +754,14 @@ class TestClusterSanity:
         call_args = mock_exit_pytest.call_args
         assert call_args[1]["junitxml_property"] == mock_junitxml_property
 
+    @patch("utilities.sanity.is_hco_tainted", return_value=[])
     @patch("utilities.sanity.check_webhook_endpoints_health")
     @patch("utilities.sanity.check_vm_creation_capability")
     @patch("utilities.sanity.storage_sanity_check")
     @patch("utilities.sanity.wait_for_hco_conditions")
     @patch("utilities.sanity.LOGGER")
     def test_cluster_sanity_skip_webhook_check(
-        self, mock_logger, _mock_wait_hco, mock_storage_sanity, mock_check_vm, mock_check_webhook
+        self, mock_logger, _mock_wait_hco, mock_storage_sanity, mock_check_vm, mock_check_webhook, _mock_taint
     ):
         """Test skip webhook check when --cluster-sanity-skip-webhook-check flag is set"""
 
@@ -769,6 +785,142 @@ class TestClusterSanity:
         assert any("Skipping webhook health check" in str(call) for call in warning_calls), (
             "Expected warning about skipping webhook health check"
         )
+
+
+class TestClusterSanityTaintCheck:
+    """Test cases for is_hco_tainted integration in cluster_sanity"""
+
+    @patch("utilities.sanity.is_hco_tainted", return_value=[])
+    @patch("utilities.sanity.check_webhook_endpoints_health")
+    @patch("utilities.sanity.check_vm_creation_capability")
+    @patch("utilities.sanity.storage_sanity_check")
+    @patch("utilities.sanity.assert_nodes_in_healthy_condition")
+    @patch("utilities.sanity.assert_nodes_schedulable")
+    @patch("utilities.sanity.wait_for_pods_running")
+    @patch("utilities.sanity.wait_for_hco_conditions")
+    @patch("utilities.sanity.exit_pytest_execution")
+    @patch("utilities.sanity.LOGGER")
+    def test_cluster_sanity_no_taint(
+        self,
+        _mock_logger,
+        mock_exit_pytest,
+        _mock_wait_hco,
+        _mock_wait_pods,
+        _mock_assert_schedulable,
+        _mock_assert_healthy,
+        mock_storage_sanity,
+        _mock_check_vm,
+        _mock_check_webhook,
+        _mock_taint,
+    ):
+        """Test cluster_sanity succeeds when HCO has no TaintedConfiguration"""
+
+        mock_request = MagicMock()
+        mock_request.config.getoption.return_value = ""
+        mock_request.session.config.getoption.return_value = False
+        mock_storage_sanity.return_value = True
+
+        cluster_sanity(
+            request=mock_request,
+            admin_client=MagicMock(),
+            cluster_storage_classes_names=["sc1"],
+            nodes=MagicMock(),
+            hco_namespace=MagicMock(),
+        )
+
+        mock_exit_pytest.assert_not_called()
+
+    @patch(
+        "utilities.sanity.is_hco_tainted",
+        return_value=[{"type": "TaintedConfiguration", "status": "True", "reason": "UnsupportedOverride"}],
+    )
+    @patch("utilities.sanity.check_webhook_endpoints_health")
+    @patch("utilities.sanity.check_vm_creation_capability")
+    @patch("utilities.sanity.storage_sanity_check")
+    @patch("utilities.sanity.assert_nodes_in_healthy_condition")
+    @patch("utilities.sanity.assert_nodes_schedulable")
+    @patch("utilities.sanity.wait_for_pods_running")
+    @patch("utilities.sanity.wait_for_hco_conditions")
+    @patch("utilities.sanity.exit_pytest_execution")
+    @patch("utilities.sanity.LOGGER")
+    def test_cluster_sanity_tainted(
+        self,
+        _mock_logger,
+        mock_exit_pytest,
+        _mock_wait_hco,
+        _mock_wait_pods,
+        _mock_assert_schedulable,
+        _mock_assert_healthy,
+        mock_storage_sanity,
+        _mock_check_vm,
+        _mock_check_webhook,
+        _mock_taint,
+    ):
+        """Test cluster_sanity fails when HCO has TaintedConfiguration and preserves taint data"""
+
+        mock_request = MagicMock()
+        mock_request.config.getoption.return_value = ""
+        mock_request.session.config.getoption.return_value = False
+        mock_storage_sanity.return_value = True
+
+        cluster_sanity(
+            request=mock_request,
+            admin_client=MagicMock(),
+            cluster_storage_classes_names=["sc1"],
+            nodes=MagicMock(),
+            hco_namespace=MagicMock(),
+        )
+
+        mock_exit_pytest.assert_called_once()
+        call_args = mock_exit_pytest.call_args
+        assert "TaintedConfiguration" in call_args[1]["log_message"]
+        assert "UnsupportedOverride" in call_args[1]["log_message"]
+
+    @patch(
+        "utilities.sanity.is_hco_tainted",
+        return_value=[{"type": "TaintedConfiguration", "status": "True", "reason": "UnsupportedOverride"}],
+    )
+    @patch("utilities.sanity.check_webhook_endpoints_health")
+    @patch("utilities.sanity.check_vm_creation_capability")
+    @patch("utilities.sanity.storage_sanity_check")
+    @patch("utilities.sanity.assert_nodes_in_healthy_condition")
+    @patch("utilities.sanity.assert_nodes_schedulable")
+    @patch("utilities.sanity.wait_for_pods_running")
+    @patch("utilities.sanity.wait_for_hco_conditions")
+    @patch("utilities.sanity.exit_pytest_execution")
+    @patch("utilities.sanity.LOGGER")
+    def test_cluster_sanity_skip_hco_taint_check(
+        self,
+        mock_logger,
+        mock_exit_pytest,
+        _mock_wait_hco,
+        _mock_wait_pods,
+        _mock_assert_schedulable,
+        _mock_assert_healthy,
+        mock_storage_sanity,
+        _mock_check_vm,
+        _mock_check_webhook,
+        mock_taint,
+    ):
+        """Test cluster_sanity skips HCO taint check when --cluster-sanity-skip-hco-taint-check is set"""
+
+        mock_request = MagicMock()
+        mock_request.config.getoption.return_value = ""
+        mock_request.session.config.getoption.side_effect = lambda flag: flag == "--cluster-sanity-skip-hco-taint-check"
+        mock_storage_sanity.return_value = True
+
+        cluster_sanity(
+            request=mock_request,
+            admin_client=MagicMock(),
+            cluster_storage_classes_names=["sc1"],
+            nodes=MagicMock(),
+            hco_namespace=MagicMock(),
+        )
+
+        mock_taint.assert_not_called()
+        mock_exit_pytest.assert_not_called()
+        warning_calls = list(mock_logger.warning.call_args_list)
+        assert any("Skipping HCO taint check" in str(call) for call in warning_calls)
 
 
 class TestDiscoverWebhookServices:

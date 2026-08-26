@@ -309,6 +309,11 @@ def pytest_addoption(parser):
         help="Skip webhook health check in cluster_sanity fixture",
         action="store_true",
     )
+    cluster_sanity_group.addoption(
+        "--cluster-sanity-skip-hco-taint-check",
+        help="Skip HCO TaintedConfiguration check in cluster_sanity fixture",
+        action="store_true",
+    )
     # Log collector group
     data_collector_group.addoption(
         "--data-collector",
