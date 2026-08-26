@@ -104,15 +104,15 @@ def can_list_vms(client: DynamicClient, namespace_name: str) -> bool:
         return False
 
 
-def wait_for_vm_list_permission(client: DynamicClient, namespace_name: str, allowed: bool) -> None:
+def wait_for_vm_list_permission(client: DynamicClient, namespace_name: str, is_allowed: bool) -> None:
     """Wait for VM list permission to reach the expected state.
 
     Args:
         client: DynamicClient to test access with.
         namespace_name: Namespace to list VMs in.
-        allowed: True to wait for access, False to wait for forbidden.
+        is_allowed: True to wait for access, False to wait for forbidden.
     """
-    LOGGER.info(f"Waiting for VM list access: allowed={allowed}")
+    LOGGER.info(f"Waiting for VM list access: allowed={is_allowed}")
     for sample in TimeoutSampler(
         wait_timeout=TIMEOUT_1MIN,
         sleep=TIMEOUT_5SEC,
@@ -120,8 +120,8 @@ def wait_for_vm_list_permission(client: DynamicClient, namespace_name: str, allo
         client=client,
         namespace_name=namespace_name,
     ):
-        if sample == allowed:
-            LOGGER.info(f"VM list access reached expected state: allowed={allowed}")
+        if sample == is_allowed:
+            LOGGER.info(f"VM list access reached expected state: allowed={is_allowed}")
             break
 
 

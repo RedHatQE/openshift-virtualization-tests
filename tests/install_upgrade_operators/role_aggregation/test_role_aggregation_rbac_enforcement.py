@@ -51,7 +51,7 @@ class TestRoleAggregationAdmin:
         Expected:
             - Operation is rejected with a Forbidden error
         """
-        wait_for_vm_list_permission(client=unprivileged_client, namespace_name=namespace.name, allowed=False)
+        wait_for_vm_list_permission(client=unprivileged_client, namespace_name=namespace.name, is_allowed=False)
 
     @pytest.mark.polarion("CNV-16029")
     @pytest.mark.dependency(depends=["test_disabled_admin"])
@@ -111,7 +111,7 @@ class TestRoleAggregationEdit:
         Expected:
             - Operation is rejected with a Forbidden error
         """
-        wait_for_vm_list_permission(client=unprivileged_client, namespace_name=namespace.name, allowed=False)
+        wait_for_vm_list_permission(client=unprivileged_client, namespace_name=namespace.name, is_allowed=False)
 
     @pytest.mark.polarion("CNV-16260")
     @pytest.mark.dependency(depends=["test_disabled_edit"])
@@ -167,7 +167,7 @@ class TestRoleAggregationView:
         Expected:
             - Operation is rejected with a Forbidden error
         """
-        wait_for_vm_list_permission(client=unprivileged_client, namespace_name=namespace.name, allowed=False)
+        wait_for_vm_list_permission(client=unprivileged_client, namespace_name=namespace.name, is_allowed=False)
 
     @pytest.mark.polarion("CNV-16261")
     @pytest.mark.dependency(depends=["test_disabled_view"])
@@ -188,4 +188,4 @@ class TestRoleAggregationView:
         Expected:
             - VirtualMachine resources are listed successfully
         """
-        wait_for_vm_list_permission(client=unprivileged_client, namespace_name=namespace.name, allowed=True)
+        wait_for_vm_list_permission(client=unprivileged_client, namespace_name=namespace.name, is_allowed=True)
