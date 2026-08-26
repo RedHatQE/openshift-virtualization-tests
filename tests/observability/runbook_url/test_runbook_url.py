@@ -1,5 +1,6 @@
 import pytest
 
+
 class TestRunbookUrlsAndPrometheusRules:
     @pytest.mark.polarion("CNV-10084")
     def test_runbook_downstream_urls(self, available_runbook_urls, cnv_prometheus_rule_alerts, subtests):
