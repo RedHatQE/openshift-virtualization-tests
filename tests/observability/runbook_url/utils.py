@@ -2,9 +2,6 @@ import pytest
 
 from utilities.jira import is_jira_open
 
-RUNBOOK_BLOB_PREFIX = "https://github.com/openshift/runbooks/blob/master/"
-RUNBOOK_RAW_PREFIX = "https://raw.githubusercontent.com/openshift/runbooks/master/"
-
 
 def github_blob_url_to_raw(blob_url: str) -> str:
     """Convert an openshift/runbooks GitHub blob URL to its raw.githubusercontent.com equivalent.
