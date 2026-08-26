@@ -150,7 +150,20 @@ def check_rate_limit(repo_name: str, pr_number: int) -> dict[str, Any] | None:
         return None
 
     if result.returncode != 0:
-        LOGGER.warning(f"PR #{pr_number}: rate-limit check exited {result.returncode}: {result.stderr.strip()}")
+        stderr = result.stderr.strip()
+        stdout = result.stdout.strip()
+        # A missing CodeRabbit summary comment is a normal, expected state (CodeRabbit
+        # has not engaged with the PR yet) — there is nothing to retry. The CLI emits
+        # this message on stdout, so check both streams. Whitespace is collapsed before
+        # matching so the phrase is still detected if it spans a stream boundary, and
+        # the match is case-insensitive so minor upstream wording/casing drift does not
+        # resurrect the false alarm. Logged at INFO so it is not a false-alarm warning.
+        combined_output = " ".join(f"{stdout} {stderr}".casefold().split())
+        if "no coderabbit summary comment found" in combined_output:
+            LOGGER.info(f"PR #{pr_number}: no CodeRabbit summary comment — skipping")
+        else:
+            detail = " | ".join(stream for stream in (stdout, stderr) if stream) or "(no output)"
+            LOGGER.warning(f"PR #{pr_number}: rate-limit check exited {result.returncode}: {detail}")
         return None
 
     try:
