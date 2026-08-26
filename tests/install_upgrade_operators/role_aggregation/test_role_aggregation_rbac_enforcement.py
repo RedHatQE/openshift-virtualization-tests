@@ -33,6 +33,7 @@ class TestRoleAggregationAdmin:
     """
 
     @pytest.mark.polarion("CNV-16028")
+    # Re-enabled test requires the disabled test's side effects (aggregation state)
     @pytest.mark.dependency(name="test_disabled_admin")
     @pytest.mark.usefixtures("aggregation_disabled")
     def test_admin_forbidden_when_aggregation_disabled(self, unprivileged_client, namespace):
@@ -41,6 +42,8 @@ class TestRoleAggregationAdmin:
         from listing virtualization resources when role aggregation is disabled.
 
         Preconditions:
+            - RoleBinding granting the unprivileged user the admin ClusterRole
+              in the namespace
             - HyperConverged CR spec.roleAggregationStrategy set to "Manual"
               (role aggregation disabled)
 
@@ -54,6 +57,7 @@ class TestRoleAggregationAdmin:
         wait_for_vm_list_permission(client=unprivileged_client, namespace_name=namespace.name, is_allowed=False)
 
     @pytest.mark.polarion("CNV-16029")
+    # Aggregation must be disabled before re-enabling to test the transition
     @pytest.mark.dependency(depends=["test_disabled_admin"])
     @pytest.mark.usefixtures("aggregation_reenabled")
     def test_admin_can_delete_vm_collection_when_aggregation_reenabled(
@@ -64,6 +68,8 @@ class TestRoleAggregationAdmin:
         call on VirtualMachine resources when role aggregation is re-enabled.
 
         Preconditions:
+            - RoleBinding granting the unprivileged user the admin ClusterRole
+              in the namespace
             - HyperConverged CR spec.roleAggregationStrategy restored to
               "AggregateToDefault"
 
@@ -93,6 +99,7 @@ class TestRoleAggregationEdit:
     """
 
     @pytest.mark.polarion("CNV-16262")
+    # Re-enabled test requires the disabled test's side effects (aggregation state)
     @pytest.mark.dependency(name="test_disabled_edit")
     @pytest.mark.usefixtures("aggregation_disabled")
     def test_edit_forbidden_when_aggregation_disabled(self, unprivileged_client, namespace):
@@ -101,6 +108,8 @@ class TestRoleAggregationEdit:
         from listing virtualization resources when role aggregation is disabled.
 
         Preconditions:
+            - RoleBinding granting the unprivileged user the edit ClusterRole
+              in the namespace
             - HyperConverged CR spec.roleAggregationStrategy set to "Manual"
               (role aggregation disabled)
 
@@ -114,6 +123,7 @@ class TestRoleAggregationEdit:
         wait_for_vm_list_permission(client=unprivileged_client, namespace_name=namespace.name, is_allowed=False)
 
     @pytest.mark.polarion("CNV-16260")
+    # Aggregation must be disabled before re-enabling to test the transition
     @pytest.mark.dependency(depends=["test_disabled_edit"])
     @pytest.mark.usefixtures("aggregation_reenabled")
     def test_edit_can_create_vm_dry_run_when_aggregation_reenabled(self, unprivileged_client, namespace, dry_run_vm):
@@ -122,6 +132,8 @@ class TestRoleAggregationEdit:
         using a server-side dry-run when role aggregation is re-enabled.
 
         Preconditions:
+            - RoleBinding granting the unprivileged user the edit ClusterRole
+              in the namespace
             - HyperConverged CR spec.roleAggregationStrategy restored to
               "AggregateToDefault"
 
@@ -149,6 +161,7 @@ class TestRoleAggregationView:
     """
 
     @pytest.mark.polarion("CNV-16263")
+    # Re-enabled test requires the disabled test's side effects (aggregation state)
     @pytest.mark.dependency(name="test_disabled_view")
     @pytest.mark.usefixtures("aggregation_disabled")
     def test_view_forbidden_when_aggregation_disabled(self, unprivileged_client, namespace):
@@ -157,6 +170,8 @@ class TestRoleAggregationView:
         from listing virtualization resources when role aggregation is disabled.
 
         Preconditions:
+            - RoleBinding granting the unprivileged user the view ClusterRole
+              in the namespace
             - HyperConverged CR spec.roleAggregationStrategy set to "Manual"
               (role aggregation disabled)
 
@@ -170,6 +185,7 @@ class TestRoleAggregationView:
         wait_for_vm_list_permission(client=unprivileged_client, namespace_name=namespace.name, is_allowed=False)
 
     @pytest.mark.polarion("CNV-16261")
+    # Aggregation must be disabled before re-enabling to test the transition
     @pytest.mark.dependency(depends=["test_disabled_view"])
     @pytest.mark.usefixtures("aggregation_reenabled")
     def test_view_can_list_vms_when_aggregation_reenabled(self, unprivileged_client, namespace):
@@ -178,6 +194,8 @@ class TestRoleAggregationView:
         resources when role aggregation is re-enabled.
 
         Preconditions:
+            - RoleBinding granting the unprivileged user the view ClusterRole
+              in the namespace
             - HyperConverged CR spec.roleAggregationStrategy restored to
               "AggregateToDefault"
 

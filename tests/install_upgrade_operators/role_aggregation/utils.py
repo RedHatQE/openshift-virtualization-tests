@@ -15,6 +15,7 @@ from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_5MIN, TIMEOUT_5SE
 
 if TYPE_CHECKING:
     from kubernetes.dynamic import DynamicClient
+
 LOGGER = logging.getLogger(__name__)
 
 KUBEVIRT_AGGREGATION_LEVELS = ("admin", "edit", "view")
