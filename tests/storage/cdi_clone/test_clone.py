@@ -4,6 +4,7 @@ Clone tests
 
 import pytest
 from ocp_resources.datavolume import DataVolume
+
 from tests.os_params import FEDORA_LATEST
 from tests.storage.cdi_clone.utils import create_vm_from_clone_dv_template
 from tests.storage.stop_status_utils import dv_stop_status_restart_threshold
@@ -21,7 +22,6 @@ from utilities.storage import (
     check_disk_count_in_vm,
     create_dv,
     create_vm_from_dv,
-    data_source_ref,
     get_dv_size_from_datasource,
     overhead_size_for_dv,
     sc_volume_binding_mode_is_wffc,
@@ -48,7 +48,11 @@ def test_successful_vm_restart_with_cloned_dv(
         size=size,
         storage_class=storage_class_name_scope_module,
         consume_wffc=False,
-        source_ref=data_source_ref(data_source=fedora_data_source_scope_module),
+        source_ref={
+            "kind": fedora_data_source_scope_module.kind,
+            "name": fedora_data_source_scope_module.name,
+            "namespace": fedora_data_source_scope_module.namespace,
+        },
     ) as cdv:
         if sc_volume_binding_mode_is_wffc(sc=storage_class_name_scope_module, client=unprivileged_client):
             cdv.wait_for_status(status=DataVolume.Status.PENDING_POPULATION, timeout=TIMEOUT_1MIN)
@@ -220,6 +224,7 @@ def test_clone_from_fs_to_block_using_dv_template(
 
     Steps:
         1. Create a VM using a clone DataVolume template that clones the filesystem DV to block
+        2. Wait for the VM to reach Running state with SSH connectivity
 
     Expected:
         - VM boots successfully with the cloned block DV
@@ -256,6 +261,7 @@ def test_clone_from_block_to_fs_using_dv_template(
 
     Steps:
         1. Create a VM using a clone DataVolume template that clones the block DV to filesystem
+        2. Wait for the VM to reach Running state with SSH connectivity
 
     Expected:
         - VM boots successfully with the cloned filesystem DV
