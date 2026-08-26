@@ -1,8 +1,6 @@
-import logging
-
 import pytest
 
-LOGGER = logging.getLogger(__name__)
+from utilities.jira import is_jira_open
 
 RUNBOOK_BLOB_PREFIX = "https://github.com/openshift/runbooks/blob/master/"
 RUNBOOK_RAW_PREFIX = "https://raw.githubusercontent.com/openshift/runbooks/master/"
@@ -17,7 +15,11 @@ def github_blob_url_to_raw(blob_url: str) -> str:
     Returns:
         The corresponding raw content URL.
     """
-    return blob_url.replace(RUNBOOK_BLOB_PREFIX, RUNBOOK_RAW_PREFIX, 1)
+    return blob_url.replace(
+        "https://github.com/openshift/runbooks/blob/master/",
+        "https://raw.githubusercontent.com/openshift/runbooks/master/",
+        1,
+    )
 
 
 def validate_downstream_runbook_url(
@@ -36,6 +38,11 @@ def validate_downstream_runbook_url(
         for alert_name, runbook_url in alerts_dict.items():
             with subtests.test(msg=f"{rule_name}/{alert_name}"):
                 assert runbook_url, f"Alert '{alert_name}' is missing runbook URL, runbook_url is {runbook_url}"
+                if "kubevirt/virt-platform-autopilot" in runbook_url and is_jira_open(jira_id="CNV-96023"):
+                    pytest.xfail(
+                        reason="CNV-96023: runbook not located in correct repo"
+                        " (kubevirt/virt-platform-autopilot instead of openshift/runbooks)"
+                    )
                 assert runbook_url in available_runbook_urls, (
                     f"Alert '{alert_name}' runbook URL '{runbook_url}' not found in runbooks repository"
                 )
