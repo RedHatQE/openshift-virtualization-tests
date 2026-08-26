@@ -10,7 +10,7 @@ from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.os_params import FEDORA_LATEST, FEDORA_LATEST_LABELS
-from utilities.constants.timeouts import TIMEOUT_1MIN
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_2MIN
 from utilities.virt import migrate_vm_and_verify, running_vm, vm_instance_from_template
 
 if TYPE_CHECKING:
@@ -46,7 +46,11 @@ def vm_with_fio(
 @pytest.fixture()
 def running_fio_in_vm(vm_with_fio):
     LOGGER.info("Installing fio and iotop tools")
-    run_ssh_commands(host=vm_with_fio.ssh_exec, commands=shlex.split("sudo dnf install -y iotop fio"))
+    run_ssh_commands(
+        host=vm_with_fio.ssh_exec,
+        commands=shlex.split("sudo dnf install -y iotop fio"),
+        wait_timeout=TIMEOUT_2MIN,
+    )
 
     # Random write/read -  create a 1G file, and perform 4KB reads and writes using a 75%/25%
     LOGGER.info("Running fio in VM")
@@ -55,7 +59,11 @@ def running_fio_in_vm(vm_with_fio):
         "--gtod_reduce=1 --name=test --filename=/home/fedora/random_read_write.fio --bs=4k --iodepth=64 "
         "--size=1G --readwrite=randrw --rwmixread=75 --numjobs=8 >& /dev/null &"
     )
-    run_ssh_commands(host=vm_with_fio.ssh_exec, commands=fio_cmd)
+    run_ssh_commands(
+        host=vm_with_fio.ssh_exec,
+        commands=fio_cmd,
+        wait_timeout=TIMEOUT_2MIN,
+    )
     get_disk_usage(ssh_exec=vm_with_fio.ssh_exec)
 
 

@@ -11,7 +11,7 @@ from tests.storage.utils import (
     assert_pvc_snapshot_clone_annotation,
     assert_use_populator,
 )
-from tests.utils import create_windows2022_vm_using_existing_dv
+from tests.utils import create_windows2022_vm
 from utilities.constants import Images
 from utilities.constants.images import OS_FLAVOR_FEDORA, OS_FLAVOR_WINDOWS
 from utilities.constants.timeouts import TIMEOUT_1MIN
@@ -164,12 +164,12 @@ class TestWindowsClonedDv:
         Expected:
             - VM OS info reported by VMI matches the expected Windows OS parameters
         """
-        with create_windows2022_vm_using_existing_dv(
+        with create_windows2022_vm(
             namespace=namespace.name,
             client=unprivileged_client,
             vm_name=f"vm-{WIN_2K22}",
             cpu_model=modern_cpu_for_migration,
-            existing_data_volume=cloned_windows_dv_multi_storage_scope_class,
+            data_volume=cloned_windows_dv_multi_storage_scope_class,
         ) as vm:
             validate_os_info_vmi_vs_windows_os(vm=vm)
 

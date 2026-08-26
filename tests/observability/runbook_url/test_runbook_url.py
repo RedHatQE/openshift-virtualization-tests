@@ -1,11 +1,4 @@
-import logging
-
 import pytest
-
-from tests.observability.runbook_url.utils import validate_downstream_runbook_url
-
-LOGGER = logging.getLogger(__name__)
-
 
 class TestRunbookUrlsAndPrometheusRules:
     @pytest.mark.polarion("CNV-10084")

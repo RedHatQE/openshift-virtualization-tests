@@ -26,8 +26,8 @@ from tests.network.libs.bgp import CLUSTER_FRR_ASN, EXTERNAL_FRR_ASN, NET_TOOLS_
 LOGGER = logging.getLogger(__name__)
 
 EVPN_CUDN_NET_SEED: int = 5
-CUDN_EVPN_SUBNET_IPV4: str = f"{random_ipv4_address(net_seed=EVPN_CUDN_NET_SEED, host_address=0)}/24"
-CUDN_EVPN_SUBNET_IPV6: str = f"{random_ipv6_address(net_seed=EVPN_CUDN_NET_SEED, host_address=0)}/64"
+CUDN_EVPN_SUBNET_IPV4: str = str(random_ipv4_address(net_seed=EVPN_CUDN_NET_SEED, host_address=0))
+CUDN_EVPN_SUBNET_IPV6: str = str(random_ipv6_address(net_seed=EVPN_CUDN_NET_SEED, host_address=0))
 
 _BRIDGE_NAME: str = "br0"
 _VXLAN_NAME: str = "vxlan0"
@@ -138,8 +138,10 @@ def _build_bridge_commands(
     return [
         f"ip link add {_BRIDGE_NAME} type bridge vlan_filtering 1 vlan_default_pvid 0",
         f"ip link set {_BRIDGE_NAME} up",
-        f"ip link add {_VXLAN_NAME} type vxlan dstport {_VXLAN_DEST_PORT} local {local_vtep_ip}"
-        " nolearning external vnifilter",
+        (
+            f"ip link add {_VXLAN_NAME} type vxlan dstport {_VXLAN_DEST_PORT} local {local_vtep_ip}"
+            " nolearning external vnifilter"
+        ),
         f"ip link set {_VXLAN_NAME} master {_BRIDGE_NAME}",
         f"bridge link set dev {_VXLAN_NAME} vlan_tunnel on neigh_suppress on learning off",
         f"ip link set {_VXLAN_NAME} up",

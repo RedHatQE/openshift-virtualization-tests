@@ -40,7 +40,7 @@ def create_flat_overlay_vm(
     networks = {nad_name: nad_name}
     network_data = {
         "ethernets": {
-            "eth1": {"addresses": [f"{random_ipv4_address(net_seed=0, host_address=host_ip_suffix)}/24"]},
+            "eth1": {"addresses": [str(random_ipv4_address(net_seed=0, host_address=host_ip_suffix))]},
         }
     }
     cloud_init_data = compose_cloud_init_data_dict(network_data=network_data)
@@ -88,8 +88,10 @@ def start_nc_response_on_vm(flat_l2_port, vm, num_connections):
     vm_console_run_commands(
         vm=vm,
         commands=[
-            f'for i in {{1..{num_connections}}}; do echo -e "{HTTP_SUCCESS_RESPONSE_STR}-$i\n\n" | nc '
-            f"-lp {flat_l2_port}; done &"
+            (
+                f'for i in {{1..{num_connections}}}; do echo -e "{HTTP_SUCCESS_RESPONSE_STR}-$i\n\n" | nc '
+                f"-lp {flat_l2_port}; done &"
+            )
         ],
         return_code_validation=False,
     )

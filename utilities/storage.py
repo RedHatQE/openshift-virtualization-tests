@@ -34,9 +34,9 @@ import utilities.artifactory
 import utilities.infra
 import utilities.virt as virt_util
 from utilities import console
+from utilities.architecture import get_multiarch_cpu_arch
 from utilities.artifactory import get_test_artifact_server_url
 from utilities.constants import Images
-from utilities.constants.architecture import MULTIARCH
 from utilities.constants.components import HPP_POOL
 from utilities.constants.images import OS_FLAVOR_WINDOWS
 from utilities.constants.networking import POD_CONTAINER_SPEC
@@ -73,15 +73,23 @@ LOGGER = logging.getLogger(__name__)
 _DEFAULT_DISK_SERIAL_COMMAND = shlex.split("sudo ls /dev/disk/by-id")
 
 
-def create_dummy_first_consumer_pod(volume_mode=DataVolume.VolumeMode.FILE, dv=None, pvc=None):
+def create_dummy_first_consumer_pod(
+    client: DynamicClient,
+    volume_mode: str = DataVolume.VolumeMode.FILE,
+    dv: DataVolume | None = None,
+    pvc: PersistentVolumeClaim | None = None,
+) -> None:
     """
-    Create a dummy pod that will become the PVCs first consumer
-    Triggers start of CDI worker pod
+    Create a dummy pod that will become the PVCs first consumer.
 
-    To consume PVCs that are not backed by DVs, just pass in pvc param
-    Otherwise, it is needed to pass in dv
+    Triggers start of CDI worker pod.
+
+    Args:
+        client: Kubernetes client to use for creating the pod.
+        volume_mode: Volume mode for the PVC mount.
+        dv: DataVolume to consume. Mutually exclusive with pvc.
+        pvc: PVC to consume directly. Mutually exclusive with dv.
     """
-
     if not (pvc or dv):
         raise ValueError("Exactly one of the args: (dv,pvc) must be passed")
     if dv:
@@ -98,12 +106,15 @@ def create_dummy_first_consumer_pod(volume_mode=DataVolume.VolumeMode.FILE, dv=N
         ):
             if sample:
                 break
-    pvc = pvc or dv.pvc
+        pvc = pvc or dv.pvc
+    if not pvc:
+        raise ValueError("Could not resolve PVC from provided arguments")
     with PodWithPVC(
         namespace=pvc.namespace,
         name=f"first-consumer-{pvc.name}",
         pvc_name=pvc.name,
         containers=get_containers_for_pods_with_pvc(volume_mode=volume_mode, pvc_name=pvc.name),
+        client=client,
     ) as pod:
         LOGGER.info(
             f"Created dummy pod {pod.name} to be the first consumer of the PVC, "
@@ -139,10 +150,7 @@ def construct_datavolume_source_dict(
         source_spec: dict[str, Any] = {"http": {"url": url}}
     elif source == "registry":
         registry_spec: dict[str, Any] = {"url": url}
-        # For multi-arch cluster and single --cpu-arch=ARCH, explicitly set the registry platform architecture
-        # For --cpu-arch=ARCH1,ARCH2, py_config["cpu_arch"] is never set
-        cpu_arch = py_config.get("cpu_arch")
-        if cpu_arch and py_config.get("cluster_type") == MULTIARCH:
+        if cpu_arch := get_multiarch_cpu_arch():
             registry_spec["platform"] = {"architecture": cpu_arch}
         source_spec = {"registry": registry_spec}
     elif source == "pvc":
@@ -281,7 +289,7 @@ def create_dv(
             source_dict=source_dict,
         ) as dv:
             if storage_class and sc_volume_binding_mode_is_wffc(sc=storage_class, client=client) and consume_wffc:
-                create_dummy_first_consumer_pod(dv=dv)
+                create_dummy_first_consumer_pod(client=client, dv=dv)
             yield dv
 
     finally:
@@ -538,7 +546,9 @@ def virtctl_upload_dv(
         f"--size={size}",
     ]
     resource_to_cleanup = (
-        PersistentVolumeClaim(namespace=namespace, name=name) if pvc else DataVolume(namespace=namespace, name=name)
+        PersistentVolumeClaim(namespace=namespace, name=name, client=client)
+        if pvc
+        else DataVolume(namespace=namespace, name=name, client=client)
     )
     if pvc:
         command[1] = "pvc"
@@ -710,9 +720,9 @@ def overhead_size_for_dv(image_size, overhead_value):
     return f"{math.ceil(dv_size)}Mi"
 
 
-def cdi_feature_gate_list_with_added_feature(feature):
+def cdi_feature_gate_list_with_added_feature(feature: str, client: DynamicClient) -> list[str]:
     return [
-        *CDIConfig(name="config").instance.to_dict().get("spec", {}).get("featureGates", []),
+        *CDIConfig(name="config", client=client).instance.to_dict().get("spec", {}).get("featureGates", []),
         feature,
     ]
 
@@ -803,18 +813,37 @@ def run_command_on_vm_and_check_output(
     )
 
 
-def assert_disk_serial(vm, command=_DEFAULT_DISK_SERIAL_COMMAND):
-    assert (
-        HOTPLUG_DISK_SERIAL
-        in run_ssh_commands(host=vm.ssh_exec, commands=command, wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC)[0]
-    ), f"hotplug disk serial id {HOTPLUG_DISK_SERIAL} is not in VM"
+def assert_disk_serial(
+    vm: virt_util.VirtualMachineForTests,
+    serials: list[str] | None = None,
+    command: list[str] = _DEFAULT_DISK_SERIAL_COMMAND,
+) -> None:
+    """Assert that hotplug disk serial(s) are visible inside the VM.
+
+    Args:
+        vm: Virtual machine instance to inspect.
+        serials: Serial strings to verify. Defaults to [HOTPLUG_DISK_SERIAL].
+        command: Shell command whose output is searched for the serial strings.
+    """
+    if serials is None:
+        serials = [HOTPLUG_DISK_SERIAL]
+    output = run_ssh_commands(host=vm.ssh_exec, commands=command, wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC)[0]
+    missing = [serial for serial in serials if serial not in output]
+    assert not missing, f"Disk serial(s) {missing} not found in VM, output: {output}"
 
 
-def assert_hotplugvolume_nonexist(vm):
-    volume_status = vm.vmi.instance.status.volumeStatus[0]
-    assert HOTPLUG_VOLUME not in volume_status, (
-        f"{HOTPLUG_VOLUME} in {volume_status}, hotplug disk should become a regular disk for VM"
-    )
+def assert_hotplugvolume_nonexist(vm: virt_util.VirtualMachineForTests) -> None:
+    """Assert no volume in the VM still carries a hotplugVolume marker.
+
+    After a hotplugged disk is persisted the marker must be removed from every
+    volumeStatus entry; a leftover indicates the disk was not fully converted
+    to a regular disk.
+
+    Args:
+        vm: Virtual machine instance to inspect.
+    """
+    hotplug_statuses = [status for status in vm.vmi.instance.status.volumeStatus if HOTPLUG_VOLUME in status]
+    assert not hotplug_statuses, f"Hotplug disk was not converted to a regular disk in {hotplug_statuses}"
 
 
 def wait_for_vm_volume_ready(
@@ -1103,14 +1132,19 @@ def wait_for_cdi_worker_pod(pod_name, storage_ns_name, admin_client):
         raise
 
 
-def get_storage_class_with_specified_volume_mode(volume_mode, sc_names):
+def get_storage_class_with_specified_volume_mode(
+    volume_mode: str, sc_names: list[str], client: DynamicClient
+) -> str | None:
     sc_with_volume_mode = f"Storage class with volume mode '{volume_mode}'"
     for storage_class_name in sc_names:
-        for claim_property_set in StorageProfile(name=storage_class_name).instance.status["claimPropertySets"]:
+        for claim_property_set in StorageProfile(name=storage_class_name, client=client).instance.status[
+            "claimPropertySets"
+        ]:
             if claim_property_set["volumeMode"] == volume_mode:
                 LOGGER.info(f"{sc_with_volume_mode}: '{storage_class_name}'")
                 return storage_class_name
     LOGGER.error(f"No {sc_with_volume_mode} among {sc_names}")
+    return None
 
 
 @contextmanager
@@ -1166,9 +1200,9 @@ def update_default_sc(default, storage_class):
         yield
 
 
-def verify_dv_and_pvc_does_not_exist(name, namespace, timeout=TIMEOUT_10MIN):
-    dv = DataVolume(namespace=namespace, name=name)
-    pvc = PersistentVolumeClaim(namespace=namespace, name=name)
+def verify_dv_and_pvc_does_not_exist(name: str, namespace: str, client: DynamicClient, timeout: int = TIMEOUT_10MIN):
+    dv = DataVolume(namespace=namespace, name=name, client=client)
+    pvc = PersistentVolumeClaim(namespace=namespace, name=name, client=client)
 
     samples = TimeoutSampler(wait_timeout=timeout, sleep=TIMEOUT_5SEC, func=lambda: dv.exists or pvc.exists)
     try:
@@ -1180,10 +1214,10 @@ def verify_dv_and_pvc_does_not_exist(name, namespace, timeout=TIMEOUT_10MIN):
         raise
 
 
-def wait_for_volume_snapshot_ready_to_use(namespace, name):
+def wait_for_volume_snapshot_ready_to_use(namespace: str, name: str, client: DynamicClient) -> VolumeSnapshot:
     ready_to_use_status = "readyToUse"
     LOGGER.info(f"Wait for VolumeSnapshot '{name}' in '{namespace}' to be '{ready_to_use_status}'")
-    volume_snapshot = VolumeSnapshot(namespace=namespace, name=name)
+    volume_snapshot = VolumeSnapshot(namespace=namespace, name=name, client=client)
     volume_snapshot.wait(timeout=TIMEOUT_10MIN)
     try:
         for sample in TimeoutSampler(
@@ -1200,8 +1234,8 @@ def wait_for_volume_snapshot_ready_to_use(namespace, name):
         raise
 
 
-def wait_for_succeeded_dv(namespace, dv_name):
-    dv = DataVolume(namespace=namespace, name=dv_name)
+def wait_for_succeeded_dv(namespace: str, dv_name: str, client: DynamicClient):
+    dv = DataVolume(namespace=namespace, name=dv_name, client=client)
     try:
         samples = TimeoutSampler(
             wait_timeout=TIMEOUT_2MIN,
@@ -1312,6 +1346,7 @@ def vm_snapshot(vm, name):
         name=name,
         namespace=vm.namespace,
         vm_name=vm.name,
+        client=vm.client,
     ) as snapshot:
         snapshot.wait_snapshot_done()
         virt_util.running_vm(vm=vm, wait_for_interfaces=False)

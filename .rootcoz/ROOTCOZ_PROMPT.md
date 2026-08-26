@@ -190,6 +190,50 @@ When uncertain:
 - If direct evidence is missing or contradictory, lower confidence and populate
   `missing_information`.
 
+### Upstream Causality Chain (MANDATORY for Timeout/Migration/Network Failures)
+
+When a test failure involves a timeout waiting for a condition (e.g., migration
+phase, pod status, network connectivity), treat the timeout as a SECONDARY symptom.
+The timeout tells you WHAT didn't happen — you must find WHY it didn't happen.
+
+**Required investigation order:**
+
+1. **Identify the timed-out condition.** What was the test waiting for?
+   (e.g., migration to complete, pod to reach Running, SSH to connect)
+2. **Find the component responsible for that condition.** Which controller/handler
+   should have made it happen? (e.g., virt-handler for migration execution,
+   virt-controller for migration scheduling)
+3. **Search that component's logs for ERROR-level entries** during the failure
+   window (from operation start to the observed failure).
+4. **Follow the causal chain upstream.** If you find a network-level error
+   (e.g., "Connection reset by peer"), that is still a SYMPTOM — search for
+   what caused the connection to reset (proxy failure, socket error, filesystem
+   error, etc.)
+5. **Pursue the deepest available causal evidence.** Prefer component ERROR logs
+   over K8s events, and syscall-level or configuration-level errors when present.
+   If the component logs show a clear product-path defect (e.g., a logic error,
+   race condition, or incorrect state transition) without a syscall-level error,
+   that is a valid root cause — do not force deeper digging when the causal
+   chain is already clear.
+
+**Anti-pattern — DO NOT DO THIS:**
+- ❌ Report "migration failed with Connection reset by peer" as the root cause
+- ❌ Stop at the K8s Event level without reading component logs
+- ❌ Classify based on the test's `TimeoutExpiredError` without finding what timed out
+
+**Correct pattern:**
+- ✅ Read the relevant component logs on ALL involved nodes → find the ERROR-level
+  entry that preceded the K8s event → identify the syscall or component error that
+  caused the downstream symptom → trace that error to a specific code path,
+  configuration, or environmental condition.
+
+  Example depth: A K8s event reporting a network-level error
+  (e.g., connection reset, timeout) is layer 2 — it tells you the connection
+  broke, not why. The component log on the node where the operation was
+  executing — showing the specific syscall failure, path resolution error,
+  or resource exhaustion that preceded the network symptom — is layer 1.
+  Your analysis must reach layer 1 and explain the underlying cause.
+
 ### Exception and Pattern Signals
 
 Common exceptions and patterns provide useful signals, but they are not verdicts by
@@ -218,6 +262,13 @@ Pattern guidance:
   source code and correlate migration timing with test operations (hot-plug, live
   migration API calls, etc.). A migration immediately following a hot-plug action
   (NIC or disk) is likely caused by the hot-plug, not by workload updates.
+  **CRITICAL: For migration failures, you MUST read the relevant component logs on
+  the source and target nodes when both are assigned** (see Section 3b). If no
+  target node was assigned (migration failed during scheduling), record this in
+  `missing_information` and inspect scheduler and source-node evidence. A K8s event
+  reporting a network-level error is a SYMPTOM — the root cause is in the component
+  log that shows WHY the operation failed. A migration timeout analysis without
+  component log evidence from all assigned nodes is INCOMPLETE.
 - **SSH connectivity failure:** Read the test code to determine how SSH is used.
   Wrong credentials, missing `virtctl` binary, no retry logic, or missing
   `wait_for_ssh_connectivity()` before running commands is `CODE ISSUE`.
@@ -267,6 +318,12 @@ Pattern guidance:
   tolerance.
 
 ### Jira Search Keyword Guidance
+
+The STEP 0 agent `cross-domain-resolver` identifies all product domains involved in
+a failure (not just the test's home directory) and generates domain-specific keywords.
+Use its output to select 3-5 unique final `jira_search_keywords` that cover
+the highest-confidence involved domains. Keep unused domain candidates in
+analysis evidence, not in the final field.
 
 When classifying a failure as `PRODUCT BUG`, generate `jira_search_keywords` to help
 find existing Jira tickets:
@@ -348,6 +405,7 @@ Environment:
 - OCS: 4.22.0-70.stable [LOW]
 - Network Type: OVNKubernetes [HIGH]
 - HCO Image: registry.redhat.io/...@sha256:... [LOW]
+- HCO Index Image: registry.redhat.io/...@sha256:... [LOW]
 - Test Image: quay.io/openshift-cnv/...@sha256:... [LOW]
 
 Root Cause:
@@ -360,11 +418,22 @@ pod image tags, or log output under `build-artifacts/`.
 If a version still cannot be determined, mark as `unknown`.
 Do NOT skip this step — the environment block MUST appear in every `details` field.
 
+**Peer revision / re-analysis (MANDATORY):** Whenever you emit or revise the
+analysis JSON — including after peer debate feedback, classification changes,
+or any follow-up rewrite of `details` — the `details` field MUST still begin
+with the full `Environment:` block (then Root Cause and the rest of the required
+structure). You may update classification and root-cause text; you MUST NOT drop
+or postpone the Environment block. If your prior draft already had Environment
+data, carry it forward unchanged unless versions need correction.
+
 ### Self-Verification (MANDATORY)
 
-Before submitting your JSON response, verify:
+Before submitting your JSON response (initial analysis **and** any revision), verify:
 1. Does `details` start with "Environment:" on the first line? If NO, fix it.
-2. Does the Environment block list ALL version fields from `run-info.json`? If NO, add the missing ones.
+2. Does the Environment block list ALL version/revision fields, image references, and environment identifiers from `run-info.json`? If NO, add the missing ones.
+3. Does `Root Cause:` follow the complete Environment block? If NO, restore the required structure before submitting.
+4. If this is a revised analysis after peer feedback: did you keep the Environment
+   block at the top of `details`? If NO, restore it before submitting.
 
 **CRITICAL: Never dismiss or skip warnings, conditions, or errors found in the data.**
 Every warning, condition entry, and error message in VirtualMachine, VMI, DataVolume,
@@ -412,6 +481,52 @@ multiple product bugs.
 Example: A VMI condition warning about `LiveMigratable: False` due to host-device
 passthrough may be secondary to an SSH timeout failure, or it may explain why migration
 never completed. Investigate it explicitly before ruling it out.
+
+### 3b. Must-Gather Artifact Scanning (MANDATORY for PRODUCT BUG Classification)
+
+When build-artifacts contain must-gather data, you MUST scan component logs —
+not just K8s events. Events are downstream symptoms; component logs contain
+the actual errors.
+
+**Log priority for root cause identification:**
+
+1. **ERROR-level component logs** — the ACTUAL error
+2. **K8s Events** — the REPORTED error (often a downstream symptom)
+3. **Pod status/phase transitions** — WHEN things failed
+4. **Test output/console** — HOW the test observed the failure
+
+**If your analysis only references layers 2-4, you have NOT found the root
+cause.** Go back and read layer 1 logs. Exception: if `must-gather-analyzer`
+reports no artifacts, note this in `missing_information` and proceed with
+layers 2-4 evidence — do not require layer 1 logs that do not exist.
+
+The STEP 0 agent `must-gather-analyzer` provides structured evidence from
+must-gather artifacts (artifact discovery, component log scanning, and
+causal chain tracing — all in one pass).
+Use its output as input for your classification — do not repeat its
+investigation, but verify its conclusions against your own reading of the
+artifacts.
+
+### 3c. Regression Detection (MANDATORY for Product Bugs with Behavioral-Change or Recent-Onset Signals)
+
+When a product bug failure shows signs of a behavioral change or recent onset,
+investigate whether it is a regression before finalizing your classification.
+
+The STEP 0 agents `regression-detector` and `recent-changes-scanner` provide
+version correlation, behavioral change evidence, and recent change analysis.
+Use their output alongside your own analysis. **Important:** these agents do
+not have access to history tools — their regression assessment may be
+`INSUFFICIENT DATA`. Cross-reference with `get_failure_history` results: if
+history shows the test was previously passing, override the agent's assessment
+and treat it as a regression candidate regardless of what the agent reported.
+
+If regression evidence is found, include it in your `details` field (the
+`pattern` field should remain `NEW` for initial analysis — `classify_test_pattern`
+will consider your evidence when choosing the final pattern). If all available
+checks complete without evidence, state "Regression investigation: no evidence
+of a recent behavioral change in [component]". If the required history or
+artifacts are unavailable, state "Regression investigation: insufficient data
+to assess a recent behavioral change in [component]".
 
 ## 4. Missing Information Guidance
 
@@ -589,7 +704,7 @@ the test infrastructure.
 When classifying as `PRODUCT BUG`, your analysis MUST include evidence that you
 investigated the product source code. In your `details` field, include a section like:
 
-```
+```text
 Product code investigation:
 - Examined [component] source at [repo]/[path/to/file.go]
 - The [function/handler] at [file:line] is responsible for [behavior]

@@ -42,10 +42,10 @@ LOCAL_PATH = f"/tmp/{Images.Cdi.QCOW2_IMG}"
 LATEST_WINDOWS_OS_DICT = py_config.get("latest_windows_os_dict", {})
 
 
-def get_population_method_by_provisioner(storage_class, cluster_csi_drivers_names):
+def get_population_method_by_provisioner(storage_class, cluster_csi_drivers_names, client):
     return (
         POPULATED_STR
-        if StorageClass(name=storage_class).instance.get("provisioner") in cluster_csi_drivers_names
+        if StorageClass(name=storage_class, client=client).instance.get("provisioner") in cluster_csi_drivers_names
         else NON_CSI_POPULATED_STR
     )
 
@@ -200,6 +200,7 @@ def test_virtctl_image_upload_dv(
 )
 @pytest.mark.s390x
 def test_virtctl_image_upload_with_exist_dv_image(
+    admin_client,
     data_volume_multi_storage_scope_function,
     storage_class_name_scope_function,
     download_image,
@@ -228,6 +229,7 @@ def test_virtctl_image_upload_with_exist_dv_image(
                 populated=get_population_method_by_provisioner(
                     storage_class=storage_class_name_scope_function,
                     cluster_csi_drivers_names=cluster_csi_drivers_names,
+                    client=admin_client,
                 ),
             ),
         )
@@ -257,7 +259,7 @@ def test_virtctl_image_upload_pvc(download_image, namespace, storage_class_name_
         insecure=True,
     ) as res:
         check_upload_virtctl_result(result=res)
-        pvc = PersistentVolumeClaim(namespace=namespace.name, name=pvc_name)
+        pvc = PersistentVolumeClaim(namespace=namespace.name, name=pvc_name, client=namespace.client)
         assert pvc.bound()
 
 
@@ -303,7 +305,7 @@ def empty_pvc(
         if sc_volume_binding_mode_is_wffc(sc=storage_class_name_scope_module, client=namespace.client):
             # For PVC to bind on WFFC, it must be consumed
             # (this was previously solved by hard coding hostpath_node at all times)
-            create_dummy_first_consumer_pod(pvc=pvc)
+            create_dummy_first_consumer_pod(client=namespace.client, pvc=pvc)
         pvc.wait_for_status(status=PersistentVolumeClaim.Status.BOUND, timeout=60)
         yield pvc
 
@@ -346,6 +348,7 @@ def test_virtctl_image_upload_with_exist_pvc(
 @pytest.mark.polarion("CNV-3729")
 @pytest.mark.s390x
 def test_virtctl_image_upload_with_exist_pvc_image(
+    admin_client,
     download_image,
     namespace,
     storage_class_name_scope_module,
@@ -383,6 +386,7 @@ def test_virtctl_image_upload_with_exist_pvc_image(
                     populated=get_population_method_by_provisioner(
                         storage_class=storage_class_name_scope_module,
                         cluster_csi_drivers_names=cluster_csi_drivers_names,
+                        client=admin_client,
                     ),
                 ),
             )
