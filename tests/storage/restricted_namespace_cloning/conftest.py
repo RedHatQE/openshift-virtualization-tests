@@ -25,16 +25,16 @@ from tests.storage.restricted_namespace_cloning.constants import (
     VERBS_SRC_SA,
     VM_FOR_TEST,
 )
-from tests.storage.utils import (
-    create_cluster_role,
-    create_role_binding,
-    set_permissions,
-)
 from utilities.constants import Images
 from utilities.constants.images import OS_FLAVOR_FEDORA
 from utilities.constants.pytest import UNPRIVILEGED_USER
 from utilities.constants.storage import BIND_IMMEDIATE_ANNOTATION, PVC
 from utilities.infra import create_ns
+from utilities.rbac import (
+    create_cluster_role,
+    create_role_binding,
+    set_permissions,
+)
 from utilities.storage import construct_datavolume_source_dict, create_dv, get_dv_size_from_datasource
 from utilities.virt import VirtualMachineForTests, running_vm
 

@@ -16,7 +16,6 @@ from tests.storage.snapshots.constants import WINDOWS_DIRECTORY_PATH
 from tests.storage.utils import (
     assert_windows_directory_existence,
     create_windows_directory,
-    set_permissions,
 )
 from tests.utils import create_windows2022_vm
 from utilities.constants.pytest import UNPRIVILEGED_USER
@@ -25,6 +24,7 @@ from utilities.constants.timeouts import (
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
 )
+from utilities.rbac import set_permissions
 from utilities.storage import data_volume_template_with_source_ref_dict
 
 LOGGER = logging.getLogger(__name__)
