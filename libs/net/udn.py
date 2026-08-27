@@ -11,6 +11,7 @@ from utilities.infra import create_ns
 
 UDN_BINDING_DEFAULT_PLUGIN_NAME: Final[str] = "l2bridge"
 UDN_PASST_CORE_BINDING_NAME: Final[str] = "passtBinding"
+PRIMARY_UDN_NAMESPACE_LABEL: Final[dict[str, str]] = {"k8s.ovn.org/primary-user-defined-network": ""}
 
 
 def udn_primary_network(name: str, binding: str) -> tuple[Interface, Network]:
@@ -28,6 +29,6 @@ def create_udn_namespace(
 ) -> Generator[Namespace]:
     return create_ns(
         name=name,
-        labels={"k8s.ovn.org/primary-user-defined-network": "", **(labels or {})},
+        labels={**PRIMARY_UDN_NAMESPACE_LABEL, **(labels or {})},
         admin_client=client,
     )

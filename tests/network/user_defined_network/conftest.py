@@ -8,7 +8,7 @@ from ocp_resources.user_defined_network import Layer2UserDefinedNetwork
 
 from libs.net.ip import random_ipv4_address
 from libs.net.traffic_generator import IPERF_SERVER_PORT, TcpServer, VMTcpClient
-from libs.net.udn import UDN_BINDING_DEFAULT_PLUGIN_NAME
+from libs.net.udn import PRIMARY_UDN_NAMESPACE_LABEL, UDN_BINDING_DEFAULT_PLUGIN_NAME
 from libs.net.vmspec import lookup_iface_status_ip, lookup_primary_network
 from libs.vm import affinity
 from libs.vm.oper import run_vms
@@ -27,7 +27,7 @@ def udn_namespace(admin_client):
     yield from create_ns(
         admin_client=admin_client,
         name="test-user-defined-network-ns",
-        labels={"k8s.ovn.org/primary-user-defined-network": ""},
+        labels=PRIMARY_UDN_NAMESPACE_LABEL,
     )
 
 
