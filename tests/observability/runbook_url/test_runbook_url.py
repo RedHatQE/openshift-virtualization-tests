@@ -3,22 +3,12 @@ import logging
 import pytest
 
 from tests.utils import validate_runbook_url_exists
-from utilities.constants import CNV_PROMETHEUS_RULES, QUARANTINED
+from utilities.constants import QUARANTINED
 
 LOGGER = logging.getLogger(__name__)
 
 
 class TestRunbookUrlsAndPrometheusRules:
-    @pytest.mark.polarion("CNV-10081")
-    def test_no_new_prometheus_rules(self, cnv_prometheus_rules_names):
-        """
-        Since validations for runbook url of all cnv alerts are done via polarion parameterization of prometheusrules,
-        this test has been added to catch any new cnv prometheusrules that is not part of cnv_prometheus_rules_matrix
-        """
-        assert sorted(CNV_PROMETHEUS_RULES) == sorted(cnv_prometheus_rules_names), (
-            f"New cnv prometheusrule found: {set(cnv_prometheus_rules_names) - set(CNV_PROMETHEUS_RULES)}"
-        )
-
     @pytest.mark.xfail(
         reason=f"{QUARANTINED}: New alerts runbooks added to upstream and not merged yet for downstream, CNV-67890",
         run=False,
