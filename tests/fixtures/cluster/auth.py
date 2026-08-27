@@ -204,3 +204,9 @@ def _wait_for_oauth_openshift_deployment(admin_client):
     for reason in ("ReplicaSetUpdated", "NewReplicaSetAvailable"):
         LOGGER.info(f"{_log} {reason}")
         _wait_sampler(_reason=reason)
+
+
+@pytest.fixture(scope="session")
+def fail_when_no_unprivileged_client_available_scope_session(unprivileged_client, admin_client):
+    if unprivileged_client is admin_client:
+        pytest.fail("No unprivileged_client available, failing the test")
