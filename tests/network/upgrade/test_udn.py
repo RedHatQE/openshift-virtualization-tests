@@ -6,10 +6,20 @@ Preconditions:
     - A primary UDN network.
 """
 
+import os
+
 import pytest
 
-from libs.net.vmspec import lookup_iface_status_ip, lookup_primary_network
-from tests.network.libs.connectivity import build_ping_command, packet_loss_percent_from_ping_output
+from tests.network.upgrade.utils import assert_udn_vms_ping_connectivity
+from tests.upgrade_params import (
+    IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID,
+    IUO_UPGRADE_TEST_ORDERING_NODE_ID,
+)
+from utilities.constants.pytest import DEPENDENCY_SCOPE_SESSION
+
+BEFORE_UPGRADE_UDN_CONNECTIVITY_TEST_ID = (
+    f"{os.path.abspath(__file__)}::test_connectivity_between_udn_vms_before_upgrade"
+)
 
 pytestmark = [
     pytest.mark.upgrade,
@@ -50,7 +60,10 @@ test_udn_vm_state_before_upgrade.__test__ = False
 
 
 @pytest.mark.polarion("CNV-11617")
-def test_connectivity_between_udn_vms_before_upgrade(running_udn_vms_upgrade):
+@pytest.mark.order(before=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
+# Post-upgrade test depends on this to skip if pre-upgrade connectivity already fails.
+@pytest.mark.dependency(name=BEFORE_UPGRADE_UDN_CONNECTIVITY_TEST_ID, scope=DEPENDENCY_SCOPE_SESSION)
+def test_connectivity_between_udn_vms_before_upgrade(subtests, running_udn_vms_upgrade):
     """
     Test that two VMs with a primary UDN network can communicate with each other over the primary UDN network.
 
@@ -66,17 +79,7 @@ def test_connectivity_between_udn_vms_before_upgrade(running_udn_vms_upgrade):
     Expected:
         - Ping command succeeds with 0% packet loss.
     """
-    source_vm, destination_vm = running_udn_vms_upgrade
-    destination_vm_ip = str(
-        lookup_iface_status_ip(
-            vm=destination_vm, iface_name=lookup_primary_network(vm=destination_vm).name, ip_family=4
-        )
-    )
-    ping_command = build_ping_command(dst_ip=destination_vm_ip, count=3, timeout=10)
-    ping_output = "\n".join(source_vm.console(commands=[ping_command], timeout=30)[ping_command])
-    assert packet_loss_percent_from_ping_output(ping_output=ping_output) == 0, (
-        f"Ping from {source_vm.name} to {destination_vm_ip} did not report 0% packet loss: {ping_output}"
-    )
+    assert_udn_vms_ping_connectivity(running_udn_vms=running_udn_vms_upgrade, subtests=subtests)
 
 
 @pytest.mark.polarion("CNV-13119")
@@ -109,7 +112,16 @@ test_udn_vm_state_after_upgrade.__test__ = False
 
 
 @pytest.mark.polarion("CNV-16774")
-def test_connectivity_between_udn_vms_after_upgrade():
+@pytest.mark.order(after=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
+# Requires upgrade completion and pre-upgrade baseline connectivity.
+@pytest.mark.dependency(
+    depends=[
+        IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID,
+        BEFORE_UPGRADE_UDN_CONNECTIVITY_TEST_ID,
+    ],
+    scope=DEPENDENCY_SCOPE_SESSION,
+)
+def test_connectivity_between_udn_vms_after_upgrade(subtests, running_udn_vms_upgrade):
     """
     Test that two VMs with a primary UDN network can communicate with each other over the primary UDN network.
 
@@ -125,6 +137,4 @@ def test_connectivity_between_udn_vms_after_upgrade():
     Expected:
         - Ping command succeeds with 0% packet loss.
     """
-
-
-test_connectivity_between_udn_vms_after_upgrade.__test__ = False
+    assert_udn_vms_ping_connectivity(running_udn_vms=running_udn_vms_upgrade, subtests=subtests)
