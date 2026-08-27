@@ -1,10 +1,16 @@
 import ipaddress
+import re
 from typing import Final
 
 from timeout_sampler import TimeoutExpiredError, retry
 
 from libs.net.traffic_generator import IPERF_SERVER_PORT, TcpServer, VMTcpClient
 from libs.vm.vm import BaseVirtualMachine
+
+
+class PacketLossSummaryNotFoundError(Exception):
+    """Raised when ping output does not contain a packet-loss summary line."""
+
 
 ARP_ISOLATION_SYSCTL_CMD: Final[list[str]] = [
     # Only answer ARP for the IP assigned to the receiving interface —
@@ -66,3 +72,21 @@ def poll_tcp_connectivity(
     except TimeoutExpiredError:
         reachable = False
     return reachable if expect_connectivity else not reachable
+
+
+def packet_loss_percent_from_ping_output(ping_output: str) -> float:
+    """Return the packet-loss percentage parsed from ping summary output.
+
+    Args:
+        ping_output: The full output of a ping command.
+
+    Returns:
+        The packet-loss percentage (0-100) reported in the statistics line.
+
+    Raises:
+        PacketLossSummaryNotFoundError: If the ping output has no packet-loss summary line.
+    """
+    match = re.search(pattern=r"(\d+(?:\.\d+)?)% packet loss", string=ping_output)
+    if not match:
+        raise PacketLossSummaryNotFoundError(f"No packet-loss summary found in ping output: {ping_output}")
+    return float(match.group(1))
