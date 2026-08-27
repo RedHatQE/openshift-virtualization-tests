@@ -11,11 +11,6 @@ from utilities.constants import TIMEOUT_10SEC, TIMEOUT_30SEC
 LOGGER = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="module")
-def cnv_prometheus_rules_names(hco_namespace):
-    return [prometheus_rule.name for prometheus_rule in PrometheusRule.get(namespace=hco_namespace.name)]
-
-
 @pytest.fixture()
 def cnv_alerts_runbook_urls_from_prometheus_rule(cnv_prometheus_rules_matrix__function__, hpp_cr_installed):
     rule_name = cnv_prometheus_rules_matrix__function__
