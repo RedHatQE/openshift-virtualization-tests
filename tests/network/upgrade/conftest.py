@@ -1,7 +1,8 @@
 from ipaddress import IPv4Interface, IPv6Interface
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 import pytest
+from ocp_resources.user_defined_network import Layer2UserDefinedNetwork
 from ocp_resources.virtual_machine import VirtualMachine
 
 if TYPE_CHECKING:
@@ -15,7 +16,12 @@ if TYPE_CHECKING:
 
 from libs.net import nodenetworkconfigurationpolicy as libnncp
 from libs.net.cluster import cluster_vlans, ipv4_supported_cluster, ipv6_supported_cluster
-from libs.net.ip import filter_link_local_addresses, random_ipv4_address, random_ipv6_address
+from libs.net.ip import (
+    filter_link_local_addresses,
+    random_ipv4_address,
+    random_ipv6_address,
+)
+from libs.net.udn import PRIMARY_UDN_NAMESPACE_LABEL, UDN_BINDING_DEFAULT_PLUGIN_NAME
 from libs.net.vmspec import lookup_iface_status
 from libs.vm.oper import run_vms
 from libs.vm.spec import Interface, Multus, Network
@@ -35,6 +41,7 @@ from tests.network.libs.localnet import (
     localnet_cudn,
     localnet_vm,
 )
+from tests.network.libs.vm_factory import udn_vm
 from tests.network.upgrade.libupgrade import KMP_DISABLED_LABEL
 from utilities.constants.cluster import WORKER_NODE_LABEL_KEY
 from utilities.constants.networking import KMP_VM_ASSIGNMENT_LABEL, LINUX_BRIDGE
@@ -381,3 +388,78 @@ def ipv4_dedicated_nic_bridge_localnet_address_pool_upgrade() -> Generator[IPv4I
 @pytest.fixture(scope="session")
 def ipv6_dedicated_nic_bridge_localnet_address_pool_upgrade() -> Generator[IPv6Interface]:
     return (random_ipv6_address(net_seed=1, host_address=host) for host in range(1, 254))
+
+
+@pytest.fixture(scope="session")
+def udn_upgrade_namespace(admin_client: DynamicClient) -> Generator[Namespace]:
+    yield from create_ns(
+        admin_client=admin_client,
+        name="upgrade-udn-ns",
+        labels=PRIMARY_UDN_NAMESPACE_LABEL,
+    )
+
+
+@pytest.fixture(scope="session")
+def udn_upgrade_layer2(
+    admin_client: DynamicClient,
+    udn_upgrade_namespace: Namespace,
+) -> Generator[Layer2UserDefinedNetwork]:
+    with Layer2UserDefinedNetwork(
+        name="upgrade-udn",
+        namespace=udn_upgrade_namespace.name,
+        role="Primary",
+        subnets=[str(random_ipv4_address(net_seed=2, host_address=0))],
+        ipam={"lifecycle": "Persistent"},
+        client=admin_client,
+    ) as udn:
+        udn.wait_for_condition(
+            condition="NetworkAllocationSucceeded",
+            status=udn.Condition.Status.TRUE,
+        )
+        yield udn
+
+
+UDN_UPGRADE_VM_ANTI_AFFINITY_LABEL: Final[dict[str, str]] = {"upgrade-udn-vm": "true"}
+
+
+@pytest.fixture(scope="session")
+def vma_upgrade_udn(
+    admin_client: DynamicClient,
+    udn_upgrade_namespace: Namespace,
+    udn_upgrade_layer2: Layer2UserDefinedNetwork,
+) -> Generator[BaseVirtualMachine]:
+    with udn_vm(
+        namespace_name=udn_upgrade_namespace.name,
+        name="upgrade-udn-vm-a",
+        client=admin_client,
+        binding=UDN_BINDING_DEFAULT_PLUGIN_NAME,
+        template_labels=UDN_UPGRADE_VM_ANTI_AFFINITY_LABEL,
+        anti_affinity_namespaces=[udn_upgrade_namespace.name],
+    ) as vm:
+        yield vm
+
+
+@pytest.fixture(scope="session")
+def vmb_upgrade_udn(
+    admin_client: DynamicClient,
+    udn_upgrade_namespace: Namespace,
+    udn_upgrade_layer2: Layer2UserDefinedNetwork,
+) -> Generator[BaseVirtualMachine]:
+    with udn_vm(
+        namespace_name=udn_upgrade_namespace.name,
+        name="upgrade-udn-vm-b",
+        client=admin_client,
+        binding=UDN_BINDING_DEFAULT_PLUGIN_NAME,
+        template_labels=UDN_UPGRADE_VM_ANTI_AFFINITY_LABEL,
+        anti_affinity_namespaces=[udn_upgrade_namespace.name],
+    ) as vm:
+        yield vm
+
+
+@pytest.fixture(scope="session")
+def running_udn_vms_upgrade(
+    vma_upgrade_udn: BaseVirtualMachine,
+    vmb_upgrade_udn: BaseVirtualMachine,
+) -> tuple[BaseVirtualMachine, BaseVirtualMachine]:
+    vm_a, vm_b = run_vms(vms=(vma_upgrade_udn, vmb_upgrade_udn))
+    return vm_a, vm_b
