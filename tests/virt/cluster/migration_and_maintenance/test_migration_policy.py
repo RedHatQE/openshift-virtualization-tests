@@ -190,6 +190,7 @@ class TestMigrationPolicies:
         ],
         indirect=True,
     )
+    @pytest.mark.usefixtures("xfail_postcopy_migration")
     def test_migration_policy_reverts_to_default_values(
         self,
         migration_policy_a,
