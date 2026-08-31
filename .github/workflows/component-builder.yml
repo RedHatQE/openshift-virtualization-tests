@@ -11,29 +11,38 @@ permissions:
   contents: read
 
 env:
-  FEDORA_VERSION: 43
   REMOTE_REPOSITORY: quay.io/openshift-cnv/qe-cnv-tests-fedora-staging
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      matrix: ${{ steps.component-builder-config.outputs.matrix }}
+      fedora_version: ${{ steps.component-builder-config.outputs.fedora_version }}
+      fedora_image_base: ${{ steps.component-builder-config.outputs.fedora_image_base }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Read component builder config
+        id: component-builder-config
+        run: |
+          echo "matrix=$(jq -c '.matrix' .github/component-builder-config.json)" >> "${GITHUB_OUTPUT}"
+          echo "fedora_version=$(jq -r '.fedora_version' .github/component-builder-config.json)" >> "${GITHUB_OUTPUT}"
+          echo "fedora_image_base=$(jq -r '.fedora_image_base' .github/component-builder-config.json)" >> "${GITHUB_OUTPUT}"
+
   guest-fedora:
     runs-on: ubuntu-latest
+    needs: prepare
     strategy:
-      matrix:
-        include:
-          - arch: amd64
-            url_arch: x86_64
-            qemu_package: qemu-system-x86
-            fedora_url: https://download.fedoraproject.org/pub/fedora/linux/releases/43/Cloud/x86_64/images
-          - arch: arm64
-            url_arch: aarch64
-            qemu_package: qemu-system-aarch64
-            fedora_url: https://download.fedoraproject.org/pub/fedora/linux/releases/43/Cloud/aarch64/images
-          - arch: s390x
-            url_arch: s390x
-            qemu_package: qemu-system-s390x
-            fedora_url: https://download.fedoraproject.org/pub/fedora-secondary/releases/43/Cloud/s390x/images
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
     env:
-      FEDORA_IMAGE_BASE: Fedora-Cloud-Base-Generic-43-1.6
+      FEDORA_VERSION: ${{ needs.prepare.outputs.fedora_version }}
+      FEDORA_IMAGE_BASE: ${{ needs.prepare.outputs.fedora_image_base }}
       CPU_ARCH: ${{ matrix.arch }}
       FULL_EMULATION: "true"
       DEBIAN_FRONTEND: noninteractive
