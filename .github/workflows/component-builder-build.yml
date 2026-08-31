@@ -94,20 +94,61 @@ jobs:
           fedora_checksum="${FEDORA_CHECKSUM_BASE}-${URL_ARCH}-CHECKSUM"
           wget -q "${FEDORA_URL}/${fedora_checksum}" -O CHECKSUM
 
-      - name: Verify Fedora image checksum
+      - name: Verify Fedora CHECKSUM OpenPGP signature and image digest
         working-directory: ./containers/fedora
         env:
           URL_ARCH: ${{ matrix.url_arch }}
+          # Fedora 43 primary release signing key fingerprint.
+          # Source: https://fedoraproject.org/security
+          # Fingerprint must be updated when the Fedora version changes.
+          FEDORA_SIGNING_KEY_FINGERPRINT: "C6E7F081CF80E13146676E88829B606631645531"
         run: |
+          set -euo pipefail
           FEDORA_IMAGE="${FEDORA_IMAGE_BASE}.${URL_ARCH}.qcow2"
-          # Extract the SHA256 line for the exact artifact and verify it.
+
+          # ---------------------------------------------------------------
+          # Step 1: Import the Fedora release signing key from the official
+          # Fedora site (separate trust root — not the same mirror that
+          # served the qcow2 and CHECKSUM).  Then verify that the imported
+          # key's fingerprint exactly matches the pinned value above.
+          # ---------------------------------------------------------------
+          GPG_HOME="$(mktemp -d)"
+          chmod 0700 "${GPG_HOME}"
+          # Fetch the Fedora keyring from the authoritative source.
+          curl -fsSL --proto '=https' --tlsv1.2 \
+            "https://fedoraproject.org/fedora.gpg" \
+            -o "${GPG_HOME}/fedora.gpg"
+          # Import into the isolated keyring.
+          gpg --homedir "${GPG_HOME}" --import "${GPG_HOME}/fedora.gpg"
+          # Confirm the pinned fingerprint is present in the imported keyring.
+          if ! gpg --homedir "${GPG_HOME}" --fingerprint --with-colons \
+               | grep -q "^fpr:.*:${FEDORA_SIGNING_KEY_FINGERPRINT}:$"; then
+            echo "ERROR: Pinned fingerprint ${FEDORA_SIGNING_KEY_FINGERPRINT} not found in fedora.gpg"
+            rm -rf "${GPG_HOME}"
+            exit 1
+          fi
+          echo "Signing key fingerprint verified: ${FEDORA_SIGNING_KEY_FINGERPRINT}"
+
+          # ---------------------------------------------------------------
+          # Step 2: Verify the OpenPGP clearsignature on the CHECKSUM file.
+          # This ensures the digest we are about to extract was produced by
+          # Fedora's release key — a compromised mirror cannot forge this.
+          # ---------------------------------------------------------------
+          gpg --homedir "${GPG_HOME}" --verify CHECKSUM \
+            || { echo "ERROR: OpenPGP signature verification failed for CHECKSUM"; rm -rf "${GPG_HOME}"; exit 1; }
+          echo "OpenPGP signature on CHECKSUM is valid"
+          rm -rf "${GPG_HOME}"
+
+          # ---------------------------------------------------------------
+          # Step 3: Extract the SHA256 digest and verify the qcow2 image.
           # The Fedora CHECKSUM file uses the format: SHA256 (filename) = <digest>
           # sha256sum expects: <digest>  <filename>
+          # ---------------------------------------------------------------
           grep "SHA256 (${FEDORA_IMAGE})" CHECKSUM \
             | sed 's/SHA256 (\(.*\)) = \(.*\)/\2  \1/' \
             | sha256sum --check --status \
             || { echo "ERROR: SHA256 digest mismatch for ${FEDORA_IMAGE}"; exit 1; }
-          echo "Checksum verified for ${FEDORA_IMAGE}"
+          echo "SHA256 digest verified for ${FEDORA_IMAGE}"
           rm CHECKSUM
 
       - name: Install uv

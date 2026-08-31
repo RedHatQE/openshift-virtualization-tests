@@ -46,7 +46,7 @@ case "$CPU_ARCH" in
     "amd64")
         CPU_ARCH_CODE="x86_64"
         VIRT_TYPE="kvm"
-        BOOT_OPTS=""
+        BOOT_OPTS=()
  ;;
     "arm64")
         CPU_ARCH_CODE="aarch64"
@@ -67,12 +67,12 @@ case "$CPU_ARCH" in
             exit 1
         fi
         chmod 0660 "${AARCH64_VARS}"
-        BOOT_OPTS="--boot uefi,nvram=${AARCH64_VARS}"
+        BOOT_OPTS=(--boot "uefi,nvram=${AARCH64_VARS}")
  ;;
     "s390x")
         CPU_ARCH_CODE="s390x"
         VIRT_TYPE="qemu"
-        BOOT_OPTS=""
+        BOOT_OPTS=()
  ;;
     *)
         echo "Use the value amd64, s390x or arm64 for CPU_ARCH env variable"
@@ -173,7 +173,6 @@ CONSOLE_LOG="${RUN_TMP_DIR}/console-${NAME}.log"
 touch "${CONSOLE_LOG}"
 chmod 0660 "${CONSOLE_LOG}"
 echo "Run the VM (ctrl+] to exit)"
-# shellcheck disable=SC2086
 virt-install \
   --memory 2048 \
   --vcpus 2 \
@@ -187,7 +186,7 @@ virt-install \
   --network default \
   --noautoconsole \
   --serial file,path="${CONSOLE_LOG}" \
-  $BOOT_OPTS \
+  "${BOOT_OPTS[@]}" \
   --import
 
 # When NO_SECRETS==true:
@@ -207,8 +206,14 @@ WAIT_SECONDS=0
 PERIOD_SECONDS=60
 TIMEOUT_SECONDS=3600
 while true; do
-    DOMAIN_STATE=$(virsh domstate "${NAME}" 2>&1) || true
-    if [ "${DOMAIN_STATE}" = "shut off" ] || echo "${DOMAIN_STATE}" | grep -q "failed to get domain"; then
+    if ! DOMAIN_STATE=$(LC_ALL=C virsh domstate "${NAME}" 2>&1); then
+        if echo "${DOMAIN_STATE}" | grep -q "failed to get domain"; then
+            break
+        fi
+        echo "ERROR: Failed to query VM '${NAME}' state: ${DOMAIN_STATE}"
+        exit 1
+    fi
+    if [ "${DOMAIN_STATE}" = "shut off" ]; then
         break
     fi
     case "${DOMAIN_STATE}" in
@@ -252,11 +257,13 @@ FROM scratch
 COPY --chown=107:107 ${FEDORA_IMAGE} /disk/
 EOF
 
-pushd "${BUILD_DIR}"
-echo "Build container image"
-${IMAGE_BUILD_CMD} build -f Dockerfile --arch="${CPU_ARCH}" -t "${FEDORA_CONTAINER_IMAGE}" .
+# Run build/save commands in a subshell so cleanup executes from the original directory
+(
+    cd "${BUILD_DIR}"
+    echo "Build container image"
+    ${IMAGE_BUILD_CMD} build -f Dockerfile --arch="${CPU_ARCH}" -t "${FEDORA_CONTAINER_IMAGE}" .
 
-echo "Save container image as TAR"
-${IMAGE_BUILD_CMD} save --output "fedora${FEDORA_VERSION}-${CPU_ARCH}.tar" "${FEDORA_CONTAINER_IMAGE}"
-popd
-echo "Fedora image located in ${BUILD_DIR}/"
+    echo "Save container image as TAR"
+    ${IMAGE_BUILD_CMD} save --output "fedora${FEDORA_VERSION}-${CPU_ARCH}.tar" "${FEDORA_CONTAINER_IMAGE}"
+    echo "Fedora image located in ${BUILD_DIR}/"
+)
