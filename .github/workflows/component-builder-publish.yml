@@ -7,6 +7,8 @@ on:
   push:
     paths:
       - 'containers/fedora/**'
+      - '.github/component-builder-config.json'
+      - '.github/workflows/component-builder-prepare.yml'
     branches:
       - 'main'
 
