@@ -44,8 +44,14 @@ jobs:
         run: |
           set -euo pipefail
           config=".github/component-builder-config.json"
+          fedora_version=$(jq -re '.fedora_version' "${config}")
+
+          jq -e --arg fedora_version "${fedora_version}" '
+            .matrix.include
+            | all(.[]; .fedora_url | contains("/" + $fedora_version + "/"))
+          ' "${config}" > /dev/null
           echo "matrix=$(jq -ce '.matrix' "${config}")" >> "${GITHUB_OUTPUT}"
-          echo "fedora_version=$(jq -re '.fedora_version' "${config}")" >> "${GITHUB_OUTPUT}"
+          echo "fedora_version=${fedora_version}" >> "${GITHUB_OUTPUT}"
           echo "fedora_image_base=$(jq -re '.fedora_image_base' "${config}")" >> "${GITHUB_OUTPUT}"
           echo "fedora_checksum_base=$(jq -re '.fedora_checksum_base' "${config}")" >> "${GITHUB_OUTPUT}"
           echo "architectures=$(jq -re '[.matrix.include[].arch] | join(" ")' "${config}")" >> "${GITHUB_OUTPUT}"

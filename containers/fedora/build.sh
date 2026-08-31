@@ -16,8 +16,8 @@ trap cleanup EXIT
 [ -z "${CPU_ARCH}" ] && echo "Set the env variable CPU_ARCH" && exit 1
 
 BUILD_DIR="fedora_build_${CPU_ARCH}"
-CLOUD_INIT_ISO="cidata.iso"
-NAME="fedora${FEDORA_VERSION}"
+CLOUD_INIT_ISO="cidata-${CPU_ARCH}.iso"
+NAME="fedora${FEDORA_VERSION}-${CPU_ARCH}"
 FEDORA_CONTAINER_IMAGE="localhost/fedora:${FEDORA_VERSION}-${CPU_ARCH}"
 
 IMAGE_BUILD_CMD=$(which podman 2>/dev/null || which docker)
@@ -188,8 +188,8 @@ virt-install \
   --import
 
 # Stream the guest serial console log to stdout so CI logs show what is happening inside the VM.
-# tail -f works without a TTY and streams as lines are written by the guest.
-tail -f "${CONSOLE_LOG}" &
+# tail -n +1 -f works without a TTY and streams as lines are written by the guest.
+tail -n +1 -f "${CONSOLE_LOG}" &
 CONSOLE_PID=$!
 
 # Wait for cloud-init to finish (user-data issues 'shutdown' as its last step).
