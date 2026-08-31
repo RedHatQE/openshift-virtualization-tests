@@ -27,7 +27,7 @@ uv sync
 
 ### Environment Variables
 Set the following environment variables before running the script:
-- `FEDORA_IMAGE`: Path to the Fedora base image file (e.g., `Fedora-Cloud-Base-Generic.43-1.6.x86_64.qcow2`).
+- `FEDORA_IMAGE`: Path to the Fedora base image file (e.g., `Fedora-Cloud-Base-Generic-43-1.6.x86_64.qcow2`).
 - `FEDORA_VERSION`: Version of Fedora (e.g., `43`).
 - `CPU_ARCH`: Target CPU architecture. Use `amd64` for x86_64, `arm64` for aarch64, or `s390x` for s390x.
 - `ACCESS_TOKEN`: Bitwarden access token for authentication.
@@ -80,7 +80,6 @@ The resulting files are stored in the `fedora_build_${CPU_ARCH}` directory:
 > When a PR that touches `containers/fedora/**` or `.github/component-builder-config.json`
 > is merged to `main`, CI automatically handles everything up to and including the
 > staging multi-arch manifest (see [CI pipeline](#ci-pipeline-automated) below).
-> Skip to [Staging → production promotion](#staging--production-promotion-manual) instead.
 
 After building VM images for Fedora AMD64, ARM64, and S390X architectures, the
 following procedure should help in building multi-arch image manifest
