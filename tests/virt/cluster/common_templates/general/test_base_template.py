@@ -427,7 +427,7 @@ def test_vm_annotations_in_template(base_templates):
         for annotation_name, annotation_value in vm_annotations.items():
             # Construct template label name from the annotation
             # Windows OS in annotation = "windows2k19", in label = "win2k19"
-            annotation_value = re.sub("windows", "win", annotation_value)
+            annotation_value = annotation_value.replace("windows", "win")
             label_name = f"{annotation_name.split('/')[-1]}.{Resource.ApiGroup.TEMPLATE_KUBEVIRT_IO}/{annotation_value}"
 
             # Linux-based OS annotation includes only a major release ("vm.kubevirt.io/os: rhel8")

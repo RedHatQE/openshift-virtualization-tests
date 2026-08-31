@@ -169,7 +169,7 @@ def assert_crypto_policy_propagated_to_components(
         & CDI) doesn't match with the expected 'crypto_policy'
     """
     conflicting_resources = []
-    selected_managed_crs = managed_crs_list if managed_crs_list else MANAGED_CRS_LIST
+    selected_managed_crs = managed_crs_list or MANAGED_CRS_LIST
     for resource in selected_managed_crs:
         expected_value = CRYPTO_POLICY_EXPECTED_DICT[crypto_policy][resource]
         error_message = wait_for_crypto_policy_update(

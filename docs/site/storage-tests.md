@@ -33,6 +33,7 @@ When verifying CDI capabilities, ensure that DataVolumes can pull from external 
 ```python
 from ocp_resources.datavolume import DataVolume
 
+
 def test_successful_import_secure_image(namespace, storage_class):
     dv = DataVolume(
         name="alpine-import",
@@ -57,6 +58,7 @@ Many Virtualization features, such as live migration and eviction strategies, de
 
 ```python
 import pytest
+
 
 @pytest.mark.rwx_default_storage
 def test_vm_live_migration_with_shared_disk():

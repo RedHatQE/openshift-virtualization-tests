@@ -202,6 +202,7 @@ When reviewing quarantine PRs, verify the **quarantine mechanism matches the fai
 - **ALWAYS use `timeout_sampler`** - from `timeout_sampler` package for any operation that waits for a condition:
   ```python
   from timeout_sampler import TimeoutSampler
+
   for sample in TimeoutSampler(wait_timeout=60, sleep=5, func=check_condition):
       if sample:
           break

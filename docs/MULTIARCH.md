@@ -61,10 +61,10 @@ Mark the entire file or specific classes with the `multiarch` marker:
 # Module-level (preferred — marks the whole file)
 pytestmark = [pytest.mark.multiarch]
 
+
 # Class-level
 @pytest.mark.multiarch
-class TestMultiarchFeature:
-    ...
+class TestMultiarchFeature: ...
 ```
 
 The `multiarch` marker is **required** on any test that runs in multiarch-dedicated mode. It also prevents the test from being collected on homogeneous clusters.

@@ -16,6 +16,7 @@ from utilities.virt import (
     wait_for_vm_interfaces,
 )
 
+
 @pytest.fixture()
 def sample_vm(unprivileged_client, namespace):
     name = "sample-vm"
@@ -27,6 +28,7 @@ def sample_vm(unprivileged_client, namespace):
     ) as vm:
         running_vm(vm=vm)
         yield vm
+
 
 def test_vm_restart(sample_vm):
     """Test restarting an active virtual machine."""
@@ -48,12 +50,9 @@ def test_vm_restart(sample_vm):
 Testing resource hotplugging involves patching the VM specification while the virtual machine instance is running, and confirming the guest OS successfully registers the new limits.
 
 ```python
-from tests.utils import (
-    hotplug_spec_vm,
-    wait_for_guest_os_cpu_count,
-    assert_guest_os_memory_amount
-)
+from tests.utils import hotplug_spec_vm, wait_for_guest_os_cpu_count, assert_guest_os_memory_amount
 from utilities.constants.virt import SIX_CPU_SOCKETS, SIX_GI_MEMORY
+
 
 def test_hotplug_resources(sample_vm):
     # Hotplug CPU and wait for guest recognition
@@ -73,6 +72,7 @@ To verify a VM can successfully migrate to another node without losing state or 
 
 ```python
 from utilities.virt import migrate_vm_and_verify
+
 
 def test_vm_migration(admin_client, sample_vm):
     migrate_vm_and_verify(vm=sample_vm, client=admin_client, check_ssh_connectivity=True)

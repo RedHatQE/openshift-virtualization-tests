@@ -17,14 +17,11 @@ import pytest
 from libs.net.vmspec import lookup_iface_status_ip
 from utilities.network import assert_ping_successful
 
+
 @pytest.mark.ipv4
 def test_vm_basic_connectivity(vm_a, vm_b, target_network):
     # Lookup the destination IP on VM B's secondary interface
-    dst_ip = lookup_iface_status_ip(
-        vm=vm_b,
-        iface_name=target_network.name,
-        ip_family=4
-    )
+    dst_ip = lookup_iface_status_ip(vm=vm_b, iface_name=target_network.name, ip_family=4)
 
     # Assert successful ping from VM A to VM B's IP
     assert_ping_successful(src_vm=vm_a, dst_ip=dst_ip)
@@ -42,11 +39,7 @@ Do not hardcode or assume IP addresses. Always dynamically look up the IP addres
 from libs.net.vmspec import lookup_iface_status_ip
 
 # Fetch IPv4 address for a specific interface
-ip_address = lookup_iface_status_ip(
-    vm=my_target_vm,
-    iface_name="bridge-network",
-    ip_family=4
-)
+ip_address = lookup_iface_status_ip(vm=my_target_vm, iface_name="bridge-network", ip_family=4)
 ```
 
 ### 2. Verify Connectivity or Packet Loss
@@ -85,16 +78,14 @@ import pytest
 from pyhelper_utils.exceptions import CommandExecFailed
 from pyhelper_utils.shell import run_ssh_commands
 
+
 def test_network_policy_deny_http(vm_a, vm_b, deny_all_policy):
     dst_ip = vm_b.vmi.interfaces[0].ipAddress
     command = shlex.split(f"curl --connect-timeout 5 -I http://{dst_ip}:80")
 
     # Expect the command to fail because the policy denies the traffic
     with pytest.raises(CommandExecFailed):
-        run_ssh_commands(
-            host=vm_a.ssh_exec,
-            commands=[command]
-        )
+        run_ssh_commands(host=vm_a.ssh_exec, commands=[command])
 ```
 
 ### IPv6 and Link-Local Addresses
@@ -105,6 +96,7 @@ If your test operates in an IPv6 environment, standard IP lookups might return a
 from libs.net.ip import filter_link_local_addresses
 from libs.net.vmspec import lookup_iface_status
 
+
 def test_ipv6_link_local_ping(vm_a, vm_b, ipv6_network):
     # Fetch all IPs for the interface
     all_ips = lookup_iface_status(vm=vm_b, iface_name=ipv6_network.name)["ipAddresses"]
@@ -113,7 +105,7 @@ def test_ipv6_link_local_ping(vm_a, vm_b, ipv6_network):
     link_local_ips = filter_link_local_addresses(ip_addresses=all_ips)
 
     for dst_ip in link_local_ips:
-         assert_ping_successful(src_vm=vm_a, dst_ip=dst_ip)
+        assert_ping_successful(src_vm=vm_a, dst_ip=dst_ip)
 ```
 
 ### Testing L2 Protocols (DHCP, Custom Ethernet Types)
