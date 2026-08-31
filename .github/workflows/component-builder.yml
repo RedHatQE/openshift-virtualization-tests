@@ -25,6 +25,6 @@ jobs:
       fedora_image_base: ${{ needs.prepare.outputs.fedora_image_base }}
       fedora_checksum_base: ${{ needs.prepare.outputs.fedora_checksum_base }}
       matrix: ${{ needs.prepare.outputs.matrix }}
-      remote_repository: "quay.io/openshift-cnv/qe-cnv-tests-fedora-staging"
+      remote_repository: ${{ needs.prepare.outputs.remote_repository }}
       no_secrets: true
       upload_artifact: true
