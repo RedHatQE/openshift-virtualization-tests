@@ -23,6 +23,7 @@ jobs:
     permissions:
       contents: read
     strategy:
+      fail-fast: false
       matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
     env:
       FEDORA_VERSION: ${{ needs.prepare.outputs.fedora_version }}
@@ -65,8 +66,10 @@ jobs:
 
       - name: Verify Fedora image checksum
         working-directory: ./containers/fedora
+        env:
+          URL_ARCH: ${{ matrix.url_arch }}
         run: |
-          FEDORA_IMAGE="${FEDORA_IMAGE_BASE}.${{ matrix.url_arch }}.qcow2"
+          FEDORA_IMAGE="${FEDORA_IMAGE_BASE}.${URL_ARCH}.qcow2"
           # Extract the SHA256 line for the exact artifact and verify it.
           # The Fedora CHECKSUM file uses the format: SHA256 (filename) = <digest>
           # sha256sum expects: <digest>  <filename>
@@ -136,6 +139,11 @@ jobs:
           FEDORA_VERSION: ${{ needs.prepare.outputs.fedora_version }}
           REMOTE_REPOSITORY: ${{ env.REMOTE_REPOSITORY }}
         run: |
+          set -euo pipefail
+          if [ -z "${ARCHITECTURES// /}" ]; then
+            echo "ERROR: ARCHITECTURES is empty; refusing to publish an empty manifest"
+            exit 1
+          fi
           remote_tag="${FEDORA_VERSION}-dev"
           # Build the list of arch-specific image references
           ARCH_IMAGES=""
@@ -144,4 +152,7 @@ jobs:
           done
           # Create and push the multi-arch manifest
           podman manifest create "${REMOTE_REPOSITORY}":"${remote_tag}" ${ARCH_IMAGES}
-          podman manifest push "${REMOTE_REPOSITORY}":"${remote_tag}" --all --format=oci
+          # Confirm every expected platform is present before publishing
+          podman manifest inspect "${REMOTE_REPOSITORY}":"${remote_tag}" \
+            | jq -e --argjson n "$(printf '%s\n' ${ARCHITECTURES} | wc -l)" '(.manifests | length) == $n'
+          podman manifest push "${REMOTE_REPOSITORY}":"${remote_tag}" --all --format=v2s2

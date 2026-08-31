@@ -26,6 +26,7 @@ if [ -z $IMAGE_BUILD_CMD ]; then
     exit 1
 fi
 
+RUN_TMP_DIR=$(mktemp -d)
 case "$CPU_ARCH" in
     "amd64")
         CPU_ARCH_CODE="x86_64"
@@ -37,7 +38,7 @@ case "$CPU_ARCH" in
         VIRT_TYPE="qemu"
         # aarch64 requires UEFI and a writable per-VM NVRAM vars file.
         # Without the vars file libvirt cannot configure ACPI on aarch64.
-        AARCH64_VARS="/tmp/aavmf-vars-${NAME}.fd"
+        AARCH64_VARS="${RUN_TMP_DIR}/aavmf-vars-${NAME}.fd"
         for vars_path in \
             "/usr/share/edk2/aarch64/vars-template-pflash.qcow2" \
             "/usr/share/AAVMF/AAVMF_VARS.fd"; do
@@ -94,7 +95,7 @@ fi
 WORK_IMAGE="${FEDORA_IMAGE%.qcow2}-work.qcow2"
 cp "${FEDORA_IMAGE}" "${WORK_IMAGE}"
 
-# On arm64 QEMU emulation (arm64, s390x) the real-root systemd device timeout
+# Under arm64 QEMU full emulation the real-root systemd device timeout
 # (DefaultDeviceTimeoutSec, 45s) can expire before virtio devices are
 # enumerated after pivot-root, causing local-fs.target to fail and breaking
 # cloud-init's dependency chain.
@@ -134,19 +135,19 @@ if [ "${CPU_ARCH}" = "arm64" ]; then
 fi
 
 # Clean up any leftovers from a previous failed run
-rm -rf $BUILD_DIR
+rm -rf -- "${BUILD_DIR:?BUILD_DIR is unset}"
 if virsh domstate "${NAME}" &>/dev/null; then
     echo "Found existing domain '${NAME}', removing it before proceeding..."
     virsh destroy "${NAME}" 2>/dev/null || true
     if [ "${CPU_ARCH}" = "arm64" ]; then
-        virsh undefine --nvram "${NAME}"
+        virsh undefine --nvram "${NAME}" || true
     else
-        virsh undefine "${NAME}"
+        virsh undefine "${NAME}" || true
     fi
 fi
 
-CONSOLE_LOG="/tmp/console-${NAME}.log"
-# Pre-create the log file with open permissions so the qemu process can write to it
+CONSOLE_LOG="${RUN_TMP_DIR}/console-${NAME}.log"
+# Pre-create the log file so everyone can write to it
 touch "${CONSOLE_LOG}"
 chmod 666 "${CONSOLE_LOG}"
 echo "Run the VM (ctrl+] to exit)"
@@ -171,6 +172,8 @@ virt-install \
 # tail -f works without a TTY and streams as lines are written by the guest.
 tail -f "${CONSOLE_LOG}" &
 CONSOLE_PID=$!
+# Clean up on every exit path, including the timeout and set -e aborts.
+trap 'kill "${CONSOLE_PID}" 2>/dev/null || true; rm -f "${CONSOLE_LOG}" "${AARCH64_VARS:-}"' EXIT
 
 # Wait for cloud-init to finish (user-data issues 'shutdown' as its last step).
 # virsh domstate exits non-zero for unknown domains, so we treat that as "shut off" too.
@@ -183,6 +186,12 @@ while true; do
     if [ "${DOMAIN_STATE}" = "shut off" ] || echo "${DOMAIN_STATE}" | grep -q "failed to get domain"; then
         break
     fi
+    case "${DOMAIN_STATE}" in
+        crashed|"pmsuspended")
+            echo "ERROR: VM entered terminal state '${DOMAIN_STATE}' after ${WAIT_SECONDS} seconds"
+            exit 1
+            ;;
+    esac
     if [ ${WAIT_SECONDS} -ge ${TIMEOUT_SECONDS} ]; then
         echo "ERROR: VM did not shut down within ${TIMEOUT_SECONDS} seconds (last state: ${DOMAIN_STATE})"
         exit 1
@@ -191,9 +200,6 @@ while true; do
     WAIT_SECONDS=$((WAIT_SECONDS + PERIOD_SECONDS))
 done
 echo "VM shut down after ${WAIT_SECONDS} seconds"
-# Stop the console tailer and clean up temp files
-kill "${CONSOLE_PID}" 2>/dev/null || true
-rm -f "${CONSOLE_LOG}" "${AARCH64_VARS:-}"
 
 # Prepare VM image
 virt-sysprep -d "${NAME}" --operations machine-id,bash-history,logfiles,tmp-files,net-hostname,net-hwaddr
