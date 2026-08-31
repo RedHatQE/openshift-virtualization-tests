@@ -14,7 +14,7 @@
       {
         "arch": "arm64",
         "url_arch": "aarch64",
-        "qemu_package": "qemu-system-aarch64",
+        "qemu_package": "qemu-system-aarch64 qemu-efi-aarch64",
         "fedora_url": "https://download.fedoraproject.org/pub/fedora/linux/releases/43/Cloud/aarch64/images"
       },
       {
