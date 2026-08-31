@@ -74,7 +74,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            "$QEMU_PACKAGE" \
+            $QEMU_PACKAGE \
             libvirt-daemon-system \
             virtinst cloud-image-utils \
             libguestfs-tools
