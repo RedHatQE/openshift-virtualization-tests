@@ -1,0 +1,45 @@
+name: "Component Builder Prepare"
+on:
+  workflow_call:
+    outputs:
+      matrix:
+        description: "JSON matrix consumed by build jobs via fromJson()"
+        value: ${{ jobs.prepare.outputs.matrix }}
+      fedora_version:
+        description: "Fedora version string (e.g. '43')"
+        value: ${{ jobs.prepare.outputs.fedora_version }}
+      fedora_image_base:
+        description: "Base name of the Fedora cloud image"
+        value: ${{ jobs.prepare.outputs.fedora_image_base }}
+      fedora_checksum_base:
+        description: "Base name of the Fedora checksum file"
+        value: ${{ jobs.prepare.outputs.fedora_checksum_base }}
+      architectures:
+        description: "Space-separated list of architectures (e.g. 'amd64 arm64 s390x')"
+        value: ${{ jobs.prepare.outputs.architectures }}
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      matrix: ${{ steps.component-builder-config.outputs.matrix }}
+      fedora_version: ${{ steps.component-builder-config.outputs.fedora_version }}
+      fedora_image_base: ${{ steps.component-builder-config.outputs.fedora_image_base }}
+      fedora_checksum_base: ${{ steps.component-builder-config.outputs.fedora_checksum_base }}
+      architectures: ${{ steps.component-builder-config.outputs.architectures }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Read component builder config
+        id: component-builder-config
+        run: |
+          echo "matrix=$(jq -c '.matrix' .github/component-builder-config.json)" >> "${GITHUB_OUTPUT}"
+          echo "fedora_version=$(jq -r '.fedora_version' .github/component-builder-config.json)" >> "${GITHUB_OUTPUT}"
+          echo "fedora_image_base=$(jq -r '.fedora_image_base' .github/component-builder-config.json)" >> "${GITHUB_OUTPUT}"
+          echo "fedora_checksum_base=$(jq -r '.fedora_checksum_base' .github/component-builder-config.json)" >> "${GITHUB_OUTPUT}"
+          echo "architectures=$(jq -r '[.matrix.include[].arch] | join(" ")' .github/component-builder-config.json)" >> "${GITHUB_OUTPUT}"
