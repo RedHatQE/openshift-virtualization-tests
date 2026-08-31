@@ -14,6 +14,8 @@ Ensure the following tools are installed on your system:
 - `qemu-img`
 - `cloud-localds`
 - `virt-sysprep`
+- `qemu-efi-aarch64` / `AAVMF` (required for `arm64` UEFI vars)
+- `libguestfs-tools` (provides `guestfish` and `virt-sysprep`, required for `arm64` BLS kernel cmdline patching and image sysprep)
 
 Ensure Your Python Environment Is Ready
 Install the required Python dependencies: Run the following command to set up the Python environment:
@@ -25,7 +27,7 @@ uv sync
 Set the following environment variables before running the script:
 - `FEDORA_IMAGE`: Path to the Fedora base image file (e.g., `Fedora-Cloud-Base-Generic.x86_64-40-1.14.qcow2`).
 - `FEDORA_VERSION`: Version of Fedora (e.g., `40`).
-- `CPU_ARCH`: Target CPU architecture. Use `amd64` for x86_64 or `arm64` for aarch64.
+- `CPU_ARCH`: Target CPU architecture. Use `amd64` for x86_64, `arm64` for aarch64, or `s390x` for s390x.
 - `ACCESS_TOKEN`: Bitwarden access token for authentication.
 - `ORGANIZATION_ID`: Bitwarden organization ID for accessing secrets.
 
@@ -39,7 +41,7 @@ Define the environment variables in your shell:
 ```bash
 export FEDORA_IMAGE=/path/to/fedora-image.qcow2
 export FEDORA_VERSION=40
-export CPU_ARCH=amd64  # Use arm64 if targeting ARM architecture
+export CPU_ARCH=amd64  # Use arm64 or s390x if targeting ARM or s390x architecture
 ```
 
 ### Step 2: Ensure You Are Logged In to quay.io
@@ -56,7 +58,7 @@ Execute the script in a terminal:
 ### Step 4: Script Workflow
 1. Validates the required environment variables.
 2. Determines appropriate virtualization settings based on CPU_ARCH.
-3. Creates a working directory named fedora_build.
+3. Creates a working directory named `fedora_build_${CPU_ARCH}`.
 4. Generates a secure password for the VM OS login.
 5. Configures cloud-init with the secure password.
 6. Runs the Fedora VM and performs customizations.
@@ -65,58 +67,62 @@ Execute the script in a terminal:
 9. Builds the container image and saves it as a tarball.
 
 ### Step 5: Retrieve Outputs
-The resulting files are stored in the fedora_build directory:
+The resulting files are stored in the `fedora_build_${CPU_ARCH}` directory:
 1. Compressed VM Image: A compressed .qcow2 file.
 2. Dockerfile: Used to build the container image.
 3. Container Image Tarball.
 
 ### Step 6: Creating multi-arch image manifest
-After building VM images for Fedora AMD64 and ARM64 architectures,the
+After building VM images for Fedora AMD64, ARM64, and S390X architectures, the
 following procedure should help in building multi-arch image manifest
 
 1. Create a new tag for container images with revision number.
 
 Note: Revision number is required to prevent overriding of existing tags
 in the container image 'qe-cnv-tests-fedora'. Revision number is not
-required for the very first build of Fedora container image.Revision
+required for the very first build of Fedora container image. Revision
 number is created with naming convention as *.rev-YYMMDD* suffixed to
 the image tag.
 
-Make sure that the chosen tag does not exists already for the fedora
+Make sure that the chosen tag does not exist already for the fedora
 container image
 ```bash
 export REV=.rev-250317
-oc image info quay.io/openshift-cnv/qe-cnv-tests-fedora:41${REV}
-oc image info quay.io/openshift-cnv/qe-cnv-tests-fedora:41-amd64${REV}
-oc image info quay.io/openshift-cnv/qe-cnv-tests-fedora:41-arm64${REV}
+oc image info quay.io/openshift-cnv/qe-cnv-tests-fedora:43${REV}
+oc image info quay.io/openshift-cnv/qe-cnv-tests-fedora:43-amd64${REV}
+oc image info quay.io/openshift-cnv/qe-cnv-tests-fedora:43-arm64${REV}
+oc image info quay.io/openshift-cnv/qe-cnv-tests-fedora:43-s390x${REV}
 ```
-Above commands should return 'image not found'. After confirming that this
-tags are not used already, it could be used to tag images
+Above commands should return 'image not found'. After confirming that these
+tags are not used already, they can be used to tag images
 
 ```bash
-podman tag localhost/fedora:41-amd64 quay.io/openshift-cnv/qe-cnv-tests-fedora:41-amd64[${REV}]
-podman tag localhost/fedora:41-arm64 quay.io/openshift-cnv/qe-cnv-tests-fedora:41-arm64[${REV}]
+podman tag localhost/fedora:43-amd64 quay.io/openshift-cnv/qe-cnv-tests-fedora:43-amd64${REV}
+podman tag localhost/fedora:43-arm64 quay.io/openshift-cnv/qe-cnv-tests-fedora:43-arm64${REV}
+podman tag localhost/fedora:43-s390x quay.io/openshift-cnv/qe-cnv-tests-fedora:43-s390x${REV}
 ```
 
 2. Create a new multi-arch image manifest with the images
 ```bash
-podman manifest create quay.io/openshift-cnv/qe-cnv-tests-fedora:41[${REV}] \
-  quay.io/openshift-cnv/qe-cnv-tests-fedora:41-amd64[${REV}] \
-  quay.io/openshift-cnv/qe-cnv-tests-fedora:41-arm64[${REV}]
+podman manifest create quay.io/openshift-cnv/qe-cnv-tests-fedora:43${REV} \
+  quay.io/openshift-cnv/qe-cnv-tests-fedora:43-amd64${REV} \
+  quay.io/openshift-cnv/qe-cnv-tests-fedora:43-arm64${REV} \
+  quay.io/openshift-cnv/qe-cnv-tests-fedora:43-s390x${REV}
 ```
 
 3. Inspect the multi-arch image manifest
 ```bash
-podman manifest inspect quay.io/openshift-cnv/qe-cnv-tests-fedora:41[${REV}] | jq '.manifests[]|."platform"|."architecture"'
+podman manifest inspect quay.io/openshift-cnv/qe-cnv-tests-fedora:43${REV} | jq '.manifests[]|."platform"|."architecture"'
 ```
-The above should list *amd64* and *arm64* as output, which means that architecture specific images are now part of image
+The above should list *amd64*, *arm64*, and *s390x* as output, which means that architecture-specific images are now part of the image
 manifest
 
 4. Push the images and multi-arch image manifest
 ```bash
-podman push quay.io/openshift-cnv/qe-cnv-tests-fedora:41-amd64[${REV}]
-podman push quay.io/openshift-cnv/qe-cnv-tests-fedora:41-arm64[${REV}]
-podman manifest push quay.io/openshift-cnv/qe-cnv-tests-fedora:41[${REV}] --all --format=v2s2
+podman push quay.io/openshift-cnv/qe-cnv-tests-fedora:43-amd64${REV}
+podman push quay.io/openshift-cnv/qe-cnv-tests-fedora:43-arm64${REV}
+podman push quay.io/openshift-cnv/qe-cnv-tests-fedora:43-s390x${REV}
+podman manifest push quay.io/openshift-cnv/qe-cnv-tests-fedora:43${REV} --all --format=v2s2
 ```
 
 5. Swapping newly built image for latest
@@ -131,27 +137,57 @@ multi-arch image manifest.
 
 This operation is performed from quay.io web UI.
 
-For example, if the latest tag for 'qe-cnv-tests-fedora' is '41'
-and new multi-arch image is validated with tag '41.rev-250318'.
+For example, if the latest tag for 'qe-cnv-tests-fedora' is '43'
+and new multi-arch image is validated with tag '43.rev-250318'.
 
-Check if there is an existing 'rev-xxxxxx' tag associated with the active tag (i.e) 41.
+Check if there is an existing 'rev-xxxxxx' tag associated with the active tag (i.e) 43.
 In this case, new tag for uploaded multi-arch image manifest can be created same
-as active tag (i.e) 41
+as active tag (i.e) 43
 Otherwise:
-a. New tag is created for the active tag '41' as '41.rev-xxxxxx'
-b. then new tag for uploaded multi-arch image manifest '41.rev-250318' is created as '41'.
+a. New tag is created for the active tag '43' as '43.rev-xxxxxx'
+b. then new tag for uploaded multi-arch image manifest '43.rev-250318' is created as '43'.
 
 This way there will be minimal impact for test runs that
-tried to pull the latest fedora container image with tag '41'
+tried to pull the latest fedora container image with tag '43'
+
+## Component Builder Configuration
+
+All multi-arch build options, Fedora image versions, checksums, and target architecture matrices are central to `.github/component-builder-config.json`.
+To update the Fedora version or target CPU architectures, update this configuration file ("one-file-edit" workflow):
+
+```json
+{
+  "fedora_version": "43",
+  "fedora_image_base": "Fedora-Cloud-Base-Generic-43-1.6",
+  "fedora_checksum_base": "Fedora-Cloud-43-1.6",
+  "matrix": {
+    "include": [
+      {
+        "arch": "amd64",
+        "url_arch": "x86_64",
+        "qemu_package": "qemu-system-x86",
+        "fedora_url": "https://download.fedoraproject.org/pub/fedora/linux/releases/43/Cloud/x86_64/images"
+      },
+      ...
+    ]
+  }
+}
+```
+
+Editing `.github/component-builder-config.json` automatically updates the GitHub workflow parameters and matrix for builds, tests, and releases across all specified architectures (`amd64`, `arm64`, `s390x`).
 
 # Test build via GitHub
-When pushing a new commit which affects a file under this directory, a GitHub action will be triggered to build a new Fedora container image.
-To test this image locally:
-- Access the action workflow on github: https://github.com/RedHatQE/openshift-virtualization-tests/actions/workflows/component-builder.yml
+When pushing a new commit which affects a file under this directory or `.github/component-builder-config.json`, a GitHub action will be triggered to build new Fedora container images.
+To test these images locally:
+- Access the action workflow on GitHub: https://github.com/RedHatQE/openshift-virtualization-tests/actions/workflows/component-builder.yml
 - Click on the relevant run
-- On the bottom of the page, click on the artifact to download.
-- Once on the local storage, extract the tar file from the zip.
-- Load the image into the local image storage using podman:
+- At the bottom of the page, click on the architecture-specific artifact to download (`fedora-container-image-amd64`, `fedora-container-image-arm64`, or `fedora-container-image-s390x`).
+- Once on local storage, extract the tar file from the zip archive.
+- Load the image into local image storage using podman:
+```bash
+podman load -i fedora-image-${CPU_ARCH}.tar
 ```
-podman load -i fedora-image.tar
+For example, for `amd64`:
+```bash
+podman load -i fedora-image-amd64.tar
 ```
