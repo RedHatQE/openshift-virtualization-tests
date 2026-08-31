@@ -1,0 +1,27 @@
+{
+  "fedora_version": "43",
+  "fedora_image_base": "Fedora-Cloud-Base-Generic-43-1.6",
+  "fedora_checksum_base": "Fedora-Cloud-43-1.6",
+  "matrix": {
+    "include": [
+      {
+        "arch": "amd64",
+        "url_arch": "x86_64",
+        "qemu_package": "qemu-system-x86",
+        "fedora_url": "https://download.fedoraproject.org/pub/fedora/linux/releases/43/Cloud/x86_64/images"
+      },
+      {
+        "arch": "arm64",
+        "url_arch": "aarch64",
+        "qemu_package": "qemu-system-aarch64",
+        "fedora_url": "https://download.fedoraproject.org/pub/fedora/linux/releases/43/Cloud/aarch64/images"
+      },
+      {
+        "arch": "s390x",
+        "url_arch": "s390x",
+        "qemu_package": "qemu-system-s390x",
+        "fedora_url": "https://download.fedoraproject.org/pub/fedora-secondary/releases/43/Cloud/s390x/images"
+      }
+    ]
+  }
+}
