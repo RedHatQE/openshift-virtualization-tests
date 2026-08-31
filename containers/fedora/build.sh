@@ -71,21 +71,58 @@ if [ $FEDORA_VERSION -gt 40 ]; then
    OS_VARIANT="fedora40"
 fi
 
+# Work on a copy of the base image so the original is never mutated.
+# This ensures cloud-init always runs fresh on repeated executions.
+WORK_IMAGE="${FEDORA_IMAGE%.qcow2}-work.qcow2"
+cp "${FEDORA_IMAGE}" "${WORK_IMAGE}"
+
+
+# Clean up any leftovers from a previous failed run
+rm -rf $BUILD_DIR
+if virsh domstate "${NAME}" &>/dev/null; then
+    echo "Found existing domain '${NAME}', removing it before proceeding..."
+    virsh destroy "${NAME}" 2>/dev/null || true
+    if [ "${CPU_ARCH}" = "arm64" ]; then
+        virsh undefine --nvram "${NAME}"
+    else
+        virsh undefine "${NAME}"
+    fi
+fi
+
 echo "Run the VM (ctrl+] to exit)"
 virt-install \
   --memory 2048 \
   --vcpus 2 \
   --arch $CPU_ARCH_CODE \
   --name $NAME \
-  --disk $FEDORA_IMAGE,device=disk \
+  --disk $WORK_IMAGE,device=disk \
   --disk $CLOUD_INIT_ISO,device=cdrom \
   --os-variant $OS_VARIANT \
   --virt-type $VIRT_TYPE \
   --graphics none \
   --network default \
   --noautoconsole \
-  --wait 30 \
   --import
+
+# Wait for cloud-init to finish (user-data issues 'shutdown' as its last step).
+# virsh domstate exits non-zero for unknown domains, so we treat that as "shut off" too.
+echo "Waiting for VM to shut down after cloud-init completes..."
+WAIT_SECONDS=0
+PERIOD_SECONDS=60
+TIMEOUT_SECONDS=1800
+while true; do
+    DOMAIN_STATE=$(virsh domstate "${NAME}" 2>&1) || true
+    if [ "${DOMAIN_STATE}" = "shut off" ] || echo "${DOMAIN_STATE}" | grep -q "failed to get domain"; then
+        break
+    fi
+    if [ ${WAIT_SECONDS} -ge ${TIMEOUT_SECONDS} ]; then
+        echo "ERROR: VM did not shut down within ${TIMEOUT_SECONDS} seconds (last state: ${DOMAIN_STATE})"
+        exit 1
+    fi
+    sleep ${PERIOD_SECONDS}
+    WAIT_SECONDS=$((WAIT_SECONDS + PERIOD_SECONDS))
+done
+echo "VM shut down after ${WAIT_SECONDS} seconds"
 
 # Prepare VM image
 virt-sysprep -d "${NAME}" --operations machine-id,bash-history,logfiles,tmp-files,net-hostname,net-hwaddr
@@ -104,7 +141,7 @@ rm -f "${CLOUD_INIT_ISO}"
 
 mkdir $BUILD_DIR
 echo "Snapshot image"
-qemu-img convert -c -O qcow2 "${FEDORA_IMAGE}" "${BUILD_DIR}/${FEDORA_IMAGE}"
+qemu-img convert -c -O qcow2 "${WORK_IMAGE}" "${BUILD_DIR}/${FEDORA_IMAGE}"
 
 echo "Create Dockerfile"
 
