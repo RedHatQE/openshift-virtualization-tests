@@ -128,8 +128,8 @@ jobs:
           grep "${archive}" bws-checksums.txt | sha256sum --check --status \
             || { echo "ERROR: SHA256 digest mismatch for ${archive}"; exit 1; }
           echo "Checksum verified for ${archive}"
-          unzip -o bws.zip -d /usr/local/bin
-          chmod +x /usr/local/bin/bws
+          sudo unzip -o bws.zip -d /usr/local/bin
+          sudo chmod +x /usr/local/bin/bws
           rm bws.zip bws-checksums.txt
           bws --version
 
