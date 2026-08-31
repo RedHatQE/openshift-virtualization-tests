@@ -6,6 +6,7 @@ on:
       - '.github/component-builder-config.json'
       - '.github/workflows/component-builder-prepare.yml'
       - '.github/workflows/component-builder-build.yml'
+      - '.github/workflows/component-builder-publish.yml'
     branches:
       - 'main'
 
