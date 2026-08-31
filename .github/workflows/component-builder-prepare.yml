@@ -49,6 +49,7 @@ jobs:
           jq -e --arg fedora_version "${fedora_version}" '
             (.fedora_image_base    | contains($fedora_version))
             and (.fedora_checksum_base | contains($fedora_version))
+            and (.matrix.include | length > 0)
             and (
               .matrix.include
               | all(.[];
