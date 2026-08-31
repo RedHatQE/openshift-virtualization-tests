@@ -47,8 +47,18 @@ jobs:
           fedora_version=$(jq -re '.fedora_version' "${config}")
 
           jq -e --arg fedora_version "${fedora_version}" '
-            .matrix.include
-            | all(.[]; .fedora_url | contains("/" + $fedora_version + "/"))
+            (.fedora_image_base    | contains($fedora_version))
+            and (.fedora_checksum_base | contains($fedora_version))
+            and (
+              .matrix.include
+              | all(.[];
+                (.fedora_url | contains("/" + $fedora_version + "/"))
+                and (
+                  (.fedora_url | test("^https://download\\.fedoraproject\\.org/"))
+                  or (.fedora_url | test("^https://dl\\.fedoraproject\\.org/"))
+                )
+              )
+            )
           ' "${config}" > /dev/null
           echo "matrix=$(jq -ce '.matrix' "${config}")" >> "${GITHUB_OUTPUT}"
           echo "fedora_version=${fedora_version}" >> "${GITHUB_OUTPUT}"
