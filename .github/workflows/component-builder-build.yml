@@ -123,14 +123,14 @@ jobs:
           archive="bws-x86_64-unknown-linux-gnu-${BWS_VERSION}.zip"
           checksums_file="bws-sha256-checksums-${BWS_VERSION}.txt"
           base_url="https://github.com/bitwarden/sdk-sm/releases/download/bws-v${BWS_VERSION}"
-          curl -fsSL "${base_url}/${archive}" -o bws.zip
+          curl -fsSL "${base_url}/${archive}" -o "${archive}"
           curl -fsSL "${base_url}/${checksums_file}" -o bws-checksums.txt
           grep "${archive}" bws-checksums.txt | sha256sum --check --status \
             || { echo "ERROR: SHA256 digest mismatch for ${archive}"; exit 1; }
           echo "Checksum verified for ${archive}"
-          sudo unzip -o bws.zip -d /usr/local/bin
+          sudo unzip -o "${archive}" -d /usr/local/bin
           sudo chmod +x /usr/local/bin/bws
-          rm bws.zip bws-checksums.txt
+          rm "${archive}" bws-checksums.txt
           bws --version
 
       - name: Create VM
