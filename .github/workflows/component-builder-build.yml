@@ -128,7 +128,7 @@ jobs:
           grep "${archive}" bws-checksums.txt | sha256sum --check --status \
             || { echo "ERROR: SHA256 digest mismatch for ${archive}"; exit 1; }
           echo "Checksum verified for ${archive}"
-          tmpdir="${mktemp -d}"
+          tmpdir="$(mktemp -d)"
           unzip -o "${archive}" -d "${tmpdir}"
           sudo install -m 0755 "${tmpdir}/bws" /usr/local/bin/bws
           rm -rf "${tmpdir}" "${archive}" bws-checksums.txt
