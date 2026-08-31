@@ -15,25 +15,7 @@ env:
 
 jobs:
   prepare:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    outputs:
-      matrix: ${{ steps.component-builder-config.outputs.matrix }}
-      fedora_version: ${{ steps.component-builder-config.outputs.fedora_version }}
-      fedora_image_base: ${{ steps.component-builder-config.outputs.fedora_image_base }}
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-
-      - name: Read component builder config
-        id: component-builder-config
-        run: |
-          echo "matrix=$(jq -c '.matrix' .github/component-builder-config.json)" >> "${GITHUB_OUTPUT}"
-          echo "fedora_version=$(jq -r '.fedora_version' .github/component-builder-config.json)" >> "${GITHUB_OUTPUT}"
-          echo "fedora_image_base=$(jq -r '.fedora_image_base' .github/component-builder-config.json)" >> "${GITHUB_OUTPUT}"
+    uses: ./.github/workflows/component-builder-prepare.yml
 
   guest-fedora:
     runs-on: ubuntu-latest
