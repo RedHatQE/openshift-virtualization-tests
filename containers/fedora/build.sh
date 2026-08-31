@@ -61,7 +61,7 @@ case "$CPU_ARCH" in
     *)
         echo "Use the value amd64, s390x or arm64 for CPU_ARCH env variable"
         exit 1
-	;;
+ ;;
 esac
 
 if [ "$FULL_EMULATION" = "true" ]; then
