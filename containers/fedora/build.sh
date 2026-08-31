@@ -31,6 +31,12 @@ cleanup_build_resources() {
     if [ -n "${CONSOLE_PID:-}" ]; then
         kill "${CONSOLE_PID}" 2>/dev/null || true
     fi
+    virsh destroy "${NAME}" 2>/dev/null || true
+    if [ "${CPU_ARCH:-}" = "arm64" ]; then
+        virsh undefine "${NAME}" --nvram 2>/dev/null || true
+    else
+        virsh undefine "${NAME}" 2>/dev/null || true
+    fi
     rm -f -- "${BLS_ENTRY_TMP:-}" "${CONSOLE_LOG:-}" \
         "${AARCH64_VARS:-}" "${WORK_IMAGE:-}"
     rm -rf -- "${RUN_TMP_DIR:?}"
