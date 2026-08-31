@@ -25,8 +25,8 @@ uv sync
 
 ### Environment Variables
 Set the following environment variables before running the script:
-- `FEDORA_IMAGE`: Path to the Fedora base image file (e.g., `Fedora-Cloud-Base-Generic.x86_64-40-1.14.qcow2`).
-- `FEDORA_VERSION`: Version of Fedora (e.g., `40`).
+- `FEDORA_IMAGE`: Path to the Fedora base image file (e.g., `Fedora-Cloud-Base-Generic.43-1.6.x86_64.qcow2`).
+- `FEDORA_VERSION`: Version of Fedora (e.g., `43`).
 - `CPU_ARCH`: Target CPU architecture. Use `amd64` for x86_64, `arm64` for aarch64, or `s390x` for s390x.
 - `ACCESS_TOKEN`: Bitwarden access token for authentication.
 - `ORGANIZATION_ID`: Bitwarden organization ID for accessing secrets.
@@ -40,7 +40,7 @@ Ensure you have the necessary permissions to run virtualization and container-re
 Define the environment variables in your shell:
 ```bash
 export FEDORA_IMAGE=/path/to/fedora-image.qcow2
-export FEDORA_VERSION=40
+export FEDORA_VERSION=43
 export CPU_ARCH=amd64  # Use arm64 or s390x if targeting ARM or s390x architecture
 ```
 
