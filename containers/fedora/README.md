@@ -15,6 +15,8 @@ Ensure the following tools are installed on your system:
 - `cloud-localds`
 - `virt-sysprep`
 - `qemu-efi-aarch64` / `AAVMF` (required for `arm64` UEFI vars)
+- `qemu-system-aarch64` (required for local `arm64` builds)
+- `qemu-system-s390x` (required for local `s390x` builds)
 - `libguestfs-tools` (provides `guestfish` and `virt-sysprep`, required for `arm64` BLS kernel cmdline patching and image sysprep)
 
 Ensure Your Python Environment Is Ready
