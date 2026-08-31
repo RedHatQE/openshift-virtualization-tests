@@ -6,7 +6,6 @@ import pytest
 from ocp_resources.datavolume import DataVolume
 
 from tests.os_params import FEDORA_LATEST
-from tests.storage.cdi_clone.utils import create_vm_from_clone_dv_template
 from tests.storage.stop_status_utils import dv_stop_status_restart_threshold
 from tests.storage.utils import (
     assert_pvc_snapshot_clone_annotation,
@@ -22,11 +21,44 @@ from utilities.storage import (
     check_disk_count_in_vm,
     create_dv,
     create_vm_from_dv,
+    data_volume_template_dict_with_pvc_source,
     get_dv_size_from_datasource,
     overhead_size_for_dv,
     sc_volume_binding_mode_is_wffc,
 )
-from utilities.virt import restart_vm_wait_for_running_vm
+from utilities.virt import (
+    VirtualMachineForTests,
+    restart_vm_wait_for_running_vm,
+    running_vm,
+)
+
+
+def create_vm_from_clone_dv_template(
+    vm_name,
+    dv_name,
+    namespace_name,
+    source_dv,
+    client,
+    volume_mode,
+    storage_class,
+    size=None,
+):
+    with VirtualMachineForTests(
+        name=vm_name,
+        namespace=namespace_name,
+        os_flavor=OS_FLAVOR_FEDORA,
+        client=client,
+        memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
+        data_volume_template=data_volume_template_dict_with_pvc_source(
+            target_dv_name=dv_name,
+            target_dv_namespace=namespace_name,
+            source_dv=source_dv,
+            volume_mode=volume_mode,
+            size=size,
+            storage_class=storage_class,
+        ),
+    ) as vm:
+        running_vm(vm=vm)
 
 
 @pytest.mark.sno
