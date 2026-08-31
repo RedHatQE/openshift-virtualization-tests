@@ -173,7 +173,7 @@ virt-install \
 tail -f "${CONSOLE_LOG}" &
 CONSOLE_PID=$!
 # Clean up on every exit path, including the timeout and set -e aborts.
-trap 'kill "${CONSOLE_PID}" 2>/dev/null || true; rm -f "${CONSOLE_LOG}" "${AARCH64_VARS:-}"' EXIT
+trap 'kill "${CONSOLE_PID}" 2>/dev/null || true; rm -f "${CONSOLE_LOG}" "${AARCH64_VARS:-}"; cleanup' EXIT
 
 # Wait for cloud-init to finish (user-data issues 'shutdown' as its last step).
 # virsh domstate exits non-zero for unknown domains, so we treat that as "shut off" too.
