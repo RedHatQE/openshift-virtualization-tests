@@ -129,11 +129,15 @@ if [ "${CPU_ARCH}" = "arm64" ]; then
     # Mount the ext4 /boot partition (second partition) explicitly.
     # guestfish -i mounts the btrfs root subvolume, which does not contain
     # the BLS entries.
-    BLS_ENTRY=$(guestfish -a "${WORK_IMAGE}" \
+    if ! guestfish -a "${WORK_IMAGE}" \
         run : \
         mount /dev/sda2 / : \
-        ls /loader/entries \
-        | grep '\.conf$' | head -1)
+        ls /loader/entries > "${BLS_ENTRY_TMP}"; then
+        echo "ERROR: guestfish failed while listing BLS entries" >&2
+        rm -f "${BLS_ENTRY_TMP}"
+        exit 1
+    fi
+    BLS_ENTRY=$(awk '/\.conf$/ { print; exit }' "${BLS_ENTRY_TMP}")
     if [ -z "${BLS_ENTRY}" ]; then
         echo "ERROR: No BLS entry found in /boot/loader/entries/"
         rm -f "${BLS_ENTRY_TMP}"
@@ -204,7 +208,7 @@ while true; do
         break
     fi
     case "${DOMAIN_STATE}" in
-        crashed|"pmsuspended")
+        crashed*|pmsuspended*|paused*)
             echo "ERROR: VM entered terminal state '${DOMAIN_STATE}' after ${WAIT_SECONDS} seconds"
             exit 1
             ;;
