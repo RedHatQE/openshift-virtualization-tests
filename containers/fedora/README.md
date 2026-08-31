@@ -199,6 +199,7 @@ To update the Fedora version or target CPU architectures, update this configurat
   "fedora_version": "43",
   "fedora_image_base": "Fedora-Cloud-Base-Generic-43-1.6",
   "fedora_checksum_base": "Fedora-Cloud-43-1.6",
+  "remote_repository": "quay.io/openshift-cnv/qe-cnv-tests-fedora-staging",
   "matrix": {
     "include": [
       {
@@ -212,6 +213,14 @@ To update the Fedora version or target CPU architectures, update this configurat
   }
 }
 ```
+
+| Key | Description |
+|---|---|
+| `fedora_version` | Fedora major version number (e.g. `"43"`) |
+| `fedora_image_base` | Base filename of the Fedora Cloud image (without architecture suffix and extension) |
+| `fedora_checksum_base` | Base filename of the Fedora checksum file (without architecture suffix) |
+| `remote_repository` | Target container registry repository for tagging and pushing images (e.g. `quay.io/org/repo`) |
+| `matrix.include` | Per-architecture build parameters (`arch`, `url_arch`, `qemu_package`, `fedora_url`) |
 
 Editing `.github/component-builder-config.json` automatically updates the GitHub workflow parameters and matrix for builds, tests, and releases across all specified architectures (`amd64`, `arm64`, `s390x`).
 

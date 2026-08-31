@@ -17,6 +17,9 @@ on:
       architectures:
         description: "Space-separated list of architectures (e.g. 'amd64 arm64 s390x')"
         value: ${{ jobs.prepare.outputs.architectures }}
+      remote_repository:
+        description: "Remote container repository used for tagging and pushing (e.g. quay.io/org/repo)"
+        value: ${{ jobs.prepare.outputs.remote_repository }}
 
 jobs:
   prepare:
@@ -29,6 +32,7 @@ jobs:
       fedora_image_base: ${{ steps.component-builder-config.outputs.fedora_image_base }}
       fedora_checksum_base: ${{ steps.component-builder-config.outputs.fedora_checksum_base }}
       architectures: ${{ steps.component-builder-config.outputs.architectures }}
+      remote_repository: ${{ steps.component-builder-config.outputs.remote_repository }}
     steps:
       - name: Check out code
         uses: actions/checkout@v7
@@ -45,3 +49,4 @@ jobs:
           echo "fedora_image_base=$(jq -re '.fedora_image_base' "${config}")" >> "${GITHUB_OUTPUT}"
           echo "fedora_checksum_base=$(jq -re '.fedora_checksum_base' "${config}")" >> "${GITHUB_OUTPUT}"
           echo "architectures=$(jq -re '[.matrix.include[].arch] | join(" ")' "${config}")" >> "${GITHUB_OUTPUT}"
+          echo "remote_repository=$(jq -re '.remote_repository' "${config}")" >> "${GITHUB_OUTPUT}"

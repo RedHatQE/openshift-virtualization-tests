@@ -2,6 +2,7 @@
   "fedora_version": "43",
   "fedora_image_base": "Fedora-Cloud-Base-Generic-43-1.6",
   "fedora_checksum_base": "Fedora-Cloud-43-1.6",
+  "remote_repository": "quay.io/openshift-cnv/qe-cnv-tests-fedora-staging",
   "matrix": {
     "include": [
       {
