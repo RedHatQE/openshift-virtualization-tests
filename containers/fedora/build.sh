@@ -89,6 +89,10 @@ if virsh domstate "${NAME}" &>/dev/null; then
     fi
 fi
 
+CONSOLE_LOG="/tmp/console-${NAME}.log"
+# Pre-create the log file with open permissions so the qemu process can write to it
+touch "${CONSOLE_LOG}"
+chmod 666 "${CONSOLE_LOG}"
 echo "Run the VM (ctrl+] to exit)"
 virt-install \
   --memory 2048 \
@@ -102,7 +106,13 @@ virt-install \
   --graphics none \
   --network default \
   --noautoconsole \
+  --serial file,path="${CONSOLE_LOG}" \
   --import
+
+# Stream the guest serial console log to stdout so CI logs show what is happening inside the VM.
+# tail -f works without a TTY and streams as lines are written by the guest.
+tail -f "${CONSOLE_LOG}" &
+CONSOLE_PID=$!
 
 # Wait for cloud-init to finish (user-data issues 'shutdown' as its last step).
 # virsh domstate exits non-zero for unknown domains, so we treat that as "shut off" too.
@@ -123,6 +133,9 @@ while true; do
     WAIT_SECONDS=$((WAIT_SECONDS + PERIOD_SECONDS))
 done
 echo "VM shut down after ${WAIT_SECONDS} seconds"
+# Stop the console tailer and clean up the log file
+kill "${CONSOLE_PID}" 2>/dev/null || true
+rm -f "${CONSOLE_LOG}"
 
 # Prepare VM image
 virt-sysprep -d "${NAME}" --operations machine-id,bash-history,logfiles,tmp-files,net-hostname,net-hwaddr
