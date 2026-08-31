@@ -226,8 +226,17 @@ To update the Fedora version or target CPU architectures, update this configurat
 Editing `.github/component-builder-config.json` automatically updates the GitHub workflow parameters and matrix for builds, tests, and releases across all specified architectures (`amd64`, `arm64`, `s390x`).
 
 # Test build via GitHub
-When pushing a new commit which affects a file under this directory or `.github/component-builder-config.json`, a GitHub action will be triggered to build new Fedora container images.
-To test these images locally:
+Opening (or updating) a pull request that touches any of the following paths triggers the **Component Builder Check** workflow ([`component-builder.yml`](../../.github/workflows/component-builder.yml)):
+
+- `containers/fedora/**`
+- `.github/component-builder-config.json`
+- `.github/workflows/component-builder-prepare.yml`
+- `.github/workflows/component-builder-build.yml`
+- `.github/workflows/component-builder.yml`
+
+The same workflow can also be started manually from the **Actions** tab (`workflow_dispatch`).
+
+To test images built by a PR check run locally:
 - Access the action workflow on GitHub: https://github.com/RedHatQE/openshift-virtualization-tests/actions/workflows/component-builder.yml
 - Click on the relevant run
 - At the bottom of the page, click on the architecture-specific artifact to download (`fedora-container-image-amd64`, `fedora-container-image-arm64`, or `fedora-container-image-s390x`).
@@ -240,3 +249,12 @@ For example, for `amd64`:
 ```bash
 podman load -i fedora-image-amd64.tar
 ```
+
+> **⚠️ Security limitation — PR artifact images use a known password.**
+> PR-check builds run with `NO_SECRETS=true`, which skips secure password
+> injection. The VM inside these artifacts retains the placeholder password
+> `CHANGE_ME` (with `ssh_pwauth: true` enabled in cloud-init). Do **not**
+> treat PR artifact images as equivalent to published images, and do **not**
+> use them in any environment where SSH access must be restricted.
+> Published images (built after merge to `main`) always receive a securely
+> generated password via the `QUAY_TOKEN`-protected CI pipeline.

@@ -13,6 +13,14 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
+# Serialize publish runs at the workflow level so concurrent main-branch pushes
+# cannot interleave their matrix jobs and publish a mixed-commit manifest.
+# cancel-in-progress: false ensures an in-progress run is never abandoned
+# mid-publish, which could leave arch-specific tags in an inconsistent state.
+concurrency:
+  group: component-builder-publish
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
