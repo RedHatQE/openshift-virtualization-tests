@@ -9,7 +9,6 @@ cleanup() {
     fi
     set -x
 }
-trap cleanup EXIT
 
 [ -z "${FEDORA_IMAGE}" ] && echo "Set the env variable FEDORA_IMAGE" && exit 1
 [ -z "${FEDORA_VERSION}" ] && echo "Set the env variable FEDORA_VERSION" && exit 1
@@ -38,7 +37,7 @@ cleanup_build_resources() {
         virsh undefine "${NAME}" 2>/dev/null || true
     fi
     rm -f -- "${BLS_ENTRY_TMP:-}" "${CONSOLE_LOG:-}" \
-        "${AARCH64_VARS:-}" "${WORK_IMAGE:-}"
+        "${AARCH64_VARS:-}" "${WORK_IMAGE:-}" "${CLOUD_INIT_ISO:-}"
     rm -rf -- "${RUN_TMP_DIR:?}"
     cleanup
 }
@@ -191,10 +190,15 @@ virt-install \
   $BOOT_OPTS \
   --import
 
+# When NO_SECRETS==true:
 # Stream the guest serial console log to stdout so CI logs show what is happening inside the VM.
 # tail -n +1 -f works without a TTY and streams as lines are written by the guest.
-tail -n +1 -f "${CONSOLE_LOG}" &
-CONSOLE_PID=$!
+if [ "${NO_SECRETS}" = "true" ]; then
+  tail -n +1 -f "${CONSOLE_LOG}" &
+  CONSOLE_PID=$!
+else
+  echo "NO_SECRETS unset: not streaming guest serial console to CI logs"
+fi
 
 # Wait for cloud-init to finish (user-data issues 'shutdown' as its last step).
 # virsh domstate exits non-zero for unknown domains, so we treat that as "shut off" too.
