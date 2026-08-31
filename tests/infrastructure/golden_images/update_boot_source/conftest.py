@@ -271,6 +271,7 @@ def created_data_import_cron(
     with DataImportCron(
         name="data-import-cron-for-test",
         namespace=data_import_cron_namespace.name,
+        client=unprivileged_client,
         managed_data_source=golden_images_data_import_cron_spec.managedDataSource,
         schedule=golden_images_data_import_cron_spec.schedule,
         annotations=BIND_IMMEDIATE_ANNOTATION,
