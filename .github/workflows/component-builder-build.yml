@@ -114,13 +114,15 @@ jobs:
           # ---------------------------------------------------------------
           GPG_HOME="$(mktemp -d)"
           chmod 0700 "${GPG_HOME}"
-          # Fetch the Fedora keyring from the authoritative source.
+          # Fetch the full Fedora keyring from the authoritative source into a
+          # temporary import-only homedir.  We never verify against this
+          # multi-key bundle; it is only used to extract the one pinned key.
           curl -fsSL --proto '=https' --tlsv1.2 \
             "https://fedoraproject.org/fedora.gpg" \
             -o "${GPG_HOME}/fedora.gpg"
-          # Import into the isolated keyring.
+          # Import all keys from the bundle so we can query them.
           gpg --homedir "${GPG_HOME}" --import "${GPG_HOME}/fedora.gpg"
-          # Confirm the pinned fingerprint is present in the imported keyring.
+          # Confirm the pinned fingerprint is present before exporting.
           if ! gpg --homedir "${GPG_HOME}" --fingerprint --with-colons \
                | grep -q "^fpr:.*:${FEDORA_SIGNING_KEY_FINGERPRINT}:$"; then
             echo "ERROR: Pinned fingerprint ${FEDORA_SIGNING_KEY_FINGERPRINT} not found in fedora.gpg"
@@ -130,17 +132,27 @@ jobs:
           echo "Signing key fingerprint verified: ${FEDORA_SIGNING_KEY_FINGERPRINT}"
 
           # ---------------------------------------------------------------
-          # Step 2: Verify the OpenPGP clearsignature on the CHECKSUM file.
-          # This ensures the digest we are about to extract was produced by
-          # Fedora's release key — a compromised mirror cannot forge this.
+          # Step 2: Build a dedicated keyring that contains ONLY the pinned
+          # release key (and its signing subkeys).  gpgv will then accept
+          # signatures from that single key and nothing else.
           # ---------------------------------------------------------------
-          gpg --homedir "${GPG_HOME}" --verify CHECKSUM \
+          PINNED_KEYRING="${GPG_HOME}/pinned.gpg"
+          gpg --homedir "${GPG_HOME}" \
+            --export --armor "${FEDORA_SIGNING_KEY_FINGERPRINT}" \
+            | gpg --dearmor > "${PINNED_KEYRING}"
+
+          # ---------------------------------------------------------------
+          # Step 3: Verify the OpenPGP clearsignature on the CHECKSUM file
+          # using gpgv and the single-key keyring.  gpgv has no trust model
+          # and no keyring fallback — only keys in --keyring are accepted.
+          # ---------------------------------------------------------------
+          gpgv --keyring "${PINNED_KEYRING}" CHECKSUM \
             || { echo "ERROR: OpenPGP signature verification failed for CHECKSUM"; rm -rf "${GPG_HOME}"; exit 1; }
-          echo "OpenPGP signature on CHECKSUM is valid"
+          echo "OpenPGP signature on CHECKSUM is valid (verified against pinned key only)"
           rm -rf "${GPG_HOME}"
 
           # ---------------------------------------------------------------
-          # Step 3: Extract the SHA256 digest and verify the qcow2 image.
+          # Step 4: Extract the SHA256 digest and verify the qcow2 image.
           # The Fedora CHECKSUM file uses the format: SHA256 (filename) = <digest>
           # sha256sum expects: <digest>  <filename>
           # ---------------------------------------------------------------
