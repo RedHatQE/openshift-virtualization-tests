@@ -73,6 +73,13 @@ The resulting files are stored in the `fedora_build_${CPU_ARCH}` directory:
 3. Container Image Tarball.
 
 ### Step 6: Creating multi-arch image manifest
+
+> **⚠️ Only follow this step for local/manual builds.**
+> When a PR that touches `containers/fedora/**` or `.github/component-builder-config.json`
+> is merged to `main`, CI automatically handles everything up to and including the
+> staging multi-arch manifest (see [CI pipeline](#ci-pipeline-automated) below).
+> Skip to [Staging → production promotion](#staging--production-promotion-manual) instead.
+
 After building VM images for Fedora AMD64, ARM64, and S390X architectures, the
 following procedure should help in building multi-arch image manifest
 
@@ -149,6 +156,38 @@ b. then new tag for uploaded multi-arch image manifest '43.rev-250318' is create
 
 This way there will be minimal impact for test runs that
 tried to pull the latest fedora container image with tag '43'
+
+## CI Pipeline (automated)
+
+Merging any change to `containers/fedora/**`, `.github/component-builder-config.json`,
+or either of the shared workflow files (`component-builder-prepare.yml`,
+`component-builder-build.yml`) into `main` automatically triggers
+[`component-builder-publish.yml`](../../.github/workflows/component-builder-publish.yml).
+
+**You do not need to run any of the steps above after a PR merge — CI does this for you.**
+
+The automated pipeline performs the following steps in sequence:
+
+1. **Read config** — reads `FEDORA_VERSION` and the architecture matrix from
+   `.github/component-builder-config.json`.
+2. **Build all architectures in parallel** — for each arch (`amd64`, `arm64`, `s390x`):
+   - Downloads and SHA-256 verifies the upstream Fedora cloud image.
+   - Builds the VM and packages it into a container image.
+   - Pushes the per-arch image as
+     `quay.io/openshift-cnv/qe-cnv-tests-fedora-staging:${FEDORA_VERSION}-${arch}`
+     (e.g. `…:43-amd64`).
+3. **Create and push multi-arch manifest** — assembles all per-arch images into a
+   single multi-arch manifest and pushes it as
+   `quay.io/openshift-cnv/qe-cnv-tests-fedora-staging:${FEDORA_VERSION}-dev`
+   (e.g. `…:43-dev`).
+
+The pipeline uses the `QUAY_USER` / `QUAY_TOKEN` GitHub secrets; no manual
+registry login is required.
+
+> **Note:** The `component-builder.yml` workflow also runs on every **pull request**
+> that touches the same paths.  On PRs it builds all architectures but does **not**
+> push to any registry; it uploads the images as downloadable workflow artifacts
+> instead (see [Test build via GitHub](#test-build-via-github) below).
 
 ## Component Builder Configuration
 
