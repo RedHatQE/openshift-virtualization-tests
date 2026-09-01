@@ -3,7 +3,7 @@ Localnet connectivity upgrade tests.
 
 Verifies IPAM-less localnet VM connectivity is preserved across cluster upgrades,
 for both default bridge (br-ex) and dedicated NIC bridge.
-https://redhat.atlassian.net/browse/CNV-85783
+https://redhat.atlassian.net/browse/CNV-85783  # <skip-jira-utils-check>
 
 Preconditions:
     - OVN bridge mapping configured via NNCP for the default bridge (br-ex)
