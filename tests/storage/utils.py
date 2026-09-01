@@ -553,18 +553,23 @@ class VMWithSeveralBlankDisks(VirtualMachineForTests):
     def to_dict(self) -> None:
         """Build the VM resource dict and add blank disk entries to it.
 
-        Note:
-            Do not call more than once. Each call appends the blank disks to the resource dict,
-            so a second call will result in duplicate disks.
+        Blank DataVolume templates, disks, and volumes are rebuilt on every call so a
+        second ``to_dict()`` does not duplicate names or change the requested disk count.
         """
         super().to_dict()
         template_spec = self.res["spec"]["template"]["spec"]
         disks = template_spec["domain"]["devices"]["disks"]
         volumes = template_spec["volumes"]
         dv_templates = self.res["spec"].setdefault("dataVolumeTemplates", [])
+        blank_dv_names = [f"{self.name}-blank-{disk_index}" for disk_index in range(self.num_blank_disks)]
+        blank_dv_name_set = set(blank_dv_names)
+        disks[:] = [disk for disk in disks if disk["name"] not in blank_dv_name_set]
+        volumes[:] = [volume for volume in volumes if volume["name"] not in blank_dv_name_set]
+        dv_templates[:] = [
+            template for template in dv_templates if template["metadata"]["name"] not in blank_dv_name_set
+        ]
 
-        for disk_index in range(self.num_blank_disks):
-            dv_name = f"{self.name}-blank-{disk_index}"
+        for dv_name in blank_dv_names:
             dv_templates.append(
                 blank_dv_template(
                     name=dv_name,
