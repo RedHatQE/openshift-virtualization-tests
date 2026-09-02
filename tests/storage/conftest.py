@@ -3,6 +3,7 @@ Pytest conftest file for CNV CDI tests
 """
 
 import base64
+import copy
 import ipaddress
 import logging
 import os
@@ -42,9 +43,10 @@ from tests.storage.utils import (
     is_hpp_cr_legacy,
 )
 from tests.utils import create_cirros_vm
+from utilities.architecture import get_multiarch_cpu_arch
 from utilities.artifactory import get_artifactory_config_map, get_artifactory_secret
 from utilities.constants import Images
-from utilities.constants.cluster import CNV_TEST_SERVICE_ACCOUNT
+from utilities.constants.cluster import CNV_TEST_SERVICE_ACCOUNT, KUBERNETES_ARCH_LABEL
 from utilities.constants.components import CDI_OPERATOR, CDI_UPLOADPROXY
 from utilities.constants.images import OS_FLAVOR_FEDORA, OS_FLAVOR_RHEL
 from utilities.constants.instance_types import PREFERENCE_STR, U1_SMALL
@@ -167,11 +169,15 @@ def internal_http_deployment(cnv_tests_utilities_namespace, admin_client):
     Deploy internal HTTP server Deployment into the cnv_tests_utilities_namespace namespace.
     This Deployment deploys a pod that runs an HTTP server
     """
+    template = copy.deepcopy(INTERNAL_HTTP_TEMPLATE)
+    if cpu_arch := get_multiarch_cpu_arch():
+        template["spec"]["nodeSelector"] = {KUBERNETES_ARCH_LABEL: cpu_arch}
+
     with Deployment(
         name="internal-http",
         namespace=cnv_tests_utilities_namespace.name,
         selector=INTERNAL_HTTP_SELECTOR,
-        template=INTERNAL_HTTP_TEMPLATE,
+        template=template,
         replicas=1,
         client=admin_client,
     ) as dep:
@@ -208,7 +214,7 @@ def upload_proxy_route(admin_client):
 
 
 @pytest.fixture()
-def uploadproxy_route_deleted(hco_namespace):
+def uploadproxy_route_deleted(admin_client, hco_namespace):
     """
     Delete uploadproxy route from kubevirt-hyperconverged namespace.
 
@@ -216,16 +222,16 @@ def uploadproxy_route_deleted(hco_namespace):
     Once the cdi-operator is terminated, route is deleted to perform the test.
     """
     ns = hco_namespace.name
-    deployment = Deployment(name=CDI_OPERATOR, namespace=ns)
+    deployment = Deployment(name=CDI_OPERATOR, namespace=ns, client=admin_client)
     try:
         deployment.scale_replicas(replica_count=0)
         deployment.wait_for_replicas(deployed=False)
-        Route(name=CDI_UPLOADPROXY, namespace=ns).delete(wait=True)
+        Route(name=CDI_UPLOADPROXY, namespace=ns, client=admin_client).delete(wait=True)
         yield
     finally:
         deployment.scale_replicas(replica_count=1)
         deployment.wait_for_replicas()
-        Route(name=CDI_UPLOADPROXY, namespace=ns).wait()
+        Route(name=CDI_UPLOADPROXY, namespace=ns, client=admin_client).wait()
 
 
 @pytest.fixture()
@@ -252,11 +258,12 @@ def cdi_config_upload_proxy_overridden(
 
 
 @pytest.fixture()
-def new_route_created(hco_namespace):
-    existing_route = Route(name=CDI_UPLOADPROXY, namespace=hco_namespace.name)
+def new_route_created(admin_client, hco_namespace):
+    existing_route = Route(name=CDI_UPLOADPROXY, namespace=hco_namespace.name, client=admin_client)
     route = Route(
         name="newuploadroute-cdi",
         namespace=hco_namespace.name,
+        client=admin_client,
         destination_ca_cert=existing_route.ca_cert,
         service=CDI_UPLOADPROXY,
     )

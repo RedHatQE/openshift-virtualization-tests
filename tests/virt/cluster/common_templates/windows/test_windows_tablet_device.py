@@ -13,7 +13,7 @@ from pyhelper_utils.shell import run_ssh_commands
 
 from tests.os_params import WINDOWS_10, WINDOWS_LATEST, WINDOWS_LATEST_LABELS
 from tests.virt.cluster.common_templates.utils import check_vm_xml_tablet_device, set_vm_tablet_device_dict
-from utilities.constants.timeouts import TCP_TIMEOUT_30SEC
+from utilities.constants.timeouts import TCP_TIMEOUT_30SEC, TIMEOUT_2MIN
 from utilities.constants.virt import VIRTIO
 
 pytestmark = [
@@ -33,6 +33,7 @@ def check_windows_vm_tablet_device(vm, driver_state):
         host=vm.ssh_exec,
         commands=shlex.split("%systemroot%\\\\system32\\\\driverquery /fo list /v"),
         tcp_timeout=TCP_TIMEOUT_30SEC,
+        wait_timeout=TIMEOUT_2MIN,
     )[0]
 
     assert re.search(

@@ -30,6 +30,7 @@ from utilities.constants.images import OS_FLAVOR_WINDOWS
 from utilities.constants.os_matrix import DATA_SOURCE_STR
 from utilities.constants.timeouts import (
     TCP_TIMEOUT_30SEC,
+    TIMEOUT_1MIN,
     TIMEOUT_1SEC,
     TIMEOUT_2MIN,
     TIMEOUT_5SEC,
@@ -107,11 +108,12 @@ def get_stress_ng_pid(ssh_exec, windows=False):
     stress = "stress-ng"
     LOGGER.info(f"Get pid of {stress}")
     command_prefix = "wsl" if windows else ""
+    tcp_timeout = TIMEOUT_1MIN if windows else TCP_TIMEOUT_30SEC
 
     return run_ssh_commands(
         host=ssh_exec,
         commands=shlex.split(f"{command_prefix} bash -c 'pgrep {stress}'"),
-        tcp_timeout=TCP_TIMEOUT_30SEC,
+        tcp_timeout=tcp_timeout,
         wait_timeout=TIMEOUT_2MIN,
     )[0].split("\n")[0]
 
@@ -287,6 +289,7 @@ def get_num_gpu_devices_in_rhel_vm(vm):
                 "-c",
                 '/sbin/lspci -nnk | grep -E "controller.+NVIDIA" | wc -l',
             ],
+            wait_timeout=TIMEOUT_2MIN,
         )[0].strip()
     )
 
@@ -296,6 +299,7 @@ def get_gpu_device_name_from_windows_vm(vm):
         host=vm.ssh_exec,
         commands=[shlex.split("wmic path win32_VideoController get name")],
         tcp_timeout=TCP_TIMEOUT_30SEC,
+        wait_timeout=TIMEOUT_2MIN,
     )[0]
 
 

@@ -20,7 +20,7 @@ from tests.upgrade_params import (
     SNAPSHOT_RESTORE_CREATE_AFTER_UPGRADE,
     STORAGE_NODE_ID_PREFIX,
 )
-from utilities.constants.pytest import DEPENDENCY_SCOPE_SESSION
+from utilities.constants.pytest import DEPENDENCY_SCOPE_SESSION, QUARANTINED
 from utilities.constants.storage import HOTPLUG_DISK_VIRTIO_BUS
 from utilities.storage import (
     assert_disk_serial,
@@ -50,6 +50,10 @@ pytestmark = [
 class TestUpgradeStorage:
     """Pre-upgrade tests"""
 
+    @pytest.mark.xfail(
+        reason=f"{QUARANTINED}: Flaky UEFI boot failure after DV clone on upgrade cluster; CNV-95012",
+        run=False,
+    )
     @pytest.mark.sno
     @pytest.mark.polarion("CNV-5993")
     @pytest.mark.order(before=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
@@ -103,7 +107,6 @@ class TestUpgradeStorage:
     def test_vm_with_hotplug_before_upgrade(
         self,
         skip_if_config_default_storage_class_access_mode_rwo,
-        enabled_feature_gate_for_declarative_hotplug_volumes_upg,
         upgrade_namespace_scope_session,
         blank_disk_dv_with_default_sc,
         fedora_vm_for_hotplug_upg,

@@ -7,6 +7,7 @@ import shlex
 import pytest
 from pyhelper_utils.shell import run_ssh_commands
 
+from utilities.constants.timeouts import TIMEOUT_2MIN
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 
@@ -64,4 +65,5 @@ def test_vm_with_sidecar_hook(enabled_featuregate_scope_function, sidecar_vm):
     run_ssh_commands(
         host=sidecar_vm.ssh_exec,
         commands=shlex.split("sudo dmidecode -s baseboard-manufacturer | grep 'Radical Edward'\n"),
+        wait_timeout=TIMEOUT_2MIN,
     )
