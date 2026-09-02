@@ -39,7 +39,6 @@ from ocp_resources.machine import Machine
 from ocp_resources.migration_policy import MigrationPolicy
 from ocp_resources.mutating_webhook_config import MutatingWebhookConfiguration
 from ocp_resources.namespace import Namespace
-from ocp_resources.network_addons_config import NetworkAddonsConfig
 from ocp_resources.network_config_openshift_io import Network
 from ocp_resources.node import Node
 from ocp_resources.node_network_state import NodeNetworkState
@@ -147,7 +146,6 @@ from utilities.infra import (
     get_node_selector_dict,
     get_nodes_cpu_model,
     get_nodes_with_label,
-    get_pods,
     get_subscription,
     get_utility_pods_from_nodes,
     label_nodes,
@@ -155,7 +153,6 @@ from utilities.infra import (
     name_prefix,
     run_virtctl_command,
     scale_deployment_replicas,
-    wait_for_pods_deletion,
 )
 from utilities.network import (
     EthernetNetworkConfigurationPolicy,
@@ -163,13 +160,10 @@ from utilities.network import (
     SriovIfaceNotFound,
     cloud_init,
     create_sriov_node_policy,
-    enable_hyperconverged_ovs_annotations,
     get_cluster_cni_type,
     network_device,
     network_nad,
     wait_for_node_marked_by_bridge,
-    wait_for_ovs_daemonset_resource,
-    wait_for_ovs_status,
 )
 from utilities.operator import (
     disable_default_sources_in_operatorhub,
@@ -196,7 +190,6 @@ from utilities.virt import (
     fedora_vm_body,
     get_base_templates_list,
     get_hyperconverged_kubevirt,
-    get_hyperconverged_ovs_annotations,
     get_kubevirt_hyperconverged_spec,
     kubernetes_taint_exists,
     running_vm,
@@ -1327,23 +1320,6 @@ def kubevirt_feature_gates_scope_module(kubevirt_config_scope_module):
     return kubevirt_config_scope_module["developerConfiguration"][FEATURE_GATES]
 
 
-@pytest.fixture(scope="class")
-def ovs_daemonset(admin_client, hco_namespace):
-    return wait_for_ovs_daemonset_resource(admin_client=admin_client, hco_namespace=hco_namespace)
-
-
-@pytest.fixture()
-def hyperconverged_ovs_annotations_fetched(hyperconverged_resource_scope_function):
-    return get_hyperconverged_ovs_annotations(hyperconverged=hyperconverged_resource_scope_function)
-
-
-@pytest.fixture(scope="session")
-def network_addons_config_scope_session(admin_client):
-    nac = list(NetworkAddonsConfig.get(dyn_client=admin_client))
-    assert nac, "There should be one NetworkAddonsConfig CR."
-    return nac[0]
-
-
 @pytest.fixture(scope="session")
 def ocs_storage_class(cluster_storage_classes):
     """
@@ -1370,31 +1346,6 @@ def fail_test_if_no_ocs_sc(ocs_storage_class):
     """
     if not ocs_storage_class:
         pytest.fail("Failing test, OCS storage class is not deployed")
-
-
-@pytest.fixture(scope="session")
-def hyperconverged_ovs_annotations_enabled_scope_session(
-    admin_client,
-    hco_namespace,
-    hyperconverged_resource_scope_session,
-    network_addons_config_scope_session,
-):
-    yield from enable_hyperconverged_ovs_annotations(
-        admin_client=admin_client,
-        hco_namespace=hco_namespace,
-        hyperconverged_resource=hyperconverged_resource_scope_session,
-        network_addons_config=network_addons_config_scope_session,
-    )
-
-    # Make sure all ovs pods are deleted:
-    wait_for_ovs_status(network_addons_config=network_addons_config_scope_session, status=False)
-    wait_for_pods_deletion(
-        pods=get_pods(
-            dyn_client=admin_client,
-            namespace=hco_namespace,
-            label="app=ovs-cni",
-        )
-    )
 
 
 @pytest.fixture(scope="session")

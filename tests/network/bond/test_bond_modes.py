@@ -8,7 +8,7 @@ from contextlib import contextmanager
 
 import pytest
 
-from utilities.constants import TIMEOUT_9MIN
+from utilities.constants import LINUX_BRIDGE, TIMEOUT_9MIN
 from utilities.infra import ExecCommandOnPod, get_node_selector_dict, get_node_selector_name
 from utilities.network import (
     BondNodeNetworkConfigurationPolicy,
@@ -19,10 +19,7 @@ from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 pytestmark = [
     pytest.mark.sno,
-    pytest.mark.usefixtures(
-        "hyperconverged_ovs_annotations_enabled_scope_session",
-        "workers_type",
-    ),
+    pytest.mark.usefixtures("workers_type"),
 ]
 
 
@@ -83,10 +80,10 @@ def matrix_bond_modes_bond(
 
 
 @pytest.fixture()
-def bond_modes_nad(bridge_device_matrix__function__, namespace, matrix_bond_modes_bond):
+def bond_modes_nad(namespace, matrix_bond_modes_bond):
     with network_nad(
         namespace=namespace,
-        nad_type=bridge_device_matrix__function__,
+        nad_type=LINUX_BRIDGE,
         nad_name=f"bond-nad-{matrix_bond_modes_bond.bond_name}",
         interface_name=f"br{matrix_bond_modes_bond.bond_name}",
     ) as nad:
@@ -95,7 +92,6 @@ def bond_modes_nad(bridge_device_matrix__function__, namespace, matrix_bond_mode
 
 @pytest.fixture()
 def matrix_bond_modes_bridge(
-    bridge_device_matrix__function__,
     worker_node1,
     bond_modes_nad,
     matrix_bond_modes_bond,
@@ -104,7 +100,7 @@ def matrix_bond_modes_bridge(
     Create bridge and attach the BOND to it
     """
     with network_device(
-        interface_type=bridge_device_matrix__function__,
+        interface_type=LINUX_BRIDGE,
         nncp_name=f"bridge-on-bond-{matrix_bond_modes_bond.bond_name}",
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         interface_name=bond_modes_nad.bridge_name,
@@ -132,7 +128,6 @@ def bond_modes_vm(
 
 @pytest.fixture()
 def bridge_on_bond_fail_over_mac(
-    bridge_device_matrix__function__,
     worker_node1,
     bond_modes_nad,
     active_backup_bond_with_fail_over_mac,
@@ -141,7 +136,7 @@ def bridge_on_bond_fail_over_mac(
     Create bridge and attach the BOND to it
     """
     with network_device(
-        interface_type=bridge_device_matrix__function__,
+        interface_type=LINUX_BRIDGE,
         nncp_name="bridge-on-bond-fail-over-mac",
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
         interface_name=bond_modes_nad.bridge_name,

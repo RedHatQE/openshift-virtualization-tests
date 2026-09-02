@@ -31,11 +31,9 @@ from utilities.constants import (
     IPV4_STR,
     IPV6_STR,
     LATEST_RELEASE_STR,
-    LINUX_BRIDGE,
     MONITORING_METRICS,
     OS_STR,
     OS_VERSION_STR,
-    OVS_BRIDGE,
     PREFERENCE_STR,
     PRODUCTION_CATALOG_SOURCE,
     TEKTON_AVAILABLE_PIPELINEREF,
@@ -136,8 +134,6 @@ cnv_vm_resource_requests_units_matrix = [
 
 
 cnv_vmi_monitoring_metrics_matrix = MONITORING_METRICS
-
-bridge_device_matrix = [LINUX_BRIDGE, OVS_BRIDGE]
 
 storage_class_matrix = [
     {
