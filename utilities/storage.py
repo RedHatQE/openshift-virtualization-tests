@@ -689,10 +689,23 @@ def data_volume_template_dict_with_pvc_source(
 
 
 def data_volume_template_with_source_ref_dict(
-    data_source: DataSource, storage_class: str | None = None
+    data_source: DataSource, storage_class: str | None = None, name: str | None = None
 ) -> dict[str, Any]:
+    """Build a DataVolume template dict backed by a DataSource source reference.
+
+    Args:
+        data_source: The DataSource to clone from.
+        storage_class: Storage class for the PVC; if None, the cluster default is used.
+        name: Explicit DataVolume name. If None, a unique name is generated from the
+            DataSource name. The namespace is stripped from the returned dict so the
+            template is safe to embed in a VM's ``dataVolumeTemplates`` list.
+
+    Returns:
+        Mutable DataVolume resource dict with ``metadata.namespace`` removed, ready for
+        use in VM ``dataVolumeTemplates``.
+    """
     dv = DataVolume(
-        name=utilities.infra.unique_name(name=data_source.name),
+        name=name if name is not None else utilities.infra.unique_name(name=data_source.name),
         namespace=data_source.namespace,
         client=data_source.client,
         size=get_dv_size_from_datasource(data_source=data_source),
