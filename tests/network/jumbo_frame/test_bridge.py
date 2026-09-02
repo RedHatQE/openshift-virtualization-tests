@@ -8,6 +8,7 @@ import pytest
 
 from libs.net.ip import random_ipv4_address
 from tests.network.utils import assert_no_ping
+from utilities.constants import LINUX_BRIDGE
 from utilities.infra import get_node_selector_dict
 from utilities.network import (
     assert_ping_successful,
@@ -19,9 +20,6 @@ from utilities.network import (
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 pytestmark = [
-    pytest.mark.usefixtures(
-        "hyperconverged_ovs_annotations_enabled_scope_session",
-    ),
     pytest.mark.special_infra,
     pytest.mark.jumbo_frame,
 ]
@@ -35,13 +33,12 @@ def jumbo_frame_bridge_device_name(index_number):
 @pytest.fixture(scope="class")
 def jumbo_frame_bridge_device_worker_1(
     cluster_hardware_mtu,
-    bridge_device_matrix__class__,
     worker_node1,
     nodes_available_nics,
     jumbo_frame_bridge_device_name,
 ):
     with network_device(
-        interface_type=bridge_device_matrix__class__,
+        interface_type=LINUX_BRIDGE,
         nncp_name="jumbo-frame-bridge-nncp-1",
         interface_name=jumbo_frame_bridge_device_name,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
@@ -54,13 +51,12 @@ def jumbo_frame_bridge_device_worker_1(
 @pytest.fixture(scope="class")
 def jumbo_frame_bridge_device_worker_2(
     cluster_hardware_mtu,
-    bridge_device_matrix__class__,
     worker_node2,
     nodes_available_nics,
     jumbo_frame_bridge_device_name,
 ):
     with network_device(
-        interface_type=bridge_device_matrix__class__,
+        interface_type=LINUX_BRIDGE,
         nncp_name="jumbo-frame-bridge-nncp-2",
         interface_name=jumbo_frame_bridge_device_name,
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
@@ -73,7 +69,6 @@ def jumbo_frame_bridge_device_worker_2(
 @pytest.fixture(scope="class")
 def br1test_bridge_nad(
     cluster_hardware_mtu,
-    bridge_device_matrix__class__,
     namespace,
     jumbo_frame_bridge_device_name,
     jumbo_frame_bridge_device_worker_1,
@@ -81,7 +76,7 @@ def br1test_bridge_nad(
 ):
     with network_nad(
         namespace=namespace,
-        nad_type=bridge_device_matrix__class__,
+        nad_type=LINUX_BRIDGE,
         nad_name=f"{jumbo_frame_bridge_device_name}-nad",
         interface_name=jumbo_frame_bridge_device_name,
         mtu=cluster_hardware_mtu,

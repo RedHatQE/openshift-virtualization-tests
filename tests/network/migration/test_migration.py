@@ -42,8 +42,6 @@ from utilities.virt import (
 PING_LOG = "ping.log"
 LOGGER = logging.getLogger(__name__)
 
-pytestmark = pytest.mark.usefixtures("hyperconverged_ovs_annotations_enabled_scope_session")
-
 
 def http_port_accessible(vm, server_ip, server_port):
     if get_valid_ip_address(family=IPV6_STR, dst_ip=server_ip):
