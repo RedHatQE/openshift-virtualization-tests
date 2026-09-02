@@ -7,7 +7,7 @@ https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main
 
 import pytest
 
-from tests.network.primary_network.multiarch.libmultiarch import ping_between_vms
+from tests.network.libs.connectivity import is_destination_vm_pingable
 
 
 @pytest.mark.multiarch
@@ -34,7 +34,9 @@ class TestMultiArchPodNetwork:
         Expected:
             - 0 packet loss
         """
-        ping_between_vms(source_vm=arm_vm, destination_vm=amd_vm)
+        assert is_destination_vm_pingable(source_vm=arm_vm, destination_vm=amd_vm), (
+            f"{amd_vm.name} is unreachable from {arm_vm.name}."
+        )
 
     @pytest.mark.polarion("CNV-15969")
     def test_pod_network_connectivity_amd_to_arm(self, arm_vm, amd_vm):
@@ -47,4 +49,6 @@ class TestMultiArchPodNetwork:
         Expected:
             - 0 packet loss
         """
-        ping_between_vms(source_vm=amd_vm, destination_vm=arm_vm)
+        assert is_destination_vm_pingable(source_vm=amd_vm, destination_vm=arm_vm), (
+            f"{arm_vm.name} is unreachable from {amd_vm.name}."
+        )
