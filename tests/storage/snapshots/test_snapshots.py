@@ -500,3 +500,59 @@ def test_write_to_file_while_snapshot(
         client=windows_vm_with_vtpm_for_snapshot.client,
     ) as restore:
         start_windows_vm_after_restore(vm_restore=restore, windows_vm=windows_vm_with_vtpm_for_snapshot)
+
+
+@pytest.mark.tier3
+@pytest.mark.conformance
+class TestRestoreMultiDiskPerformance:
+    """
+    Snapshot restore performance tests for VMs with multiple disks.
+
+    Jira: https://redhat.atlassian.net/browse/CNV-88906  # <skip-jira-utils-check>
+
+    Markers:
+        - tier3
+        - conformance
+
+    Preconditions:
+        - VolumeSnapshot-capable StorageClass available
+        - Fedora golden image DataSource available
+    """
+
+    __test__ = False
+
+    @pytest.mark.polarion("CNV-16400")
+    def test_restore_vm_with_4_disks_completes_within_five_minutes(self):
+        """
+        Test that restoring a snapshot of a VM with 4 disks completes within 5 minutes.
+
+        Preconditions:
+            - Running Fedora VM with 4 disk devices (1 boot from golden image DataSource + 3 blank DVs)
+            - VM snapshot taken and ready to use
+            - VM stopped before restore
+
+        Steps:
+            1. Restore the VM snapshot
+            2. Wait for the restore to complete with a 5-minute timeout
+
+        Expected:
+            - Restore completes successfully within 5 minutes
+        """
+
+    @pytest.mark.polarion("CNV-16401")
+    def test_restore_four_vms_with_4_disks_completes_within_five_minutes(self):
+        """
+        Test that restoring snapshots of 4 VMs (each with 4 disks) in parallel completes within 5 minutes per VM.
+
+        Preconditions:
+            - 4 running Fedora VMs, each with 4 disk devices (1 boot from golden image DataSource + 3 blank DVs)
+            - VM snapshots taken and ready to use for all 4 VMs
+            - All 4 VMs stopped before restore
+
+        Steps:
+            1. Restore all 4 VM snapshots concurrently, each with its own 5-minute deadline
+            2. Wait for all restores to complete
+
+        Expected:
+            - Each restore completes successfully within 5 minutes
+        """
