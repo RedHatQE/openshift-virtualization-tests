@@ -27,8 +27,6 @@ from utilities.constants import (
     INSTANCE_TYPE_STR,
     IPV4_STR,
     IPV6_STR,
-    LINUX_BRIDGE,
-    OVS_BRIDGE,
     PREFERENCE_STR,
     PRODUCTION_CATALOG_SOURCE,
     TEKTON_AVAILABLE_PIPELINEREF,
@@ -124,9 +122,6 @@ cnv_vm_resource_requests_units_matrix = [
     "sockets",
     "threads",
 ]
-
-
-bridge_device_matrix = [LINUX_BRIDGE, OVS_BRIDGE]
 
 storage_class_matrix = [
     {

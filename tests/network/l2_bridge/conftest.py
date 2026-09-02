@@ -18,6 +18,7 @@ from tests.network.libs.dhcpd import (
     verify_dhcpd_activated,
 )
 from tests.network.utils import update_cloud_init_extra_user_data
+from utilities.constants import LINUX_BRIDGE
 from utilities.infra import get_node_selector_dict, name_prefix
 from utilities.network import (
     cloud_init_network_data,
@@ -53,13 +54,12 @@ def l2_bridge_device_name(index_number):
 
 @pytest.fixture(scope="class")
 def l2_bridge_device_worker_1(
-    bridge_device_matrix__class__,
     nodes_available_nics,
     worker_node1,
     l2_bridge_device_name,
 ):
     with network_device(
-        interface_type=bridge_device_matrix__class__,
+        interface_type=LINUX_BRIDGE,
         nncp_name=f"l2-bridge-{name_prefix(worker_node1.name)}",
         interface_name=l2_bridge_device_name,
         node_selector=get_node_selector_dict(node_selector=worker_node1.hostname),
@@ -70,13 +70,12 @@ def l2_bridge_device_worker_1(
 
 @pytest.fixture(scope="class")
 def l2_bridge_device_worker_2(
-    bridge_device_matrix__class__,
     nodes_available_nics,
     worker_node2,
     l2_bridge_device_name,
 ):
     with network_device(
-        interface_type=bridge_device_matrix__class__,
+        interface_type=LINUX_BRIDGE,
         nncp_name=f"l2-bridge-{name_prefix(worker_node2.name)}",
         interface_name=l2_bridge_device_name,
         node_selector=get_node_selector_dict(node_selector=worker_node2.hostname),
@@ -87,7 +86,6 @@ def l2_bridge_device_worker_2(
 
 @pytest.fixture(scope="class")
 def dhcp_nad(
-    bridge_device_matrix__class__,
     namespace,
     l2_bridge_device_worker_1,
     l2_bridge_device_worker_2,
@@ -97,7 +95,7 @@ def dhcp_nad(
     vlan_tag = next(vlan_index_number)
     with network_nad(
         namespace=namespace,
-        nad_type=bridge_device_matrix__class__,
+        nad_type=LINUX_BRIDGE,
         nad_name=f"{l2_bridge_device_name}-dhcp-broadcast-nad-vlan-{vlan_tag}",
         interface_name=l2_bridge_device_name,
         vlan=vlan_tag,
@@ -107,7 +105,6 @@ def dhcp_nad(
 
 @pytest.fixture(scope="class")
 def custom_eth_type_llpd_nad(
-    bridge_device_matrix__class__,
     namespace,
     l2_bridge_device_worker_1,
     l2_bridge_device_worker_2,
@@ -115,7 +112,7 @@ def custom_eth_type_llpd_nad(
 ):
     with network_nad(
         namespace=namespace,
-        nad_type=bridge_device_matrix__class__,
+        nad_type=LINUX_BRIDGE,
         nad_name=f"{l2_bridge_device_name}-custom-eth-type-icmp-nad",
         interface_name=l2_bridge_device_name,
     ) as nad:
@@ -124,7 +121,6 @@ def custom_eth_type_llpd_nad(
 
 @pytest.fixture(scope="class")
 def mpls_nad(
-    bridge_device_matrix__class__,
     namespace,
     l2_bridge_device_worker_1,
     l2_bridge_device_worker_2,
@@ -132,7 +128,7 @@ def mpls_nad(
 ):
     with network_nad(
         namespace=namespace,
-        nad_type=bridge_device_matrix__class__,
+        nad_type=LINUX_BRIDGE,
         nad_name=f"{l2_bridge_device_name}-mpls-nad",
         interface_name=l2_bridge_device_name,
     ) as nad:
@@ -141,7 +137,6 @@ def mpls_nad(
 
 @pytest.fixture(scope="class")
 def dot1q_nad(
-    bridge_device_matrix__class__,
     namespace,
     l2_bridge_device_worker_1,
     l2_bridge_device_worker_2,
@@ -149,7 +144,7 @@ def dot1q_nad(
 ):
     with network_nad(
         namespace=namespace,
-        nad_type=bridge_device_matrix__class__,
+        nad_type=LINUX_BRIDGE,
         nad_name=f"{l2_bridge_device_name}-dot1q-nad",
         interface_name=l2_bridge_device_name,
     ) as nad:
