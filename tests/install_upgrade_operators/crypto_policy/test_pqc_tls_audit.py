@@ -13,6 +13,7 @@ from utilities.jira import is_jira_open
 LOGGER = logging.getLogger(__name__)
 VIRT_PLATFORM_AUTOPILOT_METRICS = "virt-platform-autopilot-metrics"
 pytestmark = pytest.mark.post_upgrade
+VIRT_PLATFORM_AUTOPILOT_METRICS = "virt-platform-autopilot-metrics"
 
 
 @pytest.mark.polarion("CNV-15222")
