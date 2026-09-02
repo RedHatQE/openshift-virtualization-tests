@@ -11,7 +11,6 @@ from ocp_resources.user_defined_network import Layer2UserDefinedNetwork
 
 from libs.net.ip import random_ipv4_address
 from libs.net.udn import create_udn_namespace
-from tests.storage.stop_status_utils import dv_stop_status_restart_threshold
 from utilities.constants import Images
 from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_2MIN
 from utilities.storage import check_upload_virtctl_result, create_dv, get_downloaded_artifact, virtctl_upload_dv
@@ -64,7 +63,7 @@ def uploaded_dv_with_immediate_binding(
     ) as res:
         check_upload_virtctl_result(result=res)
         dv = DataVolume(namespace=namespace.name, name=dv_name, client=unprivileged_client)
-        dv.wait_for_dv_success(timeout=TIMEOUT_1MIN, restart_threshold=dv_stop_status_restart_threshold, dv=dv)
+        dv.wait_for_dv_success(timeout=TIMEOUT_1MIN)
         assert dv.pvc.bound(), f"PVC status is {dv.pvc.status}"
         yield dv
         dv.delete(wait=True)

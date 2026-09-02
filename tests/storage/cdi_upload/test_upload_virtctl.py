@@ -180,7 +180,7 @@ def test_virtctl_image_upload_dv(
     ) as res:
         check_upload_virtctl_result(result=res)
         dv = DataVolume(namespace=namespace.name, name=dv_name, client=unprivileged_client)
-        dv.wait_for_dv_success(timeout=TIMEOUT_1MIN, stop_status_func=dv_stop_status_restart_threshold, dv=dv)
+        dv.wait_for_dv_success(timeout=TIMEOUT_1MIN)
         create_vm_from_dv(client=unprivileged_client, dv=dv, start=True)
 
 
@@ -460,7 +460,7 @@ def test_virtctl_image_upload_dv_in_pudn_namespace(
     ) as res:
         check_upload_virtctl_result(result=res)
         dv = DataVolume(namespace=udn_namespace_for_dv_upload.name, name=dv_name, client=admin_client)
-        dv.wait_for_dv_success(timeout=TIMEOUT_1MIN, stop_status_func=dv_stop_status_restart_threshold, dv=dv)
+        dv.wait_for_dv_success(timeout=TIMEOUT_1MIN)
 
 
 @pytest.mark.tier3
