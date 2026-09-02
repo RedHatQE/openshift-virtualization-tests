@@ -123,6 +123,20 @@ Comment on your GitHub PR:
 
 This triggers CodeRabbit to analyze the PR's changed files and post an inline review comment with a test execution plan (smoke/gating impact, affected tests to run).
 
+### Re-run smoke tests
+
+Comment on your GitHub PR (OWNER / MEMBER / COLLABORATOR only):
+
+```bash
+/rerun-smoke
+```
+
+This adds the `retest-smoke` label so Jenkins job `github-events-listener` can pick up a smoke re-run (Jenkins typically removes the label after processing).
+If `retest-smoke` is already on the PR and was added less than 4 hours ago, the workflow skips re-adding the label and logs guidance to check that Jenkins job.
+If the label is still present and older than 4 hours, the workflow removes and re-adds it so Jenkins sees a fresh labeled event.
+A thumbs-up on the comment means the workflow accepted the request and added or refreshed the label.
+If the request is skipped (4-hour cooldown, or label present without usable label history), the thumbs-up is replaced with 👎 — check the workflow Action logs and Jenkins job `github-events-listener`.
+
 ### Run the tests via a Jenkins job
 
 #### Build and push a container with your changes

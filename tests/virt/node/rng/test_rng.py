@@ -7,6 +7,7 @@ import shlex
 import pytest
 from pyhelper_utils.shell import run_ssh_commands
 
+from utilities.constants.timeouts import TIMEOUT_2MIN
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 
@@ -16,6 +17,7 @@ def rng_vm(unprivileged_client, namespace):
     with VirtualMachineForTests(
         name=name,
         namespace=namespace.name,
+        client=unprivileged_client,
         body=fedora_vm_body(name=name),
     ) as vm:
         running_vm(vm=vm)
@@ -38,6 +40,7 @@ def test_vm_with_rng(rng_vm):
     rng_output = run_ssh_commands(
         host=rng_vm.ssh_exec,
         commands=rng_commnds,
+        wait_timeout=TIMEOUT_2MIN,
     )
     assert set(rng_output[:2]) == {"1\n"}, f"Expected:1, actual: {rng_output[:2]}"
     assert rng_output[-1].strip() == "virtio_rng.0", f"rng_current: {rng_output[0]}"

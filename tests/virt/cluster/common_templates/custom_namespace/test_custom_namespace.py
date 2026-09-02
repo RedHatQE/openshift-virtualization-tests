@@ -133,6 +133,7 @@ class TestCustomNamespace:
     def test_base_templates_exist_in_default_namespace_after_revert(
         self,
         admin_client,
+        unprivileged_client,
         hco_namespace,
         base_templates,
         deleted_base_templates,
@@ -141,7 +142,7 @@ class TestCustomNamespace:
         verify_base_templates_exist_in_namespace(
             client=admin_client,
             original_base_templates=base_templates,
-            namespace=Namespace(name=NamespacesNames.OPENSHIFT),
+            namespace=Namespace(client=unprivileged_client, name=NamespacesNames.OPENSHIFT),
         )
 
     @pytest.mark.polarion("CNV-8152")

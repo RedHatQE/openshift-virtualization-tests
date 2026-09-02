@@ -3,6 +3,7 @@ import copy
 import logging
 import uuid
 from collections.abc import Generator
+from ipaddress import IPv4Interface, IPv6Interface
 from typing import Final
 
 from kubernetes.dynamic import DynamicClient
@@ -43,24 +44,46 @@ LOGGER = logging.getLogger(__name__)
 
 
 def ip_addresses_from_pool(
-    ipv4_pool: Generator[str],
-    ipv6_pool: Generator[str],
-) -> list[str]:
-    """Draw IP addresses from pools according to the cluster network IP stack.
+    ipv4_pool: Generator[IPv4Interface],
+    ipv6_pool: Generator[IPv6Interface],
+) -> list[IPv4Interface | IPv6Interface]:
+    """Draw IP interface objects from pools according to the cluster network IP stack.
 
     Args:
-        ipv4_pool: Generator yielding IPv4 address.
-        ipv6_pool: Generator yielding IPv6 address.
+        ipv4_pool: Generator yielding IPv4Interface addresses.
+        ipv6_pool: Generator yielding IPv6Interface addresses.
 
     Returns:
-        List of IP addresses, one per IP family supported by the cluster.
+        List of IPv4Interface/IPv6Interface objects, one per supported IP family.
     """
-    addresses = []
+    addresses: list[IPv4Interface | IPv6Interface] = []
     if ipv4_supported_cluster():
         addresses.append(next(ipv4_pool))
     if ipv6_supported_cluster():
         addresses.append(next(ipv6_pool))
     return addresses
+
+
+def localnet_cloudinit(
+    network_data: cloudinit.NetworkData,
+    runcmd: list[str] | None = None,
+) -> CloudInitNoCloud:
+    """Build a CloudInitNoCloud for a localnet VM.
+
+    Sets users=[] to prevent cloud-init from overriding the default OS user credentials.
+
+    Args:
+        network_data: Cloud-init network configuration to apply.
+        runcmd: Commands to run on first boot via cloud-init runcmd. None means no extra commands.
+
+    Returns:
+        CloudInitNoCloud configured with the given network and user data.
+    """
+    userdata = cloudinit.UserData(users=[], runcmd=runcmd)
+    return CloudInitNoCloud(
+        networkData=cloudinit.asyaml(no_cloud=network_data),
+        userData=cloudinit.format_cloud_config(userdata=userdata),
+    )
 
 
 def localnet_vm(
@@ -69,8 +92,7 @@ def localnet_vm(
     client: DynamicClient,
     networks: list[Network],
     interfaces: list[Interface],
-    network_data: cloudinit.NetworkData | None = None,
-    runcmd: list[str] | None = None,
+    cloud_init: CloudInitNoCloud | None = None,
     affinity: Affinity | None = None,
     vm_labels: dict[str, str] | None = None,
 ) -> BaseVirtualMachine:
@@ -82,41 +104,22 @@ def localnet_vm(
     - Based on a standard Fedora VM template.
 
     Args:
-        namespace (str): The namespace where the VM should be created.
-        name (str): The name of the VM.
-        client (DynamicClient): The Kubernetes dynamic client for resource creation.
-        networks (list[Network]): List of Network objects defining the networks to attach.
+        namespace: The namespace where the VM should be created.
+        name: The name of the VM.
+        client: The Kubernetes dynamic client for resource creation.
+        networks: List of Network objects defining the networks to attach.
             Each Network should have a name and configuration.
-        interfaces (list[Interface]): List of Interface objects defining the interface configurations.
+        interfaces: List of Interface objects defining the interface configurations.
             Each Interface should have a name matching a Network, and additional configuration and state.
-        network_data (cloudinit.NetworkData | None): Cloud-init NetworkData object containing the network
-            configuration for the VM interfaces. If None, no network configuration is applied via cloud-init.
-        runcmd (list[str] | None): Commands to run on first boot via cloud-init runcmd. None means no
-            extra commands are injected.
-        affinity (Affinity | None): Optional Affinity object for VM scheduling. Controls the VM scheduling
-            location. If None, no affinity constraints are applied.
-        vm_labels (dict[str, str] | None): Optional labels to apply to the VM template metadata.
+        cloud_init: Optional pre-composed cloud-init configuration.
+            If None, no cloud-init configuration is applied.
+        affinity: Optional Affinity object for VM scheduling. If None, no affinity constraints are applied.
+        vm_labels: Optional labels to apply to the VM template metadata.
             These labels are set on the VMI pod and can be used for affinity/anti-affinity matching.
             If None, no additional labels are applied beyond LOCALNET_TEST_LABEL.
 
     Returns:
         BaseVirtualMachine: The configured VM object ready for creation.
-
-    Example:
-        >>> networks = [
-        ...     Network(name="net1", multus=Multus(networkName="physical-net1")),
-        ...     Network(name="net2", multus=Multus(networkName="physical-net2")),
-        ... ]
-        >>> interfaces = [
-        ...     Interface(name="net1", bridge={}, state="up"),
-        ...     Interface(name="net2", bridge={}, state="up"),
-        ... ]
-        >>> network_data = cloudinit.NetworkData(ethernets={
-        ...     "eth0": cloudinit.EthernetDevice(addresses=["172.16.1.1/24"]),
-        ...     "eth1": cloudinit.EthernetDevice(addresses=["172.16.2.1/24"]),
-        ... })
-        >>> vm = localnet_vm(namespace="test-localnet", name="vm1", client=client,
-        ...                   networks=networks, interfaces=interfaces, network_data=network_data)
     """
     spec = base_vmspec()
     spec.template.metadata = spec.template.metadata or Metadata()
@@ -130,15 +133,8 @@ def localnet_vm(
     vmi_spec.domain.devices = vmi_spec.domain.devices or Devices()
     vmi_spec.domain.devices.interfaces = interfaces
 
-    if network_data is not None:
-        # Prevents cloud-init from overriding the default OS user credentials
-        userdata = cloudinit.UserData(users=[], runcmd=runcmd)
-        disk, volume = cloudinitdisk_storage(
-            data=CloudInitNoCloud(
-                networkData=cloudinit.asyaml(no_cloud=network_data),
-                userData=cloudinit.format_cloud_config(userdata=userdata),
-            )
-        )
+    if cloud_init is not None:
+        disk, volume = cloudinitdisk_storage(data=cloud_init)
         vmi_spec = add_volume_disk(vmi_spec=vmi_spec, volume=volume, disk=disk)
 
     if affinity is not None:

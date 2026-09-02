@@ -18,6 +18,7 @@ from pyhelper_utils.shell import run_ssh_commands
 
 from tests.os_params import FEDORA_LATEST, RHEL_LATEST, RHEL_LATEST_LABELS
 from tests.virt.cluster.common_templates.utils import check_vm_xml_tablet_device, set_vm_tablet_device_dict
+from utilities.constants.timeouts import TIMEOUT_2MIN
 from utilities.constants.virt import VIRTIO
 from utilities.virt import VirtualMachineForTestsFromTemplate, migrate_vm_and_verify
 
@@ -32,6 +33,7 @@ def check_vm_system_tablet_device(vm, expected_device):
     output = run_ssh_commands(
         host=vm.ssh_exec,
         commands=shlex.split(r"grep -rs '^QEMU *.* Tablet' /sys/devices ||true"),
+        wait_timeout=TIMEOUT_2MIN,
     )[0]
 
     assert re.search(rf"/sys/devices/pci(.*)QEMU {expected_device} Tablet", output), (

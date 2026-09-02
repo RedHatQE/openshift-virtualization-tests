@@ -18,6 +18,7 @@ from tests.virt.constants import WINDOWS_10_WSL
 from utilities.constants import Images
 from utilities.constants.timeouts import (
     TCP_TIMEOUT_30SEC,
+    TIMEOUT_2MIN,
     TIMEOUT_15MIN,
 )
 from utilities.constants.virt import STRESS_CPU_MEM_IO_COMMAND
@@ -75,6 +76,7 @@ def start_file_transfer(vm):
         host=vm.ssh_exec,
         commands=shlex.split(f"{'wsl' if 'windows' in vm.name else ''} dd if=/dev/zero of={file_name} bs=100M count=1"),
         tcp_timeout=TCP_TIMEOUT_30SEC,
+        wait_timeout=TIMEOUT_2MIN,
     )
 
     stop_event = Event()
@@ -125,5 +127,6 @@ def test_vm_fedora_oom(admin_client, fedora_oom_vm, fedora_oom_stress_started):
 )
 @pytest.mark.special_infra
 @pytest.mark.high_resource_vm
+@pytest.mark.windows
 def test_vm_windows_oom(admin_client, vm_with_memory_load, windows_oom_stress_started):
     verify_vm_not_crashed(vm=vm_with_memory_load, admin_client=admin_client)

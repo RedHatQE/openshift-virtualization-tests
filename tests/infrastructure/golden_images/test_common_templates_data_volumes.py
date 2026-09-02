@@ -25,7 +25,7 @@ def vm_from_golden_image_multi_storage(
         name="vm-from-golden-image",
         namespace=namespace.name,
         client=unprivileged_client,
-        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL),
+        vm_instance_type=VirtualMachineClusterInstancetype(client=unprivileged_client, name=U1_SMALL),
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=golden_image_data_source_multi_storage_scope_function,
             storage_class=storage_class_name_scope_function,

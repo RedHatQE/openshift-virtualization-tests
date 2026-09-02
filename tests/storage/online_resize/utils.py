@@ -156,6 +156,7 @@ def vm_restore(vm, name):
         namespace=vm.namespace,
         vm_name=vm.name,
         snapshot_name=name,
+        client=vm.client,
     ) as restore:
         restore.wait_restore_done()
         running_vm(vm=vm)

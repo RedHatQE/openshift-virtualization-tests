@@ -40,6 +40,7 @@ def verify_tpm_in_os(vm):
             r"wmic /namespace:\\root\cimv2\security\microsofttpm path Win32_Tpm get IsEnabled_InitialValue",
             posix=False,
         ),
+        wait_timeout=TIMEOUT_2MIN,
     )[0]
     assert "TRUE" in vtpm_enabled, "TPM is not present/enabled in OS!"
 
@@ -67,17 +68,27 @@ def enable_bitlocker(vm):
         run_ssh_commands(
             host=vm.ssh_exec,
             commands=shlex.split('powershell -c "install-windowsfeature bitlocker"'),
+            wait_timeout=TIMEOUT_2MIN,
         )
         restart_vm_wait_for_running_vm(vm=vm)
 
-    run_ssh_commands(host=vm.ssh_exec, commands=shlex.split('powershell -c "initialize-tpm"'))
-    run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("manage-bde -on c: -s"))
+    run_ssh_commands(
+        host=vm.ssh_exec,
+        commands=shlex.split('powershell -c "initialize-tpm"'),
+        wait_timeout=TIMEOUT_2MIN,
+    )
+    run_ssh_commands(
+        host=vm.ssh_exec,
+        commands=shlex.split("manage-bde -on c: -s"),
+        wait_timeout=TIMEOUT_2MIN,
+    )
     _wait_encryption_finish(vm=vm)
 
 
 @pytest.fixture(scope="class")
 def file_system_persistent_storage_hco_config(
     request,
+    admin_client,
     hyperconverged_resource_scope_module,
     rwx_fs_available_storage_classes_names,
 ):
@@ -89,6 +100,7 @@ def file_system_persistent_storage_hco_config(
         storage_class = py_config["default_storage_class"]
 
     with update_hco_with_persistent_storage_config(
+        admin_client=admin_client,
         hco_cr=hyperconverged_resource_scope_module,
         storage_class=storage_class,
     ):
@@ -155,6 +167,7 @@ def migrated_encrypted_vm(
     ],
     indirect=True,
 )
+@pytest.mark.windows
 class TestBitLockerVTPM:
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::persistent_tpm")
     @pytest.mark.polarion("CNV-10318")

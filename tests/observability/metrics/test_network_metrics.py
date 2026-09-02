@@ -33,6 +33,7 @@ class TestVmiNetworkMetricsLinux:
 
 
 @pytest.mark.tier3
+@pytest.mark.windows
 class TestVmiNetworkMetricsWindows:
     @pytest.mark.polarion("CNV-11846")
     def test_kubevirt_vmi_network_traffic_bytes_total_windows_vm(

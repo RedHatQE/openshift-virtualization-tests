@@ -155,7 +155,6 @@ class TestVmWithInstanceTypeAndPref:
 
     @pytest.mark.dependency(depends=["start_vm_with_instance_type_and_preference"])
     @pytest.mark.polarion("CNV-9821")
-    @pytest.mark.s390x
     def test_validate_clock_values(self, rhel_vm_with_instance_type_and_preference):
         clock_dict = rhel_vm_with_instance_type_and_preference.vmi.instance.to_dict()["spec"]["domain"]["clock"]
         vmi_clock_values = [

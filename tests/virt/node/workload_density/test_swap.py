@@ -80,7 +80,7 @@ def node_affinity_for_swap_label():
 
 @pytest.fixture(scope="package")
 def wasp_agent_daemonset(hco_namespace):
-    yield DaemonSet(name="wasp-agent", namespace=hco_namespace.name)
+    yield DaemonSet(client=hco_namespace.client, name="wasp-agent", namespace=hco_namespace.name)
 
 
 @pytest.fixture(scope="package")
@@ -119,6 +119,7 @@ def calculated_vm_memory_size(available_memory_per_node, node_with_least_availab
 
 @pytest.fixture(scope="class")
 def vm_for_swap_usage_test(
+    unprivileged_client,
     namespace,
     cpu_for_migration,
     calculated_vm_memory_size,
@@ -127,6 +128,7 @@ def vm_for_swap_usage_test(
     with VirtualMachineForTests(
         name="vm-for-swap-usage-test",
         namespace=namespace.name,
+        client=unprivileged_client,
         cpu_model=cpu_for_migration,
         memory_guest=calculated_vm_memory_size,
         image=Images.Fedora.FEDORA_CONTAINER_IMAGE,
@@ -145,10 +147,11 @@ def swap_vm_stress_started(vm_for_swap_usage_test):
 
 
 @pytest.fixture()
-def vm_with_different_qos(request, namespace):
+def vm_with_different_qos(request, unprivileged_client, namespace):
     with VirtualMachineForTests(
         name=request.param["name"],
         namespace=namespace.name,
+        client=unprivileged_client,
         memory_requests=Images.Fedora.DEFAULT_MEMORY_SIZE,
         memory_limits=request.param.get("memory_limits"),
         image=Images.Fedora.FEDORA_CONTAINER_IMAGE,

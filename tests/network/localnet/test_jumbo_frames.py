@@ -3,7 +3,7 @@ import pytest
 from libs.net.ip import ICMP_HEADER_SIZE, TCP_HEADER_SIZE, filter_link_local_addresses, ip_header_size
 from libs.net.traffic_generator import client_server_active_connection, is_tcp_connection
 from libs.net.vmspec import lookup_iface_status
-from tests.network.localnet.liblocalnet import LOCALNET_OVS_BRIDGE_INTERFACE
+from tests.network.libs.localnet import LOCALNET_OVS_BRIDGE_INTERFACE
 from utilities.virt import vm_console_run_commands
 
 pytestmark = [
