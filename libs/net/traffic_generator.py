@@ -1,12 +1,14 @@
 import contextlib
+import ipaddress
 import logging
+import uuid
 from abc import ABC, abstractmethod
 from collections.abc import Generator
 from typing import Final, Self
 
 from ocp_resources.pod import Pod
 from ocp_utilities.exceptions import CommandExecFailed
-from timeout_sampler import retry
+from timeout_sampler import TimeoutExpiredError, retry
 
 from libs.net.ip import filter_link_local_addresses
 from libs.net.vmspec import lookup_iface_status, lookup_iface_status_ip
@@ -24,9 +26,17 @@ class BaseTcpClient(ABC):
     """Base abstract class for network traffic generator client."""
 
     def __init__(self, server_ip: str, server_port: int):
+        """Build the base iperf3 client command.
+
+        --connect-timeout is in milliseconds; --interval 0 disables the periodic
+        per-second throughput reports.
+        """
         self._server_ip = server_ip
         self.server_port = server_port
-        self._cmd = f"{_IPERF_BIN} --client {self._server_ip} --time 0 --port {self.server_port} --connect-timeout 300"
+        self._cmd = (
+            f"{_IPERF_BIN} --client {self._server_ip} --time 0 --port {self.server_port} "
+            f"--connect-timeout 5000 --interval 0"
+        )
 
     @property
     def server_ip(self) -> str:
@@ -121,13 +131,26 @@ class VMTcpClient(BaseTcpClient):
         self._vm = vm
         self._cmd += f" --bind-dev {bind_dev}" if bind_dev else ""
         self._cmd += f" --set-mss {maximum_segment_size}" if maximum_segment_size else ""
+        # Unique per instance so concurrent clients on the same VM never share a log.
+        self._log_path = f"/tmp/{_IPERF_BIN}_client_{uuid.uuid4().hex}.log"
 
     def __enter__(self) -> Self:
+        """Start the iperf3 client in the background, capturing its output to a log file.
+
+        stdbuf forces line-buffered output; otherwise iperf3 block-buffers stdout when
+        redirected and the connection banner is never flushed. On readiness failure the client
+        is stopped here, since __exit__ does not run when __enter__ raises and the client may
+        have connected and be generating traffic despite the failed readiness check.
+        """
         self._vm.console(
-            commands=[f"{self._cmd} &"],
+            commands=[f"stdbuf -oL -eL {self._cmd} >{self._log_path} 2>&1 &"],
             timeout=_DEFAULT_CMD_TIMEOUT_SEC,
         )
-        self._ensure_is_running()
+        try:
+            self._ensure_is_running()
+        except TimeoutExpiredError:
+            _stop_process(vm=self._vm, cmd=self._cmd)
+            raise
 
         return self
 
@@ -139,7 +162,9 @@ class VMTcpClient(BaseTcpClient):
         return self._vm
 
     def is_running(self) -> bool:
-        return _is_process_running(vm=self._vm, cmd=self._cmd)
+        return _is_connection_established(
+            vm=self._vm, server_ip=self._server_ip, server_port=self.server_port, log_path=self._log_path
+        )
 
     @retry(wait_timeout=30, sleep=2, exceptions_dict={})
     def _ensure_is_running(self) -> bool:
@@ -147,8 +172,9 @@ class VMTcpClient(BaseTcpClient):
 
 
 def _stop_process(vm: BaseVirtualMachine, cmd: str) -> None:
+    # `|| true` so a process that already exited is not treated as an error.
     try:
-        vm.console(commands=[f"pkill -f '{cmd}'"], timeout=_DEFAULT_CMD_TIMEOUT_SEC)
+        vm.console(commands=[f"pkill -f '{cmd}' || true"], timeout=_DEFAULT_CMD_TIMEOUT_SEC)
     except CommandExecFailed as e:
         LOGGER.warning(str(e))
 
@@ -162,6 +188,57 @@ def _is_process_running(vm: BaseVirtualMachine, cmd: str) -> bool:
         return True
     except CommandExecFailed:
         return False
+
+
+def _is_connection_established(vm: BaseVirtualMachine, server_ip: str, server_port: int, log_path: str) -> bool:
+    """Check whether the client currently holds an established connection to the server.
+
+    Queries the live socket state rather than relying on client-process liveness (a running
+    process may still be attempting - or have failed - to connect) or on the client output (a
+    past connection banner does not prove the connection is still up after a disruptive event
+    such as migration). When no established connection is found, the captured client output is
+    logged to ease debugging.
+
+    Args:
+        vm: The virtual machine running the client.
+        server_ip: Destination IP address of the server the client connects to.
+        server_port: Port on which the server listens for connections.
+        log_path: Path on the VM holding the iperf3 client output, logged on failure.
+
+    Returns:
+        True if an established connection to the server currently exists, False otherwise.
+    """
+    # ss requires an IPv6 destination literal to be bracketed; IPv4 is used as-is.
+    dst = f"[{server_ip}]" if ipaddress.ip_address(server_ip).version == 6 else server_ip
+    try:
+        vm.console(
+            commands=[f"ss -Ht state established '( dport = :{server_port} and dst {dst} )' | grep -q ."],
+            timeout=_DEFAULT_CMD_TIMEOUT_SEC,
+        )
+        return True
+    except CommandExecFailed:
+        LOGGER.warning(
+            f"iperf3 client on {vm.name} has no established connection to {server_ip}:{server_port}. "
+            f"Client output:\n{_read_client_output(vm=vm, log_path=log_path)}"
+        )
+        return False
+
+
+def _read_client_output(vm: BaseVirtualMachine, log_path: str) -> str:
+    """Return the iperf3 client output captured on the VM, or a placeholder when unreadable.
+
+    The captured lines include the echoed command and shell prompt, which are dropped so only
+    the iperf3 output remains.
+    """
+    read_output_cmd = f"cat {log_path}"
+    try:
+        output = vm.console(commands=[read_output_cmd], timeout=_DEFAULT_CMD_TIMEOUT_SEC)
+    except CommandExecFailed as client_output_read_error:
+        return f"<unreadable: {client_output_read_error}>"
+
+    return (
+        "\n".join(line for line in output[read_output_cmd] if line.strip() and read_output_cmd not in line) or "empty"
+    )
 
 
 class PodTcpClient(BaseTcpClient):
