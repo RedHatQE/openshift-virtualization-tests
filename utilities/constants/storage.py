@@ -86,11 +86,10 @@ WILDCARD_CRON_EXPRESSION = "* * * * *"
 OUTDATED = "Outdated"
 # Built-in CNV ClusterRole granting create/clone permissions in an OS-images namespace
 OS_IMAGES_EDIT_CLUSTER_ROLE = "os-images.kubevirt.io:edit"
-# Granular built-in ClusterRoles that together grant the least-privilege permissions to clone
-# golden images across namespaces (the combination recommended to customers): read access to the
-# source images (``view``) plus permission to clone from the source PVCs (``cdi.kubevirt.io:clone-source``)
-VIEW_CLUSTER_ROLE = "view"
-CDI_CLONE_SOURCE_CLUSTER_ROLE = "cdi.kubevirt.io:clone-source"
+# Built-in CDI ClusterRole (shipped by the CDI operator) granting the ``datavolumes/source`` permission
+# required to clone golden images across namespaces. Bind it in the source (OS-images) namespace to the
+# user/service account that performs the clone. See kubevirt/containerized-data-importer#4219.
+CDI_CLONE_SOURCER_CLUSTER_ROLE = "cdi.kubevirt.io:clone-sourcer"
 
 # Storage capacity metric field names
 CAPACITY = "capacity"
