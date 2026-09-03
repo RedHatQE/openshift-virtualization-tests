@@ -200,12 +200,6 @@ def updated_default_storage_profile(default_sc, admin_client):
 
 
 @pytest.fixture()
-def skip_if_no_ocs_rbd_non_virt_sc(cluster_storage_classes_names):
-    if StorageClassNames.CEPH_RBD not in cluster_storage_classes_names:
-        pytest.skip(f"Skip due to no storageclass  {StorageClassNames.CEPH_RBD} in the cluster")
-
-
-@pytest.fixture()
 def ocs_rbd_non_virt_vm_for_checkups_test(admin_client, checkups_namespace):
     with create_cirros_vm(
         storage_class=StorageClassNames.CEPH_RBD,
