@@ -1,0 +1,236 @@
+name: "Component Builder Build"
+on:
+  workflow_call:
+    inputs:
+      fedora_version:
+        description: "Fedora version string (e.g. '43')"
+        required: true
+        type: string
+      fedora_image_base:
+        description: "Base name of the Fedora cloud image"
+        required: true
+        type: string
+      fedora_checksum_base:
+        description: "Base name of the Fedora checksum file"
+        required: true
+        type: string
+      matrix:
+        description: "JSON matrix string consumed by the build job via fromJson()"
+        required: true
+        type: string
+      remote_repository:
+        description: "Remote container repository used for tagging (e.g. quay.io/org/repo)"
+        required: true
+        type: string
+      no_secrets:
+        description: "Set to true to build without real credentials (Check workflow)"
+        required: false
+        type: boolean
+        default: false
+      upload_artifact:
+        description: "Set to true to save the built image as a workflow artifact"
+        required: false
+        type: boolean
+        default: false
+      push_image:
+        description: "Set to true to push the built image to the remote registry"
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      BITWARDEN_ORGANIZATION_ID:
+        required: false
+      BITWARDEN_ACCESS_TOKEN:
+        required: false
+      QUAY_USER:
+        required: false
+      QUAY_TOKEN:
+        required: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(inputs.matrix) }}
+    env:
+      FEDORA_VERSION: ${{ inputs.fedora_version }}
+      FEDORA_IMAGE_BASE: ${{ inputs.fedora_image_base }}
+      FEDORA_CHECKSUM_BASE: ${{ inputs.fedora_checksum_base }}
+      CPU_ARCH: ${{ matrix.arch }}
+      FULL_EMULATION: "true"
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install dependencies for VM build
+        env:
+          QEMU_PACKAGE: ${{ matrix.qemu_package }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            $QEMU_PACKAGE \
+            libvirt-daemon-system \
+            virtinst cloud-image-utils \
+            libguestfs-tools
+
+      - name: Tweak hosted runner to enable 'virt-sysprep'
+        # https://bugs.launchpad.net/ubuntu/+source/linux/+bug/759725
+        run: sudo chmod 0644 /boot/vmlinuz*
+
+      - name: Fetch base Fedora image
+        working-directory: ./containers/fedora
+        env:
+          FEDORA_URL: ${{ matrix.fedora_url }}
+          URL_ARCH: ${{ matrix.url_arch }}
+        run: |
+          fedora_image="${FEDORA_IMAGE_BASE}.${URL_ARCH}.qcow2"
+          wget -q "${FEDORA_URL}/${fedora_image}"
+          fedora_checksum="${FEDORA_CHECKSUM_BASE}-${URL_ARCH}-CHECKSUM"
+          wget -q "${FEDORA_URL}/${fedora_checksum}" -O CHECKSUM
+
+      - name: Verify Fedora CHECKSUM OpenPGP signature and image digest
+        working-directory: ./containers/fedora
+        env:
+          URL_ARCH: ${{ matrix.url_arch }}
+          # Fedora 43 primary release signing key fingerprint.
+          # Source: https://fedoraproject.org/security
+          # Fingerprint must be updated when the Fedora version changes.
+          FEDORA_SIGNING_KEY_FINGERPRINT: "C6E7F081CF80E13146676E88829B606631645531"
+        run: |
+          set -euo pipefail
+          FEDORA_IMAGE="${FEDORA_IMAGE_BASE}.${URL_ARCH}.qcow2"
+
+          # ---------------------------------------------------------------
+          # Step 1: Import the Fedora release signing key from the official
+          # Fedora site (separate trust root — not the same mirror that
+          # served the qcow2 and CHECKSUM).  Then verify that the imported
+          # key's fingerprint exactly matches the pinned value above.
+          # ---------------------------------------------------------------
+          GPG_HOME="$(mktemp -d)"
+          chmod 0700 "${GPG_HOME}"
+          # Fetch the full Fedora keyring from the authoritative source into a
+          # temporary import-only homedir.  We never verify against this
+          # multi-key bundle; it is only used to extract the one pinned key.
+          curl -fsSL --proto '=https' --tlsv1.2 \
+            "https://fedoraproject.org/fedora.gpg" \
+            -o "${GPG_HOME}/fedora.gpg"
+          # Import all keys from the bundle so we can query them.
+          gpg --homedir "${GPG_HOME}" --import "${GPG_HOME}/fedora.gpg"
+          # Confirm the pinned fingerprint is present before exporting.
+          if ! gpg --homedir "${GPG_HOME}" --fingerprint --with-colons \
+               | grep -q "^fpr:.*:${FEDORA_SIGNING_KEY_FINGERPRINT}:$"; then
+            echo "ERROR: Pinned fingerprint ${FEDORA_SIGNING_KEY_FINGERPRINT} not found in fedora.gpg"
+            rm -rf "${GPG_HOME}"
+            exit 1
+          fi
+          echo "Signing key fingerprint verified: ${FEDORA_SIGNING_KEY_FINGERPRINT}"
+
+          # ---------------------------------------------------------------
+          # Step 2: Build a dedicated keyring that contains ONLY the pinned
+          # release key (and its signing subkeys).  gpgv will then accept
+          # signatures from that single key and nothing else.
+          # ---------------------------------------------------------------
+          PINNED_KEYRING="${GPG_HOME}/pinned.gpg"
+          gpg --homedir "${GPG_HOME}" \
+            --export --armor "${FEDORA_SIGNING_KEY_FINGERPRINT}" \
+            | gpg --dearmor > "${PINNED_KEYRING}"
+
+          # ---------------------------------------------------------------
+          # Step 3: Verify the OpenPGP clearsignature on the CHECKSUM file
+          # using gpgv and the single-key keyring.  gpgv has no trust model
+          # and no keyring fallback — only keys in --keyring are accepted.
+          # ---------------------------------------------------------------
+          gpgv --keyring "${PINNED_KEYRING}" CHECKSUM \
+            || { echo "ERROR: OpenPGP signature verification failed for CHECKSUM"; rm -rf "${GPG_HOME}"; exit 1; }
+          echo "OpenPGP signature on CHECKSUM is valid (verified against pinned key only)"
+          rm -rf "${GPG_HOME}"
+
+          # ---------------------------------------------------------------
+          # Step 4: Extract the SHA256 digest and verify the qcow2 image.
+          # The Fedora CHECKSUM file uses the format: SHA256 (filename) = <digest>
+          # sha256sum expects: <digest>  <filename>
+          # ---------------------------------------------------------------
+          grep "SHA256 (${FEDORA_IMAGE})" CHECKSUM \
+            | sed 's/SHA256 (\(.*\)) = \(.*\)/\2  \1/' \
+            | sha256sum --check --status \
+            || { echo "ERROR: SHA256 digest mismatch for ${FEDORA_IMAGE}"; exit 1; }
+          echo "SHA256 digest verified for ${FEDORA_IMAGE}"
+          rm CHECKSUM
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.1
+        with:
+          version: "0.12.7"
+
+      - name: Install Bitwarden Secrets Manager CLI
+        if: ${{ !inputs.no_secrets }}
+        env:
+          BWS_VERSION: "2.1.0"
+        run: |
+          archive="bws-x86_64-unknown-linux-gnu-${BWS_VERSION}.zip"
+          checksums_file="bws-sha256-checksums-${BWS_VERSION}.txt"
+          base_url="https://github.com/bitwarden/sdk-sm/releases/download/bws-v${BWS_VERSION}"
+          curl -fsSL "${base_url}/${archive}" -o "${archive}"
+          curl -fsSL "${base_url}/${checksums_file}" -o bws-checksums.txt
+          grep "${archive}" bws-checksums.txt | sha256sum --check --status \
+            || { echo "ERROR: SHA256 digest mismatch for ${archive}"; exit 1; }
+          echo "Checksum verified for ${archive}"
+          tmpdir="$(mktemp -d)"
+          unzip -o "${archive}" -d "${tmpdir}"
+          sudo install -m 0755 "${tmpdir}/bws" /usr/local/bin/bws
+          rm -rf "${tmpdir}" "${archive}" bws-checksums.txt
+          bws --version
+
+      - name: Create VM
+        working-directory: ./containers/fedora
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+          NO_SECRETS: ${{ inputs.no_secrets && 'true' || '' }}
+          ORGANIZATION_ID: ${{ secrets.BITWARDEN_ORGANIZATION_ID }}
+          ACCESS_TOKEN: ${{ secrets.BITWARDEN_ACCESS_TOKEN }}
+          FEDORA_IMAGE: "${{ inputs.fedora_image_base }}.${{ matrix.url_arch }}.qcow2"
+        run: ./build.sh
+
+      - name: Save container image as tarball
+        if: ${{ inputs.upload_artifact }}
+        env:
+          local_repository: "localhost/fedora"
+          arch_tag: "${{ env.FEDORA_VERSION }}-${{ env.CPU_ARCH }}"
+          REMOTE_REPOSITORY: ${{ inputs.remote_repository }}
+        run: |
+          mkdir -p artifacts
+          podman tag "${local_repository}":"${arch_tag}" "${REMOTE_REPOSITORY}":"${arch_tag}"
+          podman save -o "artifacts/fedora-image-${CPU_ARCH}.tar" "${REMOTE_REPOSITORY}":"${arch_tag}"
+          echo "Saved image to artifacts/fedora-image-${CPU_ARCH}.tar"
+
+      - name: Upload container image artifact
+        if: ${{ inputs.upload_artifact }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: fedora-container-image-${{ env.CPU_ARCH }}
+          path: artifacts/fedora-image-${{ env.CPU_ARCH }}.tar
+          retention-days: 5
+          compression-level: 0
+
+      - name: Log in to quay.io
+        if: ${{ inputs.push_image }}
+        env:
+          QUAY_USER: ${{ secrets.QUAY_USER }}
+          QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
+        run: printf '%s' "$QUAY_TOKEN" | podman login -u "$QUAY_USER" --password-stdin quay.io
+
+      - name: Tag & Push image to staging
+        if: ${{ inputs.push_image }}
+        env:
+          local_repository: "localhost/fedora"
+          arch_tag: "${{ env.FEDORA_VERSION }}-${{ env.CPU_ARCH }}"
+          REMOTE_REPOSITORY: ${{ inputs.remote_repository }}
+        run: |
+          podman tag "${local_repository}":"${arch_tag}" "${REMOTE_REPOSITORY}":"${arch_tag}"
+          podman push "${REMOTE_REPOSITORY}":"${arch_tag}"
