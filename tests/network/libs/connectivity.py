@@ -1,10 +1,18 @@
 import ipaddress
+import re
 from typing import Final
 
 from timeout_sampler import TimeoutExpiredError, retry
 
 from libs.net.traffic_generator import IPERF_SERVER_PORT, TcpServer, VMTcpClient
+from libs.net.vmspec import lookup_iface_status_ip
 from libs.vm.vm import BaseVirtualMachine
+from utilities.virt import vm_console_run_commands
+
+
+class PacketLossSummaryNotFoundError(Exception):
+    """Raised when ping output does not contain a packet-loss summary line."""
+
 
 ARP_ISOLATION_SYSCTL_CMD: Final[list[str]] = [
     # Only answer ARP for the IP assigned to the receiving interface —
@@ -31,6 +39,39 @@ def build_ping_command(dst_ip: str, count: int, timeout: int) -> str:
     ip = ipaddress.ip_address(address=dst_ip)
     ping_ipv6_flag = " -6" if ip.version == 6 else ""
     return f"ping{ping_ipv6_flag} {dst_ip} -c {count} -w {timeout}"
+
+
+def ping_between_vms(
+    source_vm: BaseVirtualMachine,
+    destination_vm: BaseVirtualMachine,
+    iface_name: str = "default",
+    ip_family: int = 4,
+) -> str:
+    """Ping the destination VM from the source VM over the given interface.
+
+    The ping command is not validated by its exit code, so total packet loss is reflected
+    in the returned output rather than raising.
+
+    Args:
+        source_vm: VM that initiates the ping.
+        destination_vm: VM whose interface IP is the ping target.
+        iface_name: Interface on the destination VM whose status IP is pinged
+            ("default" is the pod network).
+        ip_family: IP version to use (4 or 6).
+
+    Returns:
+        The raw ping output.
+    """
+    ping_timeout = 15
+    dst_ip = lookup_iface_status_ip(vm=destination_vm, iface_name=iface_name, ip_family=ip_family)
+    ping_command = build_ping_command(dst_ip=str(dst_ip), count=10, timeout=ping_timeout)
+    output = vm_console_run_commands(
+        vm=source_vm,
+        commands=[ping_command],
+        timeout=ping_timeout + 5,
+        return_code_validation=False,
+    )
+    return "\n".join(output[ping_command])
 
 
 @retry(wait_timeout=60, sleep=5, exceptions_dict={})
@@ -73,3 +114,40 @@ def poll_tcp_connectivity(
     except TimeoutExpiredError:
         reachable = False
     return reachable if expect_connectivity else not reachable
+
+
+def packet_loss_percent_from_ping_output(ping_output: str) -> float:
+    """Return the packet-loss percentage parsed from ping summary output.
+
+    Args:
+        ping_output: The full output of a ping command.
+
+    Returns:
+        The packet-loss percentage (0-100) reported in the statistics line.
+
+    Raises:
+        PacketLossSummaryNotFoundError: If the ping output has no packet-loss summary line.
+    """
+    match = re.search(pattern=r"(\d+(?:\.\d+)?)% packet loss", string=ping_output)
+    if not match:
+        raise PacketLossSummaryNotFoundError(f"No packet-loss summary found in ping output: {ping_output}")
+    return float(match.group(1))
+
+
+def is_destination_vm_pingable(
+    source_vm: BaseVirtualMachine,
+    destination_vm: BaseVirtualMachine,
+) -> bool:
+    """Return whether the destination VM is reachable by ping from the source VM.
+
+    Reachability tolerates partial packet loss.
+
+    Args:
+        source_vm: VM that initiates the ping.
+        destination_vm: VM whose interface IP is the ping target.
+
+    Returns:
+        True if any ping reply was received, False on total packet loss.
+    """
+    ping_output = ping_between_vms(source_vm=source_vm, destination_vm=destination_vm)
+    return packet_loss_percent_from_ping_output(ping_output=ping_output) < 100
