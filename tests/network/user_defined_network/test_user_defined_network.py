@@ -16,8 +16,8 @@ from ocp_resources.utils.constants import TIMEOUT_1MINUTE
 
 from libs.net.traffic_generator import is_tcp_connection
 from libs.net.vmspec import lookup_iface_status_ip, lookup_primary_network
-from tests.network.libs.connectivity import poll_tcp_connectivity
-from tests.network.user_defined_network.libudn import lookup_default_pod_ip
+from tests.network.libs.connectivity import build_ping_command, poll_tcp_connectivity
+from tests.network.user_defined_network.libudn import lookup_default_pod_ip, wait_for_expected_packet_loss
 from utilities.constants.networking import PUBLIC_DNS_SERVER_IP
 from utilities.constants.pytest import QUARANTINED
 from utilities.constants.timeouts import TIMEOUT_1MIN
@@ -146,7 +146,7 @@ class TestPrimaryUdn:
         assert is_tcp_connection(server=server, client=client)
 
     @pytest.mark.polarion("CNV-11432")
-    def test_vm_to_pod_connectivity_on_udn(self, vma_udn, udn_pod):
+    def test_vm_to_pod_connectivity_on_udn(self, vma_udn, allowed_udn_pod):
         """
         Test that a VM reaches a pod on the same primary UDN network (east-west connectivity).
 
@@ -164,16 +164,17 @@ class TestPrimaryUdn:
         Expected:
             - Ping succeeds with 0% packet loss.
         """
-        pod_ip = lookup_default_pod_ip(pod=udn_pod)
+        pod_ip = lookup_default_pod_ip(pod=allowed_udn_pod)
         vma_udn.console(commands=[f"ping -c 3 {pod_ip}"], timeout=TIMEOUT_1MIN)
 
     @pytest.mark.polarion("CNV-11435")
-    def test_network_policy_enforcement_on_primary_udn_interface(self):
+    @pytest.mark.usefixtures("udn_network_policy")
+    def test_network_policy_enforcement_on_primary_udn_interface(self, vma_udn, allowed_udn_pod, denied_udn_pod):
         """
-        Test that a network policy is enforced on the VM primary UDN interface: traffic from
-        an allowed pod is permitted while traffic from a denied pod is blocked.
+        [NEGATIVE] Test that a network policy is enforced on the VM primary UDN interface: traffic
+        from an allowed pod is permitted while traffic from a denied pod is blocked.
 
-        No STP exists for this scenario - tracked via Jira: https://redhat.atlassian.net/browse/CNV-94228 # <skip-jira-utils-check>
+        No STP exists for this scenario - tracked via Jira: https://redhat.atlassian.net/browse/CNV-52883 # <skip-jira-utils-check>
 
         Preconditions:
             - Running under-test VM attached to the primary UDN network.
@@ -192,8 +193,12 @@ class TestPrimaryUdn:
             - Ping from the allowed pod succeeds with 0% packet loss.
             - Ping from the denied pod fails with 100% packet loss.
         """
-
-    test_network_policy_enforcement_on_primary_udn_interface.__test__ = False
+        udn_vm_ip = str(
+            lookup_iface_status_ip(vm=vma_udn, iface_name=lookup_primary_network(vm=vma_udn).name, ip_family=4)
+        )
+        ping_command = build_ping_command(dst_ip=udn_vm_ip, count=3, timeout=10)
+        wait_for_expected_packet_loss(pod=denied_udn_pod, ping_command=ping_command, expected_packet_loss=100)
+        wait_for_expected_packet_loss(pod=allowed_udn_pod, ping_command=ping_command, expected_packet_loss=0)
 
     @pytest.mark.order("last")
     @pytest.mark.usefixtures("vma_udn")
