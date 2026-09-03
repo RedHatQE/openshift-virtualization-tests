@@ -1250,6 +1250,21 @@ class TestGetCnvVersionExplorerUrl:
 
         assert result == "https://version-explorer.com"
 
+    @patch("utilities.pytest_utils.os.environ", {"CNV_VERSION_EXPLORER_URL": "https://version-explorer.com"})
+    @patch("utilities.pytest_utils.LOGGER")
+    def test_get_cnv_version_explorer_url_upgrade_custom_cnv(self, mock_logger):
+        """Test getting CNV version explorer URL with upgrade_custom=cnv"""
+        mock_config = MagicMock()
+        mock_config.getoption.side_effect = lambda option: {
+            "install": False,
+            "upgrade": None,
+            "upgrade_custom": "cnv",
+        }.get(option, False)
+
+        result = get_cnv_version_explorer_url(mock_config)
+
+        assert result == "https://version-explorer.com"
+
     @patch("utilities.pytest_utils.os.environ", {})
     def test_get_cnv_version_explorer_url_missing_env(self):
         """Test error when CNV_VERSION_EXPLORER_URL is missing"""
