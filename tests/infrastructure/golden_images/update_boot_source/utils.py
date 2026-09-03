@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 from packaging.version import Version
 from pytest_testconfig import py_config
-from timeout_sampler import TimeoutExpiredError, TimeoutSampler
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 
 from tests.infrastructure.golden_images.constants import DATA_SOURCE_READY_FOR_CONSUMPTION_MESSAGE
 from utilities.constants import Images
@@ -28,6 +28,7 @@ from utilities.constants.timeouts import (
     TIMEOUT_2MIN,
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
+    TIMEOUT_10MIN,
     TIMEOUT_30SEC,
 )
 from utilities.exceptions import ResourceValueError
@@ -313,3 +314,32 @@ def wait_for_data_source_unchanged_referenced_volume(data_source: DataSource, vo
                 )
     except TimeoutExpiredError:
         return
+
+
+@retry(wait_timeout=TIMEOUT_10MIN, sleep=TIMEOUT_5SEC)
+def wait_for_data_source_updated_referenced_volume(
+    data_source: DataSource,
+    match_volume_name: bool,
+    volume_name: str,
+) -> bool:
+    """Wait for DataSource volume reference to update within a 10-minute window.
+
+    This function polls the DataSource resource to verify its volume reference
+    updates as expected, either by checking for an exact match or verifying
+    that reconciliation occurred (any change from previous value).
+
+    Args:
+        data_source: The DataSource resource to monitor.
+        match_volume_name: If True, wait for volume reference to match volume_name exactly.
+            If False, wait for volume reference to change from volume_name (the previous value).
+        volume_name: When match_volume_name=True, the expected volume name.
+            When match_volume_name=False, the previous volume name that should change.
+
+    Raises:
+        TimeoutExpiredError: If the expected condition is not met within 10 minutes.
+    """
+
+    if match_volume_name:
+        return data_source.source.name == volume_name
+    else:
+        return data_source.source.name != volume_name
