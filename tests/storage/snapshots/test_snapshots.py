@@ -18,6 +18,8 @@ from tests.storage.snapshots.constants import (
     WINDOWS_DIRECTORY_PATH,
 )
 from tests.storage.snapshots.utils import (
+    assert_restored_vm_disk_count,
+    assert_restored_vms_disk_counts,
     expected_output_after_restore,
     fail_to_create_snapshot_no_permissions,
     start_windows_vm_after_restore,
@@ -500,3 +502,76 @@ def test_write_to_file_while_snapshot(
         client=windows_vm_with_vtpm_for_snapshot.client,
     ) as restore:
         start_windows_vm_after_restore(vm_restore=restore, windows_vm=windows_vm_with_vtpm_for_snapshot)
+
+
+@pytest.mark.tier3
+@pytest.mark.conformance
+class TestRestoreMultiDiskPerformance:
+    """
+    Snapshot restore performance tests for VMs with multiple disks.
+
+    Jira: https://redhat.atlassian.net/browse/CNV-88908  # <skip-jira-utils-check>
+
+    Markers:
+        - tier3
+        - conformance
+
+    Preconditions:
+        - VolumeSnapshot-capable StorageClass available
+        - Fedora golden image DataSource available
+    """
+
+    @pytest.mark.polarion("CNV-16805")
+    def test_restore_vm_with_4_disks_completes_within_five_minutes(
+        self, restored_vm_with_4_disks, vm_with_4_disks_for_snapshot
+    ):
+        """
+        Test that restoring a snapshot of a VM with 4 disks completes within 5 minutes.
+
+        Preconditions:
+            - Running Fedora VM with 4 disk devices (1 boot from golden image DataSource + 3 blank DVs)
+            - VM snapshot taken and ready to use
+            - VM stopped before restore
+            - Snapshot restore initiated with a 5-minute timeout
+
+        Steps:
+            1. Verify the restore reports completion status
+            2. Start the restored VM
+            3. Verify the guest disk count matches the VM spec
+
+        Expected:
+            - Restore completed successfully within 5 minutes and the restored VM reports the same
+              number of disks as the VM spec
+        """
+        assert restored_vm_with_4_disks.instance.status.complete, (
+            "Restore did not complete successfully within 5 minutes"
+        )
+        assert_restored_vm_disk_count(vm=vm_with_4_disks_for_snapshot)
+
+    @pytest.mark.polarion("CNV-16806")
+    def test_restore_four_vms_with_4_disks_completes_within_five_minutes(
+        self, restored_four_vms, four_vms_with_4_disks_for_snapshot
+    ):
+        """
+        Test that restoring snapshots of 4 VMs (each with 4 disks) in parallel completes within 5 minutes per VM.
+
+        Preconditions:
+            - 4 running Fedora VMs, each with 4 disk devices (1 boot from golden image DataSource + 3 blank DVs)
+            - VM snapshots taken and ready to use for all 4 VMs
+            - All 4 VMs stopped before restore
+            - All 4 snapshot restores initiated concurrently, each with its own 5-minute deadline
+
+        Steps:
+            1. For each restore, verify it reports completion status
+            2. Start the restored VMs
+            3. Verify each restored VM guest disk count matches the VM spec
+
+        Expected:
+            - Each restore completed successfully within 5 minutes and each restored VM
+              reports the same number of disks as the VM spec
+        """
+        failed_restores = [restore.name for restore in restored_four_vms if not restore.instance.status.complete]
+        assert not failed_restores, (
+            f"Restores did not complete successfully within 5 minutes: {', '.join(failed_restores)}"
+        )
+        assert_restored_vms_disk_counts(vms=four_vms_with_4_disks_for_snapshot)
