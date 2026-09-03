@@ -2180,7 +2180,7 @@ def vm_instance_from_template(
         yield vm
 
 
-def _uncordon_and_stabilize(admin_client: DynamicClient, node: Node, hco_namespace: str) -> None:
+def _uncordon_and_stabilize(admin_client: DynamicClient, node: Node, hco_namespace: Namespace) -> None:
     """
     Uncordon a node and wait for KubeVirt to stabilize.
 
@@ -2218,7 +2218,7 @@ def cordon_node(admin_client: DynamicClient, node: Node) -> Generator[None]:
 
 @contextmanager
 def drain_node(
-    admin_client: DynamicClient, node: Node, hco_namespace: str, compact_cluster: bool = False
+    admin_client: DynamicClient, node: Node, hco_namespace: Namespace, compact_cluster: bool = False
 ) -> Generator[None]:
     """
     Drain a node and uncordon it on exit.
