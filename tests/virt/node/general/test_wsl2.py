@@ -17,7 +17,7 @@ from ocp_resources.virtual_machine_preference import VirtualMachinePreference
 from pyhelper_utils.shell import run_ssh_commands
 
 from tests.utils import verify_wsl2_guest_works
-from tests.virt.constants import WINDOWS_10_WSL, WINDOWS_11_WSL
+from tests.virt.constants import WINDOWS_11_WSL
 from utilities.constants import Images
 from utilities.constants.images import OS_FLAVOR_WINDOWS
 from utilities.constants.timeouts import TCP_TIMEOUT_30SEC, TIMEOUT_2MIN
@@ -132,11 +132,6 @@ def migrated_wsl2_vm(admin_client: DynamicClient, windows_wsl2_vm: VirtualMachin
 @pytest.mark.parametrize(
     "golden_image_data_source_for_test_scope_class, windows_wsl2_vm_preference",
     [
-        pytest.param(
-            {"os_dict": WINDOWS_10_WSL},
-            "windows.10",
-            id="Windows-10",
-        ),
         pytest.param(
             {"os_dict": WINDOWS_11_WSL},
             "windows.11",

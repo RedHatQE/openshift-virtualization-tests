@@ -9,7 +9,6 @@ from utilities.constants.architecture import (
 from utilities.constants.storage import StorageClassNames
 from utilities.constants.virt import (
     REGEDIT_PROC_NAME,
-    WIN_10,
     WIN_11,
 )
 from utilities.virt import (
@@ -57,36 +56,27 @@ LINUX_DV_PARAMS = [
 WINDOWS_DV_PARAMS = [
     {
         "dv-ocs-win": {
-            "image_path": f"{Images.Windows.UEFI_WIN_DIR}/{Images.Windows.WIN10_IMG}",
+            "image_path": f"{Images.Windows.DIR}/{Images.Windows.WIN11_IMG}",
             "dv_size": Images.Windows.DEFAULT_DV_SIZE,
             "storage_class": StorageClassNames.CEPH_RBD_VIRTUALIZATION,
         }
     },
     {
         "dv-nfs-win": {
-            "image_path": f"{Images.Windows.UEFI_WIN_DIR}/{Images.Windows.WIN10_IMG}",
+            "image_path": f"{Images.Windows.DIR}/{Images.Windows.WIN11_IMG}",
             "dv_size": Images.Windows.DEFAULT_DV_SIZE,
             "storage_class": StorageClassNames.NFS,
         }
     },
 ]
 
-WSL2_DV_PARAMS = [
-    {
-        "dv-win10-wsl2-win": {
-            "image_path": f"{Images.Windows.UEFI_WIN_DIR}/{Images.Windows.WIN10_WSL2_IMG}",
-            "dv_size": Images.Windows.DEFAULT_DV_SIZE,
-            "storage_class": StorageClassNames.CEPH_RBD_VIRTUALIZATION,
-        }
-    },
-    {
-        "dv-win11-wsl2-win": {
-            "image_path": f"{Images.Windows.DIR}/{Images.Windows.WIN11_WSL2_IMG}",
-            "dv_size": Images.Windows.DEFAULT_DV_SIZE,
-            "storage_class": StorageClassNames.CEPH_RBD_VIRTUALIZATION,
-        }
-    },
-]
+WSL2_DV_PARAMS = {
+    "dv-win11-wsl2-win": {
+        "image_path": f"{Images.Windows.DIR}/{Images.Windows.WIN11_WSL2_IMG}",
+        "dv_size": Images.Windows.DEFAULT_DV_SIZE,
+        "storage_class": StorageClassNames.CEPH_RBD_VIRTUALIZATION,
+    }
+}
 
 LINUX_VM_PARAMS = [
     {
@@ -127,7 +117,7 @@ WINDOWS_VM_PARAMS = [
     {
         "windows-multi-mig-ocsdisk-vm": {
             "os_labels": {
-                "os": WIN_10,
+                "os": WIN_11,
                 "workload": Template.Workload.DESKTOP,
                 "flavor": Template.Flavor.MEDIUM,
             },
@@ -137,7 +127,7 @@ WINDOWS_VM_PARAMS = [
     {
         "windows-multi-mig-nfsdisk-vm": {
             "os_labels": {
-                "os": WIN_10,
+                "os": WIN_11,
                 "workload": Template.Workload.DESKTOP,
                 "flavor": Template.Flavor.MEDIUM,
             },
@@ -146,33 +136,17 @@ WINDOWS_VM_PARAMS = [
     },
 ]
 
-WSL2_VM_PARAMS = [
-    {
-        "windows-multi-mig-win10-wsl2-vm": {
-            "os_labels": {
-                "os": WIN_10,
-                "workload": Template.Workload.DESKTOP,
-                "flavor": Template.Flavor.MEDIUM,
-            },
-            "datasource_name": "dv-win10-wsl2-win",
-            "memory_guest": Images.Windows.DEFAULT_MEMORY_SIZE_WSL,
-            "cpu_cores": 16,
-            "cpu_threads": 1,
-            "cpu_features": {INTEL: "vmx", AMD: "svm"},
-        }
-    },
-    {
-        "windows-multi-mig-win11-wsl2-vm": {
-            "os_labels": {
-                "os": WIN_11,
-                "workload": Template.Workload.DESKTOP,
-                "flavor": Template.Flavor.MEDIUM,
-            },
-            "datasource_name": "dv-win11-wsl2-win",
-            "memory_guest": Images.Windows.DEFAULT_MEMORY_SIZE_WSL,
-            "cpu_cores": 16,
-            "cpu_threads": 1,
-            "cpu_features": {INTEL: "vmx", AMD: "svm"},
-        }
-    },
-]
+WSL2_VM_PARAMS = {
+    "windows-multi-mig-win11-wsl2-vm": {
+        "os_labels": {
+            "os": WIN_11,
+            "workload": Template.Workload.DESKTOP,
+            "flavor": Template.Flavor.MEDIUM,
+        },
+        "datasource_name": "dv-win11-wsl2-win",
+        "memory_guest": Images.Windows.DEFAULT_MEMORY_SIZE_WSL,
+        "cpu_cores": 16,
+        "cpu_threads": 1,
+        "cpu_features": {INTEL: "vmx", AMD: "svm"},
+    }
+}
