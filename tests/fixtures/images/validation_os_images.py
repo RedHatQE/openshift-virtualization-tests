@@ -1,5 +1,4 @@
 import logging
-from contextlib import ExitStack
 
 import pytest
 from ocp_resources.cluster_role import ClusterRole
@@ -17,12 +16,8 @@ from utilities.artifactory import (
     get_test_artifact_server_url,
 )
 from utilities.constants import Images
-from utilities.constants.storage import (
-    BIND_IMMEDIATE_ANNOTATION,
-    CDI_CLONE_SOURCE_CLUSTER_ROLE,
-    REGISTRY_STR,
-    VIEW_CLUSTER_ROLE,
-)
+from utilities.constants.pytest import UNPRIVILEGED_USER
+from utilities.constants.storage import BIND_IMMEDIATE_ANNOTATION, CDI_CLONE_SOURCER_CLUSTER_ROLE, REGISTRY_STR
 from utilities.constants.timeouts import TIMEOUT_10MIN, TIMEOUT_50MIN
 from utilities.constants.virt import WIN_2K22
 from utilities.os_utils import get_windows_container_disk_path
@@ -45,60 +40,57 @@ def validation_os_images_namespace(admin_client):
 
 
 @pytest.fixture(scope="session")
-def validation_os_images_role_bindings(admin_client, validation_os_images_namespace):
-    """Grants unprivileged clients least-privilege permissions to clone from the validation-os-images namespace.
+def validation_os_images_role_binding(admin_client, validation_os_images_namespace):
+    """Grants the unprivileged user permission to clone from the validation-os-images namespace.
 
-    Binds two granular built-in ClusterRoles to ``system:authenticated`` in the validation-os-images
-    namespace so cross-namespace clones from this namespace succeed with the least-privilege set
-    recommended to customers: ``view`` (read the source images) and ``cdi.kubevirt.io:clone-source``
-    (clone the source PVCs).
+    Binds the CDI-shipped ``cdi.kubevirt.io:clone-sourcer`` ClusterRole to the unprivileged user in the
+    validation-os-images namespace, granting the ``datavolumes/source`` permission the
+    ``datavolume-mutate.cdi.kubevirt.io`` webhook requires for cross-namespace clones.
 
     Yields:
-        list[RoleBinding]: The RoleBindings granting view and clone-source permissions.
+        RoleBinding: The RoleBinding granting clone-sourcer permission to the unprivileged user.
     """
-    role_bindings = {
-        cluster_role_name: RoleBinding(
-            client=admin_client,
-            name=f"validation-os-images-{cluster_role_name.split(':')[-1]}",
-            namespace=validation_os_images_namespace.name,
-            subjects_kind="Group",
-            subjects_name="system:authenticated",
-            role_ref_kind=ClusterRole.kind,
-            role_ref_name=cluster_role_name,
-        )
-        for cluster_role_name in (VIEW_CLUSTER_ROLE, CDI_CLONE_SOURCE_CLUSTER_ROLE)
-    }
+    role_binding = RoleBinding(
+        client=admin_client,
+        name="validation-os-images-clone-sourcer",
+        namespace=validation_os_images_namespace.name,
+        subjects_kind="User",
+        subjects_name=UNPRIVILEGED_USER,
+        role_ref_kind=ClusterRole.kind,
+        role_ref_name=CDI_CLONE_SOURCER_CLUSTER_ROLE,
+    )
 
-    with ExitStack() as stack:
-        for cluster_role_name, role_binding in role_bindings.items():
-            if role_binding.exists:
-                subjects = next(iter(role_binding.instance.subjects))
-                assert subjects.kind == "Group", (
-                    f"RoleBinding {role_binding.name} subjects kind is {subjects.kind}, expected Group"
-                )
-                assert subjects.name == "system:authenticated", (
-                    f"RoleBinding {role_binding.name} subjects name is {subjects.name}, expected system:authenticated"
-                )
-                role_ref = role_binding.instance.roleRef
-                assert role_ref.kind == ClusterRole.kind, (
-                    f"RoleBinding {role_binding.name} roleRef kind is {role_ref.kind}, expected {ClusterRole.kind}"
-                )
-                assert role_ref.name == cluster_role_name, (
-                    f"RoleBinding {role_binding.name} roleRef name is {role_ref.name}, expected {cluster_role_name}"
-                )
-            else:
-                LOGGER.info(
-                    f"Creating RoleBinding {role_binding.name} in {role_binding.namespace} "
-                    f"binding {cluster_role_name} to system:authenticated"
-                )
-                stack.enter_context(cm=role_binding)
-        yield list(role_bindings.values())
+    if role_binding.exists:
+        LOGGER.info(f"Reusing existing RoleBinding {role_binding.name} in {role_binding.namespace}")
+        subjects = role_binding.instance.subjects
+        assert len(subjects) == 1, f"RoleBinding {role_binding.name} has {len(subjects)} subjects, expected exactly one"
+        subject = subjects[0]
+        assert subject.kind == "User", f"RoleBinding {role_binding.name} subject kind is {subject.kind}, expected User"
+        assert subject.name == UNPRIVILEGED_USER, (
+            f"RoleBinding {role_binding.name} subject name is {subject.name}, expected {UNPRIVILEGED_USER}"
+        )
+        role_ref = role_binding.instance.roleRef
+        assert role_ref.kind == ClusterRole.kind, (
+            f"RoleBinding {role_binding.name} roleRef kind is {role_ref.kind}, expected {ClusterRole.kind}"
+        )
+        assert role_ref.name == CDI_CLONE_SOURCER_CLUSTER_ROLE, (
+            f"RoleBinding {role_binding.name} roleRef name is {role_ref.name}, expected {CDI_CLONE_SOURCER_CLUSTER_ROLE}"
+        )
+        yield role_binding
+        return
+
+    LOGGER.info(
+        f"Creating RoleBinding {role_binding.name} in {role_binding.namespace} "
+        f"binding {CDI_CLONE_SOURCER_CLUSTER_ROLE} to user {UNPRIVILEGED_USER}"
+    )
+    with role_binding as clone_sourcer_role_binding:
+        yield clone_sourcer_role_binding
 
 
 @pytest.fixture(scope="session")
 def windows_validation_os_images_data_volume_scope_session(
     validation_os_images_namespace,
-    validation_os_images_role_bindings,
+    validation_os_images_role_binding,
     conformance_tests,
 ):
     """Provides the DV backing the Windows Server 2022 image in the validation-os-images namespace.
