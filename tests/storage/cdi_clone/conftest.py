@@ -1,13 +1,22 @@
 import pytest
 from ocp_resources.datavolume import DataVolume
+from ocp_resources.virtual_machine_clone import VirtualMachineClone
 
 from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE
 from tests.storage.stop_status_utils import dv_stop_status_restart_threshold
+from tests.storage.utils import VMWithSeveralBlankDisks
 from utilities.constants import Images
+from utilities.constants.images import OS_FLAVOR_FEDORA
 from utilities.constants.storage import REGISTRY_STR
-from utilities.constants.timeouts import TIMEOUT_40MIN
+from utilities.constants.timeouts import TIMEOUT_10MIN, TIMEOUT_40MIN
 from utilities.constants.virt import WIN_2K22
-from utilities.storage import create_dv, data_volume, get_dv_size_from_datasource
+from utilities.storage import (
+    create_dv,
+    data_volume,
+    data_volume_template_with_source_ref_dict,
+    get_dv_size_from_datasource,
+)
+from utilities.virt import running_vm, target_vm_from_cloning_job
 
 
 @pytest.fixture()
@@ -63,6 +72,50 @@ def fedora_dv_with_block_volume_mode(
     ) as dv:
         dv.wait_for_dv_success(stop_status_func=dv_stop_status_restart_threshold, dv=dv)
         yield dv
+
+
+@pytest.fixture()
+def source_vm_with_4_disks(
+    skip_if_no_storage_class_for_snapshot,
+    unprivileged_client,
+    namespace,
+    fedora_data_source_scope_module,
+    snapshot_storage_class_name_scope_module,
+):
+    with VMWithSeveralBlankDisks(
+        name="fedora-4-disks-clone-source",
+        namespace=namespace.name,
+        client=unprivileged_client,
+        os_flavor=OS_FLAVOR_FEDORA,
+        blank_disk_storage_class_name=snapshot_storage_class_name_scope_module,
+        num_blank_disks=3,
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=fedora_data_source_scope_module,
+            storage_class=snapshot_storage_class_name_scope_module,
+        ),
+        vm_instance_type_infer=True,
+        vm_preference_infer=True,
+    ) as vm:
+        running_vm(vm=vm)
+        yield vm
+
+
+@pytest.fixture()
+def target_vm_from_4_disk_clone(
+    unprivileged_client,
+    namespace,
+    source_vm_with_4_disks,
+):
+    with VirtualMachineClone(
+        name="clone-job-4-disks",
+        client=unprivileged_client,
+        namespace=namespace.name,
+        source_name=source_vm_with_4_disks.name,
+        target_name="fedora-4-disks-target",
+    ) as vmc:
+        vmc.wait_for_status(status=VirtualMachineClone.Status.SUCCEEDED, timeout=TIMEOUT_10MIN)
+        with target_vm_from_cloning_job(client=unprivileged_client, cloning_job=vmc) as target_vm:
+            yield target_vm
 
 
 @pytest.fixture(scope="class")

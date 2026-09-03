@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 import ast
 import logging
 import shlex
 from collections.abc import Generator
 from contextlib import contextmanager
+from typing import TYPE_CHECKING
 
 import pytest
 import requests
@@ -23,7 +26,7 @@ from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.storage.constants import NO_STORAGE_CLASS_FAILURE_MESSAGE
+from tests.storage.constants import BLANK_DV_SIZE, NO_STORAGE_CLASS_FAILURE_MESSAGE
 from utilities import console
 from utilities.constants import Images
 from utilities.constants.cluster import LS_COMMAND
@@ -36,6 +39,7 @@ from utilities.infra import (
 from utilities.ssp import validate_os_info_vmi_vs_windows_os
 from utilities.storage import (
     PodWithPVC,
+    construct_datavolume_source_dict,
     create_dv,
     get_containers_for_pods_with_pvc,
 )
@@ -44,6 +48,9 @@ from utilities.virt import (
     vm_instance_from_template,
     wait_for_windows_vm,
 )
+
+if TYPE_CHECKING:
+    from typing import Any
 
 LOGGER = logging.getLogger(__name__)
 
@@ -500,3 +507,76 @@ def get_storage_class_for_storage_migration(storage_class: str, cluster_storage_
             storage_class=storage_class, cluster_storage_classes_names=cluster_storage_classes_names
         )
     )
+
+
+def blank_dv_template(name: str, namespace: str, storage_class_name: str, size: str = BLANK_DV_SIZE) -> dict[str, Any]:
+    """Build a blank DataVolume template dict suitable for VM dataVolumeTemplates.
+
+    Args:
+        name: DataVolume name.
+        namespace: Target namespace (stripped from the returned dict for template use).
+        storage_class_name: Storage class for the blank PVC.
+        size: Requested PVC size.
+
+    Returns:
+        Mutable DataVolume resource dict with namespace removed, ready for use in
+        VM dataVolumeTemplates.
+    """
+    data_volume = DataVolume(
+        name=name,
+        namespace=namespace,
+        source_dict=construct_datavolume_source_dict(source="blank"),
+        size=size,
+        storage_class=storage_class_name,
+        api_name="storage",
+    )
+    data_volume.to_dict()
+    del data_volume.res["metadata"]["namespace"]
+    return data_volume.res
+
+
+class VMWithSeveralBlankDisks(VirtualMachineForTests):
+    """VM that injects blank data disks at creation time to avoid post-creation PATCH calls."""
+
+    def __init__(
+        self,
+        blank_disk_storage_class_name: str,
+        num_blank_disks: int,
+        blank_disk_size: str = BLANK_DV_SIZE,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(**kwargs)
+        self.blank_disk_storage_class_name = blank_disk_storage_class_name
+        self.num_blank_disks = num_blank_disks
+        self.blank_disk_size = blank_disk_size
+
+    def to_dict(self) -> None:
+        """Build the VM resource dict and add blank disk entries to it.
+
+        Blank DataVolume templates, disks, and volumes are rebuilt on every call so a
+        second ``to_dict()`` does not duplicate names or change the requested disk count.
+        """
+        super().to_dict()
+        template_spec = self.res["spec"]["template"]["spec"]
+        disks = template_spec["domain"]["devices"]["disks"]
+        volumes = template_spec["volumes"]
+        dv_templates = self.res["spec"].setdefault("dataVolumeTemplates", [])
+        blank_dv_names = [f"{self.name}-blank-{disk_index}" for disk_index in range(self.num_blank_disks)]
+        blank_dv_name_set = set(blank_dv_names)
+        disks[:] = [disk for disk in disks if disk["name"] not in blank_dv_name_set]
+        volumes[:] = [volume for volume in volumes if volume["name"] not in blank_dv_name_set]
+        dv_templates[:] = [
+            template for template in dv_templates if template["metadata"]["name"] not in blank_dv_name_set
+        ]
+
+        for dv_name in blank_dv_names:
+            dv_templates.append(
+                blank_dv_template(
+                    name=dv_name,
+                    namespace=self.namespace,
+                    storage_class_name=self.blank_disk_storage_class_name,
+                    size=self.blank_disk_size,
+                )
+            )
+            disks.append({"disk": {"bus": self.disk_type}, "name": dv_name})
+            volumes.append({"name": dv_name, "dataVolume": {"name": dv_name}})
