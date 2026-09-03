@@ -1,4 +1,7 @@
+import logging
+
 import pytest
+from packaging.version import Version
 
 from tests.install_upgrade_operators.deployment.utils import (
     assert_cnv_deployment_container_env_image_not_in_upstream,
@@ -10,7 +13,12 @@ from utilities.constants.components import (
     HCO_OPERATOR,
     HCO_WEBHOOK,
     HPP_POOL,
+    KUBEVIRT_MIGRATION_CONTROLLER,
 )
+from utilities.hco import get_hco_version
+from utilities.jira import is_jira_open
+
+LOGGER = logging.getLogger(__name__)
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.arm64, pytest.mark.s390x]
 
@@ -66,22 +74,30 @@ def test_request_param(deployment_by_name, cpu_min_value):
 @pytest.mark.gating
 @pytest.mark.conformance
 @pytest.mark.polarion("CNV-7675")
-def test_cnv_deployment_priority_class_name(
-    cnv_deployment_by_name,
-    xfail_if_jira_76659_open_and_migration_controller_deployment,
-):
-    if cnv_deployment_by_name.name.startswith(HPP_POOL):
-        pytest.xfail("HPP pool deployment doesn't have priority class name")
-    elif not cnv_deployment_by_name.instance.spec.template.spec.priorityClassName:
-        pytest.fail(
-            f"For cnv deployment {cnv_deployment_by_name.name}, spec.template.spec.priorityClassName has not been set."
-        )
+def test_cnv_deployment_priority_class_name(subtests, discovered_cnv_deployments, jira_76659_open):
+    for deployment in discovered_cnv_deployments:
+        with subtests.test(msg=deployment.name):
+            if deployment.name.startswith(HPP_POOL):
+                LOGGER.warning(f"Skipping HPP pool deployment {deployment.name}: no priorityClassName expected")
+                continue
+            if deployment.name == KUBEVIRT_MIGRATION_CONTROLLER and jira_76659_open:
+                pytest.xfail(f"{KUBEVIRT_MIGRATION_CONTROLLER} deployment is not running due to CNV-76659 bug")
+            assert deployment.instance.spec.template.spec.priorityClassName, (
+                f"Deployment {deployment.name} has no priorityClassName set"
+            )
 
 
-@pytest.mark.usefixtures("xfail_if_sriov_conforma_jira_open_and_hco_operator")
 @pytest.mark.gating
 @pytest.mark.conformance
 @pytest.mark.polarion("CNV-8264")
-def test_cnv_deployment_container_image(cnv_deployment_by_name):
-    assert_cnv_deployment_container_image_not_in_upstream(cnv_deployment=cnv_deployment_by_name)
-    assert_cnv_deployment_container_env_image_not_in_upstream(cnv_deployment=cnv_deployment_by_name)
+def test_cnv_deployment_container_image(subtests, discovered_cnv_deployments, admin_client, hco_namespace):
+    hco_version = Version(version=get_hco_version(client=admin_client, hco_ns_name=hco_namespace.name))
+    for deployment in discovered_cnv_deployments:
+        with subtests.test(msg=deployment.name):
+            if deployment.name == HCO_OPERATOR:
+                if hco_version >= Version("4.23") and is_jira_open(jira_id="CNV-92888"):
+                    pytest.xfail("sriov-dp-admission-controller upstream registry violation (CNV-92888)")
+                if hco_version >= Version("5.0") and is_jira_open(jira_id="CNV-92889"):
+                    pytest.xfail("sriov-dp-admission-controller upstream registry violation (CNV-92889)")
+            assert_cnv_deployment_container_image_not_in_upstream(cnv_deployment=deployment)
+            assert_cnv_deployment_container_env_image_not_in_upstream(cnv_deployment=deployment)

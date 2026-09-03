@@ -353,6 +353,7 @@ def wait_for_consistent_resource_conditions(
                 client=dynamic_client,
                 namespace=namespace,
                 name=resource_name,
+                _request_timeout=TIMEOUT_1MIN,
             )
         ),
         exceptions_dict=exceptions_dict,
