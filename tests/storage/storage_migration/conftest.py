@@ -264,9 +264,14 @@ def vms_boot_time_before_storage_migration(online_vms_for_storage_class_migratio
 @pytest.fixture(scope="class")
 def deleted_old_dvs_of_online_vms(unprivileged_client, online_vms_for_storage_class_migration):
     for vm in online_vms_for_storage_class_migration:
-        dv_name = vm.instance.status.volumeUpdateState.volumeMigrationState.migratedVolumes[0].sourcePVCInfo.claimName
-        dv = DataVolume(client=unprivileged_client, name=dv_name, namespace=vm.namespace, ensure_exists=True)
-        assert dv.delete(wait=True)
+        current_dv_names = {
+            volume["dataVolume"]["name"]
+            for volume in vm.instance.spec.template.spec.volumes
+            if "dataVolume" in dict(volume)
+        }
+        for dv in DataVolume.get(client=unprivileged_client, namespace=vm.namespace):
+            if dv.name not in current_dv_names:
+                assert dv.delete(wait=True)
 
 
 @pytest.fixture(scope="class")
