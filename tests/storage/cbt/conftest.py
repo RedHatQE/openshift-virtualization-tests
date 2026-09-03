@@ -1,6 +1,7 @@
 """CBT backup fixtures (backup success only)."""
 
 import secrets
+from contextlib import ExitStack
 
 import pytest
 from ocp_resources.kubevirt import KubeVirt
@@ -14,13 +15,18 @@ from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClust
 
 from tests.storage.cbt.constants import (
     CBT_BOOT_DISK_TEST_DATA_FILE,
+    CBT_DATA_DISK_TEST_DATA,
     CBT_ENABLED_LABEL,
-    CBT_INCREMENTAL_TEST_DATA,
-    CBT_INCREMENTAL_TEST_DATA_FILE,
     CBT_TEST_DATA,
 )
 from tests.storage.cbt.utils import (
-    cbt_pvc_size_with_headroom,
+    CbtVmWithDataDisks,
+    cbt_pvc_size_for_vm,
+    data_disk_name,
+    deploy_cbt_pull_backup,
+    guest_device_path_for_volume,
+    incremental_test_data,
+    incremental_test_data_file,
     wait_for_pull_backup_export_deleted,
     wait_for_pull_backup_export_ready,
     wait_for_push_backup_complete,
@@ -33,7 +39,7 @@ from utilities.storage import (
     data_volume_template_with_source_ref_dict,
     write_file_via_ssh,
 )
-from utilities.virt import VirtualMachineForTests, running_vm
+from utilities.virt import running_vm
 
 
 @pytest.fixture(scope="module")
@@ -79,10 +85,17 @@ def vm_with_cbt_label(
     """
     VM with CBT enabled, started, and test data written.
 
+    request.param (dict):
+        name: VM name prefix.
+        data_disk_count: Optional int (default 0). Number of blank data disks (named
+            "cbt-datadisk-<index>-<unique_suffix>") to attach before first start (avoiding a
+            restart) and write test data to, in addition to the boot disk.
+
     Returns:
         VirtualMachine: Running VM with CBT enabled and test data written
     """
-    with VirtualMachineForTests(
+    data_disk_count = request.param.get("data_disk_count", 0)
+    with CbtVmWithDataDisks(
         name=f"{request.param['name']}-{unique_suffix}",
         namespace=namespace.name,
         client=unprivileged_client,
@@ -94,10 +107,21 @@ def vm_with_cbt_label(
         ),
         os_flavor=OS_FLAVOR_RHEL,
         label=CBT_ENABLED_LABEL,
+        data_disk_storage_class_name=storage_class_name_scope_module,
+        data_disk_count=data_disk_count,
+        unique_suffix=unique_suffix,
     ) as vm:
         running_vm(vm=vm)
         wait_for_vm_cbt_enabled(vm=vm)
         write_file_via_ssh(vm=vm, filename=CBT_BOOT_DISK_TEST_DATA_FILE, content=CBT_TEST_DATA)
+        for disk_index in range(1, data_disk_count + 1):
+            volume_name = data_disk_name(index=disk_index, unique_suffix=unique_suffix)
+            write_file_via_ssh(
+                vm=vm,
+                filename=guest_device_path_for_volume(vm=vm, volume_name=volume_name),
+                content=CBT_DATA_DISK_TEST_DATA,
+                use_sudo=True,
+            )
         yield vm
 
 
@@ -155,80 +179,16 @@ def push_backup_pvc(
     Returns:
         PersistentVolumeClaim: PVC for push-mode backup storage
     """
-    boot_disk_size = vm_with_cbt_label.data_volume_template["spec"]["storage"]["resources"]["requests"]["storage"]
     with PersistentVolumeClaim(
         name=f"cbt-backup-{unique_suffix}",
         namespace=namespace.name,
         client=unprivileged_client,
         accessmodes=PersistentVolumeClaim.AccessMode.RWO,
-        size=cbt_pvc_size_with_headroom(source_disk_size=boot_disk_size),
+        size=cbt_pvc_size_for_vm(vm=vm_with_cbt_label),
         storage_class=storage_class_name_scope_module,
         volume_mode=PersistentVolumeClaim.VolumeMode.FILE,
     ) as pvc:
         yield pvc
-
-
-@pytest.fixture()
-def completed_full_backup_push_mode(
-    unprivileged_client,
-    namespace,
-    push_backup_pvc,
-    backup_tracker_source,
-    unique_suffix,
-):
-    """
-    Full push-mode backup after Complete=True.
-
-    Returns:
-        VirtualMachineBackup: Completed full push backup
-    """
-    with VirtualMachineBackup(
-        mode=VirtualMachineBackup.Mode.PUSH,
-        name=f"full-push-{unique_suffix}",
-        namespace=namespace.name,
-        client=unprivileged_client,
-        pvc_name=push_backup_pvc.name,
-        force_full_backup=True,
-        source=backup_tracker_source,
-    ) as backup:
-        wait_for_push_backup_complete(backup=backup)
-        yield backup
-
-
-@pytest.fixture()
-def completed_incremental_backup_push_mode(
-    unprivileged_client,
-    namespace,
-    push_backup_pvc,
-    vm_with_cbt_label,
-    completed_full_backup_push_mode,
-    backup_tracker_source,
-    unique_suffix,
-):
-    """
-    Incremental push-mode backup after Complete=True.
-
-    Depends on a prior full push backup, then writes new guest data before the incremental.
-
-    Returns:
-        VirtualMachineBackup: Completed incremental push backup
-    """
-    write_file_via_ssh(
-        vm=vm_with_cbt_label,
-        filename=CBT_INCREMENTAL_TEST_DATA_FILE,
-        content=CBT_INCREMENTAL_TEST_DATA,
-    )
-    with VirtualMachineBackup(
-        mode=VirtualMachineBackup.Mode.PUSH,
-        name=f"incr-push-{unique_suffix}",
-        namespace=namespace.name,
-        client=unprivileged_client,
-        pvc_name=push_backup_pvc.name,
-        force_full_backup=False,
-        source=backup_tracker_source,
-    ) as backup:
-        wait_for_push_backup_complete(backup=backup)
-        yield backup
 
 
 @pytest.fixture()
@@ -245,13 +205,12 @@ def pull_backup_staging_pvc(
     Returns:
         PersistentVolumeClaim: Staging PVC for the pull-mode export
     """
-    boot_disk_size = vm_with_cbt_label.data_volume_template["spec"]["storage"]["resources"]["requests"]["storage"]
     with PersistentVolumeClaim(
         name=f"cbt-staging-{unique_suffix}",
         namespace=namespace.name,
         client=unprivileged_client,
         accessmodes=PersistentVolumeClaim.AccessMode.RWO,
-        size=cbt_pvc_size_with_headroom(source_disk_size=boot_disk_size),
+        size=cbt_pvc_size_for_vm(vm=vm_with_cbt_label),
         storage_class=storage_class_name_scope_module,
         volume_mode=PersistentVolumeClaim.VolumeMode.FILE,
     ) as pvc:
@@ -280,75 +239,134 @@ def pull_mode_token_secret(
 
 
 @pytest.fixture()
-def ready_full_backup_pull_mode(
+def completed_push_backup_chain(
+    request,
     unprivileged_client,
     namespace,
-    pull_backup_staging_pvc,
-    pull_mode_token_secret,
+    push_backup_pvc,
+    vm_with_cbt_label,
     backup_tracker_source,
     unique_suffix,
 ):
     """
-    Full pull-mode backup after export is ready (no collect).
+    Sequential push-mode backup chain: a full backup followed by incremental backups.
+
+    request.param (dict):
+        incremental_count: Number of incremental backups to perform after the full backup.
+            Use 0 for a full-backup-only chain.
+
+    Side effects:
+        Writes new test data to the VM before each incremental backup.
 
     Returns:
-        VirtualMachineBackup: Pull backup with export endpoints ready
+        list[VirtualMachineBackup]: Every backup in the chain, in order (full backup first,
+            followed by each incremental backup).
     """
-    with VirtualMachineBackup(
-        mode=VirtualMachineBackup.Mode.PULL,
-        name=f"full-pull-{unique_suffix}",
-        namespace=namespace.name,
-        client=unprivileged_client,
-        token_secret_ref=pull_mode_token_secret.name,
-        pvc_name=pull_backup_staging_pvc.name,
-        force_full_backup=True,
-        source=backup_tracker_source,
-    ) as backup:
-        wait_for_pull_backup_export_ready(backup=backup)
-        yield backup
+    incremental_count = request.param["incremental_count"]
+    with ExitStack() as stack:
+        backups = []
+        full_backup = stack.enter_context(
+            cm=VirtualMachineBackup(
+                mode=VirtualMachineBackup.Mode.PUSH,
+                name=f"full-push-{unique_suffix}",
+                namespace=namespace.name,
+                client=unprivileged_client,
+                pvc_name=push_backup_pvc.name,
+                force_full_backup=True,
+                source=backup_tracker_source,
+            )
+        )
+        wait_for_push_backup_complete(backup=full_backup)
+        backups.append(full_backup)
+        for incremental_index in range(1, incremental_count + 1):
+            write_file_via_ssh(
+                vm=vm_with_cbt_label,
+                filename=incremental_test_data_file(index=incremental_index),
+                content=incremental_test_data(index=incremental_index),
+            )
+            incremental_backup = stack.enter_context(
+                cm=VirtualMachineBackup(
+                    mode=VirtualMachineBackup.Mode.PUSH,
+                    name=f"incr{incremental_index}-push-{unique_suffix}",
+                    namespace=namespace.name,
+                    client=unprivileged_client,
+                    pvc_name=push_backup_pvc.name,
+                    force_full_backup=False,
+                    source=backup_tracker_source,
+                )
+            )
+            wait_for_push_backup_complete(backup=incremental_backup)
+            backups.append(incremental_backup)
+        yield backups
 
 
 @pytest.fixture()
-def ready_incremental_backup_pull_mode(
+def ready_pull_backup_chain(
+    request,
     unprivileged_client,
     namespace,
     pull_backup_staging_pvc,
     pull_mode_token_secret,
     vm_with_cbt_label,
-    ready_full_backup_pull_mode,
     backup_tracker_source,
     unique_suffix,
 ):
     """
-    Incremental pull-mode backup after export is ready (no collect).
+    Sequential pull-mode backup chain: a full backup followed by incremental backups.
 
-    Deletes the prior full pull backup so the staging PVC and export can be reused.
+    Each backup's export must be deleted before the next backup can reuse the staging PVC, so
+    name and status are copied immediately after export becomes ready. Only the last backup in
+    the chain still exists when this fixture yields.
+
+    request.param (dict):
+        incremental_count: Number of incremental backups to perform after the full backup.
+            Use 0 for a full-backup-only chain.
+
+    Side effects:
+        Writes new test data to the VM before each incremental backup.
 
     Returns:
-        VirtualMachineBackup: Incremental pull backup with export endpoints ready
+        list[tuple[str, Any]]: (backup name, backup status) for every backup in the chain, in
+            order (full backup first, followed by each incremental backup).
     """
-    full_backup_name = ready_full_backup_pull_mode.name
-    ready_full_backup_pull_mode.delete(wait=True)
-    ready_full_backup_pull_mode.teardown = False
-    wait_for_pull_backup_export_deleted(
-        name=full_backup_name,
+    incremental_count = request.param["incremental_count"]
+    completed_backups = []
+    current_backup = deploy_cbt_pull_backup(
+        name=f"full-pull-{unique_suffix}",
         namespace=namespace.name,
         client=unprivileged_client,
-    )
-    write_file_via_ssh(
-        vm=vm_with_cbt_label,
-        filename=CBT_INCREMENTAL_TEST_DATA_FILE,
-        content=CBT_INCREMENTAL_TEST_DATA,
-    )
-    with VirtualMachineBackup(
-        mode=VirtualMachineBackup.Mode.PULL,
-        name=f"incr-pull-{unique_suffix}",
-        namespace=namespace.name,
-        client=unprivileged_client,
-        token_secret_ref=pull_mode_token_secret.name,
+        token_secret_name=pull_mode_token_secret.name,
         pvc_name=pull_backup_staging_pvc.name,
-        force_full_backup=False,
         source=backup_tracker_source,
-    ) as backup:
-        wait_for_pull_backup_export_ready(backup=backup)
-        yield backup
+        force_full_backup=True,
+    )
+    try:
+        wait_for_pull_backup_export_ready(backup=current_backup)
+        completed_backups.append((current_backup.name, current_backup.instance.to_dict()["status"]))
+        for incremental_index in range(1, incremental_count + 1):
+            previous_backup_name = current_backup.name
+            current_backup.delete(wait=True)
+            wait_for_pull_backup_export_deleted(
+                name=previous_backup_name,
+                namespace=namespace.name,
+                client=unprivileged_client,
+            )
+            write_file_via_ssh(
+                vm=vm_with_cbt_label,
+                filename=incremental_test_data_file(index=incremental_index),
+                content=incremental_test_data(index=incremental_index),
+            )
+            current_backup = deploy_cbt_pull_backup(
+                name=f"incr{incremental_index}-pull-{unique_suffix}",
+                namespace=namespace.name,
+                client=unprivileged_client,
+                token_secret_name=pull_mode_token_secret.name,
+                pvc_name=pull_backup_staging_pvc.name,
+                source=backup_tracker_source,
+                force_full_backup=False,
+            )
+            wait_for_pull_backup_export_ready(backup=current_backup)
+            completed_backups.append((current_backup.name, current_backup.instance.to_dict()["status"]))
+        yield completed_backups
+    finally:
+        current_backup.clean_up()
