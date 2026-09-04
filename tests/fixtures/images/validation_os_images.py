@@ -87,6 +87,45 @@ def validation_os_images_role_binding(admin_client, validation_os_images_namespa
         yield clone_sourcer_role_binding
 
 
+@pytest.fixture(scope="module")
+def validation_os_images_clone_role_binding_for_namespace(admin_client, namespace, validation_os_images_namespace):
+    """Grants a test namespace's default ServiceAccount permission to clone from validation-os-images.
+
+    A VM created with a cross-namespace ``dataVolumeTemplates`` clone has its clone DataVolume created by the
+    virt-controller, which authorizes the clone against the VM namespace's ``default`` ServiceAccount rather
+    than the interactive user. This binds the CDI-shipped ``cdi.kubevirt.io:clone-sourcer`` ClusterRole to that
+    ServiceAccount in the validation-os-images namespace, granting the ``datavolumes/source`` permission the
+    ``datavolume-mutate.cdi.kubevirt.io`` webhook requires. Tests that clone the image by creating the
+    DataVolume directly (as the unprivileged user) are covered by ``validation_os_images_role_binding`` instead.
+
+    Yields:
+        RoleBinding: The RoleBinding granting clone-sourcer permission to the test namespace's default SA.
+    """
+    role_binding = RoleBinding(
+        client=admin_client,
+        name=f"clone-sourcer-{namespace.name}",
+        namespace=validation_os_images_namespace.name,
+        subjects_kind="ServiceAccount",
+        subjects_name="default",
+        subjects_namespace=namespace.name,
+        role_ref_kind=ClusterRole.kind,
+        role_ref_name=CDI_CLONE_SOURCER_CLUSTER_ROLE,
+    )
+
+    if role_binding.exists:
+        LOGGER.warning(
+            f"Deleting leftover RoleBinding {role_binding.name} in {role_binding.namespace} from a previous run"
+        )
+        role_binding.delete(wait=True)
+
+    LOGGER.info(
+        f"Creating RoleBinding {role_binding.name} in {role_binding.namespace} binding "
+        f"{CDI_CLONE_SOURCER_CLUSTER_ROLE} to the default ServiceAccount of namespace {namespace.name}"
+    )
+    with role_binding as clone_sourcer_role_binding:
+        yield clone_sourcer_role_binding
+
+
 @pytest.fixture(scope="session")
 def windows_validation_os_images_data_volume_scope_session(
     validation_os_images_namespace,
