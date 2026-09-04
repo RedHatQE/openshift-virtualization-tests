@@ -29,6 +29,7 @@ from tests.network.bgp.evpn.libevpn import (
     deploy_evpn_l3_endpoint,
     deploy_evpn_l3_vrf,
     evpn_workloads_active_connections,
+    node_primary_ipv4_interface,
     teardown_evpn_bridge,
     teardown_evpn_l2_endpoint,
     teardown_evpn_l3_endpoint,
@@ -88,9 +89,7 @@ def vtep(
     admin_client: DynamicClient,
     workers: list[Node],
 ) -> Generator[VTEP]:
-    host_cidrs = json.loads(workers[0].instance.metadata.annotations["k8s.ovn.org/host-cidrs"])
-    host_cidr = next(cidr for cidr in host_cidrs if "." in cidr)
-    vtep_cidr = str(ipaddress.ip_network(host_cidr, strict=False))
+    vtep_cidr = str(node_primary_ipv4_interface(workers[0]).network)
     with VTEP(
         name="evpn-vtep",
         cidrs=[vtep_cidr],
@@ -217,11 +216,7 @@ def evpn_bridge(
     frr_external_pod: ExternalFrrPodInfo,
     workers: list[Node],
 ) -> Generator[None]:
-    worker_ips = []
-    for worker in workers:
-        host_cidrs = json.loads(worker.instance.metadata.annotations["k8s.ovn.org/host-cidrs"])
-        host_ip = next(cidr.split("/")[0] for cidr in host_cidrs if "." in cidr)
-        worker_ips.append(host_ip)
+    worker_ips = [str(node_primary_ipv4_interface(worker).ip) for worker in workers]
 
     deploy_evpn_bridge(
         pod=frr_external_pod.pod,
