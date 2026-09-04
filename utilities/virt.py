@@ -107,7 +107,7 @@ from utilities.constants.virt import (
     ROOTDISK,
     VIRTCTL,
 )
-from utilities.data_collector import collect_vnc_screenshot_for_vms
+from utilities.data_collector import collect_must_gather_for_vm, collect_vnc_screenshot_for_vms
 from utilities.exceptions import MigrationStuckSchedulingError, ResourceValueError
 from utilities.hco import get_hco_namespace, wait_for_hco_conditions
 from utilities.network import (
@@ -1847,6 +1847,7 @@ def wait_for_running_vm(
             wait_for_ssh_connectivity(vm=vm, timeout=ssh_timeout)
     except TimeoutExpiredError:
         collect_vnc_screenshot_for_vms(vm=vm)
+        collect_must_gather_for_vm(vm=vm)
         raise
 
 
@@ -1979,6 +1980,7 @@ def migrate_vm_and_verify(
         node_before=node_before,
         wait_for_interfaces=wait_for_interfaces,
         check_ssh_connectivity=check_ssh_connectivity,
+        admin_client=client,
     )
     return None
 
@@ -2051,6 +2053,7 @@ def verify_vm_migrated(
     node_before,
     wait_for_interfaces=True,
     check_ssh_connectivity=False,
+    admin_client: DynamicClient | None = None,
 ):
     vmi_name = vm.vmi.name
     vmi_node_name = vm.vmi.node.name
@@ -2067,6 +2070,7 @@ def verify_vm_migrated(
             wait_for_ssh_connectivity(vm=vm)
     except TimeoutExpiredError:
         collect_vnc_screenshot_for_vms(vm=vm)
+        collect_must_gather_for_vm(vm=vm, admin_client=admin_client)
         raise
 
 
