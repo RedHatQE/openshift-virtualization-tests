@@ -57,6 +57,7 @@ def windows_vm_with_vtpm_for_snapshot(
     unprivileged_client,
     modern_cpu_for_migration,
     windows_validation_os_images_data_source_scope_session,
+    validation_os_images_clone_role_binding_for_namespace,
     storage_class_matrix_snapshot_matrix__module__,
 ):
     with create_windows2022_vm(

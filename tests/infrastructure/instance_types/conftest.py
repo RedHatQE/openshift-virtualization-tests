@@ -99,7 +99,11 @@ def windows_validating_admission_policy_binding(admin_client):
 
 @pytest.fixture()
 def windows_vm_for_dedicated_cpu(
-    request, unprivileged_client, namespace, windows_validation_os_images_data_source_scope_session
+    request,
+    unprivileged_client,
+    namespace,
+    windows_validation_os_images_data_source_scope_session,
+    validation_os_images_clone_role_binding_for_namespace,
 ):
     with VirtualMachineForTests(
         client=unprivileged_client,
