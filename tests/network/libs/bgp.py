@@ -214,7 +214,7 @@ def generate_frr_conf(
     lines.extend([f" neighbor {ip} remote-as {CLUSTER_FRR_ASN}" for ip in nodes_ipv4_list])
     lines.append("")
 
-    # IPv4 unicast: advertise external subnet, activate neighbors
+    # IPv4 unicast: advertise external subnet to nodes
     lines.extend([
         " address-family ipv4 unicast",
         f"  network {external_subnet_ipv4}",
@@ -222,12 +222,11 @@ def generate_frr_conf(
     for ip in nodes_ipv4_list:
         lines.extend([
             f"  neighbor {ip} activate",
-            f"  neighbor {ip} next-hop-self",
-            f"  neighbor {ip} route-reflector-client",
+            f"  neighbor {ip} attribute-unchanged next-hop",
         ])
     lines.extend([" exit-address-family", ""])
 
-    # EVPN: activate neighbors with route-map to handle AS-path loop prevention
+    # EVPN: activate neighbors for L2VPN EVPN route exchange
     lines.append(" address-family l2vpn evpn")
     for ip in nodes_ipv4_list:
         lines.extend([
