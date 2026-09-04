@@ -26,6 +26,7 @@ def windows_vm_with_vtpm_for_memory_dump(
     namespace,
     modern_cpu_for_migration,
     windows_validation_os_images_data_source_scope_session,
+    validation_os_images_clone_role_binding_for_namespace,
 ):
     with create_windows2022_vm(
         data_volume_template=data_volume_template_with_source_ref_dict(

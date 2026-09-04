@@ -378,6 +378,7 @@ def windows_vm_with_vtpm_for_storage_migration(
     modern_cpu_for_migration,
     source_storage_class,
     windows_validation_os_images_data_source_scope_session,
+    validation_os_images_clone_role_binding_for_namespace,
 ):
     with create_windows2022_vm(
         namespace=namespace.name,

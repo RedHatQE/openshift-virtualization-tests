@@ -86,6 +86,8 @@ WILDCARD_CRON_EXPRESSION = "* * * * *"
 OUTDATED = "Outdated"
 # Built-in CNV ClusterRole granting create/clone permissions in an OS-images namespace
 OS_IMAGES_EDIT_CLUSTER_ROLE = "os-images.kubevirt.io:edit"
+# Built-in CDI ClusterRole (shipped by the CDI operator) granting the ``datavolumes/source`` permission
+CDI_CLONE_SOURCER_CLUSTER_ROLE = "cdi.kubevirt.io:clone-sourcer"
 
 # Storage capacity metric field names
 CAPACITY = "capacity"

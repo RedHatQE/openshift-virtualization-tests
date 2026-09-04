@@ -72,6 +72,7 @@ def vm_instance_multi_storage_scope_class(
     namespace,
     modern_cpu_for_migration,
     windows_validation_os_images_data_source_scope_session,
+    validation_os_images_clone_role_binding_for_namespace,
     storage_class_name_scope_class,
 ):
     """Creates a Windows 2022 VM with vTPM from the session-scoped Windows DataSource."""
