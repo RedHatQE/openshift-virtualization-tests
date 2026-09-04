@@ -44,8 +44,7 @@ def validation_os_images_role_binding(admin_client, validation_os_images_namespa
     """Grants the unprivileged user permission to clone from the validation-os-images namespace.
 
     Binds the CDI-shipped ``cdi.kubevirt.io:clone-sourcer`` ClusterRole to the unprivileged user in the
-    validation-os-images namespace, granting the ``datavolumes/source`` permission the
-    ``datavolume-mutate.cdi.kubevirt.io`` webhook requires for cross-namespace clones.
+    validation-os-images namespace.
 
     Yields:
         RoleBinding: The RoleBinding granting clone-sourcer permission to the unprivileged user.
