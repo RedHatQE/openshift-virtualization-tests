@@ -1077,7 +1077,7 @@ class TestCheckVmCreationCapability:
         mock_admin_client = MagicMock()
 
         # Should not raise
-        check_vm_creation_capability(admin_client=mock_admin_client, namespace="openshift-cnv")
+        check_vm_creation_capability(client=mock_admin_client, namespace="openshift-cnv")
 
         mock_vm.create.assert_called_once()
 
@@ -1093,7 +1093,7 @@ class TestCheckVmCreationCapability:
         mock_admin_client = MagicMock()
 
         with pytest.raises(ClusterSanityError) as exc_info:
-            check_vm_creation_capability(admin_client=mock_admin_client, namespace="openshift-cnv")
+            check_vm_creation_capability(client=mock_admin_client, namespace="openshift-cnv")
 
         assert "Dry-run VM creation failed" in str(exc_info.value), (
             "Expected 'Dry-run VM creation failed' in exception message for API error"
@@ -1111,7 +1111,7 @@ class TestCheckVmCreationCapability:
         mock_admin_client = MagicMock()
 
         with pytest.raises(ClusterSanityError) as exc_info:
-            check_vm_creation_capability(admin_client=mock_admin_client, namespace="openshift-cnv")
+            check_vm_creation_capability(client=mock_admin_client, namespace="openshift-cnv")
 
         assert "Unexpected error during dry-run VM creation" in str(exc_info.value), (
             "Expected 'Unexpected error during dry-run VM creation' in exception message"
@@ -1129,7 +1129,7 @@ class TestCheckVmCreationCapability:
         mock_admin_client = MagicMock()
 
         with pytest.raises(ClusterSanityError) as exc_info:
-            check_vm_creation_capability(admin_client=mock_admin_client, namespace="openshift-cnv")
+            check_vm_creation_capability(client=mock_admin_client, namespace="openshift-cnv")
 
         assert "Connection error during dry-run VM creation" in str(exc_info.value), (
             "Expected 'Connection error during dry-run VM creation' in exception message"
@@ -1147,7 +1147,7 @@ class TestCheckVmCreationCapability:
         mock_admin_client = MagicMock()
 
         with pytest.raises(ClusterSanityError) as exc_info:
-            check_vm_creation_capability(admin_client=mock_admin_client, namespace="openshift-cnv")
+            check_vm_creation_capability(client=mock_admin_client, namespace="openshift-cnv")
 
         assert "Connection error during dry-run VM creation" in str(exc_info.value), (
             "Expected 'Connection error during dry-run VM creation' in exception message for timeout"

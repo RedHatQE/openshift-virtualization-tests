@@ -146,13 +146,13 @@ def check_webhook_endpoints_health(admin_client: DynamicClient, namespace: Names
     LOGGER.info("All discovered webhook services have available endpoints")
 
 
-def check_vm_creation_capability(admin_client: DynamicClient, namespace: str) -> None:
+def check_vm_creation_capability(client: DynamicClient, namespace: str) -> None:
     """
     Verify VM creation capability by performing a dry-run VM creation.
 
     Args:
-        admin_client: Kubernetes dynamic client with admin privileges for cluster operations.
-        namespace: str
+        client: Kubernetes dynamic client for cluster operations.
+        namespace: Target namespace for the dry-run VM.
 
     Raises:
         ClusterSanityError: When dry-run VM creation fails.
@@ -163,7 +163,7 @@ def check_vm_creation_capability(admin_client: DynamicClient, namespace: str) ->
         vm = VirtualMachine(
             name="sanity-check-dry-run-vm",
             namespace=namespace,
-            client=admin_client,
+            client=client,
             body={
                 "spec": {
                     "running": False,
@@ -307,7 +307,7 @@ def cluster_sanity(
         else:
             LOGGER.info(f"Check webhook endpoints health. (To skip webhook check pass {skip_webhook_check} to pytest)")
             check_webhook_endpoints_health(admin_client=admin_client, namespace=hco_namespace)
-            check_vm_creation_capability(admin_client=admin_client, namespace="default")
+            check_vm_creation_capability(client=admin_client, namespace="default")
 
         # Wait for hco to be healthy
         wait_for_hco_conditions(

@@ -55,32 +55,7 @@ def aggregation_reenabled(admin_client, hyperconverged_resource_scope_class):
 @pytest.fixture()
 def vm_collection_resource_for_unprivileged_client(unprivileged_client):
     """VirtualMachine API resource handle for the unprivileged client."""
-    return unprivileged_client.resources.get(api_version="kubevirt.io/v1", kind="VirtualMachine")
-
-
-@pytest.fixture()
-def dry_run_vm(unprivileged_client, namespace):
-    """Minimal VirtualMachine configured for server-side dry-run creation."""
-    return VirtualMachine(
-        name="rbac-dry-run-vm",
-        namespace=namespace.name,
-        client=unprivileged_client,
-        body={
-            "spec": {
-                "running": False,
-                "template": {
-                    "spec": {
-                        "domain": {
-                            "devices": {},
-                            "resources": {
-                                "requests": {
-                                    "memory": "64Mi",
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-        },
-        dry_run=True,
+    return unprivileged_client.resources.get(
+        api_version=f"{VirtualMachine.ApiGroup.KUBEVIRT_IO}/{VirtualMachine.ApiVersion.V1}",
+        kind=VirtualMachine.kind,
     )

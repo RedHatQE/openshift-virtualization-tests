@@ -8,7 +8,7 @@ from kubernetes.dynamic.exceptions import ForbiddenError
 from ocp_resources.cluster_role import ClusterRole
 from ocp_resources.role_binding import RoleBinding
 from ocp_resources.virtual_machine import VirtualMachine
-from timeout_sampler import TimeoutSampler
+from timeout_sampler import TimeoutSampler, retry
 
 from utilities.constants.pytest import UNPRIVILEGED_USER
 from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_5MIN, TIMEOUT_5SEC, TIMEOUT_10SEC
@@ -17,8 +17,6 @@ if TYPE_CHECKING:
     from kubernetes.dynamic import DynamicClient
 
 LOGGER = logging.getLogger(__name__)
-
-KUBEVIRT_AGGREGATION_LEVELS = ("admin", "edit", "view")
 
 
 def get_kubevirt_aggregation_roles(admin_client: DynamicClient) -> dict[str, str]:
@@ -33,8 +31,9 @@ def get_kubevirt_aggregation_roles(admin_client: DynamicClient) -> dict[str, str
     Returns:
         Dict mapping kubevirt.io role name to its aggregation label key.
     """
+    kubevirt_aggregation_levels = ("admin", "edit", "view")
     roles = {}
-    for level in KUBEVIRT_AGGREGATION_LEVELS:
+    for level in kubevirt_aggregation_levels:
         built_in_role = ClusterRole(name=level, client=admin_client)
         selectors = built_in_role.instance.aggregationRule.clusterRoleSelectors
         label_key, _ = next(iter(selectors[0].matchLabels))
@@ -53,7 +52,7 @@ def aggregation_labels_match_expected_state(
         aggregation_roles: Mapping of kubevirt.io role name to aggregation label key.
 
     Returns:
-        True if all ClusterRoles match the expected label state.
+        True if all ClusterRoles match the expected label state, False otherwise.
     """
     for role_name, label_key in aggregation_roles.items():
         labels = ClusterRole(name=role_name, client=admin_client).instance.metadata.labels or {}
@@ -88,42 +87,24 @@ def wait_for_aggregation_labels(admin_client: DynamicClient, should_be_present: 
     LOGGER.info(f"Aggregation labels match expected state: should_be_present={should_be_present}")
 
 
-def can_list_vms(client: DynamicClient, namespace_name: str) -> bool:
-    """Check if listing VirtualMachines succeeds.
-
-    Args:
-        client: DynamicClient to test access with.
-        namespace_name: Namespace to list VMs in.
-
-    Returns:
-        True if listing succeeds, False if ForbiddenError is raised.
-    """
-    try:
-        list(VirtualMachine.get(client=client, namespace=namespace_name))
-        return True
-    except ForbiddenError:
-        return False
-
-
-def wait_for_vm_list_permission(client: DynamicClient, namespace_name: str, is_allowed: bool) -> None:
+@retry(wait_timeout=TIMEOUT_1MIN, sleep=TIMEOUT_5SEC)
+def wait_for_vm_list_permission(client: DynamicClient, namespace_name: str, is_allowed: bool) -> bool:
     """Wait for VM list permission to reach the expected state.
 
     Args:
         client: DynamicClient to test access with.
         namespace_name: Namespace to list VMs in.
         is_allowed: True to wait for access, False to wait for forbidden.
+
+    Returns:
+        True when VM list access matches the expected state, False otherwise.
     """
-    LOGGER.info(f"Waiting for VM list access: allowed={is_allowed}")
-    for sample in TimeoutSampler(
-        wait_timeout=TIMEOUT_1MIN,
-        sleep=TIMEOUT_5SEC,
-        func=can_list_vms,
-        client=client,
-        namespace_name=namespace_name,
-    ):
-        if sample == is_allowed:
-            LOGGER.info(f"VM list access reached expected state: allowed={is_allowed}")
-            break
+    try:
+        list(VirtualMachine.get(client=client, namespace=namespace_name))
+        can_list = True
+    except ForbiddenError:
+        can_list = False
+    return can_list == is_allowed
 
 
 def unprivileged_role_binding(

@@ -15,6 +15,7 @@ Preconditions:
 import pytest
 
 from tests.install_upgrade_operators.role_aggregation.utils import wait_for_vm_list_permission
+from utilities.sanity import check_vm_creation_capability
 
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.arm64]
 
@@ -126,7 +127,7 @@ class TestRoleAggregationEdit:
     # Aggregation must be disabled before re-enabling to test the transition
     @pytest.mark.dependency(depends=["test_disabled_edit"])
     @pytest.mark.usefixtures("aggregation_reenabled")
-    def test_edit_can_create_vm_dry_run_when_aggregation_reenabled(self, unprivileged_client, namespace, dry_run_vm):
+    def test_edit_can_create_vm_dry_run_when_aggregation_reenabled(self, unprivileged_client, namespace):
         """
         Test that an unprivileged user with the edit role can create a VirtualMachine
         using a server-side dry-run when role aggregation is re-enabled.
@@ -144,7 +145,7 @@ class TestRoleAggregationEdit:
         Expected:
             - Dry-run create operation succeeds
         """
-        dry_run_vm.create()
+        check_vm_creation_capability(client=unprivileged_client, namespace=namespace.name)
 
 
 @pytest.mark.usefixtures("view_role_binding")
