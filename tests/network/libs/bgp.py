@@ -194,16 +194,15 @@ def generate_frr_conf(
 
     evpn_route_map = "evpn-to-ocp"
 
-    # Route-map: strips cluster ASN from AS_PATH for eBGP EVPN re-advertisement
+    # Route-map: preserve next-hop for EVPN re-advertisement
     lines = [
         f"route-map {evpn_route_map} permit 10",
-        f" set as-path exclude {CLUSTER_FRR_ASN}",
         " set ip next-hop unchanged",
         "exit",
         "",
     ]
 
-    # BGP router and neighbor definitions
+    # BGP router and neighbor definitions (eBGP: external AS)
     lines.extend([
         f"router bgp {EXTERNAL_FRR_ASN}",
         " no bgp ebgp-requires-policy",
