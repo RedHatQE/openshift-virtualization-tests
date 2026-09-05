@@ -9,6 +9,7 @@ import pytest
 from utilities.exceptions import (
     ClusterSanityError,
     DataVolumeConditionMessageNotFoundError,
+    MigrationFailedError,
     MigrationStuckSchedulingError,
     MissingEnvironmentVariableError,
     MissingResourceException,
@@ -331,4 +332,21 @@ class TestMigrationStuckSchedulingError:
         migration_name = "test-migration"
         error = MigrationStuckSchedulingError(migration_name)
         expected = "Migration test-migration is stuck in Scheduling state."
+        assert str(error) == expected
+
+
+class TestMigrationFailedError:
+    """Test cases for MigrationFailedError exception"""
+
+    def test_migration_failed_error_init(self):
+        """Test MigrationFailedError initialization"""
+        migration_name = "test-migration"
+        error = MigrationFailedError(migration_name)
+        assert error.migration_name == migration_name
+
+    def test_migration_failed_error_str(self):
+        """Test MigrationFailedError string representation"""
+        migration_name = "test-migration"
+        error = MigrationFailedError(migration_name)
+        expected = "Migration test-migration reached terminal Failed phase."
         assert str(error) == expected
