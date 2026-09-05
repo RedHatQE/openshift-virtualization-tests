@@ -5,7 +5,6 @@ import shlex
 from typing import TYPE_CHECKING
 
 import pytest
-from ocp_resources.daemonset import DaemonSet
 from ocp_resources.resource import ResourceEditor
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
@@ -27,11 +26,7 @@ if TYPE_CHECKING:
 LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
-    pytest.mark.usefixtures(
-        "fail_if_wasp_agent_disabled",
-        "wasp_agent_active_and_ready",
-        "swap_is_available_on_nodes",
-    ),
+    pytest.mark.usefixtures("swap_is_available_on_nodes"),
     pytest.mark.swap,
 ]
 
@@ -76,27 +71,6 @@ def node_with_max_memory_labeled_for_swap_test(node_with_most_available_memory):
 @pytest.fixture(scope="class")
 def node_affinity_for_swap_label():
     return build_node_affinity_dict(key=SWAP_LABEL_KEY, values=[SWAP_LABEL_VALUE])
-
-
-@pytest.fixture(scope="package")
-def wasp_agent_daemonset(hco_namespace):
-    yield DaemonSet(client=hco_namespace.client, name="wasp-agent", namespace=hco_namespace.name)
-
-
-@pytest.fixture(scope="package")
-def fail_if_wasp_agent_disabled(wasp_agent_daemonset):
-    if not wasp_agent_daemonset.exists:
-        pytest.fail(reason="Wasp agent not deployed to cluster")
-
-
-@pytest.fixture(scope="package")
-def wasp_agent_active_and_ready(workers, wasp_agent_daemonset):
-    wasp_agent_ds_instance = wasp_agent_daemonset.instance
-    desired = wasp_agent_ds_instance.status.desiredNumberScheduled
-    ready = wasp_agent_ds_instance.status.numberReady
-    assert desired == ready == len(workers), (
-        f"Wasp not ready on all nodes. Number of workers: {len(workers)}, \nNumber of ready wasp agent pods: {ready}"
-    )
 
 
 @pytest.fixture(scope="package")
