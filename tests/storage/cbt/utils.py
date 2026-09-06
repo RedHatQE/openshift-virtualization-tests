@@ -161,15 +161,17 @@ def _wait_for_guest_volume_target(vm: VirtualMachine, volume_name: str) -> str:
         TimeoutExpiredError: If the volume never reports a guest device name within the timeout.
     """
     LOGGER.info(f"Waiting for guest device of volume {volume_name} on VM {vm.name}")
-    for target in TimeoutSampler(
-        wait_timeout=TIMEOUT_10MIN,
-        sleep=TIMEOUT_5SEC,
-        func=guest_volume_target,
-        vm=vm,
-        volume_name=volume_name,
-    ):
-        if target:
-            return target
+    return next(
+        target
+        for target in TimeoutSampler(
+            wait_timeout=TIMEOUT_10MIN,
+            sleep=TIMEOUT_5SEC,
+            func=guest_volume_target,
+            vm=vm,
+            volume_name=volume_name,
+        )
+        if target
+    )
 
 
 def guest_device_path_for_volume(vm: VirtualMachine, volume_name: str) -> str:
