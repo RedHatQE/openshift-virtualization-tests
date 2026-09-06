@@ -313,6 +313,8 @@ class TestMultipleDiskBackup:
         Test that a full backup in push mode completes successfully for a VM with multiple disks.
 
         Preconditions:
+            - Running CBT-enabled VM with a boot disk and two data disks
+            - Test data written to all disks
             - Backup PVC available
 
         Steps:
@@ -350,6 +352,8 @@ class TestMultipleDiskBackup:
         Test that a full backup in pull mode becomes ready for export for a VM with multiple disks.
 
         Preconditions:
+            - Running CBT-enabled VM with a boot disk and two data disks
+            - Test data written to all disks
             - Scratch PVC available for pull mode
 
         Steps:

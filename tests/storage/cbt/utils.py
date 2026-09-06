@@ -144,12 +144,15 @@ def guest_volume_target(vm: VirtualMachine, volume_name: str) -> str | None:
     return None
 
 
-def _wait_for_guest_volume_target(vm: VirtualMachine, volume_name: str) -> None:
+def _wait_for_guest_volume_target(vm: VirtualMachine, volume_name: str) -> str:
     """Wait until the volume reports a guest device name.
 
     Args:
         vm: Running VM to inspect.
         volume_name: VM volume name to wait for.
+
+    Returns:
+        str: The guest device target sampled from VMI ``volumeStatus``.
 
     Side effects:
         Polls the VMI until the volume reports a guest device name.
@@ -166,7 +169,7 @@ def _wait_for_guest_volume_target(vm: VirtualMachine, volume_name: str) -> None:
         volume_name=volume_name,
     ):
         if target:
-            return
+            return target
 
 
 def guest_device_path_for_volume(vm: VirtualMachine, volume_name: str) -> str:
@@ -185,8 +188,8 @@ def guest_device_path_for_volume(vm: VirtualMachine, volume_name: str) -> str:
     Raises:
         TimeoutExpiredError: If the volume never reports a guest device name within the timeout.
     """
-    _wait_for_guest_volume_target(vm=vm, volume_name=volume_name)
-    return f"/dev/{guest_volume_target(vm=vm, volume_name=volume_name)}"
+    target = _wait_for_guest_volume_target(vm=vm, volume_name=volume_name)
+    return f"/dev/{target}"
 
 
 def attached_data_disk_names(vm: VirtualMachine) -> list[str]:
@@ -215,11 +218,21 @@ def incremental_test_data_file(index: int) -> str:
 
 def assert_backup_status_includes_volumes(
     backup_name: str,
-    backup_status: Any,
+    backup_status: dict[str, Any],
     expected_volume_names: list[str],
     expected_backup_type: str | None = None,
 ) -> None:
-    """Assert a backup status includes the expected volumes (and optional type)."""
+    """Assert a previously captured backup status includes the expected volumes.
+
+    Inspects ``includedVolumes`` and, when requested, the optional ``type`` field.
+    Does not read a live backup resource.
+
+    Args:
+        backup_name: Backup resource name used in assertion messages.
+        backup_status: Previously captured backup status mapping, not a live resource.
+        expected_volume_names: Volume names that must appear in ``includedVolumes``.
+        expected_backup_type: Expected ``status.type`` value. When omitted, type is not checked.
+    """
     included_volumes = backup_status["includedVolumes"]
     actual_volume_names = [volume["volumeName"] for volume in included_volumes]
     assert sorted(actual_volume_names) == sorted(expected_volume_names), (

@@ -369,4 +369,10 @@ def ready_pull_backup_chain(
             completed_backups.append((current_backup.name, current_backup.instance.to_dict()["status"]))
         yield completed_backups
     finally:
+        final_backup_name = current_backup.name
         current_backup.clean_up()
+        wait_for_pull_backup_export_deleted(
+            name=final_backup_name,
+            namespace=namespace.name,
+            client=unprivileged_client,
+        )
