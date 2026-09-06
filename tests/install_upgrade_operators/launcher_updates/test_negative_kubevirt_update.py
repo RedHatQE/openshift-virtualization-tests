@@ -3,6 +3,7 @@ import pytest
 from tests.install_upgrade_operators.constants import WORKLOAD_UPDATE_STRATEGY_KEY_NAME, WORKLOADUPDATEMETHODS
 from tests.install_upgrade_operators.launcher_updates.constants import (
     CUSTOM_WORKLOAD_UPDATE_STRATEGY,
+    HCO_WORKLOAD_UPDATE_STRATEGY_BASE_PATH,
 )
 from tests.install_upgrade_operators.utils import wait_for_spec_change
 from utilities.hco import get_hco_spec
@@ -76,7 +77,7 @@ class TestLauncherUpdateNegative:
         wait_for_spec_change(
             expected=CUSTOM_WORKLOAD_UPDATE_STRATEGY,
             get_spec_func=lambda: get_hco_spec(admin_client=admin_client, hco_namespace=hco_namespace),
-            base_path=[WORKLOAD_UPDATE_STRATEGY_KEY_NAME],
+            base_path=HCO_WORKLOAD_UPDATE_STRATEGY_BASE_PATH,
         )
         wait_for_spec_change(
             expected=CUSTOM_WORKLOAD_UPDATE_STRATEGY,

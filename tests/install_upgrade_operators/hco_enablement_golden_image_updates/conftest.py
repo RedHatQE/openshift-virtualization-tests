@@ -19,7 +19,6 @@ from utilities.constants.cluster import KUBERNETES_ARCH_LABEL
 from utilities.constants.components import HCO_OPERATOR
 from utilities.constants.hco import (
     COMMON_TEMPLATES_KEY_NAME,
-    FEATURE_GATES,
     SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
 )
 from utilities.hco import disable_common_boot_image_import_hco_spec
@@ -157,7 +156,7 @@ def expected_common_templates_related_resources(
         - ImageStreams: always base names
     When disabled: all base names.
     """
-    feature_gate_enabled = hyperconverged_resource_scope_class.instance.spec.get(FEATURE_GATES, {}).get(
+    feature_gate_enabled = hyperconverged_resource_scope_class.instance.spec.get("workloadSources", {}).get(
         ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT, False
     )
 

@@ -54,8 +54,11 @@ def hyperconverged_with_node_placement(request, admin_client, hco_namespace, hyp
     workloads_placement = request.param["workloads"]
 
     LOGGER.info("Fetching HCO to save its initial node placement configuration ")
-    initial_infra = hyperconverged_resource_scope_class.instance.to_dict()["spec"].get("infra", {})
-    initial_workloads = hyperconverged_resource_scope_class.instance.to_dict()["spec"].get("workloads", {})
+    node_placements = (
+        hyperconverged_resource_scope_class.instance.to_dict()["spec"].get("deployment", {}).get("nodePlacements", {})
+    )
+    initial_infra = node_placements.get("infra", {})
+    initial_workloads = node_placements.get("workload", {})
     yield utilities.hco.apply_np_changes(
         admin_client=admin_client,
         hco=hyperconverged_resource_scope_class,

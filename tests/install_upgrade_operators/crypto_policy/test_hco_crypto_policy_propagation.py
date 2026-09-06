@@ -22,7 +22,8 @@ pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.s390x]
 def hco_crypto_policy(
     hyperconverged_resource_scope_function, updated_hco_crypto_policy, cnv_crypto_policy_matrix__function__
 ):
-    tls_profile = hyperconverged_resource_scope_function.instance.spec.get(TLS_SECURITY_PROFILE)
+    hco_spec = hyperconverged_resource_scope_function.instance.to_dict()["spec"]
+    tls_profile = hco_spec.get("security", {}).get(TLS_SECURITY_PROFILE)
     if not tls_profile:
         return None
     tls_dict = tls_profile.to_dict()

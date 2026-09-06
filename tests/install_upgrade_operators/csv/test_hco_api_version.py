@@ -7,6 +7,6 @@ pytestmark = [pytest.mark.sno, pytest.mark.s390x, pytest.mark.skip_must_gather_c
 @pytest.mark.polarion("CNV-5832")
 def test_hyperconverged_cr_api_version(hyperconverged_resource_scope_function):
     """
-    This test will check the Hyperconverged CR's api_version for v1beta1
+    This test will check the Hyperconverged CR's api_version for v1
     """
-    assert Resource.ApiVersion.V1BETA1 in hyperconverged_resource_scope_function.instance.apiVersion
+    assert Resource.ApiVersion.V1 in hyperconverged_resource_scope_function.instance.apiVersion

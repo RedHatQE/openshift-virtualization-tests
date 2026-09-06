@@ -216,8 +216,11 @@ def hyperconverged_resource_before_np(admin_client, hco_namespace, hyperconverge
     Update HCO CR with infrastructure and workloads spec.
     """
     LOGGER.info("Fetching HCO to save its initial node placement configuration ")
-    initial_infra = hyperconverged_resource_scope_class.instance.to_dict()["spec"].get("infra", {})
-    initial_workloads = hyperconverged_resource_scope_class.instance.to_dict()["spec"].get("workloads", {})
+    node_placements = (
+        hyperconverged_resource_scope_class.instance.to_dict()["spec"].get("deployment", {}).get("nodePlacements", {})
+    )
+    initial_infra = node_placements.get("infra", {})
+    initial_workloads = node_placements.get("workload", {})
     yield hyperconverged_resource_scope_class
     LOGGER.info("Revert to initial HCO node placement configuration ")
     apply_np_changes(
