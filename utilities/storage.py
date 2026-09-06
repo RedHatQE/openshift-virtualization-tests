@@ -767,8 +767,10 @@ def write_file(
     """
     if not vm.ready:
         vm.start(wait=True)
-    with console.Console(vm=vm, kubeconfig=kubeconfig) as vm_console:
-        vm_console.sendline(f"echo '{content}' >> {filename}")
+    prompt = r"\$ "
+    with console.Console(vm=vm, prompt=prompt, kubeconfig=kubeconfig) as vm_console:
+        vm_console.sendline(f"echo '{content}' >> {filename} && sync")
+        vm_console.expect(prompt)
     if stop_vm:
         vm.stop(wait=True)
 
