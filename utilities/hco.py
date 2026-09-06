@@ -197,15 +197,20 @@ def apply_np_changes(
     workloads_placement=None,
     exclude_deployments=None,
 ):
-    current_infra = hco.instance.to_dict()["spec"].get("infra")
-    current_workloads = hco.instance.to_dict()["spec"].get("workloads")
+    node_placements = hco.instance.to_dict()["spec"].get("deployment", {}).get("nodePlacements", {})
+    current_infra = node_placements.get("infra")
+    current_workloads = node_placements.get("workload")
     target_infra = infra_placement if infra_placement is not None else current_infra
     target_workloads = workloads_placement if workloads_placement is not None else current_workloads
     if target_workloads != current_workloads or target_infra != current_infra:
         patch = {
             "spec": {
-                "infra": target_infra or None,
-                "workloads": target_workloads or None,
+                "deployment": {
+                    "nodePlacements": {
+                        "infra": target_infra or None,
+                        "workload": target_workloads or None,
+                    },
+                },
             },
         }
         LOGGER.info(f"Updating HCO with node placement. {patch}")
@@ -368,7 +373,7 @@ def disable_common_boot_image_import_hco_spec(
     golden_images_data_import_crons: list[DataImportCron],
     exclude_data_source_names: Collection[str] | None = None,
 ) -> Iterator[None]:
-    if hco_resource.instance.spec[ENABLE_COMMON_BOOT_IMAGE_IMPORT]:
+    if hco_resource.instance.spec.workloadSources.enableCommonBootImageImport:
         update_common_boot_image_import_spec(
             hco_resource=hco_resource,
             enable=False,
@@ -415,7 +420,7 @@ def update_common_boot_image_import_spec(hco_resource, enable):
             for sample in TimeoutSampler(
                 wait_timeout=TIMEOUT_2MIN,
                 sleep=5,
-                func=lambda: _hco_resource.instance.spec[ENABLE_COMMON_BOOT_IMAGE_IMPORT] == _enable,
+                func=lambda: _hco_resource.instance.spec.workloadSources.enableCommonBootImageImport == _enable,
             ):
                 if sample:
                     return
@@ -424,7 +429,7 @@ def update_common_boot_image_import_spec(hco_resource, enable):
             raise
 
     editor = ResourceEditor(
-        patches={hco_resource: {"spec": {ENABLE_COMMON_BOOT_IMAGE_IMPORT: enable}}},
+        patches={hco_resource: {"spec": {"workloadSources": {ENABLE_COMMON_BOOT_IMAGE_IMPORT: enable}}}},
     )
     editor.update(backup_resources=True)
     _wait_for_spec_update(_hco_resource=hco_resource, _enable=enable)
@@ -552,7 +557,11 @@ def update_hco_templates_spec(
 ):
     with ResourceEditorValidateHCOReconcile(
         admin_client=admin_client,
-        patches={hyperconverged_resource: {"spec": {SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME: [updated_template]}}},
+        patches={
+            hyperconverged_resource: {
+                "spec": {"workloadSources": {SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME: [updated_template]}},
+            },
+        },
         list_resource_reconcile=[SSP, CDI],
         wait_for_reconcile_post_update=True,
     ):
@@ -570,11 +579,12 @@ def update_hco_templates_spec(
 
 @contextmanager
 def enabled_aaq_in_hco(client, hco_namespace, hyperconverged_resource, enable_acrq_support=False):
-    patches = {hyperconverged_resource: {"spec": {"enableApplicationAwareQuota": True}}}
+    application_aware_config = {"enable": True}
     if enable_acrq_support:
-        patches[hyperconverged_resource]["spec"]["applicationAwareConfig"] = {
-            "allowApplicationAwareClusterResourceQuota": True,
-        }
+        application_aware_config["allowApplicationAwareClusterResourceQuota"] = True
+    patches = {
+        hyperconverged_resource: {"spec": {"deployment": {"applicationAwareConfig": application_aware_config}}},
+    }
 
     with ResourceEditorValidateHCOReconcile(
         patches=patches,
