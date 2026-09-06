@@ -55,13 +55,26 @@ def udn_affinity_label():
 
 
 @pytest.fixture(scope="module")
-def vma_udn(udn_namespace, namespaced_layer2_user_defined_network, udn_affinity_label, admin_client):
+def udn_vm_pair_labels() -> tuple[tuple[str, str], tuple[str, str]]:
+    key, _ = affinity.new_label(key_prefix="udn")
+    return (key, "client"), (key, "server")
+
+
+@pytest.fixture(scope="module")
+def vma_udn(
+    udn_namespace: Namespace,
+    namespaced_layer2_user_defined_network: Layer2UserDefinedNetwork,
+    udn_vm_pair_labels: tuple[tuple[str, str], tuple[str, str]],
+    admin_client: DynamicClient,
+) -> Generator[BaseVirtualMachine]:
+    client_label, server_label = udn_vm_pair_labels
     with udn_vm(
         namespace_name=udn_namespace.name,
         name="vma-udn",
         client=admin_client,
         binding=UDN_BINDING_DEFAULT_PLUGIN_NAME,
-        template_labels=dict((udn_affinity_label,)),
+        template_labels=dict((client_label,)),
+        affinity=affinity.new_pod_anti_affinity(label=server_label),
     ) as vm:
         vm.start(wait=True)
         vm.wait_for_agent_connected()
@@ -69,13 +82,20 @@ def vma_udn(udn_namespace, namespaced_layer2_user_defined_network, udn_affinity_
 
 
 @pytest.fixture(scope="module")
-def vmb_udn(udn_namespace, namespaced_layer2_user_defined_network, udn_affinity_label, admin_client):
+def vmb_udn(
+    udn_namespace: Namespace,
+    namespaced_layer2_user_defined_network: Layer2UserDefinedNetwork,
+    udn_vm_pair_labels: tuple[tuple[str, str], tuple[str, str]],
+    admin_client: DynamicClient,
+) -> Generator[BaseVirtualMachine]:
+    client_label, server_label = udn_vm_pair_labels
     with udn_vm(
         namespace_name=udn_namespace.name,
         name="vmb-udn",
         client=admin_client,
         binding=UDN_BINDING_DEFAULT_PLUGIN_NAME,
-        template_labels=dict((udn_affinity_label,)),
+        template_labels=dict((server_label,)),
+        affinity=affinity.new_pod_anti_affinity(label=client_label),
     ) as vm:
         vm.start(wait=True)
         vm.wait_for_agent_connected()
