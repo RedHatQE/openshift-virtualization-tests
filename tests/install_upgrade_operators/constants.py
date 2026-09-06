@@ -38,7 +38,6 @@ S390X_SPECIFIC_KUBEVIRT_FEATUREGATES = {"SecureExecution"}
 EXPECTED_CDI_HARDCODED_FEATUREGATES = {
     "DataVolumeClaimAdoption",
     "HonorWaitForFirstConsumer",
-    "WebhookPvcRendering",
 }
 HCO_DEFAULT_FEATUREGATES = {
     DEPLOY_KUBE_SECONDARY_DNS: FG_DISABLED,
