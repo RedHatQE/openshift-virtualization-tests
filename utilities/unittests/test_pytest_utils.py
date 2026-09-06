@@ -32,6 +32,7 @@ from utilities.pytest_utils import (
     exit_pytest_execution,
     filter_hpp_tests,
     filter_multiarch_tests,
+    filter_ocs_tests,
     generate_common_template_matrix_dicts,
     generate_instance_type_matrix_dicts,
     get_artifactory_server_url,
@@ -41,6 +42,7 @@ from utilities.pytest_utils import (
     get_matrix_params,
     get_tests_cluster_markers,
     mark_nmstate_dependent_tests,
+    ocs_storage_class_in_matrix,
     remove_tests_from_list,
     reorder_early_fixtures,
     run_in_progress_config_map,
@@ -2785,6 +2787,121 @@ class TestFilterHppTests:
 
         assert result == []
         config.hook.pytest_deselected.assert_called_once_with(items=[item_hpp])
+
+
+OCS_STORAGE_CLASS = "ocs-storagecluster-ceph-rbd-virtualization"
+
+
+class TestOcsStorageClassInMatrix:
+    """Test cases for ocs_storage_class_in_matrix function."""
+
+    @patch(target="utilities.pytest_utils.py_config", new={"storage_class_matrix": [{OCS_STORAGE_CLASS: {}}]})
+    def test_true_when_ocs_storage_class_in_matrix(self):
+        """Returns True when the OCS storage class is in the storage class matrix."""
+        assert ocs_storage_class_in_matrix() is True
+
+    @patch(target="utilities.pytest_utils.py_config", new={"storage_class_matrix": [{"some-other-sc": {}}]})
+    def test_false_when_ocs_storage_class_not_in_matrix(self):
+        """Returns False when the OCS storage class is not in the storage class matrix."""
+        assert ocs_storage_class_in_matrix() is False
+
+    @patch(target="utilities.pytest_utils.py_config", new={})
+    def test_false_when_matrix_missing(self):
+        """Returns False when the storage class matrix is not configured."""
+        assert ocs_storage_class_in_matrix() is False
+
+
+class TestFilterOcsTests:
+    """Test cases for filter_ocs_tests function."""
+
+    @patch(target="utilities.pytest_utils.py_config", new={})
+    def test_removes_ocs_tests_when_no_marker_expression(self):
+        """OCS tests are filtered out when no -m option is set and OCS storage class is absent."""
+        item_ocs = MagicMock()
+        item_ocs.keywords = {"ocs": True}
+        item_other = MagicMock()
+        item_other.keywords = {"storage": True}
+        config = MagicMock()
+        config.getoption.return_value = None
+
+        result = filter_ocs_tests(items=[item_ocs, item_other], config=config)
+
+        assert result == [item_other]
+        config.hook.pytest_deselected.assert_called_once_with(items=[item_ocs])
+
+    @patch(target="utilities.pytest_utils.py_config", new={})
+    def test_removes_ocs_tests_when_marker_does_not_include_ocs(self):
+        """OCS tests are filtered out when -m is set but does not contain 'ocs'."""
+        item_ocs = MagicMock()
+        item_ocs.keywords = {"ocs": True}
+        item_other = MagicMock()
+        item_other.keywords = {"storage": True}
+        config = MagicMock()
+        config.getoption.return_value = "smoke"
+
+        result = filter_ocs_tests(items=[item_ocs, item_other], config=config)
+
+        assert result == [item_other]
+        config.hook.pytest_deselected.assert_called_once_with(items=[item_ocs])
+
+    @patch(target="utilities.pytest_utils.py_config", new={})
+    def test_keeps_ocs_tests_when_marker_includes_ocs(self):
+        """All tests are kept when -m includes 'ocs'."""
+        item_ocs = MagicMock()
+        item_ocs.keywords = {"ocs": True}
+        item_other = MagicMock()
+        item_other.keywords = {"storage": True}
+        items = [item_ocs, item_other]
+        config = MagicMock()
+        config.getoption.return_value = "ocs"
+
+        result = filter_ocs_tests(items=items, config=config)
+
+        assert result == items
+        config.hook.pytest_deselected.assert_not_called()
+
+    @patch(target="utilities.pytest_utils.py_config", new={})
+    def test_keeps_ocs_tests_when_marker_contains_ocs_in_expression(self):
+        """All tests are kept when -m contains 'ocs' as part of a larger expression."""
+        item_ocs = MagicMock()
+        item_ocs.keywords = {"ocs": True}
+        items = [item_ocs]
+        config = MagicMock()
+        config.getoption.return_value = "ocs and storage"
+
+        result = filter_ocs_tests(items=items, config=config)
+
+        assert result == items
+        config.hook.pytest_deselected.assert_not_called()
+
+    @patch(target="utilities.pytest_utils.py_config", new={})
+    def test_empty_marker_expression_filters_ocs(self):
+        """OCS tests are filtered out when -m is an empty string and OCS storage class is absent."""
+        item_ocs = MagicMock()
+        item_ocs.keywords = {"ocs": True}
+        config = MagicMock()
+        config.getoption.return_value = ""
+
+        result = filter_ocs_tests(items=[item_ocs], config=config)
+
+        assert result == []
+        config.hook.pytest_deselected.assert_called_once_with(items=[item_ocs])
+
+    @patch(target="utilities.pytest_utils.py_config", new={"storage_class_matrix": [{OCS_STORAGE_CLASS: {}}]})
+    def test_keeps_ocs_tests_when_ocs_storage_class_in_matrix(self):
+        """All tests are kept when the OCS storage class is in the matrix, even without -m ocs."""
+        item_ocs = MagicMock()
+        item_ocs.keywords = {"ocs": True}
+        item_other = MagicMock()
+        item_other.keywords = {"storage": True}
+        items = [item_ocs, item_other]
+        config = MagicMock()
+        config.getoption.return_value = None
+
+        result = filter_ocs_tests(items=items, config=config)
+
+        assert result == items
+        config.hook.pytest_deselected.assert_not_called()
 
 
 class TestFilterMultiarchTests:

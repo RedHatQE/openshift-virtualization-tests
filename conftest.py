@@ -58,6 +58,7 @@ from utilities.pytest_utils import (
     deploy_run_in_progress_namespace,
     filter_hpp_tests,
     filter_multiarch_tests,
+    filter_ocs_tests,
     get_artifactory_server_url,
     get_base_matrix_name,
     get_cnv_version_explorer_url,
@@ -677,6 +678,7 @@ def pytest_collection_modifyitems(session, config, items):
     items[:] = filter_sno_only_tests(items=items, config=config)
     items[:] = filter_multiarch_tests(items=items, config=config)
     items[:] = filter_hpp_tests(items=items, config=config)
+    items[:] = filter_ocs_tests(items=items, config=config)
     items[:] = mark_nmstate_dependent_tests(items=items)
 
 

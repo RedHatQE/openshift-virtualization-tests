@@ -66,10 +66,10 @@ class TestCheckupPositive:
             result_entry="storageProfileMissingVolumeSnapshotClass",
         )
 
+    @pytest.mark.ocs
     @pytest.mark.polarion("CNV-10709")
     def test_ocs_rbd_non_virt_vm_exist(
         self,
-        skip_if_no_ocs_rbd_non_virt_sc,
         ocs_rbd_non_virt_vm_for_checkups_test,
         checkup_configmap,
         checkup_job,
