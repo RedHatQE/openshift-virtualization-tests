@@ -525,7 +525,7 @@ def ping(src_vm, dst_ip, packet_size=None, count=None, quiet_output=True, interf
     interface = f"-I {interface}" if interface else ""
     ping_cmd = (
         f"ping {'-q' if quiet_output else ''} {ping_ipv6} {'-n' if windows else '-c'} "
-        f"{count if count else '3'} {dst_ip} {packet_size} {interface}"
+        f"{count or '3'} {dst_ip} {packet_size} {interface}"
     )
     _, out, err = src_vm.ssh_exec.run_command(command=shlex.split(ping_cmd))
     out_to_process = err or out
