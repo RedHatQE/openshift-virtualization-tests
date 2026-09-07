@@ -461,19 +461,6 @@ def must_gather_stopped_vms(must_gather_vms_from_alternate_namespace):
 
 
 @pytest.fixture(scope="class")
-def must_gather_long_name_vm(node_gather_unprivileged_namespace, unprivileged_client):
-    with VirtualMachineForTests(
-        client=unprivileged_client,
-        namespace=node_gather_unprivileged_namespace.name,
-        name=LONG_VM_NAME,
-        body=fedora_vm_body(name=LONG_VM_NAME),
-        generate_unique_name=False,
-    ) as vm:
-        running_vm(vm=vm)
-        yield vm
-
-
-@pytest.fixture(scope="class")
 def gathered_images(
     request,
     must_gather_tmpdir_scope_module,

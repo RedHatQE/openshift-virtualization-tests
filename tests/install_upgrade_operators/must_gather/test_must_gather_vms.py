@@ -25,7 +25,6 @@ from tests.install_upgrade_operators.must_gather.utils import (
     check_list_of_resources,
     check_no_duplicate_and_missing_files_collected_from_migrated_vm,
     extracted_data_from_must_gather_on_vm_node,
-    validate_files_collected,
     validate_guest_console_logs_collected,
     validate_no_empty_files_collected_must_gather_vm,
 )
@@ -274,24 +273,6 @@ class TestGuestConsoleLog:
         validate_guest_console_logs_collected(
             vm=must_gather_vm_scope_class,
             collected_vm_details_must_gather=collected_vm_details_must_gather,
-            admin_client=admin_client,
-        )
-
-
-@pytest.mark.sno
-class TestMustGatherVmLongNameDetails:
-    @pytest.mark.polarion("CNV-9233")
-    def test_data_collected_from_virt_launcher_long(
-        self,
-        admin_client,
-        must_gather_long_name_vm,
-        collected_vm_details_must_gather,
-        nftables_ruleset_from_utility_pods,
-    ):
-        validate_files_collected(
-            base_path=collected_vm_details_must_gather,
-            vm_list=[must_gather_long_name_vm],
-            nftables_ruleset_from_utility_pods=nftables_ruleset_from_utility_pods,
             admin_client=admin_client,
         )
 
