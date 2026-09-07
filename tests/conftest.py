@@ -91,6 +91,7 @@ from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
     get_base_templates_list,
+    get_hyperconverged_kubevirt,
     running_vm,
     start_and_fetch_processid_on_linux_vm,
     vm_instance_from_template,
@@ -214,6 +215,12 @@ def prometheus():
         verify_ssl=False,
         bearer_token=utilities.infra.get_prometheus_k8s_token(duration="86400s"),
     )
+
+
+@pytest.fixture(scope="class")
+def kubevirt_resource_scope_class(admin_client, installing_cnv, hco_namespace):
+    if not installing_cnv:
+        return get_hyperconverged_kubevirt(admin_client=admin_client, hco_namespace=hco_namespace)
 
 
 @pytest.fixture(scope="session")

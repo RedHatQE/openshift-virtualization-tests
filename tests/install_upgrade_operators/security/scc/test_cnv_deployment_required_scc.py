@@ -3,12 +3,8 @@ Test to verify all HCO deployments have 'openshift.io/required-scc' annotation.
 """
 
 import pytest
-from ocp_resources.deployment import Deployment
 
-from utilities.constants.components import (
-    ALL_CNV_DEPLOYMENTS,
-    HPP_POOL,
-)
+from utilities.constants.components import HPP_POOL
 
 REQUIRED_SCC_ANNOTATION = "openshift.io/required-scc"
 REQUIRED_SCC_VALUE = "restricted-v2"
@@ -17,20 +13,19 @@ pytestmark = [pytest.mark.s390x, pytest.mark.skip_must_gather_collection]
 
 
 @pytest.fixture(scope="module")
-def required_scc_deployment_check(admin_client, hco_namespace):
+def required_scc_deployment_check(discovered_cnv_deployments):
     missing_required_scc_annotation = []
     incorrect_required_scc_annotation_value = {}
 
-    for name in ALL_CNV_DEPLOYMENTS:
-        if name.startswith(HPP_POOL):
+    for deployment in discovered_cnv_deployments:
+        if deployment.name.startswith(HPP_POOL):
             continue
-        dp = Deployment(client=admin_client, name=name, namespace=hco_namespace.name)
-        scc = dp.instance.spec.template.metadata.annotations.get(REQUIRED_SCC_ANNOTATION)
+        scc = deployment.instance.spec.template.metadata.annotations.get(REQUIRED_SCC_ANNOTATION)
 
         if scc is None:
-            missing_required_scc_annotation.append(dp.name)
+            missing_required_scc_annotation.append(deployment.name)
         elif scc != REQUIRED_SCC_VALUE:
-            incorrect_required_scc_annotation_value[dp.name] = scc
+            incorrect_required_scc_annotation_value[deployment.name] = scc
 
     return {
         "missing_required_scc_annotation": missing_required_scc_annotation,
