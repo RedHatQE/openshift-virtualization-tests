@@ -337,7 +337,6 @@ def deploy_cbt_pull_backup(
     token_secret_name: str,
     pvc_name: str,
     source: dict[str, str],
-    *,
     force_full_backup: bool,
 ) -> VirtualMachineBackup:
     """Create and deploy a pull-mode VirtualMachineBackup.
