@@ -2174,9 +2174,9 @@ def vm_instance_from_template(
         if params.get("start_vm", True):
             running_vm(
                 vm=vm,
-                dv_wait_timeout=params.get("dv_wait_timeout", TIMEOUT_30MIN),
                 wait_for_interfaces=params.get("guest_agent", True),
                 check_ssh_connectivity=vm.ssh,
+                **({"dv_wait_timeout": params["dv_wait_timeout"]} if params.get("dv_wait_timeout") is not None else {}),
             )
         yield vm
 
