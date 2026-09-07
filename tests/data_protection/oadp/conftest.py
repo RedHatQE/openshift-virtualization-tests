@@ -111,7 +111,7 @@ def velero_backup_multiple_namespaces(admin_client, imported_dv_second_namespace
 def velero_restore_multiple_namespaces(admin_client, velero_backup_multiple_namespaces):
     # Delete NS in order to restore it
     for ns in velero_backup_multiple_namespaces.included_namespaces:
-        Namespace(name=ns).delete(wait=True)
+        Namespace(name=ns, client=admin_client).delete(wait=True)
     with VeleroRestore(
         client=admin_client,
         included_namespaces=velero_backup_multiple_namespaces.included_namespaces,
@@ -228,7 +228,9 @@ def velero_restore_first_namespace_without_datamover(
     admin_client,
     velero_backup_first_namespace_without_datamover,
 ):
-    Namespace(name=velero_backup_first_namespace_without_datamover.included_namespaces[0]).delete(wait=True)
+    Namespace(name=velero_backup_first_namespace_without_datamover.included_namespaces[0], client=admin_client).delete(
+        wait=True
+    )
     with VeleroRestore(
         client=admin_client,
         included_namespaces=velero_backup_first_namespace_without_datamover.included_namespaces,
@@ -259,7 +261,9 @@ def velero_restore_first_namespace_with_datamover(
     velero_backup_first_namespace_using_datamover,
 ):
     # Delete NS in order to restore it
-    Namespace(name=velero_backup_first_namespace_using_datamover.included_namespaces[0]).delete(wait=True)
+    Namespace(name=velero_backup_first_namespace_using_datamover.included_namespaces[0], client=admin_client).delete(
+        wait=True
+    )
     with VeleroRestore(
         client=admin_client,
         included_namespaces=velero_backup_first_namespace_using_datamover.included_namespaces,
@@ -337,7 +341,7 @@ def uploaded_rhel_dv(
         insecure=True,
     ) as res:
         check_upload_virtctl_result(result=res)
-        yield DataVolume(namespace=namespace_for_backup2.name, name=dv_name)
+        yield DataVolume(namespace=namespace_for_backup2.name, name=dv_name, client=namespace_for_backup2.client)
 
 
 @pytest.fixture()
@@ -360,7 +364,9 @@ def velero_restore_second_namespace_with_datamover(
     velero_backup_second_namespace_using_datamover,
 ):
     # Delete NS in order to restore it
-    Namespace(name=velero_backup_second_namespace_using_datamover.included_namespaces[0]).delete(wait=True)
+    Namespace(name=velero_backup_second_namespace_using_datamover.included_namespaces[0], client=admin_client).delete(
+        wait=True
+    )
     with VeleroRestore(
         client=admin_client,
         included_namespaces=velero_backup_second_namespace_using_datamover.included_namespaces,

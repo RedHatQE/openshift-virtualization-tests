@@ -49,23 +49,26 @@ jobs:
             thread_id=$(echo "$thread_data" | jq -r '.id')
 
             # Check if the opening comment is from CodeRabbit — if not, skip
-            local opener_login opener_type
+            local opener_login opener_type opener_id
             opener_login=$(echo "$thread_data" | jq -r '.opening_comment.nodes[0].author.login // ""')
             opener_type=$(echo "$thread_data" | jq -r '.opening_comment.nodes[0].author.__typename // ""')
+            opener_id=$(echo "$thread_data" | jq -r '.opening_comment.nodes[0].id // ""')
             if [ "$opener_login" != "$BOT_LOGIN" ] || [ "$opener_type" != "$BOT_TYPE" ]; then
               echo "Thread $thread_id not opened by CodeRabbit (opener: $opener_login, type: $opener_type). Skipping."
               return
             fi
 
-            # Check for a substantive reply from PR author (>= 15 chars) or CodeRabbit verification
+            # Check for a substantive reply from PR author (>= 15 chars) or CodeRabbit verification.
+            # The opening comment is excluded so CodeRabbit's original finding text (which may itself
+            # contain words like "addressed"/"resolved") is never mistaken for a verification reply.
             local has_response
-            has_response=$(echo "$thread_data" | jq -r --arg pr_author "$PR_AUTHOR" --arg bot_login "$BOT_LOGIN" --arg bot_type "$BOT_TYPE" '
-              any(.recent_comments.nodes[];
+            has_response=$(echo "$thread_data" | jq -r --arg pr_author "$PR_AUTHOR" --arg bot_login "$BOT_LOGIN" --arg bot_type "$BOT_TYPE" --arg opener_id "$opener_id" '
+              any(.recent_comments.nodes[] | select(.id != $opener_id);
                 (
                   # PR author posted a substantive reply (>= 15 chars)
                   (.author.login == $pr_author and ((.body // "") | length) >= 15)
                   or
-                  # CodeRabbit verified the fix
+                  # CodeRabbit verified the fix in a reply (not the original finding)
                   (.author.login == $bot_login and .author.__typename == $bot_type and ((.body // "") | test("\\b(addressed|verified|resolved)\\b|✅|concern is fully"; "i")))
                 )
               )
@@ -121,6 +124,7 @@ jobs:
                         isResolved
                         opening_comment: comments(first: 1) {
                           nodes {
+                            id
                             author {
                               login
                               __typename
@@ -129,6 +133,7 @@ jobs:
                         }
                         recent_comments: comments(last: 5) {
                           nodes {
+                            id
                             author {
                               login
                               __typename

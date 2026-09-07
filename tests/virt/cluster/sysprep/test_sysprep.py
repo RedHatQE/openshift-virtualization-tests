@@ -22,6 +22,7 @@ from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.constants.images import OS_FLAVOR_WINDOWS
 from utilities.constants.timeouts import (
     TCP_TIMEOUT_30SEC,
+    TIMEOUT_2MIN,
     TIMEOUT_5MIN,
 )
 from utilities.ssp import get_windows_timezone
@@ -53,9 +54,12 @@ def verify_changes_from_autounattend(vm, timezone, hostname):
 
     # hostname
     LOGGER.info(f"Verifying hostname change from answer file in vm {vm.name}")
-    actual_hostname = run_ssh_commands(host=vm.ssh_exec, commands=["hostname"], tcp_timeout=TCP_TIMEOUT_30SEC)[
-        0
-    ].strip()
+    actual_hostname = run_ssh_commands(
+        host=vm.ssh_exec,
+        commands=["hostname"],
+        tcp_timeout=TCP_TIMEOUT_30SEC,
+        wait_timeout=TIMEOUT_2MIN,
+    )[0].strip()
     assert actual_hostname == hostname, f"Incorrect hostname, expected {hostname}, found {actual_hostname}"
 
 
@@ -167,6 +171,7 @@ def sealed_vm(sysprep_vm):
             posix=False,
         ),
         tcp_timeout=TCP_TIMEOUT_30SEC,
+        wait_timeout=TIMEOUT_2MIN,
     )
 
 

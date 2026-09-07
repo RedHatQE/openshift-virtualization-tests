@@ -2,7 +2,6 @@ import logging
 
 import pytest
 from ocp_resources.datavolume import DataVolume
-from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.storage_profile import StorageProfile
 from pytest_testconfig import py_config
 
@@ -11,7 +10,6 @@ from tests.storage.upgrade.utils import (
     create_vm_for_snapshot_upgrade_tests,
 )
 from utilities.constants.storage import HOTPLUG_DISK_SERIAL, HOTPLUG_DISK_VIRTIO_BUS
-from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.storage import create_dv, virtctl_volume
 from utilities.virt import (
     VirtualMachineForTests,
@@ -91,22 +89,6 @@ def blank_disk_dv_with_default_sc(upgrade_namespace_scope_session):
         client=upgrade_namespace_scope_session.client,
     ) as dv:
         yield dv
-
-
-@pytest.fixture(scope="session")
-def enabled_feature_gate_for_declarative_hotplug_volumes_upg(
-    admin_client,
-    hyperconverged_resource_scope_session,
-):
-    with ResourceEditorValidateHCOReconcile(
-        admin_client=admin_client,
-        patches={
-            hyperconverged_resource_scope_session: {"spec": {"featureGates": {"declarativeHotplugVolumes": True}}},
-        },
-        list_resource_reconcile=[KubeVirt],
-        wait_for_reconcile_post_update=True,
-    ):
-        yield
 
 
 @pytest.fixture(scope="session")

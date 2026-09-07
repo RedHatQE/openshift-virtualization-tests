@@ -9,15 +9,15 @@ from ocp_resources.image_stream import ImageStream
 from ocp_resources.resource import Resource
 from ocp_resources.ssp import SSP
 from ocp_resources.volume_snapshot import VolumeSnapshot
+from pytest_testconfig import config as py_config
 
 from tests.install_upgrade_operators.hco_enablement_golden_image_updates.utils import (
-    COMMON_TEMPLATE,
-    get_templates_by_type_from_hco_status,
+    verify_common_template_namespace_updated,
+    verify_resource_in_ns,
+    verify_resource_not_in_ns,
 )
-from utilities.constants.timeouts import (
-    TIMEOUT_3MIN,
-    TIMEOUT_10MIN,
-)
+from utilities.constants.architecture import MULTIARCH
+from utilities.constants.timeouts import TIMEOUT_3MIN, TIMEOUT_10MIN
 from utilities.hco import (
     ResourceEditorValidateHCOReconcile,
     wait_for_hco_conditions,
@@ -31,68 +31,9 @@ COMMON_BOOT_IMAGE_NAMESPACE_STR = "commonBootImageNamespace"
 pytestmark = [pytest.mark.arm64, pytest.mark.s390x]
 
 
-def get_templates_resources_names_dict(templates):
-    resource_dict = {}
-    for template in templates:
-        image_stream_name = template["spec"]["template"]["spec"]["source"]["registry"].get("imageStream")
-        if image_stream_name:
-            resource_dict.setdefault(ImageStream.kind, set()).add(image_stream_name)
-        resource_dict.setdefault(DataImportCron.kind, set()).add(template["metadata"]["name"])
-        resource_dict.setdefault(DataSource.kind, set()).add(template["spec"]["managedDataSource"])
-    return resource_dict
-
-
-def verify_resource_not_in_ns(resource_type, namespace, client):
-    resources = resource_type.get(client=client, namespace=namespace)
-    resources_names = {resource.name for resource in resources}
-    assert not resources_names, f"{resource_type.kind} resources shouldn't exist in {namespace}: {resources_names}"
-
-
-def verify_resource_in_ns(expected_resource_names, namespace, client, resource_type, ready_condition=None):
-    """
-    Verify that resources exist in expected_namespace and in ready status.
-    """
-    resources = list(resource_type.get(client=client, namespace=namespace))
-    resources_names = {resource.name for resource in resources}
-    missing_resources_names = expected_resource_names - resources_names
-    assert not missing_resources_names, f"Missing {resource_type.kind} in {namespace}: {missing_resources_names}"
-
-    if ready_condition:
-        LOGGER.info(f"Verify that {expected_resource_names} are in {ready_condition} condition")
-        for resource in resources:
-            resource.wait_for_condition(
-                condition=ready_condition,
-                status=resource.Condition.Status.TRUE,
-                timeout=TIMEOUT_10MIN,
-            )
-
-
-def verify_common_template_namespace_updated(common_templates, namespace_name):
-    non_updated_templates = []
-    for template in common_templates:
-        if template["metadata"].get("namespace") != namespace_name:
-            non_updated_templates.append(
-                f"{template['metadata']['name']} expected namespace: {namespace_name} "
-                f"actual: {template['metadata'].get('namespace')}\n"
-            )
-    assert not non_updated_templates, non_updated_templates
-
-
 @pytest.fixture(scope="module")
 def custom_golden_images_namespace(admin_client):
     yield from create_ns(admin_client=admin_client, name="custom-golden-images-namespace")
-
-
-@pytest.fixture(scope="class")
-def default_common_template_hco_status(hyperconverged_status_templates_scope_class):
-    return get_templates_by_type_from_hco_status(
-        hco_status_templates=hyperconverged_status_templates_scope_class, template_type=COMMON_TEMPLATE
-    )
-
-
-@pytest.fixture(scope="class")
-def default_common_templates_related_resources(default_common_template_hco_status):
-    return get_templates_resources_names_dict(templates=default_common_template_hco_status)
 
 
 @pytest.fixture(scope="class")
@@ -151,7 +92,7 @@ class TestDefaultCommonTemplates:
     @pytest.mark.parametrize(
         "common_templates",
         [
-            pytest.param("default_common_template_hco_status", marks=pytest.mark.polarion("CNV-11473")),
+            pytest.param("common_templates_from_hco_status_scope_class", marks=pytest.mark.polarion("CNV-11473")),
             pytest.param("ssp_spec_templates_scope_function", marks=pytest.mark.polarion("CNV-11677")),
         ],
     )
@@ -170,20 +111,27 @@ class TestDefaultCommonTemplates:
         "resource_type, ready_condition",
         [
             pytest.param(ImageStream, None, marks=pytest.mark.polarion("CNV-11474")),
-            pytest.param(DataImportCron, "UpToDate", marks=pytest.mark.polarion("CNV-11475")),
-            pytest.param(DataSource, DataSource.Condition.READY, marks=pytest.mark.polarion("CNV-11476")),
+            pytest.param(DataImportCron, DataImportCron.Condition.UP_TO_DATE, marks=pytest.mark.polarion("CNV-11475")),
+            pytest.param(
+                DataSource,
+                DataSource.Condition.READY,
+                marks=(
+                    pytest.mark.polarion("CNV-11476"),
+                    *((pytest.mark.jira("CNV-94362", run=False),) if py_config["cluster_type"] == MULTIARCH else ()),
+                ),
+            ),
         ],
     )
     def test_resources_in_custom_ns(
         self,
         admin_client,
         custom_golden_images_namespace,
-        default_common_templates_related_resources,
+        expected_common_templates_related_resources,
         resource_type,
         ready_condition,
     ):
         verify_resource_in_ns(
-            expected_resource_names=default_common_templates_related_resources[resource_type.kind],
+            expected_resource_names=expected_common_templates_related_resources[resource_type.kind],
             namespace=custom_golden_images_namespace.name,
             client=admin_client,
             resource_type=resource_type,

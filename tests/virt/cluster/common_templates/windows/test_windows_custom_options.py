@@ -17,6 +17,7 @@ from utilities.constants import Images
 from utilities.constants.networking import LINUX_BRIDGE
 from utilities.constants.timeouts import (
     TCP_TIMEOUT_30SEC,
+    TIMEOUT_2MIN,
     TIMEOUT_12MIN,
 )
 from utilities.constants.virt import VIRTIO
@@ -115,6 +116,7 @@ def initialize_and_format_windows_drive(vm, disk_number, partition_number, drive
         ],
         get_pty=True,
         tcp_timeout=TCP_TIMEOUT_30SEC,
+        wait_timeout=TIMEOUT_2MIN,
     )
 
 

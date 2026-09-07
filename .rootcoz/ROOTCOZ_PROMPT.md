@@ -405,6 +405,7 @@ Environment:
 - OCS: 4.22.0-70.stable [LOW]
 - Network Type: OVNKubernetes [HIGH]
 - HCO Image: registry.redhat.io/...@sha256:... [LOW]
+- HCO Index Image: registry.redhat.io/...@sha256:... [LOW]
 - Test Image: quay.io/openshift-cnv/...@sha256:... [LOW]
 
 Root Cause:
@@ -417,11 +418,22 @@ pod image tags, or log output under `build-artifacts/`.
 If a version still cannot be determined, mark as `unknown`.
 Do NOT skip this step — the environment block MUST appear in every `details` field.
 
+**Peer revision / re-analysis (MANDATORY):** Whenever you emit or revise the
+analysis JSON — including after peer debate feedback, classification changes,
+or any follow-up rewrite of `details` — the `details` field MUST still begin
+with the full `Environment:` block (then Root Cause and the rest of the required
+structure). You may update classification and root-cause text; you MUST NOT drop
+or postpone the Environment block. If your prior draft already had Environment
+data, carry it forward unchanged unless versions need correction.
+
 ### Self-Verification (MANDATORY)
 
-Before submitting your JSON response, verify:
+Before submitting your JSON response (initial analysis **and** any revision), verify:
 1. Does `details` start with "Environment:" on the first line? If NO, fix it.
-2. Does the Environment block list ALL version fields from `run-info.json`? If NO, add the missing ones.
+2. Does the Environment block list ALL version/revision fields, image references, and environment identifiers from `run-info.json`? If NO, add the missing ones.
+3. Does `Root Cause:` follow the complete Environment block? If NO, restore the required structure before submitting.
+4. If this is a revised analysis after peer feedback: did you keep the Environment
+   block at the top of `details`? If NO, restore it before submitting.
 
 **CRITICAL: Never dismiss or skip warnings, conditions, or errors found in the data.**
 Every warning, condition entry, and error message in VirtualMachine, VMI, DataVolume,

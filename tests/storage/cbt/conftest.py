@@ -23,6 +23,7 @@ from tests.storage.cbt.utils import (
     cbt_pvc_size_with_headroom,
     wait_for_pull_backup_export_deleted,
     wait_for_pull_backup_export_ready,
+    wait_for_push_backup_complete,
     wait_for_vm_cbt_enabled,
 )
 from utilities.constants.images import OS_FLAVOR_RHEL
@@ -138,6 +139,96 @@ def backup_tracker_source(backup_tracker_for_vm):
         "kind": VirtualMachineBackupTracker.kind,
         "name": backup_tracker_for_vm.name,
     }
+
+
+@pytest.fixture()
+def push_backup_pvc(
+    unprivileged_client,
+    namespace,
+    vm_with_cbt_label,
+    storage_class_name_scope_module,
+    unique_suffix,
+):
+    """
+    PVC for storing push-mode backup output.
+
+    Returns:
+        PersistentVolumeClaim: PVC for push-mode backup storage
+    """
+    boot_disk_size = vm_with_cbt_label.data_volume_template["spec"]["storage"]["resources"]["requests"]["storage"]
+    with PersistentVolumeClaim(
+        name=f"cbt-backup-{unique_suffix}",
+        namespace=namespace.name,
+        client=unprivileged_client,
+        accessmodes=PersistentVolumeClaim.AccessMode.RWO,
+        size=cbt_pvc_size_with_headroom(source_disk_size=boot_disk_size),
+        storage_class=storage_class_name_scope_module,
+        volume_mode=PersistentVolumeClaim.VolumeMode.FILE,
+    ) as pvc:
+        yield pvc
+
+
+@pytest.fixture()
+def completed_full_backup_push_mode(
+    unprivileged_client,
+    namespace,
+    push_backup_pvc,
+    backup_tracker_source,
+    unique_suffix,
+):
+    """
+    Full push-mode backup after Complete=True.
+
+    Returns:
+        VirtualMachineBackup: Completed full push backup
+    """
+    with VirtualMachineBackup(
+        mode=VirtualMachineBackup.Mode.PUSH,
+        name=f"full-push-{unique_suffix}",
+        namespace=namespace.name,
+        client=unprivileged_client,
+        pvc_name=push_backup_pvc.name,
+        force_full_backup=True,
+        source=backup_tracker_source,
+    ) as backup:
+        wait_for_push_backup_complete(backup=backup)
+        yield backup
+
+
+@pytest.fixture()
+def completed_incremental_backup_push_mode(
+    unprivileged_client,
+    namespace,
+    push_backup_pvc,
+    vm_with_cbt_label,
+    completed_full_backup_push_mode,
+    backup_tracker_source,
+    unique_suffix,
+):
+    """
+    Incremental push-mode backup after Complete=True.
+
+    Depends on a prior full push backup, then writes new guest data before the incremental.
+
+    Returns:
+        VirtualMachineBackup: Completed incremental push backup
+    """
+    write_file_via_ssh(
+        vm=vm_with_cbt_label,
+        filename=CBT_INCREMENTAL_TEST_DATA_FILE,
+        content=CBT_INCREMENTAL_TEST_DATA,
+    )
+    with VirtualMachineBackup(
+        mode=VirtualMachineBackup.Mode.PUSH,
+        name=f"incr-push-{unique_suffix}",
+        namespace=namespace.name,
+        client=unprivileged_client,
+        pvc_name=push_backup_pvc.name,
+        force_full_backup=False,
+        source=backup_tracker_source,
+    ) as backup:
+        wait_for_push_backup_complete(backup=backup)
+        yield backup
 
 
 @pytest.fixture()

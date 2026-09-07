@@ -3,12 +3,14 @@ import json
 import logging
 import re
 import time
-from ipaddress import IPv4Address, ip_interface
+from ipaddress import IPv4Address, IPv4Interface, IPv6Interface, ip_interface
 from typing import Final, cast
 
 from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.client import ResourceField
 from ocp_resources.resource import ResourceEditor
+from ocp_utilities.exceptions import CommandExecFailed
+from pexpect.exceptions import EOF
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 
 from libs.net.ip import random_ipv4_address
@@ -102,13 +104,7 @@ def create_vm_with_secondary_interface_on_setup(
     cloud_init_data = compose_cloud_init_data_dict(
         network_data={
             "ethernets": {
-                "eth1": {
-                    "addresses": [
-                        f"{random_ipv4_address(net_seed=0, host_address=ipv4_address_suffix)}/{
-                            IPV4_ADDRESS_SUBNET_PREFIX_LENGTH
-                        }"
-                    ]
-                }
+                "eth1": {"addresses": [str(random_ipv4_address(net_seed=0, host_address=ipv4_address_suffix))]}
             }
         }
     )
@@ -275,12 +271,14 @@ def hot_plug_interface_and_set_address(
 
 @retry(
     wait_timeout=120,
-    sleep=5,
+    sleep=10,
     exceptions_dict={
         VMInterfaceStatusNotFoundError: [],
         GuestInterfaceNotFoundError: [],
         json.JSONDecodeError: [],
         IndexError: [],
+        CommandExecFailed: [],
+        EOF: [],
     },
 )
 def _lookup_hotplugged_iface_via_console(
@@ -309,7 +307,7 @@ def _lookup_hotplugged_iface_via_console(
         f"falling back to console lookup by MAC {vmi_iface['macAddress']}."
     )
     cmd = "ip -j addr show"
-    output = vm_console_run_commands(vm=vm, commands=[cmd], timeout=30)
+    output = vm_console_run_commands(vm=vm, commands=[cmd])
     guest_interfaces = json.loads(output[cmd][1])
 
     visible_ifaces = [{"ifname": iface.get("ifname"), "address": iface.get("address")} for iface in guest_interfaces]
@@ -431,7 +429,7 @@ def secondary_network_vm(
     client: DynamicClient,
     nad_name: str,
     secondary_iface_name: str,
-    secondary_iface_addresses: list[str],
+    secondary_iface_addresses: list[IPv4Interface | IPv6Interface],
     affinity: Affinity | None = None,
     labels: dict[str, str] | None = None,
 ) -> BaseVirtualMachine:
@@ -443,7 +441,7 @@ def secondary_network_vm(
         client: Kubernetes dynamic client.
         nad_name: NetworkAttachmentDefinition name for the secondary interface.
         secondary_iface_name: Name of the secondary network interface in the VM spec.
-        secondary_iface_addresses: CIDR addresses to assign to the secondary interface via cloud-init.
+        secondary_iface_addresses: IP interface objects for the secondary interface, one per supported IP family.
         affinity: Optional node or pod affinity rules for scheduling.
         labels: Optional labels to apply to the VM template metadata for pod scheduling.
     """
@@ -468,7 +466,7 @@ def secondary_network_vm(
     primary = primary_iface_cloud_init()
     if primary:
         ethernets["eth0"] = primary
-    ethernets["eth1"] = cloudinit.EthernetDevice(addresses=secondary_iface_addresses)
+    ethernets["eth1"] = cloudinit.EthernetDevice(addresses=[str(addr) for addr in secondary_iface_addresses])
 
     disk, volume = cloudinitdisk_storage(
         data=CloudInitNoCloud(

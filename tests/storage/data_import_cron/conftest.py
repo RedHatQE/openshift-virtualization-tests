@@ -49,7 +49,9 @@ def vm_for_data_source_import(
         os_flavor=OS_FLAVOR_FEDORA,
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=DataSource(
-                name=imported_data_source.name, namespace=data_import_cron_pvc_target_namespace.name
+                name=imported_data_source.name,
+                namespace=data_import_cron_pvc_target_namespace.name,
+                client=unprivileged_client,
             ),
             storage_class=storage_class_name_scope_module,
         ),
@@ -98,8 +100,10 @@ def data_import_cron_with_pvc_source(
 
 
 @pytest.fixture(scope="class")
-def imported_data_source(data_import_cron_pvc_target_namespace):
-    yield DataSource(namespace=data_import_cron_pvc_target_namespace.name, name="target-data-source")
+def imported_data_source(admin_client, data_import_cron_pvc_target_namespace):
+    yield DataSource(
+        namespace=data_import_cron_pvc_target_namespace.name, name="target-data-source", client=admin_client
+    )
 
 
 @pytest.fixture(scope="class")

@@ -8,6 +8,11 @@ from utilities.network import compose_cloud_init_data_dict, network_device, netw
 
 
 @pytest.fixture(scope="module")
+def pod_network_nic_model(request):
+    return request.param
+
+
+@pytest.fixture(scope="module")
 def bridge_device_name(index_number):
     yield f"br{next(index_number)}test"
 

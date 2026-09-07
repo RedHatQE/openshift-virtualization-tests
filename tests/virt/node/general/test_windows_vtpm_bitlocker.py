@@ -40,6 +40,7 @@ def verify_tpm_in_os(vm):
             r"wmic /namespace:\\root\cimv2\security\microsofttpm path Win32_Tpm get IsEnabled_InitialValue",
             posix=False,
         ),
+        wait_timeout=TIMEOUT_2MIN,
     )[0]
     assert "TRUE" in vtpm_enabled, "TPM is not present/enabled in OS!"
 
@@ -67,11 +68,20 @@ def enable_bitlocker(vm):
         run_ssh_commands(
             host=vm.ssh_exec,
             commands=shlex.split('powershell -c "install-windowsfeature bitlocker"'),
+            wait_timeout=TIMEOUT_2MIN,
         )
         restart_vm_wait_for_running_vm(vm=vm)
 
-    run_ssh_commands(host=vm.ssh_exec, commands=shlex.split('powershell -c "initialize-tpm"'))
-    run_ssh_commands(host=vm.ssh_exec, commands=shlex.split("manage-bde -on c: -s"))
+    run_ssh_commands(
+        host=vm.ssh_exec,
+        commands=shlex.split('powershell -c "initialize-tpm"'),
+        wait_timeout=TIMEOUT_2MIN,
+    )
+    run_ssh_commands(
+        host=vm.ssh_exec,
+        commands=shlex.split("manage-bde -on c: -s"),
+        wait_timeout=TIMEOUT_2MIN,
+    )
     _wait_encryption_finish(vm=vm)
 
 

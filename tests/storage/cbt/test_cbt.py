@@ -11,6 +11,7 @@ Preconditions:
 
 import pytest
 
+from tests.storage.cbt.constants import CBT_BACKUP_TYPE_FULL, CBT_BACKUP_TYPE_INCREMENTAL
 from tests.storage.cbt.utils import assert_backup_includes_volumes
 from utilities.constants.virt import DV_DISK
 
@@ -20,7 +21,7 @@ from utilities.constants.virt import DV_DISK
     [{"name": "cbt-full"}],
     indirect=True,
 )
-class TestFullBackupRestore:
+class TestFullBackup:
     """
     Full backup validation for push and pull modes (backup success only).
 
@@ -30,9 +31,12 @@ class TestFullBackupRestore:
     """
 
     @pytest.mark.polarion("CNV-15997")
-    def test_full_backup_push_mode_restore(self):
+    def test_full_backup_push_mode(
+        self,
+        completed_full_backup_push_mode,
+    ):
         """
-        Test that a VM can be backed up (push mode) and restored from a full backup.
+        Test that a full backup in push mode completes successfully.
 
         Preconditions:
             - Backup PVC available
@@ -40,16 +44,16 @@ class TestFullBackupRestore:
         Steps:
             1. Create a backup tracker for the VM
             2. Perform a full backup in push mode
-            3. Wait for backup to complete
-            4. Delete the original VM
-            5. Restore VM from the full backup
-            6. Start the restored VM
+            3. Wait for the backup to complete
 
         Expected:
-            - Restored VM boots successfully and test data is present
+            - Full backup completes and includes the boot disk
         """
-
-    test_full_backup_push_mode_restore.__test__ = False  # STD placeholder - not yet implemented
+        assert_backup_includes_volumes(
+            backup=completed_full_backup_push_mode,
+            expected_volume_names=[DV_DISK],
+            expected_backup_type=CBT_BACKUP_TYPE_FULL,
+        )
 
     @pytest.mark.polarion("CNV-15996")
     def test_full_backup_pull_mode(
@@ -73,7 +77,7 @@ class TestFullBackupRestore:
         assert_backup_includes_volumes(
             backup=ready_full_backup_pull_mode,
             expected_volume_names=[DV_DISK],
-            expected_backup_type="Full",
+            expected_backup_type=CBT_BACKUP_TYPE_FULL,
         )
 
 
@@ -82,7 +86,7 @@ class TestFullBackupRestore:
     [{"name": "cbt-incr"}],
     indirect=True,
 )
-class TestIncrementalBackupRestore:
+class TestIncrementalBackup:
     """
     Incremental backup validation for push and pull modes (backup success only).
 
@@ -93,26 +97,30 @@ class TestIncrementalBackupRestore:
     """
 
     @pytest.mark.polarion("CNV-15998")
-    def test_incremental_backup_push_mode_restore(self):
+    def test_incremental_backup_push_mode(
+        self,
+        completed_incremental_backup_push_mode,
+    ):
         """
-        Test that a VM can be backed up (push mode) and restored from an incremental backup.
+        Test that an incremental backup in push mode completes successfully.
 
         Preconditions:
             - Backup PVC available
+            - Full backup completed in push mode
 
         Steps:
             1. Write new test data to VM
             2. Perform an incremental backup in push mode
-            3. Wait for backup to complete
-            4. Delete the original VM
-            5. Restore VM from the incremental backup
-            6. Start the restored VM
+            3. Wait for the backup to complete
 
         Expected:
-            - Restored VM boots successfully and all test data is present
+            - Incremental backup completes and includes the boot disk
         """
-
-    test_incremental_backup_push_mode_restore.__test__ = False  # STD placeholder - not yet implemented
+        assert_backup_includes_volumes(
+            backup=completed_incremental_backup_push_mode,
+            expected_volume_names=[DV_DISK],
+            expected_backup_type=CBT_BACKUP_TYPE_INCREMENTAL,
+        )
 
     @pytest.mark.polarion("CNV-16000")
     def test_incremental_backup_pull_mode(
@@ -138,7 +146,7 @@ class TestIncrementalBackupRestore:
         assert_backup_includes_volumes(
             backup=ready_incremental_backup_pull_mode,
             expected_volume_names=[DV_DISK],
-            expected_backup_type="Incremental",
+            expected_backup_type=CBT_BACKUP_TYPE_INCREMENTAL,
         )
 
 

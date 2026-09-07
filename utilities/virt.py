@@ -1998,7 +1998,11 @@ def wait_for_migration_finished(migration: VirtualMachineInstanceMigration, time
     """
 
     sleep = TIMEOUT_10SEC
-    samples = TimeoutSampler(wait_timeout=timeout, sleep=sleep, func=lambda: migration.instance.status.phase)
+    samples = TimeoutSampler(
+        wait_timeout=timeout,
+        sleep=sleep,
+        func=lambda: (status := migration.instance.status) and status.phase,
+    )
     counter = 0
     sample = None
     try:
@@ -2164,6 +2168,8 @@ def vm_instance_from_template(
         machine_type=params.get("machine_type"),
         eviction_strategy=params.get("eviction_strategy"),
         vm_affinity=vm_affinity,
+        tpm_params=params.get("tpm_params"),
+        efi_params=params.get("efi_params"),
     ) as vm:
         if params.get("start_vm", True):
             running_vm(

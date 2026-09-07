@@ -1,4 +1,5 @@
 from collections.abc import Generator, Iterator
+from ipaddress import IPv4Interface, IPv6Interface
 
 import pytest
 from kubernetes.dynamic import DynamicClient
@@ -125,20 +126,20 @@ def cudn_localnet_no_vlan(
 
 
 @pytest.fixture(scope="module")
-def ipv4_localnet_address_pool() -> Generator[str]:
-    return (f"{random_ipv4_address(net_seed=0, host_address=host_value)}/24" for host_value in range(1, 254))
+def ipv4_localnet_address_pool() -> Generator[IPv4Interface]:
+    return (random_ipv4_address(net_seed=0, host_address=host_value) for host_value in range(1, 254))
 
 
 @pytest.fixture(scope="module")
-def ipv6_localnet_address_pool() -> Generator[str]:
-    return (f"{random_ipv6_address(net_seed=0, host_address=host_value)}/64" for host_value in range(1, 254))
+def ipv6_localnet_address_pool() -> Generator[IPv6Interface]:
+    return (random_ipv6_address(net_seed=0, host_address=host_value) for host_value in range(1, 254))
 
 
 @pytest.fixture(scope="module")
 def vm_localnet_1(
     unprivileged_client: DynamicClient,
-    ipv4_localnet_address_pool: Generator[str],
-    ipv6_localnet_address_pool: Generator[str],
+    ipv4_localnet_address_pool: Generator[IPv4Interface],
+    ipv6_localnet_address_pool: Generator[IPv6Interface],
     namespace_localnet_1: Namespace,
     cudn_localnet: libcudn.ClusterUserDefinedNetwork,
     cudn_localnet_no_vlan: libcudn.ClusterUserDefinedNetwork,
@@ -164,16 +165,22 @@ def vm_localnet_1(
             network_data=cloudinit.NetworkData(
                 ethernets={
                     GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
-                        addresses=ip_addresses_from_pool(
-                            ipv4_pool=ipv4_localnet_address_pool,
-                            ipv6_pool=ipv6_localnet_address_pool,
-                        ),
+                        addresses=[
+                            str(addr)
+                            for addr in ip_addresses_from_pool(
+                                ipv4_pool=ipv4_localnet_address_pool,
+                                ipv6_pool=ipv6_localnet_address_pool,
+                            )
+                        ],
                     ),
                     GUEST_2ND_IFACE_NAME: cloudinit.EthernetDevice(
-                        addresses=ip_addresses_from_pool(
-                            ipv4_pool=ipv4_localnet_address_pool,
-                            ipv6_pool=ipv6_localnet_address_pool,
-                        ),
+                        addresses=[
+                            str(addr)
+                            for addr in ip_addresses_from_pool(
+                                ipv4_pool=ipv4_localnet_address_pool,
+                                ipv6_pool=ipv6_localnet_address_pool,
+                            )
+                        ],
                     ),
                 }
             )
@@ -186,8 +193,8 @@ def vm_localnet_1(
 @pytest.fixture(scope="module")
 def vm_localnet_2(
     namespace_localnet_2: Namespace,
-    ipv4_localnet_address_pool: Generator[str],
-    ipv6_localnet_address_pool: Generator[str],
+    ipv4_localnet_address_pool: Generator[IPv4Interface],
+    ipv6_localnet_address_pool: Generator[IPv6Interface],
     cudn_localnet: libcudn.ClusterUserDefinedNetwork,
     unprivileged_client: DynamicClient,
 ) -> Generator[BaseVirtualMachine]:
@@ -201,10 +208,13 @@ def vm_localnet_2(
             network_data=cloudinit.NetworkData(
                 ethernets={
                     GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
-                        addresses=ip_addresses_from_pool(
-                            ipv4_pool=ipv4_localnet_address_pool,
-                            ipv6_pool=ipv6_localnet_address_pool,
-                        ),
+                        addresses=[
+                            str(addr)
+                            for addr in ip_addresses_from_pool(
+                                ipv4_pool=ipv4_localnet_address_pool,
+                                ipv6_pool=ipv6_localnet_address_pool,
+                            )
+                        ],
                     )
                 }
             )
@@ -257,8 +267,8 @@ def cudn_localnet_ovs_bridge(
 @pytest.fixture(scope="function")
 def vm_ovs_bridge_localnet_link_down(
     namespace_localnet_1: Namespace,
-    ipv4_localnet_address_pool: Generator[str],
-    ipv6_localnet_address_pool: Generator[str],
+    ipv4_localnet_address_pool: Generator[IPv4Interface],
+    ipv6_localnet_address_pool: Generator[IPv6Interface],
     cudn_localnet_ovs_bridge: libcudn.ClusterUserDefinedNetwork,
     unprivileged_client: DynamicClient,
 ) -> Generator[BaseVirtualMachine]:
@@ -274,10 +284,13 @@ def vm_ovs_bridge_localnet_link_down(
             network_data=cloudinit.NetworkData(
                 ethernets={
                     GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
-                        addresses=ip_addresses_from_pool(
-                            ipv4_pool=ipv4_localnet_address_pool,
-                            ipv6_pool=ipv6_localnet_address_pool,
-                        )
+                        addresses=[
+                            str(addr)
+                            for addr in ip_addresses_from_pool(
+                                ipv4_pool=ipv4_localnet_address_pool,
+                                ipv6_pool=ipv6_localnet_address_pool,
+                            )
+                        ]
                     )
                 }
             )
@@ -290,8 +303,8 @@ def vm_ovs_bridge_localnet_link_down(
 @pytest.fixture(scope="module")
 def vm_ovs_bridge_localnet_1(
     namespace_localnet_1: Namespace,
-    ipv4_localnet_address_pool: Generator[str],
-    ipv6_localnet_address_pool: Generator[str],
+    ipv4_localnet_address_pool: Generator[IPv4Interface],
+    ipv6_localnet_address_pool: Generator[IPv6Interface],
     cudn_localnet_ovs_bridge: libcudn.ClusterUserDefinedNetwork,
     unprivileged_client: DynamicClient,
 ) -> Generator[BaseVirtualMachine]:
@@ -307,10 +320,13 @@ def vm_ovs_bridge_localnet_1(
             network_data=cloudinit.NetworkData(
                 ethernets={
                     GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
-                        addresses=ip_addresses_from_pool(
-                            ipv4_pool=ipv4_localnet_address_pool,
-                            ipv6_pool=ipv6_localnet_address_pool,
-                        )
+                        addresses=[
+                            str(addr)
+                            for addr in ip_addresses_from_pool(
+                                ipv4_pool=ipv4_localnet_address_pool,
+                                ipv6_pool=ipv6_localnet_address_pool,
+                            )
+                        ]
                     )
                 }
             )
@@ -323,8 +339,8 @@ def vm_ovs_bridge_localnet_1(
 @pytest.fixture(scope="module")
 def vm_ovs_bridge_localnet_2(
     namespace_localnet_1: Namespace,
-    ipv4_localnet_address_pool: Generator[str],
-    ipv6_localnet_address_pool: Generator[str],
+    ipv4_localnet_address_pool: Generator[IPv4Interface],
+    ipv6_localnet_address_pool: Generator[IPv6Interface],
     cudn_localnet_ovs_bridge: libcudn.ClusterUserDefinedNetwork,
     unprivileged_client: DynamicClient,
 ) -> Generator[BaseVirtualMachine]:
@@ -340,10 +356,13 @@ def vm_ovs_bridge_localnet_2(
             network_data=cloudinit.NetworkData(
                 ethernets={
                     GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
-                        addresses=ip_addresses_from_pool(
-                            ipv4_pool=ipv4_localnet_address_pool,
-                            ipv6_pool=ipv6_localnet_address_pool,
-                        )
+                        addresses=[
+                            str(addr)
+                            for addr in ip_addresses_from_pool(
+                                ipv4_pool=ipv4_localnet_address_pool,
+                                ipv6_pool=ipv6_localnet_address_pool,
+                            )
+                        ]
                     )
                 }
             )
@@ -476,8 +495,8 @@ def cudn_localnet_ovs_bridge_jumbo_frame(
 @pytest.fixture(scope="module")
 def vm1_ovs_bridge_localnet_jumbo_frame(
     namespace_localnet_1: Namespace,
-    ipv4_localnet_address_pool: Generator[str],
-    ipv6_localnet_address_pool: Generator[str],
+    ipv4_localnet_address_pool: Generator[IPv4Interface],
+    ipv6_localnet_address_pool: Generator[IPv6Interface],
     cudn_localnet_ovs_bridge_jumbo_frame: libcudn.ClusterUserDefinedNetwork,
     unprivileged_client: DynamicClient,
 ) -> Generator[BaseVirtualMachine]:
@@ -495,10 +514,13 @@ def vm1_ovs_bridge_localnet_jumbo_frame(
             network_data=cloudinit.NetworkData(
                 ethernets={
                     GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
-                        addresses=ip_addresses_from_pool(
-                            ipv4_pool=ipv4_localnet_address_pool,
-                            ipv6_pool=ipv6_localnet_address_pool,
-                        )
+                        addresses=[
+                            str(addr)
+                            for addr in ip_addresses_from_pool(
+                                ipv4_pool=ipv4_localnet_address_pool,
+                                ipv6_pool=ipv6_localnet_address_pool,
+                            )
+                        ]
                     )
                 }
             )
@@ -511,8 +533,8 @@ def vm1_ovs_bridge_localnet_jumbo_frame(
 @pytest.fixture(scope="module")
 def vm2_ovs_bridge_localnet_jumbo_frame(
     namespace_localnet_1: Namespace,
-    ipv4_localnet_address_pool: Generator[str],
-    ipv6_localnet_address_pool: Generator[str],
+    ipv4_localnet_address_pool: Generator[IPv4Interface],
+    ipv6_localnet_address_pool: Generator[IPv6Interface],
     cudn_localnet_ovs_bridge_jumbo_frame: libcudn.ClusterUserDefinedNetwork,
     unprivileged_client: DynamicClient,
 ) -> Generator[BaseVirtualMachine]:
@@ -530,10 +552,13 @@ def vm2_ovs_bridge_localnet_jumbo_frame(
             network_data=cloudinit.NetworkData(
                 ethernets={
                     GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
-                        addresses=ip_addresses_from_pool(
-                            ipv4_pool=ipv4_localnet_address_pool,
-                            ipv6_pool=ipv6_localnet_address_pool,
-                        )
+                        addresses=[
+                            str(addr)
+                            for addr in ip_addresses_from_pool(
+                                ipv4_pool=ipv4_localnet_address_pool,
+                                ipv6_pool=ipv6_localnet_address_pool,
+                            )
+                        ]
                     )
                 }
             )
