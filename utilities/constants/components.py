@@ -261,17 +261,6 @@ CNV_OPERATORS = [
     VIRT_PLATFORM_AUTOPILOT,
 ]
 
-CNV_PROMETHEUS_RULES = [
-    f"{PROMETHEUS_RULES_STR}-{CLUSTER_NETWORK_ADDONS_OPERATOR}",
-    KUBEVIRT_HYPERCONVERGED_PROMETHEUS_RULE,
-    "prometheus-cdi-rules",
-    "prometheus-hpp-rules",
-    "prometheus-k8s-rules-cnv",
-    "prometheus-kubevirt-rules",
-    f"kubevirt-cnv-{PROMETHEUS_RULES_STR}",
-    KUBEMACPOOL_PROMETHEUS_RULE,
-]
-
 VM_CONSOLE_PROXY_CLUSTER_RESOURCES = [
     APIService,
     ClusterRole,

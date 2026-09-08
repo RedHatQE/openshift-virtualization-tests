@@ -6,7 +6,6 @@ import urllib
 from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import UTC, datetime
-from typing import Any
 
 import bitmath
 from kubernetes.dynamic import DynamicClient
@@ -64,7 +63,6 @@ from utilities.storage import construct_datavolume_source_dict
 from utilities.virt import VirtualMachineForTests, running_vm
 
 LOGGER = logging.getLogger(__name__)
-CURL_QUERY = "curl -k https://localhost:8443/metrics"
 SINGLE_VM = 1
 COUNT_THREE = 3
 
@@ -105,103 +103,34 @@ def get_vm_metrics(prometheus: Prometheus, query: str, vm_name: str, timeout: in
     return None
 
 
-def assert_vm_metric(prometheus: Prometheus, query: str, vm_name: str):
-    assert get_vm_metrics(prometheus=prometheus, query=query, vm_name=vm_name), (
-        f"query: {query} has no result for vm: {vm_name}"
-    )
-
-
-def parse_vm_metric_results(raw_output: str) -> dict[str, Any]:
-    """
-    Parse metrics received from virt-handler pod
-
-    Args:
-        raw_output (str): raw metric output received from virt-handler pods
-
-    Returns:
-        dict: Dictionary of parsed output
-    """
-    regex_metrics = r"(?P<metric>\S+)\{(?P<labels>[^\}]+)\}[ ](?P<value>\d+)"
-    metric_results: dict[str, Any] = {}
-    for line in raw_output.splitlines():
-        if line.startswith("# HELP"):
-            metric, description = line[7:].split(" ", 1)
-            metric_results.setdefault(metric, {})["help"] = description
-        elif line.startswith("# TYPE"):
-            metric, metric_type = line[7:].split(" ", 1)
-            metric_results.setdefault(metric, {})["type"] = metric_type
-        elif re.match(regex_metrics, line):
-            match = re.match(regex_metrics, line)
-            if match:
-                metric_instance_dict = match.groupdict()
-                metric_instance_dict["labeldict"] = {
-                    val[0]: val[-1]
-                    for val in [label.partition("=") for label in metric_instance_dict["labels"].split(",")]
-                }
-                metric_results.setdefault(metric_instance_dict["metric"], {}).setdefault("results", []).append(
-                    metric_instance_dict
-                )
-        else:
-            metric, metric_type = line.split(" ", 1)
-            metric_results.setdefault(metric, {})["type"] = metric_type
-    return metric_results
-
-
-def assert_vm_metric_virt_handler_pod(query: str, vm: VirtualMachineForTests, admin_client: DynamicClient):
-    """
-    Get vm metric information from virt-handler pod
-
-    Args:
-        query (str): Prometheus query string
-        vm (VirtualMachineForTests): A VirtualMachineForTests
-        admin_client (DynamicClient): Admin client for privileged operations
-
-    """
-    pod = vm.vmi.get_virt_handler_pod(privileged_client=admin_client)
-    output = parse_vm_metric_results(raw_output=pod.execute(command=["bash", "-c", f"{CURL_QUERY}"]))
-    assert output, f'No query output found from {VIRT_HANDLER} pod "{pod.name}" for query: "{CURL_QUERY}"'
-    metrics_list = []
-    if query in output:
-        metrics_list = [
-            result["labeldict"]
-            for result in output[query]["results"]
-            if "labeldict" in result and vm.name in result["labeldict"]["name"]
-        ]
-    assert metrics_list, (
-        f'{VIRT_HANDLER} pod query:"{CURL_QUERY}" did not return any vm metric information for vm: {vm.name} '
-        f"from {VIRT_HANDLER} pod: {pod.name}. "
-    )
-    assert_validate_vm_metric(vm=vm, metrics_list=metrics_list, admin_client=admin_client)
-
-
-def assert_validate_vm_metric(
-    vm: VirtualMachineForTests, metrics_list: list[dict[str, str]], admin_client: DynamicClient
+def assert_vm_metric_labels(
+    prometheus: Prometheus, query: str, vm: VirtualMachineForTests, admin_client: DynamicClient
 ) -> None:
-    """
-    Validate vm metric information fetched from virt-handler pod
+    """Validates that Prometheus metric results contain correct node and namespace labels for the VM.
 
     Args:
-        vm (VirtualMachineForTests): A VirtualMachineForTests
-        metrics_list (list): List of metrics entries collected from associated Virt-handler pod
-        admin_client (DynamicClient): Admin client for privileged operations
-
+        prometheus: Prometheus client instance.
+        query: Prometheus query string.
+        vm: VM to validate metric labels for.
+        admin_client: Admin client for privileged operations.
     """
+    results = get_vm_metrics(prometheus=prometheus, query=query, vm_name=vm.name)
+    assert results, f"query: {query} has no result for vm: {vm.name}"
+
     vmi_node = vm.vmi.get_node(privileged_client=admin_client)
-    expected_values = {
-        "kubernetes_vmi_label_kubevirt_io_nodeName": vmi_node.name,
+    vm_results = [result["metric"] for result in results if result["metric"].get("name") == vm.name]
+    expected_labels = {
         "namespace": vm.namespace,
         "node": vmi_node.name,
     }
-    LOGGER.info(f"{VIRT_HANDLER} pod metrics associated with vm: {vm.name} are: {metrics_list}")
-    metric_data_mismatch = [
-        entity
-        for key in expected_values
-        for entity in metrics_list
-        if not entity.get(key, None) or expected_values[key] not in entity[key]
+    label_mismatches = [
+        metric
+        for metric in vm_results
+        for label, expected_value in expected_labels.items()
+        if metric.get(label) != expected_value
     ]
-    virt_handler_pod = vm.vmi.get_virt_handler_pod(privileged_client=admin_client)
-    assert not metric_data_mismatch, (
-        f"Vm metric validation via {VIRT_HANDLER} pod {virt_handler_pod} failed: {metric_data_mismatch}"
+    assert not label_mismatches, (
+        f"Metric label validation failed for vm {vm.name}. Expected: {expected_labels}, mismatched: {label_mismatches}"
     )
 
 

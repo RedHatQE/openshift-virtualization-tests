@@ -476,6 +476,8 @@ def test_virtctl_image_upload_dv_in_pudn_namespace(
                 "template_labels": LATEST_WINDOWS_OS_DICT.get("template_labels"),
                 "ssh": True,
                 "os_version": LATEST_WINDOWS_OS_DICT.get("os_version"),
+                "tpm_params": {"persistent": True},
+                "efi_params": {"persistent": True},
             },
             marks=(pytest.mark.polarion("CNV-3410")),
         ),
