@@ -22,6 +22,7 @@ from utilities.bitwarden import get_cnv_tests_secret_by_name
 from utilities.constants.images import OS_FLAVOR_WINDOWS
 from utilities.constants.timeouts import (
     TCP_TIMEOUT_30SEC,
+    TIMEOUT_2MIN,
     TIMEOUT_5MIN,
 )
 from utilities.ssp import get_windows_timezone
@@ -53,9 +54,12 @@ def verify_changes_from_autounattend(vm, timezone, hostname):
 
     # hostname
     LOGGER.info(f"Verifying hostname change from answer file in vm {vm.name}")
-    actual_hostname = run_ssh_commands(host=vm.ssh_exec, commands=["hostname"], tcp_timeout=TCP_TIMEOUT_30SEC)[
-        0
-    ].strip()
+    actual_hostname = run_ssh_commands(
+        host=vm.ssh_exec,
+        commands=["hostname"],
+        tcp_timeout=TCP_TIMEOUT_30SEC,
+        wait_timeout=TIMEOUT_2MIN,
+    )[0].strip()
     assert actual_hostname == hostname, f"Incorrect hostname, expected {hostname}, found {actual_hostname}"
 
 
@@ -144,7 +148,7 @@ def sysprep_vm(
             namespace=namespace.name,
             client=unprivileged_client,
             vm_instance_type=vm_instance_type,
-            vm_preference=VirtualMachineClusterPreference(name="windows.2k19"),
+            vm_preference=VirtualMachineClusterPreference(client=unprivileged_client, name="windows.2k19"),
             data_volume_template=golden_image_data_volume_template_for_test_scope_class,
             os_flavor=OS_FLAVOR_WINDOWS,
             disk_type=None,
@@ -167,6 +171,7 @@ def sealed_vm(sysprep_vm):
             posix=False,
         ),
         tcp_timeout=TCP_TIMEOUT_30SEC,
+        wait_timeout=TIMEOUT_2MIN,
     )
 
 
@@ -266,6 +271,7 @@ def detached_sysprep_resource_and_restarted_vm(sysprep_vm, attached_sysprep_volu
     ],
     indirect=True,
 )
+@pytest.mark.windows
 @pytest.mark.special_infra
 @pytest.mark.high_resource_vm
 @pytest.mark.usefixtures("sysprep_vm", "sealed_vm", "attached_sysprep_volume_to_vm")

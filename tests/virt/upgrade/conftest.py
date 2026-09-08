@@ -361,8 +361,9 @@ def vm_for_post_copy_upgrade(virt_upgrade_namespace, unprivileged_client, cpu_fo
 
 
 @pytest.fixture(scope="session")
-def parallel_live_migrations_increased(hyperconverged_resource_scope_session):
+def parallel_live_migrations_increased(admin_client, hyperconverged_resource_scope_session):
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={
             hyperconverged_resource_scope_session: {
                 "spec": {

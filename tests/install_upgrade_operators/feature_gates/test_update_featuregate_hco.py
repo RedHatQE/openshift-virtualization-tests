@@ -2,11 +2,11 @@ import pytest
 from ocp_resources.kubevirt import KubeVirt
 
 from tests.install_upgrade_operators.constants import (
-    DISABLE_MDEV_CONFIGURATION,
     FEATUREGATES,
     FG_ENABLED,
     MEDIATED_DEVICES_CONFIGURATION,
 )
+from utilities.constants.hco import DISABLE_MDEV_CONFIGURATION
 from utilities.hco import ResourceEditorValidateHCOReconcile
 
 pytestmark = [pytest.mark.s390x, pytest.mark.skip_must_gather_collection]
@@ -15,9 +15,11 @@ pytestmark = [pytest.mark.s390x, pytest.mark.skip_must_gather_collection]
 @pytest.fixture()
 def updated_fg_hco(
     request,
+    admin_client,
     hyperconverged_resource_scope_function,
 ):
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={hyperconverged_resource_scope_function: {"spec": {FEATUREGATES: request.param["featuregate"]}}},
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,

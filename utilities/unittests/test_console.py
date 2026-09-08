@@ -215,12 +215,13 @@ class TestConsole:
 
         console = Console(vm=mock_vm)
         console.child = MagicMock()
+        console.child.expect.return_value = 0  # simulate login prompt found
 
         console._connect()
 
         # Verify connection sequence
         console.child.send.assert_any_call("\n\n")
-        console.child.expect.assert_any_call("login:")
+        console.child.expect.assert_any_call(["login:", r"#", r"\$"])
         console.child.sendline.assert_any_call("testuser")
         console.child.expect.assert_any_call("Password:")
         console.child.sendline.assert_any_call("testpass")
@@ -239,16 +240,40 @@ class TestConsole:
 
         console = Console(vm=mock_vm)
         console.child = MagicMock()
+        console.child.expect.return_value = 0  # simulate login prompt found
 
         console._connect()
 
         # Verify connection sequence without password
         console.child.send.assert_any_call("\n\n")
-        console.child.expect.assert_any_call("login:")
+        console.child.expect.assert_any_call(["login:", r"#", r"\$"])
         console.child.sendline.assert_any_call("testuser")
         # Should not expect or send password
         password_calls = [call for call in console.child.expect.call_args_list if "Password:" in str(call)]
         assert len(password_calls) == 0
+
+    @patch("console.get_data_collector_base_directory")
+    def test_console_connect_already_logged_in(self, mock_get_dir):
+        """Test _connect method when reconnecting to already-logged-in session"""
+        mock_get_dir.return_value = "/tmp/data"
+        mock_vm = MagicMock()
+        mock_vm.name = "test-vm"
+        mock_vm.namespace = None
+        mock_vm.username = "testuser"
+        mock_vm.password = "testpass"
+        mock_vm.login_params = {}
+
+        console = Console(vm=mock_vm)
+        console.child = MagicMock()
+        console.child.expect.return_value = 1  # simulate shell prompt found (not login:)
+
+        console._connect()
+
+        # Should detect existing shell prompt and skip login
+        console.child.send.assert_any_call("\n\n")
+        console.child.expect.assert_called_once_with(["login:", r"#", r"\$"])
+        # Should NOT send username or password
+        assert console.child.sendline.call_count == 0
 
     @patch("console.get_data_collector_base_directory")
     def test_console_connect_no_username(self, mock_get_dir):

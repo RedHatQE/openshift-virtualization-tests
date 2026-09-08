@@ -14,6 +14,7 @@ def updated_workload_strategy_custom_values(hyperconverged_resource_scope_functi
     Note: This is needed for tests that modify such fields to default values
     """
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={hyperconverged_resource_scope_function: CUSTOM_WORKLOAD_STRATEGY_SPEC.copy()},
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,

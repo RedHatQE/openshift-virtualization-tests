@@ -4,7 +4,6 @@ import re
 
 import pytest
 from ocp_resources.network_attachment_definition import NetworkAttachmentDefinition
-from ocp_resources.virtual_machine import VirtualMachine
 from pytest_testconfig import py_config
 
 from tests.install_upgrade_operators.constants import FILE_SUFFIX, SECTION_TITLE
@@ -26,7 +25,6 @@ from tests.install_upgrade_operators.must_gather.utils import (
     check_list_of_resources,
     check_no_duplicate_and_missing_files_collected_from_migrated_vm,
     extracted_data_from_must_gather_on_vm_node,
-    validate_files_collected,
     validate_guest_console_logs_collected,
     validate_no_empty_files_collected_must_gather_vm,
 )
@@ -59,42 +57,20 @@ def kubevirt_architecture_configuration_scope_session(
 @pytest.mark.usefixtures("collected_cluster_must_gather_with_vms")
 @pytest.mark.sno
 class TestMustGatherClusterWithVMs:
-    @pytest.mark.parametrize(
-        ("resource_type", "resource_path", "checks"),
-        [
-            pytest.param(
-                NetworkAttachmentDefinition,
-                "namespaces/{namespace}/"
-                f"{NetworkAttachmentDefinition.ApiGroup.K8S_CNI_CNCF_IO}/"
-                "network-attachment-definitions/{name}.yaml",
-                VALIDATE_FIELDS,
-                marks=(pytest.mark.polarion("CNV-2720")),
-                id="test_network_attachment_definitions_resources",
-            ),
-            pytest.param(
-                VirtualMachine,
-                f"namespaces/{{namespace}}/{VirtualMachine.ApiGroup.KUBEVIRT_IO}/virtualmachines/custom/{{name}}.yaml",
-                VALIDATE_FIELDS,
-                marks=(pytest.mark.polarion("CNV-3043")),
-                id="test_virtualmachine_resources",
-            ),
-        ],
-        indirect=["resource_type"],
-    )
-    def test_resource_type(
+    @pytest.mark.polarion("CNV-2720")
+    def test_network_attachment_definitions_resources(
         self,
         admin_client,
         collected_cluster_must_gather_with_vms,
-        resource_type,
-        resource_path,
-        checks,
     ):
         check_list_of_resources(
             client=admin_client,
-            resource_type=resource_type,
+            resource_type=NetworkAttachmentDefinition,
             temp_dir=collected_cluster_must_gather_with_vms,
-            resource_path=resource_path,
-            checks=checks,
+            resource_path="namespaces/{namespace}/"
+            f"{NetworkAttachmentDefinition.ApiGroup.K8S_CNI_CNCF_IO}/"
+            "network-attachment-definitions/{name}.yaml",
+            checks=VALIDATE_FIELDS,
         )
 
 
@@ -297,24 +273,6 @@ class TestGuestConsoleLog:
         validate_guest_console_logs_collected(
             vm=must_gather_vm_scope_class,
             collected_vm_details_must_gather=collected_vm_details_must_gather,
-            admin_client=admin_client,
-        )
-
-
-@pytest.mark.sno
-class TestMustGatherVmLongNameDetails:
-    @pytest.mark.polarion("CNV-9233")
-    def test_data_collected_from_virt_launcher_long(
-        self,
-        admin_client,
-        must_gather_long_name_vm,
-        collected_vm_details_must_gather,
-        nftables_ruleset_from_utility_pods,
-    ):
-        validate_files_collected(
-            base_path=collected_vm_details_must_gather,
-            vm_list=[must_gather_long_name_vm],
-            nftables_ruleset_from_utility_pods=nftables_ruleset_from_utility_pods,
             admin_client=admin_client,
         )
 

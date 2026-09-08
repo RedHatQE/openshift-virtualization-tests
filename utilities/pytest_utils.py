@@ -45,6 +45,7 @@ from utilities.constants.cluster import (
     POD_SECURITY_NAMESPACE_LABELS,
 )
 from utilities.constants.pytest import SANITY_TESTS_FAILURE
+from utilities.constants.storage import StorageClassNames
 from utilities.constants.timeouts import (
     TIMEOUT_2MIN,
     TIMEOUT_5MIN,
@@ -567,6 +568,45 @@ def filter_hpp_tests(items: list[pytest.Item], config: pytest.Config) -> list[py
     return items
 
 
+def ocs_storage_class_in_matrix() -> bool:
+    """Check whether the OCS storage class is configured in the storage class matrix.
+
+    ``py_config["storage_class_matrix"]`` is populated from the ``--storage-class-matrix`` CLI
+    option. Presence of the OCS storage class in the matrix means OCS is available in the cluster,
+    so OCS-marked tests should run automatically without requiring an explicit ``-m ocs``.
+
+    Returns:
+        True if the OCS storage class is present in the storage class matrix, False otherwise.
+    """
+    return any(
+        StorageClassNames.CEPH_RBD_VIRTUALIZATION in storage_class
+        for storage_class in py_config.get("storage_class_matrix", [])
+    )
+
+
+def filter_ocs_tests(items: list[pytest.Item], config: pytest.Config) -> list[pytest.Item]:
+    """Deselect OCS-marked tests when OCS is not selected or configured.
+
+    Args:
+        items: Collected pytest items.
+        config: Pytest configuration used for marker selection and deselection reporting.
+
+    Returns:
+        The retained pytest items.
+
+    Side Effects:
+        Reports removed OCS-marked items through ``pytest_deselected``.
+    """
+    marker_expression = config.getoption("-m")
+    ocs_marker_requested = bool(marker_expression) and "ocs" in marker_expression
+    if ocs_marker_requested or ocs_storage_class_in_matrix():
+        return items
+
+    discard_tests, items_to_return = remove_tests_from_list(items=items, filter_str="ocs")
+    config.hook.pytest_deselected(items=discard_tests)
+    return items_to_return
+
+
 def mark_nmstate_dependent_tests(items: list[pytest.Item]) -> list[pytest.Item]:
     """
     Dynamically mark tests that depend on NMState with the 'nmstate' marker.
@@ -798,6 +838,8 @@ def update_cpu_arch_related_config(cpu_arch_option: str) -> None:
         if py_config["cluster_type"] == MULTIARCH:
             generate_common_template_matrix_dicts(os_dict=py_config["os_matrix"][arch], cpu_arch=arch)
             generate_instance_type_matrix_dicts(os_dict=py_config["os_matrix"][arch], cpu_arch=arch)
+            py_config["data_import_cron_matrix"] = py_config["os_matrix"][arch]["data_import_cron_matrix"]
+            py_config["auto_update_data_source_matrix"] = py_config["os_matrix"][arch]["auto_update_data_source_matrix"]
         else:
             generate_common_template_matrix_dicts(os_dict=py_config)
             if py_config["cluster_type"] != AMD_64:

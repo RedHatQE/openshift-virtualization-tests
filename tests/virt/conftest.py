@@ -61,7 +61,7 @@ def virt_special_infra_sanity(
 
     def _verify_not_psi_cluster():
         LOGGER.info("Verifying tests run on BM cluster")
-        if Infrastructure(name="cluster").instance.status.platform == "OpenStack":
+        if Infrastructure(client=admin_client, name="cluster").platform == "OpenStack":
             failed_verifications_list.append("Cluster should be BM and not PSI")
 
     def _verify_gpu(_gpu_nodes, _nodes_with_supported_gpus):
@@ -75,7 +75,7 @@ def virt_special_infra_sanity(
 
     def _verfify_no_dpdk():
         LOGGER.info("Verifing cluster doesn't have DPDK enabled")
-        if PerformanceProfile(name="dpdk").exists:
+        if PerformanceProfile(client=admin_client, name="dpdk").exists:
             failed_verifications_list.append("Cluster has DPDK enabled (DPDK is incomatible with NVIDIA GPU)")
 
     def _verify_sriov(_sriov_workers):
@@ -219,9 +219,13 @@ def supported_gpu_device(workers_utility_pods, nodes_with_supported_gpus):
 
 
 @pytest.fixture(scope="session")
-def hco_cr_with_mdev_permitted_hostdevices_scope_session(hyperconverged_resource_scope_session, supported_gpu_device):
+def hco_cr_with_mdev_permitted_hostdevices_scope_session(
+    admin_client, hyperconverged_resource_scope_session, supported_gpu_device
+):
     yield from patch_hco_cr_with_mdev_permitted_hostdevices(
-        hyperconverged_resource=hyperconverged_resource_scope_session, supported_gpu_device=supported_gpu_device
+        admin_client=admin_client,
+        hyperconverged_resource=hyperconverged_resource_scope_session,
+        supported_gpu_device=supported_gpu_device,
     )
 
 
@@ -367,8 +371,10 @@ def vm_for_test_from_template_scope_class(
 
 
 @pytest.fixture(scope="class")
-def hco_memory_overcommit_increased(hyperconverged_resource_scope_class):
-    yield from update_hco_memory_overcommit(hco=hyperconverged_resource_scope_class, percentage=200)
+def hco_memory_overcommit_increased(admin_client, hyperconverged_resource_scope_class):
+    yield from update_hco_memory_overcommit(
+        admin_client=admin_client, hco=hyperconverged_resource_scope_class, percentage=200
+    )
 
 
 @pytest.fixture(scope="session")
@@ -384,3 +390,19 @@ def nodes_cpu_vendor(schedulable_nodes):
         return INTEL
     else:
         return None
+
+
+@pytest.fixture()
+def xfail_postcopy_migration(is_postcopy_migration_bug_open):
+    """
+    Conditionally xfail a test affected by the CNV-84023 product bug.
+
+    Calls `pytest.xfail()` while CNV-84023 is open on a cluster with
+    RHCOS 10+ nodes. No-op once CNV-84023 is resolved.
+
+    Raises:
+        _pytest.outcomes.XFailed: If CNV-84023 is open and the cluster has
+            RHCOS 10+ nodes. This terminates the requesting test's setup.
+    """
+    if is_postcopy_migration_bug_open:
+        pytest.xfail(reason="CNV-84023: post-copy migration fails on RHCOS 10+ nodes")

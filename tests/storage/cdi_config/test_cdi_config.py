@@ -35,7 +35,7 @@ def test_cdi_config_exists(cdi_config, upload_proxy_route):
 
 @pytest.mark.destructive
 @pytest.mark.polarion("CNV-2209")
-def test_different_route_for_upload_proxy(hco_namespace, cdi_config, uploadproxy_route_deleted):
+def test_different_route_for_upload_proxy(admin_client, hco_namespace, cdi_config, uploadproxy_route_deleted):
     """
     Test that CDIConfig's upload_proxy_url changes when the upload-proxy route is deleted
     and recreated with a different host
@@ -44,6 +44,7 @@ def test_different_route_for_upload_proxy(hco_namespace, cdi_config, uploadproxy
         namespace=hco_namespace.name,
         name="new-route-uploadproxy",
         service=CDI_UPLOADPROXY,
+        client=admin_client,
     ) as new_route:
         cdi_config.wait_until_upload_url_changed(uploadproxy_url=new_route.host)
 
@@ -119,6 +120,7 @@ def test_cdi_spec_reconciled_by_hco(initial_cdi_config_from_cr, cdi_with_extra_n
 )
 @pytest.mark.s390x
 def test_cdi_tunables_in_hco_propagated_to_cr(
+    admin_client,
     hyperconverged_resource_scope_module,
     cdi,
     namespace,
@@ -142,6 +144,7 @@ def test_cdi_tunables_in_hco_propagated_to_cr(
         return current_cdi_config_from_cr == initial_cdi_config_from_cr
 
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={hyperconverged_resource_scope_module: {"spec": hco_updated_spec_stanza}},
         list_resource_reconcile=[CDI],
     ):

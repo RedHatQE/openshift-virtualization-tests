@@ -6,11 +6,12 @@ import pytest
 from ocp_resources.datavolume import DataVolume
 
 from tests.os_params import FEDORA_LATEST
+from tests.storage.stop_status_utils import dv_stop_status_restart_threshold
 from tests.storage.utils import (
     assert_pvc_snapshot_clone_annotation,
     assert_use_populator,
 )
-from tests.utils import create_windows2022_vm_using_existing_dv
+from tests.utils import create_windows2022_vm
 from utilities.constants import Images
 from utilities.constants.images import OS_FLAVOR_FEDORA, OS_FLAVOR_WINDOWS
 from utilities.constants.timeouts import TIMEOUT_1MIN
@@ -89,7 +90,10 @@ def test_successful_vm_restart_with_cloned_dv(
             cdv.wait_for_status(status=DataVolume.Status.PENDING_POPULATION, timeout=TIMEOUT_1MIN)
             cdv.pvc.wait()
         else:
-            cdv.wait_for_dv_success()
+            cdv.wait_for_dv_success(
+                stop_status_func=dv_stop_status_restart_threshold,
+                dv=cdv,
+            )
         with create_vm_from_dv(
             client=unprivileged_client,
             dv=cdv,
@@ -109,6 +113,8 @@ def test_successful_vm_restart_with_cloned_dv(
 
 @pytest.mark.tier3
 @pytest.mark.incremental
+@pytest.mark.conformance
+@pytest.mark.windows
 class TestWindowsClonedDv:
     """
     Tests for Windows 2022 DV cloning, and VM creation with vTPM.
@@ -158,12 +164,12 @@ class TestWindowsClonedDv:
         Expected:
             - VM OS info reported by VMI matches the expected Windows OS parameters
         """
-        with create_windows2022_vm_using_existing_dv(
+        with create_windows2022_vm(
             namespace=namespace.name,
             client=unprivileged_client,
             vm_name=f"vm-{WIN_2K22}",
             cpu_model=modern_cpu_for_migration,
-            existing_data_volume=cloned_windows_dv_multi_storage_scope_class,
+            data_volume=cloned_windows_dv_multi_storage_scope_class,
         ) as vm:
             validate_os_info_vmi_vs_windows_os(vm=vm)
 
@@ -207,7 +213,10 @@ def test_successful_snapshot_clone(
         source_pvc_namespace=data_volume_snapshot_capable_storage_scope_function.namespace,
         storage_class=storage_class,
     ) as cdv:
-        cdv.wait_for_dv_success()
+        cdv.wait_for_dv_success(
+            stop_status_func=dv_stop_status_restart_threshold,
+            dv=cdv,
+        )
         if OS_FLAVOR_WINDOWS not in data_volume_snapshot_capable_storage_scope_function.name:
             with create_vm_from_dv(
                 client=unprivileged_client,

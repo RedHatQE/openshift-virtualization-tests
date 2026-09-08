@@ -204,9 +204,9 @@ def get_daemonset_replicas(admin_client, namespaces):
     return daemonsets_replicas
 
 
-def get_nodes_status():
+def get_nodes_status(client):
     nodes_status = {"nodes": {}}
-    for node in Node.get():
+    for node in Node.get(client=client):
         # Set loglevel to ERROR to avoid cluttering with the logs resulting from getting node status
         with resource_log_level_error(resource=node) as _node:
             nodes_status["nodes"][node.name] = "ready" if _node.kubelet_ready else "not ready"
@@ -233,7 +233,7 @@ def collect_cluster_health_info(client, hco_namespace, additional_namespaces):
     pods_status = get_pods_status(admin_client=client, namespaces=namespaces_to_monitor)
     deployments_replicas = get_deployment_replicas(admin_client=client, namespaces=namespaces_to_monitor)
     daemonset_replicas = get_daemonset_replicas(admin_client=client, namespaces=namespaces_to_monitor)
-    nodes_status = get_nodes_status()
+    nodes_status = get_nodes_status(client=client)
     hco_status_conditions = get_hyperconverged_status_conditions(client=client, hco_namespace=hco_namespace)
 
     log_content = json.dumps(
@@ -407,11 +407,11 @@ def pod_deleting_process_recover(resources, namespace, pod_prefix):
         raise ResourceNotFoundError(f"No resources found with prefix {pod_prefix} in namespace {namespace}")
 
 
-def get_instance_type(name):
+def get_instance_type(name, client):
     """
     Function to check if the instance type exists
     """
-    instance_type = VirtualMachineClusterInstancetype(name=name)
+    instance_type = VirtualMachineClusterInstancetype(client=client, name=name)
     if not instance_type.exists:
         raise ResourceNotFoundError(f"Required instance type {name} does not exist")
     return instance_type

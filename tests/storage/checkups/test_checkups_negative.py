@@ -2,6 +2,7 @@ import pytest
 from ocp_resources.job import Job
 
 from tests.storage.checkups.utils import assert_results_in_configmap
+from utilities.constants.pytest import QUARANTINED
 
 DEFAULT_STORAGE_CLASS_ENTRY = "defaultStorageClass"
 MSG_NO_DEFAULT_STORAGE_CLASS = "no default storage class"
@@ -18,6 +19,12 @@ MSG_UNKNOWN_PROVISIONER = "there are StorageProfiles with empty ClaimPropertySet
         ),
     ],
     indirect=True,
+)
+@pytest.mark.xfail(
+    reason=(
+        f"{QUARANTINED}: wrong failure reason: CNV-94365, not enough info to debug the failed checkup job: CNV-72377"
+    ),
+    run=False,
 )
 class TestCheckupNegative:
     @pytest.mark.polarion("CNV-10701")

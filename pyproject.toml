@@ -148,6 +148,7 @@ packages = ["libs", "scripts", "tests", "utilities"]
 dev = [
     "ipdb>=0.13.13",
     "ipython>=8.12.3",
+    "pygithub>=2.9.1",
     "pytest-repeat>=0.9.4",
 ]
 

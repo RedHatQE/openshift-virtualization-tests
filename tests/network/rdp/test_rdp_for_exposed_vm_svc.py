@@ -106,6 +106,7 @@ def configure_rdp_on_server_windows_vm(vm: VirtualMachineForTests) -> None:
     ],
     indirect=True,
 )
+@pytest.mark.windows
 def test_rdp_for_exposed_win_vm_as_node_port_svc(
     rdp_vm,
     rdp_pod,

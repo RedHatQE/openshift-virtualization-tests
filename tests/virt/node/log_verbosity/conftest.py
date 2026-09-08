@@ -9,6 +9,7 @@ from utilities.hco import ResourceEditorValidateHCOReconcile
 
 @pytest.fixture(scope="class")
 def updated_log_verbosity_config(
+    admin_client,
     request,
     worker_node1,
     hyperconverged_resource_scope_class,
@@ -25,6 +26,7 @@ def updated_log_verbosity_config(
         "node": {"kubevirt": {"nodeVerbosity": {worker_node1.name: VIRT_LOG_VERBOSITY_LEVEL_6}}},
     }
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={
             hyperconverged_resource_scope_class: {
                 "spec": {"logVerbosityConfig": log_verbosity_level_six_config_dict[request.param]}

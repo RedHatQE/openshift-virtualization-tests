@@ -2,7 +2,7 @@
 Windows crash detection with hyperv panic device
 
 Reference:
-https://redhat.atlassian.net/browse/VIRTSTRAT-557
+https://redhat.atlassian.net/browse/VIRTSTRAT-557  # <skip-jira-utils-check>
 """
 
 import logging
@@ -99,6 +99,7 @@ def windows_vm_with_panic_device(
 )
 @pytest.mark.special_infra
 @pytest.mark.high_resource_vm
+@pytest.mark.windows
 def test_windows_crash_detection_with_hyperv_panic(
     enabled_featuregate_scope_function,
     windows_vm_with_panic_device,

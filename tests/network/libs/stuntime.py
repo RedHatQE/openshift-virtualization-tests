@@ -64,8 +64,10 @@ class ContinuousPing:
         # Use SIGINT (not default SIGTERM) to ensure ping flushes statistics summary before exit
         self._vm.console(
             commands=[
-                f"pkill -SIGINT -f '{self._cmd}' || true; "
-                f"while pgrep -f '{self._cmd}' >/dev/null 2>&1; do sleep 0.1; done"
+                (
+                    f"pkill -SIGINT -f '{self._cmd}' || true; "
+                    f"while pgrep -f '{self._cmd}' >/dev/null 2>&1; do sleep 0.1; done"
+                )
             ],
             timeout=DEFAULT_COMMAND_TIMEOUT_SECONDS,
         )

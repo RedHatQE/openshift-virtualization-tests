@@ -20,6 +20,7 @@ from tests.virt.cluster.vm_cloning.utils import (
 )
 from utilities.constants import Images
 from utilities.constants.instance_types import RHEL_WITH_INSTANCETYPE_AND_PREFERENCE
+from utilities.constants.timeouts import TIMEOUT_2MIN
 from utilities.storage import (
     add_dv_to_vm,
     check_disk_count_in_vm,
@@ -121,6 +122,7 @@ def files_created_on_pvc_disks(vm_with_dv_for_cloning):
             # update selinux: allow snapshot for second disk
             shlex.split("sudo setsebool -P virt_qemu_ga_read_nonsecurity_files 1"),
         ],
+        wait_timeout=TIMEOUT_2MIN,
     )
 
 
@@ -217,6 +219,7 @@ def test_clone_vm_with_instance_type_and_preference(
 @pytest.mark.ibm_bare_metal
 @pytest.mark.special_infra
 @pytest.mark.high_resource_vm
+@pytest.mark.windows
 def test_clone_windows_vm(
     vm_with_dv_for_cloning,
     cloning_job_scope_function,

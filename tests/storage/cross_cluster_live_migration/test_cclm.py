@@ -215,6 +215,7 @@ class TestCCLMSeveralVMs:
     indirect=True,
 )
 @pytest.mark.usefixtures("remote_cluster_source_storage_class", "local_cluster_target_storage_class", "dv_wait_timeout")
+@pytest.mark.windows
 class TestCCLMWindowsWithVTPM:
     """
     Tests for cross-cluster live migration of a Windows VM with vTPM.

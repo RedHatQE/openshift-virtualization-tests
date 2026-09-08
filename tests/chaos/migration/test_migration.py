@@ -79,7 +79,7 @@ def test_pod_delete_migration(
     wait_for_vmi_relocation_and_running(vm=chaos_vm_rhel9, initial_node=tainted_node_for_vm_chaos_rhel9_migration)
     wait_for_pods_running(
         admin_client=admin_client,
-        namespace=Namespace(name=pod_deleting_process["namespace_name"]),
+        namespace=Namespace(client=admin_client, name=pod_deleting_process["namespace_name"]),
         number_of_consecutive_checks=10,
         filter_pods_by_name=pod_deleting_process["pod_prefix"],
     )

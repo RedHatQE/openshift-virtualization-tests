@@ -63,9 +63,11 @@ def vmi_old_uid(vm_for_test_from_template_scope_class):
 
 @pytest.fixture()
 def hco_cr_with_evictionstrategy_none(
+    admin_client,
     hyperconverged_resource_scope_function,
 ):
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={hyperconverged_resource_scope_function: {"spec": {EVICTIONSTRATEGY: "None"}}},
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,

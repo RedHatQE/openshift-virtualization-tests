@@ -62,6 +62,7 @@ def install_nvidia_drivers_on_windows_vm(vm, supported_gpu_device):
             )
         ],
         tcp_timeout=TCP_TIMEOUT_30SEC,
+        wait_timeout=TIMEOUT_2MIN,
     )
     # Wait for Running VM, as only vGPU VM Reboots after installing NVIDIA GRID Drivers.
     if fetch_gpu_device_name_from_vm_instance(vm=vm) == vgpu_device_name:

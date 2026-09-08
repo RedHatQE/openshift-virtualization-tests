@@ -30,13 +30,13 @@ from utilities.constants.images import OS_FLAVOR_WINDOWS
 from utilities.constants.os_matrix import DATA_SOURCE_STR
 from utilities.constants.timeouts import (
     TCP_TIMEOUT_30SEC,
+    TIMEOUT_1MIN,
     TIMEOUT_1SEC,
     TIMEOUT_2MIN,
     TIMEOUT_5SEC,
     TIMEOUT_30MIN,
     TIMEOUT_30SEC,
 )
-from utilities.constants.virt import OS_PROC_NAME
 from utilities.hco import (
     ResourceEditorValidateHCOReconcile,
     is_hco_tainted,
@@ -52,13 +52,10 @@ from utilities.storage import (
 from utilities.virt import (
     VirtualMachineForTests,
     fetch_pid_from_linux_vm,
-    fetch_pid_from_windows_vm,
     get_vm_boot_time,
     kill_processes_by_name_linux,
     migrate_vm_and_verify,
-    pause_unpause_vm_and_check_connectivity,
     start_and_fetch_processid_on_linux_vm,
-    start_and_fetch_processid_on_windows_vm,
     verify_vm_migrated,
     wait_for_migration_finished,
     wait_for_updated_kv_value,
@@ -70,6 +67,7 @@ LOGGER = logging.getLogger(__name__)
 @contextmanager
 def append_feature_gate_to_hco(feature_gate, resource, client, namespace):
     with update_hco_annotations(
+        admin_client=client,
         resource=resource,
         path="developerConfiguration/featureGates",
         value=feature_gate,
@@ -110,11 +108,12 @@ def get_stress_ng_pid(ssh_exec, windows=False):
     stress = "stress-ng"
     LOGGER.info(f"Get pid of {stress}")
     command_prefix = "wsl" if windows else ""
+    tcp_timeout = TIMEOUT_1MIN if windows else TCP_TIMEOUT_30SEC
 
     return run_ssh_commands(
         host=ssh_exec,
         commands=shlex.split(f"{command_prefix} bash -c 'pgrep {stress}'"),
-        tcp_timeout=TCP_TIMEOUT_30SEC,
+        tcp_timeout=tcp_timeout,
         wait_timeout=TIMEOUT_2MIN,
     )[0].split("\n")[0]
 
@@ -214,23 +213,6 @@ def flatten_dict(dictionary, parent_key=""):
     return dict(items)
 
 
-def kill_processes_by_name_windows(vm, process_name):
-    cmd = shlex.split(f"taskkill /F /IM {process_name}")
-    run_ssh_commands(host=vm.ssh_exec, commands=cmd, tcp_timeout=TCP_TIMEOUT_30SEC)
-
-
-def validate_pause_unpause_windows_vm(vm: VirtualMachineForTests, pre_pause_pid: int | None = None) -> None:
-    proc_name = OS_PROC_NAME["windows"]
-    if not pre_pause_pid:
-        pre_pause_pid = start_and_fetch_processid_on_windows_vm(vm=vm, process_name=proc_name)
-    pause_unpause_vm_and_check_connectivity(vm=vm)
-    post_pause_pid = fetch_pid_from_windows_vm(vm=vm, process_name=proc_name)
-    kill_processes_by_name_windows(vm=vm, process_name=proc_name)
-    assert post_pause_pid == pre_pause_pid, (
-        f"PID mismatch!\nPre pause PID is: {pre_pause_pid}\nPost pause PID is: {post_pause_pid}"
-    )
-
-
 def wait_for_virt_launcher_pod(vmi, privileged_client: DynamicClient):
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_30SEC,
@@ -260,12 +242,13 @@ def validate_machine_type(vm, expected_machine_type, admin_client):
     )
 
 
-def patch_hco_cr_with_mdev_permitted_hostdevices(hyperconverged_resource, supported_gpu_device):
+def patch_hco_cr_with_mdev_permitted_hostdevices(admin_client, hyperconverged_resource, supported_gpu_device):
     required_keys = [MDEV_TYPE_STR, MDEV_NAME_STR, VGPU_DEVICE_NAME_STR]
     missing_keys = [key for key in required_keys if key not in supported_gpu_device]
     if missing_keys:
         raise ValueError(f"Missing required keys in supported_gpu_device: {missing_keys}")
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={
             hyperconverged_resource: {
                 "spec": {
@@ -306,6 +289,7 @@ def get_num_gpu_devices_in_rhel_vm(vm):
                 "-c",
                 '/sbin/lspci -nnk | grep -E "controller.+NVIDIA" | wc -l',
             ],
+            wait_timeout=TIMEOUT_2MIN,
         )[0].strip()
     )
 
@@ -315,6 +299,7 @@ def get_gpu_device_name_from_windows_vm(vm):
         host=vm.ssh_exec,
         commands=[shlex.split("wmic path win32_VideoController get name")],
         tcp_timeout=TCP_TIMEOUT_30SEC,
+        wait_timeout=TIMEOUT_2MIN,
     )[0]
 
 
@@ -499,8 +484,9 @@ def get_data_volume_template_dict_with_default_storage_class(
     return data_volume_template
 
 
-def update_hco_memory_overcommit(hco, percentage):
+def update_hco_memory_overcommit(admin_client, hco, percentage):
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={
             hco: {
                 "spec": {
