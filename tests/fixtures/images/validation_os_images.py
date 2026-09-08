@@ -48,15 +48,11 @@ def validation_os_images_namespace(admin_client):
 
 @pytest.fixture(scope="session")
 def validation_os_images_role_binding(admin_client, validation_os_images_namespace):
-    """Grants clone and view permissions in the validation-os-images namespace.
+    """Grants the unprivileged user and any ServiceAccount permission to clone from validation-os-images.
 
-    Binds the CDI-shipped ``cdi.kubevirt.io:clone-sourcer`` ClusterRole to the unprivileged user (for direct
-    ``DataVolumeSource`` clones) and to the ``system:serviceaccounts`` group (for cross-namespace
-    ``dataVolumeTemplates`` clones, which virt-controller authorizes against the VM namespace's ``default``
-    ServiceAccount rather than the interactive user - covering every namespace's default ServiceAccount
-    without needing a binding per test namespace). Also binds the built-in ``view`` ClusterRole to the
-    unprivileged user - not required by any test, but lets a human logged in as the unprivileged user inspect
-    resources, e.g. ``oc get datasource,pvc -n validation-os-images``, for manual debugging.
+    Binds the CDI-shipped ``cdi.kubevirt.io:clone-sourcer`` ClusterRole to the unprivileged user and to the
+    ``system:serviceaccounts`` group, and the built-in ``view`` ClusterRole to the unprivileged user, in the
+    validation-os-images namespace.
 
     Yields:
         list[RoleBinding]: The RoleBindings granting the above permissions.
@@ -68,12 +64,17 @@ def validation_os_images_role_binding(admin_client, validation_os_images_namespa
             subjects_name=UNPRIVILEGED_USER,
             cluster_role_name=CDI_CLONE_SOURCER_CLUSTER_ROLE,
         ),
+        # Not required by any test, but lets a human logged in as the unprivileged user inspect resources
+        # (e.g. `oc get datasource,pvc -n validation-os-images`) for manual debugging.
         RoleBindingSpec(
             name="validation-os-images-view",
             subjects_kind="User",
             subjects_name=UNPRIVILEGED_USER,
             cluster_role_name=VIEW_CLUSTER_ROLE,
         ),
+        # Covers cross-namespace dataVolumeTemplates clones, which virt-controller authorizes against the
+        # VM namespace's default ServiceAccount rather than the interactive user; a group binding covers
+        # every namespace without needing a binding per test namespace.
         RoleBindingSpec(
             name="validation-os-images-clone-sourcer-serviceaccounts",
             subjects_kind="Group",
