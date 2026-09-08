@@ -194,16 +194,15 @@ def generate_frr_conf(
 
     evpn_route_map = "evpn-to-ocp"
 
-    # Route-map: strips cluster ASN from AS_PATH for eBGP EVPN re-advertisement
+    # Route-map: preserve next-hop for EVPN re-advertisement
     lines = [
         f"route-map {evpn_route_map} permit 10",
-        f" set as-path exclude {CLUSTER_FRR_ASN}",
         " set ip next-hop unchanged",
         "exit",
         "",
     ]
 
-    # BGP router and neighbor definitions
+    # BGP router and neighbor definitions (eBGP: external AS)
     lines.extend([
         f"router bgp {EXTERNAL_FRR_ASN}",
         " no bgp ebgp-requires-policy",
@@ -214,7 +213,7 @@ def generate_frr_conf(
     lines.extend([f" neighbor {ip} remote-as {CLUSTER_FRR_ASN}" for ip in nodes_ipv4_list])
     lines.append("")
 
-    # IPv4 unicast: advertise external subnet, activate neighbors
+    # IPv4 unicast: advertise external subnet to nodes
     lines.extend([
         " address-family ipv4 unicast",
         f"  network {external_subnet_ipv4}",
@@ -222,12 +221,11 @@ def generate_frr_conf(
     for ip in nodes_ipv4_list:
         lines.extend([
             f"  neighbor {ip} activate",
-            f"  neighbor {ip} next-hop-self",
-            f"  neighbor {ip} route-reflector-client",
+            f"  neighbor {ip} attribute-unchanged next-hop",
         ])
     lines.extend([" exit-address-family", ""])
 
-    # EVPN: activate neighbors with route-map to handle AS-path loop prevention
+    # EVPN: activate neighbors for L2VPN EVPN route exchange
     lines.append(" address-family l2vpn evpn")
     for ip in nodes_ipv4_list:
         lines.extend([

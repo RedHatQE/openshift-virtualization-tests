@@ -1,10 +1,12 @@
 import contextlib
 import ipaddress
+import json
 import logging
 import shlex
 import uuid
 from collections.abc import Generator
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from ocp_resources.pod import Pod
 from pytest import Subtests
@@ -22,6 +24,9 @@ from libs.net.traffic_generator import (
 from libs.net.vmspec import lookup_iface_status, lookup_primary_network
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs.bgp import CLUSTER_FRR_ASN, EXTERNAL_FRR_ASN, NET_TOOLS_CONTAINER_NAME
+
+if TYPE_CHECKING:
+    from ocp_resources.node import Node
 
 LOGGER = logging.getLogger(__name__)
 
@@ -468,3 +473,16 @@ def assert_evpn_workloads_connectivity(
         for l3_client, l3_server in l3_connections:
             with subtests.test(f"routed-L3 IPv{ipaddress.ip_address(l3_client.server_ip).version}"):
                 assert is_tcp_connection(server=l3_server, client=l3_client)
+
+
+def node_primary_ipv4_interface(node: Node) -> ipaddress.IPv4Interface:
+    """Return the primary IPv4 interface of a node.
+
+    Args:
+        node: The node to get the primary IPv4 interface of.
+
+    Returns:
+        The primary IPv4 interface of the node as an ipaddress.IPv4Interface object.
+    """
+    primary_ifaddr = json.loads(node.instance.metadata.annotations["k8s.ovn.org/node-primary-ifaddr"])
+    return ipaddress.IPv4Interface(address=primary_ifaddr["ipv4"])
