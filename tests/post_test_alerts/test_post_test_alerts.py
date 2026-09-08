@@ -3,7 +3,7 @@ Post-test alerts verification.
 
 Verifies that KubeVirtDeprecatedAPIRequested alert was not triggered during test execution.
 
-Jira: https://redhat.atlassian.net/browse/CNV-80353
+Jira: https://redhat.atlassian.net/browse/CNV-80353 # <skip-jira-utils-check>
 """
 
 import logging
