@@ -40,6 +40,7 @@ def poll_tcp_connectivity(
     server_ip: str,
     client_bind_dev: str | None = None,
     server_bind_dev: str | None = None,
+    client_target_ip: str | None = None,
     expect_connectivity: bool = True,
 ) -> bool:
     """Poll TCP connectivity (or its absence) between two VMs, retrying until the expected state is reached.
@@ -52,6 +53,9 @@ def poll_tcp_connectivity(
             Bypasses ECMP routing when both secondary interfaces share the same subnet.
         server_bind_dev: Guest network device name to force the server responses out (e.g. "eth1").
             Bypasses ECMP routing on the server VM when it has multiple secondary interfaces.
+        client_target_ip: IP address the client connects to. Set this to reach the server through
+            an intermediary address (e.g. a ClusterIP service VIP) while the server still binds to
+            its own IP.
         expect_connectivity: When True polls until connectivity exists; when False polls until it does not.
 
     Returns:
@@ -60,7 +64,10 @@ def poll_tcp_connectivity(
     try:
         with TcpServer(vm=server_vm, port=IPERF_SERVER_PORT, bind_ip=server_ip, bind_dev=server_bind_dev):
             with VMTcpClient(
-                vm=client_vm, server_ip=server_ip, server_port=IPERF_SERVER_PORT, bind_dev=client_bind_dev
+                vm=client_vm,
+                server_ip=server_ip if client_target_ip is None else client_target_ip,
+                server_port=IPERF_SERVER_PORT,
+                bind_dev=client_bind_dev,
             ):
                 reachable = True
     except TimeoutExpiredError:

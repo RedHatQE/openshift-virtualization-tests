@@ -576,6 +576,7 @@ class TestVmiSyncTotal:
     """
 
     @pytest.mark.polarion("CNV-16271")
+    @pytest.mark.usefixtures("initial_vmi_sync_total_values")
     def test_kubevirt_vmi_sync_total(self, prometheus, vm_for_migration_metrics_test):
         """
         Test that kubevirt_vmi_sync_total metric is reported by both

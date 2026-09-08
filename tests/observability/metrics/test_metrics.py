@@ -5,8 +5,7 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_VMI_INFO,
 )
 from tests.observability.metrics.utils import (
-    assert_vm_metric,
-    assert_vm_metric_virt_handler_pod,
+    assert_vm_metric_labels,
     compare_kubevirt_vmi_info_metric_with_vm_info,
 )
 from utilities.constants.monitoring import KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS
@@ -22,15 +21,14 @@ class TestMetricsLinux:
         self, admin_client, prometheus, single_metric_vm, cnv_vmi_monitoring_metrics_matrix__function__
     ):
         """
-        Tests validating ability to perform various prometheus api queries on various metrics against a given vm.
-        This test also validates ability to pull metric information from a given vm's virt-handler pod and validates
-        appropriate information exists for that metrics.
+        Tests validating ability to perform various prometheus api queries on various metrics against a given vm
+        and validates appropriate label information (node, namespace) exists for those metrics.
         """
-        assert_vm_metric(
-            prometheus=prometheus, query=cnv_vmi_monitoring_metrics_matrix__function__, vm_name=single_metric_vm.name
-        )
-        assert_vm_metric_virt_handler_pod(
-            query=cnv_vmi_monitoring_metrics_matrix__function__, vm=single_metric_vm, admin_client=admin_client
+        assert_vm_metric_labels(
+            prometheus=prometheus,
+            query=cnv_vmi_monitoring_metrics_matrix__function__,
+            vm=single_metric_vm,
+            admin_client=admin_client,
         )
 
 
@@ -45,13 +43,11 @@ class TestMetricsWindows:
         windows_vm_for_test,
         cnv_vmi_monitoring_metrics_matrix__function__,
     ):
-        assert_vm_metric(
+        assert_vm_metric_labels(
             prometheus=prometheus,
             query=cnv_vmi_monitoring_metrics_matrix__function__,
-            vm_name=windows_vm_for_test.name,
-        )
-        assert_vm_metric_virt_handler_pod(
-            query=cnv_vmi_monitoring_metrics_matrix__function__, vm=windows_vm_for_test, admin_client=admin_client
+            vm=windows_vm_for_test,
+            admin_client=admin_client,
         )
 
 

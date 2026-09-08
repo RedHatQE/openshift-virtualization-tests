@@ -1,9 +1,11 @@
 from collections.abc import Generator
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 import pytest
 from kubernetes.dynamic import DynamicClient
+from ocp_resources.network_policy import NetworkPolicy
 from ocp_resources.pod import Pod
+from ocp_resources.service import Service
 from ocp_resources.user_defined_network import Layer2UserDefinedNetwork
 
 from libs.net.ip import random_ipv4_address
@@ -14,12 +16,16 @@ from libs.vm import affinity
 from libs.vm.oper import run_vms
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs.vm_factory import udn_vm
+from tests.network.user_defined_network.libudn import ALLOWED_POD_CONTAINER_NAME
 from utilities.constants.architecture import AMD_64, ARM_64
 from utilities.constants.networking import POD_CONTAINER_SPEC
 from utilities.infra import create_ns
 
 if TYPE_CHECKING:
     from ocp_resources.namespace import Namespace
+
+ALLOWED_POD_LABEL: Final[dict[str, str]] = {"udn": "allowed"}
+VMI_ID_LABEL: Final[str] = "vmi.kubevirt.io/id"
 
 
 @pytest.fixture(scope="module")
@@ -53,7 +59,7 @@ def udn_affinity_label():
     return affinity.new_label(key_prefix="udn")
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="module")
 def vma_udn(udn_namespace, namespaced_layer2_user_defined_network, udn_affinity_label, admin_client):
     with udn_vm(
         namespace_name=udn_namespace.name,
@@ -67,7 +73,7 @@ def vma_udn(udn_namespace, namespaced_layer2_user_defined_network, udn_affinity_
         yield vm
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="module")
 def vmb_udn(udn_namespace, namespaced_layer2_user_defined_network, udn_affinity_label, admin_client):
     with udn_vm(
         namespace_name=udn_namespace.name,
@@ -154,16 +160,49 @@ def running_amd_and_arm_vms(
 
 
 @pytest.fixture(scope="class")
-def udn_pod(
+def allowed_udn_pod(
     admin_client: DynamicClient,
     udn_namespace: Namespace,
     namespaced_layer2_user_defined_network: Layer2UserDefinedNetwork,
 ) -> Generator[Pod]:
     with Pod(
-        name="udn-pod",
+        name="udn-allowed-pod",
         namespace=udn_namespace.name,
-        containers=[{**POD_CONTAINER_SPEC, "name": "udn-container"}],
+        containers=[{**POD_CONTAINER_SPEC, "name": ALLOWED_POD_CONTAINER_NAME}],
         client=admin_client,
+        label=ALLOWED_POD_LABEL,
     ) as pod:
         pod.wait_for_status(status=Pod.Status.RUNNING)
         yield pod
+
+
+@pytest.fixture()
+def clusterip_service_for_vmb_udn(
+    admin_client: DynamicClient, udn_namespace: Namespace, vmb_udn: BaseVirtualMachine
+) -> Generator[Service]:
+    """A ClusterIP service targeting the primary-UDN server VM."""
+    with Service(
+        name="udn-clusterip-svc",
+        namespace=udn_namespace.name,
+        selector={VMI_ID_LABEL: vmb_udn.name},
+        ports=[{"port": IPERF_SERVER_PORT}],
+        client=admin_client,
+    ) as svc:
+        yield svc
+
+
+@pytest.fixture()
+def udn_network_policy(
+    admin_client: DynamicClient,
+    udn_namespace: Namespace,
+    vma_udn: BaseVirtualMachine,
+) -> Generator[NetworkPolicy]:
+    with NetworkPolicy(
+        name="udn-network-policy",
+        namespace=udn_namespace.name,
+        client=admin_client,
+        pod_selector={"matchLabels": {VMI_ID_LABEL: vma_udn.name}},
+        ingress=[{"from": [{"podSelector": {"matchLabels": ALLOWED_POD_LABEL}}]}],
+        policy_types=["Ingress"],
+    ) as network_policy:
+        yield network_policy
