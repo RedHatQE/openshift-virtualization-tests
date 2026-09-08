@@ -390,3 +390,19 @@ def nodes_cpu_vendor(schedulable_nodes):
         return INTEL
     else:
         return None
+
+
+@pytest.fixture()
+def xfail_postcopy_migration(is_postcopy_migration_bug_open):
+    """
+    Conditionally xfail a test affected by the CNV-84023 product bug.
+
+    Calls `pytest.xfail()` while CNV-84023 is open on a cluster with
+    RHCOS 10+ nodes. No-op once CNV-84023 is resolved.
+
+    Raises:
+        _pytest.outcomes.XFailed: If CNV-84023 is open and the cluster has
+            RHCOS 10+ nodes. This terminates the requesting test's setup.
+    """
+    if is_postcopy_migration_bug_open:
+        pytest.xfail(reason="CNV-84023: post-copy migration fails on RHCOS 10+ nodes")
