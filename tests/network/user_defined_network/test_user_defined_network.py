@@ -14,10 +14,10 @@ from typing import TYPE_CHECKING
 import pytest
 from ocp_resources.utils.constants import TIMEOUT_1MINUTE
 
-from libs.net.traffic_generator import is_tcp_connection
+from libs.net.traffic_generator import IPERF_SERVER_PORT, PodTcpClient, TcpServer, is_tcp_connection
 from libs.net.vmspec import lookup_iface_status_ip, lookup_primary_network
 from tests.network.libs.connectivity import poll_tcp_connectivity
-from tests.network.user_defined_network.libudn import lookup_default_pod_ip
+from tests.network.user_defined_network.libudn import ALLOWED_POD_CONTAINER_NAME, lookup_default_pod_ip
 from utilities.constants.networking import PUBLIC_DNS_SERVER_IP
 from utilities.constants.pytest import QUARANTINED
 from utilities.constants.timeouts import TIMEOUT_1MIN
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from ocp_resources.service import Service
     from ocp_resources.user_defined_network import Layer2UserDefinedNetwork
 
-    from libs.net.traffic_generator import TcpServer, VMTcpClient
+    from libs.net.traffic_generator import VMTcpClient
     from libs.vm.vm import BaseVirtualMachine
 
 
@@ -146,7 +146,7 @@ class TestPrimaryUdn:
         assert is_tcp_connection(server=server, client=client)
 
     @pytest.mark.polarion("CNV-11432")
-    def test_vm_to_pod_connectivity_on_udn(self, vma_udn, udn_pod):
+    def test_vm_to_pod_connectivity_on_udn(self, vma_udn, allowed_udn_pod):
         """
         Test that a VM reaches a pod on the same primary UDN network (east-west connectivity).
 
@@ -164,36 +164,52 @@ class TestPrimaryUdn:
         Expected:
             - Ping succeeds with 0% packet loss.
         """
-        pod_ip = lookup_default_pod_ip(pod=udn_pod)
+        pod_ip = lookup_default_pod_ip(pod=allowed_udn_pod)
         vma_udn.console(commands=[f"ping -c 3 {pod_ip}"], timeout=TIMEOUT_1MIN)
 
     @pytest.mark.polarion("CNV-11435")
-    def test_network_policy_enforcement_on_primary_udn_interface(self):
+    @pytest.mark.usefixtures("udn_network_policy")
+    def test_network_policy_enforcement_on_primary_udn_interface(self, vma_udn, vmb_udn, allowed_udn_pod):
         """
-        Test that a network policy is enforced on the VM primary UDN interface: traffic from
-        an allowed pod is permitted while traffic from a denied pod is blocked.
+        [NEGATIVE] Test that a network policy is enforced on the VM primary UDN interface: traffic
+        from an allowed source is permitted while traffic from a denied source is blocked.
 
         No STP exists for this scenario - tracked via Jira: https://redhat.atlassian.net/browse/CNV-94228 # <skip-jira-utils-check>
 
         Preconditions:
             - Running under-test VM attached to the primary UDN network.
-            - Running allowed pod attached to the primary UDN network.
-            - Running denied pod attached to the primary UDN network.
-            - Network policy applied to the primary UDN, allowing traffic from an allowed pod
-              and denying traffic from a denied pod.
+            - Running denied VM attached to the same primary UDN network.
+            - Running allowed pod attached to the same primary UDN network.
+            - Network policy applied to the under-test VM primary UDN interface, allowing ingress
+              only from the allowed pod.
 
         Steps:
-            1. Execute a ping command from the allowed pod to the under-test VM
+            1. Initiate a TCP connection from the denied VM to the under-test VM
                primary UDN interface IP address.
-            2. Execute a ping command from the denied pod to the under-test VM
+            2. Initiate a TCP connection from the allowed pod to the under-test VM
                primary UDN interface IP address.
 
         Expected:
-            - Ping from the allowed pod succeeds with 0% packet loss.
-            - Ping from the denied pod fails with 100% packet loss.
-        """
+            - The TCP connection from the denied VM is blocked.
+            - The TCP connection from the allowed pod is established.
 
-    test_network_policy_enforcement_on_primary_udn_interface.__test__ = False
+        The blocked source is polled to absorb the asynchronous enforcement of the network policy.
+        Once the deny rule is in effect the allow rule is too, so the allowed pod is checked once.
+        """
+        udn_vm_ip = str(
+            lookup_iface_status_ip(vm=vma_udn, iface_name=lookup_primary_network(vm=vma_udn).name, ip_family=4)
+        )
+        poll_tcp_connectivity(client_vm=vmb_udn, server_vm=vma_udn, server_ip=udn_vm_ip, expect_connectivity=False)
+        with TcpServer(vm=vma_udn, port=IPERF_SERVER_PORT, bind_ip=udn_vm_ip) as server:
+            with PodTcpClient(
+                pod=allowed_udn_pod,
+                server_ip=udn_vm_ip,
+                server_port=IPERF_SERVER_PORT,
+                container=ALLOWED_POD_CONTAINER_NAME,
+            ) as client:
+                assert is_tcp_connection(server=server, client=client), (
+                    f"Allowed pod {allowed_udn_pod.name} failed to reach {udn_vm_ip}:{IPERF_SERVER_PORT}"
+                )
 
     @pytest.mark.order("last")
     @pytest.mark.usefixtures("vma_udn")

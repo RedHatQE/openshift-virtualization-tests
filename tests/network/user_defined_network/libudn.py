@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 from ocp_resources.resource import Resource
 
@@ -9,6 +9,8 @@ from libs.net.vmspec import IpNotFound
 
 if TYPE_CHECKING:
     from ocp_resources.pod import Pod
+
+ALLOWED_POD_CONTAINER_NAME: Final[str] = "udn-container"
 
 
 def lookup_default_pod_ip(pod: Pod) -> str:
