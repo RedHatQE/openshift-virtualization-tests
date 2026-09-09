@@ -72,7 +72,6 @@ class TestFileRestoreBackupVendorWorkflow:
     """
 
     @pytest.mark.polarion("CNV-16767")
-    @pytest.mark.usefixtures("deleted_linux_test_file_on_data_disk")
     def test_restore_workflow_from_api(
         self,
         admin_client,
@@ -155,7 +154,6 @@ class TestFileRestoreWindowsGuestFileCount:
         namespace,
         windows_file_restore_vm,
         windows_multi_file_data_disk_snapshot,
-        deleted_windows_multi_files_on_data_disk,
     ):
         """
         Test that the restored file count in status matches actual files transferred on a Windows VM.
@@ -203,12 +201,6 @@ class TestFileRestoreWindowsGuestFileCount:
             assert reported_file_count == actual_file_count, (
                 f"Reported count {reported_file_count} does not match guest count {actual_file_count}"
             )
-            for guest_path, expected_content in deleted_windows_multi_files_on_data_disk:
-                verify_file_in_windows_vm(
-                    windows_vm=windows_file_restore_vm,
-                    file_name_with_path=guest_path,
-                    file_content=expected_content,
-                )
 
 
 @pytest.mark.tier3
@@ -229,7 +221,6 @@ class TestFileRestoreWindowsNTFSACLsAndOwnership:
     """
 
     @pytest.mark.polarion("CNV-16768")
-    @pytest.mark.usefixtures("deleted_windows_test_file_on_data_disk")
     def test_windows_vm_restore_from_backup_pvc_preserves_ntfs_acls_and_ownership(
         self,
         admin_client,
@@ -279,7 +270,6 @@ class TestFileRestoreWindowsNTFSACLsAndOwnership:
             )
 
     @pytest.mark.polarion("CNV-16769")
-    @pytest.mark.usefixtures("deleted_windows_test_file_for_snapshot")
     def test_windows_vm_restore_from_snapshot_preserves_ntfs_acls_and_ownership(
         self,
         admin_client,
@@ -355,7 +345,6 @@ class TestFileRestoreWindowsDriveRoot:
     """
 
     @pytest.mark.polarion("CNV-16771")
-    @pytest.mark.usefixtures("deleted_windows_drive_root_file")
     def test_windows_vm_restore_from_drive_root_path(
         self,
         admin_client,

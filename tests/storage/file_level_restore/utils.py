@@ -92,6 +92,16 @@ class VirtualMachineFileRestore(NamespacedResource):
         self._source_partition = source_partition
 
     def to_dict(self) -> None:
+        """Build the VirtualMachineFileRestore manifest in ``self.res``.
+
+        Calls the base ``to_dict()`` first, then populates ``spec`` when this
+        resource was constructed programmatically (no ``kind_dict`` or
+        ``yaml_file``). The guard prevents duplicate spec injection if
+        ``to_dict()`` is invoked more than once.
+
+        Side effects:
+            Mutates ``self.res`` in place by updating ``spec``.
+        """
         super().to_dict()
         if not self.kind_dict and not self.yaml_file:
             spec: dict[str, Any] = {
@@ -197,7 +207,8 @@ def get_file_restore_operator_configmap(admin_client: DynamicClient) -> ConfigMa
                 config_map_instance=sample,
                 key=CONFIGMAP_WINDOWS_HELPERS_TAR,
             )
-        except RuntimeError:
+        except RuntimeError as err:
+            LOGGER.info(f"ConfigMap '{FILE_RESTORE_SSH_CONFIGMAP_NAME}' binary keys not yet ready: {err}")
             continue
         if ssh_public_key and linux_helpers and windows_helpers:
             LOGGER.info("File-restore operator ConfigMap is ready with guest helper tarballs")
@@ -208,16 +219,18 @@ def get_file_restore_operator_configmap(admin_client: DynamicClient) -> ConfigMa
     )
 
 
-def get_operator_ssh_public_key(admin_client: DynamicClient) -> str:
-    """Retrieve the SSH public key from the file-restore operator ConfigMap.
+def _ssh_public_key_from_config_map(config_map: ConfigMap) -> str:
+    """Extract the operator SSH public key from a ConfigMap resource.
 
     Args:
-        admin_client: Kubernetes admin client.
+        config_map: File-restore operator ConfigMap.
 
     Returns:
         The operator SSH public key string.
+
+    Raises:
+        RuntimeError: If the SSH public key entry is missing or empty.
     """
-    config_map = get_file_restore_operator_configmap(admin_client=admin_client)
     ssh_public_key = _get_configmap_data_value(
         config_map_instance=config_map.instance,
         key=CONFIGMAP_SSH_PUBLIC_KEY,
@@ -241,7 +254,7 @@ def extract_helper_tar(tar_bytes: bytes) -> dict[str, str]:
         tar_path = Path(temp_directory) / "helpers.tar"
         tar_path.write_bytes(data=tar_bytes)
         with tarfile.open(name=tar_path, mode="r:") as tar_archive:
-            tar_archive.extractall(path=temp_directory)
+            tar_archive.extractall(path=temp_directory, filter="data")
         for extracted_path in Path(temp_directory).iterdir():
             if extracted_path.is_file() and extracted_path.name != tar_path.name:
                 files[extracted_path.name] = extracted_path.read_text(encoding="utf-8")
@@ -256,7 +269,7 @@ def install_linux_guest_helper(vm: VirtualMachineForTests, admin_client: Dynamic
         admin_client: Kubernetes admin client.
     """
     config_map = get_file_restore_operator_configmap(admin_client=admin_client)
-    operator_public_key = get_operator_ssh_public_key(admin_client=admin_client)
+    operator_public_key = _ssh_public_key_from_config_map(config_map=config_map)
     linux_tar = _get_configmap_binary_value(
         config_map_instance=config_map.instance,
         key=CONFIGMAP_LINUX_HELPERS_TAR,
@@ -291,9 +304,10 @@ def install_linux_guest_helper(vm: VirtualMachineForTests, admin_client: Dynamic
             sleep=TIMEOUT_5SEC,
         )
 
+    setup_script_path = shlex.quote(f"{stage_directory}/{LINUX_SETUP_SCRIPT}")
     run_ssh_commands(
         host=vm.ssh_exec,
-        commands=["sudo", "bash", f"{stage_directory}/{LINUX_SETUP_SCRIPT}", operator_public_key],
+        commands=["sudo", "bash", setup_script_path, operator_public_key],
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
     )
@@ -348,8 +362,8 @@ def install_windows_guest_helper(vm: VirtualMachineForTests, admin_client: Dynam
         vm: Running Windows VM to configure.
         admin_client: Kubernetes admin client.
     """
-    operator_public_key = get_operator_ssh_public_key(admin_client=admin_client)
     config_map = get_file_restore_operator_configmap(admin_client=admin_client)
+    operator_public_key = _ssh_public_key_from_config_map(config_map=config_map)
     windows_tar = _get_configmap_binary_value(
         config_map_instance=config_map.instance,
         key=CONFIGMAP_WINDOWS_HELPERS_TAR,
@@ -463,7 +477,7 @@ def assert_restore_volume_detached(vm: VirtualMachineForTests, restore_cr_name: 
     volume_name = restore_volume_name(restore_cr_name=restore_cr_name)
     vmi = vm.vmi.instance
     spec_volume_names = {volume.name for volume in vmi.spec.volumes}
-    status_volume_names = {volume_status.get("name") for volume_status in vmi.status.volumeStatus}
+    status_volume_names = {volume_status.get("name") for volume_status in vmi.status.volumeStatus or []}
     assert volume_name not in spec_volume_names, f"Restore volume '{volume_name}' is still present in VMI spec volumes"
     assert volume_name not in status_volume_names, (
         f"Restore volume '{volume_name}' is still present in VMI status volumeStatus"
@@ -777,9 +791,9 @@ def _config_map_as_dict(config_map_instance: Any) -> dict[str, Any]:
     Returns:
         ConfigMap fields as a dictionary.
     """
-    if hasattr(config_map_instance, "to_dict"):
-        return config_map_instance.to_dict()
-    return dict(config_map_instance)
+    if isinstance(config_map_instance, dict):
+        return config_map_instance
+    return config_map_instance.to_dict()
 
 
 def _get_configmap_data_value(config_map_instance: Any, key: str) -> str:

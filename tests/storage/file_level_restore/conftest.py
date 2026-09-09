@@ -398,15 +398,15 @@ def deleted_windows_test_file_on_data_disk(
 def windows_multi_files_on_data_disk(windows_file_restore_vm):
     """Multiple test files on the Windows NTFS data disk. Yields list of (guest_path, content)."""
     files: list[tuple[str, str]] = []
+    restore_test_directory = windows_guest_path(
+        guest_path=windows_data_disk_path(relative_path=WINDOWS_RESTORE_TEST_DIRECTORY),
+    )
     for file_index in range(1, WINDOWS_MULTI_FILE_COUNT + 1):
         guest_path = windows_data_disk_path(
             relative_path=f"{WINDOWS_RESTORE_TEST_DIRECTORY}/multi-file-{file_index}.txt",
         )
         file_content = f"windows-multi-file-content-{file_index}"
         powershell_path = windows_guest_path(guest_path=guest_path)
-        restore_test_directory = windows_guest_path(
-            guest_path=windows_data_disk_path(relative_path=WINDOWS_RESTORE_TEST_DIRECTORY),
-        )
         write_command = (
             f"New-Item -ItemType Directory -Path '{restore_test_directory}' -Force | Out-Null;"
             f" Set-Content -LiteralPath '{powershell_path}' -Value '{file_content}' -NoNewline"
