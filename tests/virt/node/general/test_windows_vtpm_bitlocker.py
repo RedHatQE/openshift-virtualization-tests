@@ -129,6 +129,7 @@ def windows_vtpm_vm(
         tpm_params=persistent_enabled,
         efi_params=persistent_enabled,
         cpu_model=modern_cpu_for_migration,
+        exclude_from_descheduler=True,
     ) as vm:
         running_vm(vm=vm)
         verify_tpm_in_os(vm=vm)

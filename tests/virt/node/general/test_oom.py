@@ -49,6 +49,7 @@ def fedora_oom_vm(namespace, unprivileged_client):
         cpu_cores=2,
         cpu_requests="2",
         cpu_limits="2",
+        exclude_from_descheduler=True,
     ) as vm:
         running_vm(vm=vm)
         yield vm
