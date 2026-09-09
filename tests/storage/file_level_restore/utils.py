@@ -677,7 +677,7 @@ def delete_windows_guest_file(vm: VirtualMachineForTests, guest_path: str) -> No
             "powershell",
             "-NoProfile",
             "-Command",
-            f"Remove-Item -LiteralPath '{powershell_path}' -Force",
+            f"Remove-Item -LiteralPath '{powershell_path}' -Force -ErrorAction Stop",
         ],
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
