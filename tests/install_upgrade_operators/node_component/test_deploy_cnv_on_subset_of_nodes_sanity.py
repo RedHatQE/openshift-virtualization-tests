@@ -156,6 +156,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
     )
     def test_workload_components_selection_change_denied_with_workloads(
         self,
+        admin_client,
         nodes_labeled,
         vm_placement_vm_work3,
         hyperconverged_resource_scope_function,
@@ -163,6 +164,7 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         LOGGER.info("Attempting to update HCO with node placement, expecting it to fail")
         try:
             with ResourceEditorValidateHCOReconcile(
+                admin_client=admin_client,
                 patches={hyperconverged_resource_scope_function: {"spec": {"workloads": WORK_LABEL_1}}},
             ):
                 LOGGER.info("Expected ability to change workloads label {WORK_LABEL_1} while VM/Workload is present.")

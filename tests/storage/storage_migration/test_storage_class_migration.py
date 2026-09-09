@@ -245,6 +245,7 @@ class TestStorageClassMigrationWithVolumeHotplug:
     indirect=True,
 )
 @pytest.mark.tier3
+@pytest.mark.windows
 class TestStorageClassMigrationWindowsWithVTPM:
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME_WINDOWS}::test_vm_storage_class_migration_windows_vm_with_vtpm")
     @pytest.mark.polarion("CNV-11499")

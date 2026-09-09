@@ -203,7 +203,7 @@ def test_base_templates_annotations(base_templates, common_templates_expected_li
 
     assert not set(base_templates) ^ set(common_templates_expected_list), (
         f"Not all base CNV templates exist\n extra templates: {extra_templates}\n "
-        f"missing templates: {missing_templates}",
+        f"missing templates: {missing_templates}"
     )
 
 

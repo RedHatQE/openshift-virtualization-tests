@@ -43,8 +43,6 @@ if TYPE_CHECKING:
 PING_LOG = "ping.log"
 LOGGER = logging.getLogger(__name__)
 
-pytestmark = pytest.mark.usefixtures("hyperconverged_ovs_annotations_enabled_scope_session")
-
 
 def http_port_accessible(vm, server_ip, server_port):
     if get_valid_ip_address(family=IPV6_STR, dst_ip=server_ip):
@@ -121,9 +119,7 @@ def vma(
 ):
     name = "vma"
     networks = {br1test_nad.name: br1test_nad.name}
-    network_data_data = {
-        "ethernets": {"eth1": {"addresses": [f"{random_ipv4_address(net_seed=0, host_address=1)}/24"]}}
-    }
+    network_data_data = {"ethernets": {"eth1": {"addresses": [str(random_ipv4_address(net_seed=0, host_address=1))]}}}
     cloud_init_data = compose_cloud_init_data_dict(
         network_data=network_data_data,
         ipv6_network_data=ipv6_primary_interface_cloud_init_data,
@@ -153,9 +149,7 @@ def vmb(
 ):
     name = "vmb"
     networks = {br1test_nad.name: br1test_nad.name}
-    network_data_data = {
-        "ethernets": {"eth1": {"addresses": [f"{random_ipv4_address(net_seed=0, host_address=2)}/24"]}}
-    }
+    network_data_data = {"ethernets": {"eth1": {"addresses": [str(random_ipv4_address(net_seed=0, host_address=2))]}}}
     cloud_init_data = compose_cloud_init_data_dict(
         network_data=network_data_data,
         ipv6_network_data=ipv6_primary_interface_cloud_init_data,

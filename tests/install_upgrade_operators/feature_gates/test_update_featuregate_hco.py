@@ -15,9 +15,11 @@ pytestmark = [pytest.mark.s390x, pytest.mark.skip_must_gather_collection]
 @pytest.fixture()
 def updated_fg_hco(
     request,
+    admin_client,
     hyperconverged_resource_scope_function,
 ):
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={hyperconverged_resource_scope_function: {"spec": {FEATUREGATES: request.param["featuregate"]}}},
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,

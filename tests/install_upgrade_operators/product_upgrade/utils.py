@@ -720,8 +720,11 @@ def update_mcp_paused_spec(mcp: list[MachineConfigPool], paused: bool = True) ->
         ResourceEditor(patches={_mcp: {"spec": {"paused": paused}}}).update()
 
 
-def set_workload_update_methods_hco(hyperconverged_resource: HyperConverged, workload_update_method: list[str]) -> None:
+def set_workload_update_methods_hco(
+    admin_client: DynamicClient, hyperconverged_resource: HyperConverged, workload_update_method: list[str]
+) -> None:
     ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={
             hyperconverged_resource: {
                 "spec": {WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {WORKLOADUPDATEMETHODS: workload_update_method}}

@@ -371,7 +371,7 @@ def file_system_metric_mountpoints_existence(request, prometheus, vm_for_test, d
 
 
 @pytest.fixture(scope="class")
-def vm_for_test_with_resource_limits(namespace):
+def vm_for_test_with_resource_limits(namespace, unprivileged_client):
     vm_name = "vm-with-limits"
     with VirtualMachineForTests(
         name=vm_name,
@@ -379,6 +379,7 @@ def vm_for_test_with_resource_limits(namespace):
         cpu_limits=ONE_CPU_CORE,
         memory_limits=Images.Fedora.DEFAULT_MEMORY_SIZE,
         body=fedora_vm_body(name=vm_name),
+        client=unprivileged_client,
     ) as vm:
         running_vm(vm=vm)
         yield vm
@@ -403,7 +404,8 @@ def storage_class_labels_for_testing(admin_client):
 def template_validator_finalizer(admin_client, hco_namespace):
     deployment = Deployment(name=VIRT_TEMPLATE_VALIDATOR, namespace=hco_namespace.name, client=admin_client)
     with ResourceEditorValidateHCOReconcile(
-        patches={deployment: {"metadata": {"finalizers": ["ssp.kubernetes.io/temporary-finalizer"]}}}
+        admin_client=admin_client,
+        patches={deployment: {"metadata": {"finalizers": ["ssp.kubernetes.io/temporary-finalizer"]}}},
     ):
         yield
 
@@ -493,7 +495,7 @@ def windows_vm_for_test(windows_vm_namespace, unprivileged_client):
 
 
 @pytest.fixture(scope="class")
-def vm_for_migration_metrics_test(namespace, cpu_for_migration, is_postcopy_migration_bug_open):
+def vm_for_migration_metrics_test(namespace, unprivileged_client, cpu_for_migration, is_postcopy_migration_bug_open):
     if is_postcopy_migration_bug_open:
         pytest.xfail(reason="CNV-84023: post-copy migration fails on RHCOS 10+ nodes")
 
@@ -504,6 +506,7 @@ def vm_for_migration_metrics_test(namespace, cpu_for_migration, is_postcopy_migr
         body=fedora_vm_body(name=name),
         cpu_model=cpu_for_migration,
         additional_labels=MIGRATION_POLICY_VM_LABEL,
+        client=unprivileged_client,
     ) as vm:
         running_vm(vm=vm, check_ssh_connectivity=False)
         yield vm
@@ -592,8 +595,8 @@ def fedora_vm_with_stress_ng(namespace, unprivileged_client, golden_images_names
         client=unprivileged_client,
         name="fedora-vm-test-with-stress-ng",
         namespace=namespace.name,
-        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL),
-        vm_preference=VirtualMachineClusterPreference(name=OS_FLAVOR_FEDORA),
+        vm_instance_type=VirtualMachineClusterInstancetype(client=unprivileged_client, name=U1_SMALL),
+        vm_preference=VirtualMachineClusterPreference(client=unprivileged_client, name=OS_FLAVOR_FEDORA),
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=DataSource(
                 name=OS_FLAVOR_FEDORA,

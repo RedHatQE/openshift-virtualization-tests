@@ -501,8 +501,9 @@ def download_and_extract_tar(tarfile_url, dest_path):
 
 
 @contextmanager
-def update_hco_with_persistent_storage_config(hco_cr, storage_class):
+def update_hco_with_persistent_storage_config(admin_client, hco_cr, storage_class):
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={hco_cr: {"spec": {"vmStateStorageClass": storage_class}}},
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,
@@ -708,26 +709,37 @@ def verify_rwx_default_storage(client: DynamicClient) -> None:
 
 
 @contextmanager
-def create_windows2022_vm_using_existing_dv(
+def create_windows2022_vm(
     namespace: str,
     client: DynamicClient,
     vm_name: str,
     cpu_model: str | None = None,
-    existing_data_volume: DataVolume | None = None,
+    data_volume: DataVolume | None = None,
+    data_volume_template: dict | None = None,
+    check_running_vm: bool = True,
 ) -> Generator[VirtualMachineForTests]:
     """
-    Creates a Windows Server 2022 VM with vTPM using existing DataVolume.
+    Creates a Windows Server 2022 VM with vTPM using an existing DataVolume or a DataVolume template.
 
     Args:
-        existing_data_volume: DataVolume to use for the VM's data volume
         namespace: Kubernetes namespace
         client: Kubernetes client
         vm_name: Name for the VirtualMachine
         cpu_model: CPU model specification (can be None)
+        data_volume: Existing DataVolume to use for the VM's data volume
+        data_volume_template: DataVolume template dictionary with metadata and spec
+        check_running_vm: If True, start the VM and wait for Windows boot
 
     Yields:
-        VirtualMachineForTests: Running Windows 2022 VM with vTPM
+        VirtualMachineForTests: Windows 2022 VM with vTPM
     """
+
+    assert data_volume is not None or data_volume_template is not None, (
+        "Must provide exactly one of data_volume or data_volume_template"
+    )
+    assert data_volume is None or data_volume_template is None, (
+        "Must provide exactly one of data_volume or data_volume_template, not both"
+    )
 
     with VirtualMachineForTests(
         name=vm_name,
@@ -736,46 +748,11 @@ def create_windows2022_vm_using_existing_dv(
         os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK,
         vm_instance_type=VirtualMachineClusterInstancetype(name=U1_LARGE, client=client),
         vm_preference=VirtualMachineClusterPreference(name=WINDOWS_2K22_PREFERENCE, client=client),
-        data_volume=existing_data_volume,
+        data_volume=data_volume,
+        data_volume_template=data_volume_template,
         cpu_model=cpu_model,
     ) as vm:
-        running_vm(vm=vm)
-        wait_for_windows_vm(vm=vm, version="2022")
-        yield vm
-
-
-@contextmanager
-def create_windows2022_vm_with_data_volume_template(
-    namespace: str,
-    client: DynamicClient,
-    vm_name: str,
-    cpu_model: str | None = None,
-    dv_template: dict | None = None,
-) -> Generator[VirtualMachineForTests]:
-    """
-    Creates a Windows Server 2022 VM with vTPM with dv template.
-
-    Args:
-        dv_template: DataVolume template dictionary with metadata and spec
-        namespace: Kubernetes namespace
-        client: Kubernetes client
-        vm_name: Name for the VirtualMachine
-        cpu_model: CPU model specification (can be None)
-
-    Yields:
-        VirtualMachineForTests: Running Windows 2022 VM with vTPM
-    """
-
-    with VirtualMachineForTests(
-        name=vm_name,
-        namespace=namespace,
-        client=client,
-        os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK,
-        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_LARGE, client=client),
-        vm_preference=VirtualMachineClusterPreference(name=WINDOWS_2K22_PREFERENCE, client=client),
-        data_volume_template=dv_template,
-        cpu_model=cpu_model,
-    ) as vm:
-        running_vm(vm=vm)
-        wait_for_windows_vm(vm=vm, version="2022")
+        if check_running_vm:
+            running_vm(vm=vm)
+            wait_for_windows_vm(vm=vm, version="2022")
         yield vm

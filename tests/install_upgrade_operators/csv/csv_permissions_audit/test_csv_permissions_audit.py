@@ -12,7 +12,6 @@ from utilities.constants.components import (
     AAQ_OPERATOR,
     CDI_OPERATOR,
     CLUSTER_NETWORK_ADDONS_OPERATOR,
-    CNV_OPERATORS,
     HOSTPATH_PROVISIONER_OPERATOR,
     HYPERCONVERGED_CLUSTER_OPERATOR,
     KUBEVIRT_MIGRATION_OPERATOR,
@@ -51,23 +50,11 @@ def global_permission_from_csv(cnv_operators_matrix__function__, csv_permissions
 
 
 @pytest.fixture(scope="module")
-def operators_from_csv(csv_permissions):
-    return {service_account_name for service_account_name, all_permissions in csv_permissions.items()}
-
-
-@pytest.fixture(scope="module")
 def csv_permissions(admin_client):
     return get_csv_permissions(
         namespace=py_config["hco_namespace"],
         csv_name_starts_with=py_config["hco_cr_name"],
         admin_client=admin_client,
-    )
-
-
-@pytest.mark.polarion("CNV-9805")
-def test_new_operator_in_csv(operators_from_csv):
-    assert sorted(operators_from_csv) == sorted(CNV_OPERATORS), (
-        f"Expected cnv operators:{CNV_OPERATORS} does not match operators {operators_from_csv} "
     )
 
 

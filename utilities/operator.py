@@ -220,9 +220,9 @@ def get_machine_config_pools_conditions(machine_config_pools):
     return {mcp.name: mcp.instance.status.conditions for mcp in machine_config_pools}
 
 
-def get_operator_hub():
+def get_operator_hub(client: DynamicClient) -> OperatorHub:
     operator_hub_name = "cluster"
-    operator_hub = OperatorHub(name=operator_hub_name)
+    operator_hub = OperatorHub(client=client, name=operator_hub_name)
     if operator_hub.exists:
         return operator_hub
     raise ResourceNotFoundError(f"OperatorHub {operator_hub_name} not found")
@@ -230,30 +230,32 @@ def get_operator_hub():
 
 @contextmanager
 def disable_default_sources_in_operatorhub(admin_client):
-    operator_hub = get_operator_hub()
+    operator_hub = get_operator_hub(client=admin_client)
     LOGGER.info("Disable default sources in operatorhub.")
     with ResourceEditor(patches={operator_hub: {"spec": {"disableAllDefaultSources": True}}}) as edited_source:
         # wait for all the catalogsources to disappear:
         sources = operator_hub.instance.status.sources
         for catalog_source_name in [catalog_source["name"] for catalog_source in sources]:
-            wait_for_catalog_source_disabled(catalog_name=catalog_source_name)
+            wait_for_catalog_source_disabled(client=admin_client, catalog_name=catalog_source_name)
         yield edited_source
 
 
-def get_catalog_source(catalog_name):
+def get_catalog_source(client: DynamicClient, catalog_name: str) -> CatalogSource | None:
     market_place_namespace = py_config["marketplace_namespace"]
-    catalog_source = CatalogSource(namespace=market_place_namespace, name=catalog_name)
+    catalog_source = CatalogSource(client=client, namespace=market_place_namespace, name=catalog_name)
     if catalog_source.exists:
         return catalog_source
     LOGGER.warning(f"CatalogSource {catalog_name} not found in namespace: {market_place_namespace}")
+    return None
 
 
-def wait_for_catalog_source_disabled(catalog_name):
+def wait_for_catalog_source_disabled(client: DynamicClient, catalog_name: str) -> None:
     LOGGER.info(f"Wait for catalogsource {catalog_name} to be disabled.")
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_5MIN,
         sleep=10,
         func=get_catalog_source,
+        client=client,
         catalog_name=catalog_name,
     )
     try:
@@ -296,7 +298,7 @@ def wait_for_catalogsource_ready(admin_client, catalog_name):
             _pod.name
             for _pod in utilities.infra.get_pods(
                 client=admin_client,
-                namespace=Namespace(name=py_config["marketplace_namespace"]),
+                namespace=Namespace(client=admin_client, name=py_config["marketplace_namespace"]),
                 label=f"olm.catalogSource={catalog_name}",
             )
             if _pod.instance.status.phase != Pod.Status.RUNNING
@@ -395,7 +397,7 @@ def get_install_plan_from_subscription(subscription):
 
 
 def wait_for_csv_successful_state(admin_client, namespace_name, subscription_name):
-    subscription = Subscription(name=subscription_name, namespace=namespace_name)
+    subscription = Subscription(client=admin_client, name=subscription_name, namespace=namespace_name)
     if subscription.exists:
         csv = utilities.infra.get_csv_by_name(
             csv_name=subscription.instance.status.installedCSV,
@@ -520,7 +522,7 @@ def wait_for_package_manifest_to_exist(client, cr_name, catalog_name):
 
 
 def update_image_in_catalog_source(client, image, catalog_source_name, cr_name):
-    catalog = get_catalog_source(catalog_name=catalog_source_name)
+    catalog = get_catalog_source(client=client, catalog_name=catalog_source_name)
     if catalog:
         LOGGER.info(f"Updating {catalog_source_name} image to {image}")
         ResourceEditor(patches={catalog: {"spec": {"image": image}}}).update()
@@ -554,8 +556,8 @@ def update_subscription_source(
     }).update()
 
 
-def cluster_with_icsp():
-    icsp_list = list(ImageContentSourcePolicy.get())
+def cluster_with_icsp(client: DynamicClient) -> bool:
+    icsp_list = list(ImageContentSourcePolicy.get(dyn_client=client))
     return len(icsp_list) > 0
 
 

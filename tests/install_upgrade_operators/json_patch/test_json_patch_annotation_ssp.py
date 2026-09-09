@@ -28,6 +28,7 @@ pytestmark = [pytest.mark.arm64, pytest.mark.s390x]
 @pytest.fixture(scope="class")
 def json_patched_ssp(admin_client, hco_namespace, prometheus, hyperconverged_resource_scope_class):
     with update_hco_annotations(
+        admin_client=admin_client,
         resource=hyperconverged_resource_scope_class,
         path=TEMPLATE_VALIDATOR,
         value={"replicas": REPLICAS},

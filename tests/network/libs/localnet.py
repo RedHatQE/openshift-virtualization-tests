@@ -1,0 +1,266 @@
+import contextlib
+import copy
+import logging
+import uuid
+from collections.abc import Generator
+from ipaddress import IPv4Interface, IPv6Interface
+from typing import Final
+
+from kubernetes.dynamic import DynamicClient
+
+from libs.net import nodenetworkconfigurationpolicy as libnncp
+from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
+from libs.vm.affinity import new_pod_anti_affinity
+from libs.vm.factory import base_vmspec, fedora_vm
+from libs.vm.spec import Affinity, CloudInitNoCloud, Devices, Interface, Metadata, Network
+from libs.vm.vm import BaseVirtualMachine, add_volume_disk, cloudinitdisk_storage
+from tests.network.libs import cloudinit
+from tests.network.libs import cluster_user_defined_network as libcudn
+from tests.network.libs.label_selector import LabelSelector
+from utilities.constants.cluster import WORKER_NODE_LABEL_KEY
+from utilities.constants.networking import OVS_BRIDGE
+
+LOCALNET_BR_EX_NETWORK = "localnet-br-ex-network"
+LOCALNET_BR_EX_NETWORK_NO_VLAN = "localnet-br-ex-network-no-vlan"
+LOCALNET_OVS_BRIDGE_NETWORK = "localnet-ovs-network"
+LOCALNET_BR_EX_INTERFACE = "localnet-iface-vlan"
+LOCALNET_BR_EX_INTERFACE_NO_VLAN = "localnet-iface-no-vlan"
+LOCALNET_OVS_BRIDGE_INTERFACE = "localnet-iface-ovs-bridge"
+LOCALNET_IPAM_INTERFACE = "localnet-ipam-iface"
+LOCALNET_TEST_LABEL = {"test": "localnet"}
+LOCALNET_VM_ANTI_AFFINITY = new_pod_anti_affinity(label=next(iter(LOCALNET_TEST_LABEL.items())))
+LINK_STATE_UP = "up"
+LINK_STATE_DOWN = "down"
+NNCP_INTERFACE_TYPE_ETHERNET = "ethernet"
+GUEST_1ST_IFACE_NAME: Final[str] = "eth0"
+GUEST_2ND_IFACE_NAME: Final[str] = "eth1"
+GUEST_3RD_IFACE_NAME: Final[str] = "eth2"
+
+IFACE_A_NAME: Final[str] = "localnet-vlan-a"
+IFACE_B_NAME: Final[str] = "localnet-vlan-b"
+CUDN_B_NAME: Final[str] = "cudn-localnet-vlan-b"
+
+LOGGER = logging.getLogger(__name__)
+
+
+def ip_addresses_from_pool(
+    ipv4_pool: Generator[IPv4Interface],
+    ipv6_pool: Generator[IPv6Interface],
+) -> list[IPv4Interface | IPv6Interface]:
+    """Draw IP interface objects from pools according to the cluster network IP stack.
+
+    Args:
+        ipv4_pool: Generator yielding IPv4Interface addresses.
+        ipv6_pool: Generator yielding IPv6Interface addresses.
+
+    Returns:
+        List of IPv4Interface/IPv6Interface objects, one per supported IP family.
+    """
+    addresses: list[IPv4Interface | IPv6Interface] = []
+    if ipv4_supported_cluster():
+        addresses.append(next(ipv4_pool))
+    if ipv6_supported_cluster():
+        addresses.append(next(ipv6_pool))
+    return addresses
+
+
+def localnet_cloudinit(
+    network_data: cloudinit.NetworkData,
+    runcmd: list[str] | None = None,
+) -> CloudInitNoCloud:
+    """Build a CloudInitNoCloud for a localnet VM.
+
+    Sets users=[] to prevent cloud-init from overriding the default OS user credentials.
+
+    Args:
+        network_data: Cloud-init network configuration to apply.
+        runcmd: Commands to run on first boot via cloud-init runcmd. None means no extra commands.
+
+    Returns:
+        CloudInitNoCloud configured with the given network and user data.
+    """
+    userdata = cloudinit.UserData(users=[], runcmd=runcmd)
+    return CloudInitNoCloud(
+        networkData=cloudinit.asyaml(no_cloud=network_data),
+        userData=cloudinit.format_cloud_config(userdata=userdata),
+    )
+
+
+def localnet_vm(
+    namespace: str,
+    name: str,
+    client: DynamicClient,
+    networks: list[Network],
+    interfaces: list[Interface],
+    cloud_init: CloudInitNoCloud | None = None,
+    affinity: Affinity | None = None,
+    vm_labels: dict[str, str] | None = None,
+) -> BaseVirtualMachine:
+    """
+    Create a Fedora-based Virtual Machine connected to localnet network(s).
+
+    The VM will:
+    - Apply a specific label for VM scheduling.
+    - Based on a standard Fedora VM template.
+
+    Args:
+        namespace: The namespace where the VM should be created.
+        name: The name of the VM.
+        client: The Kubernetes dynamic client for resource creation.
+        networks: List of Network objects defining the networks to attach.
+            Each Network should have a name and configuration.
+        interfaces: List of Interface objects defining the interface configurations.
+            Each Interface should have a name matching a Network, and additional configuration and state.
+        cloud_init: Optional pre-composed cloud-init configuration.
+            If None, no cloud-init configuration is applied.
+        affinity: Optional Affinity object for VM scheduling. If None, no affinity constraints are applied.
+        vm_labels: Optional labels to apply to the VM template metadata.
+            These labels are set on the VMI pod and can be used for affinity/anti-affinity matching.
+            If None, no additional labels are applied beyond LOCALNET_TEST_LABEL.
+
+    Returns:
+        BaseVirtualMachine: The configured VM object ready for creation.
+    """
+    spec = base_vmspec()
+    spec.template.metadata = spec.template.metadata or Metadata()
+    spec.template.metadata.labels = spec.template.metadata.labels or {}
+    spec.template.metadata.labels.update(LOCALNET_TEST_LABEL)
+    if vm_labels:
+        spec.template.metadata.labels.update(vm_labels)
+
+    vmi_spec = spec.template.spec
+    vmi_spec.networks = networks
+    vmi_spec.domain.devices = vmi_spec.domain.devices or Devices()
+    vmi_spec.domain.devices.interfaces = interfaces
+
+    if cloud_init is not None:
+        disk, volume = cloudinitdisk_storage(data=cloud_init)
+        vmi_spec = add_volume_disk(vmi_spec=vmi_spec, volume=volume, disk=disk)
+
+    if affinity is not None:
+        vmi_spec.affinity = copy.deepcopy(affinity)
+
+    return fedora_vm(namespace=namespace, name=name, client=client, spec=spec)
+
+
+def localnet_cudn(
+    name: str,
+    match_labels: dict[str, str],
+    physical_network_name: str,
+    client: DynamicClient,
+    vlan_id: int | None = None,
+    mtu: int | None = None,
+) -> libcudn.ClusterUserDefinedNetwork:
+    """
+    Create a ClusterUserDefinedNetwork resource configured for localnet with the specified VLAN ID.
+
+    The function creates a CUDN with:
+    - IPAM disabled
+    - VLAN access mode with the specified VLAN ID
+    - Localnet configuration with secondary role
+    - Network topology set to LOCALNET
+
+    Args:
+        name (str): The name of the CUDN resource.
+        match_labels (dict[str, str]): Labels for namespace selection.
+        physical_network_name (str): The name of the physical network to associate with the localnet configuration.
+        client (DynamicClient): Dynamic client for resource creation.
+        vlan_id (int|None): The VLAN ID to configure for the network. If None, no VLAN is configured.
+        mtu (int): Optional customized MTU of the network.
+
+    Returns:
+        ClusterUserDefinedNetwork: The configured CUDN object ready for creation.
+    """
+    ipam = libcudn.Ipam(mode=libcudn.Ipam.Mode.DISABLED.value)
+    vlan = (
+        libcudn.Vlan(mode=libcudn.Vlan.Mode.ACCESS.value, access=libcudn.Access(id=vlan_id))
+        if vlan_id is not None
+        else None
+    )
+    localnet = libcudn.Localnet(
+        role=libcudn.Localnet.Role.SECONDARY.value,
+        physicalNetworkName=physical_network_name,
+        vlan=vlan,
+        ipam=ipam,
+        mtu=mtu,
+    )
+    network = libcudn.Network(topology=libcudn.Network.Topology.LOCALNET.value, localnet=localnet)
+
+    return libcudn.ClusterUserDefinedNetwork(
+        name=name,
+        namespace_selector=LabelSelector(matchLabels=match_labels),
+        network=network,
+        client=client,
+    )
+
+
+@contextlib.contextmanager
+def create_nncp_localnet_on_secondary_node_nic(
+    node_nic_name: str,
+    client: DynamicClient,
+    mtu: int | None = None,
+) -> Generator[libnncp.NodeNetworkConfigurationPolicy]:
+    """Create NNCP to configure an OVS bridge on a secondary NIC across all worker nodes.
+
+    Note:
+        This function assumes homogeneous hardware—all workers must have a NIC with
+        the same name. The configuration is applied to all workers to support anti-affinity scheduled VMs.
+
+    Args:
+        node_nic_name: Name of the available NIC on all nodes.
+        client: Dynamic client used to create and manage the NNCP resource.
+        mtu: Optional MTU to configure on the physical NIC.
+
+    Yields:
+        The created NodeNetworkConfigurationPolicy.
+    """
+    bridge_name = f"localnet-ovs-br-{uuid.uuid4().hex[:16]}"
+    interfaces = []
+
+    if mtu:
+        # Ensure the physical NIC MTU matches the network MTU
+        interfaces.append(
+            libnncp.Interface(
+                name=node_nic_name,
+                type=NNCP_INTERFACE_TYPE_ETHERNET,
+                mtu=mtu,
+                state=libnncp.Resource.Interface.State.UP,
+            )
+        )
+
+    interfaces.append(
+        libnncp.Interface(
+            name=bridge_name,
+            type=OVS_BRIDGE,
+            ipv4=libnncp.IPv4(enabled=False),
+            ipv6=libnncp.IPv6(enabled=False),
+            state=libnncp.Resource.Interface.State.UP,
+            bridge=libnncp.Bridge(
+                options=libnncp.BridgeOptions(libnncp.STP(enabled=False)),
+                port=[
+                    libnncp.Port(
+                        name=node_nic_name,
+                    )
+                ],
+            ),
+        ),
+    )
+
+    desired_state = libnncp.DesiredState(
+        interfaces=interfaces,
+        ovn=libnncp.OVN([
+            libnncp.BridgeMappings(
+                localnet=LOCALNET_OVS_BRIDGE_NETWORK,
+                bridge=bridge_name,
+                state=libnncp.BridgeMappings.State.PRESENT.value,
+            )
+        ]),
+    )
+    with libnncp.NodeNetworkConfigurationPolicy(
+        client=client,
+        name=bridge_name,
+        desired_state=desired_state,
+        node_selector={WORKER_NODE_LABEL_KEY: ""},
+    ) as nncp:
+        nncp.wait_for_status_success()
+        yield nncp

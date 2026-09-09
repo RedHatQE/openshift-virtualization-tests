@@ -29,11 +29,15 @@ def restart_vm_wait_for_gated_state(vm, admin_client: DynamicClient):
     wait_when_pod_in_gated_state(pod=vm.vmi.get_virt_launcher_pod(privileged_client=admin_client))
 
 
-def wait_for_aacrq_object_created(namespace, acrq_name):
+def wait_for_aacrq_object_created(admin_client, namespace, acrq_name):
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_1MIN,
         sleep=TIMEOUT_5SEC,
-        func=lambda: ApplicationAwareAppliedClusterResourceQuota(namespace=namespace.name, name=acrq_name).exists,
+        func=lambda: (
+            ApplicationAwareAppliedClusterResourceQuota(
+                client=admin_client, namespace=namespace.name, name=acrq_name
+            ).exists
+        ),
     )
     try:
         for sample in samples:

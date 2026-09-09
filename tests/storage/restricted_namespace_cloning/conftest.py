@@ -33,7 +33,7 @@ from tests.storage.utils import (
 from utilities.constants import Images
 from utilities.constants.images import OS_FLAVOR_FEDORA
 from utilities.constants.pytest import UNPRIVILEGED_USER
-from utilities.constants.storage import PVC
+from utilities.constants.storage import BIND_IMMEDIATE_ANNOTATION, PVC
 from utilities.infra import create_ns
 from utilities.storage import construct_datavolume_source_dict, create_dv, get_dv_size_from_datasource
 from utilities.virt import VirtualMachineForTests, running_vm
@@ -93,7 +93,7 @@ def dv_cloned_from_datasource(
 
 
 @pytest.fixture()
-def data_volume_clone_settings(destination_namespace, dv_cloned_from_datasource):
+def data_volume_clone_settings(unprivileged_client, destination_namespace, dv_cloned_from_datasource):
     storage_class = dv_cloned_from_datasource.storage_class
     dv = DataVolume(
         name=f"{TARGET_DV}-{storage_class}",
@@ -106,6 +106,7 @@ def data_volume_clone_settings(destination_namespace, dv_cloned_from_datasource)
         size=dv_cloned_from_datasource.size,
         storage_class=storage_class,
         api_name="storage",
+        client=unprivileged_client,
     )
     dv.to_dict()
     return dv
@@ -290,6 +291,8 @@ def dv_cloned_by_unprivileged_user_in_the_same_namespace(
         source_pvc_namespace=namespace,
         client=unprivileged_client,
         storage_class=storage_class_name_scope_module,
+        consume_wffc=False,
+        annotations=BIND_IMMEDIATE_ANNOTATION,
     ) as cdv:
         yield cdv
 
@@ -313,6 +316,8 @@ def dv_destination_cloned_from_pvc(
         source_pvc_namespace=dv_cloned_from_datasource.namespace,
         client=unprivileged_client,
         storage_class=storage_class_name_scope_module,
+        consume_wffc=False,
+        annotations=BIND_IMMEDIATE_ANNOTATION,
     ) as cdv:
         cdv.wait_for_dv_success()
         yield cdv

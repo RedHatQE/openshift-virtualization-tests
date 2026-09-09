@@ -19,7 +19,6 @@ from utilities.constants.components import (
     ALL_CNV_PODS,
     ALL_HCO_RELATED_OBJECTS,
     CNV_OPERATORS,
-    CNV_PROMETHEUS_RULES,
     HCO_CATALOG_SOURCE,
     VM_CONSOLE_PROXY_CLUSTER_RESOURCES,
     VM_CONSOLE_PROXY_NAMESPACE_RESOURCES,
@@ -41,10 +40,6 @@ from utilities.constants.instance_types import (
 )
 from utilities.constants.monitoring import MONITORING_METRICS
 from utilities.constants.namespaces import NamespacesNames
-from utilities.constants.networking import (
-    LINUX_BRIDGE,
-    OVS_BRIDGE,
-)
 from utilities.constants.storage import (
     BREW_REGISTRY_SOURCE,
     HPP_CAPABILITIES,
@@ -141,8 +136,6 @@ cnv_vm_resource_requests_units_matrix = [
 
 cnv_vmi_monitoring_metrics_matrix = MONITORING_METRICS
 
-bridge_device_matrix = [LINUX_BRIDGE, OVS_BRIDGE]
-
 storage_class_matrix = [
     {
         StorageClassNames.CEPH_RBD_VIRTUALIZATION: {
@@ -152,6 +145,7 @@ storage_class_matrix = [
             "online_resize": True,
             "wffc": False,
             "default": True,
+            "data_import_cron_source_format": "snapshot",
         }
     },
     {HppCsiStorageClass.Name.HOSTPATH_CSI_BASIC: HPP_CAPABILITIES},
@@ -210,8 +204,6 @@ cnv_crd_matrix = ALL_CNV_CRDS
 cnv_crypto_policy_matrix = [TLS_OLD_POLICY, TLS_CUSTOM_POLICY]
 
 cnv_related_object_matrix = ALL_HCO_RELATED_OBJECTS
-cnv_prometheus_rules_matrix = CNV_PROMETHEUS_RULES
-
 cnv_deployment_matrix = ALL_CNV_DEPLOYMENTS
 cnv_daemonset_matrix = ALL_CNV_DAEMONSETS
 pod_resource_validation_matrix = [{"cpu": 5}, {"memory": None}]

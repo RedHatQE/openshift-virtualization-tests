@@ -99,8 +99,9 @@ def wait_for_pages_to_scan_value_to_grow(utility_pods, node, initial_value):
 
 
 @pytest.fixture(scope="class")
-def ksm_enabled_in_hco(hyperconverged_resource_scope_class):
+def ksm_enabled_in_hco(admin_client, hyperconverged_resource_scope_class):
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={
             hyperconverged_resource_scope_class: {
                 "spec": {"ksmConfiguration": {"nodeLabelSelector": {"matchLabels": KERNEL_SAMEPAGE_MERGING_TEST_LABEL}}}

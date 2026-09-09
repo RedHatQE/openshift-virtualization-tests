@@ -49,6 +49,7 @@ def xfail_windows_memory_hotunplug(hotplugged_vm):
 @pytest.fixture(scope="class")
 def hotplug_vm_snapshot(hotplugged_vm):
     with VirtualMachineSnapshot(
+        client=hotplugged_vm.client,
         name=f"{hotplugged_vm.name}-snapshot",
         namespace=hotplugged_vm.namespace,
         vm_name=hotplugged_vm.name,
@@ -70,7 +71,7 @@ def hotplug_vm_snapshot(hotplugged_vm):
             {"os_dict": WINDOWS_LATEST},
             {"template_labels": WINDOWS_LATEST_LABELS, "vm_name": "windows-latest-cpu-hotplug-vm"},
             id="WIN-VM",
-            marks=[pytest.mark.special_infra, pytest.mark.high_resource_vm],
+            marks=[pytest.mark.special_infra, pytest.mark.high_resource_vm, pytest.mark.windows],
         ),
     ],
     indirect=True,
@@ -127,7 +128,7 @@ class TestCPUHotPlug:
             {"os_dict": WINDOWS_LATEST},
             {"template_labels": WINDOWS_LATEST_LABELS, "vm_name": "windows-latest-memory-hotplug-vm"},
             id="WIN-VM",
-            marks=[pytest.mark.special_infra, pytest.mark.high_resource_vm],
+            marks=[pytest.mark.special_infra, pytest.mark.high_resource_vm, pytest.mark.windows],
         ),
     ],
     indirect=True,

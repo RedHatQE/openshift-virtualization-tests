@@ -1,5 +1,7 @@
 """SR-IOV library constants and utilities."""
 
+from ipaddress import IPv4Interface, IPv6Interface
+
 from kubernetes.dynamic import DynamicClient
 
 from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
@@ -24,7 +26,7 @@ def base_sriov_vm(
     client: DynamicClient,
     sriov_network_name: str,
     sriov_mac: str,
-    addresses: list[str],
+    addresses: list[IPv4Interface | IPv6Interface],
     memory_guest: str = "1Gi",
     memory_max_guest: str | None = None,
 ) -> BaseVirtualMachine:
@@ -39,8 +41,7 @@ def base_sriov_vm(
         client: Kubernetes dynamic client.
         sriov_network_name: Name of the SR-IOV NetworkAttachmentDefinition.
         sriov_mac: MAC address to assign to the SR-IOV interface.
-        addresses: CIDR addresses to assign to the SR-IOV interface
-            (e.g. ["172.16.0.1/24", "fd00::1/64"]).
+        addresses: IP interface objects for the SR-IOV interface, one per supported IP family.
         memory_guest: Initial guest memory (e.g. "1Gi"). Defaults to "1Gi".
         memory_max_guest: Maximum guest memory for hot-plug. None disables hot-plug.
 
@@ -58,7 +59,7 @@ def base_sriov_vm(
 
     ethernets: dict[str, cloudinit.EthernetDevice] = {}
     ethernets["sriov"] = cloudinit.EthernetDevice(
-        addresses=addresses,
+        addresses=[str(addr) for addr in addresses],
         match=MatchSelector(macaddress=sriov_mac),
         set_name=VM_SRIOV_IFACE_NAME,
     )
@@ -115,9 +116,9 @@ def sriov_cloud_init_data(
 ):
     sriov_addresses = []
     if ipv4_supported_cluster():
-        sriov_addresses.append(f"{random_ipv4_address(net_seed=net_seed, host_address=host_address)}/24")
+        sriov_addresses.append(str(random_ipv4_address(net_seed=net_seed, host_address=host_address)))
     if ipv6_supported_cluster():
-        sriov_addresses.append(f"{random_ipv6_address(net_seed=net_seed, host_address=host_address)}/64")
+        sriov_addresses.append(str(random_ipv6_address(net_seed=net_seed, host_address=host_address)))
 
     sriov_interface_data = {
         "ethernets": {

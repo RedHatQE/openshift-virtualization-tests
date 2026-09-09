@@ -136,8 +136,9 @@ def enabled_featuregate_scope_function(
 
 
 @pytest.fixture(scope="class")
-def migration_policy_with_allow_auto_converge(namespace):
+def migration_policy_with_allow_auto_converge(admin_client, namespace):
     with MigrationPolicy(
+        client=admin_client,
         name="migration-policy-auto-converge",
         namespace_selector={f"{Resource.ApiGroup.KUBERNETES_IO}/metadata.name": namespace.name},
         allow_auto_converge=True,

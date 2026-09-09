@@ -1,5 +1,6 @@
 import logging
 from collections.abc import Generator
+from ipaddress import IPv4Interface, IPv6Interface
 
 import pytest
 from kubernetes.dynamic import DynamicClient
@@ -11,14 +12,15 @@ from libs.vm.spec import Interface, Multus, Network
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs import cloudinit
 from tests.network.libs import cluster_user_defined_network as libcudn
-from tests.network.libs.stuntime import CLIENT_VM_LABEL, SERVER_VM_LABEL, ContinuousPing
-from tests.network.localnet.liblocalnet import (
+from tests.network.libs.localnet import (
     GUEST_1ST_IFACE_NAME,
     LOCALNET_OVS_BRIDGE_INTERFACE,
     ip_addresses_from_pool,
     libnncp,
+    localnet_cloudinit,
     localnet_vm,
 )
+from tests.network.libs.stuntime import CLIENT_VM_LABEL, SERVER_VM_LABEL, ContinuousPing
 
 LOGGER = logging.getLogger(__name__)
 
@@ -36,8 +38,8 @@ def localnet_stuntime_server_vm(
     nncp_localnet_on_secondary_node_nic: libnncp.NodeNetworkConfigurationPolicy,
     cudn_localnet_ovs_bridge: libcudn.ClusterUserDefinedNetwork,
     namespace_localnet_1: Namespace,
-    ipv4_localnet_address_pool: Generator[str],
-    ipv6_localnet_address_pool: Generator[str],
+    ipv4_localnet_address_pool: Generator[IPv4Interface],
+    ipv6_localnet_address_pool: Generator[IPv6Interface],
 ) -> Generator[BaseVirtualMachine]:
     with localnet_vm(
         namespace=namespace_localnet_1.name,
@@ -47,15 +49,20 @@ def localnet_stuntime_server_vm(
             Network(name=LOCALNET_OVS_BRIDGE_INTERFACE, multus=Multus(networkName=cudn_localnet_ovs_bridge.name))
         ],
         interfaces=[Interface(name=LOCALNET_OVS_BRIDGE_INTERFACE, bridge={})],
-        network_data=cloudinit.NetworkData(
-            ethernets={
-                GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
-                    addresses=ip_addresses_from_pool(
-                        ipv4_pool=ipv4_localnet_address_pool,
-                        ipv6_pool=ipv6_localnet_address_pool,
+        cloud_init=localnet_cloudinit(
+            network_data=cloudinit.NetworkData(
+                ethernets={
+                    GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
+                        addresses=[
+                            str(addr)
+                            for addr in ip_addresses_from_pool(
+                                ipv4_pool=ipv4_localnet_address_pool,
+                                ipv6_pool=ipv6_localnet_address_pool,
+                            )
+                        ]
                     )
-                )
-            }
+                }
+            )
         ),
         vm_labels=dict([SERVER_VM_LABEL]),
     ) as server_vm:
@@ -69,8 +76,8 @@ def localnet_stuntime_client_vm(
     unprivileged_client: DynamicClient,
     cudn_localnet_ovs_bridge: libcudn.ClusterUserDefinedNetwork,
     namespace_localnet_1: Namespace,
-    ipv4_localnet_address_pool: Generator[str],
-    ipv6_localnet_address_pool: Generator[str],
+    ipv4_localnet_address_pool: Generator[IPv4Interface],
+    ipv6_localnet_address_pool: Generator[IPv6Interface],
     localnet_stuntime_server_vm: BaseVirtualMachine,
 ) -> Generator[BaseVirtualMachine]:
     with localnet_vm(
@@ -81,15 +88,20 @@ def localnet_stuntime_client_vm(
             Network(name=LOCALNET_OVS_BRIDGE_INTERFACE, multus=Multus(networkName=cudn_localnet_ovs_bridge.name))
         ],
         interfaces=[Interface(name=LOCALNET_OVS_BRIDGE_INTERFACE, bridge={})],
-        network_data=cloudinit.NetworkData(
-            ethernets={
-                GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
-                    addresses=ip_addresses_from_pool(
-                        ipv4_pool=ipv4_localnet_address_pool,
-                        ipv6_pool=ipv6_localnet_address_pool,
+        cloud_init=localnet_cloudinit(
+            network_data=cloudinit.NetworkData(
+                ethernets={
+                    GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
+                        addresses=[
+                            str(addr)
+                            for addr in ip_addresses_from_pool(
+                                ipv4_pool=ipv4_localnet_address_pool,
+                                ipv6_pool=ipv6_localnet_address_pool,
+                            )
+                        ]
                     )
-                )
-            }
+                }
+            )
         ),
         affinity=new_pod_affinity(label=SERVER_VM_LABEL),
         vm_labels=dict([CLIENT_VM_LABEL]),

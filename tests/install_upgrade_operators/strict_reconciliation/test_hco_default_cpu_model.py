@@ -75,10 +75,12 @@ def fedora_vm_scope_function(unprivileged_client, namespace):
 
 @pytest.fixture()
 def hco_with_default_cpu_model_set(
+    admin_client,
     hyperconverged_resource_scope_function,
     cluster_common_node_cpu,
 ):
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={
             hyperconverged_resource_scope_function: {
                 "spec": {

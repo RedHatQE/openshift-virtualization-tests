@@ -60,6 +60,7 @@ def verify_evmcs_related_attributes(vmi_xml_dict):
 )
 @pytest.mark.special_infra
 @pytest.mark.high_resource_vm
+@pytest.mark.windows
 class TestWindowsHyperVFlags:
     @pytest.mark.parametrize(
         "hyperv_vm",

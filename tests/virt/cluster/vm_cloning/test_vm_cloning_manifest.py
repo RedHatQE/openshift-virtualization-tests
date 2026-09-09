@@ -41,8 +41,9 @@ def virtctl_cloning_manifest(request, fedora_vm_for_cloning):
 
 
 @pytest.fixture()
-def vmsnapshot_created(fedora_vm_for_cloning):
+def vmsnapshot_created(unprivileged_client, fedora_vm_for_cloning):
     with VirtualMachineSnapshot(
+        client=unprivileged_client,
         name=fedora_vm_for_cloning.name,
         namespace=fedora_vm_for_cloning.namespace,
         vm_name=fedora_vm_for_cloning.name,

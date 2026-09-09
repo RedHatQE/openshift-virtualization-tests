@@ -58,6 +58,7 @@ from utilities.pytest_utils import (
     deploy_run_in_progress_namespace,
     filter_hpp_tests,
     filter_multiarch_tests,
+    filter_ocs_tests,
     get_artifactory_server_url,
     get_base_matrix_name,
     get_cnv_version_explorer_url,
@@ -76,12 +77,34 @@ from utilities.pytest_utils import (
 )
 
 pytest_plugins = [
+    "tests.fixtures.cluster.auth",
+    "tests.fixtures.cluster.binaries",
+    "tests.fixtures.cluster.cpu",
+    "tests.fixtures.cluster.infrastructure",
+    "tests.fixtures.cluster.namespaces",
+    "tests.fixtures.cluster.nodes",
+    "tests.fixtures.cluster.sanity",
+    "tests.fixtures.cluster.utilities",
     "tests.fixtures.network.l2_bridge",
     "tests.fixtures.network.cluster",
     "tests.fixtures.images.validation_os_images",
     "tests.fixtures.network.multiarch",
     "tests.fixtures.credentials.artifacts",
     "tests.fixtures.credentials.rhsm",
+    "tests.fixtures.operator.aaq",
+    "tests.fixtures.operator.cdi",
+    "tests.fixtures.operator.csv",
+    "tests.fixtures.operator.hco",
+    "tests.fixtures.operator.kubevirt",
+    "tests.fixtures.operator.ssp",
+    "tests.fixtures.network.node_nics",
+    "tests.fixtures.network.mac_pool",
+    "tests.fixtures.network.nmstate",
+    "tests.fixtures.network.sriov",
+    "tests.fixtures.storage.storage_classes",
+    "tests.fixtures.images.golden_images",
+    "tests.fixtures.storage.data_volumes",
+    "tests.fixtures.observability.monitoring",
 ]
 
 LOGGER = logging.getLogger(__name__)
@@ -103,6 +126,7 @@ EXCLUDE_MARKER_FROM_TIER2_MARKER = [
     "cclm",
     "mtv",
     "multiarch",
+    "mixed_os_nodes",
 ]
 
 TEAM_MARKERS = {
@@ -196,7 +220,6 @@ def pytest_addoption(parser):
     )
     # Matrix addoption
     matrix_group.addoption("--storage-class-matrix", help="Storage class matrix to use")
-    matrix_group.addoption("--bridge-device-matrix", help="Bridge device matrix to use")
     matrix_group.addoption("--rhel-os-matrix", help="RHEL OS matrix to use")
     matrix_group.addoption("--windows-os-matrix", help="Windows OS matrix to use")
     matrix_group.addoption("--fedora-os-matrix", help="Fedora OS matrix to use")
@@ -286,6 +309,11 @@ def pytest_addoption(parser):
     cluster_sanity_group.addoption(
         "--cluster-sanity-skip-webhook-check",
         help="Skip webhook health check in cluster_sanity fixture",
+        action="store_true",
+    )
+    cluster_sanity_group.addoption(
+        "--cluster-sanity-skip-hco-taint-check",
+        help="Skip HCO TaintedConfiguration check in cluster_sanity fixture",
         action="store_true",
     )
     # Log collector group
@@ -651,6 +679,7 @@ def pytest_collection_modifyitems(session, config, items):
     items[:] = filter_sno_only_tests(items=items, config=config)
     items[:] = filter_multiarch_tests(items=items, config=config)
     items[:] = filter_hpp_tests(items=items, config=config)
+    items[:] = filter_ocs_tests(items=items, config=config)
     items[:] = mark_nmstate_dependent_tests(items=items)
 
 

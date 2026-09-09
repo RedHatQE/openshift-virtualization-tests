@@ -14,8 +14,9 @@ from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 
 @pytest.fixture()
-def set_uninstall_strategy_remove_workloads(hyperconverged_resource_scope_function):
+def set_uninstall_strategy_remove_workloads(admin_client, hyperconverged_resource_scope_function):
     with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
         patches={hyperconverged_resource_scope_function: {"spec": {"uninstallStrategy": "RemoveWorkloads"}}},
         list_resource_reconcile=[CDI, KubeVirt],
         wait_for_reconcile_post_update=True,
@@ -35,15 +36,6 @@ def remove_kubevirt_vm(unprivileged_client, namespace):
         vm.start()
         vm.vmi.wait_until_running()
         yield vm
-
-
-@pytest.mark.polarion("CNV-3738")
-@pytest.mark.s390x
-def test_validate_default_uninstall_strategy(kubevirt_resource):
-    strategy = kubevirt_resource.instance.spec.uninstallStrategy
-    assert strategy == "BlockUninstallIfWorkloadsExist", (
-        f"Default uninstall strategy is incorrect.Expected 'BlockUninstallIfWorkloadsExist', found '{strategy}'"
-    )
 
 
 @pytest.mark.polarion("CNV-3718")

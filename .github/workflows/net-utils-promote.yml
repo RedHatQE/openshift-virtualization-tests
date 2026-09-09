@@ -41,7 +41,7 @@ jobs:
           sudo apt-get install -y skopeo
 
       - name: Log in to quay.io
-        uses: redhat-actions/podman-login@v1
+        uses: redhat-actions/podman-login@v2
         with:
           username: ${{ secrets.QUAY_USER }}
           password: ${{ secrets.QUAY_TOKEN }}

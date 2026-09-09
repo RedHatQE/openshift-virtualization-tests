@@ -24,6 +24,9 @@ QUAY_FEDORA_CONTAINER_IMAGE = f"docker://{Images.Fedora.FEDORA_CONTAINER_IMAGE}"
 TEST_FILE_NAME = "test-file.txt"
 TEST_FILE_CONTENT = "test-content"
 
+NUM_HOTPLUG_DISKS = 3
+BLANK_DV_SIZE = "1Gi"
+
 STORAGE_CLASS_A = "storage_class_a"
 STORAGE_CLASS_B = "storage_class_b"
 

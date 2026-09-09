@@ -14,7 +14,7 @@ from utilities.constants.images import OS_FLAVOR_RHEL
 from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_30SEC
 from utilities.storage import (
     add_dv_to_vm,
-    check_disk_count_in_vm,
+    assert_guest_disk_count,
     check_upload_virtctl_result,
     construct_datavolume_source_dict,
     create_dv,
@@ -57,7 +57,9 @@ def blank_dv_wffc_scope_function(request, unprivileged_client, namespace, wffc_s
 
 
 @pytest.fixture()
-def blank_dv_template_wffc_scope_function(request, namespace, wffc_storage_class_name_scope_module):
+def blank_dv_template_wffc_scope_function(
+    request, unprivileged_client, namespace, wffc_storage_class_name_scope_module
+):
     blank_dv_template = DataVolume(
         name=f"dv-{request.param['dv_name']}",
         namespace=namespace.name,
@@ -65,6 +67,7 @@ def blank_dv_template_wffc_scope_function(request, namespace, wffc_storage_class
         size=DEFAULT_BLANK_DV_SIZE,
         storage_class=wffc_storage_class_name_scope_module,
         api_name="storage",
+        client=unprivileged_client,
     )
     blank_dv_template.to_dict()
     return blank_dv_template.res
@@ -72,7 +75,7 @@ def blank_dv_template_wffc_scope_function(request, namespace, wffc_storage_class
 
 def validate_vm_and_disk_count(vm):
     running_vm(vm=vm)
-    check_disk_count_in_vm(vm=vm)
+    assert_guest_disk_count(vm=vm)
 
 
 @pytest.fixture(scope="class")
@@ -175,7 +178,7 @@ class TestWFFCUploadVirtctl:
             check_upload_virtctl_result(result=res)
             vm_from_uploaded_dv.vmi.wait_until_running()
             wait_for_ssh_connectivity(vm=vm_from_uploaded_dv, timeout=TIMEOUT_2MIN)
-            check_disk_count_in_vm(vm=vm_from_uploaded_dv)
+            assert_guest_disk_count(vm=vm_from_uploaded_dv)
 
 
 @pytest.mark.sno

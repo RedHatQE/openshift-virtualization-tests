@@ -14,6 +14,7 @@ storage_class_matrix = [
             "snapshot": True,
             "online_resize": True,
             "wffc": True,
+            "data_import_cron_source_format": "pvc",
         }
     },
 ]

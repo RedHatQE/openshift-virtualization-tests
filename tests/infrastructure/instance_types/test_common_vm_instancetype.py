@@ -51,6 +51,7 @@ def test_common_instancetype_owner(base_vm_cluster_instancetypes):
     assert not failed_ins_type, f"The following instance types do no have {VIRT_OPERATOR} owner: {failed_ins_type}"
 
 
+@pytest.mark.windows
 @pytest.mark.usefixtures(
     "windows_validating_admission_policy",
     "windows_validating_admission_policy_binding",

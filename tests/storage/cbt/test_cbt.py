@@ -1,5 +1,5 @@
 """
-CBT (Changed Block Tracking) backup and restore validation
+CBT (Changed Block Tracking) backup validation (backup success only)
 
 STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
@@ -11,12 +11,27 @@ Preconditions:
 
 import pytest
 
-__test__ = False
+from tests.storage.cbt.constants import (
+    CBT_BACKUP_CHAIN_INCREMENTAL_COUNT,
+    CBT_BACKUP_TYPE_FULL,
+    CBT_BACKUP_TYPE_INCREMENTAL,
+    CBT_MULTI_DISK_DATA_DISK_COUNT,
+)
+from tests.storage.cbt.utils import (
+    assert_backup_status_includes_volumes,
+    attached_data_disk_names,
+)
+from utilities.constants.virt import DV_DISK
 
 
-class TestFullBackupRestore:
+@pytest.mark.parametrize(
+    "vm_with_cbt_label",
+    [{"name": "cbt-full"}],
+    indirect=True,
+)
+class TestFullBackup:
     """
-    Full backup and restore validation for push and pull modes.
+    Full backup validation for push and pull modes (backup success only).
 
     Preconditions:
         - Running VM with CBT enabled
@@ -24,9 +39,17 @@ class TestFullBackupRestore:
     """
 
     @pytest.mark.polarion("CNV-15997")
-    def test_full_backup_push_mode_restore(self):
+    @pytest.mark.parametrize(
+        "completed_push_backup_chain",
+        [{"incremental_count": 0}],
+        indirect=True,
+    )
+    def test_full_backup_push_mode(
+        self,
+        completed_push_backup_chain,
+    ):
         """
-        Test that a VM can be backed up (push mode) and restored from a full backup.
+        Test that a full backup in push mode completes successfully.
 
         Preconditions:
             - Backup PVC available
@@ -34,19 +57,31 @@ class TestFullBackupRestore:
         Steps:
             1. Create a backup tracker for the VM
             2. Perform a full backup in push mode
-            3. Wait for backup to complete
-            4. Delete the original VM
-            5. Restore VM from the full backup
-            6. Start the restored VM
+            3. Wait for the backup to complete
 
         Expected:
-            - Restored VM boots successfully and test data is present
+            - Full backup completes and includes the boot disk
         """
+        full_backup = completed_push_backup_chain[0]
+        assert_backup_status_includes_volumes(
+            backup_name=full_backup.name,
+            backup_status=full_backup.instance.to_dict()["status"],
+            expected_volume_names=[DV_DISK],
+            expected_backup_type=CBT_BACKUP_TYPE_FULL,
+        )
 
     @pytest.mark.polarion("CNV-15996")
-    def test_full_backup_pull_mode_restore(self):
+    @pytest.mark.parametrize(
+        "ready_pull_backup_chain",
+        [{"incremental_count": 0}],
+        indirect=True,
+    )
+    def test_full_backup_pull_mode(
+        self,
+        ready_pull_backup_chain,
+    ):
         """
-        Test that a full backup in pull mode can be performed and the VM can be restored.
+        Test that a full backup in pull mode becomes ready for export.
 
         Preconditions:
             - Scratch PVC available for pull mode
@@ -54,19 +89,28 @@ class TestFullBackupRestore:
         Steps:
             1. Create a backup tracker for the VM
             2. Perform a full backup in pull mode
-            3. Wait for backup to complete
-            4. Delete the original VM
-            5. Restore VM from the backup
-            6. Start the restored VM
+            3. Wait for the backup export to become ready
 
         Expected:
-            - Restored VM boots successfully and test data is present
+            - Backup export is ready and includes the boot disk
         """
+        backup_name, backup_status = ready_pull_backup_chain[0]
+        assert_backup_status_includes_volumes(
+            backup_name=backup_name,
+            backup_status=backup_status,
+            expected_volume_names=[DV_DISK],
+            expected_backup_type=CBT_BACKUP_TYPE_FULL,
+        )
 
 
-class TestIncrementalBackupRestore:
+@pytest.mark.parametrize(
+    "vm_with_cbt_label",
+    [{"name": "cbt-incr"}],
+    indirect=True,
+)
+class TestIncrementalBackup:
     """
-    Incremental backup and restore validation for push and pull modes.
+    Incremental backup validation for push and pull modes (backup success only).
 
     Preconditions:
         - Running VM with CBT enabled
@@ -75,150 +119,262 @@ class TestIncrementalBackupRestore:
     """
 
     @pytest.mark.polarion("CNV-15998")
-    def test_incremental_backup_push_mode_restore(self):
+    @pytest.mark.parametrize(
+        "completed_push_backup_chain",
+        [{"incremental_count": 1}],
+        indirect=True,
+    )
+    def test_incremental_backup_push_mode(
+        self,
+        completed_push_backup_chain,
+    ):
         """
-        Test that a VM can be backed up (push mode) and restored from an incremental backup.
+        Test that an incremental backup in push mode completes successfully.
 
         Preconditions:
             - Backup PVC available
+            - Full backup completed in push mode
 
         Steps:
             1. Write new test data to VM
             2. Perform an incremental backup in push mode
-            3. Wait for backup to complete
-            4. Delete the original VM
-            5. Restore VM from the incremental backup
-            6. Start the restored VM
+            3. Wait for the backup to complete
 
         Expected:
-            - Restored VM boots successfully and all test data is present
+            - Incremental backup completes and includes the boot disk
         """
+        incremental_backup = completed_push_backup_chain[-1]
+        assert_backup_status_includes_volumes(
+            backup_name=incremental_backup.name,
+            backup_status=incremental_backup.instance.to_dict()["status"],
+            expected_volume_names=[DV_DISK],
+            expected_backup_type=CBT_BACKUP_TYPE_INCREMENTAL,
+        )
 
     @pytest.mark.polarion("CNV-16000")
-    def test_incremental_backup_pull_mode_restore(self):
+    @pytest.mark.parametrize(
+        "ready_pull_backup_chain",
+        [{"incremental_count": 1}],
+        indirect=True,
+    )
+    def test_incremental_backup_pull_mode(
+        self,
+        ready_pull_backup_chain,
+    ):
         """
-        Test that an incremental backup in pull mode can be performed and the VM can be restored.
+        Test that an incremental backup in pull mode becomes ready for export.
 
         Preconditions:
             - Scratch PVC available for pull mode
 
         Steps:
-            1. Write new test data to VM
-            2. Perform an incremental backup in pull mode
-            3. Wait for backup to complete
-            4. Delete the original VM
-            5. Restore VM from the incremental backup
-            6. Start the restored VM
+            1. Perform a full backup in pull mode and wait until export is ready
+            2. Delete the full pull-mode backup
+            3. Write new test data to VM
+            4. Perform an incremental backup in pull mode
+            5. Wait for the backup export to become ready
 
         Expected:
-            - Restored VM boots successfully and all test data is present
+            - Incremental backup export is ready and includes the boot disk
         """
+        backup_name, backup_status = ready_pull_backup_chain[-1]
+        assert_backup_status_includes_volumes(
+            backup_name=backup_name,
+            backup_status=backup_status,
+            expected_volume_names=[DV_DISK],
+            expected_backup_type=CBT_BACKUP_TYPE_INCREMENTAL,
+        )
 
 
+@pytest.mark.parametrize(
+    "vm_with_cbt_label",
+    [{"name": "cbt-multi-incr"}],
+    indirect=True,
+)
 class TestMultipleIncrementalBackups:
     """
-    Multiple incremental backups and restore validation.
+    Multiple sequential incremental backups validation (backup success only).
 
     Preconditions:
         - Running VM with CBT enabled
-        - Full backup completed
         - Test data written to VM
     """
 
     @pytest.mark.polarion("CNV-16002")
-    def test_multiple_incremental_backups_push_mode_restore(self):
+    @pytest.mark.parametrize(
+        "completed_push_backup_chain",
+        [{"incremental_count": CBT_BACKUP_CHAIN_INCREMENTAL_COUNT}],
+        indirect=True,
+    )
+    def test_multiple_incremental_backups_push_mode(
+        self,
+        completed_push_backup_chain,
+    ):
         """
-        Test that a VM can be restored from multiple incremental backups (push mode) with all data present.
+        Test that a full backup followed by multiple sequential incremental backups all complete
+        successfully in push mode.
 
         Preconditions:
             - Backup PVC available
 
         Steps:
-            1. Write additional test data to VM
-            2. Perform first incremental backup in push mode
-            3. Write more test data to VM
-            4. Perform second incremental backup in push mode
-            5. Wait for all backups to complete
-            6. Delete the original VM
-            7. Restore VM from the latest incremental backup
-            8. Start the restored VM
+            1. Perform a full backup in push mode and wait until it completes
+            2. Write new test data to VM, perform an incremental backup in push mode, and wait
+               until it completes
+            3. Repeat step 2 two more times
 
         Expected:
-            - Restored VM boots successfully and all test data is present
+            - Every backup in the chain completes and includes the boot disk, with the first
+              backup typed Full and every following backup typed Incremental
         """
+        expected_chain_length = 1 + CBT_BACKUP_CHAIN_INCREMENTAL_COUNT
+        assert len(completed_push_backup_chain) == expected_chain_length, (
+            f"Expected 1 full + {CBT_BACKUP_CHAIN_INCREMENTAL_COUNT} incremental backups, "
+            f"got {len(completed_push_backup_chain)}"
+        )
+        for backup_index, backup in enumerate(completed_push_backup_chain):
+            expected_backup_type = CBT_BACKUP_TYPE_FULL if backup_index == 0 else CBT_BACKUP_TYPE_INCREMENTAL
+            assert_backup_status_includes_volumes(
+                backup_name=backup.name,
+                backup_status=backup.instance.to_dict()["status"],
+                expected_volume_names=[DV_DISK],
+                expected_backup_type=expected_backup_type,
+            )
 
     @pytest.mark.polarion("CNV-16001")
-    def test_multiple_incremental_backups_pull_mode_restore(self):
+    @pytest.mark.parametrize(
+        "ready_pull_backup_chain",
+        [{"incremental_count": CBT_BACKUP_CHAIN_INCREMENTAL_COUNT}],
+        indirect=True,
+    )
+    def test_multiple_incremental_backups_pull_mode(
+        self,
+        ready_pull_backup_chain,
+    ):
         """
-        Test that a VM can be restored from multiple incremental backups (pull mode) with all data present.
+        Test that a full backup followed by multiple sequential incremental backups all become
+        ready for export in pull mode.
 
         Preconditions:
             - Scratch PVC available for pull mode
 
         Steps:
-            1. Write additional test data to VM
-            2. Perform first incremental backup in pull mode
-            3. Write more test data to VM
-            4. Perform second incremental backup in pull mode
-            5. Wait for all backups to complete
-            6. Delete the original VM
-            7. Restore VM from the latest incremental backup
-            8. Start the restored VM
+            1. Perform a full backup in pull mode and wait until export is ready
+            2. Delete the previous backup, write new test data to VM, perform an incremental
+               backup in pull mode, and wait until export is ready
+            3. Repeat step 2 two more times
 
         Expected:
-            - Restored VM boots successfully and all test data is present
+            - Every backup in the chain is ready for export and includes the boot disk, with the
+              first backup typed Full and every following backup typed Incremental
         """
+        expected_chain_length = 1 + CBT_BACKUP_CHAIN_INCREMENTAL_COUNT
+        assert len(ready_pull_backup_chain) == expected_chain_length, (
+            f"Expected 1 full + {CBT_BACKUP_CHAIN_INCREMENTAL_COUNT} incremental backups, "
+            f"got {len(ready_pull_backup_chain)}"
+        )
+        for backup_index, (backup_name, backup_status) in enumerate(ready_pull_backup_chain):
+            expected_backup_type = CBT_BACKUP_TYPE_FULL if backup_index == 0 else CBT_BACKUP_TYPE_INCREMENTAL
+            assert_backup_status_includes_volumes(
+                backup_name=backup_name,
+                backup_status=backup_status,
+                expected_volume_names=[DV_DISK],
+                expected_backup_type=expected_backup_type,
+            )
 
 
+@pytest.mark.parametrize(
+    "vm_with_cbt_label",
+    [{"name": "cbt-multi-disk", "data_disk_count": CBT_MULTI_DISK_DATA_DISK_COUNT}],
+    indirect=True,
+)
 class TestMultipleDiskBackup:
     """
-    Backup and restore validation for VMs with multiple disks.
+    Full backup validation for VMs with multiple disks (backup success only).
 
     Preconditions:
         - Running VM with CBT enabled
-        - VM has boot disk and data disk
-        - Test data written to both disks
+        - VM has a boot disk and two data disks
+        - Test data written to all disks
     """
 
     @pytest.mark.polarion("CNV-16003")
-    def test_backup_multiple_disks_push_mode_restore(self):
+    @pytest.mark.parametrize(
+        "completed_push_backup_chain",
+        [{"incremental_count": 0}],
+        indirect=True,
+    )
+    def test_backup_multiple_disks_push_mode(
+        self,
+        completed_push_backup_chain,
+        vm_with_cbt_label,
+    ):
         """
-        Test that a VM with multiple disks can be backed up (push mode) and restored with all disks accessible.
+        Test that a full backup in push mode completes successfully for a VM with multiple disks.
 
         Preconditions:
+            - Running CBT-enabled VM with a boot disk and two data disks
+            - Test data written to all disks
             - Backup PVC available
 
         Steps:
             1. Create a backup tracker for the VM
             2. Perform a full backup in push mode
-            3. Wait for backup to complete
-            4. Delete the original VM
-            5. Restore VM from the backup with both disks
-            6. Start the restored VM
+            3. Wait for the backup to complete
 
         Expected:
-            - Restored VM boots successfully and test data from both disks is present
+            - Full backup completes and includes the boot disk and all data disks
         """
+        data_disk_names = attached_data_disk_names(vm=vm_with_cbt_label)
+        assert len(data_disk_names) == CBT_MULTI_DISK_DATA_DISK_COUNT, (
+            f"VM {vm_with_cbt_label.name} has data disks {data_disk_names}, expected {CBT_MULTI_DISK_DATA_DISK_COUNT}"
+        )
+        full_backup = completed_push_backup_chain[0]
+        assert_backup_status_includes_volumes(
+            backup_name=full_backup.name,
+            backup_status=full_backup.instance.to_dict()["status"],
+            expected_volume_names=[DV_DISK, *data_disk_names],
+            expected_backup_type=CBT_BACKUP_TYPE_FULL,
+        )
 
     @pytest.mark.polarion("CNV-16004")
-    def test_backup_multiple_disks_pull_mode_restore(self):
+    @pytest.mark.parametrize(
+        "ready_pull_backup_chain",
+        [{"incremental_count": 0}],
+        indirect=True,
+    )
+    def test_backup_multiple_disks_pull_mode(
+        self,
+        ready_pull_backup_chain,
+        vm_with_cbt_label,
+    ):
         """
-        Test that a VM with multiple disks can be backed up (pull mode) and restored with all disks accessible.
+        Test that a full backup in pull mode becomes ready for export for a VM with multiple disks.
 
         Preconditions:
+            - Running CBT-enabled VM with a boot disk and two data disks
+            - Test data written to all disks
             - Scratch PVC available for pull mode
 
         Steps:
             1. Create a backup tracker for the VM
             2. Perform a full backup in pull mode
-            3. Wait for backup to complete
-            4. Delete the original VM
-            5. Restore VM from the backup with both disks
-            6. Start the restored VM
+            3. Wait for the backup export to become ready
 
         Expected:
-            - Restored VM boots successfully and test data from both disks is present
+            - Backup export is ready and includes the boot disk and all data disks
         """
+        data_disk_names = attached_data_disk_names(vm=vm_with_cbt_label)
+        assert len(data_disk_names) == CBT_MULTI_DISK_DATA_DISK_COUNT, (
+            f"VM {vm_with_cbt_label.name} has data disks {data_disk_names}, expected {CBT_MULTI_DISK_DATA_DISK_COUNT}"
+        )
+        backup_name, backup_status = ready_pull_backup_chain[0]
+        assert_backup_status_includes_volumes(
+            backup_name=backup_name,
+            backup_status=backup_status,
+            expected_volume_names=[DV_DISK, *data_disk_names],
+            expected_backup_type=CBT_BACKUP_TYPE_FULL,
+        )
 
 
 class TestBackupAfterLiveMigration:
@@ -232,6 +388,8 @@ class TestBackupAfterLiveMigration:
         - Test data written to VM
         - Full backup completed before migration
     """
+
+    __test__ = False  # STD placeholder - not yet implemented
 
     @pytest.mark.polarion("CNV-16005")
     def test_incremental_backup_after_live_migration_push_mode(self):
@@ -287,6 +445,8 @@ class TestHotplugBackup:
         - Full backup completed
         - Test data written to VM
     """
+
+    __test__ = False  # STD placeholder - not yet implemented
 
     @pytest.mark.polarion("CNV-16009")
     def test_backup_with_hotplugged_disk_push_mode_restore(self):
@@ -344,6 +504,8 @@ class TestBackupErrorHandling:
         - Test data written to VM
     """
 
+    __test__ = False  # STD placeholder - not yet implemented
+
     @pytest.mark.polarion("CNV-16023")
     def test_backup_fails_when_storage_full_push_mode(self):
         """
@@ -390,6 +552,8 @@ class TestConcurrentBackups:
         - Test data written to each VM
     """
 
+    __test__ = False  # STD placeholder - not yet implemented
+
     @pytest.mark.polarion("CNV-16011")
     def test_concurrent_backups_push_mode_restore(self):
         """
@@ -432,6 +596,7 @@ class TestConcurrentBackups:
 
 
 @pytest.mark.tier3
+@pytest.mark.windows
 class TestWindowsVMFullBackup:
     """
     Full backup and restore validation for Windows VMs.
@@ -440,6 +605,8 @@ class TestWindowsVMFullBackup:
         - Running Windows VM with CBT enabled
         - Test data written to Windows VM
     """
+
+    __test__ = False  # STD placeholder - not yet implemented
 
     @pytest.mark.polarion("CNV-16013")
     def test_windows_vm_full_backup_push_mode_restore(self):
@@ -483,6 +650,7 @@ class TestWindowsVMFullBackup:
 
 
 @pytest.mark.tier3
+@pytest.mark.windows
 class TestWindowsVMIncrementalBackup:
     """
     Incremental backup and restore validation for Windows VMs.
@@ -492,6 +660,8 @@ class TestWindowsVMIncrementalBackup:
         - Full backup completed
         - Test data written to Windows VM
     """
+
+    __test__ = False  # STD placeholder - not yet implemented
 
     @pytest.mark.polarion("CNV-16015")
     def test_windows_vm_incremental_backup_push_mode_restore(self):

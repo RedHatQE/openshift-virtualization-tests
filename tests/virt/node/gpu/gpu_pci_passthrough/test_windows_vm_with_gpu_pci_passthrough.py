@@ -54,6 +54,7 @@ TESTS_CLASS_NAME = "TestPCIPassthroughWinHostDevicesSpec"
     ],
     indirect=True,
 )
+@pytest.mark.windows
 class TestPCIPassthroughWinHostDevicesSpec:
     """
     Test PCI Passthrough with Windows VM using HostDevices Spec.

@@ -1,3 +1,4 @@
+from ipaddress import IPv4Interface, IPv6Interface
 from typing import Final
 
 from kubernetes.dynamic import DynamicClient
@@ -119,7 +120,7 @@ def two_secondary_bridge_vm(
     name: str,
     client: DynamicClient,
     nad_names: list[str],
-    ip_addresses: list[list[str]],
+    ip_addresses: list[list[IPv4Interface | IPv6Interface]],
     iface_names: list[str],
     runcmd: list[str] | None = None,
 ) -> BaseVirtualMachine:
@@ -135,8 +136,8 @@ def two_secondary_bridge_vm(
         name: VM name.
         client: Kubernetes dynamic client.
         nad_names: NAD names (multus networkName) for the secondary interfaces, in spec order.
-        ip_addresses: Per-interface CIDR address lists, aligned with nad_names.
-            Each inner list contains one address per supported IP family.
+        ip_addresses: Per-interface IP interface objects, aligned with nad_names.
+            Each inner list contains one IPv4Interface/IPv6Interface per supported IP family.
         iface_names: Logical interface names for the VM spec, aligned with nad_names.
         runcmd: Commands to run on first boot via cloud-init runcmd. None means no extra commands.
     """
@@ -154,7 +155,7 @@ def non_migratable_bridge_vm(
     name: str,
     client: DynamicClient,
     nad_names: list[str],
-    ip_addresses: list[list[str]],
+    ip_addresses: list[list[IPv4Interface | IPv6Interface]],
     iface_names: list[str],
     runcmd: list[str] | None = None,
 ) -> BaseVirtualMachine:
@@ -168,7 +169,7 @@ def non_migratable_bridge_vm(
         name: VM name.
         client: Kubernetes dynamic client.
         nad_names: NAD names for the secondary interfaces, in spec order.
-        ip_addresses: Per-interface CIDR address lists, aligned with nad_names.
+        ip_addresses: Per-interface IP interface objects, aligned with nad_names.
         iface_names: Logical interface names for the VM spec, aligned with nad_names.
         runcmd: Commands to run on first boot via cloud-init runcmd. None means no extra commands.
     """
@@ -200,7 +201,7 @@ def non_migratable_bridge_vm(
 
 def _bridge_vm_spec(
     nad_names: list[str],
-    ip_addresses: list[list[str]],
+    ip_addresses: list[list[IPv4Interface | IPv6Interface]],
     iface_names: list[str],
     runcmd: list[str] | None = None,
 ) -> VMSpec:
@@ -222,7 +223,7 @@ def _bridge_vm_spec(
     if primary := primary_iface_cloud_init():
         ethernets["eth0"] = primary
     for i, addresses in enumerate(ip_addresses):
-        ethernets[f"eth{i + 1}"] = cloudinit.EthernetDevice(addresses=addresses)
+        ethernets[f"eth{i + 1}"] = cloudinit.EthernetDevice(addresses=[str(addr) for addr in addresses])
     userdata = cloudinit.UserData(users=[], runcmd=runcmd)
     disk, volume = cloudinitdisk_storage(
         data=CloudInitNoCloud(
