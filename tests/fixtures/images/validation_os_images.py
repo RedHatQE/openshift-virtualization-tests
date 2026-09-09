@@ -48,10 +48,11 @@ def validation_os_images_namespace(admin_client):
 
 @pytest.fixture(scope="session")
 def validation_os_images_role_binding(admin_client, validation_os_images_namespace):
-    """Grants the unprivileged user and any ServiceAccount permission to clone from validation-os-images.
+    """Grants any authenticated identity permission to clone from validation-os-images.
 
-    Binds the CDI-shipped ``cdi.kubevirt.io:clone-sourcer`` ClusterRole to the unprivileged user and to the
-    ``system:serviceaccounts`` group, and the built-in ``view`` ClusterRole to the unprivileged user, in the
+    Binds the CDI-shipped ``cdi.kubevirt.io:clone-sourcer`` ClusterRole to the ``system:authenticated`` group
+    (covering both the unprivileged user and any ServiceAccount, e.g. a VM namespace's default ServiceAccount
+    performing a cross-namespace clone), and the built-in ``view`` ClusterRole to the unprivileged user, in the
     validation-os-images namespace.
 
     Yields:
@@ -60,8 +61,8 @@ def validation_os_images_role_binding(admin_client, validation_os_images_namespa
     bindings_spec = (
         RoleBindingSpec(
             name="validation-os-images-clone-sourcer",
-            subjects_kind="User",
-            subjects_name=UNPRIVILEGED_USER,
+            subjects_kind="Group",
+            subjects_name="system:authenticated",
             cluster_role_name=CDI_CLONE_SOURCER_CLUSTER_ROLE,
         ),
         # Not required by any test, but lets a human logged in as the unprivileged user inspect resources
@@ -71,15 +72,6 @@ def validation_os_images_role_binding(admin_client, validation_os_images_namespa
             subjects_kind="User",
             subjects_name=UNPRIVILEGED_USER,
             cluster_role_name=VIEW_CLUSTER_ROLE,
-        ),
-        # Covers cross-namespace dataVolumeTemplates clones, which virt-controller authorizes against the
-        # VM namespace's default ServiceAccount rather than the interactive user; a group binding covers
-        # every namespace without needing a binding per test namespace.
-        RoleBindingSpec(
-            name="validation-os-images-clone-sourcer-serviceaccounts",
-            subjects_kind="Group",
-            subjects_name="system:serviceaccounts",
-            cluster_role_name=CDI_CLONE_SOURCER_CLUSTER_ROLE,
         ),
     )
 
