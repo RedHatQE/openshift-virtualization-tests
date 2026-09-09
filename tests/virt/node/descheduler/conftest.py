@@ -2,34 +2,16 @@ import logging
 
 import pytest
 from kubernetes.utils.quantity import parse_quantity
-from ocp_resources.deployment import Deployment
-from ocp_resources.pod_disruption_budget import PodDisruptionBudget
-from ocp_resources.resource import Resource, ResourceEditor
 from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
-from ocp_utilities.infra import get_pods_by_name_prefix
 
 from tests.utils import start_stress_on_vm
-from tests.virt.node.descheduler.constants import (
-    DESCHEDULER_LABEL_KEY,
-    DESCHEDULER_LABEL_VALUE,
-    DESCHEDULER_TEST_LABEL,
-)
 from tests.virt.node.descheduler.utils import (
     calculate_vm_deployment,
     deploy_vms,
     vm_nodes,
     vms_per_nodes,
 )
-from tests.virt.utils import (
-    build_node_affinity_dict,
-    get_boot_time_for_multiple_vms,
-    get_non_terminated_pods,
-)
-from utilities.constants.timeouts import (
-    TIMEOUT_5MIN,
-    TIMEOUT_5SEC,
-)
-from utilities.infra import wait_for_pods_deletion
+from utilities.constants.timeouts import TIMEOUT_5MIN
 from utilities.virt import wait_for_migration_finished
 
 LOGGER = logging.getLogger(__name__)
@@ -92,160 +74,6 @@ def all_existing_migrations_completed(admin_client, namespace):
     # Descheduler may trigger multiple migrations, need to wait when all succeeded
     for migration in VirtualMachineInstanceMigration.get(client=admin_client, namespace=namespace):
         wait_for_migration_finished(migration=migration, timeout=TIMEOUT_5MIN)
-
-
-@pytest.fixture(scope="class")
-def node_with_min_memory_labeled_for_descheduler_test(node_with_least_available_memory):
-    with ResourceEditor(patches={node_with_least_available_memory: {"metadata": {"labels": DESCHEDULER_TEST_LABEL}}}):
-        yield
-
-
-@pytest.fixture(scope="class")
-def node_with_max_memory_labeled_for_descheduler_test(node_with_most_available_memory):
-    with ResourceEditor(patches={node_with_most_available_memory: {"metadata": {"labels": DESCHEDULER_TEST_LABEL}}}):
-        yield
-
-
-@pytest.fixture(scope="class")
-def node_affinity_for_descheduler_label():
-    return build_node_affinity_dict(key=DESCHEDULER_LABEL_KEY, values=[DESCHEDULER_LABEL_VALUE])
-
-
-@pytest.fixture(scope="class")
-def calculated_vm_deployment_for_node_with_least_available_memory(
-    request,
-    vm_deployment_size,
-    available_memory_per_node,
-    node_with_least_available_memory,
-):
-    yield calculate_vm_deployment(
-        available_memory_per_node=available_memory_per_node,
-        deployment_size=vm_deployment_size,
-        available_nodes=[node_with_least_available_memory],
-        percent_of_available_memory=request.param,
-    )
-
-
-@pytest.fixture(scope="class")
-def deployed_vms_for_utilization_imbalance(
-    request,
-    namespace,
-    unprivileged_client,
-    cpu_for_migration,
-    vm_deployment_size,
-    calculated_vm_deployment_for_node_with_least_available_memory,
-    node_affinity_for_descheduler_label,
-):
-    yield from deploy_vms(
-        vm_prefix=request.param["vm_prefix"],
-        client=unprivileged_client,
-        namespace_name=namespace.name,
-        cpu_model=cpu_for_migration,
-        vm_count=sum(calculated_vm_deployment_for_node_with_least_available_memory.values()),
-        deployment_size=vm_deployment_size,
-        prefer_no_eviction=request.param.get("prefer_no_eviction", False),
-        vm_affinity=node_affinity_for_descheduler_label,
-    )
-
-
-@pytest.fixture(scope="class")
-def deployed_vms_on_labeled_node(
-    namespace,
-    unprivileged_client,
-    cpu_for_migration,
-    vm_deployment_size,
-    calculated_vm_deployment_for_node_with_least_available_memory,
-    node_affinity_for_descheduler_label,
-):
-    yield from deploy_vms(
-        vm_prefix="node-labels-test",
-        client=unprivileged_client,
-        namespace_name=namespace.name,
-        cpu_model=cpu_for_migration,
-        vm_count=sum(calculated_vm_deployment_for_node_with_least_available_memory.values()),
-        deployment_size=vm_deployment_size,
-        vm_affinity=node_affinity_for_descheduler_label,
-    )
-
-
-@pytest.fixture(scope="class")
-def vms_boot_time_before_utilization_imbalance(
-    deployed_vms_for_utilization_imbalance,
-):
-    yield get_boot_time_for_multiple_vms(vm_list=deployed_vms_for_utilization_imbalance)
-
-
-@pytest.fixture(scope="class")
-def unallocated_pod_count(
-    admin_client,
-    node_with_least_available_memory,
-):
-    non_terminated_pod_count = len(get_non_terminated_pods(client=admin_client, node=node_with_least_available_memory))
-    capacity = int(node_with_least_available_memory.instance.status.capacity.pods)
-    # Target 85% utilization: high enough to trigger descheduler (>70%) but below scheduler preemption threshold
-    target_pod_count = int(capacity * 0.85)
-    pods_to_add = max(0, target_pod_count - non_terminated_pod_count)
-    LOGGER.info(
-        f"Node {node_with_least_available_memory.name}: current pods {non_terminated_pod_count}, will add {pods_to_add}"
-    )
-    return pods_to_add
-
-
-@pytest.fixture(scope="class")
-def utilization_imbalance(
-    admin_client,
-    namespace,
-    node_with_least_available_memory,
-    unallocated_pod_count,
-):
-    evict_protected_pod_label_dict = {"test-evict-protected-pod": "true"}
-    evict_protected_pod_selector = {"matchLabels": evict_protected_pod_label_dict}
-
-    utilization_imbalance_deployment_name = "utilization-imbalance-deployment"
-    with PodDisruptionBudget(
-        name=utilization_imbalance_deployment_name,
-        namespace=namespace.name,
-        client=admin_client,
-        min_available=unallocated_pod_count,
-        selector=evict_protected_pod_selector,
-    ):
-        with Deployment(
-            name=utilization_imbalance_deployment_name,
-            namespace=namespace.name,
-            client=admin_client,
-            replicas=unallocated_pod_count,
-            selector=evict_protected_pod_selector,
-            template={
-                "metadata": {
-                    "labels": evict_protected_pod_label_dict,
-                },
-                "spec": {
-                    "nodeSelector": {
-                        f"{Resource.ApiGroup.KUBERNETES_IO}/hostname": node_with_least_available_memory.hostname,
-                    },
-                    "restartPolicy": "Always",
-                    "containers": [
-                        {
-                            "name": "tail",
-                            "image": "registry.access.redhat.com/ubi8/ubi-minimal:latest",
-                            "command": ["/bin/tail"],
-                            "args": ["-f", "/dev/null"],
-                        }
-                    ],
-                },
-            },
-        ) as deployment:
-            deployment.wait_for_replicas(timeout=unallocated_pod_count * TIMEOUT_5SEC)
-            yield
-
-    LOGGER.info(f"Wait while all {utilization_imbalance_deployment_name} pods removed")
-    wait_for_pods_deletion(
-        pods=get_pods_by_name_prefix(
-            client=admin_client,
-            namespace=namespace.name,
-            pod_prefix=utilization_imbalance_deployment_name,
-        )
-    )
 
 
 @pytest.fixture(scope="class")
