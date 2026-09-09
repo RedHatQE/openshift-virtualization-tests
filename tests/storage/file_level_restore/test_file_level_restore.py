@@ -3,6 +3,17 @@ File-Level Restore Tests
 
 STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
 Jira: https://redhat.atlassian.net/browse/VIRTSTRAT-480 # <skip-jira-utils-check>
+
+STP P0 scenarios deferred to vm-file-restore-operator Tier 1 e2e (downstream follow-up CNV-90681):
+- Manual restore mode (CNV-88322)
+- Failure and error status reporting (CNV-88322)
+- Invalid restore request validation (CNV-88322)
+- VirtualMachineFileRestore API CRUD (CNV-88322)
+
+Restricted authenticated guest access is STP P1 and tracked under CNV-88322 for a later tier.
+
+Temporary-resource cleanup is verified in each implemented success test. Dedicated cleanup-on-failure
+STD coverage remains the CNV-16813 placeholder in this module.
 """
 
 import pytest
@@ -114,7 +125,8 @@ class TestFileRestoreBackupVendorWorkflow:
                 file_restore=file_restore,
                 target_phase=VirtualMachineFileRestore.Phase.SUCCEEDED,
             )
-            assert get_restored_files_count(file_restore=file_restore) == 1
+            restored_file_count = get_restored_files_count(file_restore=file_restore)
+            assert restored_file_count == 1, f"VMFileRestore reported {restored_file_count} restored files, expected 1"
             run_command_on_vm_and_check_output(
                 vm=file_restore_linux_vm,
                 command=f"cat {restore_path}",

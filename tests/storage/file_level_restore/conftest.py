@@ -22,6 +22,7 @@ from tests.storage.file_level_restore.constants import (
     WINDOWS_TEST_FILE_NAME,
 )
 from tests.storage.file_level_restore.utils import (
+    delete_windows_guest_file,
     ensure_linux_data_disk_directory,
     format_and_mount_linux_data_disk,
     get_windows_file_acl_baseline,
@@ -33,6 +34,7 @@ from tests.storage.file_level_restore.utils import (
     volume_snapshot_class_for_storage_class,
     wait_for_file_restore_operator_ready,
     windows_data_disk_path,
+    windows_data_disk_volume_snapshot,
     windows_guest_path,
 )
 from tests.utils import create_windows2022_vm
@@ -283,19 +285,7 @@ def deleted_windows_test_file_for_snapshot(
 ):
     """Deleted Windows data-disk test file after snapshot. Yields (guest_path, content)."""
     guest_path, file_content = windows_test_file_on_data_disk
-    powershell_path = windows_guest_path(guest_path=guest_path)
-    LOGGER.info(f"Deleting test file '{powershell_path}' from Windows data disk after snapshot")
-    run_ssh_commands(
-        host=windows_file_restore_vm.ssh_exec,
-        commands=[
-            "powershell",
-            "-NoProfile",
-            "-Command",
-            f"Remove-Item -LiteralPath '{powershell_path}' -Force",
-        ],
-        wait_timeout=TIMEOUT_2MIN,
-        sleep=TIMEOUT_5SEC,
-    )
+    delete_windows_guest_file(vm=windows_file_restore_vm, guest_path=guest_path)
     yield guest_path, file_content
 
 
@@ -325,32 +315,14 @@ def windows_data_disk_snapshot(
     snapshot_storage_class_name_scope_module,
 ):
     """VolumeSnapshot of the Windows NTFS data disk PVC."""
-    LOGGER.info("Flushing Windows filesystem cache before snapshot")
-    run_ssh_commands(
-        host=windows_file_restore_vm.ssh_exec,
-        commands=[
-            "powershell",
-            "-NoProfile",
-            "-Command",
-            f"Write-VolumeCache -DriveLetter {WINDOWS_DATA_DISK_LETTER}",
-        ],
-        wait_timeout=TIMEOUT_2MIN,
-        sleep=TIMEOUT_5SEC,
-    )
-    volume_snapshot_class_name = volume_snapshot_class_for_storage_class(
+    with windows_data_disk_volume_snapshot(
+        vm=windows_file_restore_vm,
+        pvc_name=windows_data_disk.name,
+        snapshot_name="file-restore-windows-data-disk-snapshot",
+        namespace_name=namespace.name,
         storage_class_name=snapshot_storage_class_name_scope_module,
         admin_client=admin_client,
-    )
-    pvc_name = windows_data_disk.name
-    LOGGER.info(f"Creating VolumeSnapshot of Windows data disk PVC '{pvc_name}'")
-    with VolumeSnapshot(
-        name="file-restore-windows-data-disk-snapshot",
-        namespace=namespace.name,
-        source={"persistentVolumeClaimName": pvc_name},
-        volume_snapshot_class_name=volume_snapshot_class_name,
-        client=admin_client,
     ) as snapshot:
-        wait_for_volume_snapshot_ready_to_use(namespace=namespace.name, name=snapshot.name, client=admin_client)
         yield snapshot
 
 
@@ -378,19 +350,7 @@ def deleted_windows_test_file_on_data_disk(
 ):
     """Deleted Windows data-disk test file after backup exists. Yields (guest_path, content)."""
     guest_path, file_content = windows_test_file_on_data_disk
-    powershell_path = windows_guest_path(guest_path=guest_path)
-    LOGGER.info(f"Deleting test file '{powershell_path}' from Windows data disk")
-    run_ssh_commands(
-        host=windows_file_restore_vm.ssh_exec,
-        commands=[
-            "powershell",
-            "-NoProfile",
-            "-Command",
-            f"Remove-Item -LiteralPath '{powershell_path}' -Force",
-        ],
-        wait_timeout=TIMEOUT_2MIN,
-        sleep=TIMEOUT_5SEC,
-    )
+    delete_windows_guest_file(vm=windows_file_restore_vm, guest_path=guest_path)
     yield guest_path, file_content
 
 
@@ -431,31 +391,14 @@ def windows_multi_file_data_disk_snapshot(
     snapshot_storage_class_name_scope_module,
 ):
     """VolumeSnapshot of the Windows data disk containing multiple test files."""
-    LOGGER.info("Flushing Windows filesystem cache before multi-file snapshot")
-    run_ssh_commands(
-        host=windows_file_restore_vm.ssh_exec,
-        commands=[
-            "powershell",
-            "-NoProfile",
-            "-Command",
-            f"Write-VolumeCache -DriveLetter {WINDOWS_DATA_DISK_LETTER}",
-        ],
-        wait_timeout=TIMEOUT_2MIN,
-        sleep=TIMEOUT_5SEC,
-    )
-    volume_snapshot_class_name = volume_snapshot_class_for_storage_class(
+    with windows_data_disk_volume_snapshot(
+        vm=windows_file_restore_vm,
+        pvc_name=windows_data_disk.name,
+        snapshot_name="file-restore-windows-multi-file-snapshot",
+        namespace_name=namespace.name,
         storage_class_name=snapshot_storage_class_name_scope_module,
         admin_client=admin_client,
-    )
-    pvc_name = windows_data_disk.name
-    with VolumeSnapshot(
-        name="file-restore-windows-multi-file-snapshot",
-        namespace=namespace.name,
-        source={"persistentVolumeClaimName": pvc_name},
-        volume_snapshot_class_name=volume_snapshot_class_name,
-        client=admin_client,
     ) as snapshot:
-        wait_for_volume_snapshot_ready_to_use(namespace=namespace.name, name=snapshot.name, client=admin_client)
         yield snapshot
 
 
@@ -467,19 +410,7 @@ def deleted_windows_multi_files_on_data_disk(
 ):
     """Deleted Windows multi-file set after snapshot. Yields list of (guest_path, content)."""
     for guest_path, _ in windows_multi_files_on_data_disk:
-        powershell_path = windows_guest_path(guest_path=guest_path)
-        LOGGER.info(f"Deleting multi-file test file '{powershell_path}' from Windows data disk")
-        run_ssh_commands(
-            host=windows_file_restore_vm.ssh_exec,
-            commands=[
-                "powershell",
-                "-NoProfile",
-                "-Command",
-                f"Remove-Item -LiteralPath '{powershell_path}' -Force",
-            ],
-            wait_timeout=TIMEOUT_2MIN,
-            sleep=TIMEOUT_5SEC,
-        )
+        delete_windows_guest_file(vm=windows_file_restore_vm, guest_path=guest_path)
     yield windows_multi_files_on_data_disk
 
 
@@ -510,31 +441,14 @@ def windows_drive_root_data_disk_snapshot(
     snapshot_storage_class_name_scope_module,
 ):
     """VolumeSnapshot of the Windows data disk containing a drive-root file."""
-    LOGGER.info("Flushing Windows filesystem cache before drive-root snapshot")
-    run_ssh_commands(
-        host=windows_file_restore_vm.ssh_exec,
-        commands=[
-            "powershell",
-            "-NoProfile",
-            "-Command",
-            f"Write-VolumeCache -DriveLetter {WINDOWS_DATA_DISK_LETTER}",
-        ],
-        wait_timeout=TIMEOUT_2MIN,
-        sleep=TIMEOUT_5SEC,
-    )
-    volume_snapshot_class_name = volume_snapshot_class_for_storage_class(
+    with windows_data_disk_volume_snapshot(
+        vm=windows_file_restore_vm,
+        pvc_name=windows_data_disk.name,
+        snapshot_name="file-restore-windows-drive-root-snapshot",
+        namespace_name=namespace.name,
         storage_class_name=snapshot_storage_class_name_scope_module,
         admin_client=admin_client,
-    )
-    pvc_name = windows_data_disk.name
-    with VolumeSnapshot(
-        name="file-restore-windows-drive-root-snapshot",
-        namespace=namespace.name,
-        source={"persistentVolumeClaimName": pvc_name},
-        volume_snapshot_class_name=volume_snapshot_class_name,
-        client=admin_client,
     ) as snapshot:
-        wait_for_volume_snapshot_ready_to_use(namespace=namespace.name, name=snapshot.name, client=admin_client)
         yield snapshot
 
 
@@ -546,17 +460,5 @@ def deleted_windows_drive_root_file(
 ):
     """Deleted Windows drive-root file after snapshot. Yields (guest_path, content)."""
     guest_path, file_content = windows_drive_root_file_on_data_disk
-    powershell_path = windows_guest_path(guest_path=guest_path)
-    LOGGER.info(f"Deleting drive-root test file '{powershell_path}' from Windows data disk")
-    run_ssh_commands(
-        host=windows_file_restore_vm.ssh_exec,
-        commands=[
-            "powershell",
-            "-NoProfile",
-            "-Command",
-            f"Remove-Item -LiteralPath '{powershell_path}' -Force",
-        ],
-        wait_timeout=TIMEOUT_2MIN,
-        sleep=TIMEOUT_5SEC,
-    )
+    delete_windows_guest_file(vm=windows_file_restore_vm, guest_path=guest_path)
     yield guest_path, file_content

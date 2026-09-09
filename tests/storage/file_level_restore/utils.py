@@ -6,6 +6,8 @@ import shlex
 import tarfile
 import tempfile
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -15,9 +17,10 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.resource import NamespacedResource
 from ocp_resources.storage_class import StorageClass
+from ocp_resources.volume_snapshot import VolumeSnapshot
 from ocp_resources.volume_snapshot_class import VolumeSnapshotClass
 from pyhelper_utils.shell import run_ssh_commands
-from timeout_sampler import TimeoutSampler
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.storage.file_level_restore.constants import (
     CONFIGMAP_LINUX_HELPERS_TAR,
@@ -39,6 +42,7 @@ from tests.storage.file_level_restore.constants import (
     WINDOWS_SETUP_SCRIPT,
 )
 from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5MIN, TIMEOUT_5SEC
+from utilities.storage import wait_for_volume_snapshot_ready_to_use
 
 if TYPE_CHECKING:
     from kubernetes.dynamic import DynamicClient
@@ -118,6 +122,8 @@ class VirtualMachineFileRestore(NamespacedResource):
                 spec["source"]["snapshot"] = {"name": self._source_snapshot_name}
             elif self._source_pvc_name:
                 spec["source"]["pvc"] = {"name": self._source_pvc_name}
+            else:
+                raise ValueError("VirtualMachineFileRestore requires either source_snapshot_name or source_pvc_name")
 
             if self._source_path is not None:
                 spec["sourcePath"] = self._source_path
@@ -147,6 +153,59 @@ def volume_snapshot_class_for_storage_class(storage_class_name: str, admin_clien
     raise ValueError(
         f"No VolumeSnapshotClass found for StorageClass '{storage_class_name}' (provisioner: {provisioner})"
     )
+
+
+@contextmanager
+def windows_data_disk_volume_snapshot(
+    vm: VirtualMachineForTests,
+    pvc_name: str,
+    snapshot_name: str,
+    namespace_name: str,
+    storage_class_name: str,
+    admin_client: DynamicClient,
+) -> Iterator[VolumeSnapshot]:
+    """Create a ready VolumeSnapshot of a Windows VM data disk PVC.
+
+    Flushes the guest filesystem cache, resolves the VolumeSnapshotClass, creates the
+    snapshot, and waits until it is ready to use.
+
+    Args:
+        vm: Running Windows VM whose data disk will be snapshotted.
+        pvc_name: Name of the data disk PVC to snapshot.
+        snapshot_name: Name for the VolumeSnapshot resource.
+        namespace_name: Namespace for the VolumeSnapshot.
+        storage_class_name: StorageClass used to resolve the VolumeSnapshotClass.
+        admin_client: Kubernetes admin client.
+
+    Yields:
+        Ready VolumeSnapshot of the Windows data disk PVC.
+    """
+    LOGGER.info("Flushing Windows filesystem cache before snapshot")
+    run_ssh_commands(
+        host=vm.ssh_exec,
+        commands=[
+            "powershell",
+            "-NoProfile",
+            "-Command",
+            f"Write-VolumeCache -DriveLetter {WINDOWS_DATA_DISK_LETTER}",
+        ],
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
+    )
+    volume_snapshot_class_name = volume_snapshot_class_for_storage_class(
+        storage_class_name=storage_class_name,
+        admin_client=admin_client,
+    )
+    LOGGER.info(f"Creating VolumeSnapshot '{snapshot_name}' of Windows data disk PVC '{pvc_name}'")
+    with VolumeSnapshot(
+        name=snapshot_name,
+        namespace=namespace_name,
+        source={"persistentVolumeClaimName": pvc_name},
+        volume_snapshot_class_name=volume_snapshot_class_name,
+        client=admin_client,
+    ) as snapshot:
+        wait_for_volume_snapshot_ready_to_use(namespace=namespace_name, name=snapshot.name, client=admin_client)
+        yield snapshot
 
 
 def wait_for_file_restore_operator_ready(admin_client: DynamicClient) -> None:
@@ -190,34 +249,38 @@ def get_file_restore_operator_configmap(admin_client: DynamicClient) -> ConfigMa
         namespace=FILE_RESTORE_OPERATOR_NAMESPACE,
         client=admin_client,
     )
-    for sample in TimeoutSampler(
-        wait_timeout=TIMEOUT_2MIN,
-        sleep=TIMEOUT_5SEC,
-        func=lambda: config_map.instance,
-    ):
-        if not sample:
-            continue
-        config_map_dict = _config_map_as_dict(config_map_instance=sample)
-        ssh_public_key = (config_map_dict.get("data") or {}).get(CONFIGMAP_SSH_PUBLIC_KEY, "")
-        try:
-            linux_helpers = _get_configmap_binary_value(
-                config_map_instance=sample,
-                key=CONFIGMAP_LINUX_HELPERS_TAR,
-            )
-            windows_helpers = _get_configmap_binary_value(
-                config_map_instance=sample,
-                key=CONFIGMAP_WINDOWS_HELPERS_TAR,
-            )
-        except RuntimeError as err:
-            LOGGER.info(f"ConfigMap '{FILE_RESTORE_SSH_CONFIGMAP_NAME}' binary keys not yet ready: {err}")
-            continue
-        if ssh_public_key and linux_helpers and windows_helpers:
-            LOGGER.info("File-restore operator ConfigMap is ready with guest helper tarballs")
-            return config_map
-    raise RuntimeError(
+    config_map_not_ready_error = (
         f"ConfigMap '{FILE_RESTORE_SSH_CONFIGMAP_NAME}' in '{FILE_RESTORE_OPERATOR_NAMESPACE}'"
         " is missing ssh-publickey or guest helper tarballs"
     )
+    try:
+        for sample in TimeoutSampler(
+            wait_timeout=TIMEOUT_2MIN,
+            sleep=TIMEOUT_5SEC,
+            func=lambda: config_map.instance,
+        ):
+            if not sample:
+                continue
+            config_map_dict = _config_map_as_dict(config_map_instance=sample)
+            ssh_public_key = (config_map_dict.get("data") or {}).get(CONFIGMAP_SSH_PUBLIC_KEY, "")
+            try:
+                linux_helpers = _get_configmap_binary_value(
+                    config_map_instance=sample,
+                    key=CONFIGMAP_LINUX_HELPERS_TAR,
+                )
+                windows_helpers = _get_configmap_binary_value(
+                    config_map_instance=sample,
+                    key=CONFIGMAP_WINDOWS_HELPERS_TAR,
+                )
+            except RuntimeError as err:
+                LOGGER.info(f"ConfigMap '{FILE_RESTORE_SSH_CONFIGMAP_NAME}' binary keys not yet ready: {err}")
+                continue
+            if ssh_public_key and linux_helpers and windows_helpers:
+                LOGGER.info("File-restore operator ConfigMap is ready with guest helper tarballs")
+                return config_map
+    except TimeoutExpiredError as err:
+        raise RuntimeError(config_map_not_ready_error) from err
+    raise RuntimeError(config_map_not_ready_error)
 
 
 def _ssh_public_key_from_config_map(config_map: ConfigMap) -> str:
@@ -402,12 +465,11 @@ def install_windows_guest_helper(vm: VirtualMachineForTests, admin_client: Dynam
     windows_key_path = windows_guest_path(
         guest_path=f"{WINDOWS_HELPER_STAGE_DIRECTORY}/{OPERATOR_SSH_PUBLIC_KEY_FILE_NAME}",
     )
-    with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False) as key_file:
-        key_file.write(operator_public_key)
-        local_key_path = key_file.name
     remote_key_sftp_path = windows_key_path.replace("\\", "/")
-    vm.ssh_exec.fs.put(path_src=local_key_path, path_dst=remote_key_sftp_path)
-    Path(local_key_path).unlink()
+    with tempfile.TemporaryDirectory() as temp_directory:
+        local_key_path = Path(temp_directory) / OPERATOR_SSH_PUBLIC_KEY_FILE_NAME
+        local_key_path.write_text(data=operator_public_key, encoding="utf-8")
+        vm.ssh_exec.fs.put(path_src=str(local_key_path), path_dst=remote_key_sftp_path)
 
     setup_script_path = windows_guest_path(
         guest_path=f"{WINDOWS_HELPER_STAGE_DIRECTORY}/{WINDOWS_SETUP_SCRIPT}",
@@ -600,6 +662,28 @@ def windows_guest_path(guest_path: str) -> str:
     return guest_path.replace("/", "\\")
 
 
+def delete_windows_guest_file(vm: VirtualMachineForTests, guest_path: str) -> None:
+    """Delete a file from a Windows VM guest filesystem.
+
+    Args:
+        vm: Running Windows VM with SSH connectivity.
+        guest_path: Windows guest path to the file using forward or backslashes.
+    """
+    powershell_path = windows_guest_path(guest_path=guest_path)
+    LOGGER.info(f"Deleting Windows test file '{powershell_path}'")
+    run_ssh_commands(
+        host=vm.ssh_exec,
+        commands=[
+            "powershell",
+            "-NoProfile",
+            "-Command",
+            f"Remove-Item -LiteralPath '{powershell_path}' -Force",
+        ],
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
+    )
+
+
 def windows_data_disk_path(relative_path: str) -> str:
     """Build a full Windows path on the NTFS data disk.
 
@@ -659,7 +743,8 @@ def virtio_disk_device_path(vm: VirtualMachineForTests, disk_name: str) -> str:
     """
     virtio_disk_names: list[str] = []
     for disk_entry in vm.vmi.instance.spec.domain.devices.disks:
-        if disk_entry.get("disk", {}).get("bus", "virtio") != "virtio":
+        disk_spec = disk_entry.get("disk")
+        if not disk_spec or disk_spec.get("bus") != "virtio":
             continue
         entry_name = disk_entry.get("name")
         if entry_name:
