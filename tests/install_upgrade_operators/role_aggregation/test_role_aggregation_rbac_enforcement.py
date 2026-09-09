@@ -40,7 +40,7 @@ class TestRoleAggregationAdmin:
     def test_admin_forbidden_when_aggregation_disabled(self, unprivileged_client, namespace):
         """
         [NEGATIVE] Test that an unprivileged user with the admin role is forbidden
-        from listing virtualization resources when role aggregation is disabled.
+        from listing virtual machines when role aggregation is disabled.
 
         Preconditions:
             - RoleBinding granting the unprivileged user the admin ClusterRole
@@ -106,7 +106,7 @@ class TestRoleAggregationEdit:
     def test_edit_forbidden_when_aggregation_disabled(self, unprivileged_client, namespace):
         """
         [NEGATIVE] Test that an unprivileged user with the edit role is forbidden
-        from listing virtualization resources when role aggregation is disabled.
+        from listing virtual machines when role aggregation is disabled.
 
         Preconditions:
             - RoleBinding granting the unprivileged user the edit ClusterRole
@@ -168,7 +168,7 @@ class TestRoleAggregationView:
     def test_view_forbidden_when_aggregation_disabled(self, unprivileged_client, namespace):
         """
         [NEGATIVE] Test that an unprivileged user with the view role is forbidden
-        from listing virtualization resources when role aggregation is disabled.
+        from listing virtual machines when role aggregation is disabled.
 
         Preconditions:
             - RoleBinding granting the unprivileged user the view ClusterRole
