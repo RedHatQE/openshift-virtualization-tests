@@ -1,18 +1,18 @@
 import logging
 from collections import Counter
 
+from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine import VirtualMachine
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.virt.node.descheduler.constants import (
-    DESCHEDULER_PREFER_NO_EVICTION_ANNOTATION,
-    DESCHEDULER_SOFT_TAINT_KEY,
-)
+from tests.utils import start_stress_on_vm
+from tests.virt.node.descheduler.constants import DESCHEDULER_SOFT_TAINT_KEY
 from utilities.constants.timeouts import (
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
     TIMEOUT_20SEC,
 )
+from utilities.constants.virt import DESCHEDULER_PREFER_NO_EVICTION_ANNOTATION
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
@@ -20,42 +20,6 @@ from utilities.virt import (
 )
 
 LOGGER = logging.getLogger(__name__)
-
-
-class VirtualMachineForDeschedulerTest(VirtualMachineForTests):
-    def __init__(
-        self,
-        name,
-        namespace,
-        memory_guest,
-        client,
-        cpu_model,
-        body,
-        cpu_cores,
-        prefer_no_eviction=False,
-        node_selector_labels=None,
-        vm_affinity=None,
-    ):
-        super().__init__(
-            name=name,
-            namespace=namespace,
-            client=client,
-            memory_guest=memory_guest,
-            cpu_model=cpu_model,
-            body=body,
-            cpu_cores=cpu_cores,
-            node_selector_labels=node_selector_labels,
-            run_strategy=VirtualMachine.RunStrategy.ALWAYS,
-            vm_affinity=vm_affinity,
-        )
-        self.prefer_no_eviction = prefer_no_eviction
-
-    def to_dict(self):
-        super().to_dict()
-        if self.prefer_no_eviction:
-            metadata = self.res["spec"]["template"]["metadata"]
-            metadata.setdefault("annotations", {})
-            metadata["annotations"][DESCHEDULER_PREFER_NO_EVICTION_ANNOTATION] = "true"
 
 
 def calculate_vm_deployment(
@@ -97,6 +61,25 @@ def vm_nodes(vms):
     return {vm.name: vm.vmi.node for vm in vms}
 
 
+def stress_vms_on_node(vms, node, stress_command):
+    """Start the given stress workload inside every VM running on the node.
+
+    Args:
+        vms (list): candidate VMs.
+        node: node whose VMs should be stressed.
+        stress_command (str): shell command to run inside each VM.
+
+    Returns:
+        list: VMs that were stressed (those running on the node).
+    """
+    stressed_vms = []
+    for vm in vms:
+        if vm.vmi.node.name == node.name:
+            stressed_vms.append(vm)
+            start_stress_on_vm(vm=vm, stress_command=stress_command)
+    return stressed_vms
+
+
 def deploy_vms(
     vm_prefix,
     client,
@@ -104,24 +87,21 @@ def deploy_vms(
     cpu_model,
     vm_count,
     deployment_size,
-    prefer_no_eviction=False,
-    node_selector_labels=None,
-    vm_affinity=None,
+    exclude_from_descheduler=False,
 ):
     vms = []
     for vm_index in range(vm_count):
         vm_name = f"vm-{vm_prefix}-{vm_index}"
-        vm = VirtualMachineForDeschedulerTest(
+        vm = VirtualMachineForTests(
             name=vm_name,
             namespace=namespace_name,
             client=client,
             cpu_cores=deployment_size["cpu"],
             memory_guest=deployment_size["memory"].bytes,
             cpu_model=cpu_model,
-            prefer_no_eviction=prefer_no_eviction,
             body=fedora_vm_body(name=vm_name),
-            node_selector_labels=node_selector_labels,
-            vm_affinity=vm_affinity,
+            run_strategy=VirtualMachine.RunStrategy.ALWAYS,
+            exclude_from_descheduler=exclude_from_descheduler,
         )
         vm.deploy()
         vms.append(vm)
@@ -137,6 +117,25 @@ def deploy_vms(
 
     for vm in vms:
         vm.wait_deleted()
+
+
+def make_vms_evictable(vms):
+    """Allow the descheduler to evict (live-migrate) the given VMs.
+
+    Removes the prefer-no-eviction annotation from each VM template; KubeVirt propagates
+    the removal to the running virt-launcher pods, so the descheduler stops treating the
+    VMs as protected.
+
+    Args:
+        vms (list): VMs to make evictable.
+    """
+    LOGGER.info(f"Removing prefer-no-eviction annotation from VMs: {[vm.name for vm in vms]}")
+    ResourceEditor(
+        patches={
+            vm: {"spec": {"template": {"metadata": {"annotations": {DESCHEDULER_PREFER_NO_EVICTION_ANNOTATION: None}}}}}
+            for vm in vms
+        }
+    ).update()
 
 
 def verify_at_least_one_vm_migrated(vms, node_before):
