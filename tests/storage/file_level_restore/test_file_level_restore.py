@@ -8,6 +8,36 @@ Jira: https://redhat.atlassian.net/browse/VIRTSTRAT-480 # <skip-jira-utils-check
 import pytest
 
 
+class TestFileRestoreOperatorDeployment:
+    """
+    Tests for vm-file-restore-operator deployment via HCO-managed lifecycle.
+
+    Preconditions:
+        - OpenShift Virtualization installed via HyperConverged CR (HCO-managed lifecycle)
+        - openshift-cnv namespace exists
+    """
+
+    __test__ = False
+
+    @pytest.mark.polarion("CNV-16810")
+    def test_file_restore_operator_deployed_after_cnv_install(self):
+        """
+        Test that vm-file-restore-operator is deployed and running after OpenShift Virtualization
+        installation via HCO-managed lifecycle.
+
+        Preconditions:
+            - OpenShift Virtualization installed via HyperConverged CR (HCO-managed lifecycle)
+            - openshift-cnv namespace exists
+
+        Steps:
+            1. Verify vm-file-restore-operator deployment exists in openshift-cnv namespace
+            2. Verify vm-file-restore-operator pod is Running
+
+        Expected:
+            - vm-file-restore-operator deployment exists and its pod is Running
+        """
+
+
 class TestFileRestoreBackupVendorWorkflow:
     """
     End-to-end restore workflow tests simulating backup vendor integration.
@@ -174,4 +204,125 @@ class TestFileRestoreWindowsDriveRoot:
 
         Expected:
             - Restored file content matches the source
+        """
+
+
+class TestFileRestoreRootDiskToOriginalPath:
+    """
+    Tests for restoring files from root disk backup to their original location on a running Linux VM.
+
+    Preconditions:
+        - vm-file-restore-operator deployed and running in openshift-cnv namespace
+        - VolumeSnapshot-capable StorageClass available
+        - Running Linux VM with guest helper installed and filerestore user SSH-configured
+    """
+
+    __test__ = False
+
+    @pytest.mark.polarion("CNV-16811")
+    def test_restore_from_root_disk_snapshot_to_original_path(self):
+        """
+        Test that files are restored from a root disk VolumeSnapshot to their original location
+        in a running Linux VM.
+
+        Preconditions:
+            - Running Linux VM with guest helper installed and filerestore user SSH-configured
+            - VolumeSnapshot of VM root disk marked readyToUse=true
+            - Target file original content recorded before deletion
+
+        Steps:
+            1. Delete target file from running VM to simulate data loss
+            2. Create VMFileRestore from root disk VolumeSnapshot targeting the original file path
+            3. Wait for VMFileRestore to reach Succeeded phase
+            4. Compare restored file content against the recorded original
+
+        Expected:
+            - Restored file content matches the recorded original
+            - File is restored to its original path on the running Linux VM
+        """
+
+    @pytest.mark.polarion("CNV-16812")
+    def test_restore_from_root_disk_backup_pvc_to_original_path(self):
+        """
+        Test that files are restored from a root disk backup PVC to their original location
+        in a running Linux VM.
+
+        Preconditions:
+            - Running Linux VM with guest helper installed and filerestore user SSH-configured
+            - Backup PVC cloned from the VM root disk PVC
+            - Target file original content recorded before deletion
+
+        Steps:
+            1. Delete target file from running VM to simulate data loss
+            2. Create VMFileRestore from root disk backup PVC targeting the original file path
+            3. Wait for VMFileRestore to reach Succeeded phase
+            4. Compare restored file content against the recorded original
+
+        Expected:
+            - Restored file content matches the recorded original
+            - File is restored to its original path on the running Linux VM
+        """
+
+
+class TestFileRestoreSequentialFromSameSnapshot:
+    """
+    Tests for data disk VolumeSnapshot restore and sequential restore from the same snapshot.
+
+    Markers:
+        - incremental
+
+    Preconditions:
+        - vm-file-restore-operator deployed and running in openshift-cnv namespace
+        - VolumeSnapshot-capable StorageClass available
+        - Running Linux VM with guest helper installed and filerestore user SSH-configured
+        - VM data disk with two distinct test files
+        - VolumeSnapshot of the VM data disk with both test files available
+    """
+
+    __test__ = False
+
+    @pytest.mark.polarion("CNV-16813")
+    def test_restore_from_data_disk_snapshot(self):
+        """
+        Test that files are restored from a data disk VolumeSnapshot in a running Linux VM
+        and temporary resources are cleaned up after the operation.
+
+        Preconditions:
+            - Running Linux VM with guest helper installed and filerestore user SSH-configured
+            - VolumeSnapshot of the VM data disk with two distinct test files available
+            - Original content recorded for the first target file before deletion
+
+        Steps:
+            1. Delete the first target file from the VM data disk
+            2. Create VMFileRestore from the data disk VolumeSnapshot targeting the deleted file path
+            3. Wait for VMFileRestore to reach Succeeded phase
+            4. Check the namespace for temporary resources left over from the restore operation
+            5. Compare restored file content against the recorded original
+
+        Expected:
+            - Restore operation from the data disk VolumeSnapshot reaches Succeeded phase
+            - Restored file content matches the recorded original
+            - Temporary resources from the operation are cleaned up
+        """
+
+    @pytest.mark.polarion("CNV-16815")
+    def test_second_restore_from_same_data_disk_snapshot(self):
+        """
+        Test that a second restore from the same data disk VolumeSnapshot completes successfully.
+
+        Preconditions:
+            - Running Linux VM with guest helper installed and filerestore user SSH-configured
+            - VolumeSnapshot of the VM data disk with two distinct test files available
+            - Restore from the data disk VolumeSnapshot completed successfully
+            - Original content recorded for the second target file before deletion
+
+        Steps:
+            1. Delete the second target file from the VM data disk
+            2. Create a second VMFileRestore from the same data disk VolumeSnapshot targeting the deleted file path
+            3. Wait for VMFileRestore to reach Succeeded phase
+            4. Compare restored file content against the recorded original
+
+        Expected:
+            - Second restore operation from the same data disk VolumeSnapshot reaches Succeeded phase
+            - Restored file content matches the recorded original
         """
