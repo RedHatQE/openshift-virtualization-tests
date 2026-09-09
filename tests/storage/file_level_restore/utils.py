@@ -31,6 +31,7 @@ from tests.storage.file_level_restore.constants import (
     LINUX_RESTORE_TEST_DIRECTORY,
     LINUX_SETUP_SCRIPT,
     LINUX_TEST_FILE_NAME,
+    OPERATOR_SSH_PUBLIC_KEY_FILE_NAME,
     RESTORE_VOLUME_SUFFIX,
     WINDOWS_DATA_DISK_LETTER,
     WINDOWS_FILERESTORE_SCRIPT,
@@ -304,10 +305,26 @@ def install_linux_guest_helper(vm: VirtualMachineForTests, admin_client: Dynamic
             sleep=TIMEOUT_5SEC,
         )
 
-    setup_script_path = shlex.quote(f"{stage_directory}/{LINUX_SETUP_SCRIPT}")
+    key_file_path = f"{stage_directory}/{OPERATOR_SSH_PUBLIC_KEY_FILE_NAME}"
+    encoded_public_key = base64.b64encode(operator_public_key.encode()).decode()
     run_ssh_commands(
         host=vm.ssh_exec,
-        commands=["sudo", "bash", setup_script_path, operator_public_key],
+        commands=[
+            "bash",
+            "-c",
+            f"echo {encoded_public_key} | base64 -d > {key_file_path} && chmod 0600 {key_file_path}",
+        ],
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
+    )
+    setup_script_path = f"{stage_directory}/{LINUX_SETUP_SCRIPT}"
+    run_ssh_commands(
+        host=vm.ssh_exec,
+        commands=[
+            "bash",
+            "-c",
+            f'sudo bash {setup_script_path} "$(cat {key_file_path})"',
+        ],
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
     )
@@ -382,10 +399,27 @@ def install_windows_guest_helper(vm: VirtualMachineForTests, admin_client: Dynam
         },
     )
 
-    setup_script_path = f"{WINDOWS_HELPER_STAGE_DIRECTORY}\\{WINDOWS_SETUP_SCRIPT}"
+    windows_key_path = windows_guest_path(
+        guest_path=f"{WINDOWS_HELPER_STAGE_DIRECTORY}/{OPERATOR_SSH_PUBLIC_KEY_FILE_NAME}",
+    )
+    with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False) as key_file:
+        key_file.write(operator_public_key)
+        local_key_path = key_file.name
+    remote_key_sftp_path = windows_key_path.replace("\\", "/")
+    vm.ssh_exec.fs.put(path_src=local_key_path, path_dst=remote_key_sftp_path)
+    Path(local_key_path).unlink()
+
+    setup_script_path = windows_guest_path(
+        guest_path=f"{WINDOWS_HELPER_STAGE_DIRECTORY}/{WINDOWS_SETUP_SCRIPT}",
+    )
     run_ssh_commands(
         host=vm.ssh_exec,
-        commands=["cmd", "/c", setup_script_path, operator_public_key],
+        commands=[
+            "powershell",
+            "-NoProfile",
+            "-Command",
+            (f"$pubKey = (Get-Content -LiteralPath '{windows_key_path}' -Raw).Trim(); & '{setup_script_path}' $pubKey"),
+        ],
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
     )

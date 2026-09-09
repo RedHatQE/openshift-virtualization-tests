@@ -15,6 +15,7 @@ LINUX_FILERESTORE_SCRIPT = "filerestore.sh"
 WINDOWS_SETUP_SCRIPT = "setup.bat"
 WINDOWS_FILERESTORE_SCRIPT = "filerestore.bat"
 WINDOWS_HELPER_STAGE_DIRECTORY = r"C:\filerestore-helpers"
+OPERATOR_SSH_PUBLIC_KEY_FILE_NAME = "operator-ssh-public-key"
 
 LINUX_DATA_DISK_MOUNT_PATH = "/mnt/data"
 LINUX_DATA_DISK_SIZE = "5Gi"

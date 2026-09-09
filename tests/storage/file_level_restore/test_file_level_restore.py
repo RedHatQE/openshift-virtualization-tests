@@ -201,6 +201,13 @@ class TestFileRestoreWindowsGuestFileCount:
             assert reported_file_count == actual_file_count, (
                 f"Reported count {reported_file_count} does not match guest count {actual_file_count}"
             )
+            assert_successful_restore_cleanup(
+                vm=windows_file_restore_vm,
+                restore_cr_name=file_restore.name,
+                namespace_name=namespace.name,
+                admin_client=admin_client,
+                snapshot_source=True,
+            )
 
 
 @pytest.mark.tier3
@@ -267,6 +274,13 @@ class TestFileRestoreWindowsNTFSACLsAndOwnership:
                 file_path=source_path,
                 expected_acl=expected_acl,
                 expected_owner=expected_owner,
+            )
+            assert_successful_restore_cleanup(
+                vm=windows_file_restore_vm,
+                restore_cr_name=file_restore.name,
+                namespace_name=namespace.name,
+                admin_client=admin_client,
+                snapshot_source=False,
             )
 
     @pytest.mark.polarion("CNV-16769")
@@ -387,6 +401,13 @@ class TestFileRestoreWindowsDriveRoot:
                 windows_vm=windows_file_restore_vm,
                 file_name_with_path=guest_path,
                 file_content=expected_content,
+            )
+            assert_successful_restore_cleanup(
+                vm=windows_file_restore_vm,
+                restore_cr_name=file_restore.name,
+                namespace_name=namespace.name,
+                admin_client=admin_client,
+                snapshot_source=True,
             )
 
 
