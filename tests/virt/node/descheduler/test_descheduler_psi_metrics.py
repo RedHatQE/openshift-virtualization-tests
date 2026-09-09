@@ -1,3 +1,15 @@
+"""
+Load-aware descheduler rebalancing tests.
+
+Jira: https://redhat.atlassian.net/browse/CNV-80073  # <skip-jira-utils-check>
+
+Preconditions:
+    - Descheduler operator installed and configured by autopilot
+    - Multiple schedulable worker nodes available for migration
+    - Set of running VMs spread across the cluster, sized to consume about half of the
+      available memory per node
+"""
+
 import logging
 
 import pytest
@@ -14,6 +26,7 @@ LOGGER = logging.getLogger(__name__)
 pytestmark = [
     pytest.mark.tier3,
     pytest.mark.descheduler,
+    pytest.mark.special_infra,
     pytest.mark.post_upgrade,
     pytest.mark.data_collector_scope(scope="module"),
 ]
@@ -29,15 +42,7 @@ pytestmark = [
 )
 class TestDeschedulerLoadAwareRebalancing:
     """
-    Tests for load-aware descheduler rebalancing driven by node utilization and pressure (PSI).
-
-    Jira: https://redhat.atlassian.net/browse/CNV-80073
-
-    Preconditions:
-        - Descheduler operator installed and configured by autopilot
-        - Multiple schedulable worker nodes available for migration
-        - Set of running VMs spread across the cluster, sized to consume about half of the
-          available memory per node
+    Tests for load-aware descheduler rebalancing driven by node CPU utilization and pressure (PSI).
     """
 
     @pytest.mark.polarion("CNV-11960")
@@ -62,7 +67,7 @@ class TestDeschedulerLoadAwareRebalancing:
     def test_rebalancing_when_node_overloaded(
         self,
         node_to_run_stress,
-        stressed_vms_on_one_node,
+        cpu_stressed_evictable_vms,
     ):
         """
         Test that the descheduler rebalances VMs away from an overloaded node.
@@ -71,12 +76,13 @@ class TestDeschedulerLoadAwareRebalancing:
             - Under-test VMs on the selected node are under CPU stress
 
         Steps:
-            1. Wait for the descheduler to act on the overloaded node
+            1. Allow the descheduler to evict the under-test VMs
+            2. Wait for the descheduler to act on the overloaded node
 
         Expected:
             - At least one under-test VM is migrated off the overloaded node
         """
-        verify_at_least_one_vm_migrated(vms=stressed_vms_on_one_node, node_before=node_to_run_stress)
+        verify_at_least_one_vm_migrated(vms=cpu_stressed_evictable_vms, node_before=node_to_run_stress)
 
     @pytest.mark.polarion("CNV-11962")
     def test_soft_taint_removed_when_node_not_overloaded(
@@ -113,3 +119,39 @@ class TestDeschedulerLoadAwareRebalancing:
             - No worker node PSI value exceeds the deviation threshold
         """
         assert_psi_values_within_threshold(psi_values_dict=workers_psi_metric_values)
+
+
+@pytest.mark.parametrize(
+    "calculated_vm_deployment_for_descheduler_test",
+    [pytest.param(0.50)],
+    indirect=True,
+)
+@pytest.mark.usefixtures(
+    "deployed_vms_for_descheduler_test",
+)
+class TestDeschedulerMemoryRebalancing:
+    """
+    Tests for load-aware descheduler rebalancing driven by node memory utilization.
+    """
+
+    @pytest.mark.polarion("CNV-16825")
+    def test_rebalancing_when_node_memory_overloaded(
+        self,
+        node_to_run_stress,
+        memory_stressed_evictable_vms,
+    ):
+        """
+        Test that the descheduler rebalances VMs away from a node overloaded on memory.
+
+        Preconditions:
+            - Under-test VMs on the selected node are consuming most of their guest memory
+
+        Steps:
+            1. Select the node running the most under-test VMs
+            2. Generate memory load on all under-test VMs located on that node
+            3. Allow the descheduler to evict the under-test VMs
+
+        Expected:
+            - At least one under-test VM is migrated off the memory-overloaded node
+        """
+        verify_at_least_one_vm_migrated(vms=memory_stressed_evictable_vms, node_before=node_to_run_stress)

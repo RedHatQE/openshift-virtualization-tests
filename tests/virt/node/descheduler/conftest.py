@@ -4,10 +4,15 @@ import pytest
 from kubernetes.utils.quantity import parse_quantity
 from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
 
-from tests.utils import start_stress_on_vm
+from tests.virt.node.descheduler.constants import (
+    STRESS_NG_CPU_LOAD_COMMAND,
+    STRESS_NG_MEMORY_LOAD_COMMAND,
+)
 from tests.virt.node.descheduler.utils import (
     calculate_vm_deployment,
     deploy_vms,
+    make_vms_evictable,
+    stress_vms_on_node,
     vm_nodes,
     vms_per_nodes,
 )
@@ -59,6 +64,8 @@ def deployed_vms_for_descheduler_test(
     vm_deployment_size,
     calculated_vm_deployment_for_descheduler_test,
 ):
+    # VMs are deployed locked (prefer-no-eviction) so the descheduler does not rebalance
+    # them during the initial scheduling imbalance; they are unlocked after stress is applied.
     yield from deploy_vms(
         vm_prefix="vm-descheduler-test",
         client=unprivileged_client,
@@ -66,6 +73,7 @@ def deployed_vms_for_descheduler_test(
         cpu_model=cpu_for_migration,
         vm_count=sum(calculated_vm_deployment_for_descheduler_test.values()),
         deployment_size=vm_deployment_size,
+        exclude_from_descheduler=True,
     )
 
 
@@ -91,15 +99,32 @@ def node_to_run_stress(schedulable_nodes, deployed_vms_for_descheduler_test):
 
 @pytest.fixture(scope="class")
 def stressed_vms_on_one_node(node_to_run_stress, deployed_vms_for_descheduler_test):
-    stressed_vms_list = []
-    for vm in deployed_vms_for_descheduler_test:
-        if vm.vmi.node.name == node_to_run_stress.name:
-            stressed_vms_list.append(vm)
-            start_stress_on_vm(
-                vm=vm,
-                stress_command="nohup stress-ng --cpu 0 &> /dev/null &",
-            )
-    yield stressed_vms_list
+    yield stress_vms_on_node(
+        vms=deployed_vms_for_descheduler_test,
+        node=node_to_run_stress,
+        stress_command=STRESS_NG_CPU_LOAD_COMMAND,
+    )
+
+
+@pytest.fixture(scope="class")
+def memory_stressed_vms_on_one_node(node_to_run_stress, deployed_vms_for_descheduler_test):
+    yield stress_vms_on_node(
+        vms=deployed_vms_for_descheduler_test,
+        node=node_to_run_stress,
+        stress_command=STRESS_NG_MEMORY_LOAD_COMMAND,
+    )
+
+
+@pytest.fixture(scope="class")
+def cpu_stressed_evictable_vms(deployed_vms_for_descheduler_test, stressed_vms_on_one_node):
+    make_vms_evictable(vms=deployed_vms_for_descheduler_test)
+    return stressed_vms_on_one_node
+
+
+@pytest.fixture(scope="class")
+def memory_stressed_evictable_vms(deployed_vms_for_descheduler_test, memory_stressed_vms_on_one_node):
+    make_vms_evictable(vms=deployed_vms_for_descheduler_test)
+    return memory_stressed_vms_on_one_node
 
 
 @pytest.fixture()
