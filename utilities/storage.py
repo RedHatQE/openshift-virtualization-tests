@@ -4,7 +4,7 @@ import os
 import shlex
 from collections.abc import Collection, Generator
 from contextlib import contextmanager
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import cachetools.func
 import kubernetes
@@ -61,6 +61,9 @@ from utilities.constants.timeouts import (
     TIMEOUT_60MIN,
 )
 from utilities.exceptions import UrlNotFoundError
+
+if TYPE_CHECKING:
+    from utilities.virt import VirtualMachineForTests
 
 HOTPLUG_VOLUME = "hotplugVolume"
 DATA_IMPORT_CRON_SUFFIX = "-image-cron"
@@ -991,16 +994,30 @@ def is_snapshot_supported_by_sc(sc_name, client):
     return False
 
 
-def check_disk_count_in_vm(vm):
-    LOGGER.info("Check disk count.")
-    out = run_ssh_commands(
-        host=vm.ssh_exec,
-        commands=[shlex.split("lsblk | grep disk | grep -v SWAP| wc -l")],
-        wait_timeout=TIMEOUT_2MIN,
-        sleep=TIMEOUT_5SEC,
-    )[0].strip()
-    assert out == str(len(vm.instance.spec.template.spec.domain.devices.disks)), (
-        "Failed to verify actual disk count against VMI"
+def assert_guest_disk_count(vm: VirtualMachineForTests) -> None:
+    """Assert that the number of disks visible inside the guest matches the VM spec.
+
+    Swap disks are excluded from the count because they are provisioned by the OS
+    and not declared in the VM spec.
+
+    Args:
+        vm: A running VM with SSH access.
+
+    Raises:
+        AssertionError: If guest disk count does not match the VM spec disk count.
+    """
+    expected_disks = len(vm.instance.spec.template.spec.domain.devices.disks)
+    guest_disk_count = int(
+        run_ssh_commands(
+            host=vm.ssh_exec,
+            commands=[shlex.split("lsblk --nodeps --noheadings | grep disk | grep -v SWAP | wc -l")],
+            wait_timeout=TIMEOUT_2MIN,
+            sleep=TIMEOUT_5SEC,
+        )[0].strip()
+    )
+    LOGGER.info(f"Guest reports {guest_disk_count} disk(s), VM spec declares {expected_disks} disk(s)")
+    assert guest_disk_count == expected_disks, (
+        f"Guest disk count ({guest_disk_count}) does not match VM spec ({expected_disks} disks expected)"
     )
 
 

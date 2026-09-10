@@ -1183,8 +1183,9 @@ def get_node_selector_dict(node_selector):
 
 
 def get_linux_guest_agent_version(ssh_exec):
-    ssh_exec.sudo = True
-    return guest_agent_version_parser(version_string=ssh_exec.package_manager.info("qemu-guest-agent"))
+    return guest_agent_version_parser(
+        version_string=ssh_exec.executor().run_cmd(cmd=shlex.split("rpm -q qemu-guest-agent"))[1]
+    )
 
 
 def get_linux_os_info(ssh_exec):
