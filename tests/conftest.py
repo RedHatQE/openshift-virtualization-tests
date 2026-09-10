@@ -62,6 +62,7 @@ from utilities.constants.storage import BIND_IMMEDIATE_ANNOTATION
 from utilities.constants.timeouts import (
     TIMEOUT_3MIN,
     TIMEOUT_5MIN,
+    TIMEOUT_50MIN,
 )
 from utilities.constants.virt import (
     CNV_VM_SSH_KEY_PATH,
@@ -202,6 +203,7 @@ def started_windows_vm(
     request,
     vm_instance_from_template_multi_storage_scope_function,
 ):
+    running_vm(vm=vm_instance_from_template_multi_storage_scope_function, dv_wait_timeout=TIMEOUT_50MIN)
     wait_for_windows_vm(
         vm=vm_instance_from_template_multi_storage_scope_function,
         version=request.param["os_version"],
