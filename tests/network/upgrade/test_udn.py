@@ -1,19 +1,34 @@
 """
 Primary UDN upgrade tests
 
-Markers:
-    - upgrade
-    - ocp_upgrade
-    - cnv_upgrade
-    - eus_upgrade
-    - single_nic
-
 Preconditions:
     - UDN namespace (with required annotations).
     - A primary UDN network.
 """
 
+import os
+
 import pytest
+
+from libs.net.traffic_generator import client_server_active_connection, is_tcp_connection
+from libs.net.vmspec import lookup_primary_network
+from tests.upgrade_params import (
+    IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID,
+    IUO_UPGRADE_TEST_ORDERING_NODE_ID,
+)
+from utilities.constants.pytest import DEPENDENCY_SCOPE_SESSION
+
+BEFORE_UPGRADE_UDN_CONNECTIVITY_TEST_ID = (
+    f"{os.path.abspath(__file__)}::test_connectivity_between_udn_vms_before_upgrade"
+)
+
+pytestmark = [
+    pytest.mark.upgrade,
+    pytest.mark.ocp_upgrade,
+    pytest.mark.cnv_upgrade,
+    pytest.mark.eus_upgrade,
+    pytest.mark.single_nic,
+]
 
 
 @pytest.mark.polarion("CNV-13118")
@@ -45,10 +60,14 @@ def test_udn_vm_state_before_upgrade():
 test_udn_vm_state_before_upgrade.__test__ = False
 
 
+@pytest.mark.ipv4
 @pytest.mark.polarion("CNV-11617")
-def test_connectivity_between_udn_vms_before_upgrade():
+@pytest.mark.order(before=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
+# Post-upgrade test depends on this to skip if pre-upgrade connectivity already fails.
+@pytest.mark.dependency(name=BEFORE_UPGRADE_UDN_CONNECTIVITY_TEST_ID, scope=DEPENDENCY_SCOPE_SESSION)
+def test_connectivity_between_udn_vms_before_upgrade(running_udn_vms_upgrade):
     """
-    Test that two VMs with a primary UDN network can communicate with each other over the primary UDN network.
+    Test that two VMs with a primary UDN network can communicate with each other over IPv4.
 
     No STP exists for this scenario - tracked via Jira: https://redhat.atlassian.net/browse/CNV-94228 # <skip-jira-utils-check>
 
@@ -57,14 +76,20 @@ def test_connectivity_between_udn_vms_before_upgrade():
         - Two running under-test VMs, each with a primary UDN network.
 
     Steps:
-        1. Execute a ping command from one under-test VM to the other under-test VM.
+        1. Establish TCP connection between the VMs over the primary UDN network.
 
     Expected:
-        - Ping command succeeds with 0% packet loss.
+        - TCP connection succeeds.
     """
-
-
-test_connectivity_between_udn_vms_before_upgrade.__test__ = False
+    client_vm, server_vm = running_udn_vms_upgrade
+    with client_server_active_connection(
+        client_vm=client_vm,
+        server_vm=server_vm,
+        spec_logical_network=lookup_primary_network(vm=server_vm).name,
+    ) as (client, server):
+        assert is_tcp_connection(server=server, client=client), (
+            f"Pre-upgrade TCP connection from {client_vm.name} to {server_vm.name} over primary UDN failed"
+        )
 
 
 @pytest.mark.polarion("CNV-13119")
@@ -96,10 +121,20 @@ def test_udn_vm_state_after_upgrade():
 test_udn_vm_state_after_upgrade.__test__ = False
 
 
+@pytest.mark.ipv4
 @pytest.mark.polarion("CNV-16774")
-def test_connectivity_between_udn_vms_after_upgrade():
+@pytest.mark.order(after=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
+# Requires upgrade completion and pre-upgrade baseline connectivity.
+@pytest.mark.dependency(
+    depends=[
+        IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID,
+        BEFORE_UPGRADE_UDN_CONNECTIVITY_TEST_ID,
+    ],
+    scope=DEPENDENCY_SCOPE_SESSION,
+)
+def test_connectivity_between_udn_vms_after_upgrade(running_udn_vms_upgrade):
     """
-    Test that two VMs with a primary UDN network can communicate with each other over the primary UDN network.
+    Test that two VMs with a primary UDN network can communicate with each other over IPv4.
 
     No STP exists for this scenario - tracked via Jira: https://redhat.atlassian.net/browse/CNV-94228 # <skip-jira-utils-check>
 
@@ -108,11 +143,17 @@ def test_connectivity_between_udn_vms_after_upgrade():
         - Two running under-test VMs, each with a primary UDN network.
 
     Steps:
-        1. Execute a ping command from one under-test VM to the other under-test VM.
+        1. Establish TCP connection between the VMs over the primary UDN network.
 
     Expected:
-        - Ping command succeeds with 0% packet loss.
+        - TCP connection succeeds, connectivity preserved after upgrade.
     """
-
-
-test_connectivity_between_udn_vms_after_upgrade.__test__ = False
+    client_vm, server_vm = running_udn_vms_upgrade
+    with client_server_active_connection(
+        client_vm=client_vm,
+        server_vm=server_vm,
+        spec_logical_network=lookup_primary_network(vm=server_vm).name,
+    ) as (client, server):
+        assert is_tcp_connection(server=server, client=client), (
+            f"Post-upgrade TCP connection from {client_vm.name} to {server_vm.name} over primary UDN failed"
+        )
