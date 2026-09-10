@@ -49,6 +49,15 @@ Before writing ANY new code:
 - **Imports always at the top of the module** - do not import inside functions
 - **`conftest.py` is for fixtures only** - helper functions, utility functions, and classes must NOT be defined in conftest.py or test_*.py; place them in dedicated utility modules instead
 
+### HCO CR (v1)
+
+CNV 5.0+ uses HyperConverged **v1** only. Never pin `api_version` to v1beta1.
+
+- Spec patches and reads are nested dicts that match the CR groups (`virtualization`, `storage`, `security`, `deployment`, `workloadSources`, `networking`). Inline those names; do not add group-key constants.
+- `spec.featureGates` is a list of `{name, state}` objects. Enable or disable with `hco_feature_gates_patch`. Read effective state with `is_feature_gate_enabled`. **Absence is not false** — it means the CRD phase default.
+- Never write a featureGates **dict** (`{"featureGates": {"downwardMetrics": True}}`).
+- `status.*` is not grouped.
+
 ### Utility Module Placement
 
 When adding functions to `utilities/`, place them in the module that matches the domain.

@@ -19,7 +19,7 @@ from utilities.constants.timeouts import (
     TIMEOUT_5SEC,
     TIMEOUT_30SEC,
 )
-from utilities.hco import ResourceEditorValidateHCOReconcile
+from utilities.hco import ResourceEditorValidateHCOReconcile, hco_feature_gates_patch
 from utilities.infra import get_node_selector_dict, get_node_selector_name
 from utilities.virt import (
     running_vm,
@@ -57,7 +57,12 @@ def download_and_install_vm_dump_metrics(vm, rpm_file_name):
 def enabled_downward_metrics_hco_featuregate(admin_client, hyperconverged_resource_scope_module):
     with ResourceEditorValidateHCOReconcile(
         admin_client=admin_client,
-        patches={hyperconverged_resource_scope_module: {"spec": {"featureGates": {"downwardMetrics": True}}}},
+        patches={
+            hyperconverged_resource_scope_module: hco_feature_gates_patch(
+                hco_resource=hyperconverged_resource_scope_module,
+                enable=["downwardMetrics"],
+            )
+        },
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,
     ):

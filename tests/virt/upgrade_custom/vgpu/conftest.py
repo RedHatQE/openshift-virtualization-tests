@@ -18,7 +18,6 @@ from tests.virt.node.gpu.utils import (
 from tests.virt.upgrade.utils import vm_from_template
 from tests.virt.utils import build_node_affinity_dict, verify_gpu_device_exists_on_node
 from utilities.artifactory import get_test_artifact_server_url
-from utilities.constants.hco import DISABLE_MDEV_CONFIGURATION, FEATURE_GATES
 from utilities.constants.timeouts import TIMEOUT_30MIN
 from utilities.constants.virt import ES_NONE
 from utilities.hco import ResourceEditorValidateHCOReconcile
@@ -94,7 +93,7 @@ def rhel_vm_for_upgrade_session_scope(
 @pytest.fixture(scope="session")
 def hco_with_disable_mdev_configuration_session_scope(admin_client, hyperconverged_resource_scope_session):
     """
-    Enable disableMDevConfiguration feature gate in HCO.
+    Disable HCO automatic mediated-device configuration.
 
     This fixture must run before any vGPU node labeling to ensure CNV
     does not configure mediated devices (vGPU configuration is handled
@@ -102,7 +101,15 @@ def hco_with_disable_mdev_configuration_session_scope(admin_client, hyperconverg
     """
     with ResourceEditorValidateHCOReconcile(
         admin_client=admin_client,
-        patches={hyperconverged_resource_scope_session: {"spec": {FEATURE_GATES: {DISABLE_MDEV_CONFIGURATION: True}}}},
+        patches={
+            hyperconverged_resource_scope_session: {
+                "spec": {
+                    "virtualization": {
+                        "mediatedDevicesConfiguration": {"enabled": False},
+                    }
+                }
+            }
+        },
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,
     ):

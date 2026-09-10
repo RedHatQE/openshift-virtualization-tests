@@ -51,13 +51,17 @@ from utilities.hco import (
     disable_common_boot_image_import_hco_spec,
     enable_common_boot_image_import_spec_wait_for_data_import_cron,
     enabled_aaq_in_hco,
+    get_hco_feature_gates,
     get_hco_namespace,
     get_hco_spec,
     get_hco_version,
     get_installed_hco_csv,
     get_json_patch_annotation_values,
     hco_cr_jsonpatch_annotations_dict,
+    hco_feature_gates_patch,
+    is_feature_gate_enabled,
     is_hco_tainted,
+    parse_hco_fg_phases,
     update_common_boot_image_import_spec,
     update_hco_annotations,
     update_hco_templates_spec,
@@ -240,7 +244,7 @@ class TestGetHcoSpec:
         mock_hco.instance.to_dict.return_value = {
             "spec": {
                 "deployment": {"nodePlacements": {"infra": {}, "workload": {}}},
-                "featureGates": {"enableCommonBootImageImport": True},
+                "featureGates": [{"name": "downwardMetrics"}],
             }
         }
         mock_get_hco.return_value = mock_hco
@@ -1346,3 +1350,159 @@ class TestEnabledAaqInHco:
             pass
 
         mock_logger.info.assert_called_with("AAQ system PODs removed.")
+
+
+_SAMPLE_FG_DESCRIPTION = """
+A list of FeatureGates.
+
+* GA: the feature is graduated and is always enabled.
+* deprecated: the feature is no longer supported.
+
+Feature-Gate list:
+* decentralizedLiveMigration:
+  DecentralizedLiveMigration enables cross-cluster migration.
+  Phase: beta
+
+* downwardMetrics:
+  Allow to expose a limited set of host metrics to guests.
+  Phase: alpha
+
+* autoResourceLimits:
+  Deprecated: this feature gate is ignored.
+  Phase: deprecated
+"""
+
+
+class TestGetHcoFeatureGates:
+    def test_missing_feature_gates_returns_empty_list(self):
+        mock_hco = MagicMock()
+        mock_hco.instance.to_dict.return_value = {"spec": {}}
+        assert get_hco_feature_gates(hco=mock_hco) == []
+
+    def test_none_feature_gates_returns_empty_list(self):
+        mock_hco = MagicMock()
+        mock_hco.instance.to_dict.return_value = {"spec": {"featureGates": None}}
+        assert get_hco_feature_gates(hco=mock_hco) == []
+
+    def test_list_passthrough(self):
+        gates = [{"name": "downwardMetrics"}]
+        mock_hco = MagicMock()
+        mock_hco.instance.to_dict.return_value = {"spec": {"featureGates": gates}}
+        assert get_hco_feature_gates(hco=mock_hco) == gates
+
+    def test_non_list_raises_type_error(self):
+        mock_hco = MagicMock()
+        mock_hco.instance.to_dict.return_value = {"spec": {"featureGates": {"downwardMetrics": True}}}
+        with pytest.raises(TypeError, match="must be a list"):
+            get_hco_feature_gates(hco=mock_hco)
+
+
+class TestParseHcoFgPhases:
+    def _phases_from_description(self, description: str) -> dict[str, str]:
+        mock_crd = MagicMock()
+        mock_crd.instance.to_dict.return_value = {
+            "spec": {
+                "versions": [
+                    {
+                        "name": Resource.ApiVersion.V1,
+                        "schema": {
+                            "openAPIV3Schema": {
+                                "properties": {"spec": {"properties": {"featureGates": {"description": description}}}}
+                            }
+                        },
+                    }
+                ]
+            }
+        }
+        with patch("utilities.hco.CustomResourceDefinition", return_value=mock_crd):
+            return parse_hco_fg_phases(admin_client=MagicMock())
+
+    def test_parses_phases_after_feature_gate_list_header(self):
+        phases = self._phases_from_description(description=_SAMPLE_FG_DESCRIPTION)
+        assert phases["decentralizedLiveMigration"] == "beta"
+        assert phases["downwardMetrics"] == "alpha"
+        assert phases["autoResourceLimits"] == "deprecated"
+        assert "GA" not in phases
+        assert "deprecated" not in phases
+
+    def test_empty_description_raises(self):
+        with pytest.raises(ValueError, match="Failed to parse feature gate phases"):
+            self._phases_from_description(description="no gates here")
+
+
+class TestIsFeatureGateEnabled:
+    def _hco_with_gates(self, gates):
+        mock_hco = MagicMock()
+        mock_hco.instance.to_dict.return_value = {"spec": {"featureGates": gates}}
+        return mock_hco
+
+    def test_present_enabled_omitted_state(self):
+        mock_hco = self._hco_with_gates(gates=[{"name": "downwardMetrics"}])
+        assert is_feature_gate_enabled(hco_resource=mock_hco, name="downwardMetrics") is True
+
+    def test_present_disabled(self):
+        mock_hco = self._hco_with_gates(gates=[{"name": "declarativeHotplugVolumes", "state": "Disabled"}])
+        assert is_feature_gate_enabled(hco_resource=mock_hco, name="declarativeHotplugVolumes") is False
+
+    @patch("utilities.hco.parse_hco_fg_phases", return_value={"videoConfig": "beta"})
+    def test_absent_beta_is_enabled(self, mock_parse_phases):
+        mock_hco = self._hco_with_gates(gates=[])
+        assert is_feature_gate_enabled(hco_resource=mock_hco, name="videoConfig") is True
+        mock_parse_phases.assert_called_once()
+
+    @patch("utilities.hco.parse_hco_fg_phases", return_value={"downwardMetrics": "alpha"})
+    def test_absent_alpha_is_disabled(self, mock_parse_phases):
+        mock_hco = self._hco_with_gates(gates=[])
+        assert is_feature_gate_enabled(hco_resource=mock_hco, name="downwardMetrics") is False
+
+    @patch("utilities.hco.parse_hco_fg_phases", return_value={"autoResourceLimits": "deprecated"})
+    def test_absent_deprecated_is_disabled(self, mock_parse_phases):
+        mock_hco = self._hco_with_gates(gates=[])
+        assert is_feature_gate_enabled(hco_resource=mock_hco, name="autoResourceLimits") is False
+
+    @patch("utilities.hco.parse_hco_fg_phases", return_value={"videoConfig": "beta"})
+    def test_unknown_name_raises_key_error(self, mock_parse_phases):
+        mock_hco = self._hco_with_gates(gates=[])
+        with pytest.raises(KeyError, match="notARealGate"):
+            is_feature_gate_enabled(hco_resource=mock_hco, name="notARealGate")
+
+    @patch("utilities.hco.parse_hco_fg_phases", return_value={"weirdGate": "ga"})
+    def test_unknown_phase_raises_value_error(self, mock_parse_phases):
+        mock_hco = self._hco_with_gates(gates=[])
+        with pytest.raises(ValueError, match="Unknown feature gate phase"):
+            is_feature_gate_enabled(hco_resource=mock_hco, name="weirdGate")
+
+
+class TestHcoFeatureGatesPatch:
+    def _hco_with_gates(self, gates):
+        mock_hco = MagicMock()
+        mock_hco.instance.to_dict.return_value = {"spec": {"featureGates": gates}}
+        return mock_hco
+
+    def test_enable_omits_state(self):
+        mock_hco = self._hco_with_gates(gates=[])
+        patch = hco_feature_gates_patch(hco_resource=mock_hco, enable=["downwardMetrics"])
+        assert patch == {"spec": {"featureGates": [{"name": "downwardMetrics"}]}}
+
+    def test_disable_sets_disabled_state(self):
+        mock_hco = self._hco_with_gates(gates=[])
+        patch = hco_feature_gates_patch(hco_resource=mock_hco, disable=["declarativeHotplugVolumes"])
+        assert patch == {"spec": {"featureGates": [{"name": "declarativeHotplugVolumes", "state": "Disabled"}]}}
+
+    def test_read_modify_write_keeps_unrelated_entries(self):
+        mock_hco = self._hco_with_gates(gates=[{"name": "downwardMetrics"}])
+        patch = hco_feature_gates_patch(hco_resource=mock_hco, disable=["videoConfig"])
+        assert patch["spec"]["featureGates"] == [
+            {"name": "downwardMetrics"},
+            {"name": "videoConfig", "state": "Disabled"},
+        ]
+
+    def test_enable_replaces_existing_entry_for_same_gate(self):
+        mock_hco = self._hco_with_gates(gates=[{"name": "downwardMetrics", "state": "Disabled"}])
+        patch = hco_feature_gates_patch(hco_resource=mock_hco, enable=["downwardMetrics"])
+        assert patch == {"spec": {"featureGates": [{"name": "downwardMetrics"}]}}
+
+    def test_empty_enable_and_disable_raises(self):
+        mock_hco = self._hco_with_gates(gates=[])
+        with pytest.raises(ValueError, match="At least one gate"):
+            hco_feature_gates_patch(hco_resource=mock_hco)
