@@ -727,7 +727,11 @@ def set_workload_update_methods_hco(
         admin_client=admin_client,
         patches={
             hyperconverged_resource: {
-                "spec": {WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {WORKLOADUPDATEMETHODS: workload_update_method}}
+                "spec": {
+                    "virtualization": {
+                        WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {WORKLOADUPDATEMETHODS: workload_update_method}
+                    }
+                }
             }
         },
         list_resource_reconcile=[KubeVirt],

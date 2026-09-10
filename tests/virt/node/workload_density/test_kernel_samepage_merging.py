@@ -104,7 +104,11 @@ def ksm_enabled_in_hco(admin_client, hyperconverged_resource_scope_class):
         admin_client=admin_client,
         patches={
             hyperconverged_resource_scope_class: {
-                "spec": {"ksmConfiguration": {"nodeLabelSelector": {"matchLabels": KERNEL_SAMEPAGE_MERGING_TEST_LABEL}}}
+                "spec": {
+                    "virtualization": {
+                        "ksmConfiguration": {"nodeLabelSelector": {"matchLabels": KERNEL_SAMEPAGE_MERGING_TEST_LABEL}}
+                    }
+                }
             }
         },
         list_resource_reconcile=[KubeVirt],

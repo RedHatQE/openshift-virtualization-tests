@@ -13,10 +13,7 @@ from ocp_resources.storage_class import StorageClass
 from pytest_testconfig import py_config
 
 from tests.install_upgrade_operators.constants import (
-    ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT,
     EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES,
-    FG_ENABLED,
-    HCO_DEFAULT_FEATUREGATES,
     RESOURCE_NAME_STR,
     RESOURCE_NAMESPACE_STR,
     RESOURCE_TYPE_STR,
@@ -27,7 +24,6 @@ from tests.install_upgrade_operators.utils import (
     get_resource_by_name,
     get_resource_from_related_object,
 )
-from utilities.constants.architecture import MULTIARCH
 from utilities.constants.components import (
     HCO_OPERATOR,
     HOSTPATH_PROVISIONER_CSI,
@@ -305,9 +301,6 @@ def expected_value(request, is_s390x_cluster):
     expected = request.param.copy()
     if expected == EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES and is_s390x_cluster:
         expected |= S390X_SPECIFIC_KUBEVIRT_FEATUREGATES
-    if expected == HCO_DEFAULT_FEATUREGATES:
-        if py_config["cluster_type"] == MULTIARCH:
-            expected[ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT] = FG_ENABLED
     return expected
 
 

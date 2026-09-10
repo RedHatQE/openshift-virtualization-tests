@@ -43,8 +43,10 @@ def updated_fs_overhead_20_with_hco(
         patches={
             hyperconverged_resource_scope_module: {
                 "spec": {
-                    "filesystemOverhead": {
-                        "storageClass": {storage_class_with_filesystem_volume_mode: str(FS_OVERHEAD_20)}
+                    "storage": {
+                        "filesystemOverhead": {
+                            "storageClass": {storage_class_with_filesystem_volume_mode: str(FS_OVERHEAD_20)}
+                        }
                     }
                 }
             }
