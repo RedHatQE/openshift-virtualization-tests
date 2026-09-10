@@ -2003,6 +2003,16 @@ def migrate_vm_and_verify(
     return None
 
 
+def set_vm_affinity(vm: VirtualMachineForTests, affinity: dict[str, Any]) -> None:
+    """Update the VM template node affinity in-place via a strategic merge patch.
+
+    Args:
+        vm (VirtualMachineForTests): The VM whose template affinity should be replaced.
+        affinity (dict[str, Any]): Kubernetes affinity dict to apply (e.g. RHCOS9_AFFINITY or RHCOS10_AFFINITY).
+    """
+    ResourceEditor(patches={vm: {"spec": {"template": {"spec": {"affinity": affinity}}}}}).update()
+
+
 def wait_for_migration_finished(migration: VirtualMachineInstanceMigration, timeout: int = TIMEOUT_12MIN) -> None:
     """
     Wait for migration to finish.
