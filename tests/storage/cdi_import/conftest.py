@@ -234,9 +234,15 @@ def vm_instance_from_template_multi_storage_scope_function(
     data_volume_multi_storage_scope_function,
     cpu_for_migration,
 ):
-    """Calls vm_instance_from_template contextmanager
+    """Creates a VM from a common template using an existing DataVolume.
 
-    Creates a VM from template and starts it (if requested).
+    Args:
+        data_volume_multi_storage_scope_function: Existing DataVolume the VM's template will consume directly
+            (no clone).
+        cpu_for_migration: CPU model applied to the VM when request.param["set_vm_common_cpu"] is True.
+
+    Yields:
+        VirtualMachine: The created VM, started unless request.param["start_vm"] is False.
     """
 
     with vm_instance_from_template(
@@ -254,6 +260,11 @@ def started_windows_vm(
     request,
     vm_instance_from_template_multi_storage_scope_function,
 ):
+    """Starts the VM and waits for the Windows guest to finish booting.
+
+    Waits up to 50 minutes for the VM's DataVolume(s) to succeed, then waits for the Windows OS
+    (request.param["os_version"]) to report ready.
+    """
     running_vm(vm=vm_instance_from_template_multi_storage_scope_function, dv_wait_timeout=TIMEOUT_50MIN)
     wait_for_windows_vm(
         vm=vm_instance_from_template_multi_storage_scope_function,
