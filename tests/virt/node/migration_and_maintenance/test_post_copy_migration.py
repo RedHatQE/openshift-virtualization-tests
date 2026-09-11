@@ -40,7 +40,7 @@ if TYPE_CHECKING:
 
 pytestmark = [
     pytest.mark.rwx_default_storage,
-    pytest.mark.usefixtures("xfail_postcopy_migration", "created_post_copy_migration_policy"),
+    pytest.mark.usefixtures("created_post_copy_migration_policy"),
     pytest.mark.data_collector_scope(scope="module"),
 ]
 
