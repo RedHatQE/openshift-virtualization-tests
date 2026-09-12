@@ -11,6 +11,7 @@ import pytest
 from ocp_resources.pod import Pod
 from pytest_testconfig import config as py_config
 
+from tests.storage.stop_status_utils import dv_stop_status_restart_threshold
 from utilities.constants.pytest import UNPRIVILEGED_PASSWORD, UNPRIVILEGED_USER
 from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_10MIN
 from utilities.infra import login_with_user_password
@@ -63,7 +64,7 @@ def dv_created_by_specific_user(
         },
         size=get_dv_size_from_datasource(data_source=fedora_data_source_scope_module),
     ) as dv:
-        dv.wait_for_dv_success()
+        dv.wait_for_dv_success(stop_status_func=dv_stop_status_restart_threshold, dv=dv)
         yield dv
 
 
