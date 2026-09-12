@@ -105,6 +105,13 @@ pytest_plugins = [
     "tests.fixtures.images.golden_images",
     "tests.fixtures.storage.data_volumes",
     "tests.fixtures.observability.monitoring",
+    "tests.fixtures.virt.instance_types",
+    "tests.fixtures.virt.migration",
+    "tests.fixtures.virt.osinfo",
+    "tests.fixtures.virt.ssh",
+    "tests.fixtures.virt.templates",
+    "tests.fixtures.virt.virtual_machines",
+    "tests.fixtures.virt.vm_actions",
 ]
 
 LOGGER = logging.getLogger(__name__)
