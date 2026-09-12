@@ -40,7 +40,6 @@ from utilities.storage import add_dv_to_vm
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 LOGGER = logging.getLogger(__name__)
-LONG_VM_NAME = "v" * 63
 
 
 @pytest.fixture(scope="module")
