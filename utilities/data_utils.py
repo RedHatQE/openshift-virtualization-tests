@@ -38,7 +38,7 @@ def name_prefix(name: str) -> str:
         >>> name_prefix("noextension")
         'noextension'
     """
-    return name.split(".")[0]
+    return name.split(".", maxsplit=1)[0]
 
 
 def authorized_key(private_key_path: str) -> str:
