@@ -2,9 +2,11 @@ import json
 import logging
 import os
 import shlex
+from datetime import UTC, datetime
 from functools import cache
 
 from _pytest.nodes import Collector
+from kubernetes.dynamic import DynamicClient
 from ocp_resources.namespace import Namespace
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_utilities.monitoring import Prometheus
@@ -13,7 +15,8 @@ from pytest_testconfig import config as py_config
 
 import utilities.hco
 import utilities.infra
-from utilities.constants.timeouts import TIMEOUT_20MIN
+from utilities.cluster import cache_admin_client
+from utilities.constants.timeouts import TIMEOUT_10MIN, TIMEOUT_20MIN
 from utilities.must_gather import run_must_gather
 
 LOGGER = logging.getLogger(__name__)
@@ -131,6 +134,50 @@ def collect_vnc_screenshot_for_vms(vm: VirtualMachine) -> None:
         LOGGER.warning(f"Skipping VNC screenshot for VM {vm.name}, status is '{printable_status}'.")
 
 
+def _get_cnv_must_gather_image(admin_client: DynamicClient) -> str:
+    """Resolve the CNV must-gather image from the installed HCO CSV.
+
+    Args:
+        admin_client: Cluster admin client used to query the CSV.
+
+    Returns:
+        The must-gather container image URL.
+    """
+    cnv_csv = utilities.hco.get_installed_hco_csv(
+        admin_client=admin_client,
+        hco_namespace=Namespace(client=admin_client, name=py_config["hco_namespace"]),
+    )
+    return [image["image"] for image in cnv_csv.instance.spec.relatedImages if "must-gather" in image["name"]][0]
+
+
+def collect_must_gather_for_vm(vm: VirtualMachine, admin_client: DynamicClient | None = None) -> None:
+    """Run CNV must-gather --vm-incident for one VM at the current time.
+
+    Uses the product incident collector which gathers only data pertinent to
+    the VM: virt-launcher logs, node diagnostics, metrics, and storage chain.
+    No cluster-wide noise. Timeboxed to 10 minutes.
+
+    Args:
+        vm (VirtualMachine): VM whose incident data should be collected.
+        admin_client (DynamicClient | None): Optional cluster admin client; falls back to cache_admin_client().
+    """
+    try:
+        admin_client = admin_client or cache_admin_client()
+        must_gather_image = _get_cnv_must_gather_image(admin_client=admin_client)
+        incident_time = datetime.now(tz=UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+        LOGGER.info(f"Collecting vm-incident must-gather for VM {vm.name} at {incident_time}")
+        run_must_gather(
+            image_url=must_gather_image,
+            target_base_dir=os.path.join(get_data_collector_dir(), "vm_must_gather"),
+            script_name=f"NS={vm.namespace} VM={vm.name} /usr/bin/gather",
+            flag_names=f"vm-incident,incident-time={incident_time}",
+            timeout=f"{TIMEOUT_10MIN}s",
+            command_timeout=TIMEOUT_10MIN,
+        )
+    except Exception:
+        LOGGER.exception(f"[DATA_COLLECTOR] Failed to collect must-gather for VM {vm.name}")
+
+
 def collect_ocp_must_gather(since_time):
     base_directory = get_data_collector_dir()
     LOGGER.info(f"Collecting OCP must-gather data under: {base_directory}, for time {since_time} seconds.")
@@ -138,13 +185,8 @@ def collect_ocp_must_gather(since_time):
 
 
 def collect_default_cnv_must_gather_with_vm_gather(since_time, target_dir, admin_client):
-    cnv_csv = utilities.hco.get_installed_hco_csv(
-        admin_client=admin_client, hco_namespace=Namespace(client=admin_client, name=py_config["hco_namespace"])
-    )
-    LOGGER.info(f"Collecting cnv-must gather using CSV: {cnv_csv.name}")
-    must_gather_image = [
-        image["image"] for image in cnv_csv.instance.spec.relatedImages if "must-gather" in image["name"]
-    ][0]
+    must_gather_image = _get_cnv_must_gather_image(admin_client=admin_client)
+    LOGGER.info("Collecting cnv-must gather for VMs")
     run_must_gather(
         image_url=must_gather_image,
         target_base_dir=target_dir,

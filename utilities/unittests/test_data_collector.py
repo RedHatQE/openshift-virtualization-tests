@@ -124,11 +124,13 @@ if "utilities.data_collector" in sys.modules:
 
 from ocp_resources.virtual_machine import VirtualMachine
 
-# Now import the real data_collector module functions
+from utilities.constants.timeouts import TIMEOUT_10MIN
 from utilities.data_collector import (
     BASE_DIRECTORY_NAME,
+    _get_cnv_must_gather_image,
     collect_alerts_data,
     collect_default_cnv_must_gather_with_vm_gather,
+    collect_must_gather_for_vm,
     collect_ocp_must_gather,
     collect_vnc_screenshot_for_vms,
     get_data_collector_base,
@@ -369,6 +371,114 @@ class TestCollectVncScreenshotForVms:
         mock_run_virtctl.assert_not_called()
 
 
+class TestGetCnvMustGatherImage:
+    """Test cases for _get_cnv_must_gather_image helper"""
+
+    @patch("utilities.data_collector.utilities.hco.get_installed_hco_csv")
+    @patch("utilities.data_collector.Namespace")
+    def test_returns_must_gather_image(self, mock_namespace_class, mock_get_csv):
+        """Test _get_cnv_must_gather_image resolves the correct image URL"""
+        mock_client = MagicMock()
+        mock_csv = MagicMock()
+        mock_csv.instance.spec.relatedImages = [
+            {"name": "some-image", "image": "quay.io/test/some:latest"},
+            {"name": "must-gather-image", "image": "quay.io/test/must-gather:latest"},
+            {"name": "cnv-must-gather-debug", "image": "quay.io/test/debug-gather:latest"},
+        ]
+        mock_get_csv.return_value = mock_csv
+
+        with patch("utilities.data_collector.py_config", {"hco_namespace": "test-hco-ns"}):
+            result = _get_cnv_must_gather_image(admin_client=mock_client)
+
+        assert result == "quay.io/test/must-gather:latest"
+        mock_namespace_class.assert_called_once_with(client=mock_client, name="test-hco-ns")
+
+    @patch("utilities.data_collector.utilities.hco.get_installed_hco_csv")
+    @patch("utilities.data_collector.Namespace")
+    def test_raises_index_error_when_no_must_gather_image(self, mock_namespace_class, mock_get_csv):
+        """Test _get_cnv_must_gather_image raises IndexError when no image matches"""
+        mock_client = MagicMock()
+        mock_csv = MagicMock()
+        mock_csv.instance.spec.relatedImages = [
+            {"name": "some-image", "image": "quay.io/test/some:latest"},
+        ]
+        mock_get_csv.return_value = mock_csv
+
+        with patch("utilities.data_collector.py_config", {"hco_namespace": "test-hco-ns"}):
+            with pytest.raises(IndexError):
+                _get_cnv_must_gather_image(admin_client=mock_client)
+
+
+class TestCollectMustGatherForVm:
+    """Test cases for collect_must_gather_for_vm function"""
+
+    @patch("utilities.data_collector.datetime")
+    @patch("utilities.data_collector._get_cnv_must_gather_image")
+    @patch("utilities.data_collector.cache_admin_client")
+    @patch("utilities.data_collector.get_data_collector_dir")
+    @patch("utilities.data_collector.run_must_gather")
+    def test_collects_vm_incident(
+        self, mock_run_must_gather, mock_get_dir, mock_cache_client, mock_get_image, mock_datetime
+    ):
+        """Test must-gather runs --vm-incident scoped to the VM"""
+        mock_get_dir.return_value = "/collect/dir"
+        mock_client = MagicMock()
+        mock_cache_client.return_value = mock_client
+        mock_get_image.return_value = "quay.io/test/must-gather:latest"
+        mock_datetime.now.return_value.strftime.return_value = "2026-08-26T12:00:00Z"
+        mock_vm = MagicMock()
+        mock_vm.name = "test-vm"
+        mock_vm.namespace = "test-ns"
+
+        collect_must_gather_for_vm(vm=mock_vm)
+
+        mock_cache_client.assert_called_once()
+        mock_get_image.assert_called_once_with(admin_client=mock_client)
+        mock_run_must_gather.assert_called_once_with(
+            image_url="quay.io/test/must-gather:latest",
+            target_base_dir="/collect/dir/vm_must_gather",
+            script_name="NS=test-ns VM=test-vm /usr/bin/gather",
+            flag_names="vm-incident,incident-time=2026-08-26T12:00:00Z",
+            timeout=f"{TIMEOUT_10MIN}s",
+            command_timeout=TIMEOUT_10MIN,
+        )
+
+    @patch("utilities.data_collector.datetime")
+    @patch("utilities.data_collector._get_cnv_must_gather_image")
+    @patch("utilities.data_collector.cache_admin_client")
+    @patch("utilities.data_collector.get_data_collector_dir")
+    @patch("utilities.data_collector.run_must_gather")
+    def test_collects_vm_incident_with_explicit_admin_client(
+        self, mock_run_must_gather, mock_get_dir, mock_cache_client, mock_get_image, mock_datetime
+    ):
+        """Test must-gather uses explicit admin_client instead of cache when provided"""
+        mock_get_dir.return_value = "/collect/dir"
+        explicit_client = MagicMock()
+        mock_get_image.return_value = "quay.io/test/must-gather:latest"
+        mock_datetime.now.return_value.strftime.return_value = "2026-08-26T12:00:00Z"
+        mock_vm = MagicMock()
+        mock_vm.name = "test-vm"
+        mock_vm.namespace = "test-ns"
+
+        collect_must_gather_for_vm(vm=mock_vm, admin_client=explicit_client)
+
+        mock_cache_client.assert_not_called()
+        mock_get_image.assert_called_once_with(admin_client=explicit_client)
+
+    @patch("utilities.data_collector.LOGGER")
+    @patch("utilities.data_collector.cache_admin_client")
+    def test_gather_failure_does_not_raise(self, mock_cache_client, mock_logger):
+        """Test must-gather failures are logged and do not raise"""
+        mock_cache_client.side_effect = RuntimeError("must-gather failed")
+        mock_vm = MagicMock()
+        mock_vm.name = "test-vm"
+
+        collect_must_gather_for_vm(vm=mock_vm)
+
+        mock_logger.exception.assert_called_once()
+        assert "test-vm" in mock_logger.exception.call_args[0][0]
+
+
 class TestCollectOcpMustGather:
     """Test cases for collect_ocp_must_gather function"""
 
@@ -393,46 +503,21 @@ class TestCollectOcpMustGather:
 class TestCollectDefaultCnvMustGatherWithVmGather:
     """Test cases for collect_default_cnv_must_gather_with_vm_gather function"""
 
-    @patch("utilities.data_collector.utilities.hco.get_installed_hco_csv")
-    @patch("utilities.data_collector.Namespace")
-    @patch("utilities.data_collector.py_config", {"hco_namespace": "test-hco-ns"})
+    @patch("utilities.data_collector._get_cnv_must_gather_image")
     @patch("utilities.data_collector.run_must_gather")
     @patch("utilities.data_collector.LOGGER")
-    def test_collect_default_cnv_must_gather_with_vm_gather(
-        self, mock_logger, mock_run_must_gather, mock_namespace_class, mock_get_csv
-    ):
+    def test_collect_default_cnv_must_gather_with_vm_gather(self, mock_logger, mock_run_must_gather, mock_get_image):
         """Test collect_default_cnv_must_gather_with_vm_gather"""
-        # Setup mocks
         mock_client = MagicMock()
+        mock_get_image.return_value = "quay.io/test/must-gather:latest"
 
-        mock_namespace = MagicMock()
-        mock_namespace_class.return_value = mock_namespace
+        collect_default_cnv_must_gather_with_vm_gather(
+            since_time=1800,
+            target_dir="/target/dir",
+            admin_client=mock_client,
+        )
 
-        mock_csv = MagicMock()
-        mock_csv.name = "cnv-csv-v1.0.0"
-        # Setup related images to test must-gather image selection logic
-        # The function filters images where name contains "must-gather" and selects the FIRST match
-        # Expected behavior: "must-gather-image" should be selected (first image with "must-gather" in name)
-        mock_csv.instance.spec.relatedImages = [
-            {"name": "some-image", "image": "quay.io/test/some:latest"},  # Will be ignored (no "must-gather")
-            {
-                "name": "must-gather-image",
-                "image": "quay.io/test/must-gather:latest",
-            },  # EXPECTED: Selected (first match)
-            {"name": "cnv-must-gather-debug", "image": "quay.io/test/debug-gather:latest"},  # Would match but not first
-        ]
-        mock_get_csv.return_value = mock_csv
-
-        collect_default_cnv_must_gather_with_vm_gather(1800, "/target/dir", admin_client=mock_client)
-
-        mock_namespace_class.assert_called_once_with(client=mock_client, name="test-hco-ns")
-        mock_get_csv.assert_called_once_with(admin_client=mock_client, hco_namespace=mock_namespace)
-
-        # ASSERTION: Verify the expected must-gather image selection behavior
-        # The function should select "quay.io/test/must-gather:latest" because:
-        # 1. It filters relatedImages where image["name"] contains "must-gather"
-        # 2. It takes the first ([0]) matching image from the filtered list
-        # 3. "must-gather-image" is the first image in the list with "must-gather" in its name
+        mock_get_image.assert_called_once_with(admin_client=mock_client)
         mock_run_must_gather.assert_called_once_with(
             image_url="quay.io/test/must-gather:latest",
             target_base_dir="/target/dir",
