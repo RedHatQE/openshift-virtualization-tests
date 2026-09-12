@@ -1,0 +1,210 @@
+"""AllowWorkloadDisruption (AWD) migration tests.
+
+STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/pull/82
+"""
+
+from __future__ import annotations
+
+import pytest
+from ocp_resources.migration_policy import MigrationPolicy
+from ocp_resources.resource import ResourceEditor
+
+from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS, WINDOWS_LATEST, WINDOWS_LATEST_LABELS
+from tests.utils import assert_guest_os_memory_amount, wait_for_guest_os_cpu_count
+from tests.virt.constants import WORKLOAD_DISRUPTION_VM_LABEL
+from tests.virt.node.migration_and_maintenance.utils import (
+    assert_expected_migration_mode,
+    assert_same_pid_after_migration,
+    start_memory_pressure_on_vm,
+)
+from utilities.constants.images import OS_FLAVOR_WINDOWS
+from utilities.constants.timeouts import TIMEOUT_15MIN, TIMEOUT_30MIN
+from utilities.constants.virt import REGEDIT_PROC_NAME, SIX_CPU_SOCKETS, SIX_GI_MEMORY
+from utilities.virt import (
+    migrate_vm_and_verify,
+    start_and_fetch_processid_on_linux_vm,
+    start_and_fetch_processid_on_windows_vm,
+)
+
+pytestmark = [pytest.mark.rwx_default_storage]
+
+
+RHEL_CLASS_NAME = "TestRhelWorkloadMigration"
+WIN_CLASS_NAME = "TestWindowsWorkloadMigration"
+
+
+@pytest.fixture(scope="module")
+def workload_disruption_migration_policy(admin_client):
+    with MigrationPolicy(
+        client=admin_client,
+        name="workload-migration-mp",
+        allow_workload_disruption=True,
+        allow_auto_converge=False,
+        bandwidth_per_migration="70Mi",
+        completion_timeout_per_gb=10,
+        vmi_selector=WORKLOAD_DISRUPTION_VM_LABEL,
+    ) as mp:
+        yield mp
+
+
+@pytest.fixture(scope="class")
+def migration_mode(request, workload_disruption_migration_policy, is_postcopy_migration_bug_open):
+    mode = request.param["mode"]
+    if mode == "PostCopy":
+        if is_postcopy_migration_bug_open:
+            pytest.xfail(reason="CNV-84023: post-copy migration fails on RHCOS 10+ nodes")
+        with ResourceEditor(patches={workload_disruption_migration_policy: {"spec": {"allowPostCopy": True}}}):
+            yield mode
+    else:
+        yield mode
+
+
+@pytest.fixture(scope="class")
+def vm_background_process_id(vm_with_hotplug_support):
+    if vm_with_hotplug_support.os_flavor == OS_FLAVOR_WINDOWS:
+        return start_and_fetch_processid_on_windows_vm(vm=vm_with_hotplug_support, process_name=REGEDIT_PROC_NAME)
+    return start_and_fetch_processid_on_linux_vm(vm=vm_with_hotplug_support, process_name="ping", args="localhost")
+
+
+@pytest.fixture()
+def vm_memory_pressure(vm_with_hotplug_support):
+    start_memory_pressure_on_vm(vm=vm_with_hotplug_support)
+
+
+@pytest.fixture()
+def migrated_vm_with_hotplug_support(admin_client, vm_with_hotplug_support):
+    migrate_vm_and_verify(
+        vm=vm_with_hotplug_support,
+        timeout=TIMEOUT_30MIN if vm_with_hotplug_support.os_flavor == OS_FLAVOR_WINDOWS else TIMEOUT_15MIN,
+        check_ssh_connectivity=True,
+        client=admin_client,
+    )
+
+
+@pytest.mark.parametrize(
+    "golden_image_data_source_for_test_scope_class, vm_with_hotplug_support, migration_mode",
+    [
+        pytest.param(
+            {"os_dict": RHEL_LATEST},
+            {
+                "template_labels": RHEL_LATEST_LABELS,
+                "vm_name": "rhel-postcopy-vm",
+                "additional_labels": WORKLOAD_DISRUPTION_VM_LABEL,
+            },
+            {"mode": "PostCopy"},
+            id="RHEL-PostCopy",
+        ),
+        pytest.param(
+            {"os_dict": RHEL_LATEST},
+            {
+                "template_labels": RHEL_LATEST_LABELS,
+                "vm_name": "rhel-paused-vm",
+                "additional_labels": WORKLOAD_DISRUPTION_VM_LABEL,
+            },
+            {"mode": "Paused"},
+            id="RHEL-Paused",
+        ),
+    ],
+    indirect=True,
+)
+@pytest.mark.usefixtures("vm_memory_pressure")
+class TestRhelWorkloadMigration:
+    # Chain root: migration mutates the shared class-scoped VM; subsequent tests verify cumulative side effects.
+    @pytest.mark.dependency(name=f"{RHEL_CLASS_NAME}::migrate_vm")
+    @pytest.mark.polarion("CNV-15225")
+    @pytest.mark.arm64
+    def test_awd_migration_mode(
+        self,
+        vm_with_hotplug_support,
+        vm_background_process_id,
+        migration_mode,
+        migrated_vm_with_hotplug_support,
+    ):
+        assert_expected_migration_mode(vm=vm_with_hotplug_support, expected_mode=migration_mode)
+        assert_same_pid_after_migration(orig_pid=vm_background_process_id, vm=vm_with_hotplug_support)
+
+    @pytest.mark.parametrize(
+        "hotplugged_sockets_memory_guest", [pytest.param({"sockets": SIX_CPU_SOCKETS})], indirect=True
+    )
+    # CPU hotplug must follow migration; the VM must be in a migrated state before hotplug changes.
+    @pytest.mark.dependency(name=f"{RHEL_CLASS_NAME}::hotplug_cpu", depends=[f"{RHEL_CLASS_NAME}::migrate_vm"])
+    @pytest.mark.polarion("CNV-15234")
+    def test_awd_hotplug_cpu(
+        self,
+        vm_with_hotplug_support,
+        vm_background_process_id,
+        migration_mode,
+        hotplugged_sockets_memory_guest,
+    ):
+        assert_expected_migration_mode(vm=vm_with_hotplug_support, expected_mode=migration_mode)
+        wait_for_guest_os_cpu_count(vm=vm_with_hotplug_support, spec_cpu_amount=SIX_CPU_SOCKETS)
+        assert_same_pid_after_migration(orig_pid=vm_background_process_id, vm=vm_with_hotplug_support)
+
+    @pytest.mark.parametrize(
+        "hotplugged_sockets_memory_guest", [pytest.param({"memory_guest": SIX_GI_MEMORY})], indirect=True
+    )
+    # Memory hotplug follows CPU hotplug; verifies cumulative hotplug and PID survival on the shared VM.
+    @pytest.mark.dependency(depends=[f"{RHEL_CLASS_NAME}::hotplug_cpu"])
+    @pytest.mark.polarion("CNV-15235")
+    def test_awd_hotplug_memory(
+        self,
+        vm_with_hotplug_support,
+        vm_background_process_id,
+        migration_mode,
+        hotplugged_sockets_memory_guest,
+    ):
+        assert_expected_migration_mode(vm=vm_with_hotplug_support, expected_mode=migration_mode)
+        assert_guest_os_memory_amount(vm=vm_with_hotplug_support, spec_memory_amount=SIX_GI_MEMORY)
+        assert_same_pid_after_migration(orig_pid=vm_background_process_id, vm=vm_with_hotplug_support)
+
+
+@pytest.mark.parametrize(
+    "golden_image_data_source_for_test_scope_class, vm_with_hotplug_support, migration_mode",
+    [
+        pytest.param(
+            {"os_dict": WINDOWS_LATEST},
+            {
+                "template_labels": WINDOWS_LATEST_LABELS,
+                "vm_name": "windows-postcopy-vm",
+                "additional_labels": WORKLOAD_DISRUPTION_VM_LABEL,
+            },
+            {"mode": "PostCopy"},
+            id="WIN-PostCopy",
+        ),
+    ],
+    indirect=True,
+)
+@pytest.mark.special_infra
+@pytest.mark.high_resource_vm
+@pytest.mark.usefixtures("vm_memory_pressure")
+class TestWindowsWorkloadMigration:
+    # Chain root: migration mutates the shared class-scoped VM; subsequent tests verify cumulative side effects.
+    @pytest.mark.dependency(name=f"{WIN_CLASS_NAME}::migrate_vm")
+    @pytest.mark.polarion("CNV-15246")
+    @pytest.mark.arm64
+    def test_awd_migration_mode(
+        self,
+        vm_with_hotplug_support,
+        vm_background_process_id,
+        migration_mode,
+        migrated_vm_with_hotplug_support,
+    ):
+        assert_expected_migration_mode(vm=vm_with_hotplug_support, expected_mode=migration_mode)
+        assert_same_pid_after_migration(orig_pid=vm_background_process_id, vm=vm_with_hotplug_support)
+
+    @pytest.mark.parametrize(
+        "hotplugged_sockets_memory_guest", [pytest.param({"memory_guest": SIX_GI_MEMORY})], indirect=True
+    )
+    # Memory hotplug must follow migration; the VM must be in a migrated state before hotplug changes.
+    @pytest.mark.dependency(depends=[f"{WIN_CLASS_NAME}::migrate_vm"])
+    @pytest.mark.polarion("CNV-16312")
+    def test_awd_hotplug_memory(
+        self,
+        vm_with_hotplug_support,
+        vm_background_process_id,
+        migration_mode,
+        hotplugged_sockets_memory_guest,
+    ):
+        assert_expected_migration_mode(vm=vm_with_hotplug_support, expected_mode=migration_mode)
+        assert_guest_os_memory_amount(vm=vm_with_hotplug_support, spec_memory_amount=SIX_GI_MEMORY)
+        assert_same_pid_after_migration(orig_pid=vm_background_process_id, vm=vm_with_hotplug_support)
