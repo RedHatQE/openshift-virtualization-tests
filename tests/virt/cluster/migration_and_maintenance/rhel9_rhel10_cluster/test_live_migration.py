@@ -12,14 +12,9 @@ from typing import TYPE_CHECKING
 import pytest
 
 from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS, WINDOWS_LATEST, WINDOWS_LATEST_LABELS
-from tests.virt.cluster.migration_and_maintenance.rhel9_rhel10_cluster.utils import (
-    RHCOS9_AFFINITY,
-    RHCOS10_AFFINITY,
-    set_vm_affinity,
-)
 from tests.virt.utils import verify_guest_boot_time
-from utilities.constants.cluster import RHCOS9_WORKER_LABEL
-from utilities.virt import VirtualMachineForTests, get_vm_boot_time, migrate_vm_and_verify
+from utilities.constants.cluster import RHCOS9_AFFINITY, RHCOS9_WORKER_LABEL, RHCOS10_AFFINITY
+from utilities.virt import VirtualMachineForTests, get_vm_boot_time, migrate_vm_and_verify, set_vm_affinity
 
 if TYPE_CHECKING:
     from kubernetes.dynamic import DynamicClient
