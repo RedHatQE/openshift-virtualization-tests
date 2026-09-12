@@ -1,0 +1,17 @@
+# Repository-local configuration for the openshift-virtualization-qe-bot
+# (https://github.com/myk-org/github-webhook-server).
+#
+# `labels.enabled-labels` is an allow-list: when set, only the listed label
+# categories are applied. All categories are listed below except
+# "needs-rebase", which is intentionally omitted to disable it.
+labels:
+  enabled-labels:
+    - verified
+    - hold
+    - wip
+    - has-conflicts
+    - can-be-merged
+    - size
+    - branch
+    - cherry-pick
+    - automerge
