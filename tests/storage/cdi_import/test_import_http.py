@@ -326,6 +326,7 @@ def test_blank_disk_import_validate_status(data_volume_multi_storage_scope_funct
 
 @pytest.mark.tier3
 @pytest.mark.windows
+@pytest.mark.usefixtures("started_windows_vm")
 @pytest.mark.parametrize(
     "data_volume_multi_storage_scope_function,"
     "vm_instance_from_template_multi_storage_scope_function,"
@@ -342,6 +343,9 @@ def test_blank_disk_import_validate_status(data_volume_multi_storage_scope_funct
                 "vm_name": f"vm-win-{LATEST_WINDOWS_OS_DICT.get('os_version')}",
                 "template_labels": LATEST_WINDOWS_OS_DICT.get("template_labels"),
                 "ssh": True,
+                "tpm_params": {"persistent": True},
+                "efi_params": {"persistent": True},
+                "start_vm": False,
             },
             {"os_version": LATEST_WINDOWS_OS_DICT.get("os_version")},
             marks=pytest.mark.polarion("CNV-3637"),
@@ -354,7 +358,6 @@ def test_successful_vm_from_imported_dv_windows(
     namespace,
     data_volume_multi_storage_scope_function,
     vm_instance_from_template_multi_storage_scope_function,
-    started_windows_vm,
 ):
     validate_os_info_vmi_vs_windows_os(
         vm=vm_instance_from_template_multi_storage_scope_function,
