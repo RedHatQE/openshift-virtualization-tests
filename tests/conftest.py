@@ -156,6 +156,8 @@ def ocp_current_version(openshift_current_version):
 @pytest.fixture(scope="session")
 def is_postcopy_migration_bug_open(cluster_has_rhcos10_or_above):
     return cluster_has_rhcos10_or_above and is_jira_open(jira_id="CNV-84023")
+
+
 @pytest.fixture()
 def vm_instance_from_template_multi_storage_scope_function(
     request,
