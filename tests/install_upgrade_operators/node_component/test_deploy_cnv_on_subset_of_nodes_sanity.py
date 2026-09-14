@@ -165,7 +165,11 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         try:
             with ResourceEditorValidateHCOReconcile(
                 admin_client=admin_client,
-                patches={hyperconverged_resource_scope_function: {"spec": {"workloads": WORK_LABEL_1}}},
+                patches={
+                    hyperconverged_resource_scope_function: {
+                        "spec": {"deployment": {"nodePlacements": {"workload": WORK_LABEL_1}}}
+                    }
+                },
             ):
                 LOGGER.info("Expected ability to change workloads label {WORK_LABEL_1} while VM/Workload is present.")
         except ForbiddenError:

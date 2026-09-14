@@ -8,6 +8,7 @@ from tests.install_upgrade_operators.launcher_updates.constants import (
     CUSTOM_BATCH_EVICTION_SIZE_INT,
     CUSTOM_WORKLOAD_UPDATE_METHODS,
     CUSTOM_WORKLOAD_UPDATE_STRATEGY,
+    HCO_WORKLOAD_UPDATE_STRATEGY_BASE_PATH,
     MOD_DEFAULT_BATCH_EVICTION_INTERVAL,
     MOD_DEFAULT_BATCH_EVICTION_INTERVAL_INT,
     MOD_DEFAULT_BATCH_EVICTION_INTERVAL_ZERO,
@@ -55,7 +56,7 @@ class TestLauncherUpdateAll:
             wait_for_spec_change(
                 expected=expected,
                 get_spec_func=lambda: get_hco_spec(admin_client=admin_client, hco_namespace=hco_namespace),
-                base_path=[WORKLOAD_UPDATE_STRATEGY_KEY_NAME],
+                base_path=HCO_WORKLOAD_UPDATE_STRATEGY_BASE_PATH,
             )
         elif resource_name == "kubevirt":
             wait_for_spec_change(
@@ -79,7 +80,11 @@ class TestCustomWorkLoadStrategy:
                 {
                     "patch": {
                         "spec": {
-                            WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {"batchEvictionInterval": CUSTOM_BATCH_EVICTION_INTERVAL}
+                            "virtualization": {
+                                WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {
+                                    "batchEvictionInterval": CUSTOM_BATCH_EVICTION_INTERVAL
+                                }
+                            }
                         }
                     },
                 },
@@ -90,7 +95,11 @@ class TestCustomWorkLoadStrategy:
             pytest.param(
                 {
                     "patch": {
-                        "spec": {WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {"batchEvictionSize": CUSTOM_BATCH_EVICTION_SIZE}}
+                        "spec": {
+                            "virtualization": {
+                                WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {"batchEvictionSize": CUSTOM_BATCH_EVICTION_SIZE}
+                            }
+                        }
                     },
                 },
                 MOD_DEFAULT_BATCH_EVICTION_SIZE,
@@ -101,7 +110,11 @@ class TestCustomWorkLoadStrategy:
                 {
                     "patch": {
                         "spec": {
-                            WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {"workloadUpdateMethods": CUSTOM_WORKLOAD_UPDATE_METHODS}
+                            "virtualization": {
+                                WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {
+                                    "workloadUpdateMethods": CUSTOM_WORKLOAD_UPDATE_METHODS
+                                }
+                            }
                         }
                     },
                 },
@@ -111,7 +124,9 @@ class TestCustomWorkLoadStrategy:
             ),
             pytest.param(
                 {
-                    "patch": {"spec": {WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {"workloadUpdateMethods": []}}},
+                    "patch": {
+                        "spec": {"virtualization": {WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {"workloadUpdateMethods": []}}}
+                    },
                 },
                 MOD_DEFAULT_WORKLOAD_UPDATE_METHOD_EMPTY,
                 marks=pytest.mark.polarion("CNV-6935"),
@@ -119,7 +134,9 @@ class TestCustomWorkLoadStrategy:
             ),
             pytest.param(
                 {
-                    "patch": {"spec": {WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {"batchEvictionInterval": "0s"}}},
+                    "patch": {
+                        "spec": {"virtualization": {WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {"batchEvictionInterval": "0s"}}}
+                    },
                 },
                 MOD_DEFAULT_BATCH_EVICTION_INTERVAL_ZERO,
                 marks=pytest.mark.polarion("CNV-6936"),
@@ -129,8 +146,10 @@ class TestCustomWorkLoadStrategy:
                 {
                     "patch": {
                         "spec": {
-                            WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {
-                                "batchEvictionInterval": CUSTOM_BATCH_EVICTION_INTERVAL_INT
+                            "virtualization": {
+                                WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {
+                                    "batchEvictionInterval": CUSTOM_BATCH_EVICTION_INTERVAL_INT
+                                }
                             }
                         }
                     },
@@ -141,7 +160,9 @@ class TestCustomWorkLoadStrategy:
             ),
             pytest.param(
                 {
-                    "patch": {"spec": {WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {"batchEvictionSize": 0}}},
+                    "patch": {
+                        "spec": {"virtualization": {WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {"batchEvictionSize": 0}}}
+                    },
                 },
                 MOD_DEFAULT_BATCH_EVICTION_SIZE_ZERO,
                 marks=pytest.mark.polarion("CNV-6938"),
@@ -151,7 +172,9 @@ class TestCustomWorkLoadStrategy:
                 {
                     "patch": {
                         "spec": {
-                            WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {"batchEvictionSize": CUSTOM_BATCH_EVICTION_SIZE_INT}
+                            "virtualization": {
+                                WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {"batchEvictionSize": CUSTOM_BATCH_EVICTION_SIZE_INT}
+                            }
                         }
                     },
                 },
@@ -169,7 +192,7 @@ class TestCustomWorkLoadStrategy:
         wait_for_spec_change(
             expected=expected,
             get_spec_func=lambda: get_hco_spec(admin_client=admin_client, hco_namespace=hco_namespace),
-            base_path=[WORKLOAD_UPDATE_STRATEGY_KEY_NAME],
+            base_path=HCO_WORKLOAD_UPDATE_STRATEGY_BASE_PATH,
         )
         if expected == MOD_DEFAULT_WORKLOAD_UPDATE_METHOD_EMPTY:
             del expected[WORKLOADUPDATEMETHODS]

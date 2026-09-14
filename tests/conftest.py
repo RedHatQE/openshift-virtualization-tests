@@ -68,7 +68,6 @@ from utilities.infra import (
     get_clusterversion,
     get_node_selector_dict,
 )
-from utilities.jira import is_jira_open
 from utilities.network import (
     cloud_init_network_data,
     network_device,
@@ -153,11 +152,6 @@ def openshift_current_version(admin_client):
 @pytest.fixture(scope="session")
 def ocp_current_version(openshift_current_version):
     return parse(version=openshift_current_version.split("-")[0])
-
-
-@pytest.fixture(scope="session")
-def is_postcopy_migration_bug_open(cluster_has_rhcos10_or_above):
-    return cluster_has_rhcos10_or_above and is_jira_open(jira_id="CNV-84023")
 
 
 @pytest.fixture()

@@ -7,7 +7,7 @@ from tests.install_upgrade_operators.strict_reconciliation.utils import (
     wait_for_fg_update,
 )
 from utilities.constants.hco import FEATURE_GATES
-from utilities.hco import get_hco_spec, wait_for_hco_conditions
+from utilities.hco import get_hco_feature_gates, wait_for_hco_conditions
 from utilities.virt import (
     get_kubevirt_hyperconverged_spec,
     wait_for_kubevirt_conditions,
@@ -27,28 +27,28 @@ class TestNegativeFeatureGates:
                     "fgs": ["fakeGate", "Sidecar"],
                 },
                 marks=(pytest.mark.polarion("CNV-6273")),
-                id="invalid_featuregates_fake_removed_from_hco_cr",
+                id="invalid_featuregates_fake_kept_on_hco_not_propagated",
             ),
             pytest.param(
                 {
                     "fgs": ["LiveMigration"],
                 },
                 marks=(pytest.mark.polarion("CNV-6274")),
-                id="invalid_featuregates_livemigration_is_removed_from_hco_cr",
+                id="invalid_featuregates_livemigration_kept_on_hco_not_propagated",
             ),
             pytest.param(
                 {
                     "fgs": ["Sidecar"],
                 },
                 marks=(pytest.mark.polarion("CNV-6276")),
-                id="invalid_featuregates_sidecar_removed_from_hco_cr",
+                id="invalid_featuregates_sidecar_kept_on_hco_not_propagated",
             ),
             pytest.param(
                 {
                     "fgs": ["HonorWaitForFirstConsumer"],
                 },
                 marks=(pytest.mark.polarion("CNV-6278")),
-                id="invalid_cdi_featuregate_removed_from_hco_cr",
+                id="invalid_cdi_featuregate_kept_on_hco_not_propagated",
             ),
         ],
         indirect=["hco_with_non_default_feature_gates"],
@@ -58,13 +58,18 @@ class TestNegativeFeatureGates:
         admin_client,
         hco_namespace,
         kubevirt_feature_gates_scope_module,
-        hco_spec_scope_module,
+        hyperconverged_resource_scope_function,
         hco_with_non_default_feature_gates,
     ):
-        default_hco_fg = hco_spec_scope_module[FEATURE_GATES]
-        updated_hco_fg = get_hco_spec(admin_client=admin_client, hco_namespace=hco_namespace)[FEATURE_GATES]
-        assert updated_hco_fg == default_hco_fg, (
-            f"HCO featuregates: {default_hco_fg} got updated with invalid featuregates {updated_hco_fg}"
+        updated_hco_names = {
+            entry["name"] for entry in get_hco_feature_gates(hco=hyperconverged_resource_scope_function)
+        }
+        missing_hco_gates = [
+            gate_name for gate_name in hco_with_non_default_feature_gates if gate_name not in updated_hco_names
+        ]
+        assert not missing_hco_gates, (
+            f"HCO dropped unknown feature gates {missing_hco_gates} from spec.featureGates; "
+            f"v1 keeps user-supplied names. Current list: {updated_hco_names}"
         )
 
         kv_current_fg = get_kubevirt_hyperconverged_spec(admin_client=admin_client, hco_namespace=hco_namespace)[

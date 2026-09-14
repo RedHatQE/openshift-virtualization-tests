@@ -40,7 +40,6 @@ from utilities.storage import add_dv_to_vm
 from utilities.virt import VirtualMachineForTests, fedora_vm_body, running_vm
 
 LOGGER = logging.getLogger(__name__)
-LONG_VM_NAME = "v" * 63
 
 
 @pytest.fixture(scope="module")
@@ -626,12 +625,12 @@ def must_gather_vm_files_path(collected_vm_details_must_gather, vm_for_migration
 
 @pytest.fixture(scope="class")
 def updated_disable_serial_console_log_false(admin_client, hyperconverged_resource_scope_class):
-    if hyperconverged_resource_scope_class.instance.spec.virtualMachineOptions.disableSerialConsoleLog:
+    if hyperconverged_resource_scope_class.instance.spec.virtualization.virtualMachineOptions.disableSerialConsoleLog:
         with ResourceEditorValidateHCOReconcile(
             admin_client=admin_client,
             patches={
                 hyperconverged_resource_scope_class: {
-                    "spec": {"virtualMachineOptions": {"disableSerialConsoleLog": False}}
+                    "spec": {"virtualization": {"virtualMachineOptions": {"disableSerialConsoleLog": False}}}
                 }
             },
         ):

@@ -49,6 +49,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 import utilities.cpu
 import utilities.data_utils
+import utilities.hco
 import utilities.infra
 from libs.net.cluster import is_ipv6_single_stack_cluster
 from utilities.cluster import cache_admin_client
@@ -111,7 +112,6 @@ from utilities.constants.virt import (
 )
 from utilities.data_collector import collect_vnc_screenshot_for_vms
 from utilities.exceptions import MigrationStuckSchedulingError, ResourceValueError
-from utilities.hco import get_hco_namespace, wait_for_hco_conditions
 from utilities.network import (
     cloud_init_network_data,
 )
@@ -2227,7 +2227,7 @@ def cordon_node(admin_client: DynamicClient, node: Node) -> Generator[None]:
     Yields:
         None: Control returns while node is cordoned, uncordon happens on exit.
     """
-    hco_namespace = get_hco_namespace(admin_client=admin_client)
+    hco_namespace = utilities.hco.get_hco_namespace(admin_client=admin_client)
     try:
         LOGGER.info(f"Cordon the node {node.name}")
         run_command(command=shlex.split(f"oc adm cordon {node.name}"))
@@ -2437,7 +2437,7 @@ def wait_for_updated_kv_value(admin_client, hco_namespace, path, value, timeout=
         LOGGER.error(f"KV CR is not updated, path: {path}, expected value: {value}, HCO annotations: {hco_annotations}")
         raise
     # After updating KV need to be sure HCO is stable
-    wait_for_hco_conditions(
+    utilities.hco.wait_for_hco_conditions(
         admin_client=admin_client,
         hco_namespace=hco_namespace,
     )
@@ -2525,7 +2525,7 @@ def wait_for_kubevirt_conditions(
 
 def wait_for_kv_stabilize(admin_client, hco_namespace):
     wait_for_kubevirt_conditions(admin_client=admin_client, hco_namespace=hco_namespace)
-    wait_for_hco_conditions(admin_client=admin_client, hco_namespace=hco_namespace)
+    utilities.hco.wait_for_hco_conditions(admin_client=admin_client, hco_namespace=hco_namespace)
 
 
 @cache

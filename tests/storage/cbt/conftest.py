@@ -34,7 +34,7 @@ from tests.storage.cbt.utils import (
 )
 from utilities.constants.images import OS_FLAVOR_RHEL
 from utilities.constants.instance_types import RHEL9_PREFERENCE, U1_SMALL
-from utilities.hco import ResourceEditorValidateHCOReconcile
+from utilities.hco import ResourceEditorValidateHCOReconcile, hco_feature_gates_patch
 from utilities.storage import (
     data_volume_template_with_source_ref_dict,
     write_file_via_ssh,
@@ -53,16 +53,18 @@ def cbt_hco_configured(
 
     Yields while both settings remain configured.
     """
+    spec_patch = hco_feature_gates_patch(
+        hco_resource=hyperconverged_resource_scope_module,
+        enable=["incrementalBackup"],
+    )
+    spec_patch["spec"]["virtualization"] = {
+        "changedBlockTrackingLabelSelectors": {
+            "virtualMachineLabelSelector": {"matchLabels": CBT_ENABLED_LABEL},
+        }
+    }
     with ResourceEditorValidateHCOReconcile(
         patches={
-            hyperconverged_resource_scope_module: {
-                "spec": {
-                    "featureGates": {"incrementalBackup": True},
-                    "changedBlockTrackingLabelSelectors": {
-                        "virtualMachineLabelSelector": {"matchLabels": CBT_ENABLED_LABEL},
-                    },
-                },
-            },
+            hyperconverged_resource_scope_module: spec_patch,
         },
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,
