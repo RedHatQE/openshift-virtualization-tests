@@ -15,7 +15,8 @@ STORAGE_WORKLOADS_DICT = {
     "limits": {"cpu": "505m", "memory": "2Gi"},
     "requests": {"cpu": "252m", "memory": "1Gi"},
 }
-NON_EXISTENT_SCRATCH_SC_DICT = {"storage": {"scratchSpaceStorageClass": "NonExistentSC"}}
+NON_EXISTENT_SCRATCH_SC = "NonExistentSC"
+NON_EXISTENT_SCRATCH_SC_DICT = {"storage": {"scratchSpaceStorageClass": NON_EXISTENT_SCRATCH_SC}}
 INSECURE_REGISTRIES_LIST = ["added-private-registry:5000"]
 
 
@@ -106,7 +107,7 @@ def test_cdi_spec_reconciled_by_hco(initial_cdi_config_from_cr, cdi_with_extra_n
         ),
         pytest.param(
             NON_EXISTENT_SCRATCH_SC_DICT,
-            NON_EXISTENT_SCRATCH_SC_DICT,
+            {"scratchSpaceStorageClass": NON_EXISTENT_SCRATCH_SC},
             marks=(pytest.mark.polarion("CNV-6001")),
             id="test_scratch_sc_in_hco_propagated_to_cdi_cr",
         ),
