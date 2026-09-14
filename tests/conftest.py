@@ -154,50 +154,6 @@ def ocp_current_version(openshift_current_version):
 
 
 @pytest.fixture(scope="session")
-def is_postcopy_migration_bug_open(cluster_has_rhcos10_or_above):
-    return cluster_has_rhcos10_or_above and is_jira_open(jira_id="CNV-84023")
-
-
-@pytest.fixture()
-def vm_instance_from_template_multi_storage_scope_function(
-    request,
-    unprivileged_client,
-    namespace,
-    data_volume_multi_storage_scope_function,
-    cpu_for_migration,
-):
-    """Calls vm_instance_from_template contextmanager
-
-    Creates a VM from template and starts it (if requested).
-    """
-
-    with vm_instance_from_template(
-        request=request,
-        unprivileged_client=unprivileged_client,
-        namespace=namespace,
-        existing_data_volume=data_volume_multi_storage_scope_function,
-        vm_cpu_model=(cpu_for_migration if request.param.get("set_vm_common_cpu") else None),
-    ) as vm:
-        yield vm
-
-
-"""
-Windows-specific fixtures
-"""
-
-
-@pytest.fixture()
-def started_windows_vm(
-    request,
-    vm_instance_from_template_multi_storage_scope_function,
-):
-    wait_for_windows_vm(
-        vm=vm_instance_from_template_multi_storage_scope_function,
-        version=request.param["os_version"],
-    )
-
-
-@pytest.fixture(scope="session")
 def junitxml_plugin(request, record_testsuite_property):
     return record_testsuite_property if request.config.pluginmanager.has_plugin("junitxml") else None
 
