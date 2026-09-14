@@ -23,7 +23,6 @@ from tests.infrastructure.golden_images.update_boot_source.utils import (
 from tests.utils import get_parameters_from_template
 from utilities.constants.hco import DATA_SOURCE_NAME
 from utilities.constants.images import DEFAULT_FEDORA_REGISTRY_URL
-from utilities.constants.pytest import QUARANTINED
 from utilities.constants.timeouts import TIMEOUT_5MIN
 from utilities.ssp import wait_for_condition_message_value
 
@@ -525,10 +524,6 @@ class TestDataSourcesOptInLabel:
     "enabled_common_boot_image_import_feature_gate_scope_class",
     "opted_in_data_source_scope_class",
     "opted_out_data_source_scope_class",
-)
-@pytest.mark.xfail(
-    reason=f"{QUARANTINED}: Flaky opt-out label / DataSource volume update; tracked in CNV-86273",
-    run=False,
 )
 class TestDataSourcesOptOutLabel:
     @pytest.mark.polarion("CNV-8244")
