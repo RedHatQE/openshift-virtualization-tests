@@ -110,7 +110,7 @@ from utilities.constants.virt import (
     ROOTDISK,
     VIRTCTL,
 )
-from utilities.data_collector import collect_vnc_screenshot_for_vms
+from utilities.data_collector import collect_must_gather_for_vm, collect_vnc_screenshot_for_vms
 from utilities.exceptions import MigrationStuckSchedulingError, ResourceValueError
 from utilities.network import (
     cloud_init_network_data,
@@ -1846,6 +1846,9 @@ def wait_for_running_vm(
     """
     Wait for the VMI to be in Running state.
 
+    On timeout, collects a VNC screenshot and a VM-incident must-gather
+    archive before re-raising the exception.
+
     Args:
         vm (VirtualMachine): VM object.
         wait_until_running_timeout (int): how much time to wait for VMI to reach Running state
@@ -1854,7 +1857,8 @@ def wait_for_running_vm(
         ssh_timeout (int): how much time to wait for SSH connectivity
 
     Raises:
-        TimeoutExpiredError: After timeout is reached for any of the steps
+        TimeoutExpiredError: After timeout is reached for any of the steps.
+            VNC screenshot and must-gather artifacts are collected before re-raising.
     """
     assert_vm_not_error_status(vm=vm)
     try:
@@ -1867,6 +1871,7 @@ def wait_for_running_vm(
             wait_for_ssh_connectivity(vm=vm, timeout=ssh_timeout)
     except TimeoutExpiredError:
         collect_vnc_screenshot_for_vms(vm=vm)
+        collect_must_gather_for_vm(vm=vm)
         raise
 
 
@@ -1999,6 +2004,7 @@ def migrate_vm_and_verify(
         node_before=node_before,
         wait_for_interfaces=wait_for_interfaces,
         check_ssh_connectivity=check_ssh_connectivity,
+        admin_client=client,
     )
     return None
 
@@ -2071,7 +2077,29 @@ def verify_vm_migrated(
     node_before,
     wait_for_interfaces=True,
     check_ssh_connectivity=False,
+    admin_client: DynamicClient | None = None,
 ):
+    """Verify that a VM migrated to a different node.
+
+    Asserts the VMI is on a new node and that migration completed, then
+    optionally waits for network interfaces and SSH connectivity.
+
+    On timeout, collects a VNC screenshot and a VM-incident must-gather
+    archive before re-raising the exception.
+
+    Args:
+        vm: VM object whose migration is being verified.
+        node_before: Node the VM was running on before migration.
+        wait_for_interfaces (bool): Wait for VM interfaces to appear after migration.
+        check_ssh_connectivity (bool): Wait for SSH connectivity after migration.
+        admin_client (DynamicClient | None): Cluster admin client for must-gather
+            collection on timeout. Falls back to cache_admin_client() when None.
+
+    Raises:
+        AssertionError: If the VM is still on the original node or migration did not complete.
+        TimeoutExpiredError: If waiting for interfaces or SSH times out.
+            VNC screenshot and must-gather artifacts are collected before re-raising.
+    """
     vmi_name = vm.vmi.name
     vmi_node_name = vm.vmi.node.name
     assert vmi_node_name != node_before.name, f"VMI: {vmi_name} still running on the same node: {vmi_node_name}"
@@ -2087,6 +2115,7 @@ def verify_vm_migrated(
             wait_for_ssh_connectivity(vm=vm)
     except TimeoutExpiredError:
         collect_vnc_screenshot_for_vms(vm=vm)
+        collect_must_gather_for_vm(vm=vm, admin_client=admin_client)
         raise
 
 
