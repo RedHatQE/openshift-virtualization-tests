@@ -6,6 +6,7 @@ from tests.install_upgrade_operators.launcher_updates.constants import (
     DEFAULT_BATCH_EVICTION_SIZE,
     DEFAULT_WORKLOAD_UPDATE_METHODS,
     DEFAULT_WORKLOAD_UPDATE_STRATEGY,
+    HCO_WORKLOAD_UPDATE_STRATEGY_BASE_PATH,
     MOD_CUST_DEFAULT_BATCH_EVICTION_INTERVAL,
     MOD_CUST_DEFAULT_BATCH_EVICTION_SIZE,
     MOD_CUST_DEFAULT_WORKLOAD_UPDATE_METHOD,
@@ -25,8 +26,10 @@ class TestLauncherUpdateModifyDefault:
                 {
                     "patch": {
                         "spec": {
-                            WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {
-                                "batchEvictionInterval": DEFAULT_BATCH_EVICTION_INTERVAL
+                            "virtualization": {
+                                WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {
+                                    "batchEvictionInterval": DEFAULT_BATCH_EVICTION_INTERVAL
+                                }
                             }
                         }
                     },
@@ -38,7 +41,11 @@ class TestLauncherUpdateModifyDefault:
             pytest.param(
                 {
                     "patch": {
-                        "spec": {WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {"batchEvictionSize": DEFAULT_BATCH_EVICTION_SIZE}}
+                        "spec": {
+                            "virtualization": {
+                                WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {"batchEvictionSize": DEFAULT_BATCH_EVICTION_SIZE}
+                            }
+                        }
                     },
                 },
                 MOD_CUST_DEFAULT_BATCH_EVICTION_SIZE,
@@ -49,7 +56,11 @@ class TestLauncherUpdateModifyDefault:
                 {
                     "patch": {
                         "spec": {
-                            WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {WORKLOADUPDATEMETHODS: DEFAULT_WORKLOAD_UPDATE_METHODS}
+                            "virtualization": {
+                                WORKLOAD_UPDATE_STRATEGY_KEY_NAME: {
+                                    WORKLOADUPDATEMETHODS: DEFAULT_WORKLOAD_UPDATE_METHODS
+                                }
+                            }
                         }
                     },
                 },
@@ -72,7 +83,7 @@ class TestLauncherUpdateModifyDefault:
         wait_for_spec_change(
             expected=expected,
             get_spec_func=lambda: get_hco_spec(admin_client=admin_client, hco_namespace=hco_namespace),
-            base_path=[WORKLOAD_UPDATE_STRATEGY_KEY_NAME],
+            base_path=HCO_WORKLOAD_UPDATE_STRATEGY_BASE_PATH,
         )
         wait_for_spec_change(
             expected=expected,
@@ -91,7 +102,9 @@ class TestLauncherUpdateModifyDefault:
                 {
                     "patch": {
                         "spec": {
-                            WORKLOAD_UPDATE_STRATEGY_KEY_NAME: DEFAULT_WORKLOAD_UPDATE_STRATEGY,
+                            "virtualization": {
+                                WORKLOAD_UPDATE_STRATEGY_KEY_NAME: DEFAULT_WORKLOAD_UPDATE_STRATEGY,
+                            }
                         }
                     },
                 },
@@ -103,7 +116,9 @@ class TestLauncherUpdateModifyDefault:
                 {
                     "patch": {
                         "spec": {
-                            WORKLOAD_UPDATE_STRATEGY_KEY_NAME: DEFAULT_WORKLOAD_UPDATE_STRATEGY,
+                            "virtualization": {
+                                WORKLOAD_UPDATE_STRATEGY_KEY_NAME: DEFAULT_WORKLOAD_UPDATE_STRATEGY,
+                            }
                         }
                     },
                 },
@@ -128,7 +143,7 @@ class TestLauncherUpdateModifyDefault:
             wait_for_spec_change(
                 expected=expected,
                 get_spec_func=lambda: get_hco_spec(admin_client=admin_client, hco_namespace=hco_namespace),
-                base_path=[WORKLOAD_UPDATE_STRATEGY_KEY_NAME],
+                base_path=HCO_WORKLOAD_UPDATE_STRATEGY_BASE_PATH,
             )
         elif resource_name == "kubevirt":
             wait_for_spec_change(

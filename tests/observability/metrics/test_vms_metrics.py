@@ -140,10 +140,7 @@ def vm_metric_1(namespace, unprivileged_client, cluster_common_node_cpu):
 
 
 @pytest.fixture()
-def vm_metric_1_vmim(admin_client, vm_metric_1, is_postcopy_migration_bug_open):
-    if is_postcopy_migration_bug_open:
-        pytest.xfail(reason="CNV-84023: post-copy migration fails on RHCOS 10+ nodes")
-
+def vm_metric_1_vmim(admin_client, vm_metric_1):
     with VirtualMachineInstanceMigration(
         name="vm-metric-1-vmim",
         namespace=vm_metric_1.namespace,
@@ -576,6 +573,7 @@ class TestVmiSyncTotal:
     """
 
     @pytest.mark.polarion("CNV-16271")
+    @pytest.mark.usefixtures("initial_vmi_sync_total_values")
     def test_kubevirt_vmi_sync_total(self, prometheus, vm_for_migration_metrics_test):
         """
         Test that kubevirt_vmi_sync_total metric is reported by both

@@ -124,9 +124,13 @@ EXPCT_CERTC_CUSTOM = {
 
 CUSTOM_HCO_CR_SPEC = {
     "spec": {
-        LIVE_MIGRATION_CONFIG_KEY: EXPCT_LM_CUSTOM,
-        HCO_CR_CERT_CONFIG_KEY: EXPCT_CERTC_CUSTOM,
-    }
+        "virtualization": {
+            LIVE_MIGRATION_CONFIG_KEY: EXPCT_LM_CUSTOM,
+        },
+        "security": {
+            HCO_CR_CERT_CONFIG_KEY: EXPCT_CERTC_CUSTOM,
+        },
+    },
 }
 KUBEVIRT_DEFAULT = {KUBEVIRT_CR_CERT_CONFIG_SELF_SIGNED_KEY: EXPCT_CERTC_DEFAULTS}
 KUBEVIRT_CUSTOM = {
@@ -201,14 +205,12 @@ STORAGE_IMPORT_VALUE = {
         "private-registry-example-2:5000",
     ]
 }
-OBSOLETE_CPUS_KEY = "obsoleteCPUs"
-OBSOLETE_CPUS_VALUE_HCO_CR = {
-    "cpuModels": [
-        "487",
-        "pentium5",
-        "pentiumhome",
-    ],
-}
+OBSOLETE_CPU_MODELS_KEY = "obsoleteCPUModels"
+OBSOLETE_CPU_MODELS_VALUE_HCO_CR = [
+    "487",
+    "pentium5",
+    "pentiumhome",
+]
 OBSOLETE_CPUS_VALUE_KUBEVIRT_CR = {
     "obsoleteCPUModels": {
         "487": True,
@@ -216,17 +218,15 @@ OBSOLETE_CPUS_VALUE_KUBEVIRT_CR = {
         "pentiumhome": True,
     },
 }
-RESOURCE_REQUIREMENTS = {
-    "storageWorkloads": {
-        "limits": {
-            "cpu": "888k",
-            "memory": "123Mi",
-        },
-        "requests": {
-            "cpu": "555m",
-            "memory": "1Gi",
-        },
-    }
+WORKLOAD_RESOURCE_REQUIREMENTS = {
+    "limits": {
+        "cpu": "888k",
+        "memory": "123Mi",
+    },
+    "requests": {
+        "cpu": "555m",
+        "memory": "1Gi",
+    },
 }
 
 NP_INFRA_KEY = "infra"
@@ -255,7 +255,7 @@ NP_INFRA_VALUE_CDI_CR = {
 NP_INFRA_VALUE_HCO_CR = {
     "nodePlacement": NP_INFRA_VALUE_CDI_CR,
 }
-NP_WORKLOADS_KEY_HCO_CR = "workloads"
+NP_WORKLOADS_KEY_HCO_CR = "workload"
 NP_WORKLOADS_KEY_CDI_CR = "workload"
 NP_WORKLOADS_VALUE_HCO_CR = {
     "nodePlacement": {

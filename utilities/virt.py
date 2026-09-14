@@ -49,6 +49,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 import utilities.cpu
 import utilities.data_utils
+import utilities.hco
 import utilities.infra
 from libs.net.cluster import is_ipv6_single_stack_cluster
 from utilities.cluster import cache_admin_client
@@ -102,6 +103,8 @@ from utilities.constants.virt import (
     CLOUD_INIT_NO_CLOUD,
     CNV_VM_SSH_KEY_PATH,
     DV_DISK,
+    ES_LIVE_MIGRATE_IF_POSSIBLE,
+    ES_NONE,
     EVICTIONSTRATEGY,
     OS_PROC_NAME,
     ROOTDISK,
@@ -109,7 +112,6 @@ from utilities.constants.virt import (
 )
 from utilities.data_collector import collect_vnc_screenshot_for_vms
 from utilities.exceptions import MigrationStuckSchedulingError, ResourceValueError
-from utilities.hco import get_hco_namespace, wait_for_hco_conditions
 from utilities.network import (
     cloud_init_network_data,
 )
@@ -297,6 +299,7 @@ class VirtualMachineForTests(VirtualMachine):
         vm_affinity=None,
         annotations=None,
         label=None,
+        exclude_from_descheduler: bool = False,
     ):
         """
         Virtual machine creation
@@ -379,6 +382,9 @@ class VirtualMachineForTests(VirtualMachine):
             vm_affinity (dict, optional): If affinity is specifies, obey all the affinity rules
             annotations (dict, optional): annotations to be added to the VM
             label (dict, optional): labels to be added to VM metadata (not the VMI template)
+            exclude_from_descheduler (bool, optional): if True, exclude the VM from the descheduler.
+                Non-migratable VMs (eviction_strategy "None" or "LiveMigrateIfPossible") are always
+                excluded. Defaults to False.
         """
         # Sets VM unique name - replaces "." with "-" in the name to handle valid values.
 
@@ -459,6 +465,7 @@ class VirtualMachineForTests(VirtualMachine):
         self.hugepages_page_size = hugepages_page_size
         self.vm_affinity = vm_affinity
         self.annotations = annotations
+        self.exclude_from_descheduler = exclude_from_descheduler
 
         # Must be here to apply on existing VMs
         self.set_login_params()
@@ -526,6 +533,15 @@ class VirtualMachineForTests(VirtualMachine):
                     template_spec = self.enable_ssh_in_cloud_init_data(template_spec=template_spec)
                 if self.ssh_secret:
                     template_spec = self.update_vm_ssh_secret_configuration(template_spec=template_spec)
+
+        self._set_descheduler_exclusion()
+
+    def _set_descheduler_exclusion(self) -> None:
+        effective_eviction_strategy = self.res["spec"]["template"]["spec"].get(EVICTIONSTRATEGY)
+        if self.exclude_from_descheduler or effective_eviction_strategy in (ES_NONE, ES_LIVE_MIGRATE_IF_POSSIBLE):
+            LOGGER.info(f"Setting descheduler exclusion annotation on VM {self.name}")
+            template_annotations = self.res["spec"]["template"].setdefault("metadata", {}).setdefault("annotations", {})
+            template_annotations["descheduler.alpha.kubernetes.io/prefer-no-eviction"] = "true"
 
     def set_hugepages_page_size(self, template_spec):
         if self.hugepages_page_size:
@@ -1286,6 +1302,7 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
         tpm_params=None,
         additional_labels=None,
         vm_affinity=None,
+        exclude_from_descheduler: bool = False,
     ):
         """VM creation using common templates.
 
@@ -1359,6 +1376,7 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
             additional_labels=additional_labels,
             vm_affinity=vm_affinity,
             os_flavor=self.os_flavor,
+            exclude_from_descheduler=exclude_from_descheduler,
         )
         self.admin_client = admin_client
         self.data_source = data_source
@@ -1444,6 +1462,8 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
                 ).storage_profile.first_claim_property_set_access_modes()
             if DataVolume.AccessMode.RWX not in self.access_modes:
                 spec[EVICTIONSTRATEGY] = "None"
+
+        self._set_descheduler_exclusion()
 
     def _update_vm_storage_config(self, spec, name):
         # volume name should be updated
@@ -2207,7 +2227,7 @@ def cordon_node(admin_client: DynamicClient, node: Node) -> Generator[None]:
     Yields:
         None: Control returns while node is cordoned, uncordon happens on exit.
     """
-    hco_namespace = get_hco_namespace(admin_client=admin_client)
+    hco_namespace = utilities.hco.get_hco_namespace(admin_client=admin_client)
     try:
         LOGGER.info(f"Cordon the node {node.name}")
         run_command(command=shlex.split(f"oc adm cordon {node.name}"))
@@ -2417,7 +2437,7 @@ def wait_for_updated_kv_value(admin_client, hco_namespace, path, value, timeout=
         LOGGER.error(f"KV CR is not updated, path: {path}, expected value: {value}, HCO annotations: {hco_annotations}")
         raise
     # After updating KV need to be sure HCO is stable
-    wait_for_hco_conditions(
+    utilities.hco.wait_for_hco_conditions(
         admin_client=admin_client,
         hco_namespace=hco_namespace,
     )
@@ -2505,7 +2525,7 @@ def wait_for_kubevirt_conditions(
 
 def wait_for_kv_stabilize(admin_client, hco_namespace):
     wait_for_kubevirt_conditions(admin_client=admin_client, hco_namespace=hco_namespace)
-    wait_for_hco_conditions(admin_client=admin_client, hco_namespace=hco_namespace)
+    utilities.hco.wait_for_hco_conditions(admin_client=admin_client, hco_namespace=hco_namespace)
 
 
 @cache

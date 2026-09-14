@@ -22,7 +22,6 @@ from tests.virt.node.gpu.utils import (
     wait_for_nvidia_vgpu_manager,
 )
 from tests.virt.utils import patch_hco_cr_with_mdev_permitted_hostdevices
-from utilities.constants.hco import DISABLE_MDEV_CONFIGURATION, FEATURE_GATES
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import label_nodes
 
@@ -66,20 +65,22 @@ def hco_cr_with_node_specific_vgpu_permitted_hostdevices(
         patches={
             hyperconverged_resource_scope_class: {
                 "spec": {
-                    "permittedHostDevices": {
-                        "mediatedDevices": [
-                            {
-                                "externalResourceProvider": True,
-                                "mdevNameSelector": supported_gpu_device[MDEV_NAME_STR],
-                                "resourceName": supported_gpu_device[VGPU_DEVICE_NAME_STR],
-                            },
-                            {
-                                "externalResourceProvider": True,
-                                "mdevNameSelector": supported_gpu_device[MDEV_GRID_NAME_STR],
-                                "resourceName": supported_gpu_device[VGPU_GRID_NAME_STR],
-                            },
-                        ]
-                    },
+                    "virtualization": {
+                        "permittedHostDevices": {
+                            "mediatedDevices": [
+                                {
+                                    "externalResourceProvider": True,
+                                    "mdevNameSelector": supported_gpu_device[MDEV_NAME_STR],
+                                    "resourceName": supported_gpu_device[VGPU_DEVICE_NAME_STR],
+                                },
+                                {
+                                    "externalResourceProvider": True,
+                                    "mdevNameSelector": supported_gpu_device[MDEV_GRID_NAME_STR],
+                                    "resourceName": supported_gpu_device[VGPU_GRID_NAME_STR],
+                                },
+                            ]
+                        },
+                    }
                 }
             }
         },
@@ -92,7 +93,7 @@ def hco_cr_with_node_specific_vgpu_permitted_hostdevices(
 @pytest.fixture(scope="package")
 def hco_with_disable_mdev_configuration(admin_client, hyperconverged_resource_scope_session):
     """
-    Enable disableMDevConfiguration feature gate in HCO.
+    Disable HCO automatic mediated-device configuration.
 
     This fixture must run before any vGPU node labeling to ensure CNV
     does not configure mediated devices (vGPU configuration is handled
@@ -100,7 +101,15 @@ def hco_with_disable_mdev_configuration(admin_client, hyperconverged_resource_sc
     """
     with ResourceEditorValidateHCOReconcile(
         admin_client=admin_client,
-        patches={hyperconverged_resource_scope_session: {"spec": {FEATURE_GATES: {DISABLE_MDEV_CONFIGURATION: True}}}},
+        patches={
+            hyperconverged_resource_scope_session: {
+                "spec": {
+                    "virtualization": {
+                        "mediatedDevicesConfiguration": {"enabled": False},
+                    }
+                }
+            }
+        },
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,
     ):

@@ -252,15 +252,17 @@ def patch_hco_cr_with_mdev_permitted_hostdevices(admin_client, hyperconverged_re
         patches={
             hyperconverged_resource: {
                 "spec": {
-                    "permittedHostDevices": {
-                        "mediatedDevices": [
-                            {
-                                "externalResourceProvider": True,
-                                "mdevNameSelector": supported_gpu_device[MDEV_NAME_STR],
-                                "resourceName": supported_gpu_device[VGPU_DEVICE_NAME_STR],
-                            }
-                        ]
-                    },
+                    "virtualization": {
+                        "permittedHostDevices": {
+                            "mediatedDevices": [
+                                {
+                                    "externalResourceProvider": True,
+                                    "mdevNameSelector": supported_gpu_device[MDEV_NAME_STR],
+                                    "resourceName": supported_gpu_device[VGPU_DEVICE_NAME_STR],
+                                }
+                            ]
+                        },
+                    }
                 }
             }
         },
@@ -490,7 +492,9 @@ def update_hco_memory_overcommit(admin_client, hco, percentage):
         patches={
             hco: {
                 "spec": {
-                    "higherWorkloadDensity": {"memoryOvercommitPercentage": percentage},
+                    "virtualization": {
+                        "higherWorkloadDensity": {"memoryOvercommitPercentage": percentage},
+                    }
                 }
             }
         },

@@ -15,7 +15,7 @@ from tests.storage.hpp.utils import (
     edit_hpp_with_node_selector,
 )
 from utilities.constants.cluster import NODE_STR
-from utilities.storage import check_disk_count_in_vm
+from utilities.storage import assert_guest_disk_count
 
 LOGGER = logging.getLogger(__name__)
 
@@ -81,13 +81,13 @@ def test_vm_with_dv_on_functional_after_configuring_hpp_not_to_work_on_that_same
     schedulable_nodes,
     cirros_vm_for_node_placement_tests,
 ):
-    check_disk_count_in_vm(vm=cirros_vm_for_node_placement_tests)
+    assert_guest_disk_count(vm=cirros_vm_for_node_placement_tests)
     with edit_hpp_with_node_selector(
         hpp_resource=hostpath_provisioner_scope_module,
         hpp_daemonset=hpp_daemonset_scope_session,
         schedulable_nodes=schedulable_nodes,
     ):
-        check_disk_count_in_vm(vm=cirros_vm_for_node_placement_tests)
+        assert_guest_disk_count(vm=cirros_vm_for_node_placement_tests)
 
 
 @pytest.mark.parametrize(

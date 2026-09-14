@@ -4,7 +4,7 @@ import os
 import shlex
 from collections.abc import Collection, Generator
 from contextlib import contextmanager
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import cachetools.func
 import kubernetes
@@ -61,6 +61,9 @@ from utilities.constants.timeouts import (
     TIMEOUT_60MIN,
 )
 from utilities.exceptions import UrlNotFoundError
+
+if TYPE_CHECKING:
+    from utilities.virt import VirtualMachineForTests
 
 HOTPLUG_VOLUME = "hotplugVolume"
 DATA_IMPORT_CRON_SUFFIX = "-image-cron"
@@ -689,10 +692,23 @@ def data_volume_template_dict_with_pvc_source(
 
 
 def data_volume_template_with_source_ref_dict(
-    data_source: DataSource, storage_class: str | None = None
+    data_source: DataSource, storage_class: str | None = None, name: str | None = None
 ) -> dict[str, Any]:
+    """Build a DataVolume template dict backed by a DataSource source reference.
+
+    Args:
+        data_source: The DataSource to clone from.
+        storage_class: Storage class for the PVC; if None, the cluster default is used.
+        name: Explicit DataVolume name. If None, a unique name is generated from the
+            DataSource name. The namespace is stripped from the returned dict so the
+            template is safe to embed in a VM's ``dataVolumeTemplates`` list.
+
+    Returns:
+        Mutable DataVolume resource dict with ``metadata.namespace`` removed, ready for
+        use in VM ``dataVolumeTemplates``.
+    """
     dv = DataVolume(
-        name=utilities.infra.unique_name(name=data_source.name),
+        name=name if name is not None else utilities.infra.unique_name(name=data_source.name),
         namespace=data_source.namespace,
         client=data_source.client,
         size=get_dv_size_from_datasource(data_source=data_source),
@@ -754,13 +770,17 @@ def write_file(
     """
     if not vm.ready:
         vm.start(wait=True)
-    with console.Console(vm=vm, kubeconfig=kubeconfig) as vm_console:
-        vm_console.sendline(f"echo '{content}' >> {filename}")
+    prompt = r"\$ "
+    with console.Console(vm=vm, prompt=prompt, kubeconfig=kubeconfig) as vm_console:
+        vm_console.sendline(f"echo '{content}' >> {filename} && sync")
+        vm_console.expect(prompt)
     if stop_vm:
         vm.stop(wait=True)
 
 
-def write_file_via_ssh(vm: virt_util.VirtualMachineForTests, filename: str, content: str) -> None:
+def write_file_via_ssh(
+    vm: virt_util.VirtualMachineForTests, filename: str, content: str, use_sudo: bool = False
+) -> None:
     """
     Write content to a file in VM using SSH connection with retry.
 
@@ -768,8 +788,15 @@ def write_file_via_ssh(vm: virt_util.VirtualMachineForTests, filename: str, cont
         vm: VirtualMachine instance with SSH connectivity
         filename: Path to the file to write in the VM
         content: Content to write to the file
+        use_sudo: Write via "sudo tee" instead of shell redirection. Required for paths the
+            unprivileged SSH user cannot write directly, e.g. raw block devices.
     """
-    cmd = shlex.split(f"echo {shlex.quote(content)} > {shlex.quote(filename)} && sync")
+    quoted_content = shlex.quote(s=content)
+    quoted_filename = shlex.quote(s=filename)
+    if use_sudo:
+        cmd = shlex.split(f"echo {quoted_content} | sudo tee {quoted_filename} && sync")
+    else:
+        cmd = shlex.split(f"echo {quoted_content} > {quoted_filename} && sync")
     run_ssh_commands(host=vm.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC)
 
 
@@ -967,16 +994,30 @@ def is_snapshot_supported_by_sc(sc_name, client):
     return False
 
 
-def check_disk_count_in_vm(vm):
-    LOGGER.info("Check disk count.")
-    out = run_ssh_commands(
-        host=vm.ssh_exec,
-        commands=[shlex.split("lsblk | grep disk | grep -v SWAP| wc -l")],
-        wait_timeout=TIMEOUT_2MIN,
-        sleep=TIMEOUT_5SEC,
-    )[0].strip()
-    assert out == str(len(vm.instance.spec.template.spec.domain.devices.disks)), (
-        "Failed to verify actual disk count against VMI"
+def assert_guest_disk_count(vm: VirtualMachineForTests) -> None:
+    """Assert that the number of disks visible inside the guest matches the VM spec.
+
+    Swap disks are excluded from the count because they are provisioned by the OS
+    and not declared in the VM spec.
+
+    Args:
+        vm: A running VM with SSH access.
+
+    Raises:
+        AssertionError: If guest disk count does not match the VM spec disk count.
+    """
+    expected_disks = len(vm.instance.spec.template.spec.domain.devices.disks)
+    guest_disk_count = int(
+        run_ssh_commands(
+            host=vm.ssh_exec,
+            commands=[shlex.split("lsblk --nodeps --noheadings | grep disk | grep -v SWAP | wc -l")],
+            wait_timeout=TIMEOUT_2MIN,
+            sleep=TIMEOUT_5SEC,
+        )[0].strip()
+    )
+    LOGGER.info(f"Guest reports {guest_disk_count} disk(s), VM spec declares {expected_disks} disk(s)")
+    assert guest_disk_count == expected_disks, (
+        f"Guest disk count ({guest_disk_count}) does not match VM spec ({expected_disks} disks expected)"
     )
 
 

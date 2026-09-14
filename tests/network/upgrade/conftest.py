@@ -1,7 +1,8 @@
 from ipaddress import IPv4Interface, IPv6Interface
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 import pytest
+from ocp_resources.user_defined_network import Layer2UserDefinedNetwork
 from ocp_resources.virtual_machine import VirtualMachine
 
 if TYPE_CHECKING:
@@ -15,7 +16,12 @@ if TYPE_CHECKING:
 
 from libs.net import nodenetworkconfigurationpolicy as libnncp
 from libs.net.cluster import cluster_vlans, ipv4_supported_cluster, ipv6_supported_cluster
-from libs.net.ip import filter_link_local_addresses, random_ipv4_address, random_ipv6_address
+from libs.net.ip import (
+    filter_link_local_addresses,
+    random_ipv4_address,
+    random_ipv6_address,
+)
+from libs.net.udn import UDN_BINDING_DEFAULT_PLUGIN_NAME, create_udn_namespace
 from libs.net.vmspec import lookup_iface_status
 from libs.vm.oper import run_vms
 from libs.vm.spec import Interface, Multus, Network
@@ -35,6 +41,7 @@ from tests.network.libs.localnet import (
     localnet_cudn,
     localnet_vm,
 )
+from tests.network.libs.vm_factory import udn_vm
 from tests.network.upgrade.libupgrade import KMP_DISABLED_LABEL
 from utilities.constants.cluster import WORKER_NODE_LABEL_KEY
 from utilities.constants.networking import KMP_VM_ASSIGNMENT_LABEL, LINUX_BRIDGE
@@ -44,6 +51,7 @@ from utilities.network import cloud_init, network_nad
 from utilities.virt import VirtualMachineForTests, fedora_vm_body
 
 NAD_MAC_SPOOF_NAME = "brspoofupgrade"
+UDN_UPGRADE_VM_ANTI_AFFINITY_LABEL: Final[dict[str, str]] = {"upgrade-udn-vm": "true"}
 
 
 @pytest.fixture(scope="session")
@@ -381,3 +389,71 @@ def ipv4_dedicated_nic_bridge_localnet_address_pool_upgrade() -> Generator[IPv4I
 @pytest.fixture(scope="session")
 def ipv6_dedicated_nic_bridge_localnet_address_pool_upgrade() -> Generator[IPv6Interface]:
     return (random_ipv6_address(net_seed=1, host_address=host) for host in range(1, 254))
+
+
+@pytest.fixture(scope="session")
+def namespace_udn_upgrade(admin_client: DynamicClient) -> Generator[Namespace]:
+    yield from create_udn_namespace(name="upgrade-udn-ns", client=admin_client)
+
+
+@pytest.fixture(scope="session")
+def primary_udn_upgrade(
+    admin_client: DynamicClient,
+    namespace_udn_upgrade: Namespace,
+) -> Generator[Layer2UserDefinedNetwork]:
+    with Layer2UserDefinedNetwork(
+        name="upgrade-udn",
+        namespace=namespace_udn_upgrade.name,
+        role="Primary",
+        subnets=[str(random_ipv4_address(net_seed=2, host_address=0))],
+        ipam={"lifecycle": "Persistent"},
+        client=admin_client,
+    ) as udn:
+        udn.wait_for_condition(
+            condition="NetworkAllocationSucceeded",
+            status=udn.Condition.Status.TRUE,
+        )
+        yield udn
+
+
+@pytest.fixture(scope="session")
+def vm_udn_upgrade_a(
+    admin_client: DynamicClient,
+    namespace_udn_upgrade: Namespace,
+    primary_udn_upgrade: Layer2UserDefinedNetwork,
+) -> Generator[BaseVirtualMachine]:
+    with udn_vm(
+        namespace_name=namespace_udn_upgrade.name,
+        name="upgrade-udn-vm-a",
+        client=admin_client,
+        binding=UDN_BINDING_DEFAULT_PLUGIN_NAME,
+        template_labels=UDN_UPGRADE_VM_ANTI_AFFINITY_LABEL,
+        anti_affinity_namespaces=[namespace_udn_upgrade.name],
+    ) as vm:
+        yield vm
+
+
+@pytest.fixture(scope="session")
+def vm_udn_upgrade_b(
+    admin_client: DynamicClient,
+    namespace_udn_upgrade: Namespace,
+    primary_udn_upgrade: Layer2UserDefinedNetwork,
+) -> Generator[BaseVirtualMachine]:
+    with udn_vm(
+        namespace_name=namespace_udn_upgrade.name,
+        name="upgrade-udn-vm-b",
+        client=admin_client,
+        binding=UDN_BINDING_DEFAULT_PLUGIN_NAME,
+        template_labels=UDN_UPGRADE_VM_ANTI_AFFINITY_LABEL,
+        anti_affinity_namespaces=[namespace_udn_upgrade.name],
+    ) as vm:
+        yield vm
+
+
+@pytest.fixture(scope="session")
+def running_udn_vms_upgrade(
+    vm_udn_upgrade_a: BaseVirtualMachine,
+    vm_udn_upgrade_b: BaseVirtualMachine,
+) -> tuple[BaseVirtualMachine, BaseVirtualMachine]:
+    vm_a, vm_b = run_vms(vms=(vm_udn_upgrade_a, vm_udn_upgrade_b))
+    return vm_a, vm_b

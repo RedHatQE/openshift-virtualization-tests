@@ -367,7 +367,9 @@ def parallel_live_migrations_increased(admin_client, hyperconverged_resource_sco
         patches={
             hyperconverged_resource_scope_session: {
                 "spec": {
-                    "liveMigrationConfig": {"parallelOutboundMigrationsPerNode": 5},
+                    "virtualization": {
+                        "liveMigrationConfig": {"parallelOutboundMigrationsPerNode": 5},
+                    }
                 }
             }
         },

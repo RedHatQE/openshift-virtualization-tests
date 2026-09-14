@@ -205,4 +205,4 @@ def test_webhook_endpoints_health(admin_client, hco_namespace):
 @pytest.mark.cluster_health_check
 def test_vm_creation_capability(admin_client):
     """Test VM creation capability by performing a dry-run VM creation."""
-    check_vm_creation_capability(admin_client=admin_client, namespace="default")
+    check_vm_creation_capability(client=admin_client, namespace="default")
