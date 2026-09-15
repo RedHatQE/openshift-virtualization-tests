@@ -3,23 +3,43 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Generator
+from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any
 
 from kubernetes.utils.quantity import parse_quantity
 from ocp_resources.datavolume import DataVolume
+from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
+from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_backup import VirtualMachineBackup
+from ocp_resources.virtual_machine_backup_tracker import VirtualMachineBackupTracker
+from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
+from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_resources.virtual_machine_export import VirtualMachineExport
 from timeout_sampler import TimeoutSampler
 
-from tests.storage.cbt.constants import CBT_BACKUP_CONDITION_FAILED, CBT_DATA_DISK_SIZE
+from tests.storage.cbt.constants import (
+    CBT_BACKUP_CONDITION_FAILED,
+    CBT_BOOT_DISK_TEST_DATA_FILE,
+    CBT_DATA_DISK_SIZE,
+    CBT_DATA_DISK_TEST_DATA,
+    CBT_ENABLED_LABEL,
+    CBT_TEST_DATA,
+)
+from utilities.constants.images import OS_FLAVOR_RHEL
+from utilities.constants.instance_types import RHEL9_PREFERENCE, U1_SMALL
 from utilities.constants.timeouts import TIMEOUT_5SEC, TIMEOUT_10MIN
 from utilities.constants.virt import CLOUD_INIT_DISK_NAME, DV_DISK
-from utilities.storage import construct_datavolume_source_dict
-from utilities.virt import VirtualMachineForTests
+from utilities.storage import (
+    construct_datavolume_source_dict,
+    data_volume_template_with_source_ref_dict,
+    write_file_via_ssh,
+)
+from utilities.virt import VirtualMachineForTests, migrate_vm_and_verify, running_vm
 
 if TYPE_CHECKING:
     from kubernetes.dynamic import DynamicClient
-    from ocp_resources.virtual_machine import VirtualMachine
+    from ocp_resources.data_source import DataSource
 
 LOGGER = logging.getLogger(__name__)
 
@@ -123,6 +143,64 @@ class CbtVmWithDataDisks(VirtualMachineForTests):
             )
             disks.append({"disk": {"bus": self.disk_type}, "name": volume_name})
             volumes.append({"name": volume_name, "dataVolume": {"name": volume_name}})
+
+
+@contextmanager
+def cbt_enabled_vm(
+    name: str,
+    namespace: str,
+    client: DynamicClient,
+    data_source: DataSource,
+    storage_class: str,
+    unique_suffix: str,
+    data_disk_count: int = 0,
+) -> Generator[VirtualMachineForTests]:
+    """Create a running CBT-enabled VM with test data written to every disk.
+
+    Args:
+        name: VM name.
+        namespace: Namespace for the VM and any additional data disks.
+        client: Client used to create the VM.
+        data_source: Golden-image DataSource for the boot disk.
+        storage_class: Storage class for the boot disk and additional data disks.
+        unique_suffix: Suffix used in additional data disk names.
+        data_disk_count: Number of blank data disks to attach before first start.
+
+    Yields:
+        VirtualMachineForTests: Running VM with CBT enabled and test data written.
+
+    Side effects:
+        Creates the VM (and optional blank data disks), starts it, waits for CBT
+        Enabled, and writes test data to the boot disk and every data disk.
+    """
+    with CbtVmWithDataDisks(
+        name=name,
+        namespace=namespace,
+        client=client,
+        vm_instance_type=VirtualMachineClusterInstancetype(client=client, name=U1_SMALL),
+        vm_preference=VirtualMachineClusterPreference(client=client, name=RHEL9_PREFERENCE),
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=data_source,
+            storage_class=storage_class,
+        ),
+        os_flavor=OS_FLAVOR_RHEL,
+        label=CBT_ENABLED_LABEL,
+        data_disk_storage_class_name=storage_class,
+        data_disk_count=data_disk_count,
+        unique_suffix=unique_suffix,
+    ) as vm:
+        running_vm(vm=vm)
+        wait_for_vm_cbt_enabled(vm=vm)
+        write_file_via_ssh(vm=vm, filename=CBT_BOOT_DISK_TEST_DATA_FILE, content=CBT_TEST_DATA)
+        for disk_index in range(1, data_disk_count + 1):
+            volume_name = data_disk_name(index=disk_index, unique_suffix=unique_suffix)
+            write_file_via_ssh(
+                vm=vm,
+                filename=guest_device_path_for_volume(vm=vm, volume_name=volume_name),
+                content=CBT_DATA_DISK_TEST_DATA,
+                use_sudo=True,
+            )
+        yield vm
 
 
 def guest_volume_target(vm: VirtualMachine, volume_name: str) -> str | None:
@@ -330,6 +408,107 @@ def wait_for_pull_backup_export_deleted(name: str, namespace: str, client: Dynam
     export.wait_deleted(timeout=TIMEOUT_10MIN)
 
 
+def cbt_source_ref(resource: VirtualMachine | VirtualMachineBackupTracker) -> dict[str, str]:
+    """TypedLocalObjectReference dict for a VirtualMachine or VirtualMachineBackupTracker."""
+    return {
+        "apiGroup": resource.api_group,
+        "kind": resource.kind,
+        "name": resource.name,
+    }
+
+
+@contextmanager
+def cbt_backup_tracker(
+    namespace: str,
+    client: DynamicClient,
+    vm: VirtualMachine,
+) -> Generator[VirtualMachineBackupTracker]:
+    """Create a VirtualMachineBackupTracker for a VM.
+
+    Args:
+        namespace: Namespace for the tracker.
+        client: Client used to create the tracker.
+        vm: VM the tracker watches.
+
+    Yields:
+        VirtualMachineBackupTracker: Tracker for the VM.
+    """
+    with VirtualMachineBackupTracker(
+        name=f"{vm.name}-tracker",
+        namespace=namespace,
+        client=client,
+        source=cbt_source_ref(resource=vm),
+    ) as tracker:
+        yield tracker
+
+
+def cbt_backup_pvc(
+    name: str,
+    namespace: str,
+    client: DynamicClient,
+    vm: VirtualMachine,
+    storage_class: str,
+) -> PersistentVolumeClaim:
+    """Build an RWO filesystem PVC sized for a CBT VM's disks.
+
+    Does not create the resource. Callers must enter it as a context manager.
+
+    Args:
+        name: PVC name.
+        namespace: Namespace for the PVC.
+        client: Client used to create the PVC.
+        vm: VM whose dataVolumeTemplates determine PVC size.
+        storage_class: Storage class for the PVC.
+
+    Returns:
+        PersistentVolumeClaim: Undeployed RWO filesystem PVC.
+    """
+    return PersistentVolumeClaim(
+        name=name,
+        namespace=namespace,
+        client=client,
+        accessmodes=PersistentVolumeClaim.AccessMode.RWO,
+        size=cbt_pvc_size_for_vm(vm=vm),
+        storage_class=storage_class,
+        volume_mode=PersistentVolumeClaim.VolumeMode.FILE,
+    )
+
+
+def cbt_push_backup(
+    name: str,
+    namespace: str,
+    client: DynamicClient,
+    pvc_name: str,
+    source: dict[str, str],
+    force_full_backup: bool,
+) -> VirtualMachineBackup:
+    """Build a push-mode VirtualMachineBackup for use as a context manager.
+
+    Does not create the resource. Callers must enter it (for example via ExitStack)
+    so deploy and cleanup stay with the context manager.
+
+    Args:
+        name: Backup resource name.
+        namespace: Namespace for the backup.
+        client: Client used to create the backup.
+        pvc_name: Push-mode backup PVC name.
+        source: Backup tracker source reference.
+        force_full_backup: Whether this backup is a full backup.
+
+    Returns:
+        VirtualMachineBackup: Undeployed push-mode backup.
+    """
+    return VirtualMachineBackup(
+        mode=VirtualMachineBackup.Mode.PUSH,
+        name=name,
+        namespace=namespace,
+        client=client,
+        pvc_name=pvc_name,
+        force_full_backup=force_full_backup,
+        source=source,
+    )
+
+
 def deploy_cbt_pull_backup(
     name: str,
     namespace: str,
@@ -365,3 +544,35 @@ def deploy_cbt_pull_backup(
     )
     backup.deploy()
     return backup
+
+
+def delete_cbt_pull_backup_and_wait_for_export(backup: VirtualMachineBackup) -> None:
+    """Delete a pull-mode backup and wait until its VirtualMachineExport is gone.
+
+    Args:
+        backup: Deployed pull-mode backup to delete.
+
+    Side effects:
+        Deletes the backup and polls until the matching VirtualMachineExport is
+        deleted so the staging PVC can be reused.
+    """
+    backup_name = backup.name
+    namespace = backup.namespace
+    client = backup.client
+    backup.delete(wait=True)
+    wait_for_pull_backup_export_deleted(name=backup_name, namespace=namespace, client=client)
+
+
+def live_migrate_cbt_vm(vm: VirtualMachineForTests, client: DynamicClient) -> None:
+    """Live-migrate a CBT VM and wait until CBT is Enabled again.
+
+    Args:
+        vm: Running CBT-enabled VM to migrate.
+        client: Admin client used to create the migration.
+
+    Side effects:
+        Live-migrates the VM, verifies SSH, and polls until CBT is Enabled.
+    """
+    LOGGER.info(f"Live-migrating VM {vm.name} before incremental backup")
+    migrate_vm_and_verify(vm=vm, client=client, check_ssh_connectivity=True)
+    wait_for_vm_cbt_enabled(vm=vm)
