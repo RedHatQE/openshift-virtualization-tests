@@ -50,6 +50,8 @@ def check_vm_xml_hyperv(vm: VirtualMachineForTests, admin_client: DynamicClient)
             - Features from HYPERV_FEATURES_LABELS_DOM_XML not in "on" state
             - Spinlocks retries value not equal to 8191
             - Stimer direct feature not in "on" state
+            - TLBFlush direct feature not in "on" state
+            - TLBFlush extended feature not in "on" state
     """
     hyperv_features = vm.vmi.get_xml_dict(privileged_client=admin_client)["domain"]["features"]["hyperv"]
     failed_hyperv_features = [
@@ -64,6 +66,14 @@ def check_vm_xml_hyperv(vm: VirtualMachineForTests, admin_client: DynamicClient)
     stimer_direct_feature = hyperv_features["stimer"]["direct"]
     if stimer_direct_feature["@state"] != "on":
         failed_hyperv_features.append(hyperv_features["stimer"])
+
+    tlbflush_direct_feature = hyperv_features["tlbflush"]["direct"]
+    if tlbflush_direct_feature["@state"] != "on":
+        failed_hyperv_features.append(hyperv_features["tlbflush"])
+
+    tlbflush_extended_feature = hyperv_features["tlbflush"]["extended"]
+    if tlbflush_extended_feature["@state"] != "on":
+        failed_hyperv_features.append(hyperv_features["tlbflush"])
 
     assert not failed_hyperv_features, (
         f"The following hyperV flags are not set correctly in VM spec: {failed_hyperv_features},"
