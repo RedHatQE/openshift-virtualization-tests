@@ -1024,6 +1024,18 @@ def restart_ocs_operator_for_virt_sc(admin_client: DynamicClient) -> None:
             }
         }
     ).update()
+    # Capture the post-patch generation and wait for the controller to observe it before
+    # checking replica counts. wait_for_replicas() alone can match stale replica status
+    # that pre-dates the restart annotation, causing the SC poll to fail intermittently.
+    expected_generation = ocs_operator.instance.metadata.generation
+    LOGGER.info(f"Waiting for ocs-operator to observe generation {expected_generation}")
+    for sample in TimeoutSampler(
+        wait_timeout=TIMEOUT_10MIN,
+        sleep=TIMEOUT_5SEC,
+        func=lambda: ocs_operator.instance.status.observedGeneration,
+    ):
+        if sample and sample >= expected_generation:
+            break
     ocs_operator.wait_for_replicas(timeout=TIMEOUT_10MIN)
 
 

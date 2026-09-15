@@ -1,8 +1,8 @@
-"""Unit tests for construct_datavolume_source_dict in utilities/storage.py"""
+"""Unit tests for utilities/storage.py"""
 
 import importlib
 import sys
-from unittest.mock import patch
+from unittest.mock import ANY, MagicMock, patch
 
 import pytest
 
@@ -15,7 +15,7 @@ import utilities.storage
 
 importlib.reload(utilities.storage)
 
-from utilities.storage import construct_datavolume_source_dict
+from utilities.storage import construct_datavolume_source_dict, restart_ocs_operator_for_virt_sc
 
 
 class TestConstructDatavolumeSourceDictHttp:
@@ -163,3 +163,33 @@ class TestConstructDatavolumeSourceDictUnsupported:
     def test_unsupported_source_raises_value_error(self):
         with pytest.raises(ValueError, match="Unsupported source type: ftp"):
             construct_datavolume_source_dict(source="ftp")
+
+
+class TestRestartOcsOperatorForVirtSc:
+    @patch("utilities.storage.Deployment")
+    def test_absent_deployment_skips_restart(self, mock_deployment_cls):
+        mock_deployment = mock_deployment_cls.return_value
+        mock_deployment.exists = False
+
+        restart_ocs_operator_for_virt_sc(admin_client=MagicMock())
+
+        mock_deployment_cls.assert_called_once()
+        mock_deployment.wait_for_replicas.assert_not_called()
+
+    @patch("utilities.storage.TimeoutSampler")
+    @patch("utilities.storage.ResourceEditor")
+    @patch("utilities.storage.Deployment")
+    def test_present_deployment_patches_and_waits(self, mock_deployment_cls, mock_editor_cls, mock_sampler_cls):
+        mock_deployment = mock_deployment_cls.return_value
+        mock_deployment.exists = True
+        mock_instance = MagicMock()
+        mock_instance.metadata.generation = 3
+        mock_instance.status.observedGeneration = 3
+        mock_deployment.instance = mock_instance
+        mock_sampler_cls.return_value = iter([3])
+
+        restart_ocs_operator_for_virt_sc(admin_client=MagicMock())
+
+        mock_editor_cls.assert_called_once()
+        mock_editor_cls.return_value.update.assert_called_once()
+        mock_deployment.wait_for_replicas.assert_called_once_with(timeout=ANY)
