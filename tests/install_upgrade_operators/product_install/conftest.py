@@ -52,6 +52,7 @@ from utilities.storage import (
     create_hpp_storage_class,
     get_default_storage_class,
     persist_storage_class_default,
+    restart_ocs_operator_for_virt_sc,
 )
 
 INSTALLATION_VERSION_MISMATCH = "98"
@@ -255,10 +256,17 @@ def default_storage_class_from_config(admin_client):
     default_storage_class_name = py_config["default_storage_class"]
     if not any(default_storage_class_name in sc_dict for sc_dict in py_config["storage_class_matrix"]):
         pytest.xfail(f"Storage class {default_storage_class_name} not found in the storage class matrix")
+
+    default_storage_class = StorageClass(client=admin_client, name=default_storage_class_name)
+
+    # ocs-storagecluster-ceph-rbd-virtualization is only created by OCS when the VirtualMachine CRD
+    # is present. After CNV uninstall/reinstall, ocs-operator may not reconcile automatically (BZ2322458).
+    if default_storage_class_name == StorageClassNames.CEPH_RBD_VIRTUALIZATION and not default_storage_class.exists:
+        restart_ocs_operator_for_virt_sc(admin_client=admin_client)
+
     # Some storageclasses are created asynchronously, for example ocs-virt,
     # so we need to wait for them to be created
     LOGGER.info(f"Waiting for storage class {default_storage_class_name} to be created")
-    default_storage_class = StorageClass(client=admin_client, name=default_storage_class_name)
     for sample in TimeoutSampler(
         wait_timeout=TIMEOUT_5MIN,
         sleep=TIMEOUT_5SEC,
