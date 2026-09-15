@@ -4,7 +4,6 @@ import os
 import shlex
 from collections.abc import Collection, Generator
 from contextlib import contextmanager
-from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 import cachetools.func
@@ -1007,38 +1006,12 @@ def restart_ocs_operator_for_virt_sc(admin_client: DynamicClient) -> None:
     if not ocs_operator.exists:
         raise RuntimeError("ocs-operator deployment not found in openshift-storage; cannot create virt StorageClass")
 
-    LOGGER.info("Restarting ocs-operator to trigger virt StorageClass creation (BZ2322458 workaround)")
-    # ResourceEditor.update() is intentionally called without 'with' here: the restart annotation must
-    # persist permanently. Using 'with' would revert the patch on __exit__, cancelling the restart trigger.
-    ResourceEditor(
-        patches={
-            ocs_operator: {
-                "spec": {
-                    "template": {
-                        "metadata": {
-                            "annotations": {"kubectl.kubernetes.io/restartedAt": datetime.now(tz=UTC).isoformat()}
-                        }
-                    }
-                }
-            }
-        }
-    ).update()
-    # Capture the post-patch generation and wait for the controller to observe it before
-    # checking replica counts. wait_for_replicas() alone can match stale replica status
-    # that pre-dates the restart annotation, causing the SC poll to fail intermittently.
-    expected_generation = ocs_operator.instance.metadata.generation
-    LOGGER.info(f"Waiting for ocs-operator to observe generation {expected_generation}")
-    try:
-        for sample in TimeoutSampler(
-            wait_timeout=TIMEOUT_10MIN,
-            sleep=TIMEOUT_5SEC,
-            func=lambda: ocs_operator.instance.status.observedGeneration,
-        ):
-            if sample is not None and sample >= expected_generation:
-                break
-    except TimeoutExpiredError:
-        LOGGER.error(f"Timeout waiting for ocs-operator to observe generation {expected_generation}")
-        raise
+    original_replicas = ocs_operator.instance.spec.replicas
+    LOGGER.info(
+        f"Restarting ocs-operator ({original_replicas} replicas) to trigger virt StorageClass creation (BZ2322458 workaround)"
+    )
+    ocs_operator.scale_replicas(replica_count=0)
+    ocs_operator.scale_replicas(replica_count=original_replicas)
     ocs_operator.wait_for_replicas(timeout=TIMEOUT_10MIN)
 
 

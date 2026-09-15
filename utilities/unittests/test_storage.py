@@ -176,26 +176,14 @@ class TestRestartOcsOperatorForVirtSc:
 
         mock_deployment.wait_for_replicas.assert_not_called()
 
-    @patch("utilities.storage.TimeoutSampler")
-    @patch("utilities.storage.ResourceEditor")
     @patch("utilities.storage.Deployment")
-    def test_present_deployment_patches_and_waits(self, mock_deployment_cls, mock_editor_cls, mock_sampler_cls):
+    def test_present_deployment_scales_and_waits(self, mock_deployment_cls):
         mock_deployment = mock_deployment_cls.return_value
         mock_deployment.exists = True
-        mock_instance = MagicMock()
-        mock_instance.metadata.generation = 3
-        mock_instance.status.observedGeneration = 3
-        mock_deployment.instance = mock_instance
-        mock_sampler_cls.return_value = iter([3])
+        mock_deployment.instance.spec.replicas = 2
 
         restart_ocs_operator_for_virt_sc(admin_client=MagicMock())
 
-        mock_editor_cls.assert_called_once_with(
-            patches={
-                mock_deployment: {
-                    "spec": {"template": {"metadata": {"annotations": {"kubectl.kubernetes.io/restartedAt": ANY}}}}
-                }
-            }
-        )
-        mock_editor_cls.return_value.update.assert_called_once()
+        mock_deployment.scale_replicas.assert_any_call(replica_count=0)
+        mock_deployment.scale_replicas.assert_called_with(replica_count=2)
         mock_deployment.wait_for_replicas.assert_called_once_with(timeout=ANY)
