@@ -18,12 +18,10 @@ from utilities.artifactory import (
     get_test_artifact_server_url,
 )
 from utilities.constants import Images
-from utilities.constants.pytest import UNPRIVILEGED_USER
 from utilities.constants.storage import (
     BIND_IMMEDIATE_ANNOTATION,
     CDI_CLONE_SOURCER_CLUSTER_ROLE,
     REGISTRY_STR,
-    VIEW_CLUSTER_ROLE,
 )
 from utilities.constants.timeouts import TIMEOUT_10MIN, TIMEOUT_50MIN
 from utilities.constants.virt import WIN_2K22
@@ -52,8 +50,7 @@ def validation_os_images_role_binding(admin_client, validation_os_images_namespa
 
     Binds the CDI-shipped ``cdi.kubevirt.io:clone-sourcer`` ClusterRole to the ``system:authenticated`` group
     (covering both the unprivileged user and any ServiceAccount, e.g. a VM namespace's default ServiceAccount
-    performing a cross-namespace clone), and the built-in ``view`` ClusterRole to the unprivileged user, in the
-    validation-os-images namespace.
+    performing a cross-namespace clone) in the validation-os-images namespace.
 
     Yields:
         list[RoleBinding]: The RoleBindings granting the above permissions.
@@ -64,14 +61,6 @@ def validation_os_images_role_binding(admin_client, validation_os_images_namespa
             subjects_kind="Group",
             subjects_name="system:authenticated",
             cluster_role_name=CDI_CLONE_SOURCER_CLUSTER_ROLE,
-        ),
-        # Not required by any test, but lets a human logged in as the unprivileged user inspect resources
-        # (e.g. `oc get datasource,pvc -n validation-os-images`) for manual debugging.
-        RoleBindingSpec(
-            name="validation-os-images-view",
-            subjects_kind="User",
-            subjects_name=UNPRIVILEGED_USER,
-            cluster_role_name=VIEW_CLUSTER_ROLE,
         ),
     )
 
