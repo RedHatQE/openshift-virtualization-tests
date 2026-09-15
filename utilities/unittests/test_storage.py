@@ -167,13 +167,13 @@ class TestConstructDatavolumeSourceDictUnsupported:
 
 class TestRestartOcsOperatorForVirtSc:
     @patch("utilities.storage.Deployment")
-    def test_absent_deployment_skips_restart(self, mock_deployment_cls):
+    def test_absent_deployment_raises(self, mock_deployment_cls):
         mock_deployment = mock_deployment_cls.return_value
         mock_deployment.exists = False
 
-        restart_ocs_operator_for_virt_sc(admin_client=MagicMock())
+        with pytest.raises(RuntimeError, match="ocs-operator deployment not found"):
+            restart_ocs_operator_for_virt_sc(admin_client=MagicMock())
 
-        mock_deployment_cls.assert_called_once()
         mock_deployment.wait_for_replicas.assert_not_called()
 
     @patch("utilities.storage.TimeoutSampler")
@@ -190,6 +190,12 @@ class TestRestartOcsOperatorForVirtSc:
 
         restart_ocs_operator_for_virt_sc(admin_client=MagicMock())
 
-        mock_editor_cls.assert_called_once()
+        mock_editor_cls.assert_called_once_with(
+            patches={
+                mock_deployment: {
+                    "spec": {"template": {"metadata": {"annotations": {"kubectl.kubernetes.io/restartedAt": ANY}}}}
+                }
+            }
+        )
         mock_editor_cls.return_value.update.assert_called_once()
         mock_deployment.wait_for_replicas.assert_called_once_with(timeout=ANY)
