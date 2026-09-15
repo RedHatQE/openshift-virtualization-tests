@@ -1,27 +1,18 @@
 import logging
 from collections import Counter
-from contextlib import contextmanager
 
-from kubernetes.dynamic import DynamicClient
-from ocp_resources.deployment import Deployment
-from ocp_resources.kube_descheduler import KubeDescheduler
-from ocp_resources.pod import Pod
+from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine import VirtualMachine
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.virt.node.descheduler.constants import (
-    DESCHEDULER_DEPLOYMENT_NAME,
-    DESCHEDULER_SOFT_TAINT_KEY,
-    DESCHEDULING_INTERVAL_120SEC,
-)
-from utilities.constants.namespaces import NamespacesNames
+from tests.utils import start_stress_on_vm
+from tests.virt.node.descheduler.constants import DESCHEDULER_SOFT_TAINT_KEY
 from utilities.constants.timeouts import (
-    TIMEOUT_1MIN,
-    TIMEOUT_5MIN,
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
     TIMEOUT_20SEC,
 )
+from utilities.constants.virt import DESCHEDULER_PREFER_NO_EVICTION_ANNOTATION
 from utilities.virt import (
     VirtualMachineForTests,
     fedora_vm_body,
@@ -29,52 +20,6 @@ from utilities.virt import (
 )
 
 LOGGER = logging.getLogger(__name__)
-
-STRATEGIES = "strategies"
-
-
-class UnexpectedBehaviorError(Exception):
-    def __init__(self, error_msg):
-        self.error_msg = error_msg
-
-    def __str__(self):
-        return f"Unexpected behavior: {self.error_msg}"
-
-
-class VirtualMachineForDeschedulerTest(VirtualMachineForTests):
-    def __init__(
-        self,
-        name,
-        namespace,
-        memory_guest,
-        client,
-        cpu_model,
-        body,
-        cpu_cores,
-        descheduler_eviction=True,
-        node_selector_labels=None,
-        vm_affinity=None,
-    ):
-        super().__init__(
-            name=name,
-            namespace=namespace,
-            client=client,
-            memory_guest=memory_guest,
-            cpu_model=cpu_model,
-            body=body,
-            cpu_cores=cpu_cores,
-            node_selector_labels=node_selector_labels,
-            run_strategy=VirtualMachine.RunStrategy.ALWAYS,
-            vm_affinity=vm_affinity,
-        )
-        self.descheduler_eviction = descheduler_eviction
-
-    def to_dict(self):
-        super().to_dict()
-        metadata = self.res["spec"]["template"]["metadata"]
-        metadata.setdefault("annotations", {})
-        if self.descheduler_eviction:
-            metadata["annotations"]["descheduler.alpha.kubernetes.io/evict"] = "true"
 
 
 def calculate_vm_deployment(
@@ -116,37 +61,23 @@ def vm_nodes(vms):
     return {vm.name: vm.vmi.node for vm in vms}
 
 
-def assert_vms_consistent_virt_launcher_pods(running_vms, admin_client: DynamicClient):
-    """Verify VMs virt launcher pods are not replaced (sampled every one minute).
-    Using VMs virt launcher pods to verify that VMs are not migrated nor restarted.
+def stress_vms_on_node(vms, node, stress_command):
+    """Start the given stress workload inside every VM running on the node.
 
     Args:
-        running_vms (list): list of VMs
-        admin_client (DynamicClient): privileged client for accessing virt launcher pods
+        vms (list): candidate VMs.
+        node: node whose VMs should be stressed.
+        stress_command (str): shell command to run inside each VM.
+
+    Returns:
+        list: VMs that were stressed (those running on the node).
     """
-
-    def _vms_launcher_pod_names():
-        result = {}
-        for vm in running_vms:
-            virt_launcher_pod = vm.vmi.get_virt_launcher_pod(privileged_client=admin_client)
-            if virt_launcher_pod.status == Pod.Status.RUNNING:
-                result[vm.name] = virt_launcher_pod.name
-        return result
-
-    orig_virt_launcher_pod_names = _vms_launcher_pod_names()
-    samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_5MIN,
-        sleep=TIMEOUT_1MIN,
-        func=_vms_launcher_pod_names,
-    )
-    try:
-        for sample in samples:
-            if any([pod_name != orig_virt_launcher_pod_names[vm_name] for vm_name, pod_name in sample.items()]):
-                raise UnexpectedBehaviorError(
-                    error_msg=f"Some VMs were migrated: {sample} from {orig_virt_launcher_pod_names}"
-                )
-    except TimeoutExpiredError:
-        LOGGER.info("No VMs were migrated.")
+    stressed_vms = []
+    for vm in vms:
+        if vm.vmi.node.name == node.name:
+            stressed_vms.append(vm)
+            start_stress_on_vm(vm=vm, stress_command=stress_command)
+    return stressed_vms
 
 
 def deploy_vms(
@@ -156,24 +87,21 @@ def deploy_vms(
     cpu_model,
     vm_count,
     deployment_size,
-    descheduler_eviction,
-    node_selector_labels=None,
-    vm_affinity=None,
+    exclude_from_descheduler=False,
 ):
     vms = []
     for vm_index in range(vm_count):
         vm_name = f"vm-{vm_prefix}-{vm_index}"
-        vm = VirtualMachineForDeschedulerTest(
+        vm = VirtualMachineForTests(
             name=vm_name,
             namespace=namespace_name,
             client=client,
             cpu_cores=deployment_size["cpu"],
             memory_guest=deployment_size["memory"].bytes,
             cpu_model=cpu_model,
-            descheduler_eviction=descheduler_eviction,
             body=fedora_vm_body(name=vm_name),
-            node_selector_labels=node_selector_labels,
-            vm_affinity=vm_affinity,
+            run_strategy=VirtualMachine.RunStrategy.ALWAYS,
+            exclude_from_descheduler=exclude_from_descheduler,
         )
         vm.deploy()
         vms.append(vm)
@@ -191,6 +119,25 @@ def deploy_vms(
         vm.wait_deleted()
 
 
+def make_vms_evictable(vms):
+    """Allow the descheduler to evict (live-migrate) the given VMs.
+
+    Removes the prefer-no-eviction annotation from each VM template; KubeVirt propagates
+    the removal to the running virt-launcher pods, so the descheduler stops treating the
+    VMs as protected.
+
+    Args:
+        vms (list): VMs to make evictable.
+    """
+    LOGGER.info(f"Removing prefer-no-eviction annotation from VMs: {[vm.name for vm in vms]}")
+    ResourceEditor(
+        patches={
+            vm: {"spec": {"template": {"metadata": {"annotations": {DESCHEDULER_PREFER_NO_EVICTION_ANNOTATION: None}}}}}
+            for vm in vms
+        }
+    ).update()
+
+
 def verify_at_least_one_vm_migrated(vms, node_before):
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_10MIN,
@@ -200,27 +147,6 @@ def verify_at_least_one_vm_migrated(vms, node_before):
     for sample in samples:
         if not all(node_before.name == node for node in sample):
             return sample
-
-
-@contextmanager
-def create_kube_descheduler(admin_client, profiles, profile_customizations):
-    with KubeDescheduler(
-        name="cluster",
-        namespace=NamespacesNames.OPENSHIFT_KUBE_DESCHEDULER_OPERATOR,
-        client=admin_client,
-        profiles=profiles,
-        descheduling_interval_seconds=DESCHEDULING_INTERVAL_120SEC,
-        mode="Automatic",
-        management_state="Managed",
-        profile_customizations=profile_customizations,
-    ) as kd:
-        deployment = Deployment(
-            name=DESCHEDULER_DEPLOYMENT_NAME,
-            namespace=NamespacesNames.OPENSHIFT_KUBE_DESCHEDULER_OPERATOR,
-            client=admin_client,
-        )
-        deployment.wait_for_replicas()
-        yield kd
 
 
 def wait_for_overutilized_soft_taint(node, taint_expected, wait_timeout=TIMEOUT_10MIN):

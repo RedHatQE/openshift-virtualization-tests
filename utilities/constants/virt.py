@@ -23,6 +23,7 @@ DV_DISK = "dv-disk"
 EVICTIONSTRATEGY = "evictionStrategy"
 ES_LIVE_MIGRATE_IF_POSSIBLE = "LiveMigrateIfPossible"
 ES_NONE = "None"
+DESCHEDULER_PREFER_NO_EVICTION_ANNOTATION = "descheduler.alpha.kubernetes.io/prefer-no-eviction"
 
 CLOUD_INIT_DISK_NAME = "cloudinitdisk"
 CLOUD_INIT_NO_CLOUD = "cloudInitNoCloud"
