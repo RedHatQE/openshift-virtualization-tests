@@ -4,15 +4,9 @@ PQC TLS audit tests for CNV endpoints.
 Epic: https://redhat.atlassian.net/browse/CNV-74453 # <skip-jira-utils-check>
 """
 
-import logging
-
 import pytest
 
-from utilities.jira import is_jira_open
-
-LOGGER = logging.getLogger(__name__)
 pytestmark = pytest.mark.post_upgrade
-VIRT_PLATFORM_AUTOPILOT_METRICS = "virt-platform-autopilot-metrics"
 
 
 @pytest.mark.polarion("CNV-15222")
@@ -39,8 +33,6 @@ def test_cnv_services_pqc_key_exchange(subtests, fips_enabled_cluster, pqc_statu
     """
     for service_name, accepted in pqc_status_by_service.items():
         with subtests.test(msg=service_name):
-            if service_name == VIRT_PLATFORM_AUTOPILOT_METRICS and is_jira_open(jira_id="CNV-96287"):
-                pytest.xfail(f"{service_name} serves plain HTTP, not TLS (CNV-96287)")
             assert accepted is not None, f"Service {service_name} is unreachable"
             if fips_enabled_cluster:
                 runtime = services_tls_runtime.get(service_name, "go")
