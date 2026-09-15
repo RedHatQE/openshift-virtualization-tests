@@ -29,11 +29,11 @@ class TestKubevirtVmiMigrationMetrics:
             ),
             pytest.param(
                 KUBEVIRT_VMI_MIGRATION_MEMORY_TRANSFER_RATE_BYTES,
-                marks=(pytest.mark.polarion("CNV-11598")),
+                marks=(pytest.mark.polarion("CNV-11598"), pytest.mark.jira("CNV-97013", run=False)),
             ),
             pytest.param(
                 KUBEVIRT_VMI_MIGRATION_DIRTY_MEMORY_RATE_BYTES,
-                marks=(pytest.mark.polarion("CNV-11599")),
+                marks=(pytest.mark.polarion("CNV-11599"), pytest.mark.jira("CNV-97013", run=False)),
             ),
             pytest.param(
                 KUBEVIRT_VMI_MIGRATION_DATA_TOTAL_BYTES,
