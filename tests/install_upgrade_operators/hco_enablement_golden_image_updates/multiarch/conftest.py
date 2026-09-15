@@ -17,7 +17,6 @@ from tests.install_upgrade_operators.hco_enablement_golden_image_updates.multiar
 )
 from utilities.constants.cluster import KUBERNETES_ARCH_LABEL
 from utilities.hco import ResourceEditorValidateHCOReconcile, update_hco_templates_spec
-from utilities.virt import get_hyperconverged_kubevirt
 
 LOGGER = logging.getLogger(__name__)
 
@@ -58,14 +57,8 @@ def enabled_multiarch_feature_gate(admin_client, hyperconverged_resource_scope_c
 
 
 @pytest.fixture(scope="class")
-def kubevirt_default_architecture(admin_client, hco_namespace):
-    # TODO: Migrate to HCO CR once defaultArchitecture is exposed there.
-    # Currently only available on KubeVirt CR status. See:
-    # https://github.com/kubevirt/hyperconverged-cluster-operator/pull/4329
-    return get_hyperconverged_kubevirt(
-        admin_client=admin_client,
-        hco_namespace=hco_namespace,
-    ).instance.status.defaultArchitecture
+def hco_status_default_architecture(hyperconverged_resource_scope_class):
+    return hyperconverged_resource_scope_class.instance.status.nodeInfo.defaultWorkloadArchitecture
 
 
 @pytest.fixture()
