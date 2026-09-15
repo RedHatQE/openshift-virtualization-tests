@@ -252,55 +252,51 @@ NP_INFRA_VALUE_CDI_CR = {
     },
     "nodeSelector": {"test_case": "np"},
 }
-NP_INFRA_VALUE_HCO_CR = {
-    "nodePlacement": NP_INFRA_VALUE_CDI_CR,
-}
+NP_INFRA_VALUE_HCO_CR = NP_INFRA_VALUE_CDI_CR
 NP_WORKLOADS_KEY_HCO_CR = "workload"
 NP_WORKLOADS_KEY_CDI_CR = "workload"
 NP_WORKLOADS_VALUE_HCO_CR = {
-    "nodePlacement": {
-        "affinity": {
-            "nodeAffinity": {
-                "requiredDuringSchedulingIgnoredDuringExecution": {
-                    "nodeSelectorTerms": [
-                        {
-                            "matchExpressions": [
-                                {
-                                    "key": "kubernetes.io/e2e-az-name",
-                                    "operator": "In",
-                                    "values": [
-                                        "e2e-az1",
-                                        "e2e-az2",
-                                    ],
-                                },
-                            ]
-                        }
-                    ]
-                },
-                "preferredDuringSchedulingIgnoredDuringExecution": [
+    "affinity": {
+        "nodeAffinity": {
+            "requiredDuringSchedulingIgnoredDuringExecution": {
+                "nodeSelectorTerms": [
                     {
-                        "weight": 1,
-                        "preference": {
-                            "matchExpressions": [
-                                {
-                                    "key": "my-cloud.io/num-cpus",
-                                    "operator": "Gt",
-                                    "values": ["8"],
-                                }
-                            ]
-                        },
+                        "matchExpressions": [
+                            {
+                                "key": "kubernetes.io/e2e-az-name",
+                                "operator": "In",
+                                "values": [
+                                    "e2e-az1",
+                                    "e2e-az2",
+                                ],
+                            },
+                        ]
                     }
-                ],
-            }
-        },
-        "nodeSelector": {"test_case": "np"},
-        "tolerations": [
-            {
-                "key": "npkey2",
-                "operator": "Exists",
-                "effect": "NoSchedule",
-            }
-        ],
+                ]
+            },
+            "preferredDuringSchedulingIgnoredDuringExecution": [
+                {
+                    "weight": 1,
+                    "preference": {
+                        "matchExpressions": [
+                            {
+                                "key": "my-cloud.io/num-cpus",
+                                "operator": "Gt",
+                                "values": ["8"],
+                            }
+                        ]
+                    },
+                }
+            ],
+        }
     },
+    "nodeSelector": {"test_case": "np"},
+    "tolerations": [
+        {
+            "key": "npkey2",
+            "operator": "Exists",
+            "effect": "NoSchedule",
+        }
+    ],
 }
-NP_WORKLOADS_VALUE_CDI_CR = NP_WORKLOADS_VALUE_HCO_CR["nodePlacement"]
+NP_WORKLOADS_VALUE_CDI_CR = NP_WORKLOADS_VALUE_HCO_CR

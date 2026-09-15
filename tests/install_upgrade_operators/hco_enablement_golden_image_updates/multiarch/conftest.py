@@ -72,7 +72,7 @@ def kubevirt_default_architecture(admin_client, hco_namespace):
 def single_arch_node_placement(admin_client, workers_architectures, hyperconverged_resource_scope_function):
     single_arch = min(workers_architectures)
     LOGGER.info(f"Restricting workloads nodePlacement to single architecture: {single_arch}")
-    placement = {"nodePlacement": {"nodeSelector": {KUBERNETES_ARCH_LABEL: single_arch}}}
+    placement = {"nodeSelector": {KUBERNETES_ARCH_LABEL: single_arch}}
     with ResourceEditorValidateHCOReconcile(
         admin_client=admin_client,
         patches={

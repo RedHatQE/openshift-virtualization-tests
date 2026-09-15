@@ -41,9 +41,7 @@ NODE_SELECTOR = "node_selector"
 HCO_NODE_PLACEMENT = {
     "infra": {},
     "workloads": {
-        "nodePlacement": {
-            "nodeSelector": {HPP_KEY: HPP_VAL},
-        }
+        "nodeSelector": {HPP_KEY: HPP_VAL},
     },
 }
 
