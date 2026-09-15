@@ -19,7 +19,7 @@ from tests.virt.upgrade.utils import (
     vm_from_template,
     wait_for_automatic_vm_migrations,
 )
-from tests.virt.utils import get_boot_time_for_multiple_vms
+from tests.virt.utils import get_boot_time_for_multiple_vms, get_pci_addresses
 from utilities.artifactory import get_test_artifact_server_url
 from utilities.constants import Images
 from utilities.constants.images import OS_FLAVOR_RHEL
@@ -322,6 +322,11 @@ def virt_migratable_vms_names(virt_migratable_vms):
 
 
 @pytest.fixture(scope="session")
+def pci_addresses_before_upgrade(vms_for_upgrade):
+    return {vm.name: get_pci_addresses(vm=vm) for vm in vms_for_upgrade}
+
+
+@pytest.fixture(scope="session")
 def linux_boot_time_before_upgrade(vms_for_upgrade):
     return get_boot_time_for_multiple_vms(vm_list=vms_for_upgrade)
 
@@ -367,7 +372,9 @@ def parallel_live_migrations_increased(admin_client, hyperconverged_resource_sco
         patches={
             hyperconverged_resource_scope_session: {
                 "spec": {
-                    "liveMigrationConfig": {"parallelOutboundMigrationsPerNode": 5},
+                    "virtualization": {
+                        "liveMigrationConfig": {"parallelOutboundMigrationsPerNode": 5},
+                    }
                 }
             }
         },

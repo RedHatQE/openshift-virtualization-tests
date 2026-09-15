@@ -6,6 +6,7 @@ from typing import Final
 import ocp_resources.network_operator_openshift_io as openshift_no
 import pytest
 from kubernetes.dynamic import DynamicClient
+from ocp_resources.cluster_operator import ClusterOperator
 from ocp_resources.namespace import Namespace
 from ocp_resources.node import Node
 from ocp_resources.resource import ResourceEditor
@@ -29,6 +30,7 @@ from tests.network.bgp.evpn.libevpn import (
     deploy_evpn_l3_endpoint,
     deploy_evpn_l3_vrf,
     evpn_workloads_active_connections,
+    node_primary_ipv4_interface,
     teardown_evpn_bridge,
     teardown_evpn_l2_endpoint,
     teardown_evpn_l3_endpoint,
@@ -44,6 +46,8 @@ from tests.network.libs.bgp import (
 )
 from tests.network.libs.label_selector import LabelSelector
 from tests.network.libs.vm_factory import udn_vm
+from utilities.constants.hco import DEFAULT_RESOURCE_CONDITIONS
+from utilities.infra import wait_for_consistent_resource_conditions
 
 EVPN_ADVERTISE_LABEL: Final[dict] = {"advertise": "evpn"}
 APP_EVPN_CUDN_LABEL: Final[dict] = {**EVPN_ADVERTISE_LABEL, "app": "cudn-evpn"}
@@ -61,6 +65,7 @@ EVPN_IP_VRF_VNI: Final[int] = 20102
 
 @pytest.fixture(scope="module")
 def ovn_local_gateway_mode(
+    admin_client: DynamicClient,
     network_operator: openshift_no.Network,
 ) -> Generator[None]:
     patch = {
@@ -75,7 +80,19 @@ def ovn_local_gateway_mode(
         }
     }
     with ResourceEditor(patches=patch):
+        wait_for_consistent_resource_conditions(
+            dynamic_client=admin_client,
+            resource_kind=ClusterOperator,
+            resource_name="network",
+            expected_conditions=DEFAULT_RESOURCE_CONDITIONS,
+        )
         yield
+    wait_for_consistent_resource_conditions(
+        dynamic_client=admin_client,
+        resource_kind=ClusterOperator,
+        resource_name="network",
+        expected_conditions=DEFAULT_RESOURCE_CONDITIONS,
+    )
 
 
 @pytest.fixture(scope="module")
@@ -88,9 +105,7 @@ def vtep(
     admin_client: DynamicClient,
     workers: list[Node],
 ) -> Generator[VTEP]:
-    host_cidrs = json.loads(workers[0].instance.metadata.annotations["k8s.ovn.org/host-cidrs"])
-    host_cidr = next(cidr for cidr in host_cidrs if "." in cidr)
-    vtep_cidr = str(ipaddress.ip_network(host_cidr, strict=False))
+    vtep_cidr = str(node_primary_ipv4_interface(workers[0]).network)
     with VTEP(
         name="evpn-vtep",
         cidrs=[vtep_cidr],
@@ -217,11 +232,7 @@ def evpn_bridge(
     frr_external_pod: ExternalFrrPodInfo,
     workers: list[Node],
 ) -> Generator[None]:
-    worker_ips = []
-    for worker in workers:
-        host_cidrs = json.loads(worker.instance.metadata.annotations["k8s.ovn.org/host-cidrs"])
-        host_ip = next(cidr.split("/")[0] for cidr in host_cidrs if "." in cidr)
-        worker_ips.append(host_ip)
+    worker_ips = [str(node_primary_ipv4_interface(worker).ip) for worker in workers]
 
     deploy_evpn_bridge(
         pod=frr_external_pod.pod,

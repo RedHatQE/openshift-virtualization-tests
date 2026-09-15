@@ -616,16 +616,12 @@ def get_hco_mismatch_statuses(hco_status_conditions, expected_hco_status):
 
 
 def get_hyperconverged_resource(client, hco_ns_name):
-    hco_name = py_config["hco_cr_name"]
-    hco = HyperConverged(
+    return HyperConverged(
         client=client,
         namespace=hco_ns_name,
-        name=hco_name,
+        name=py_config["hco_cr_name"],
+        ensure_exists=True,
     )
-    hco.api_version = f"{hco.ApiGroup.HCO_KUBEVIRT_IO}/{hco.ApiVersion.V1BETA1}"
-    if hco.exists:
-        return hco
-    raise ResourceNotFoundError(f"Hyperconverged: {hco_name} not found in {hco_ns_name}")
 
 
 def get_utility_pods_from_nodes(nodes, admin_client, label_selector):
@@ -1183,8 +1179,9 @@ def get_node_selector_dict(node_selector):
 
 
 def get_linux_guest_agent_version(ssh_exec):
-    ssh_exec.sudo = True
-    return guest_agent_version_parser(version_string=ssh_exec.package_manager.info("qemu-guest-agent"))
+    return guest_agent_version_parser(
+        version_string=ssh_exec.executor().run_cmd(cmd=shlex.split("rpm -q qemu-guest-agent"))[1]
+    )
 
 
 def get_linux_os_info(ssh_exec):
