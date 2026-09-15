@@ -4,6 +4,7 @@ Pytest conftest file for CNV Storage snapshots tests
 
 import logging
 import shlex
+from time import monotonic
 
 import pytest
 from ocp_resources.datavolume import DataVolume
@@ -12,7 +13,13 @@ from ocp_resources.virtual_machine_restore import VirtualMachineRestore
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 from pyhelper_utils.shell import run_ssh_commands
 
-from tests.storage.snapshots.constants import WINDOWS_DIRECTORY_PATH
+from tests.storage.snapshots.constants import NUM_MULTI_DISK_VMS, WINDOWS_DIRECTORY_PATH
+from tests.storage.snapshots.utils import (
+    create_vm_with_4_disks,
+    raise_cleanup_failures,
+    restore_vm_within_deadline,
+    run_parallel,
+)
 from tests.storage.utils import (
     assert_windows_directory_existence,
     create_windows_directory,
@@ -22,10 +29,12 @@ from tests.utils import create_windows2022_vm
 from utilities.constants.pytest import UNPRIVILEGED_USER
 from utilities.constants.timeouts import (
     TIMEOUT_2MIN,
+    TIMEOUT_5MIN,
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
 )
 from utilities.storage import data_volume_template_with_source_ref_dict
+from utilities.virt import running_vm
 
 LOGGER = logging.getLogger(__name__)
 
@@ -149,3 +158,209 @@ def vm_restore_with_predictable_names(
     ) as vm_restore:
         vm_restore.wait_restore_done(timeout=TIMEOUT_10MIN)
         yield vm_restore
+
+
+@pytest.fixture()
+def snapshot_of_vm_with_4_disks(admin_client, vm_with_4_disks):
+    """Create an offline snapshot of the 4-disk VM.
+
+    Yields:
+        VirtualMachineSnapshot: Completed snapshot of the 4-disk VM.
+    """
+    LOGGER.info(f"Stopping VM {vm_with_4_disks.name} for snapshot")
+    vm_with_4_disks.stop(wait=True)
+    with VirtualMachineSnapshot(
+        name=f"snapshot-{vm_with_4_disks.name}",
+        namespace=vm_with_4_disks.namespace,
+        vm_name=vm_with_4_disks.name,
+        client=admin_client,
+    ) as snapshot:
+        LOGGER.info(f"Waiting for snapshot {snapshot.name} to complete")
+        snapshot.wait_snapshot_done(timeout=TIMEOUT_10MIN)
+        yield snapshot
+
+
+@pytest.fixture()
+def created_four_vms_with_4_disks_for_snapshot(
+    unprivileged_client,
+    namespace,
+    snapshot_storage_class_name_scope_module,
+    fedora_data_source_scope_module,
+):
+    """Deploy four Fedora VMs concurrently for snapshot restore testing.
+
+    Yields:
+        list: Deployed VirtualMachineForTests objects, each with four disk devices.
+
+    Raises:
+        ExceptionGroup: On creation or cleanup failures.
+    """
+    vms = []
+    try:
+        vms, create_errors = run_parallel(
+            items=list(range(NUM_MULTI_DISK_VMS)),
+            func=lambda vm_index: create_vm_with_4_disks(
+                vm_name=f"vm-restore-4d-{vm_index}",
+                namespace_name=namespace.name,
+                client=unprivileged_client,
+                storage_class_name=snapshot_storage_class_name_scope_module,
+                data_source=fedora_data_source_scope_module,
+            ),
+            label="Failed to create VM",
+            item_name=lambda vm_index: f"vm-restore-4d-{vm_index}",
+        )
+        if create_errors:
+            raise ExceptionGroup("VM creation failed", create_errors)
+        yield vms
+    finally:
+        if vms:
+            _, cleanup_errors = run_parallel(
+                items=vms,
+                func=lambda vm: vm.clean_up(),
+                label="Failed to clean up VM",
+                item_name=lambda vm: vm.name,
+            )
+            raise_cleanup_failures("VM cleanup failed", cleanup_errors)
+
+
+@pytest.fixture()
+def four_vms_with_4_disks_for_snapshot(created_four_vms_with_4_disks_for_snapshot):
+    """Wait for the four 4-disk VMs to reach Running with SSH connectivity.
+
+    Yields:
+        list: Running VirtualMachineForTests objects, each with four disk devices.
+    """
+    LOGGER.info("Waiting for VMs to reach Running")
+    _, start_errors = run_parallel(
+        items=created_four_vms_with_4_disks_for_snapshot,
+        func=lambda vm: running_vm(vm=vm),
+        label="Failed to start VM",
+        item_name=lambda vm: vm.name,
+    )
+    if start_errors:
+        raise ExceptionGroup("VM start failures", start_errors)
+    yield created_four_vms_with_4_disks_for_snapshot
+
+
+@pytest.fixture()
+def snapshots_of_four_vms(admin_client, four_vms_with_4_disks_for_snapshot):
+    """Create offline snapshots of all four VMs.
+
+    Yields:
+        dict: Mapping of each VM to its completed VirtualMachineSnapshot.
+
+    Raises:
+        ExceptionGroup: If cleanup of one or more snapshots fails. Includes the original
+            setup or test failure when both occur.
+    """
+    LOGGER.info("Stopping VMs for snapshot")
+    _, stop_errors = run_parallel(
+        items=four_vms_with_4_disks_for_snapshot,
+        func=lambda vm: vm.stop(wait=True),
+        label="Failed to stop VM",
+        item_name=lambda vm: vm.name,
+    )
+    if stop_errors:
+        raise ExceptionGroup("VM stop failures", stop_errors)
+
+    snapshots = [
+        VirtualMachineSnapshot(
+            name=f"snapshot-{vm.name}",
+            namespace=vm.namespace,
+            vm_name=vm.name,
+            client=admin_client,
+        )
+        for vm in four_vms_with_4_disks_for_snapshot
+    ]
+    try:
+        LOGGER.info("Creating snapshots")
+        _, deploy_errors = run_parallel(
+            items=snapshots,
+            func=lambda snapshot: snapshot.deploy(),
+            label="Failed to create snapshot",
+            item_name=lambda snapshot: snapshot.name,
+        )
+        if deploy_errors:
+            raise ExceptionGroup("Snapshot creation failures", deploy_errors)
+
+        LOGGER.info("Waiting for snapshots to complete")
+        _, wait_errors = run_parallel(
+            items=snapshots,
+            func=lambda snapshot: snapshot.wait_snapshot_done(timeout=TIMEOUT_10MIN),
+            label="Failed to complete snapshot",
+            item_name=lambda snapshot: snapshot.name,
+        )
+        if wait_errors:
+            raise ExceptionGroup("Snapshot wait failures", wait_errors)
+
+        yield dict(zip(four_vms_with_4_disks_for_snapshot, snapshots))
+    finally:
+        _, cleanup_errors = run_parallel(
+            items=snapshots,
+            func=lambda snapshot: snapshot.clean_up(),
+            label="Failed to clean up snapshot",
+            item_name=lambda snapshot: snapshot.name,
+        )
+        raise_cleanup_failures(message="Snapshot cleanup failures", cleanup_errors=cleanup_errors)
+
+
+@pytest.fixture()
+def restored_vm_with_4_disks(admin_client, vm_with_4_disks, snapshot_of_vm_with_4_disks):
+    """Restore the 4-disk VM snapshot within the 5-minute performance budget.
+
+    Yields:
+        VirtualMachineRestore: Completed restore of the 4-disk VM.
+    """
+    deadline = monotonic() + TIMEOUT_5MIN
+    with VirtualMachineRestore(
+        name=f"restore-{vm_with_4_disks.name}",
+        namespace=vm_with_4_disks.namespace,
+        vm_name=vm_with_4_disks.name,
+        snapshot_name=snapshot_of_vm_with_4_disks.name,
+        client=admin_client,
+    ) as vm_restore:
+        restore_vm_within_deadline(restore=vm_restore, deadline=deadline)
+        yield vm_restore
+
+
+@pytest.fixture()
+def restored_four_vms(admin_client, snapshots_of_four_vms):
+    """Restore all four VM snapshots concurrently, each within its own 5-minute budget.
+
+    Yields:
+        list: VirtualMachineRestore objects for the concurrent restores.
+
+    Raises:
+        ExceptionGroup: If one or more restores fail, or if restore cleanup fails.
+            Cleanup failures include the original restore or test failure when both occur.
+    """
+    restores = [
+        VirtualMachineRestore(
+            name=f"restore-{vm.name}",
+            namespace=vm.namespace,
+            vm_name=vm.name,
+            snapshot_name=snapshot.name,
+            client=admin_client,
+        )
+        for vm, snapshot in snapshots_of_four_vms.items()
+    ]
+    deadline = monotonic() + TIMEOUT_5MIN
+    try:
+        _, restore_errors = run_parallel(
+            items=restores,
+            func=lambda restore: restore_vm_within_deadline(restore=restore, deadline=deadline),
+            label="Failed to restore VM",
+            item_name=lambda restore: restore.name,
+        )
+        if restore_errors:
+            raise ExceptionGroup("Restore failures", restore_errors)
+
+        yield restores
+    finally:
+        _, cleanup_errors = run_parallel(
+            items=restores,
+            func=lambda restore: restore.clean_up(),
+            label="Failed to clean up restore",
+            item_name=lambda restore: restore.name,
+        )
+        raise_cleanup_failures(message="Restore cleanup failures", cleanup_errors=cleanup_errors)

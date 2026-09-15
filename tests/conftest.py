@@ -35,6 +35,7 @@ import utilities.hco
 from libs.net.cluster import supported_cluster_ip_versions
 from libs.net.ip import filter_link_local_addresses, random_cidr_addresses_by_family
 from libs.net.vmspec import lookup_iface_status
+from tests.fixtures.storage.vms import vm_with_4_disks  # noqa: F401,NIT001
 from tests.utils import download_and_extract_tar
 from utilities.artifactory import get_artifactory_header, get_test_artifact_server_url
 from utilities.constants import Images
