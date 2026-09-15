@@ -1,4 +1,5 @@
 import logging
+from contextlib import ExitStack
 
 import pytest
 from ocp_resources.cluster_role import ClusterRole
@@ -9,6 +10,7 @@ from ocp_resources.role_binding import RoleBinding
 from ocp_resources.utils.constants import TIMEOUT_1MINUTE
 from pytest_testconfig import config as py_config
 
+from tests.fixtures.images.utils import RoleBindingSpec
 from utilities.artifactory import (
     cleanup_artifactory_secret_and_config_map,
     get_artifactory_config_map,
@@ -16,7 +18,13 @@ from utilities.artifactory import (
     get_test_artifact_server_url,
 )
 from utilities.constants import Images
-from utilities.constants.storage import BIND_IMMEDIATE_ANNOTATION, OS_IMAGES_EDIT_CLUSTER_ROLE, REGISTRY_STR
+from utilities.constants.pytest import UNPRIVILEGED_USER
+from utilities.constants.storage import (
+    BIND_IMMEDIATE_ANNOTATION,
+    CDI_CLONE_SOURCER_CLUSTER_ROLE,
+    REGISTRY_STR,
+    VIEW_CLUSTER_ROLE,
+)
 from utilities.constants.timeouts import TIMEOUT_10MIN, TIMEOUT_50MIN
 from utilities.constants.virt import WIN_2K22
 from utilities.os_utils import get_windows_container_disk_path
@@ -40,49 +48,82 @@ def validation_os_images_namespace(admin_client):
 
 @pytest.fixture(scope="session")
 def validation_os_images_role_binding(admin_client, validation_os_images_namespace):
-    """Grants unprivileged clients the same clone permissions as the golden-images namespace.
+    """Grants any authenticated identity permission to clone from validation-os-images.
 
-    Binds the built-in ``os-images.kubevirt.io:edit`` ClusterRole to ``system:authenticated`` in the
-    validation-os-images namespace so cross-namespace clones from this namespace succeed.
+    Binds the CDI-shipped ``cdi.kubevirt.io:clone-sourcer`` ClusterRole to the ``system:authenticated`` group
+    (covering both the unprivileged user and any ServiceAccount, e.g. a VM namespace's default ServiceAccount
+    performing a cross-namespace clone), and the built-in ``view`` ClusterRole to the unprivileged user, in the
+    validation-os-images namespace.
+
+    Yields:
+        list[RoleBinding]: The RoleBindings granting the above permissions.
     """
-    role_binding = RoleBinding(
-        client=admin_client,
-        name="validation-os-images-view",
-        namespace=validation_os_images_namespace.name,
-        subjects_kind="Group",
-        subjects_name="system:authenticated",
-        role_ref_kind=ClusterRole.kind,
-        role_ref_name=OS_IMAGES_EDIT_CLUSTER_ROLE,
+    bindings_spec = (
+        RoleBindingSpec(
+            name="validation-os-images-clone-sourcer",
+            subjects_kind="Group",
+            subjects_name="system:authenticated",
+            cluster_role_name=CDI_CLONE_SOURCER_CLUSTER_ROLE,
+        ),
+        # Not required by any test, but lets a human logged in as the unprivileged user inspect resources
+        # (e.g. `oc get datasource,pvc -n validation-os-images`) for manual debugging.
+        RoleBindingSpec(
+            name="validation-os-images-view",
+            subjects_kind="User",
+            subjects_name=UNPRIVILEGED_USER,
+            cluster_role_name=VIEW_CLUSTER_ROLE,
+        ),
     )
 
-    if role_binding.exists:
-        subjects = next(iter(role_binding.instance.subjects))
-        assert subjects.kind == "Group", (
-            f"RoleBinding {role_binding.name} subjects kind is {subjects.kind}, expected Group"
-        )
-        assert subjects.name == "system:authenticated", (
-            f"RoleBinding {role_binding.name} subjects name is {subjects.name}, expected system:authenticated"
-        )
-        role_ref = role_binding.instance.roleRef
-        assert role_ref.kind == ClusterRole.kind, (
-            f"RoleBinding {role_binding.name} roleRef kind is {role_ref.kind}, expected {ClusterRole.kind}"
-        )
-        assert role_ref.name == OS_IMAGES_EDIT_CLUSTER_ROLE, (
-            f"RoleBinding {role_binding.name} roleRef name is {role_ref.name}, expected {OS_IMAGES_EDIT_CLUSTER_ROLE}"
-        )
-        yield role_binding
-        return
-
-    LOGGER.info(
-        f"Creating RoleBinding {role_binding.name} in {role_binding.namespace} "
-        f"binding {OS_IMAGES_EDIT_CLUSTER_ROLE} to system:authenticated"
-    )
-    with role_binding as rb:
-        yield rb
+    with ExitStack() as stack:
+        role_bindings = []
+        for binding_spec in bindings_spec:
+            role_binding = RoleBinding(
+                client=admin_client,
+                name=binding_spec.name,
+                namespace=validation_os_images_namespace.name,
+                subjects_kind=binding_spec.subjects_kind,
+                subjects_name=binding_spec.subjects_name,
+                role_ref_kind=ClusterRole.kind,
+                role_ref_name=binding_spec.cluster_role_name,
+            )
+            if role_binding.exists:
+                LOGGER.info(f"Reusing existing RoleBinding {role_binding.name} in {role_binding.namespace}")
+                subjects = role_binding.instance.subjects
+                assert len(subjects) == 1, (
+                    f"RoleBinding {role_binding.name} has {len(subjects)} subjects, expected exactly one"
+                )
+                subject = subjects[0]
+                assert subject.kind == binding_spec.subjects_kind, (
+                    f"RoleBinding {role_binding.name} subject kind is {subject.kind}, "
+                    f"expected {binding_spec.subjects_kind}"
+                )
+                assert subject.name == binding_spec.subjects_name, (
+                    f"RoleBinding {role_binding.name} subject name is {subject.name}, "
+                    f"expected {binding_spec.subjects_name}"
+                )
+                role_ref = role_binding.instance.roleRef
+                assert role_ref.kind == ClusterRole.kind, (
+                    f"RoleBinding {role_binding.name} roleRef kind is {role_ref.kind}, expected {ClusterRole.kind}"
+                )
+                assert role_ref.name == binding_spec.cluster_role_name, (
+                    f"RoleBinding {role_binding.name} roleRef name is {role_ref.name}, "
+                    f"expected {binding_spec.cluster_role_name}"
+                )
+                role_bindings.append(role_binding)
+            else:
+                LOGGER.info(
+                    f"Creating RoleBinding {role_binding.name} in {role_binding.namespace} "
+                    f"binding {binding_spec.cluster_role_name} to {binding_spec.subjects_kind} "
+                    f"{binding_spec.subjects_name}"
+                )
+                role_bindings.append(stack.enter_context(cm=role_binding))
+        yield role_bindings
 
 
 @pytest.fixture(scope="session")
 def windows_validation_os_images_data_volume_scope_session(
+    validation_os_images_namespace,
     validation_os_images_role_binding,
     conformance_tests,
 ):
@@ -98,8 +139,8 @@ def windows_validation_os_images_data_volume_scope_session(
 
     win_dv = DataVolume(
         name=WIN_2K22,
-        namespace=validation_os_images_role_binding.namespace,
-        client=validation_os_images_role_binding.client,
+        namespace=validation_os_images_namespace.name,
+        client=validation_os_images_namespace.client,
     )
 
     if win_dv.exists:
@@ -108,15 +149,15 @@ def windows_validation_os_images_data_volume_scope_session(
         return
 
     assert not conformance_tests, (
-        f"Windows image {win_dv.name} does not exist in namespace {validation_os_images_role_binding.namespace}."
+        f"Windows image {win_dv.name} does not exist in namespace {validation_os_images_namespace.name}."
         " Self-validation requires the Windows image to be pre-created."
     )
 
     artifactory_secret = get_artifactory_secret(
-        namespace=validation_os_images_role_binding.namespace, client=validation_os_images_role_binding.client
+        namespace=validation_os_images_namespace.name, client=validation_os_images_namespace.client
     )
     artifactory_config_map = get_artifactory_config_map(
-        namespace=validation_os_images_role_binding.namespace, client=validation_os_images_role_binding.client
+        namespace=validation_os_images_namespace.name, client=validation_os_images_namespace.client
     )
 
     win_dv.storage_class = py_config["default_storage_class"]
