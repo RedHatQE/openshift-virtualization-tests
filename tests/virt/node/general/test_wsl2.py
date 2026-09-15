@@ -116,7 +116,6 @@ def windows_wsl2_vm(
         cpu_flags=vm_cpu_flags,
         os_flavor=OS_FLAVOR_WINDOWS,
         disk_type=None,
-        exclude_from_descheduler=True,
     ) as vm:
         running_vm(vm=vm)
         yield vm
