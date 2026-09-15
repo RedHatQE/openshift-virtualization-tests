@@ -17,6 +17,7 @@ VIRTCTL = "virtctl"
 
 LIVE_MIGRATE = "LiveMigrate"
 MIGRATION_POLICY_VM_LABEL = {"vm-label": "test-vm"}
+MIGRATION_POLICY_WINDOWS_VM_LABEL = {"vm-label": "test-windows-vm"}
 ROOTDISK = "rootdisk"
 DV_DISK = "dv-disk"
 

@@ -16,7 +16,6 @@ from pyhelper_utils.shell import run_ssh_commands
 from pytest import FixtureRequest
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.virt.utils import get_or_create_golden_image_data_source
 from utilities.constants.images import (
     OS_FLAVOR_RHEL,
     OS_FLAVOR_WINDOWS,
@@ -34,7 +33,12 @@ from utilities.infra import (
     run_virtctl_command,
 )
 from utilities.ssp import get_windows_os_info
-from utilities.virt import VirtualMachineForTestsFromTemplate, delete_guestosinfo_keys, get_virtctl_os_info
+from utilities.virt import (
+    VirtualMachineForTestsFromTemplate,
+    delete_guestosinfo_keys,
+    get_or_create_golden_image_data_source,
+    get_virtctl_os_info,
+)
 
 LOGGER = logging.getLogger(__name__)
 
