@@ -1,0 +1,4 @@
+nodeIndex:
+  index: 1
+nodeName: tor
+logLevel: debug
