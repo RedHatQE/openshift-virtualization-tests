@@ -138,6 +138,16 @@ class MigrationStuckSchedulingError(Exception):
         return f"Migration {self.migration_name} is stuck in Scheduling state."
 
 
+class MigrationFailedError(Exception):
+    """Exception raised when a migration reaches terminal Failed phase."""
+
+    def __init__(self, migration_name: str) -> None:
+        self.migration_name = migration_name
+
+    def __str__(self) -> str:
+        return f"Migration {self.migration_name} reached terminal Failed phase."
+
+
 def raise_multiple_exceptions(exceptions):
     """Raising multiple exceptions
 
