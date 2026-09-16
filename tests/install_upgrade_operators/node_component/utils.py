@@ -59,12 +59,12 @@ SELECTORS = [
     ("op-comp", "op3"),
 ]
 
-INFRA_LABEL_1 = {"nodePlacement": {"nodeSelector": {"infra-comp": "infra1"}}}
-INFRA_LABEL_2 = {"nodePlacement": {"nodeSelector": {"infra-comp": "infra2"}}}
-INFRA_LABEL_3 = {"nodePlacement": {"nodeSelector": {"infra-comp": "infra3"}}}
-WORK_LABEL_1 = {"nodePlacement": {"nodeSelector": {"work-comp": "work1"}}}
-WORK_LABEL_2 = {"nodePlacement": {"nodeSelector": {"work-comp": "work2"}}}
-WORK_LABEL_3 = {"nodePlacement": {"nodeSelector": {"work-comp": "work3"}}}
+INFRA_LABEL_1 = {"nodeSelector": {"infra-comp": "infra1"}}
+INFRA_LABEL_2 = {"nodeSelector": {"infra-comp": "infra2"}}
+INFRA_LABEL_3 = {"nodeSelector": {"infra-comp": "infra3"}}
+WORK_LABEL_1 = {"nodeSelector": {"work-comp": "work1"}}
+WORK_LABEL_2 = {"nodeSelector": {"work-comp": "work2"}}
+WORK_LABEL_3 = {"nodeSelector": {"work-comp": "work3"}}
 
 SUBSCRIPTION_NODE_SELCTOR_1 = {"op-comp": "op1"}
 SUBSCRIPTION_NODE_SELCTOR_2 = {"op-comp": "op2"}
