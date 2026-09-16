@@ -45,7 +45,7 @@ from tests.storage.file_level_restore.constants import (
 )
 from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5MIN, TIMEOUT_5SEC, TIMEOUT_10MIN
 from utilities.constants.virt import DV_DISK
-from utilities.infra import get_pod_by_name_prefix
+from utilities.infra import get_not_running_pods, get_pod_by_name_prefix
 from utilities.storage import run_command_on_vm_and_check_output, wait_for_volume_snapshot_ready_to_use
 
 if TYPE_CHECKING:
@@ -257,16 +257,35 @@ def assert_file_restore_operator_pod_running(admin_client: DynamicClient) -> Non
 
     Raises:
         ResourceNotFoundError: If no operator pod exists.
-        TimeoutExpiredError: If the pod does not reach Running phase in time.
+        TimeoutExpiredError: If no operator pod reaches Running phase in time.
     """
     LOGGER.info(f"Verifying file-restore operator pod is Running in namespace '{FILE_RESTORE_OPERATOR_NAMESPACE}'")
-    operator_pod = get_pod_by_name_prefix(
-        client=admin_client,
-        pod_prefix=FILE_RESTORE_OPERATOR_DEPLOYMENT_NAME,
-        namespace=FILE_RESTORE_OPERATOR_NAMESPACE,
+
+    def operator_pods() -> list[Pod]:
+        return get_pod_by_name_prefix(
+            client=admin_client,
+            pod_prefix=FILE_RESTORE_OPERATOR_DEPLOYMENT_NAME,
+            namespace=FILE_RESTORE_OPERATOR_NAMESPACE,
+            get_all=True,
+        )
+
+    for operator_pod_list in TimeoutSampler(
+        wait_timeout=TIMEOUT_5MIN,
+        sleep=TIMEOUT_5SEC,
+        func=operator_pods,
+    ):
+        not_running_pods = get_not_running_pods(pods=operator_pod_list)
+        if not_running_pods:
+            LOGGER.info(f"File-restore operator pods not yet all Running: {not_running_pods}")
+            continue
+        running_pod = operator_pod_list[0]
+        LOGGER.info(f"File-restore operator pod '{running_pod.name}' is Running")
+        return
+
+    raise TimeoutExpiredError(
+        f"No file-restore operator pod reached Running phase in namespace '{FILE_RESTORE_OPERATOR_NAMESPACE}' "
+        f"within {TIMEOUT_5MIN} seconds"
     )
-    operator_pod.wait_for_status(status=Pod.Status.RUNNING)
-    LOGGER.info(f"File-restore operator pod '{operator_pod.name}' is Running")
 
 
 def root_disk_volume_snapshot_name_from_virtual_machine_snapshot(
@@ -327,7 +346,7 @@ def linux_root_disk_online_virtual_machine_snapshot(
     restore_path: str | None = None,
     expected_content: str | None = None,
 ) -> Iterator[LinuxRootDiskVirtualMachineSnapshotInfo]:
-    """Create an online VirtualMachineSnapshot and yield the root-disk VolumeSnapshot name.
+    """Create an online VirtualMachineSnapshot and yield root-disk snapshot metadata.
 
     KubeVirt creates one VolumeSnapshot per snapshottable VM volume. This helper selects the
     root disk backup from VirtualMachineSnapshotContent for use as a VMFileRestore source.
@@ -342,7 +361,8 @@ def linux_root_disk_online_virtual_machine_snapshot(
         expected_content: When set with ``restore_path``, assert file content before snapshot.
 
     Yields:
-        VirtualMachineSnapshot handle and the root-disk VolumeSnapshot name it created.
+        ``LinuxRootDiskVirtualMachineSnapshotInfo`` with the ``VirtualMachineSnapshot`` handle
+        and the root-disk ``VolumeSnapshot`` name it created.
     """
     if restore_path is not None:
         run_command_on_vm_and_check_output(
@@ -741,7 +761,7 @@ def _log_linux_guest_command_output(*, vm: VirtualMachineForTests, label: str, c
         sleep=TIMEOUT_5SEC,
         check_rc=False,
     )[0]
-    LOGGER.info(f"Root-disk restore diagnostic [{label}] on VM '{vm.name}': {command_output!r}")
+    LOGGER.info(f"File-level restore diagnostic [{label}] on VM '{vm.name}': {command_output!r}")
 
 
 def log_linux_guest_root_disk_layout_diagnostics(*, vm: VirtualMachineForTests) -> None:
@@ -834,6 +854,8 @@ def wait_for_file_restore_phase(
         backup_mount_probe_vm: When set with ``backup_mount_probe_source_path``, log backup
             mount diagnostics once while the restore volume is mounted.
         backup_mount_probe_source_path: ``sourcePath`` used to probe the backup mount layout.
+            When both probe arguments are set, diagnostics run at most once during
+            ``SSHConnecting``, ``Restoring``, or ``Cleanup`` after ``mountPath`` is published.
 
     Raises:
         AssertionError: If the restore reaches Failed phase.
@@ -1042,6 +1064,23 @@ def windows_data_disk_path(relative_path: str) -> str:
     """
     normalized_path = relative_path.replace("\\", "/").lstrip("/")
     return f"{WINDOWS_DATA_DISK_LETTER}:/{normalized_path}"
+
+
+def delete_linux_data_disk_file(vm: VirtualMachineForTests, restore_path: str) -> None:
+    """Delete a file from the Linux VM data disk at the guest-root restore path.
+
+    Args:
+        vm: Running Linux VM with the data disk mounted.
+        restore_path: Path relative to the backup volume root and guest root after restore.
+    """
+    data_disk_path = linux_data_disk_file_path(relative_path=restore_path)
+    LOGGER.info(f"Deleting Linux test file '{data_disk_path}' from data disk")
+    run_ssh_commands(
+        host=vm.ssh_exec,
+        commands=shlex.split(f"rm -f {data_disk_path} && sync"),
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
+    )
 
 
 def linux_data_disk_file_path(relative_path: str) -> str:

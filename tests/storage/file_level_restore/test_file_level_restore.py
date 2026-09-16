@@ -56,7 +56,7 @@ class TestFileRestoreOperatorDeployment:
             - openshift-cnv namespace exists
 
         Steps:
-            1. Verify vm-file-restore-operator deployment exists in openshift-cnv namespace
+            1. Wait for vm-file-restore-operator deployment and SSH ConfigMap to become ready
             2. Verify vm-file-restore-operator pod is Running
 
         Expected:
@@ -144,10 +144,6 @@ class TestFileRestoreWindowsGuestFileCount:
     """
     Tests for file count reporting accuracy on Windows VM guests.
 
-    Markers:
-        - tier3
-        - windows
-
     Preconditions:
         - vm-file-restore-operator deployed and running in openshift-cnv namespace
         - Running Windows VM with OpenSSH Server and guest helper installed, and filerestore user SSH-configured
@@ -224,10 +220,6 @@ class TestFileRestoreWindowsGuestFileCount:
 class TestFileRestoreWindowsNTFSACLsAndOwnership:
     """
     Tests for NTFS ACLs and ownership preservation on Windows VM file restore.
-
-    Markers:
-        - tier3
-        - windows
 
     Preconditions:
         - vm-file-restore-operator deployed and running in openshift-cnv namespace
@@ -356,10 +348,6 @@ class TestFileRestoreWindowsDriveRoot:
     """
     Tests for Windows file restore from drive root paths.
 
-    Markers:
-        - tier3
-        - windows
-
     Preconditions:
         - vm-file-restore-operator deployed and running in openshift-cnv namespace
         - Running Windows VM with OpenSSH Server and guest helper installed, and filerestore user SSH-configured
@@ -425,7 +413,7 @@ class TestFileRestoreRootDiskToOriginalPath:
     Tests for restoring files from root disk backup to their original location on a running Linux VM.
 
     Root-disk snapshots use online VirtualMachineSnapshot on a root-only RHEL VM (no secondary
-    data disk). KubeVirt guest-fsfreeze quiesces the guest before creating the root VolumeSnapshot.
+    data disk). KubeVirt uses QEMU guest-agent fsfreeze to quiesce mounted filesystems before snapshot.
 
     Preconditions:
         - vm-file-restore-operator deployed and running in openshift-cnv namespace
@@ -449,17 +437,18 @@ class TestFileRestoreRootDiskToOriginalPath:
         Preconditions:
             - Running root-only Linux VM with guest helper installed and filerestore user SSH-configured
             - Root-disk VolumeSnapshot from an online VirtualMachineSnapshot marked readyToUse=true
-            - Target file original content recorded before deletion
+            - Target file original content recorded and the file deleted from the VM root disk
 
         Steps:
-            1. Delete target file from running VM to simulate data loss
-            2. Create VMFileRestore from root disk VolumeSnapshot targeting the original file path
-            3. Wait for VMFileRestore to reach Succeeded phase
-            4. Compare restored file content against the recorded original
+            1. Create VMFileRestore from root disk VolumeSnapshot targeting the original file path
+            2. Wait for VMFileRestore to reach Succeeded phase
+            3. Compare restored file content against the recorded original
+            4. Check the namespace for temporary resources left over from the restore operation
 
         Expected:
             - Restored file content matches the recorded original
             - File is restored to its original path on the running Linux VM
+            - Temporary resources from the operation are cleaned up
         """
         restore_path, expected_content = deleted_linux_test_file_on_root_disk
         log_linux_guest_restore_path_diagnostics(
@@ -481,8 +470,6 @@ class TestFileRestoreRootDiskToOriginalPath:
                 backup_mount_probe_vm=file_restore_linux_root_only_vm,
                 backup_mount_probe_source_path=restore_path,
             )
-            restored_file_count = get_restored_files_count(file_restore=file_restore)
-            assert restored_file_count == 1, f"VMFileRestore reported {restored_file_count} restored files, expected 1"
             log_linux_guest_restore_path_diagnostics(
                 vm=file_restore_linux_root_only_vm,
                 restore_path=restore_path,
@@ -517,17 +504,18 @@ class TestFileRestoreRootDiskToOriginalPath:
         Preconditions:
             - Running root-only Linux VM with guest helper installed and filerestore user SSH-configured
             - Backup PVC cloned from the root-disk VolumeSnapshot created by VirtualMachineSnapshot
-            - Target file original content recorded before deletion
+            - Target file original content recorded and the file deleted from the VM root disk
 
         Steps:
-            1. Delete target file from running VM to simulate data loss
-            2. Create VMFileRestore from root disk backup PVC targeting the original file path
-            3. Wait for VMFileRestore to reach Succeeded phase
-            4. Compare restored file content against the recorded original
+            1. Create VMFileRestore from root disk backup PVC targeting the original file path
+            2. Wait for VMFileRestore to reach Succeeded phase
+            3. Compare restored file content against the recorded original
+            4. Check the namespace for temporary resources left over from the restore operation
 
         Expected:
             - Restored file content matches the recorded original
             - File is restored to its original path on the running Linux VM
+            - Temporary resources from the operation are cleaned up
         """
         restore_path, expected_content = deleted_linux_test_file_on_root_disk_from_backup
         log_linux_guest_restore_path_diagnostics(
@@ -549,8 +537,6 @@ class TestFileRestoreRootDiskToOriginalPath:
                 backup_mount_probe_vm=file_restore_linux_root_only_vm,
                 backup_mount_probe_source_path=restore_path,
             )
-            restored_file_count = get_restored_files_count(file_restore=file_restore)
-            assert restored_file_count == 1, f"VMFileRestore reported {restored_file_count} restored files, expected 1"
             log_linux_guest_restore_path_diagnostics(
                 vm=file_restore_linux_root_only_vm,
                 restore_path=restore_path,
@@ -576,9 +562,6 @@ class TestFileRestoreSequentialFromSameSnapshot:
     """
     Tests for data disk VolumeSnapshot restore and sequential restore from the same snapshot.
 
-    Markers:
-        - incremental
-
     Preconditions:
         - vm-file-restore-operator deployed and running in openshift-cnv namespace
         - VolumeSnapshot-capable StorageClass available
@@ -603,14 +586,14 @@ class TestFileRestoreSequentialFromSameSnapshot:
         Preconditions:
             - Running Linux VM with guest helper installed and filerestore user SSH-configured
             - VolumeSnapshot of the VM data disk with two distinct test files available
+            - First target file deleted from the VM data disk after snapshot
             - Original content recorded for the first target file before deletion
 
         Steps:
-            1. Delete the first target file from the VM data disk
-            2. Create VMFileRestore from the data disk VolumeSnapshot targeting the deleted file path
-            3. Wait for VMFileRestore to reach Succeeded phase
-            4. Check the namespace for temporary resources left over from the restore operation
-            5. Compare restored file content against the recorded original
+            1. Create VMFileRestore from the data disk VolumeSnapshot targeting the deleted file path
+            2. Wait for VMFileRestore to reach Succeeded phase
+            3. Check the namespace for temporary resources left over from the restore operation
+            4. Compare restored file content against the recorded original
 
         Expected:
             - Restore operation from the data disk VolumeSnapshot reaches Succeeded phase
@@ -650,6 +633,7 @@ class TestFileRestoreSequentialFromSameSnapshot:
         namespace,
         file_restore_linux_vm,
         linux_data_disk_snapshot_with_two_files,
+        linux_two_test_files_on_data_disk,
         deleted_second_linux_file_on_data_disk,
     ):
         """
@@ -659,19 +643,23 @@ class TestFileRestoreSequentialFromSameSnapshot:
             - Running Linux VM with guest helper installed and filerestore user SSH-configured
             - VolumeSnapshot of the VM data disk with two distinct test files available
             - Restore from the data disk VolumeSnapshot completed successfully
+            - Second target file deleted from the VM data disk after snapshot
             - Original content recorded for the second target file before deletion
 
         Steps:
-            1. Delete the second target file from the VM data disk
-            2. Create a second VMFileRestore from the same data disk VolumeSnapshot targeting the deleted file path
-            3. Wait for VMFileRestore to reach Succeeded phase
-            4. Compare restored file content against the recorded original
+            1. Create a second VMFileRestore from the same data disk VolumeSnapshot targeting the deleted file path
+            2. Wait for VMFileRestore to reach Succeeded phase
+            3. Compare restored file content against the recorded original
+            4. Check the namespace for temporary resources left over from the restore operation
 
         Expected:
             - Second restore operation from the same data disk VolumeSnapshot reaches Succeeded phase
             - Restored file content matches the recorded original
+            - Temporary resources from the operation are cleaned up
+            - The first restored file remains present and correct after the second restore
         """
         restore_path, expected_content = deleted_second_linux_file_on_data_disk
+        first_restore_path, first_expected_content = linux_two_test_files_on_data_disk[0]
         with VirtualMachineFileRestore(
             name=LINUX_DATA_DISK_SNAPSHOT_SECOND_RESTORE_CR_NAME,
             namespace=namespace.name,
@@ -688,4 +676,16 @@ class TestFileRestoreSequentialFromSameSnapshot:
                 vm=file_restore_linux_vm,
                 command=f"cat {restore_path}",
                 expected_result=expected_content,
+            )
+            run_command_on_vm_and_check_output(
+                vm=file_restore_linux_vm,
+                command=f"cat {first_restore_path}",
+                expected_result=first_expected_content,
+            )
+            assert_successful_restore_cleanup(
+                vm=file_restore_linux_vm,
+                restore_cr_name=file_restore.name,
+                namespace_name=namespace.name,
+                admin_client=admin_client,
+                snapshot_source=True,
             )

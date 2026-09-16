@@ -27,6 +27,7 @@ from tests.storage.file_level_restore.constants import (
     WINDOWS_TEST_FILE_NAME,
 )
 from tests.storage.file_level_restore.utils import (
+    delete_linux_data_disk_file,
     delete_windows_guest_file,
     ensure_linux_data_disk_directory,
     format_and_mount_linux_data_disk,
@@ -123,7 +124,7 @@ def file_restore_linux_vm(
         yield vm
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture()
 def file_restore_linux_root_only_vm(
     admin_client,
     namespace,
@@ -133,8 +134,8 @@ def file_restore_linux_root_only_vm(
 ):
     """Running RHEL10 VM with guest helper and root disk only (no secondary data disk).
 
-    Root-disk tests use online VirtualMachineSnapshot, which freezes all guest filesystems
-    via the QEMU guest agent.
+    Root-disk tests use online VirtualMachineSnapshot. KubeVirt uses QEMU guest-agent
+    fsfreeze to quiesce mounted filesystems before snapshot.
     """
     with VirtualMachineForTests(
         name="file-restore-linux-root-only-vm",
@@ -649,14 +650,7 @@ def deleted_first_linux_file_on_data_disk(
 ):
     """Deleted first Linux data-disk test file after snapshot. Yields (restore_path, content)."""
     restore_path, file_content = linux_two_test_files_on_data_disk[0]
-    data_disk_path = linux_data_disk_file_path(relative_path=restore_path)
-    LOGGER.info(f"Deleting first test file '{data_disk_path}' from Linux data disk")
-    run_ssh_commands(
-        host=file_restore_linux_vm.ssh_exec,
-        commands=shlex.split(f"rm -f {data_disk_path} && sync"),
-        wait_timeout=TIMEOUT_2MIN,
-        sleep=TIMEOUT_5SEC,
-    )
+    delete_linux_data_disk_file(vm=file_restore_linux_vm, restore_path=restore_path)
     yield restore_path, file_content
 
 
@@ -668,12 +662,5 @@ def deleted_second_linux_file_on_data_disk(
 ):
     """Deleted second Linux data-disk test file after snapshot. Yields (restore_path, content)."""
     restore_path, file_content = linux_two_test_files_on_data_disk[1]
-    data_disk_path = linux_data_disk_file_path(relative_path=restore_path)
-    LOGGER.info(f"Deleting second test file '{data_disk_path}' from Linux data disk")
-    run_ssh_commands(
-        host=file_restore_linux_vm.ssh_exec,
-        commands=shlex.split(f"rm -f {data_disk_path} && sync"),
-        wait_timeout=TIMEOUT_2MIN,
-        sleep=TIMEOUT_5SEC,
-    )
+    delete_linux_data_disk_file(vm=file_restore_linux_vm, restore_path=restore_path)
     yield restore_path, file_content
