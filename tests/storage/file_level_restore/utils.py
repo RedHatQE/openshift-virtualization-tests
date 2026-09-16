@@ -43,6 +43,7 @@ from tests.storage.file_level_restore.constants import (
     WINDOWS_HELPER_STAGE_DIRECTORY,
     WINDOWS_SETUP_SCRIPT,
 )
+from tests.storage.utils import check_snapshot_indication
 from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5MIN, TIMEOUT_5SEC, TIMEOUT_10MIN
 from utilities.constants.virt import DV_DISK
 from utilities.infra import get_not_running_pods, get_pod_by_name_prefix
@@ -388,6 +389,7 @@ def linux_root_disk_online_virtual_machine_snapshot(
         client=admin_client,
     ) as vm_snapshot:
         vm_snapshot.wait_snapshot_done(timeout=TIMEOUT_10MIN)
+        check_snapshot_indication(snapshot=vm_snapshot, is_online=True)
         snapshot_indications = vm_snapshot.instance.get("status", {}).get("indications", [])
         LOGGER.info(f"VirtualMachineSnapshot '{vm_snapshot.name}' completed with indications: {snapshot_indications!r}")
         root_volume_snapshot_name = root_disk_volume_snapshot_name_from_virtual_machine_snapshot(
@@ -1066,6 +1068,23 @@ def windows_data_disk_path(relative_path: str) -> str:
     return f"{WINDOWS_DATA_DISK_LETTER}:/{normalized_path}"
 
 
+def delete_linux_guest_file(vm: VirtualMachineForTests, guest_path: str) -> None:
+    """Delete a file from a Linux VM guest filesystem.
+
+    Args:
+        vm: Running Linux VM with SSH connectivity.
+        guest_path: Absolute guest path to the file.
+    """
+    quoted_guest_path = shlex.quote(s=guest_path)
+    LOGGER.info(f"Deleting Linux test file '{guest_path}' from guest")
+    run_ssh_commands(
+        host=vm.ssh_exec,
+        commands=["bash", "-c", f"rm -f {quoted_guest_path} && sync"],
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
+    )
+
+
 def delete_linux_data_disk_file(vm: VirtualMachineForTests, restore_path: str) -> None:
     """Delete a file from the Linux VM data disk at the guest-root restore path.
 
@@ -1073,13 +1092,9 @@ def delete_linux_data_disk_file(vm: VirtualMachineForTests, restore_path: str) -
         vm: Running Linux VM with the data disk mounted.
         restore_path: Path relative to the backup volume root and guest root after restore.
     """
-    data_disk_path = linux_data_disk_file_path(relative_path=restore_path)
-    LOGGER.info(f"Deleting Linux test file '{data_disk_path}' from data disk")
-    run_ssh_commands(
-        host=vm.ssh_exec,
-        commands=shlex.split(f"rm -f {data_disk_path} && sync"),
-        wait_timeout=TIMEOUT_2MIN,
-        sleep=TIMEOUT_5SEC,
+    delete_linux_guest_file(
+        vm=vm,
+        guest_path=linux_data_disk_file_path(relative_path=restore_path),
     )
 
 

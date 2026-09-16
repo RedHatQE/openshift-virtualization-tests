@@ -1,5 +1,4 @@
 import logging
-import shlex
 
 import pytest
 from ocp_resources.datavolume import DataVolume
@@ -28,6 +27,7 @@ from tests.storage.file_level_restore.constants import (
 )
 from tests.storage.file_level_restore.utils import (
     delete_linux_data_disk_file,
+    delete_linux_guest_file,
     delete_windows_guest_file,
     ensure_linux_data_disk_directory,
     format_and_mount_linux_data_disk,
@@ -39,7 +39,6 @@ from tests.storage.file_level_restore.utils import (
     linux_restore_test_file_path,
     linux_root_disk_online_virtual_machine_snapshot,
     linux_volume_snapshot,
-    volume_snapshot_class_for_storage_class,
     wait_for_file_restore_operator_ready,
     windows_data_disk_path,
     windows_data_disk_volume_snapshot,
@@ -55,7 +54,6 @@ from utilities.storage import (
     data_volume_template_with_source_ref_dict,
     virtctl_volume,
     wait_for_vm_volume_ready,
-    wait_for_volume_snapshot_ready_to_use,
     write_file_via_ssh,
 )
 from utilities.virt import VirtualMachineForTests, running_vm
@@ -192,20 +190,14 @@ def linux_data_disk_snapshot(
     snapshot_storage_class_name_scope_module,
 ):
     """VolumeSnapshot of the Linux data disk PVC containing the test file."""
-    volume_snapshot_class_name = volume_snapshot_class_for_storage_class(
+    with linux_volume_snapshot(
+        vm=file_restore_linux_vm,
+        pvc_name=linux_data_disk.name,
+        snapshot_name="file-restore-linux-data-disk-snapshot",
+        namespace_name=namespace.name,
         storage_class_name=snapshot_storage_class_name_scope_module,
         admin_client=admin_client,
-    )
-    pvc_name = linux_data_disk.name
-    LOGGER.info(f"Creating VolumeSnapshot of Linux data disk PVC '{pvc_name}'")
-    with VolumeSnapshot(
-        name="file-restore-linux-data-disk-snapshot",
-        namespace=namespace.name,
-        source={"persistentVolumeClaimName": pvc_name},
-        volume_snapshot_class_name=volume_snapshot_class_name,
-        client=admin_client,
     ) as snapshot:
-        wait_for_volume_snapshot_ready_to_use(namespace=namespace.name, name=snapshot.name, client=admin_client)
         yield snapshot
 
 
@@ -275,13 +267,7 @@ def deleted_linux_test_file_on_root_disk(
 ):
     """Deleted Linux root-disk test file after snapshot. Yields (restore_path, content)."""
     restore_path, file_content = linux_test_file_on_root_disk
-    LOGGER.info(f"Deleting test file '{restore_path}' from Linux root disk")
-    run_ssh_commands(
-        host=file_restore_linux_root_only_vm.ssh_exec,
-        commands=["bash", "-c", f"rm -f {shlex.quote(restore_path)} && sync"],
-        wait_timeout=TIMEOUT_2MIN,
-        sleep=TIMEOUT_5SEC,
-    )
+    delete_linux_guest_file(vm=file_restore_linux_root_only_vm, guest_path=restore_path)
     yield restore_path, file_content
 
 
@@ -293,13 +279,7 @@ def deleted_linux_test_file_on_root_disk_from_backup(
 ):
     """Deleted Linux root-disk test file after backup PVC is ready. Yields (restore_path, content)."""
     restore_path, file_content = linux_test_file_on_root_disk
-    LOGGER.info(f"Deleting test file '{restore_path}' from Linux root disk")
-    run_ssh_commands(
-        host=file_restore_linux_root_only_vm.ssh_exec,
-        commands=["bash", "-c", f"rm -f {shlex.quote(restore_path)} && sync"],
-        wait_timeout=TIMEOUT_2MIN,
-        sleep=TIMEOUT_5SEC,
-    )
+    delete_linux_guest_file(vm=file_restore_linux_root_only_vm, guest_path=restore_path)
     yield restore_path, file_content
 
 
@@ -330,14 +310,7 @@ def deleted_linux_test_file_on_data_disk(
     for sourcePath and post-restore verification.
     """
     restore_path, file_content = linux_test_file_on_data_disk
-    data_disk_path = linux_data_disk_file_path(relative_path=restore_path)
-    LOGGER.info(f"Deleting test file '{data_disk_path}' from Linux data disk")
-    run_ssh_commands(
-        host=file_restore_linux_vm.ssh_exec,
-        commands=shlex.split(f"rm -f {data_disk_path} && sync"),
-        wait_timeout=TIMEOUT_2MIN,
-        sleep=TIMEOUT_5SEC,
-    )
+    delete_linux_data_disk_file(vm=file_restore_linux_vm, restore_path=restore_path)
     yield restore_path, file_content
 
 
