@@ -25,19 +25,17 @@ from tests.network.bgp.evpn.libevpn import (
     EndpointTcpClient,
     EvpnEndpoint,
     cudn_evpn_subnets,
-    deploy_evpn_bridge,
     deploy_evpn_l2_endpoint,
     deploy_evpn_l3_endpoint,
-    deploy_evpn_l3_vrf,
     evpn_workloads_active_connections,
     node_primary_ipv4_interface,
-    teardown_evpn_bridge,
     teardown_evpn_l2_endpoint,
     teardown_evpn_l3_endpoint,
-    teardown_evpn_l3_vrf,
 )
 from tests.network.libs import cluster_user_defined_network as libcudn
 from tests.network.libs.bgp import (
+    EVPN_IP_VRF_VNI,
+    EVPN_MAC_VRF_VNI,
     EXTERNAL_FRR_POD_LABEL,
     ExternalFrrPodInfo,
     create_cudn_route_advertisements,
@@ -59,8 +57,6 @@ EXTERNAL_L3_ENDPOINT_IPV4: Final[str] = "192.168.100.100/24"
 EXTERNAL_L3_ENDPOINT_IPV6: Final[str] = "fd01:1234:5678::64/64"
 EXTERNAL_L3_GATEWAY_IPV4: Final[str] = "192.168.100.1/24"
 EXTERNAL_L3_GATEWAY_IPV6: Final[str] = "fd01:1234:5678::1/64"
-EVPN_MAC_VRF_VNI: Final[int] = 10100
-EVPN_IP_VRF_VNI: Final[int] = 20102
 
 
 @pytest.fixture(scope="module")
@@ -228,26 +224,8 @@ def vm_evpn_reference(
 
 
 @pytest.fixture(scope="module")
-def evpn_bridge(
-    frr_external_pod: ExternalFrrPodInfo,
-    workers: list[Node],
-) -> Generator[None]:
-    worker_ips = [str(node_primary_ipv4_interface(worker).ip) for worker in workers]
-
-    deploy_evpn_bridge(
-        pod=frr_external_pod.pod,
-        local_vtep_ip=frr_external_pod.ipv4,
-        remote_vtep_ips=worker_ips,
-        l2_vni=EVPN_MAC_VRF_VNI,
-        l3_vni=EVPN_IP_VRF_VNI,
-    )
-    yield
-    teardown_evpn_bridge(pod=frr_external_pod.pod)
-
-
-@pytest.fixture(scope="module")
 def external_l2_endpoint(
-    evpn_bridge: None,
+    evpn_setup_ready: None,
     frr_external_pod: ExternalFrrPodInfo,
 ) -> Generator[EvpnEndpoint]:
     endpoint = deploy_evpn_l2_endpoint(
@@ -260,18 +238,8 @@ def external_l2_endpoint(
 
 
 @pytest.fixture(scope="module")
-def external_l3_vrf(
-    evpn_bridge: None,
-    frr_external_pod: ExternalFrrPodInfo,
-) -> Generator[None]:
-    deploy_evpn_l3_vrf(pod=frr_external_pod.pod, vni=EVPN_IP_VRF_VNI)
-    yield
-    teardown_evpn_l3_vrf(pod=frr_external_pod.pod)
-
-
-@pytest.fixture(scope="module")
 def external_l3_endpoint(
-    external_l3_vrf: None,
+    evpn_setup_ready: None,
     frr_external_pod: ExternalFrrPodInfo,
 ) -> Generator[EvpnEndpoint]:
     endpoint = deploy_evpn_l3_endpoint(
