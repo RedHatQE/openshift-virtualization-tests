@@ -2,19 +2,14 @@ from __future__ import annotations
 
 import logging
 import shlex
-from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Any
 
 import bitmath
 from kubernetes.dynamic import DynamicClient
-from ocp_resources.data_source import DataSource
 from ocp_resources.kubevirt import KubeVirt
-from ocp_resources.namespace import Namespace
 from ocp_resources.pod import Pod
 from ocp_resources.resource import Resource
 from pyhelper_utils.shell import run_ssh_commands
-from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.virt.node.gpu.constants import (
@@ -24,17 +19,14 @@ from tests.virt.node.gpu.constants import (
     VGPU_DEVICE_NAME_STR,
     VGPU_PRETTY_NAME_STR,
 )
-from utilities.artifactory import get_test_artifact_server_url
 from utilities.constants.hco import DEFAULT_HCO_CONDITIONS
 from utilities.constants.images import OS_FLAVOR_WINDOWS
-from utilities.constants.os_matrix import DATA_SOURCE_STR
 from utilities.constants.timeouts import (
     TCP_TIMEOUT_30SEC,
     TIMEOUT_1MIN,
     TIMEOUT_1SEC,
     TIMEOUT_2MIN,
     TIMEOUT_5SEC,
-    TIMEOUT_30MIN,
     TIMEOUT_30SEC,
 )
 from utilities.hco import (
@@ -42,12 +34,6 @@ from utilities.hco import (
     is_hco_tainted,
     update_hco_annotations,
     wait_for_hco_conditions,
-)
-from utilities.storage import (
-    create_dv,
-    create_or_update_data_source,
-    data_volume_template_with_source_ref_dict,
-    get_storage_class_dict_from_matrix,
 )
 from utilities.virt import (
     VirtualMachineForTests,
@@ -439,72 +425,6 @@ def verify_guest_boot_time(vm_list, initial_boot_time):
         if initial_boot_time[vm.name] != current_boot_time:
             rebooted_vms[vm.name] = {"initial": initial_boot_time[vm.name], "current": current_boot_time}
     assert not rebooted_vms, f"Boot time changed for VMs:\n {rebooted_vms}"
-
-
-def get_or_create_golden_image_data_source(
-    admin_client: DynamicClient, golden_images_namespace: Namespace, os_dict: dict[str, Any]
-) -> Generator[DataSource]:
-    """Retrieves or creates a DataSource object in golden image namespace specified in the OS matrix.
-
-    Args:
-        admin_client (DynamicClient): Kubernetes dynamic client.
-        golden_images_namespace (Namespace): Namespace where golden images are stored.
-        os_dict (dict[str, Any]): dict of os params
-
-    Yields:
-        DataSource: DataSource object.
-    """
-
-    data_source_name = os_dict.get(DATA_SOURCE_STR, "dummy")
-
-    data_source = DataSource(client=admin_client, name=data_source_name, namespace=golden_images_namespace.name)
-    if data_source.exists and data_source.source.exists:
-        LOGGER.info(f"DataSource {data_source_name} already exists and has a source pvc/snapshot.")
-        yield data_source
-    else:
-        LOGGER.warning(f"No DataSource {data_source_name} found or it doesn't have a source pvc/snapshot.")
-
-        with create_dv(
-            dv_name=data_source_name,
-            namespace=golden_images_namespace.name,
-            source="http",
-            storage_class=py_config["default_storage_class"],
-            url=f"{get_test_artifact_server_url()}{os_dict['image_path']}",
-            size=os_dict["dv_size"],
-            client=admin_client,
-            use_artifactory=True,
-        ) as dv:
-            dv.wait_for_dv_success(timeout=TIMEOUT_30MIN)
-            yield from create_or_update_data_source(admin_client=admin_client, dv=dv)
-
-
-def get_data_volume_template_dict_with_default_storage_class(
-    data_source: DataSource, storage_class: str | None = None
-) -> dict[str, dict]:
-    """
-    Generates a dataVolumeTemplate dict with the py_config based storage class.
-
-    Args:
-        data_source (DataSource): The data source object used to create the data volume template.
-        storage_class (str, optional): Storage class name.
-
-    Returns:
-        dict[str, dict]: A dict representing the dataVolumeTemplate to be used in VM spec.
-    """
-    data_volume_template = data_volume_template_with_source_ref_dict(data_source=data_source)
-
-    # access modes is needed to correctly set eviction strategy in VMs from template
-    # (see to_dict method in VirtualMachineForTestsFromTemplate class)
-    # TODO: remove access modes after the logic in VirtualMachineForTestsFromTemplate is updated
-    if storage_class:
-        data_volume_template["spec"]["storage"]["storageClassName"] = storage_class
-        data_volume_template["spec"]["storage"]["accessModes"] = [
-            get_storage_class_dict_from_matrix(storage_class=storage_class)[storage_class]["access_mode"]
-        ]
-    else:
-        data_volume_template["spec"]["storage"]["storageClassName"] = py_config["default_storage_class"]
-        data_volume_template["spec"]["storage"]["accessModes"] = [py_config["default_access_mode"]]
-    return data_volume_template
 
 
 def update_hco_memory_overcommit(admin_client, hco, percentage):

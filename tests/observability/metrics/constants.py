@@ -46,3 +46,5 @@ GUEST_LOAD_TIME_PERIODS = [
 
 KUBEVIRT_VMI_NODE_CPU_AFFINITY = "kubevirt_vmi_node_cpu_affinity{{kubernetes_vmi_label_kubevirt_io_domain='{vm_name}'}}"
 KUBEVIRT_VMI_SYNC_TOTAL = "kubevirt_vmi_sync_total{{name='{vm_name}'}}"
+KUBEVIRT_VMI_MIGRATION_START_TIME_SECONDS = "kubevirt_vmi_migration_start_time_seconds{{name='{vm_name}'}}"
+KUBEVIRT_VMI_MIGRATION_END_TIME_SECONDS = "kubevirt_vmi_migration_end_time_seconds{{name='{vm_name}'}}"
