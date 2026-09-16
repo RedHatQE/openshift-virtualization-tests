@@ -16,6 +16,7 @@ from tests.network.l2_bridge.utils import (
     hot_plug_interface,
     hot_plug_interface_and_set_address,
     hot_unplug_interface,
+    resolve_hotplugged_iface,
     search_hot_plugged_interface_in_vmi,
     set_secondary_static_ip_address,
     wait_for_interface_hot_plug_completion,
@@ -124,11 +125,17 @@ def running_utility_vm_for_connectivity_check(
 
 
 @pytest.fixture()
-def hot_plugged_interface_with_address(running_vm_for_nic_hot_plug, index_number, hot_plugged_interface_name):
+def hot_plugged_interface_with_address(
+    index_number,
+    running_vm_for_nic_hot_plug,
+    hot_plugged_interface_name,
+    migrated_vm_with_hot_plugged_interface_attached,
+):
+    iface = resolve_hotplugged_iface(vm=running_vm_for_nic_hot_plug, spec_interface_name=hot_plugged_interface_name)
     set_secondary_static_ip_address(
         vm=running_vm_for_nic_hot_plug,
         ipv4_address=random_ipv4_address(net_seed=0, host_address=next(index_number)),
-        vmi_interface=hot_plugged_interface_name,
+        vmi_interface=iface,
     )
 
 
@@ -168,14 +175,18 @@ def hot_plugged_interface_name_on_vm_created_with_secondary_interface(
 
 @pytest.fixture()
 def hot_plugged_second_interface_with_address(
-    running_vm_with_secondary_and_hot_plugged_interfaces,
     index_number,
+    running_vm_with_secondary_and_hot_plugged_interfaces,
     hot_plugged_interface_name_on_vm_created_with_secondary_interface,
 ):
+    iface = resolve_hotplugged_iface(
+        vm=running_vm_with_secondary_and_hot_plugged_interfaces,
+        spec_interface_name=hot_plugged_interface_name_on_vm_created_with_secondary_interface,
+    )
     set_secondary_static_ip_address(
         vm=running_vm_with_secondary_and_hot_plugged_interfaces,
         ipv4_address=random_ipv4_address(net_seed=0, host_address=next(index_number)),
-        vmi_interface=hot_plugged_interface_name_on_vm_created_with_secondary_interface,
+        vmi_interface=iface,
     )
 
 
