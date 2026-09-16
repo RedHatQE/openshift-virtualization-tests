@@ -18,13 +18,13 @@ class TestRelatedObjects:
         self,
         admin_client,
         hco_namespace,
-        ocp_resource_by_name,
+        ocp_resource_by_name_no_bearer_auth,
         pre_update_resource_version,
         updated_resource_labels,
     ):
         validate_related_objects(
             admin_client=admin_client,
             hco_namespace=hco_namespace,
-            resource=ocp_resource_by_name,
+            resource=ocp_resource_by_name_no_bearer_auth,
             pre_update_resource_version=pre_update_resource_version,
         )

@@ -205,6 +205,34 @@ def get_resource_container_env_image_mismatch(container):
     ]
 
 
+def find_related_object_by_kind_and_name(
+    hco_status_related_objects: list[Any],
+    related_object_matrix_entry: dict[str, str],
+) -> Any:
+    """Finds a related object from HCO status matching a matrix entry's name and kind.
+
+    Args:
+        hco_status_related_objects: List of related objects from HCO status.
+        related_object_matrix_entry: Single matrix entry dict mapping resource name to kind.
+
+    Returns:
+        The matching related object from HCO status.
+
+    Raises:
+        ResourceNotFoundError: If no matching related object is found.
+    """
+    kind_name = list(related_object_matrix_entry.values())[0]
+    related_object_name = list(related_object_matrix_entry.keys())[0]
+    LOGGER.info(f"Looking for related object {related_object_name}, kind {kind_name}")
+    for obj in hco_status_related_objects:
+        if obj.name == related_object_name and obj.kind == kind_name:
+            return obj
+    raise ResourceNotFoundError(
+        f"Related object {related_object_name}, kind {kind_name} not found in "
+        f"hco.status.relatedObjects: {hco_status_related_objects}"
+    )
+
+
 def get_resource_from_related_object(
     related_obj: dict[str, str],
     ocp_resources_submodule_list: list[str],

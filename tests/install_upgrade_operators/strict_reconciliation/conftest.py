@@ -171,22 +171,26 @@ def reconciled_cr_post_hco_update(
 
 
 @pytest.fixture()
-def pre_update_resource_version(related_object_from_hco_status):
-    return related_object_from_hco_status["resourceVersion"]
+def pre_update_resource_version(related_object_from_hco_status_no_bearer_auth):
+    return related_object_from_hco_status_no_bearer_auth["resourceVersion"]
 
 
 @pytest.fixture()
-def updated_resource_labels(ocp_resource_by_name):
-    expected_labels = ocp_resource_by_name.labels
-    expected_labels.custom_label = ocp_resource_by_name.name
+def updated_resource_labels(ocp_resource_by_name_no_bearer_auth):
+    expected_labels = ocp_resource_by_name_no_bearer_auth.labels
+    expected_labels.custom_label = ocp_resource_by_name_no_bearer_auth.name
     with ResourceEditor(
         patches={
-            ocp_resource_by_name: {
+            ocp_resource_by_name_no_bearer_auth: {
                 "metadata": {
-                    "labels": {VERSION_LABEL_KEY: None, "custom_label": ocp_resource_by_name.name},
+                    "labels": {VERSION_LABEL_KEY: None, "custom_label": ocp_resource_by_name_no_bearer_auth.name},
                 }
             }
         }
     ):
-        wait_for_cr_labels_change(expected_value=expected_labels, component=ocp_resource_by_name, timeout=TIMEOUT_1MIN)
+        wait_for_cr_labels_change(
+            expected_value=expected_labels,
+            component=ocp_resource_by_name_no_bearer_auth,
+            timeout=TIMEOUT_1MIN,
+        )
         yield expected_labels
