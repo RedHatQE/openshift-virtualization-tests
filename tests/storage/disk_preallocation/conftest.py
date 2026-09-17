@@ -3,6 +3,7 @@ from ocp_resources.cdi import CDI
 
 from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE
 from tests.storage.disk_preallocation.utils import wait_for_cdi_preallocation_enabled
+from tests.storage.stop_status_utils import dv_stop_status_restart_threshold
 from utilities.constants import Images
 from utilities.constants.storage import REGISTRY_STR
 from utilities.hco import (
@@ -42,7 +43,7 @@ def registry_dv_with_preallocation(namespace, storage_class_name_scope_function)
         client=namespace.client,
         preallocation=True,
     ) as dv:
-        dv.wait_for_dv_success()
+        dv.wait_for_dv_success(stop_status_func=dv_stop_status_restart_threshold, dv=dv)
         yield dv
 
 
@@ -57,7 +58,7 @@ def registry_dv_no_preallocation_spec(namespace, storage_class_name_scope_module
         storage_class=storage_class_name_scope_module,
         client=namespace.client,
     ) as dv:
-        dv.wait_for_dv_success()
+        dv.wait_for_dv_success(stop_status_func=dv_stop_status_restart_threshold, dv=dv)
         yield dv
 
 
@@ -73,7 +74,7 @@ def registry_dv_with_preallocation_false(namespace, storage_class_name_scope_fun
         client=namespace.client,
         preallocation=False,
     ) as dv:
-        dv.wait_for_dv_success()
+        dv.wait_for_dv_success(stop_status_func=dv_stop_status_restart_threshold, dv=dv)
         yield dv
 
 
@@ -88,5 +89,5 @@ def blank_dv_with_preallocation(namespace, storage_class_name_scope_function):
         client=namespace.client,
         preallocation=True,
     ) as dv:
-        dv.wait_for_dv_success()
+        dv.wait_for_dv_success(stop_status_func=dv_stop_status_restart_threshold, dv=dv)
         yield dv
