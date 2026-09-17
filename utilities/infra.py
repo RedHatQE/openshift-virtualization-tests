@@ -182,11 +182,6 @@ def get_pods(client: DynamicClient, namespace: Namespace, label: str = "") -> li
     )
 
 
-def wait_for_pods_deletion(pods):
-    for pod in pods:
-        pod.wait_deleted()
-
-
 def get_pod_container_error_status(pod: Pod) -> str | None:
     try:
         pod_instance_status = pod.instance.status
