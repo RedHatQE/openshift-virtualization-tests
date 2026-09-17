@@ -25,6 +25,7 @@ from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import NotFoundError
 from kubernetes.utils.quantity import parse_quantity
 from ocp_resources.daemonset import DaemonSet
+from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.namespace import Namespace
@@ -52,6 +53,7 @@ import utilities.data_utils
 import utilities.hco
 import utilities.infra
 from libs.net.cluster import is_ipv6_single_stack_cluster
+from utilities.artifactory import get_test_artifact_server_url
 from utilities.cluster import cache_admin_client
 from utilities.console import Console
 from utilities.constants import Images
@@ -82,6 +84,7 @@ from utilities.constants.networking import (
     IP_FAMILY_POLICY_PREFER_DUAL_STACK,
     SSH_PORT_22,
 )
+from utilities.constants.os_matrix import DATA_SOURCE_STR
 from utilities.constants.timeouts import (
     TCP_TIMEOUT_30SEC,
     TIMEOUT_1MIN,
@@ -116,7 +119,13 @@ from utilities.exceptions import MigrationFailedError, MigrationStuckSchedulingE
 from utilities.network import (
     cloud_init_network_data,
 )
-from utilities.storage import get_default_storage_class
+from utilities.storage import (
+    create_dv,
+    create_or_update_data_source,
+    data_volume_template_with_source_ref_dict,
+    get_default_storage_class,
+    get_storage_class_dict_from_matrix,
+)
 
 if TYPE_CHECKING:
     from libs.vm.vm import BaseVirtualMachine
@@ -2010,6 +2019,16 @@ def migrate_vm_and_verify(
     return None
 
 
+def set_vm_affinity(vm: VirtualMachineForTests, affinity: dict[str, Any]) -> None:
+    """Update the VM template node affinity in-place via a strategic merge patch.
+
+    Args:
+        vm (VirtualMachineForTests): The VM whose template affinity should be replaced.
+        affinity (dict[str, Any]): Kubernetes affinity dict to apply (e.g. RHCOS9_AFFINITY or RHCOS10_AFFINITY).
+    """
+    ResourceEditor(patches={vm: {"spec": {"template": {"spec": {"affinity": affinity}}}}}).update()
+
+
 def wait_for_migration_finished(migration: VirtualMachineInstanceMigration, timeout: int = TIMEOUT_12MIN) -> None:
     """
     Wait for migration to finish.
@@ -2235,6 +2254,72 @@ def vm_instance_from_template(
                 check_ssh_connectivity=vm.ssh,
             )
         yield vm
+
+
+def get_or_create_golden_image_data_source(
+    admin_client: DynamicClient, golden_images_namespace: Namespace, os_dict: dict[str, Any]
+) -> Generator[DataSource]:
+    """Retrieves or creates a DataSource object in golden image namespace specified in the OS matrix.
+
+    Args:
+        admin_client (DynamicClient): Kubernetes dynamic client.
+        golden_images_namespace (Namespace): Namespace where golden images are stored.
+        os_dict (dict[str, Any]): dict of os params
+
+    Yields:
+        DataSource: DataSource object.
+    """
+
+    data_source_name = os_dict.get(DATA_SOURCE_STR, "dummy")
+
+    data_source = DataSource(client=admin_client, name=data_source_name, namespace=golden_images_namespace.name)
+    if data_source.exists and data_source.source.exists:
+        LOGGER.info(f"DataSource {data_source_name} already exists and has a source pvc/snapshot.")
+        yield data_source
+    else:
+        LOGGER.warning(f"No DataSource {data_source_name} found or it doesn't have a source pvc/snapshot.")
+
+        with create_dv(
+            dv_name=data_source_name,
+            namespace=golden_images_namespace.name,
+            source="http",
+            storage_class=py_config["default_storage_class"],
+            url=f"{get_test_artifact_server_url()}{os_dict['image_path']}",
+            size=os_dict["dv_size"],
+            client=admin_client,
+            use_artifactory=True,
+        ) as dv:
+            dv.wait_for_dv_success(timeout=TIMEOUT_30MIN)
+            yield from create_or_update_data_source(admin_client=admin_client, dv=dv)
+
+
+def get_data_volume_template_dict_with_default_storage_class(
+    data_source: DataSource, storage_class: str | None = None
+) -> dict[str, dict]:
+    """
+    Generates a dataVolumeTemplate dict with the py_config based storage class.
+
+    Args:
+        data_source (DataSource): The data source object used to create the data volume template.
+        storage_class (str, optional): Storage class name.
+
+    Returns:
+        dict[str, dict]: A dict representing the dataVolumeTemplate to be used in VM spec.
+    """
+    data_volume_template = data_volume_template_with_source_ref_dict(data_source=data_source)
+
+    # access modes is needed to correctly set eviction strategy in VMs from template
+    # (see to_dict method in VirtualMachineForTestsFromTemplate class)
+    # TODO: remove access modes after the logic in VirtualMachineForTestsFromTemplate is updated
+    if storage_class:
+        data_volume_template["spec"]["storage"]["storageClassName"] = storage_class
+        data_volume_template["spec"]["storage"]["accessModes"] = [
+            get_storage_class_dict_from_matrix(storage_class=storage_class)[storage_class]["access_mode"]
+        ]
+    else:
+        data_volume_template["spec"]["storage"]["storageClassName"] = py_config["default_storage_class"]
+        data_volume_template["spec"]["storage"]["accessModes"] = [py_config["default_access_mode"]]
+    return data_volume_template
 
 
 def _uncordon_and_stabilize(admin_client: DynamicClient, node: Node, hco_namespace: str) -> None:
