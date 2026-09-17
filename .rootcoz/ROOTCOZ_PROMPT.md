@@ -303,6 +303,13 @@ Pattern guidance:
   cleanup blocked by infrastructure is `INFRASTRUCTURE`
 - **Console access failure:** Wrong `pexpect` patterns or timeouts in test is
   `CODE ISSUE`; `virtctl console` unable to connect to a healthy VMI is `PRODUCT BUG`
+- **VM console disconnect EOF (`pexpect.exceptions.EOF` in teardown):** When teardown
+  fails with `pexpect.exceptions.EOF` originating from `utilities/console.py`
+  `Console.disconnect()` — specifically at the `self.child.expect("login:")` call that
+  follows `self.child.send("exit")` — this is a `CODE ISSUE`. Sending `exit` to close
+  the guest shell session can close the PTY before the login prompt appears; EOF is a
+  normal outcome of a clean logout, not a product defect. Fix: catch
+  `pexpect.exceptions.EOF` around the `expect("login:")` call in `disconnect()`.
 - **Timeout mismatch with product code:** When a test uses `TimeoutSampler` or
   `wait_for_status` to wait for a product-initiated operation (e.g., pod creation by
   `virtctl`, DataVolume import by CDI), compare the test's timeout against the
