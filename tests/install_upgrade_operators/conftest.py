@@ -229,11 +229,6 @@ def xfail_if_sriov_conforma_jira_open_and_hco_operator(admin_client, hco_namespa
         is_hco_operator = any(pod.name.startswith(HCO_OPERATOR) for pod in request.getfixturevalue("cnv_pods_by_type"))
     if not is_hco_operator:
         return
-    hco_version = get_hco_version(client=admin_client, hco_ns_name=hco_namespace.name)
-    if hco_version.startswith("4.23") and is_jira_open(jira_id="CNV-92888"):
-        pytest.xfail(
-            "hco-operator image check xfailed: nightly sriov-dp-admission-controller triggers upstream registry violation (CNV-92888)"
-        )
 
 
 @pytest.fixture(scope="class")
