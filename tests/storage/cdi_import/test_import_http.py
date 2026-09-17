@@ -17,6 +17,7 @@ from tests.storage.constants import (
     HTTPS_CONFIG_MAP_NAME,
     INTERNAL_HTTP_CONFIGMAP_NAME,
 )
+from tests.storage.stop_status_utils import dv_stop_status_restart_threshold
 from tests.storage.utils import (
     assert_num_files_in_pod,
     assert_use_populator,
@@ -151,7 +152,7 @@ def test_successful_import_secure_archive(internal_http_configmap, running_pod_w
 @pytest.mark.sno
 @pytest.mark.gating
 def test_successful_import_secure_image(internal_http_configmap, dv_from_http_import):
-    dv_from_http_import.wait_for_dv_success()
+    dv_from_http_import.wait_for_dv_success(stop_status_func=dv_stop_status_restart_threshold, dv=dv_from_http_import)
 
 
 @pytest.mark.sno
@@ -187,7 +188,7 @@ def test_successful_import_basic_auth(
         secret_name=internal_http_secret.name,
         storage_class=storage_class_name_scope_module,
     ) as dv:
-        dv.wait_for_dv_success()
+        dv.wait_for_dv_success(stop_status_func=dv_stop_status_restart_threshold, dv=dv)
 
 
 @pytest.mark.sno
@@ -321,7 +322,11 @@ def test_successful_concurrent_blank_disk_import(
 @pytest.mark.polarion("CNV-2004")
 @pytest.mark.s390x
 def test_blank_disk_import_validate_status(data_volume_multi_storage_scope_function):
-    data_volume_multi_storage_scope_function.wait_for_dv_success(timeout=TIMEOUT_5MIN)
+    data_volume_multi_storage_scope_function.wait_for_dv_success(
+        timeout=TIMEOUT_5MIN,
+        stop_status_func=dv_stop_status_restart_threshold,
+        dv=data_volume_multi_storage_scope_function,
+    )
 
 
 @pytest.mark.tier3
