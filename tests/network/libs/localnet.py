@@ -95,6 +95,7 @@ def localnet_vm(
     cloud_init: CloudInitNoCloud | None = None,
     affinity: Affinity | None = None,
     vm_labels: dict[str, str] | None = None,
+    hostname: str | None = None,
 ) -> BaseVirtualMachine:
     """
     Create a Fedora-based Virtual Machine connected to localnet network(s).
@@ -117,6 +118,9 @@ def localnet_vm(
         vm_labels: Optional labels to apply to the VM template metadata.
             These labels are set on the VMI pod and can be used for affinity/anti-affinity matching.
             If None, no additional labels are applied beyond LOCALNET_TEST_LABEL.
+        hostname: Optional hostname to set on the VMI spec
+            (spec.template.spec.hostname). When set, KubeVirt uses this value for the
+            vm.kubevirt.io/name pod label instead of the VM name.
 
     Returns:
         BaseVirtualMachine: The configured VM object ready for creation.
@@ -139,6 +143,9 @@ def localnet_vm(
 
     if affinity is not None:
         vmi_spec.affinity = copy.deepcopy(affinity)
+
+    if hostname is not None:
+        vmi_spec.hostname = hostname
 
     return fedora_vm(namespace=namespace, name=name, client=client, spec=spec)
 
