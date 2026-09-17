@@ -1,5 +1,4 @@
 import logging
-import re
 
 import pytest
 from ocp_resources.ssp import SSP
