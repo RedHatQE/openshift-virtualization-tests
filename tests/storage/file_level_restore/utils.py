@@ -275,6 +275,9 @@ def assert_file_restore_operator_pod_running(admin_client: DynamicClient) -> Non
         sleep=TIMEOUT_5SEC,
         func=operator_pods,
     ):
+        if not operator_pod_list:
+            LOGGER.info("No file-restore operator pods found yet")
+            continue
         not_running_pods = get_not_running_pods(pods=operator_pod_list)
         if not_running_pods:
             LOGGER.info(f"File-restore operator pods not yet all Running: {not_running_pods}")
