@@ -10,6 +10,7 @@ from ocp_resources.virtual_machine_restore import VirtualMachineRestore
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+from tests.storage.concurrent_vm_boot.utils import run_parallel
 from tests.storage.constants import ADMIN_NAMESPACE_PARAM
 from tests.storage.snapshots.constants import (
     ERROR_MSG_USER_CANNOT_CREATE_VM_RESTORE,
@@ -24,8 +25,8 @@ from tests.storage.snapshots.utils import (
 )
 from tests.storage.utils import assert_windows_directory_existence
 from utilities.constants.cluster import LS_COMMAND
-from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_10SEC
-from utilities.storage import run_command_on_vm_and_check_output
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_5MIN, TIMEOUT_10MIN, TIMEOUT_10SEC
+from utilities.storage import assert_guest_disk_count, run_command_on_vm_and_check_output
 from utilities.virt import restart_vm_wait_for_running_vm, running_vm
 
 LOGGER = logging.getLogger(__name__)
@@ -500,3 +501,133 @@ def test_write_to_file_while_snapshot(
         client=windows_vm_with_vtpm_for_snapshot.client,
     ) as restore:
         start_windows_vm_after_restore(vm_restore=restore, windows_vm=windows_vm_with_vtpm_for_snapshot)
+
+
+@pytest.mark.tier3
+@pytest.mark.conformance
+class TestRestoreMultiDiskPerformance:
+    """
+    Snapshot restore performance tests for VMs with multiple disks.
+
+    Jira: https://redhat.atlassian.net/browse/CNV-88908  # <skip-jira-utils-check>
+
+    Preconditions:
+        - VolumeSnapshot-capable StorageClass available
+        - Fedora golden image DataSource available
+    """
+
+    @pytest.mark.polarion("CNV-16805")
+    def test_restore_single_vm_with_4_disks_completes_within_five_minutes(self, vm_with_4_disks):
+        """
+        Test that restoring a snapshot of a single VM with 4 disks completes within 5 minutes.
+
+        Preconditions:
+            - 1 running Fedora VM with 4 disk devices (1 boot from golden image DataSource + 3 blank DVs)
+            - VM snapshot taken and ready to use
+            - VM stopped before restore
+
+        Steps:
+            1. Create a snapshot of the under-test VM
+            2. Initiate restore within a 5-minute deadline
+            3. Start the restored VM
+            4. Verify the restored VM guest disk count matches the VM spec
+
+        Expected:
+            - Restore completed successfully within 5 minutes and the restored VM
+              reports the same number of disks as the VM spec
+        """
+
+        vm = vm_with_4_disks
+        if vm.ready:
+            vm.stop(wait=True)
+
+        with VirtualMachineSnapshot(
+            name=f"snapshot-{vm.name}",
+            namespace=vm.namespace,
+            vm_name=vm.name,
+            client=vm.client,
+        ) as snapshot:
+            snapshot.wait_snapshot_done()
+            with VirtualMachineRestore(
+                name=f"restore-{vm.name}",
+                namespace=vm.namespace,
+                vm_name=vm.name,
+                snapshot_name=snapshot.name,
+                client=vm.client,
+            ) as restore:
+                restore.wait_restore_done(timeout=TIMEOUT_5MIN)
+                running_vm(vm=vm)
+                assert_guest_disk_count(vm=vm)
+
+    @pytest.mark.polarion("CNV-16806")
+    def test_restore_four_vms_with_4_disks_completes_within_five_minutes(self, vms_with_4_disks_created):
+        """
+        Test that restoring snapshots of 4 VMs (each with 4 disks) in parallel completes within 5 minutes per VM.
+
+        Preconditions:
+            - 4 Fedora VMs, each with 4 disk devices (1 boot from golden image DataSource + 3 blank DVs)
+
+        Steps:
+            1. Snapshot all 4 VMs
+            2. Restore all 4 VM snapshots in parallel, each with a 5-minute timeout
+            3. Start all restored VMs
+            4. Verify each restored VM guest disk count
+
+        Expected:
+            - All restores complete successfully within 5 minutes per VM
+            - All restored VMs report the correct disk count
+        """
+        vms = vms_with_4_disks_created
+        snapshots_to_cleanup = []
+
+        try:
+            for vm in vms:
+                if vm.ready:
+                    vm.stop(wait=True)
+
+            vm_snapshot_pairs = []
+            for vm in vms:
+                snapshot = VirtualMachineSnapshot(
+                    name=f"snapshot-{vm.name}",
+                    namespace=vm.namespace,
+                    vm_name=vm.name,
+                    client=vm.client,
+                    teardown=False,
+                )
+                snapshot.deploy()
+                snapshots_to_cleanup.append(snapshot)
+                snapshot.wait_snapshot_done(timeout=TIMEOUT_10MIN)
+                vm_snapshot_pairs.append((vm, snapshot))
+
+            def restore_and_verify_vm(vm_snapshot_pair):
+                vm, snapshot = vm_snapshot_pair
+                with VirtualMachineRestore(
+                    name=f"restore-{vm.name}",
+                    namespace=vm.namespace,
+                    vm_name=vm.name,
+                    snapshot_name=snapshot.name,
+                    client=vm.client,
+                ) as restore:
+                    restore.wait_restore_done(timeout=TIMEOUT_5MIN)
+                    running_vm(vm=vm)
+                    assert_guest_disk_count(vm=vm)
+
+            _, failed_vms = run_parallel(
+                items=vm_snapshot_pairs,
+                func=restore_and_verify_vm,
+                label="Restore failed",
+                item_name=lambda pair: pair[0].name,
+            )
+
+            assert not failed_vms, f"Restore failures: {', '.join(failed_vms)}"
+        finally:
+            cleanup_errors = []
+            for snapshot in snapshots_to_cleanup:
+                try:
+                    snapshot.clean_up()
+                except Exception as error:
+                    LOGGER.error(f"Failed to clean up snapshot {snapshot.name}: {error}")
+                    cleanup_errors.append(error)
+
+            if cleanup_errors:
+                raise ExceptionGroup("Snapshot cleanup errors", cleanup_errors)
