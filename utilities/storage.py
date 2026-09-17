@@ -15,6 +15,7 @@ from ocp_resources.cdi import CDI
 from ocp_resources.cdi_config import CDIConfig
 from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
+from ocp_resources.deployment import Deployment
 from ocp_resources.hostpath_provisioner import HostPathProvisioner
 from ocp_resources.namespace import Namespace
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
@@ -39,6 +40,7 @@ from utilities.artifactory import get_test_artifact_server_url
 from utilities.constants import Images
 from utilities.constants.components import HPP_POOL
 from utilities.constants.images import OS_FLAVOR_WINDOWS
+from utilities.constants.namespaces import NamespacesNames
 from utilities.constants.networking import POD_CONTAINER_SPEC
 from utilities.constants.storage import (
     BIND_IMMEDIATE_ANNOTATION,
@@ -984,6 +986,33 @@ def get_default_storage_class(client: DynamicClient) -> StorageClass:
             if sc.instance.metadata.get("annotations", {}).get(annotation) == "true":
                 return sc
     raise ValueError("No default storage class defined")
+
+
+def restart_ocs_operator_for_virt_sc(admin_client: DynamicClient) -> None:
+    """Restart ocs-operator to trigger ocs-storagecluster-ceph-rbd-virtualization creation.
+
+    OCS creates the virt StorageClass only when the VirtualMachine CRD is present on the cluster.
+    After CNV reinstall, ocs-operator must be restarted to reconcile and create the SC.
+    This is a workaround for BZ2322458.
+
+    Args:
+        admin_client: Kubernetes dynamic client.
+    """
+    ocs_operator = Deployment(
+        client=admin_client,
+        name="ocs-operator",
+        namespace=NamespacesNames.OPENSHIFT_STORAGE,
+    )
+    if not ocs_operator.exists:
+        raise RuntimeError("ocs-operator deployment not found in openshift-storage; cannot create virt StorageClass")
+
+    original_replicas = ocs_operator.instance.spec.replicas
+    LOGGER.info(
+        f"Restarting ocs-operator ({original_replicas} replicas) to trigger virt StorageClass creation (BZ2322458 workaround)"
+    )
+    ocs_operator.scale_replicas(replica_count=0)
+    ocs_operator.scale_replicas(replica_count=original_replicas)
+    ocs_operator.wait_for_replicas(timeout=TIMEOUT_10MIN)
 
 
 def is_snapshot_supported_by_sc(sc_name, client):
