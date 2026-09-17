@@ -23,9 +23,7 @@ import shlex
 
 # Example: Run command locally and capture output
 success, stdout, stderr = run_command(
-    command=shlex.split("oc get pods -n my-namespace"),
-    check=False,
-    verify_stderr=False
+    command=shlex.split("oc get pods -n my-namespace"), check=False, verify_stderr=False
 )
 ```
 
@@ -46,10 +44,7 @@ from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5SEC
 
 # Example: Execute command inside a VM
 output = run_ssh_commands(
-    host=vm.ssh_exec,
-    commands=["cat", "/etc/os-release"],
-    wait_timeout=TIMEOUT_2MIN,
-    sleep=TIMEOUT_5SEC
+    host=vm.ssh_exec, commands=["cat", "/etc/os-release"], wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC
 )[0]
 ```
 
@@ -74,11 +69,7 @@ Object-oriented wrappers for OpenShift APIs. Instead of passing dictionaries to 
 from ocp_resources.virtual_machine import VirtualMachine
 
 # Use context managers to ensure automatic cleanup
-with VirtualMachine(
-    name="test-vm",
-    namespace="my-namespace",
-    body=vm_dict_body
-) as vm:
+with VirtualMachine(name="test-vm", namespace="my-namespace", body=vm_dict_body) as vm:
     # Interaction logic here
     pass
 ```
@@ -97,11 +88,7 @@ All resource objects inherit lifecycle state mechanisms from the base `Resource`
 
 ```python
 # Example: Waiting for a specific condition
-vm.wait_for_condition(
-    condition=VirtualMachine.Condition.READY,
-    status=True,
-    timeout=120
-)
+vm.wait_for_condition(condition=VirtualMachine.Condition.READY, status=True, timeout=120)
 
 # Example: Using exists property
 if vm.exists:
@@ -162,10 +149,7 @@ Helper utility to fetch running pods dynamically based on their prefix.
 from ocp_utilities.infra import get_pods_by_name_prefix
 
 # Example: Find all virt-launcher pods
-virt_launcher_pods = get_pods_by_name_prefix(
-    prefix="virt-launcher",
-    namespace=vm.namespace
-)
+virt_launcher_pods = get_pods_by_name_prefix(prefix="virt-launcher", namespace=vm.namespace)
 ```
 
 > **Tip:** You can review how test setups apply context managers and these utilities by reading the [Pytest Fixture Strategy](fixture-strategy.html) page.

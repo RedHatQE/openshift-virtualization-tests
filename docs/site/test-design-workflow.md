@@ -31,6 +31,7 @@ def test_flat_overlay_ping_between_vms():
         - Ping succeeds with 0% packet loss
     """
 
+
 test_flat_overlay_ping_between_vms.__test__ = False
 ```
 
@@ -56,6 +57,7 @@ After the STD design is approved and merged, write the automation code in a new 
 
 ```python
 import pytest
+
 
 @pytest.mark.gating
 def test_flat_overlay_ping_between_vms(client_vm, server_vm):
@@ -84,6 +86,7 @@ class TestSnapshotRestore:
         - Running VM with a data disk
         - Snapshot created from VM
     """
+
     __test__ = False
 
     def test_preserves_original_file(self):
