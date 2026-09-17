@@ -94,7 +94,7 @@ class TestCheckVmXmlHyperv:
             "ipi": {"@state": "on"},
             "reset": {"@state": "on"},
             "runtime": {"@state": "on"},
-            "tlbflush": {"@state": "on"},
+            "tlbflush": {"@state": "on", "direct": {"@state": "on"}, "extended": {"@state": "on"}},
             "reenlightenment": {"@state": "on"},
         }
 
@@ -120,7 +120,7 @@ class TestCheckVmXmlHyperv:
             "ipi": {"@state": "on"},
             "reset": {"@state": "on"},
             "runtime": {"@state": "on"},
-            "tlbflush": {"@state": "on"},
+            "tlbflush": {"@state": "on", "direct": {"@state": "on"}, "extended": {"@state": "on"}},
             "reenlightenment": {"@state": "on"},
         }
 
@@ -146,7 +146,7 @@ class TestCheckVmXmlHyperv:
             "ipi": {"@state": "on"},
             "reset": {"@state": "on"},
             "runtime": {"@state": "on"},
-            "tlbflush": {"@state": "on"},
+            "tlbflush": {"@state": "on", "direct": {"@state": "on"}, "extended": {"@state": "on"}},
             "reenlightenment": {"@state": "on"},
         }
 
@@ -172,7 +172,57 @@ class TestCheckVmXmlHyperv:
             "ipi": {"@state": "on"},
             "reset": {"@state": "on"},
             "runtime": {"@state": "on"},
-            "tlbflush": {"@state": "on"},
+            "tlbflush": {"@state": "on", "direct": {"@state": "on"}, "extended": {"@state": "on"}},
+            "reenlightenment": {"@state": "on"},
+        }
+
+        mock_vm.vmi.get_xml_dict.return_value = {"domain": {"features": {"hyperv": hyperv_features}}}
+
+        with pytest.raises(AssertionError, match="hyperV flags are not set correctly"):
+            check_vm_xml_hyperv(mock_vm, admin_client=mock_admin_client)
+
+    def test_check_vm_xml_hyperv_tlbflush_direct_off(self):
+        """Test assertion failure when tlbflush direct feature is disabled"""
+        mock_vm = MagicMock()
+        mock_admin_client = MagicMock()
+
+        hyperv_features = {
+            "relaxed": {"@state": "on"},
+            "vapic": {"@state": "on"},
+            "spinlocks": {"@state": "on", "@retries": "8191"},
+            "vpindex": {"@state": "on"},
+            "synic": {"@state": "on"},
+            "stimer": {"@state": "on", "direct": {"@state": "on"}},
+            "frequencies": {"@state": "on"},
+            "ipi": {"@state": "on"},
+            "reset": {"@state": "on"},
+            "runtime": {"@state": "on"},
+            "tlbflush": {"@state": "on", "direct": {"@state": "off"}, "extended": {"@state": "on"}},
+            "reenlightenment": {"@state": "on"},
+        }
+
+        mock_vm.vmi.get_xml_dict.return_value = {"domain": {"features": {"hyperv": hyperv_features}}}
+
+        with pytest.raises(AssertionError, match="hyperV flags are not set correctly"):
+            check_vm_xml_hyperv(mock_vm, admin_client=mock_admin_client)
+
+    def test_check_vm_xml_hyperv_tlbflush_extended_off(self):
+        """Test assertion failure when tlbflush extended feature is disabled"""
+        mock_vm = MagicMock()
+        mock_admin_client = MagicMock()
+
+        hyperv_features = {
+            "relaxed": {"@state": "on"},
+            "vapic": {"@state": "on"},
+            "spinlocks": {"@state": "on", "@retries": "8191"},
+            "vpindex": {"@state": "on"},
+            "synic": {"@state": "on"},
+            "stimer": {"@state": "on", "direct": {"@state": "on"}},
+            "frequencies": {"@state": "on"},
+            "ipi": {"@state": "on"},
+            "reset": {"@state": "on"},
+            "runtime": {"@state": "on"},
+            "tlbflush": {"@state": "on", "direct": {"@state": "on"}, "extended": {"@state": "off"}},
             "reenlightenment": {"@state": "on"},
         }
 
@@ -198,7 +248,7 @@ class TestCheckVmXmlHyperv:
             "ipi": {"@state": "on"},
             "reset": {"@state": "on"},
             "runtime": {"@state": "on"},
-            "tlbflush": {"@state": "on"},
+            "tlbflush": {"@state": "on", "direct": {"@state": "on"}, "extended": {"@state": "on"}},
             "reenlightenment": {"@state": "on"},
         }
 

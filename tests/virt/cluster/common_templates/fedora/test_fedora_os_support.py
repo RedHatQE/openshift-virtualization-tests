@@ -72,7 +72,7 @@ HYPERV_DICT = {
                             "reenlightenment": {},
                             "reset": {},
                             "runtime": {},
-                            "tlbflush": {},
+                            "tlbflush": {"direct": {}, "extended": {}},
                         },
                     },
                 }
