@@ -1,502 +1,134 @@
-"""
-Snapshots tests
-"""
-
+import hashlib
 import logging
+from time import monotonic
 
 import pytest
-from kubernetes.client.rest import ApiException
 from ocp_resources.virtual_machine_restore import VirtualMachineRestore
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
-from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.storage.constants import ADMIN_NAMESPACE_PARAM
-from tests.storage.snapshots.constants import (
-    ERROR_MSG_USER_CANNOT_CREATE_VM_RESTORE,
-    ERROR_MSG_USER_CANNOT_LIST_VM_RESTORE,
-    ERROR_MSG_USER_CANNOT_LIST_VM_SNAPSHOTS,
-    WINDOWS_DIRECTORY_PATH,
-)
-from tests.storage.snapshots.utils import (
-    expected_output_after_restore,
-    fail_to_create_snapshot_no_permissions,
-    start_windows_vm_after_restore,
-)
-from tests.storage.utils import assert_windows_directory_existence
-from utilities.constants.cluster import LS_COMMAND
-from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_10SEC
-from utilities.storage import run_command_on_vm_and_check_output
-from utilities.virt import restart_vm_wait_for_running_vm, running_vm
+from tests.storage.snapshots.utils import restore_vm_within_deadline, run_parallel
+from utilities.constants.timeouts import TIMEOUT_5MIN
+from utilities.storage import assert_guest_disk_count
+from utilities.virt import VirtualMachineForTests, running_vm
 
 LOGGER = logging.getLogger(__name__)
 
 
-pytestmark = pytest.mark.usefixtures(
-    "namespace",
-    "skip_if_no_storage_class_for_snapshot",
-)
-
-
-@pytest.mark.polarion("CNV-5781")
-@pytest.mark.s390x
-def test_snapshot_feature_gate_present(kubevirt_feature_gates):
+@pytest.mark.tier3
+@pytest.mark.conformance
+class TestRestoreMultiDiskPerformance:
     """
-    This test will ensure that 'Snapshot' feature gate is present in KubeVirt ConfigMap.
+    Snapshot restore performance tests for VMs with multiple disks.
+
+    Jira: https://redhat.atlassian.net/browse/CNV-88908  # <skip-jira-utils-check>
+
+    Preconditions:
+        - VolumeSnapshot-capable StorageClass available
+        - Fedora golden image DataSource available
     """
-    assert "Snapshot" in kubevirt_feature_gates
 
-
-class TestRestoreSnapshots:
-    @pytest.mark.parametrize(
-        "rhel_vm_name, snapshot_with_content, expected_results, snapshots_to_restore_idx",
-        [
-            pytest.param(
-                {"vm_name": "vm-cnv-4789"},
-                {"number_of_snapshots": 1, "online_vm": False},
-                [expected_output_after_restore(1)],
-                [0],
-                marks=(
-                    pytest.mark.polarion("CNV-4789"),
-                    pytest.mark.gating(),
-                ),
-                id="test_restore_basic_snapshot",
-            ),
-            pytest.param(
-                {"vm_name": "vm-cnv-4865"},
-                {"number_of_snapshots": 3, "online_vm": False},
-                [expected_output_after_restore(2)],
-                [1],
-                marks=pytest.mark.polarion("CNV-4865"),
-                id="test_restore_middle_snapshot",
-            ),
-            pytest.param(
-                {"vm_name": "vm-cnv-4843"},
-                {"number_of_snapshots": 3, "online_vm": False},
-                [
-                    expected_output_after_restore(3),
-                    expected_output_after_restore(2),
-                    expected_output_after_restore(1),
-                ],
-                [2, 1, 0],
-                marks=pytest.mark.polarion("CNV-4843"),
-                id="test_restore_all_snapshots",
-            ),
-            pytest.param(
-                {"vm_name": "vm-cnv-6526"},
-                {"number_of_snapshots": 1, "online_vm": True},
-                [expected_output_after_restore(1)],
-                [0],
-                marks=pytest.mark.polarion("CNV-6526"),
-                id="test_restore_basic_snapshot",
-            ),
-            pytest.param(
-                {"vm_name": "vm-cnv-6527"},
-                {"number_of_snapshots": 3, "online_vm": True},
-                [expected_output_after_restore(2)],
-                [1],
-                marks=pytest.mark.polarion("CNV-6527"),
-                id="test_restore_middle_snapshot",
-            ),
-            pytest.param(
-                {"vm_name": "vm-cnv-6528"},
-                {"number_of_snapshots": 3, "online_vm": True},
-                [
-                    expected_output_after_restore(3),
-                    expected_output_after_restore(2),
-                    expected_output_after_restore(1),
-                ],
-                [2, 1, 0],
-                marks=pytest.mark.polarion("CNV-6528"),
-                id="test_restore_all_snapshots",
-            ),
-        ],
-        indirect=["rhel_vm_name", "snapshot_with_content"],
-    )
-    def test_restore_snapshots(
-        self,
-        admin_client,
-        rhel_vm_for_snapshot,
-        snapshot_with_content,
-        expected_results,
-        snapshots_to_restore_idx,
-    ):
-        if rhel_vm_for_snapshot.ready:
-            rhel_vm_for_snapshot.stop(wait=True)
-        for idx in range(len(snapshots_to_restore_idx)):
-            snap_idx = snapshots_to_restore_idx[idx]
-            with VirtualMachineRestore(
-                client=admin_client,
-                name=f"restore-snapshot-{snap_idx}",
-                namespace=rhel_vm_for_snapshot.namespace,
-                vm_name=rhel_vm_for_snapshot.name,
-                snapshot_name=snapshot_with_content[snap_idx].name,
-            ) as vm_restore:
-                vm_restore.wait_restore_done()
-                running_vm(vm=rhel_vm_for_snapshot)
-                run_command_on_vm_and_check_output(
-                    vm=rhel_vm_for_snapshot,
-                    command=LS_COMMAND,
-                    expected_result=expected_results[idx],
-                )
-                rhel_vm_for_snapshot.stop(wait=True)
-
-    @pytest.mark.parametrize(
-        "rhel_vm_name, snapshot_with_content",
-        [
-            pytest.param(
-                {"vm_name": "vm-cnv-5048"},
-                {"number_of_snapshots": 1},
-                marks=pytest.mark.polarion("CNV-5048"),
-            ),
-        ],
-        indirect=True,
-    )
-    def test_restore_snapshot_while_vm_is_running(
-        self,
-        admin_client,
-        rhel_vm_for_snapshot,
-        snapshot_with_content,
-    ):
-        running_vm(vm=rhel_vm_for_snapshot)
-
-        # snapshot restore with online VM should create vmstore object
-        # with 'status.complete=False', 'status.conditions.ready="False"'
-        # and 'status.conditions.progress="False"'
-        with VirtualMachineRestore(
-            client=admin_client,
-            name="restore-snapshot-cnv-5048",
-            namespace=rhel_vm_for_snapshot.namespace,
-            vm_name=rhel_vm_for_snapshot.name,
-            snapshot_name=snapshot_with_content[0].name,
-        ) as vmrestore:
-            try:
-                for sampler in TimeoutSampler(
-                    wait_timeout=TIMEOUT_1MIN,
-                    sleep=TIMEOUT_10SEC,
-                    func=lambda: (
-                        not vmrestore.instance.status.get("complete")
-                        and vmrestore.instance.status.get("conditions")[0].get("status") == "False"
-                        and vmrestore.instance.status.get("conditions")[1].get("status") == "False"
-                    ),
-                ):
-                    if sampler:
-                        break
-            except TimeoutExpiredError:
-                LOGGER.error("Snapshot restore should not succeed with running VM")
-                raise
-            # Snapshot restore should be successful once the VM is stopped
-            rhel_vm_for_snapshot.stop(wait=True)
-            vmrestore.wait_restore_done()
-
-    @pytest.mark.parametrize(
-        "rhel_vm_name, snapshot_with_content, namespace",
-        [
-            pytest.param(
-                {"vm_name": "vm-cnv-5049"},
-                {"number_of_snapshots": 1},
-                ADMIN_NAMESPACE_PARAM,
-                marks=pytest.mark.polarion("CNV-5049"),
-            ),
-        ],
-        indirect=True,
-    )
-    def test_fail_restore_vm_with_unprivileged_client(
-        self,
-        rhel_vm_for_snapshot,
-        snapshot_with_content,
-        unprivileged_client,
-    ):
-        if rhel_vm_for_snapshot.ready:
-            rhel_vm_for_snapshot.stop(wait=True)
-        with pytest.raises(
-            ApiException,
-            match=ERROR_MSG_USER_CANNOT_CREATE_VM_RESTORE,
-        ):
-            with VirtualMachineRestore(
-                client=unprivileged_client,
-                name="restore-snapshot-cnv-5049-unprivileged",
-                namespace=rhel_vm_for_snapshot.namespace,
-                vm_name=rhel_vm_for_snapshot.name,
-                snapshot_name=snapshot_with_content[0].name,
-            ):
-                return
-
-    @pytest.mark.sno
-    @pytest.mark.parametrize(
-        "rhel_vm_name, snapshot_with_content",
-        [
-            pytest.param(
-                {"vm_name": "vm-cnv-5084"},
-                {"number_of_snapshots": 1},
-                marks=pytest.mark.polarion("CNV-5084"),
-                id="test_that_restore_the_same_snapshot_twice ",
-            ),
-        ],
-        indirect=True,
-    )
-    def test_restore_same_snapshot_twice(
-        self,
-        admin_client,
-        rhel_vm_for_snapshot,
-        snapshot_with_content,
-    ):
-        if rhel_vm_for_snapshot.ready:
-            rhel_vm_for_snapshot.stop(wait=True)
-        with VirtualMachineRestore(
-            client=admin_client,
-            name="restore-snapshot-cnv-5084-first",
-            namespace=rhel_vm_for_snapshot.namespace,
-            vm_name=rhel_vm_for_snapshot.name,
-            snapshot_name=snapshot_with_content[0].name,
-        ) as first_restore:
-            first_restore.wait_restore_done()
-            with VirtualMachineRestore(
-                client=admin_client,
-                name="restore-snapshot-cnv-5084-second",
-                namespace=rhel_vm_for_snapshot.namespace,
-                vm_name=rhel_vm_for_snapshot.name,
-                snapshot_name=snapshot_with_content[0].name,
-            ) as second_restore:
-                second_restore.wait_restore_done()
-                running_vm(vm=rhel_vm_for_snapshot)
-                run_command_on_vm_and_check_output(
-                    vm=rhel_vm_for_snapshot,
-                    command=LS_COMMAND,
-                    expected_result=expected_output_after_restore(1),
-                )
-
-    @pytest.mark.parametrize(
-        "rhel_vm_name, snapshot_with_content",
-        [
-            pytest.param(
-                {"vm_name": "vm-cnv-16212"},
-                {"number_of_snapshots": 1, "online_vm": False},
-                marks=pytest.mark.polarion("CNV-16212"),
-            ),
-        ],
-        indirect=True,
-    )
-    def test_restore_snapshot_with_predictable_names(
-        self,
-        vm_restore_with_predictable_names,
-        source_volume_name_for_predictable_name_restore,
-    ):
+    @pytest.mark.polarion("CNV-16805")
+    def test_restore_single_vm_with_4_disks_completes_within_five_minutes(self, request, vm_with_4_disks):
         """
-        Test restore snapshot where the DV/PVC restored has a predictable name derived from the source vm name and
-        source volume name when `volumeRestorePolicy` is set to `PrefixTargetName`.
+        Test that restoring a snapshot of a single VM with 4 disks completes within 5 minutes.
 
         Preconditions:
-            - A VM snapshot (any).
-            - Volume restore policy is set to `PrefixTargetName`.
+            - 1 running Fedora VM with 4 disk devices (1 boot from golden image DataSource + 3 blank DVs)
+            - VM snapshot taken and ready to use
+            - VM stopped before restore
 
         Steps:
-            1. Restore the snapshot.
+            1. Create a snapshot of the under-test VM
+            2. Initiate restore within a 5-minute deadline
+            3. Start the restored VM
+            4. Verify the restored VM guest disk count matches the VM spec
 
-        Expected Results:
-            - The restored DV/PVC name matches the expected predictable name derived from the source vm name and source volume name.
+        Expected:
+            - Restore completed successfully within 5 minutes and the restored VM
+              reports the same number of disks as the VM spec
         """
+        admin_client = vm_with_4_disks.client
+        if vm_with_4_disks.ready:
+            vm_with_4_disks.stop(wait=True)
 
-        restore_status = vm_restore_with_predictable_names.instance.status
-        expected_name = (
-            f"{vm_restore_with_predictable_names.vm_name}-{source_volume_name_for_predictable_name_restore}"[:63]
-        )
+        nodeid_hash = hashlib.md5(request.node.nodeid.encode()).hexdigest()[:8]
+        snapshot_name = f"snapshot-{vm_with_4_disks.name}-{nodeid_hash}"
+        with VirtualMachineSnapshot(
+            name=snapshot_name,
+            namespace=vm_with_4_disks.namespace,
+            vm_name=vm_with_4_disks.name,
+            client=admin_client,
+        ) as snapshot:
+            snapshot.deploy()
+            snapshot.wait_snapshot_done()
 
-        assert restore_status.restores[0].dataVolumeName == expected_name, (
-            f"Restored DV name is '{restore_status.restores[0].dataVolumeName}', expected '{expected_name}'"
-        )
-        assert restore_status.restores[0].persistentVolumeClaim == expected_name, (
-            f"Restored PVC name is '{restore_status.restores[0].persistentVolumeClaim}', expected '{expected_name}'"
-        )
+            deadline = monotonic() + TIMEOUT_5MIN
+            restore = VirtualMachineRestore(
+                name=f"restore-{vm_with_4_disks.name}",
+                namespace=vm_with_4_disks.namespace,
+                vm_name=vm_with_4_disks.name,
+                snapshot_name=snapshot.name,
+                client=admin_client,
+            )
 
+            restore_vm_within_deadline(restore=restore, deadline=deadline)
 
-@pytest.mark.parametrize(
-    "rhel_vm_name, snapshot_with_content",
-    [
-        pytest.param(
-            {"vm_name": "vm-cnv-4866"},
-            {"number_of_snapshots": 2},
-            marks=pytest.mark.polarion("CNV-4866"),
-        ),
-    ],
-    indirect=True,
-)
-def test_remove_vm_with_snapshots(
-    rhel_vm_for_snapshot,
-    snapshot_with_content,
-):
-    if rhel_vm_for_snapshot.ready:
-        rhel_vm_for_snapshot.stop(wait=True)
-    rhel_vm_for_snapshot.delete(wait=True)
-    for snapshot in snapshot_with_content:
-        assert snapshot.instance.status.readyToUse
+            restored_vm = VirtualMachineForTests(
+                name=vm_with_4_disks.name,
+                namespace=vm_with_4_disks.namespace,
+                client=admin_client,
+                generate_unique_name=False,
+            )
+            running_vm(vm=restored_vm)
+            assert_guest_disk_count(vm=restored_vm)
 
-
-@pytest.mark.parametrize(
-    "rhel_vm_name, snapshot_with_content, expected_result",
-    [
-        pytest.param(
-            {"vm_name": "vm-cnv-4870"},
-            {"number_of_snapshots": 2},
-            "after-snap-1.txt after-snap-2.txt before-snap-1.txt before-snap-2.txt",
-            marks=pytest.mark.polarion("CNV-4870"),
-        ),
-    ],
-    indirect=["rhel_vm_name", "snapshot_with_content"],
-)
-def test_remove_snapshots_while_vm_is_running(
-    rhel_vm_for_snapshot,
-    snapshot_with_content,
-    expected_result,
-):
-    running_vm(vm=rhel_vm_for_snapshot)
-    for idx in range(len(snapshot_with_content)):
-        snapshot_with_content[idx].delete(wait=True)
-        run_command_on_vm_and_check_output(
-            vm=rhel_vm_for_snapshot,
-            command=LS_COMMAND,
-            expected_result=expected_result,
-        )
-        restart_vm_wait_for_running_vm(vm=rhel_vm_for_snapshot, check_ssh_connectivity=True)
-        run_command_on_vm_and_check_output(
-            vm=rhel_vm_for_snapshot,
-            command=LS_COMMAND,
-            expected_result=expected_result,
-        )
-
-
-@pytest.mark.parametrize(
-    "namespace, resource, error_msg",
-    [
-        pytest.param(
-            ADMIN_NAMESPACE_PARAM,
-            VirtualMachineSnapshot,
-            ERROR_MSG_USER_CANNOT_LIST_VM_SNAPSHOTS,
-            marks=pytest.mark.polarion("CNV-5050"),
-        ),
-        pytest.param(
-            ADMIN_NAMESPACE_PARAM,
-            VirtualMachineRestore,
-            ERROR_MSG_USER_CANNOT_LIST_VM_RESTORE,
-            marks=pytest.mark.polarion("CNV-5331"),
-        ),
-    ],
-    indirect=["namespace"],
-)
-@pytest.mark.s390x
-def test_unprivileged_client_fails_to_list_resources(namespace, unprivileged_client, resource, error_msg):
-    with pytest.raises(
-        ApiException,
-        match=error_msg,
-    ):
-        list(resource.get(client=unprivileged_client, namespace=namespace.name))
-        return
-
-
-@pytest.mark.parametrize(
-    "rhel_vm_name, namespace",
-    [
-        pytest.param(
-            {"vm_name": "vm-cnv-4867"},
-            ADMIN_NAMESPACE_PARAM,
-            marks=pytest.mark.polarion("CNV-4867"),
-        ),
-    ],
-    indirect=True,
-)
-@pytest.mark.s390x
-def test_fail_to_snapshot_with_unprivileged_client_no_permissions(
-    rhel_vm_for_snapshot,
-    unprivileged_client,
-):
-    fail_to_create_snapshot_no_permissions(
-        snapshot_name="snapshot-cnv-4867-unprivileged",
-        namespace=rhel_vm_for_snapshot.namespace,
-        vm_name=rhel_vm_for_snapshot.name,
-        client=unprivileged_client,
+    @pytest.mark.polarion("CNV-16806")
+    @pytest.mark.parametrize(
+        "snapshot_and_restore_vms",
+        [{"count": 4}],
+        indirect=True,
     )
+    def test_restore_four_vms_with_4_disks_completes_within_five_minutes(self, snapshot_and_restore_vms):
+        """
+        Test that restoring snapshots of 4 VMs (each with 4 disks) in parallel completes within 5 minutes per VM.
 
+        Preconditions:
+            - 4 running Fedora VMs, each with 4 disk devices (1 boot from golden image DataSource + 3 blank DVs)
+            - VM snapshots taken and ready to use for all 4 VMs
+            - All 4 VMs stopped before restore
+            - All 4 snapshot restores initiated concurrently, each with its own 5-minute deadline
 
-@pytest.mark.parametrize(
-    "rhel_vm_name, namespace",
-    [
-        pytest.param(
-            {"vm_name": "vm-cnv-4868"},
-            ADMIN_NAMESPACE_PARAM,
-            marks=pytest.mark.polarion("CNV-4868"),
-        ),
-    ],
-    indirect=True,
-)
-@pytest.mark.s390x
-def test_fail_to_snapshot_with_unprivileged_client_dv_permissions(
-    rhel_vm_for_snapshot,
-    permissions_for_dv,
-    unprivileged_client,
-):
-    fail_to_create_snapshot_no_permissions(
-        snapshot_name="snapshot-cnv-4868-unprivileged",
-        namespace=rhel_vm_for_snapshot.namespace,
-        vm_name=rhel_vm_for_snapshot.name,
-        client=unprivileged_client,
-    )
+        Steps:
+            1. For each restore, verify it reports completion status
+            2. Start the restored VMs
+            3. Verify each restored VM guest disk count matches the VM spec
 
-
-@pytest.mark.tier3
-@pytest.mark.conformance
-@pytest.mark.windows
-@pytest.mark.parametrize(
-    "windows_vm_with_vtpm_for_snapshot",
-    [
-        pytest.param(
-            {"vm_name": "vm-8307"},
-            marks=pytest.mark.polarion("CNV-8307"),
-        ),
-    ],
-    indirect=True,
-)
-def test_online_windows_vm_successful_restore(
-    windows_vm_with_vtpm_for_snapshot,
-    windows_snapshot,
-    snapshot_dirctory_removed,
-):
-    with VirtualMachineRestore(
-        name="restore-vm",
-        namespace=windows_vm_with_vtpm_for_snapshot.namespace,
-        vm_name=windows_vm_with_vtpm_for_snapshot.name,
-        snapshot_name=windows_snapshot.name,
-        client=windows_vm_with_vtpm_for_snapshot.client,
-    ) as restore:
-        start_windows_vm_after_restore(vm_restore=restore, windows_vm=windows_vm_with_vtpm_for_snapshot)
-        assert_windows_directory_existence(
-            expected_result=True,
-            windows_vm=windows_vm_with_vtpm_for_snapshot,
-            directory_path=WINDOWS_DIRECTORY_PATH,
+        Expected:
+            - Each restore completed successfully within 5 minutes and each restored VM
+              reports the same number of disks as the VM spec
+        """
+        failed_restores = [restore.name for restore in snapshot_and_restore_vms if not restore.instance.status.complete]
+        assert not failed_restores, (
+            f"Restores did not complete successfully within 5 minutes: {', '.join(failed_restores)}"
         )
 
+        def verify_vm_disks(restore: VirtualMachineRestore) -> None:
+            vm = VirtualMachineForTests(
+                name=restore.vm_name,
+                namespace=restore.namespace,
+                client=restore.client,
+                generate_unique_name=False,
+            )
+            running_vm(vm=vm)
+            assert_guest_disk_count(vm=vm)
 
-@pytest.mark.tier3
-@pytest.mark.conformance
-@pytest.mark.windows
-@pytest.mark.parametrize(
-    "windows_vm_with_vtpm_for_snapshot",
-    [
-        pytest.param(
-            {"vm_name": "vm-8536"},
-            marks=pytest.mark.polarion("CNV-8536"),
-        ),
-    ],
-    indirect=True,
-)
-def test_write_to_file_while_snapshot(
-    windows_vm_with_vtpm_for_snapshot,
-    windows_snapshot,
-    file_created_during_snapshot,
-):
-    with VirtualMachineRestore(
-        name="restore-vm",
-        namespace=windows_vm_with_vtpm_for_snapshot.namespace,
-        vm_name=windows_vm_with_vtpm_for_snapshot.name,
-        snapshot_name=windows_snapshot.name,
-        client=windows_vm_with_vtpm_for_snapshot.client,
-    ) as restore:
-        start_windows_vm_after_restore(vm_restore=restore, windows_vm=windows_vm_with_vtpm_for_snapshot)
+        try:
+            run_parallel(
+                items=snapshot_and_restore_vms,
+                func=verify_vm_disks,
+                label="Failed to verify restored VM disks",
+                item_name=lambda r: r.vm_name,
+            )
+        except ExceptionGroup as disk_group:
+            disk_errors = [str(error) for error in disk_group.exceptions]
+            raise AssertionError(f"Restored VMs failed disk verification: {', '.join(disk_errors)}") from disk_group
