@@ -47,7 +47,7 @@ Before writing ANY new code:
 - **No dead code** - every function, variable, fixture MUST be used or removed. Code marked with `# skip-unused-code` is excluded from dead code analysis (enforced via custom ruff plugin).
 - **Prefer direct attribute access** - use `foo.attr` directly. Save to variables only when: reusing the same attribute multiple times improves readability, or extracting clarifies intent.
 - **Imports always at the top of the module** - do not import inside functions
-- **`conftest.py` is for fixtures only** - helper functions, utility functions, and classes must NOT be defined in conftest.py or test_*.py; place them in dedicated utility modules instead
+- **`conftest.py` is for fixtures only** - helper functions, utility functions, and non-test classes must NOT be defined in conftest.py or test_*.py; place them in dedicated utility modules instead (test classes used to group pytest tests are allowed in test_*.py)
 
 ### HCO CR (v1)
 
@@ -99,7 +99,10 @@ New feature tests MUST follow the STD-first workflow:
 ### Coverage Tracking
 
 - **STP link REQUIRED** — every new feature test file MUST include an STP link in the module, class, or test docstring
-- **STP scenario coverage REQUIRED** — when an STD or test references an STP, every test scenario defined in that STP MUST have a corresponding STD/test declaration in the same file or PR, unless the scenario is intentionally excluded. Intentional exclusions MUST be documented in the PR description with justification and a follow-up Jira link per excluded scenario. Partial STP coverage without documented exclusions blocks merge.
+- **STP scenario coverage REQUIRED** — when an STD or test references an STP, every scenario in that STP which is in scope for this repo MUST have a corresponding STD/test declaration, either in the same file/PR or tracked per the incremental-delivery rule below. Partial coverage without one of the documented exclusions below blocks merge.
+  - **Out-of-repo scenarios are not required here** — if the STP's own Test Strategy / Testing Tools & Frameworks section assigns a scenario to a different repository or test tier (e.g., Tier 1 scenarios owned by a dedicated feature repo while this repo covers Tier 2/Tier 3), that scenario is out of scope for this repo's coverage check. Cite the STP section that assigns ownership in the PR description (`Special notes for reviewer:`); no follow-up Jira link is required since coverage lives elsewhere.
+  - **Incremental delivery across multiple PRs is allowed** — in-repo STP scenarios MAY be delivered a few at a time across a series of PRs rather than all in one PR. The PR description MUST list which scenarios this PR covers and link the tracking Jira (epic or umbrella ticket) under which the remaining in-repo scenarios will be delivered.
+  - **Other intentional exclusions** — for any in-repo scenario excluded for a reason other than the two cases above, document the justification in the PR description AND add a follow-up Jira link per excluded scenario.
 - **STD alignment with STP** — STD docstring `Preconditions:`, `Steps:`, and `Expected:` sections MUST align with the STP scenario description for the scenario being covered.
 - **RFE/Jira link REQUIRED when no STP exists** — if there is no STP, the module, class, or test docstring MUST include a link to the RFE or Jira epic (not support cases) for coverage tracking
 - **Traceability preservation on modification REQUIRED** — when a PR modifies a test that references an STP, Jira, or RFE link, the modified test MUST retain a valid traceability link in its module, class, or test docstring. Removal or invalidation of the only traceability reference blocks merge. For STP-linked tests, reviewers MUST additionally verify that `Preconditions:`, `Steps:`, and `Expected:` docstring sections remain consistent with the STP, and that changes to the test body (assertions, fixture usage, helper calls) do not alter what the test validates in a way that diverges from the STP scenario. Misalignment between the modified test and its STP scenario blocks merge.
