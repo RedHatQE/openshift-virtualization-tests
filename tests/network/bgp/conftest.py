@@ -29,7 +29,7 @@ from tests.network.libs.bgp import (
     create_frr_configuration,
     deploy_external_frr_pod,
     enable_route_advertisements_in_cluster,
-    generate_frr_conf,
+    generate_openpe_yaml,
     wait_for_bgp_connection_established,
 )
 from tests.network.libs.label_selector import LabelSelector
@@ -37,7 +37,7 @@ from tests.network.libs.vm_factory import udn_vm
 from utilities.infra import get_node_selector_dict
 
 APP_CUDN_LABEL: Final[dict] = {"app": "cudn"}
-BGP_DATA_PATH: Final[Path] = Path(__file__).resolve().parent / "data" / "frr-config"
+OPENPE_DATA_PATH: Final[Path] = Path(__file__).resolve().parent / "data" / "openpe"
 CUDN_BGP_LABEL: Final[dict] = {"cudn-bgp": "blue"}
 CUDN_SUBNET_IPV4: Final[str] = "192.168.10.0/24"
 EXTERNAL_PROVIDER_SUBNET_IPV4: Final[str] = str(random_ipv4_address(net_seed=1, host_address=0))
@@ -88,24 +88,24 @@ def nad_localnet(
 
 
 @pytest.fixture(scope="package")
-def frr_configmap(
+def openpe_configmap(
     workers: list[Node],
     cnv_tests_utilities_namespace: Namespace,
     admin_client: DynamicClient,
     nncp_localnet_node1: libnncp.NodeNetworkConfigurationPolicy,
 ) -> Generator[ConfigMap]:
     node_name_with_nncp = nncp_localnet_node1.node_selector["kubernetes.io/hostname"]
-    frr_conf = generate_frr_conf(
+    openpe_tor_yaml = generate_openpe_yaml(
+        worker_ipv4_list=[worker.internal_ip for worker in workers if worker.hostname != node_name_with_nncp],
         external_subnet_ipv4=EXTERNAL_PROVIDER_SUBNET_IPV4,
-        nodes_ipv4_list=[worker.internal_ip for worker in workers if worker.name != node_name_with_nncp],
     )
 
     with ConfigMap(
-        name="frr-config",
+        name="openpe-config",
         namespace=cnv_tests_utilities_namespace.name,
         data={
-            "daemons": (BGP_DATA_PATH / "daemons").read_text(),
-            "frr.conf": frr_conf,
+            "openpe_tor.yaml": openpe_tor_yaml,
+            "node-config.yaml": (OPENPE_DATA_PATH / "node-config.yaml").read_text(),
         },
         client=admin_client,
     ) as cm:
@@ -176,7 +176,7 @@ def frr_configuration_created(admin_client: DynamicClient, frr_external_pod: Ext
 def frr_external_pod(
     nad_localnet: libnad.NetworkAttachmentDefinition,
     worker_node1: Node,
-    frr_configmap: ConfigMap,
+    openpe_configmap: ConfigMap,
     cnv_tests_utilities_namespace: Namespace,
     admin_client: DynamicClient,
 ) -> Generator[ExternalFrrPodInfo]:
@@ -184,13 +184,13 @@ def frr_external_pod(
         namespace_name=cnv_tests_utilities_namespace.name,
         node_name=worker_node1.name,
         nad_name=nad_localnet.name,
-        frr_configmap_name=frr_configmap.name,
+        openpe_configmap_name=openpe_configmap.name,
         client=admin_client,
     ) as pod_info:
         # Assign a secondary IP on the secondary interface to emulate the external provider subnet
         pod_info.pod.execute(
             command=shlex.split(f"ip addr add {EXTERNAL_PROVIDER_IP_V4} dev {POD_SECONDARY_IFACE_NAME}"),
-            container="frr",
+            container=NET_TOOLS_CONTAINER_NAME,
         )
         yield pod_info
 
