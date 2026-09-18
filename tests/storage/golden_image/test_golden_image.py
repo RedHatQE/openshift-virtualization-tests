@@ -14,11 +14,6 @@ pytestmark = pytest.mark.post_upgrade
 
 
 LOGGER = logging.getLogger(__name__)
-<<<<<<< HEAD
-LATEST_RHEL_IMAGE = RHEL_LATEST["image_path"]
-RHEL_IMAGE_SIZE = RHEL_LATEST["dv_size"]
-=======
->>>>>>> f6de54e1 (CherryPicked: [cnv-4.22] [Storage] Refactor golden_image tests to use Fedora DataSource (#5977))
 
 
 @pytest.fixture(scope="module")
@@ -157,15 +152,9 @@ def test_regular_user_cant_clone_dv_in_ns(
             dv_name=f"cnv-4760-{storage_class}",
             namespace=golden_images_namespace,
             source=PVC,
-<<<<<<< HEAD
-            size=golden_image_data_volume_scope_module.size,
-            source_pvc=golden_image_data_volume_scope_module.pvc.name,
-            source_namespace=golden_images_namespace,
-=======
             size=golden_image_dv_from_fedora_datasource_scope_module.size,
             source_pvc_name=golden_image_dv_from_fedora_datasource_scope_module.pvc.name,
             source_pvc_namespace=golden_images_namespace,
->>>>>>> f6de54e1 (CherryPicked: [cnv-4.22] [Storage] Refactor golden_image tests to use Fedora DataSource (#5977))
             client=unprivileged_client,
             storage_class=storage_class,
         ):
