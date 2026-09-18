@@ -171,7 +171,7 @@ def verify_pid_after_migrate_multi_vms(vms_with_pids, os_type):
         new_pid = None
         try:
             new_pid = os_dict["fetch_pid"](vm=vms_with_pids[vm_name]["vm"], process_name=os_dict["proc_name"])
-        except AssertionError | ValueError:
+        except AssertionError, ValueError:
             vms_with_wrong_pids_dict[vm_name] = {
                 "orig_pid": orig_pid,
                 "new_pid": new_pid,
@@ -228,7 +228,7 @@ def wait_windows_reboot_multi_vm(vm_list):
             try:
                 wait_for_ssh_connectivity(vm=vm)
                 os_dict["fetch_pid"](vm=vm, process_name=os_dict["proc_name"])
-            except AssertionError | ValueError | TimeoutExpiredError:
+            except AssertionError, ValueError, TimeoutExpiredError:
                 rebooted_vms.append(vm.name)
         return rebooted_vms
 

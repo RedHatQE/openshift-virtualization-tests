@@ -22,7 +22,7 @@ from tests.install_upgrade_operators.constants import (
 from tests.install_upgrade_operators.utils import (
     get_network_addon_config,
     get_resource_by_name,
-    get_resource_from_module_name,
+    get_resource_from_related_object,
 )
 from utilities.constants import HOSTPATH_PROVISIONER_CSI, HPP_POOL
 from utilities.hco import ResourceEditorValidateHCOReconcile, get_hco_version
@@ -223,7 +223,7 @@ def machine_config_pools_conditions_scope_module(machine_config_pools):
 
 @pytest.fixture()
 def ocp_resource_by_name(admin_client, ocp_resources_submodule_list, related_object_from_hco_status):
-    return get_resource_from_module_name(
+    return get_resource_from_related_object(
         related_obj=related_object_from_hco_status,
         ocp_resources_submodule_list=ocp_resources_submodule_list,
         admin_client=admin_client,
@@ -280,3 +280,10 @@ def expected_value(request, is_s390x_cluster):
     if request.param == EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES and is_s390x_cluster:
         return request.param | S390X_SPECIFIC_KUBEVIRT_FEATUREGATES
     return request.param
+
+
+@pytest.fixture(scope="session")
+def passt_enabled_in_hco_and_jira_92995_open(hyperconverged_resource_scope_session):
+    annotations = hyperconverged_resource_scope_session.instance.metadata.annotations or {}
+    hco_annotated = annotations.get("hco.kubevirt.io/deployPasstNetworkBinding") == "true"
+    return hco_annotated and is_jira_open(jira_id="CNV-92995")

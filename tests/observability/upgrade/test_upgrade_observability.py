@@ -3,7 +3,7 @@ import pytest
 from tests.observability.constants import KUBEVIRT_VMI_NUMBER_OF_OUTDATED
 from tests.observability.utils import validate_metrics_value
 from tests.upgrade_params import IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID
-from utilities.constants import DEPENDENCY_SCOPE_SESSION
+from utilities.constants import DEPENDENCY_SCOPE_SESSION, QUARANTINED
 
 
 @pytest.mark.cnv_upgrade
@@ -17,6 +17,10 @@ class TestUpgradeObservability:
     @pytest.mark.order(before=IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID)
     @pytest.mark.dependency(name=TEST_METRIC_KUBEVIRT_VMI_NUMBER_OF_OUTDATED_BEFORE_UPGRADE)
     @pytest.mark.polarion("CNV-11749")
+    @pytest.mark.xfail(
+        reason=f"{QUARANTINED}: pre-upgrade setup for quarantined post-upgrade tests; CNV-84508",
+        run=False,
+    )
     def test_metric_kubevirt_vmi_number_of_outdated_before_upgrade(self, prometheus, vm_with_node_selector_for_upgrade):
         validate_metrics_value(
             prometheus=prometheus,
@@ -32,6 +36,10 @@ class TestUpgradeObservability:
         name=TEST_OUTDATED_VMIS_COUNT_MATCHES,
         depends=[IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID],
         scope=DEPENDENCY_SCOPE_SESSION,
+    )
+    @pytest.mark.xfail(
+        reason=f"{QUARANTINED}: runs before opt-in migration completes, causing outdated VMI count mismatch; CNV-84508",
+        run=False,
     )
     def test_outdated_vmis_count_matches_kubevirt_status_after_upgrade(
         self, outdated_vmis_count, kubevirt_resource_outdated_vmi_workloads_count
@@ -55,6 +63,10 @@ class TestUpgradeObservability:
             TEST_OUTDATED_VMIS_COUNT_MATCHES,
         ],
         scope=DEPENDENCY_SCOPE_SESSION,
+    )
+    @pytest.mark.xfail(
+        reason=f"{QUARANTINED}: invalid namespace filter on kubevirt_vmi_number_of_outdated metric; CNV-84508",
+        run=False,
     )
     def test_metric_kubevirt_vmi_number_of_outdated_after_upgrade(
         self, prometheus, kubevirt_resource_outdated_vmi_workloads_count, vm_with_node_selector_for_upgrade

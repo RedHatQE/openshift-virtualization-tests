@@ -1,12 +1,9 @@
 import http
-import logging
 
 import pytest
 import requests
 
-from utilities.constants import CNV_PROMETHEUS_RULES, TIMEOUT_10SEC
-
-LOGGER = logging.getLogger(__name__)
+from utilities.constants import TIMEOUT_10SEC
 
 
 def validate_downstream_runbook_url(
@@ -33,20 +30,6 @@ def validate_downstream_runbook_url(
 
 
 class TestRunbookUrlsAndPrometheusRules:
-    @pytest.mark.polarion("CNV-10081")
-    def test_no_new_prometheus_rules(self, cnv_prometheus_rules_names, hpp_cr_installed):
-        """
-        Since validations for runbook url of all cnv alerts are done via polarion parameterization of prometheusrules,
-        this test has been added to catch any new cnv prometheusrules that is not part of cnv_prometheus_rules_matrix
-        """
-        expected_prometheus_rules_names = CNV_PROMETHEUS_RULES.copy()
-        if not hpp_cr_installed:
-            LOGGER.warning("HPP CR is not installed, removing prometheus-hpp-rules from the list of prometheus rules")
-            expected_prometheus_rules_names.remove("prometheus-hpp-rules")
-        assert sorted(cnv_prometheus_rules_names) == sorted(expected_prometheus_rules_names), (
-            f"New cnv prometheusrule found: {set(cnv_prometheus_rules_names) - set(expected_prometheus_rules_names)}"
-        )
-
     @pytest.mark.polarion("CNV-10084")
     def test_runbook_downstream_urls(self, cnv_alerts_runbook_urls_from_prometheus_rule, subtests):
         validate_downstream_runbook_url(

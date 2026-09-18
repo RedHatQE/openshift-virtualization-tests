@@ -14,8 +14,6 @@ from utilities.network import assert_ping_successful, ping
 LOGGER = logging.getLogger(__name__)
 CUSTOM_ETH_PROTOCOL = "0x88B6"  # rfc5342 Local Experimental Ethertype. Used to test custom eth type and linux bridge
 
-pytestmark = pytest.mark.usefixtures("hyperconverged_ovs_annotations_enabled_scope_session")
-
 
 def wait_for_no_packet_loss_after_connection(src_vm, dst_ip, interface=None):
     sleep_count_value = 10
