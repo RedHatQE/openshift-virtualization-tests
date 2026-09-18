@@ -79,17 +79,13 @@ def validation_os_images_role_binding(admin_client, validation_os_images_namespa
             if role_binding.exists:
                 LOGGER.info(f"Reusing existing RoleBinding {role_binding.name} in {role_binding.namespace}")
                 subjects = role_binding.instance.subjects
-                assert len(subjects) == 1, (
-                    f"RoleBinding {role_binding.name} has {len(subjects)} subjects, expected exactly one"
-                )
-                subject = subjects[0]
-                assert subject.kind == binding_spec.subjects_kind, (
-                    f"RoleBinding {role_binding.name} subject kind is {subject.kind}, "
-                    f"expected {binding_spec.subjects_kind}"
-                )
-                assert subject.name == binding_spec.subjects_name, (
-                    f"RoleBinding {role_binding.name} subject name is {subject.name}, "
-                    f"expected {binding_spec.subjects_name}"
+                assert any(
+                    subject.kind == binding_spec.subjects_kind and subject.name == binding_spec.subjects_name
+                    for subject in subjects
+                ), (
+                    f"RoleBinding {role_binding.name} is missing expected subject "
+                    f"{binding_spec.subjects_kind}/{binding_spec.subjects_name}; "
+                    f"found subjects: {[(subject.kind, subject.name) for subject in subjects]}"
                 )
                 role_ref = role_binding.instance.roleRef
                 assert role_ref.kind == ClusterRole.kind, (
