@@ -221,8 +221,7 @@ def find_related_object_by_kind_and_name(
     Raises:
         ResourceNotFoundError: If no matching related object is found.
     """
-    kind_name = list(related_object_matrix_entry.values())[0]
-    related_object_name = list(related_object_matrix_entry.keys())[0]
+    related_object_name, kind_name = next(iter(related_object_matrix_entry.items()))
     LOGGER.info(f"Looking for related object {related_object_name}, kind {kind_name}")
     for obj in hco_status_related_objects:
         if obj.name == related_object_name and obj.kind == kind_name:
