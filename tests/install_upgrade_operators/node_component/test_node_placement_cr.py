@@ -128,7 +128,7 @@ class TestCreateHCOWithNodePlacement:
         }
 
         assert not deployment_mismatch, (
-            f"For following deployment workload change did not get propagated: {daemonsets_mismatch}"
+            f"For following deployment workload change did not get propagated: {deployment_mismatch}"
         )
 
     @pytest.mark.polarion("CNV-5383")
