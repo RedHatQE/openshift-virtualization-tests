@@ -251,7 +251,9 @@ def linux_root_disk_snapshot(
 
 
 @pytest.fixture()
-def linux_root_disk_backup_pvc(linux_root_disk_snapshot, namespace, admin_client):
+def linux_root_disk_backup_pvc(
+    linux_root_disk_snapshot, namespace, admin_client, snapshot_storage_class_name_scope_module
+):
     """Backup PVC cloned from the Linux root disk VolumeSnapshot."""
     LOGGER.info(f"Creating Linux root disk backup PVC from VolumeSnapshot '{linux_root_disk_snapshot.name}'")
     with DataVolume(
@@ -259,6 +261,7 @@ def linux_root_disk_backup_pvc(linux_root_disk_snapshot, namespace, admin_client
         namespace=namespace.name,
         source_dict={"snapshot": {"name": linux_root_disk_snapshot.name, "namespace": namespace.name}},
         api_name="storage",
+        storage_class=snapshot_storage_class_name_scope_module,
         client=admin_client,
     ) as data_volume:
         data_volume.wait_for_dv_success()
@@ -340,7 +343,7 @@ def linux_root_disk_backup_pvc_file_restore(
 
 
 @pytest.fixture()
-def linux_backup_pvc(linux_data_disk_snapshot, namespace, admin_client):
+def linux_backup_pvc(linux_data_disk_snapshot, namespace, admin_client, snapshot_storage_class_name_scope_module):
     """Backup PVC cloned from the Linux data disk VolumeSnapshot."""
     LOGGER.info(f"Creating backup PVC from VolumeSnapshot '{linux_data_disk_snapshot.name}'")
     with DataVolume(
@@ -348,6 +351,7 @@ def linux_backup_pvc(linux_data_disk_snapshot, namespace, admin_client):
         namespace=namespace.name,
         source_dict={"snapshot": {"name": linux_data_disk_snapshot.name, "namespace": namespace.name}},
         api_name="storage",
+        storage_class=snapshot_storage_class_name_scope_module,
         client=admin_client,
     ) as data_volume:
         data_volume.wait_for_dv_success()
@@ -491,7 +495,7 @@ def windows_data_disk_snapshot(
 
 
 @pytest.fixture()
-def windows_backup_pvc(windows_data_disk_snapshot, namespace, admin_client):
+def windows_backup_pvc(windows_data_disk_snapshot, namespace, admin_client, snapshot_storage_class_name_scope_module):
     """Backup PVC cloned from the Windows data disk VolumeSnapshot."""
     LOGGER.info(f"Creating Windows backup PVC from VolumeSnapshot '{windows_data_disk_snapshot.name}'")
     with DataVolume(
@@ -499,6 +503,7 @@ def windows_backup_pvc(windows_data_disk_snapshot, namespace, admin_client):
         namespace=namespace.name,
         source_dict={"snapshot": {"name": windows_data_disk_snapshot.name, "namespace": namespace.name}},
         api_name="storage",
+        storage_class=snapshot_storage_class_name_scope_module,
         client=admin_client,
     ) as data_volume:
         data_volume.wait_for_dv_success()
