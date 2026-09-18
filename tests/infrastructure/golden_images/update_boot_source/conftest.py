@@ -16,7 +16,6 @@ from tests.infrastructure.golden_images.update_boot_source.utils import (
     generate_data_import_cron_dict,
     get_all_release_versions_from_docs,
 )
-from utilities.constants import Images
 from utilities.constants.images import DEFAULT_FEDORA_REGISTRY_URL
 from utilities.constants.storage import BIND_IMMEDIATE_ANNOTATION
 from utilities.constants.timeouts import (
@@ -205,11 +204,17 @@ def reconciled_custom_data_source(custom_data_source_scope_function):
 
 @pytest.fixture()
 def vm_from_custom_data_import_cron(custom_data_source_scope_function, namespace, unprivileged_client):
+    # Use vm_instance_type_infer + vm_preference_infer so the cluster selects the
+    # correct instance type and arch-aware preference from the DataSource — same
+    # pattern as test_all_datasources_support_vm_creation. Without this, on hetero
+    # clusters (s390x CP + arm64 workers) the template defaults to the CP arch (s390x)
+    # and the VM fails to schedule on arm64 workers.
     with VirtualMachineForTests(
         name=f"{custom_data_source_scope_function.name}-vm",
         namespace=namespace.name,
         client=unprivileged_client,
-        memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
+        vm_instance_type_infer=True,
+        vm_preference_infer=True,
         data_volume_template=data_volume_template_with_source_ref_dict(data_source=custom_data_source_scope_function),
     ) as vm:
         running_vm(vm=vm)
