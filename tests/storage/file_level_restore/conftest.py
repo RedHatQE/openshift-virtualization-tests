@@ -10,7 +10,11 @@ from pyhelper_utils.shell import run_ssh_commands
 from tests.storage.file_level_restore.constants import (
     LINUX_DATA_DISK_MOUNT_PATH,
     LINUX_DATA_DISK_SIZE,
+    LINUX_DATA_DISK_SNAPSHOT_RESTORE_CR_NAME,
+    LINUX_DATA_DISK_SNAPSHOT_SECOND_RESTORE_CR_NAME,
     LINUX_RESTORE_TEST_DIRECTORY,
+    LINUX_ROOT_DISK_PVC_RESTORE_CR_NAME,
+    LINUX_ROOT_DISK_SNAPSHOT_RESTORE_CR_NAME,
     LINUX_ROOT_DISK_VM_SNAPSHOT_NAME,
     LINUX_TEST_FILE_CONTENT,
     LINUX_TEST_FILE_CONTENT_2,
@@ -26,6 +30,7 @@ from tests.storage.file_level_restore.constants import (
     WINDOWS_TEST_FILE_NAME,
 )
 from tests.storage.file_level_restore.utils import (
+    VirtualMachineFileRestore,
     delete_linux_data_disk_file,
     delete_linux_guest_file,
     delete_windows_guest_file,
@@ -40,6 +45,7 @@ from tests.storage.file_level_restore.utils import (
     linux_root_disk_online_virtual_machine_snapshot,
     linux_volume_snapshot,
     wait_for_file_restore_operator_ready,
+    wait_for_file_restore_phase,
     windows_data_disk_path,
     windows_data_disk_volume_snapshot,
     windows_guest_path,
@@ -272,6 +278,31 @@ def deleted_linux_test_file_on_root_disk(
 
 
 @pytest.fixture()
+def linux_root_disk_snapshot_file_restore(
+    admin_client,
+    namespace,
+    file_restore_linux_root_only_vm,
+    linux_root_disk_snapshot,
+    deleted_linux_test_file_on_root_disk,
+):
+    """Succeeded file restore from a Linux root-disk VolumeSnapshot."""
+    restore_path, _ = deleted_linux_test_file_on_root_disk
+    with VirtualMachineFileRestore(
+        name=LINUX_ROOT_DISK_SNAPSHOT_RESTORE_CR_NAME,
+        namespace=namespace.name,
+        target_vm_name=file_restore_linux_root_only_vm.name,
+        source_snapshot_name=linux_root_disk_snapshot.name,
+        source_path=restore_path,
+        client=admin_client,
+    ) as file_restore:
+        wait_for_file_restore_phase(
+            file_restore=file_restore,
+            target_phase=VirtualMachineFileRestore.Phase.SUCCEEDED,
+        )
+        yield file_restore
+
+
+@pytest.fixture()
 def deleted_linux_test_file_on_root_disk_from_backup(
     file_restore_linux_root_only_vm,
     linux_root_disk_backup_pvc,
@@ -281,6 +312,31 @@ def deleted_linux_test_file_on_root_disk_from_backup(
     restore_path, file_content = linux_test_file_on_root_disk
     delete_linux_guest_file(vm=file_restore_linux_root_only_vm, guest_path=restore_path)
     yield restore_path, file_content
+
+
+@pytest.fixture()
+def linux_root_disk_backup_pvc_file_restore(
+    admin_client,
+    namespace,
+    file_restore_linux_root_only_vm,
+    linux_root_disk_backup_pvc,
+    deleted_linux_test_file_on_root_disk_from_backup,
+):
+    """Succeeded file restore from a Linux root-disk backup PVC."""
+    restore_path, _ = deleted_linux_test_file_on_root_disk_from_backup
+    with VirtualMachineFileRestore(
+        name=LINUX_ROOT_DISK_PVC_RESTORE_CR_NAME,
+        namespace=namespace.name,
+        target_vm_name=file_restore_linux_root_only_vm.name,
+        source_pvc_name=linux_root_disk_backup_pvc.name,
+        source_path=restore_path,
+        client=admin_client,
+    ) as file_restore:
+        wait_for_file_restore_phase(
+            file_restore=file_restore,
+            target_phase=VirtualMachineFileRestore.Phase.SUCCEEDED,
+        )
+        yield file_restore
 
 
 @pytest.fixture()
@@ -628,6 +684,31 @@ def deleted_first_linux_file_on_data_disk(
 
 
 @pytest.fixture()
+def first_linux_data_disk_snapshot_file_restore(
+    admin_client,
+    namespace,
+    file_restore_linux_vm,
+    linux_data_disk_snapshot_with_two_files,
+    deleted_first_linux_file_on_data_disk,
+):
+    """Succeeded restore of the first Linux data-disk file."""
+    restore_path, _ = deleted_first_linux_file_on_data_disk
+    with VirtualMachineFileRestore(
+        name=LINUX_DATA_DISK_SNAPSHOT_RESTORE_CR_NAME,
+        namespace=namespace.name,
+        target_vm_name=file_restore_linux_vm.name,
+        source_snapshot_name=linux_data_disk_snapshot_with_two_files.name,
+        source_path=restore_path,
+        client=admin_client,
+    ) as file_restore:
+        wait_for_file_restore_phase(
+            file_restore=file_restore,
+            target_phase=VirtualMachineFileRestore.Phase.SUCCEEDED,
+        )
+        yield file_restore
+
+
+@pytest.fixture()
 def deleted_second_linux_file_on_data_disk(
     file_restore_linux_vm,
     linux_data_disk_snapshot_with_two_files,
@@ -637,3 +718,28 @@ def deleted_second_linux_file_on_data_disk(
     restore_path, file_content = linux_two_test_files_on_data_disk[1]
     delete_linux_data_disk_file(vm=file_restore_linux_vm, restore_path=restore_path)
     yield restore_path, file_content
+
+
+@pytest.fixture()
+def second_linux_data_disk_snapshot_file_restore(
+    admin_client,
+    namespace,
+    file_restore_linux_vm,
+    linux_data_disk_snapshot_with_two_files,
+    deleted_second_linux_file_on_data_disk,
+):
+    """Succeeded restore of the second Linux data-disk file."""
+    restore_path, _ = deleted_second_linux_file_on_data_disk
+    with VirtualMachineFileRestore(
+        name=LINUX_DATA_DISK_SNAPSHOT_SECOND_RESTORE_CR_NAME,
+        namespace=namespace.name,
+        target_vm_name=file_restore_linux_vm.name,
+        source_snapshot_name=linux_data_disk_snapshot_with_two_files.name,
+        source_path=restore_path,
+        client=admin_client,
+    ) as file_restore:
+        wait_for_file_restore_phase(
+            file_restore=file_restore,
+            target_phase=VirtualMachineFileRestore.Phase.SUCCEEDED,
+        )
+        yield file_restore

@@ -8,10 +8,6 @@ Jira: https://redhat.atlassian.net/browse/VIRTSTRAT-480 # <skip-jira-utils-check
 import pytest
 
 from tests.storage.file_level_restore.constants import (
-    LINUX_DATA_DISK_SNAPSHOT_RESTORE_CR_NAME,
-    LINUX_DATA_DISK_SNAPSHOT_SECOND_RESTORE_CR_NAME,
-    LINUX_ROOT_DISK_PVC_RESTORE_CR_NAME,
-    LINUX_ROOT_DISK_SNAPSHOT_RESTORE_CR_NAME,
     LINUX_VENDOR_RESTORE_CR_NAME,
     WINDOWS_ACL_PVC_RESTORE_CR_NAME,
     WINDOWS_ACL_SNAPSHOT_RESTORE_CR_NAME,
@@ -27,7 +23,6 @@ from tests.storage.file_level_restore.utils import (
     assert_windows_ntfs_acl_matches,
     count_files_in_windows_directory,
     get_restored_files_count,
-    log_linux_guest_restore_path_diagnostics,
     wait_for_file_restore_operator_ready,
     wait_for_file_restore_phase,
     windows_data_disk_path,
@@ -427,8 +422,8 @@ class TestFileRestoreRootDiskToOriginalPath:
         admin_client,
         namespace,
         file_restore_linux_root_only_vm,
-        linux_root_disk_snapshot,
         deleted_linux_test_file_on_root_disk,
+        linux_root_disk_snapshot_file_restore,
     ):
         """
         Test that files are restored from a root disk VolumeSnapshot to their original location
@@ -451,42 +446,18 @@ class TestFileRestoreRootDiskToOriginalPath:
             - Temporary resources from the operation are cleaned up
         """
         restore_path, expected_content = deleted_linux_test_file_on_root_disk
-        log_linux_guest_restore_path_diagnostics(
+        run_command_on_vm_and_check_output(
             vm=file_restore_linux_root_only_vm,
-            restore_path=restore_path,
-            stage="pre-restore",
+            command=f"cat {restore_path}",
+            expected_result=expected_content,
         )
-        with VirtualMachineFileRestore(
-            name=LINUX_ROOT_DISK_SNAPSHOT_RESTORE_CR_NAME,
-            namespace=namespace.name,
-            target_vm_name=file_restore_linux_root_only_vm.name,
-            source_snapshot_name=linux_root_disk_snapshot.name,
-            source_path=restore_path,
-            client=admin_client,
-        ) as file_restore:
-            wait_for_file_restore_phase(
-                file_restore=file_restore,
-                target_phase=VirtualMachineFileRestore.Phase.SUCCEEDED,
-                backup_mount_probe_vm=file_restore_linux_root_only_vm,
-                backup_mount_probe_source_path=restore_path,
-            )
-            log_linux_guest_restore_path_diagnostics(
-                vm=file_restore_linux_root_only_vm,
-                restore_path=restore_path,
-                stage="post-restore",
-            )
-            run_command_on_vm_and_check_output(
-                vm=file_restore_linux_root_only_vm,
-                command=f"cat {restore_path}",
-                expected_result=expected_content,
-            )
-            assert_successful_restore_cleanup(
-                vm=file_restore_linux_root_only_vm,
-                restore_cr_name=file_restore.name,
-                namespace_name=namespace.name,
-                admin_client=admin_client,
-                snapshot_source=True,
-            )
+        assert_successful_restore_cleanup(
+            vm=file_restore_linux_root_only_vm,
+            restore_cr_name=linux_root_disk_snapshot_file_restore.name,
+            namespace_name=namespace.name,
+            admin_client=admin_client,
+            snapshot_source=True,
+        )
 
     @pytest.mark.polarion("CNV-16812")
     def test_restore_from_root_disk_backup_pvc_to_original_path(
@@ -494,8 +465,8 @@ class TestFileRestoreRootDiskToOriginalPath:
         admin_client,
         namespace,
         file_restore_linux_root_only_vm,
-        linux_root_disk_backup_pvc,
         deleted_linux_test_file_on_root_disk_from_backup,
+        linux_root_disk_backup_pvc_file_restore,
     ):
         """
         Test that files are restored from a root disk backup PVC to their original location
@@ -518,42 +489,18 @@ class TestFileRestoreRootDiskToOriginalPath:
             - Temporary resources from the operation are cleaned up
         """
         restore_path, expected_content = deleted_linux_test_file_on_root_disk_from_backup
-        log_linux_guest_restore_path_diagnostics(
+        run_command_on_vm_and_check_output(
             vm=file_restore_linux_root_only_vm,
-            restore_path=restore_path,
-            stage="pre-restore",
+            command=f"cat {restore_path}",
+            expected_result=expected_content,
         )
-        with VirtualMachineFileRestore(
-            name=LINUX_ROOT_DISK_PVC_RESTORE_CR_NAME,
-            namespace=namespace.name,
-            target_vm_name=file_restore_linux_root_only_vm.name,
-            source_pvc_name=linux_root_disk_backup_pvc.name,
-            source_path=restore_path,
-            client=admin_client,
-        ) as file_restore:
-            wait_for_file_restore_phase(
-                file_restore=file_restore,
-                target_phase=VirtualMachineFileRestore.Phase.SUCCEEDED,
-                backup_mount_probe_vm=file_restore_linux_root_only_vm,
-                backup_mount_probe_source_path=restore_path,
-            )
-            log_linux_guest_restore_path_diagnostics(
-                vm=file_restore_linux_root_only_vm,
-                restore_path=restore_path,
-                stage="post-restore",
-            )
-            run_command_on_vm_and_check_output(
-                vm=file_restore_linux_root_only_vm,
-                command=f"cat {restore_path}",
-                expected_result=expected_content,
-            )
-            assert_successful_restore_cleanup(
-                vm=file_restore_linux_root_only_vm,
-                restore_cr_name=file_restore.name,
-                namespace_name=namespace.name,
-                admin_client=admin_client,
-                snapshot_source=False,
-            )
+        assert_successful_restore_cleanup(
+            vm=file_restore_linux_root_only_vm,
+            restore_cr_name=linux_root_disk_backup_pvc_file_restore.name,
+            namespace_name=namespace.name,
+            admin_client=admin_client,
+            snapshot_source=False,
+        )
 
 
 @pytest.mark.incremental
@@ -576,8 +523,8 @@ class TestFileRestoreSequentialFromSameSnapshot:
         admin_client,
         namespace,
         file_restore_linux_vm,
-        linux_data_disk_snapshot_with_two_files,
         deleted_first_linux_file_on_data_disk,
+        first_linux_data_disk_snapshot_file_restore,
     ):
         """
         Test that files are restored from a data disk VolumeSnapshot in a running Linux VM
@@ -601,30 +548,18 @@ class TestFileRestoreSequentialFromSameSnapshot:
             - Temporary resources from the operation are cleaned up
         """
         restore_path, expected_content = deleted_first_linux_file_on_data_disk
-        with VirtualMachineFileRestore(
-            name=LINUX_DATA_DISK_SNAPSHOT_RESTORE_CR_NAME,
-            namespace=namespace.name,
-            target_vm_name=file_restore_linux_vm.name,
-            source_snapshot_name=linux_data_disk_snapshot_with_two_files.name,
-            source_path=restore_path,
-            client=admin_client,
-        ) as file_restore:
-            wait_for_file_restore_phase(
-                file_restore=file_restore,
-                target_phase=VirtualMachineFileRestore.Phase.SUCCEEDED,
-            )
-            run_command_on_vm_and_check_output(
-                vm=file_restore_linux_vm,
-                command=f"cat {restore_path}",
-                expected_result=expected_content,
-            )
-            assert_successful_restore_cleanup(
-                vm=file_restore_linux_vm,
-                restore_cr_name=file_restore.name,
-                namespace_name=namespace.name,
-                admin_client=admin_client,
-                snapshot_source=True,
-            )
+        run_command_on_vm_and_check_output(
+            vm=file_restore_linux_vm,
+            command=f"cat {restore_path}",
+            expected_result=expected_content,
+        )
+        assert_successful_restore_cleanup(
+            vm=file_restore_linux_vm,
+            restore_cr_name=first_linux_data_disk_snapshot_file_restore.name,
+            namespace_name=namespace.name,
+            admin_client=admin_client,
+            snapshot_source=True,
+        )
 
     @pytest.mark.polarion("CNV-16815")
     def test_second_restore_from_same_data_disk_snapshot(
@@ -632,9 +567,9 @@ class TestFileRestoreSequentialFromSameSnapshot:
         admin_client,
         namespace,
         file_restore_linux_vm,
-        linux_data_disk_snapshot_with_two_files,
         linux_two_test_files_on_data_disk,
         deleted_second_linux_file_on_data_disk,
+        second_linux_data_disk_snapshot_file_restore,
     ):
         """
         Test that a second restore from the same data disk VolumeSnapshot completes successfully.
@@ -660,32 +595,20 @@ class TestFileRestoreSequentialFromSameSnapshot:
         """
         restore_path, expected_content = deleted_second_linux_file_on_data_disk
         first_restore_path, first_expected_content = linux_two_test_files_on_data_disk[0]
-        with VirtualMachineFileRestore(
-            name=LINUX_DATA_DISK_SNAPSHOT_SECOND_RESTORE_CR_NAME,
-            namespace=namespace.name,
-            target_vm_name=file_restore_linux_vm.name,
-            source_snapshot_name=linux_data_disk_snapshot_with_two_files.name,
-            source_path=restore_path,
-            client=admin_client,
-        ) as file_restore:
-            wait_for_file_restore_phase(
-                file_restore=file_restore,
-                target_phase=VirtualMachineFileRestore.Phase.SUCCEEDED,
-            )
-            run_command_on_vm_and_check_output(
-                vm=file_restore_linux_vm,
-                command=f"cat {restore_path}",
-                expected_result=expected_content,
-            )
-            run_command_on_vm_and_check_output(
-                vm=file_restore_linux_vm,
-                command=f"cat {first_restore_path}",
-                expected_result=first_expected_content,
-            )
-            assert_successful_restore_cleanup(
-                vm=file_restore_linux_vm,
-                restore_cr_name=file_restore.name,
-                namespace_name=namespace.name,
-                admin_client=admin_client,
-                snapshot_source=True,
-            )
+        run_command_on_vm_and_check_output(
+            vm=file_restore_linux_vm,
+            command=f"cat {restore_path}",
+            expected_result=expected_content,
+        )
+        run_command_on_vm_and_check_output(
+            vm=file_restore_linux_vm,
+            command=f"cat {first_restore_path}",
+            expected_result=first_expected_content,
+        )
+        assert_successful_restore_cleanup(
+            vm=file_restore_linux_vm,
+            restore_cr_name=second_linux_data_disk_snapshot_file_restore.name,
+            namespace_name=namespace.name,
+            admin_client=admin_client,
+            snapshot_source=True,
+        )

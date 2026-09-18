@@ -380,7 +380,6 @@ def linux_root_disk_online_virtual_machine_snapshot(
             command=f"cat {restore_path}",
             expected_result=expected_content,
         )
-    log_linux_guest_root_disk_layout_diagnostics(vm=vm)
     LOGGER.info(
         f"Creating online VirtualMachineSnapshot '{vm_snapshot_name}' of VM '{vm.name}' "
         f"for root-disk file-level restore"
@@ -730,125 +729,10 @@ def install_windows_guest_helper(vm: VirtualMachineForTests, admin_client: Dynam
     LOGGER.info(f"Windows guest helper installed on VM '{vm.name}'")
 
 
-def log_virtual_machine_file_restore_status(*, file_restore: VirtualMachineFileRestore) -> None:
-    """Log key VirtualMachineFileRestore status fields for restore troubleshooting.
-
-    Args:
-        file_restore: The VirtualMachineFileRestore resource to inspect.
-    """
-    status = file_restore.instance.get("status", {}) or {}
-    conditions = status.get("conditions") or []
-    restore_completed_condition: dict[str, Any] = next(
-        (condition for condition in conditions if condition.get("type") == "RestoreCompleted"),
-        {},
-    )
-    LOGGER.info(
-        f"VirtualMachineFileRestore '{file_restore.name}' status snapshot: "
-        f"phase={status.get('phase')!r}, mountPath={status.get('mountPath')!r}, "
-        f"restoredFilesCount={status.get('restoredFilesCount')!r}, "
-        f"errorMessage={status.get('errorMessage')!r}, "
-        f"restoreCompletedMessage={restore_completed_condition.get('message')!r}"
-    )
-
-
-def _log_linux_guest_command_output(*, vm: VirtualMachineForTests, label: str, command: str) -> None:
-    """Run a guest command for diagnostics and log stdout without failing the test.
-
-    Args:
-        vm: Linux VM to probe over SSH.
-        label: Short label included in the log line.
-        command: Shell command executed with ``bash -c``.
-    """
-    command_output = run_ssh_commands(
-        host=vm.ssh_exec,
-        commands=["bash", "-c", command],
-        wait_timeout=TIMEOUT_2MIN,
-        sleep=TIMEOUT_5SEC,
-        check_rc=False,
-    )[0]
-    LOGGER.info(f"File-level restore diagnostic [{label}] on VM '{vm.name}': {command_output!r}")
-
-
-def log_linux_guest_root_disk_layout_diagnostics(*, vm: VirtualMachineForTests) -> None:
-    """Log guest OS release and root disk layout before a root-disk snapshot.
-
-    Args:
-        vm: Running Linux VM whose root disk will be snapshotted.
-    """
-    diagnostic_commands = {
-        "root-disk-os-release": "cat /etc/redhat-release 2>&1 || true",
-        "root-disk-lsblk": "lsblk -f 2>&1 || true",
-        "root-disk-findmnt": "findmnt -no SOURCE,TARGET,FSTYPE,OPTIONS / 2>&1 || true",
-        "root-disk-xfs-info": ('root_source=$(findmnt -no SOURCE /) && sudo xfs_info "${root_source}" 2>&1 || true'),
-    }
-    for label, command in diagnostic_commands.items():
-        _log_linux_guest_command_output(vm=vm, label=label, command=command)
-
-
-def log_linux_guest_restore_path_diagnostics(
-    *,
-    vm: VirtualMachineForTests,
-    restore_path: str,
-    stage: str,
-) -> None:
-    """Log whether the expected restore path exists and where matching files are on the guest.
-
-    Args:
-        vm: Running Linux VM to inspect.
-        restore_path: Expected guest-root path of the restored file.
-        stage: Short label for the diagnostic stage (for example ``pre-restore``).
-    """
-    restore_directory, file_name = restore_path.rsplit("/", maxsplit=1)
-    quoted_restore_path = shlex.quote(s=restore_path)
-    quoted_restore_directory = shlex.quote(s=restore_directory)
-    quoted_file_name = shlex.quote(s=file_name)
-    quoted_home_directory = shlex.quote(s=f"/home/{vm.username}")
-    diagnostic_commands = {
-        f"{stage}-expected-file": f"test -f {quoted_restore_path} && echo present || echo missing",
-        f"{stage}-parent-directory": f"ls -la {quoted_restore_directory} 2>&1 || true",
-        f"{stage}-find-copies": f"find {quoted_home_directory} -name {quoted_file_name} 2>/dev/null || true",
-    }
-    for label, command in diagnostic_commands.items():
-        _log_linux_guest_command_output(vm=vm, label=label, command=command)
-
-
-def log_file_restore_backup_mount_diagnostics(
-    *,
-    vm: VirtualMachineForTests,
-    mount_path: str,
-    source_path: str,
-) -> None:
-    """Log whether the hotplugged backup mount contains the restore source path.
-
-    Uses the same ``$MOUNT/.$SOURCE_PATH`` check as ``filerestore.sh``.
-
-    Args:
-        vm: Running Linux VM with the backup volume mounted.
-        mount_path: Guest mount path from VirtualMachineFileRestore status.
-        source_path: ``sourcePath`` from the VirtualMachineFileRestore spec.
-    """
-    quoted_mount_path = shlex.quote(s=mount_path)
-    quoted_source_path = shlex.quote(s=source_path)
-    operator_source_path = f"{quoted_mount_path}/.{quoted_source_path}"
-    source_directory, _ = source_path.rsplit("/", maxsplit=1)
-    quoted_source_directory = shlex.quote(s=f"{mount_path}{source_directory}")
-    quoted_source_file = shlex.quote(s=f"{mount_path}{source_path}")
-    diagnostic_commands = {
-        "backup-operator-path": f"test -e {operator_source_path} && echo present || echo missing",
-        "backup-source-directory": f"ls -la {quoted_source_directory} 2>&1 || true",
-        "backup-source-file-head": f"head -c 200 {quoted_source_file} 2>&1 || echo unreadable",
-    }
-    for label, command in diagnostic_commands.items():
-        _log_linux_guest_command_output(vm=vm, label=label, command=command)
-
-
 def wait_for_file_restore_phase(
     file_restore: VirtualMachineFileRestore,
     target_phase: str,
     timeout: int = TIMEOUT_5MIN,
-    *,
-    backup_mount_probe_vm: VirtualMachineForTests | None = None,
-    backup_mount_probe_source_path: str | None = None,
 ) -> None:
     """Wait for VirtualMachineFileRestore to reach a target phase.
 
@@ -856,49 +740,24 @@ def wait_for_file_restore_phase(
         file_restore: The VirtualMachineFileRestore resource to monitor.
         target_phase: The phase to wait for.
         timeout: Maximum wait time in seconds.
-        backup_mount_probe_vm: When set with ``backup_mount_probe_source_path``, log backup
-            mount diagnostics once while the restore volume is mounted.
-        backup_mount_probe_source_path: ``sourcePath`` used to probe the backup mount layout.
-            When both probe arguments are set, diagnostics run at most once during
-            ``SSHConnecting``, ``Restoring``, or ``Cleanup`` after ``mountPath`` is published.
 
     Raises:
         AssertionError: If the restore reaches Failed phase.
     """
-    backup_mount_probe_logged = False
-    backup_mount_probe_phases = {
-        VirtualMachineFileRestore.Phase.SSH_CONNECTING,
-        VirtualMachineFileRestore.Phase.RESTORING,
-        VirtualMachineFileRestore.Phase.CLEANUP,
-    }
     LOGGER.info(f"Waiting for VirtualMachineFileRestore '{file_restore.name}' to reach phase '{target_phase}'")
+    previous_phase = None
     for sample in TimeoutSampler(
         wait_timeout=timeout,
         sleep=TIMEOUT_5SEC,
         func=lambda: file_restore.instance.get("status", {}),
     ):
         phase = sample.get("phase")
-        LOGGER.info(f"VirtualMachineFileRestore '{file_restore.name}' phase: {phase}")
-        mount_path = sample.get("mountPath")
-        if (
-            not backup_mount_probe_logged
-            and backup_mount_probe_vm is not None
-            and backup_mount_probe_source_path is not None
-            and mount_path
-            and phase in backup_mount_probe_phases
-        ):
-            log_virtual_machine_file_restore_status(file_restore=file_restore)
-            log_file_restore_backup_mount_diagnostics(
-                vm=backup_mount_probe_vm,
-                mount_path=mount_path,
-                source_path=backup_mount_probe_source_path,
-            )
-            backup_mount_probe_logged = True
+        if phase != previous_phase:
+            LOGGER.info(f"VirtualMachineFileRestore '{file_restore.name}' phase: {phase}")
+            previous_phase = phase
         if phase == target_phase:
-            log_virtual_machine_file_restore_status(file_restore=file_restore)
             return
         if phase == VirtualMachineFileRestore.Phase.FAILED:
-            log_virtual_machine_file_restore_status(file_restore=file_restore)
             error_message = sample.get("errorMessage", "Unknown error")
             raise AssertionError(f"VirtualMachineFileRestore '{file_restore.name}' failed: {error_message}")
 
