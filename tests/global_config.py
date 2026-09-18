@@ -15,6 +15,7 @@ from utilities.constants import (
     ALL_CNV_DEPLOYMENTS_NO_HPP_POOL,
     ALL_CNV_PODS,
     ALL_HCO_RELATED_OBJECTS,
+    ALL_HCO_RELATED_OBJECTS_NO_BEARER_AUTH,
     BASE_ARTIFACTORY_LOCATION,
     BREW_REGISTERY_SOURCE,
     CNV_OPERATORS,
@@ -423,6 +424,7 @@ cnv_crd_matrix = ALL_CNV_CRDS
 cnv_crypto_policy_matrix = [TLS_OLD_POLICY, TLS_CUSTOM_POLICY]
 
 cnv_related_object_matrix = ALL_HCO_RELATED_OBJECTS
+cnv_related_object_no_bearer_auth_matrix = ALL_HCO_RELATED_OBJECTS_NO_BEARER_AUTH
 cnv_prometheus_rules_matrix = CNV_PROMETHEUS_RULES
 
 cnv_deployment_matrix = ALL_CNV_DEPLOYMENTS

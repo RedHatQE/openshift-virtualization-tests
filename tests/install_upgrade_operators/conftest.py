@@ -4,7 +4,6 @@ import pkgutil
 import re
 
 import pytest
-from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.cdi import CDI
 from ocp_resources.deployment import Deployment
 from ocp_resources.kubevirt import KubeVirt
@@ -18,6 +17,7 @@ from tests.install_upgrade_operators.constants import (
     RESOURCE_TYPE_STR,
 )
 from tests.install_upgrade_operators.utils import (
+    find_related_object_by_kind_and_name,
     get_network_addon_config,
     get_resource_by_name,
     get_resource_from_related_object,
@@ -231,17 +231,31 @@ def ocp_resource_by_name(admin_client, ocp_resources_submodule_list, related_obj
 
 
 @pytest.fixture()
+def ocp_resource_by_name_no_bearer_auth(
+    admin_client, ocp_resources_submodule_list, related_object_from_hco_status_no_bearer_auth
+):
+    return get_resource_from_related_object(
+        related_obj=related_object_from_hco_status_no_bearer_auth,
+        ocp_resources_submodule_list=ocp_resources_submodule_list,
+        admin_client=admin_client,
+    )
+
+
+@pytest.fixture()
 def related_object_from_hco_status(hco_status_related_objects, cnv_related_object_matrix__function__):
-    LOGGER.info(cnv_related_object_matrix__function__)
-    kind_name = list(cnv_related_object_matrix__function__.values())[0]
-    related_object_name = list(cnv_related_object_matrix__function__.keys())[0]
-    LOGGER.info(f"Looking for related object {related_object_name}, kind {kind_name}")
-    for obj in hco_status_related_objects:
-        if obj.name == related_object_name and obj.kind == kind_name:
-            return obj
-    raise ResourceNotFoundError(
-        f"Related object {related_object_name}, kind {kind_name} not found in "
-        f"hco.status.relatedObjects: {hco_status_related_objects}"
+    return find_related_object_by_kind_and_name(
+        hco_status_related_objects=hco_status_related_objects,
+        related_object_matrix_entry=cnv_related_object_matrix__function__,
+    )
+
+
+@pytest.fixture()
+def related_object_from_hco_status_no_bearer_auth(
+    hco_status_related_objects, cnv_related_object_no_bearer_auth_matrix__function__
+):
+    return find_related_object_by_kind_and_name(
+        hco_status_related_objects=hco_status_related_objects,
+        related_object_matrix_entry=cnv_related_object_no_bearer_auth_matrix__function__,
     )
 
 

@@ -16,9 +16,8 @@ from tests.install_upgrade_operators.strict_reconciliation.utils import (
     wait_for_resource_version_update,
 )
 from tests.utils import wait_for_cr_labels_change
-from utilities.constants import HCO_BEARER_AUTH, TIMEOUT_1MIN, VERSION_LABEL_KEY
+from utilities.constants import TIMEOUT_1MIN, VERSION_LABEL_KEY
 from utilities.hco import ResourceEditorValidateHCOReconcile
-from utilities.infra import is_jira_open
 
 LOGGER = logging.getLogger(__name__)
 DISABLED_KUBEVIRT_FEATUREGATES_IN_SNO = ["LiveMigration", "SRIOVLiveMigration"]
@@ -172,33 +171,26 @@ def reconciled_cr_post_hco_update(
 
 
 @pytest.fixture()
-def pre_update_resource_version(related_object_from_hco_status):
-    return related_object_from_hco_status["resourceVersion"]
+def pre_update_resource_version(related_object_from_hco_status_no_bearer_auth):
+    return related_object_from_hco_status_no_bearer_auth["resourceVersion"]
 
 
 @pytest.fixture()
-def updated_resource_labels(ocp_resource_by_name):
-    expected_labels = ocp_resource_by_name.labels
-    expected_labels.custom_label = ocp_resource_by_name.name
+def updated_resource_labels(ocp_resource_by_name_no_bearer_auth):
+    expected_labels = ocp_resource_by_name_no_bearer_auth.labels
+    expected_labels.custom_label = ocp_resource_by_name_no_bearer_auth.name
     with ResourceEditor(
         patches={
-            ocp_resource_by_name: {
+            ocp_resource_by_name_no_bearer_auth: {
                 "metadata": {
-                    "labels": {VERSION_LABEL_KEY: None, "custom_label": ocp_resource_by_name.name},
+                    "labels": {VERSION_LABEL_KEY: None, "custom_label": ocp_resource_by_name_no_bearer_auth.name},
                 }
             }
         }
     ):
-        wait_for_cr_labels_change(expected_value=expected_labels, component=ocp_resource_by_name, timeout=TIMEOUT_1MIN)
+        wait_for_cr_labels_change(
+            expected_value=expected_labels,
+            component=ocp_resource_by_name_no_bearer_auth,
+            timeout=TIMEOUT_1MIN,
+        )
         yield expected_labels
-
-
-@pytest.fixture(scope="package")
-def is_jira_64473_open():
-    return is_jira_open(jira_id="CNV-64473")
-
-
-@pytest.fixture()
-def skip_if_hco_bearer_token_bug_open(is_jira_64473_open, ocp_resource_by_name):
-    if is_jira_64473_open and ocp_resource_by_name.name == HCO_BEARER_AUTH:
-        pytest.skip(f"{HCO_BEARER_AUTH} resource labels doesn't reconcile due to 64473 bug")
