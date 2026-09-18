@@ -15,6 +15,7 @@ from libs.net.vmspec import lookup_iface_status_ip, lookup_primary_network
 from libs.vm import affinity
 from libs.vm.oper import run_vms
 from libs.vm.vm import BaseVirtualMachine
+from tests.fixtures.network.multiarch import arch_pair_udn_vms, get_worker_arch_pairs  # noqa: F401
 from tests.network.libs.vm_factory import udn_vm
 from tests.network.user_defined_network.libudn import ALLOWED_POD_CONTAINER_NAME
 from utilities.constants.architecture import AMD_64, ARM_64
@@ -26,6 +27,18 @@ if TYPE_CHECKING:
 
 ALLOWED_POD_LABEL: Final[dict[str, str]] = {"udn": "allowed"}
 VMI_ID_LABEL: Final[str] = "vmi.kubevirt.io/id"
+
+
+def pytest_generate_tests(metafunc):
+    if "arch_pair_udn_vms" in metafunc.fixturenames:
+        pairs = get_worker_arch_pairs()
+        metafunc.parametrize(
+            "arch_pair_udn_vms",
+            pairs,
+            indirect=True,
+            ids=[f"{a}-{b}" for a, b in pairs],
+            scope="class",
+        )
 
 
 @pytest.fixture(scope="module")
