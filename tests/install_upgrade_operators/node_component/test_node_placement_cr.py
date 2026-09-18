@@ -41,7 +41,9 @@ class TestCreateHCOWithNodePlacement:
         Verify that all the infrastructure and workloads Pod will be deployed on labeled nodes.
         """
 
-        assert nodes_labeled["infra1"] == expected_node_by_label["infra1"]
+        assert nodes_labeled["infra1"] == expected_node_by_label["infra1"], (
+            f"infra1 labeled nodes {nodes_labeled['infra1']} do not match expected {expected_node_by_label['infra1']}"
+        )
         # Verify all Infra Pods are created on Node which has infra1 label on it.
         verify_components_exist_only_on_selected_node(
             hco_pods_per_nodes=hco_pods_per_nodes,
@@ -51,7 +53,9 @@ class TestCreateHCOWithNodePlacement:
             hco_namespace=hco_namespace,
         )
 
-        assert nodes_labeled["work2"] == expected_node_by_label["work2"]
+        assert nodes_labeled["work2"] == expected_node_by_label["work2"], (
+            f"work2 labeled nodes {nodes_labeled['work2']} do not match expected {expected_node_by_label['work2']}"
+        )
         # Verify all Workloads Pods are created on Node which has work2 label on it.
         verify_components_exist_only_on_selected_node(
             hco_pods_per_nodes=hco_pods_per_nodes,
@@ -73,11 +77,13 @@ class TestCreateHCOWithNodePlacement:
         propagated to SSP CR and then cascade to deployment 'virt-template-validator'.
         """
 
-        assert ssp_cr_spec[TEMPLATE_VALIDATOR]["placement"] == NODE_PLACEMENT_INFRA
+        assert ssp_cr_spec[TEMPLATE_VALIDATOR]["placement"] == NODE_PLACEMENT_INFRA, (
+            "SSP virt-template-validator placement does not match expected infra node placement"
+        )
 
-        # Verify that node placement configuration has been correctly
-        # propagated to 'virt-template-validator' deployment
-        assert virt_template_validator_spec_nodeselector == NODE_PLACEMENT_INFRA["nodeSelector"]
+        assert virt_template_validator_spec_nodeselector == NODE_PLACEMENT_INFRA["nodeSelector"], (
+            "virt-template-validator deployment nodeSelector does not match expected infra nodeSelector"
+        )
 
     @pytest.mark.polarion("CNV-5382")
     @pytest.mark.dependency(depends=["test_hco_cr_with_node_placement"])
@@ -94,8 +100,12 @@ class TestCreateHCOWithNodePlacement:
         # Verify NetworkAddonsConfig component spec for Infra and Workloads.
         LOGGER.info(f"Network daemonsets placement: {network_daemonsets_placement}")
         LOGGER.info(f"Network deployment placement: {network_deployment_placement}")
-        assert network_addon_config_spec_placement.get("infra") == NODE_PLACEMENT_INFRA
-        assert network_addon_config_spec_placement.get("workloads") == NODE_PLACEMENT_WORKLOADS
+        assert network_addon_config_spec_placement.get("infra") == NODE_PLACEMENT_INFRA, (
+            "NetworkAddonsConfig infra placement does not match expected infra node placement"
+        )
+        assert network_addon_config_spec_placement.get("workloads") == NODE_PLACEMENT_WORKLOADS, (
+            "NetworkAddonsConfig workloads placement does not match expected workloads node placement"
+        )
 
         # Verify that node placement configuration has been correctly
         # propagated to network related daemonsets
@@ -134,20 +144,22 @@ class TestCreateHCOWithNodePlacement:
         propagated to KubeVirt CR and it's daemonsets and deployments.
         """
         # Verify KubeVirt component spec for Infra and Workloads.
-        assert kubevirt_hyperconverged_spec_scope_function.get("infra").get("nodePlacement") == NODE_PLACEMENT_INFRA
+        assert kubevirt_hyperconverged_spec_scope_function.get("infra").get("nodePlacement") == NODE_PLACEMENT_INFRA, (
+            "KubeVirt CR infra nodePlacement does not match expected infra node placement"
+        )
         assert (
             kubevirt_hyperconverged_spec_scope_function.get("workloads").get("nodePlacement")
             == NODE_PLACEMENT_WORKLOADS
+        ), "KubeVirt CR workloads nodePlacement does not match expected workloads node placement"
+
+        assert virt_daemonset_nodeselector_comp == NODE_PLACEMENT_WORKLOADS["nodeSelector"]["work-comp"], (
+            "virt-handler daemonset nodeSelector does not match expected workloads nodeSelector"
         )
 
-        # Verify that node placement configuration has been correctly
-        # propagated to virt related daemonsets
-        assert virt_daemonset_nodeselector_comp == NODE_PLACEMENT_WORKLOADS["nodeSelector"]["work-comp"]
-
-        # Verify that node placement configuration has been correctly
-        # propagated to virt related deployments
         for virt_deployment_nodeselector_comp in virt_deployment_nodeselector_comp_list:
-            assert virt_deployment_nodeselector_comp == NODE_PLACEMENT_INFRA["nodeSelector"]["infra-comp"]
+            assert virt_deployment_nodeselector_comp == NODE_PLACEMENT_INFRA["nodeSelector"]["infra-comp"], (
+                "virt deployment nodeSelector does not match expected infra nodeSelector"
+            )
 
     @pytest.mark.polarion("CNV-5384")
     @pytest.mark.dependency(depends=["test_hco_cr_with_node_placement"])
@@ -161,10 +173,14 @@ class TestCreateHCOWithNodePlacement:
         propagated to CDI CR and it's deployments.
         """
         # Verify CDI component spec for Infra and Workloads.
-        assert cdi_spec.get("infra") == NODE_PLACEMENT_INFRA
-        assert cdi_spec.get("workload") == NODE_PLACEMENT_WORKLOADS
+        assert cdi_spec.get("infra") == NODE_PLACEMENT_INFRA, (
+            "CDI CR infra placement does not match expected infra node placement"
+        )
+        assert cdi_spec.get("workload") == NODE_PLACEMENT_WORKLOADS, (
+            "CDI CR workload placement does not match expected workloads node placement"
+        )
 
-        # Verify that node placement configuration has been correctly
-        # propagated to CDI related deployments
         for cdi_deployment_nodeselector in cdi_deployment_nodeselector_list:
-            assert cdi_deployment_nodeselector == NODE_PLACEMENT_INFRA["nodeSelector"]
+            assert cdi_deployment_nodeselector == NODE_PLACEMENT_INFRA["nodeSelector"], (
+                "CDI deployment nodeSelector does not match expected infra nodeSelector"
+            )
