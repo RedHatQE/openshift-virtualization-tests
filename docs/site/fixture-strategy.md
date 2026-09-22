@@ -42,7 +42,6 @@ Always `yield` resources rather than `return` them, even if the fixture does not
 import pytest
 from ocp_resources.namespace import Namespace
 
-
 @pytest.fixture(scope="module")
 def isolated_namespace():
     with Namespace(name="test-isolated-ns") as ns:
