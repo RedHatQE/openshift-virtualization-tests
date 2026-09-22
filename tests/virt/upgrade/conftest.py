@@ -12,14 +12,14 @@ from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClu
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from pytest_testconfig import py_config
 
-from tests.virt.constants import VM_LABEL
+from tests.virt.constants import WORKLOAD_DISRUPTION_VM_LABEL
 from tests.virt.upgrade.utils import (
     get_virt_launcher_images_from_csv,
     validate_vms_pod_updated,
     vm_from_template,
     wait_for_automatic_vm_migrations,
 )
-from tests.virt.utils import get_boot_time_for_multiple_vms
+from tests.virt.utils import get_boot_time_for_multiple_vms, get_pci_addresses
 from utilities.artifactory import get_test_artifact_server_url
 from utilities.constants import Images
 from utilities.constants.images import OS_FLAVOR_RHEL
@@ -322,6 +322,11 @@ def virt_migratable_vms_names(virt_migratable_vms):
 
 
 @pytest.fixture(scope="session")
+def pci_addresses_before_upgrade(vms_for_upgrade):
+    return {vm.name: get_pci_addresses(vm=vm) for vm in vms_for_upgrade}
+
+
+@pytest.fixture(scope="session")
 def linux_boot_time_before_upgrade(vms_for_upgrade):
     return get_boot_time_for_multiple_vms(vm_list=vms_for_upgrade)
 
@@ -336,10 +341,11 @@ def post_copy_migration_policy_for_upgrade(admin_client):
     with MigrationPolicy(
         name="post-copy-migration-policy",
         allow_auto_converge=True,
+        allow_workload_disruption=True,
         bandwidth_per_migration="100Mi",
         completion_timeout_per_gb=1,
         allow_post_copy=True,
-        vmi_selector=VM_LABEL,
+        vmi_selector=WORKLOAD_DISRUPTION_VM_LABEL,
         client=admin_client,
     ) as mp:
         yield mp
@@ -354,7 +360,7 @@ def vm_for_post_copy_upgrade(virt_upgrade_namespace, unprivileged_client, cpu_fo
         body=fedora_vm_body(name=vm_name),
         client=unprivileged_client,
         cpu_model=cpu_for_migration,
-        additional_labels=VM_LABEL,
+        additional_labels=WORKLOAD_DISRUPTION_VM_LABEL,
     ) as vm:
         running_vm(vm=vm)
         yield vm
@@ -367,7 +373,9 @@ def parallel_live_migrations_increased(admin_client, hyperconverged_resource_sco
         patches={
             hyperconverged_resource_scope_session: {
                 "spec": {
-                    "liveMigrationConfig": {"parallelOutboundMigrationsPerNode": 5},
+                    "virtualization": {
+                        "liveMigrationConfig": {"parallelOutboundMigrationsPerNode": 5},
+                    }
                 }
             }
         },

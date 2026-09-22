@@ -3,6 +3,7 @@ import pytest
 from tests.install_upgrade_operators.strict_reconciliation.constants import (
     ALLOW_AUTO_CONVERGE,
     ALLOW_POST_COPY,
+    ALLOW_WORKLOAD_DISRUPTION,
     KUBEVIRT_CR_CONFIGURATION_KEY,
     KUBEVIRT_CR_MIGRATIONS_KEY,
     LIVE_MIGRATION_CONFIG_KEY,
@@ -20,7 +21,9 @@ class TestLiveMigrationConfigUpdate:
         [
             pytest.param(
                 {
-                    PATCH_STR: {SPEC_STR: {LIVE_MIGRATION_CONFIG_KEY: {ALLOW_AUTO_CONVERGE: EXPECTED_VALUE}}},
+                    PATCH_STR: {
+                        SPEC_STR: {"virtualization": {LIVE_MIGRATION_CONFIG_KEY: {ALLOW_AUTO_CONVERGE: EXPECTED_VALUE}}}
+                    },
                 },
                 ALLOW_AUTO_CONVERGE,
                 marks=pytest.mark.polarion("CNV-9674"),
@@ -28,11 +31,21 @@ class TestLiveMigrationConfigUpdate:
             ),
             pytest.param(
                 {
-                    PATCH_STR: {SPEC_STR: {LIVE_MIGRATION_CONFIG_KEY: {ALLOW_POST_COPY: EXPECTED_VALUE}}},
+                    PATCH_STR: {
+                        SPEC_STR: {"virtualization": {LIVE_MIGRATION_CONFIG_KEY: {ALLOW_POST_COPY: EXPECTED_VALUE}}}
+                    },
                 },
                 ALLOW_POST_COPY,
                 marks=pytest.mark.polarion("CNV-9675"),
                 id="test_allow_post_copy",
+            ),
+            pytest.param(
+                {
+                    PATCH_STR: {SPEC_STR: {LIVE_MIGRATION_CONFIG_KEY: {ALLOW_WORKLOAD_DISRUPTION: EXPECTED_VALUE}}},
+                },
+                ALLOW_WORKLOAD_DISRUPTION,
+                marks=pytest.mark.polarion("CNV-16551"),
+                id="test_allow_workload_disruption",
             ),
         ],
         indirect=["updated_hco_cr"],
@@ -44,13 +57,13 @@ class TestLiveMigrationConfigUpdate:
         hco_spec,
         kubevirt_hyperconverged_spec_scope_function,
     ):
-        hco_value = hco_spec[LIVE_MIGRATION_CONFIG_KEY].get(expected)
+        hco_value = hco_spec["virtualization"][LIVE_MIGRATION_CONFIG_KEY].get(expected)
         kubevirt_value = kubevirt_hyperconverged_spec_scope_function[KUBEVIRT_CR_CONFIGURATION_KEY][
             KUBEVIRT_CR_MIGRATIONS_KEY
         ].get(expected)
 
         assert hco_value == kubevirt_value == EXPECTED_VALUE, (
-            f"Current HCO.{SPEC_STR}.{LIVE_MIGRATION_CONFIG_KEY}.{expected} value: "
+            f"Current HCO.{SPEC_STR}.virtualization.{LIVE_MIGRATION_CONFIG_KEY}.{expected} value: "
             f"{hco_value}, current Kubevirt.{SPEC_STR}.{KUBEVIRT_CR_CONFIGURATION_KEY}.{KUBEVIRT_CR_MIGRATIONS_KEY}."
             f"{expected} value:  {kubevirt_value}, "
             f"expected: {EXPECTED_VALUE}, "

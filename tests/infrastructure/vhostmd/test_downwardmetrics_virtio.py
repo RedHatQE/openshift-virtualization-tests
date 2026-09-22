@@ -20,7 +20,7 @@ from ocp_resources.virtual_machine_cluster_preference import (
 from pyhelper_utils.shell import run_ssh_commands
 
 from utilities.constants.images import OS_FLAVOR_RHEL
-from utilities.hco import ResourceEditorValidateHCOReconcile
+from utilities.hco import ResourceEditorValidateHCOReconcile, hco_feature_gates_patch
 from utilities.virt import VirtualMachineForTests, wait_for_running_vm
 
 LOGGER = logging.getLogger(__name__)
@@ -98,7 +98,12 @@ def enabled_feature_gate_for_downward_metrics_scope_function(
 ):
     with ResourceEditorValidateHCOReconcile(
         admin_client=admin_client,
-        patches={hyperconverged_resource_scope_function: {"spec": {"featureGates": {"downwardMetrics": True}}}},
+        patches={
+            hyperconverged_resource_scope_function: hco_feature_gates_patch(
+                hco_resource=hyperconverged_resource_scope_function,
+                enable=["downwardMetrics"],
+            )
+        },
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,
     ):

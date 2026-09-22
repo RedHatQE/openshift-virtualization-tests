@@ -22,7 +22,9 @@ from tests.observability.metrics.constants import (
     KUBEVIRT_VMI_MIGRATION_DATA_REMAINING_BYTES,
     KUBEVIRT_VMI_MIGRATION_DATA_TOTAL_BYTES,
     KUBEVIRT_VMI_MIGRATION_DIRTY_MEMORY_RATE_BYTES,
+    KUBEVIRT_VMI_MIGRATION_END_TIME_SECONDS,
     KUBEVIRT_VMI_MIGRATION_MEMORY_TRANSFER_RATE_BYTES,
+    KUBEVIRT_VMI_MIGRATION_START_TIME_SECONDS,
 )
 from tests.observability.metrics.utils import (
     timestamp_to_seconds,
@@ -30,7 +32,9 @@ from tests.observability.metrics.utils import (
 )
 from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS, WINDOWS_LATEST, WINDOWS_LATEST_LABELS
 from utilities.constants.cluster import RHCOS9_AFFINITY, RHCOS10_AFFINITY
+from utilities.constants.timeouts import TIMEOUT_5MIN
 from utilities.constants.virt import MIGRATION_POLICY_VM_LABEL, MIGRATION_POLICY_WINDOWS_VM_LABEL
+from utilities.jira import is_jira_open
 from utilities.monitoring import validate_metrics_value
 
 pytestmark = [
@@ -44,6 +48,8 @@ MIGRATION_METRICS = (
     KUBEVIRT_VMI_MIGRATION_MEMORY_TRANSFER_RATE_BYTES,
     KUBEVIRT_VMI_MIGRATION_DIRTY_MEMORY_RATE_BYTES,
     KUBEVIRT_VMI_MIGRATION_DATA_TOTAL_BYTES,
+    KUBEVIRT_VMI_MIGRATION_START_TIME_SECONDS,
+    KUBEVIRT_VMI_MIGRATION_END_TIME_SECONDS,
 )
 
 METRICS_WITH_CNV_97013_BUG = [
@@ -111,69 +117,60 @@ class TestDualStreamMigrationRhcos9ToRhcos10:
         to an RHCOS 10 worker node.
 
         Steps:
-            1. Query the migration data processed and bandwidth metrics for the under-test VM
+        1. For each migration metric (data processed, data remaining, memory transfer rate, dirty
+           memory rate, data total, start time, and end time):
+           a. Query the metric value from Prometheus for the under-test VM
+           b. For timestamp metrics, compare against the VM's recorded migration state timestamps
+           c. For data metrics, validate they are greater than zero
 
         Expected:
-            - Migration data processed metric value is greater than zero
-            - Migration bandwidth metric value is greater than zero
+        - Migration start time matches the VM's recorded start timestamp
+        - Migration end time matches the VM's recorded end timestamp (after completion)
+        - Data processed, data remaining, and data total metrics are non-zero
+        - Memory transfer rate and dirty memory rate metrics xfail while CNV-97013 is open
+          (they return no data during migration)
 
         Note:
-            Also checks the data remaining and dirty memory rate metrics. The bandwidth and dirty memory rate
-            metrics are skipped while CNV-97013 is open (they return no data during migration).
+            The memory transfer rate (bandwidth) and dirty memory rate metrics xfail while CNV-97013
+            is open (they return no data during migration).
         """
         for metric in MIGRATION_METRICS:
             with subtests.test(msg=metric):
-                if metric in METRICS_WITH_CNV_97013_BUG:
+                if metric == KUBEVIRT_VMI_MIGRATION_START_TIME_SECONDS:
+                    validate_metrics_value(
+                        prometheus=prometheus,
+                        metric_name=KUBEVIRT_VMI_MIGRATION_START_TIME_SECONDS.format(
+                            vm_name=dual_stream_golden_image_vm.name
+                        ),
+                        expected_value=str(
+                            timestamp_to_seconds(
+                                timestamp=dual_stream_golden_image_vm.vmi.instance.status.migrationState.startTimestamp
+                            )
+                        ),
+                    )
+                if metric == KUBEVIRT_VMI_MIGRATION_END_TIME_SECONDS:
+                    dual_stream_migration_metrics_vmim.wait_for_status(
+                        status=dual_stream_migration_metrics_vmim.Status.SUCCEEDED,
+                        timeout=TIMEOUT_5MIN,
+                    )
+                    validate_metrics_value(
+                        prometheus=prometheus,
+                        metric_name=KUBEVIRT_VMI_MIGRATION_END_TIME_SECONDS.format(
+                            vm_name=dual_stream_golden_image_vm.name
+                        ),
+                        expected_value=str(
+                            timestamp_to_seconds(
+                                timestamp=dual_stream_golden_image_vm.vmi.instance.status.migrationState.endTimestamp
+                            )
+                        ),
+                    )
+                if metric in METRICS_WITH_CNV_97013_BUG and is_jira_open(jira_id="CNV-97013"):
                     pytest.xfail(reason=f"CNV-97013: {metric} returns no data during migration")
                 validate_metric_value_greater_than_initial_value(
                     prometheus=prometheus,
                     metric_name=metric.format(vm_name=dual_stream_golden_image_vm.name),
                     initial_value=0,
                 )
-
-    @pytest.mark.polarion("CNV-16831")
-    def test_metric_kubevirt_vmi_migration_start_time_seconds(
-        self, prometheus, dual_stream_golden_image_vm, dual_stream_migration_metrics_vmim
-    ):
-        """
-        Test that the migration start time metric is reported when a VM is live migrated from an RHCOS 9
-        worker node to an RHCOS 10 worker node.
-
-        Steps:
-            1. Query the migration start time metric for the under-test VM
-
-        Expected:
-            - Migration start time metric value matches the VM's recorded migration start timestamp
-        """
-        migration_state = dual_stream_golden_image_vm.vmi.instance.status.migrationState
-        validate_metrics_value(
-            prometheus=prometheus,
-            metric_name=f"kubevirt_vmi_migration_start_time_seconds{{name='{dual_stream_golden_image_vm.name}'}}",
-            expected_value=str(timestamp_to_seconds(timestamp=migration_state.startTimestamp)),
-        )
-
-    @pytest.mark.polarion("CNV-16832")
-    @pytest.mark.usefixtures("dual_stream_migration_succeeded")
-    def test_metric_kubevirt_vmi_migration_end_time_seconds(self, prometheus, dual_stream_golden_image_vm):
-        """
-        Test that the migration end time metric is reported when a VM is live migrated from an RHCOS 9
-        worker node to an RHCOS 10 worker node.
-
-        Preconditions:
-            - Migration has completed successfully
-
-        Steps:
-            1. Query the migration end time metric for the under-test VM
-
-        Expected:
-            - Migration end time metric value matches the VM's recorded migration end timestamp
-        """
-        migration_state = dual_stream_golden_image_vm.vmi.instance.status.migrationState
-        validate_metrics_value(
-            prometheus=prometheus,
-            metric_name=f"kubevirt_vmi_migration_end_time_seconds{{name='{dual_stream_golden_image_vm.name}'}}",
-            expected_value=str(timestamp_to_seconds(timestamp=migration_state.endTimestamp)),
-        )
 
 
 @pytest.mark.usefixtures("dual_stream_migration_metrics_policy", "dual_stream_migration_metrics_windows_policy")
@@ -231,11 +228,18 @@ class TestDualStreamMigrationRhcos10ToRhcos9:
         to an RHCOS 9 worker node.
 
         Steps:
-            1. Query the migration data processed and bandwidth metrics for the under-test VM
+        1. For each migration metric (data processed, data remaining, memory transfer rate, dirty
+           memory rate, data total, start time, and end time):
+           a. Query the metric value from Prometheus for the under-test VM
+           b. For timestamp metrics, compare against the VM's recorded migration state timestamps
+           c. For data metrics, validate they are greater than zero
 
         Expected:
-            - Migration data processed metric value is greater than zero
-            - Migration bandwidth metric value is greater than zero
+        - Migration start time matches the VM's recorded start timestamp
+        - Migration end time matches the VM's recorded end timestamp (after completion)
+        - Data processed, data remaining, and data total metrics are non-zero
+        - Memory transfer rate and dirty memory rate metrics xfail while CNV-97013 is open
+          (they return no data during migration)
 
         Note:
             Also checks the data remaining and dirty memory rate metrics. The bandwidth and dirty memory rate
@@ -243,54 +247,38 @@ class TestDualStreamMigrationRhcos10ToRhcos9:
         """
         for metric in MIGRATION_METRICS:
             with subtests.test(msg=metric):
-                if metric in METRICS_WITH_CNV_97013_BUG:
+                if metric == KUBEVIRT_VMI_MIGRATION_START_TIME_SECONDS:
+                    validate_metrics_value(
+                        prometheus=prometheus,
+                        metric_name=KUBEVIRT_VMI_MIGRATION_START_TIME_SECONDS.format(
+                            vm_name=dual_stream_golden_image_vm.name
+                        ),
+                        expected_value=str(
+                            timestamp_to_seconds(
+                                timestamp=dual_stream_golden_image_vm.vmi.instance.status.migrationState.startTimestamp
+                            )
+                        ),
+                    )
+                if metric == KUBEVIRT_VMI_MIGRATION_END_TIME_SECONDS:
+                    dual_stream_migration_metrics_vmim.wait_for_status(
+                        status=dual_stream_migration_metrics_vmim.Status.SUCCEEDED,
+                        timeout=TIMEOUT_5MIN,
+                    )
+                    validate_metrics_value(
+                        prometheus=prometheus,
+                        metric_name=KUBEVIRT_VMI_MIGRATION_END_TIME_SECONDS.format(
+                            vm_name=dual_stream_golden_image_vm.name
+                        ),
+                        expected_value=str(
+                            timestamp_to_seconds(
+                                timestamp=dual_stream_golden_image_vm.vmi.instance.status.migrationState.endTimestamp
+                            )
+                        ),
+                    )
+                if metric in METRICS_WITH_CNV_97013_BUG and is_jira_open(jira_id="CNV-97013"):
                     pytest.xfail(reason=f"CNV-97013: {metric} returns no data during migration")
                 validate_metric_value_greater_than_initial_value(
                     prometheus=prometheus,
                     metric_name=metric.format(vm_name=dual_stream_golden_image_vm.name),
                     initial_value=0,
                 )
-
-    @pytest.mark.polarion("CNV-16833")
-    def test_metric_kubevirt_vmi_migration_start_time_seconds(
-        self, prometheus, dual_stream_golden_image_vm, dual_stream_migration_metrics_vmim
-    ):
-        """
-        Test that the migration start time metric is reported when a VM is live migrated from an RHCOS 10
-        worker node to an RHCOS 9 worker node.
-
-        Steps:
-            1. Query the migration start time metric for the under-test VM
-
-        Expected:
-            - Migration start time metric value matches the VM's recorded migration start timestamp
-        """
-        migration_state = dual_stream_golden_image_vm.vmi.instance.status.migrationState
-        validate_metrics_value(
-            prometheus=prometheus,
-            metric_name=f"kubevirt_vmi_migration_start_time_seconds{{name='{dual_stream_golden_image_vm.name}'}}",
-            expected_value=str(timestamp_to_seconds(timestamp=migration_state.startTimestamp)),
-        )
-
-    @pytest.mark.polarion("CNV-16834")
-    @pytest.mark.usefixtures("dual_stream_migration_succeeded")
-    def test_metric_kubevirt_vmi_migration_end_time_seconds(self, prometheus, dual_stream_golden_image_vm):
-        """
-        Test that the migration end time metric is reported when a VM is live migrated from an RHCOS 10
-        worker node to an RHCOS 9 worker node.
-
-        Preconditions:
-            - Migration has completed successfully
-
-        Steps:
-            1. Query the migration end time metric for the under-test VM
-
-        Expected:
-            - Migration end time metric value matches the VM's recorded migration end timestamp
-        """
-        migration_state = dual_stream_golden_image_vm.vmi.instance.status.migrationState
-        validate_metrics_value(
-            prometheus=prometheus,
-            metric_name=f"kubevirt_vmi_migration_end_time_seconds{{name='{dual_stream_golden_image_vm.name}'}}",
-            expected_value=str(timestamp_to_seconds(timestamp=migration_state.endTimestamp)),
-        )

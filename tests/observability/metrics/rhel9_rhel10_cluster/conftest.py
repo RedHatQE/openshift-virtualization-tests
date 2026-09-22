@@ -2,7 +2,7 @@ import pytest
 from ocp_resources.migration_policy import MigrationPolicy
 from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
 
-from utilities.constants.timeouts import TIMEOUT_3MIN, TIMEOUT_15MIN, TIMEOUT_30MIN
+from utilities.constants.timeouts import TIMEOUT_3MIN
 from utilities.constants.virt import MIGRATION_POLICY_VM_LABEL, MIGRATION_POLICY_WINDOWS_VM_LABEL
 from utilities.virt import (
     get_data_volume_template_dict_with_default_storage_class,
@@ -14,9 +14,6 @@ from utilities.virt import (
 
 @pytest.fixture(scope="module")
 def dual_stream_migration_metrics_policy(admin_client):
-    # Bandwidth is capped low so metrics are sampled while migration is in progress. The cluster's
-    # default completionTimeoutPerGiB is far too tight for that throttled rate (it would abort the
-    # migration before it can converge), so it's overridden here to fit the 128Ki bandwidth cap.
     with MigrationPolicy(
         client=admin_client,
         name="dual-stream-migration-metrics-policy",
@@ -80,15 +77,12 @@ def dual_stream_golden_image_vm(
         yield vm
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="class")
 def dual_stream_migration_metrics_vmim(
     request,
     admin_client,
     dual_stream_golden_image_vm,
 ):
-    # Triggers the migration once and advances it only to RUNNING - enough for the in-progress
-    # metrics and the migration start time. Waiting for SUCCEEDED is a separate fixture (below),
-    # consumed only by the end-time test.
     set_vm_affinity(vm=dual_stream_golden_image_vm, affinity=request.param["target_affinity"])
     with VirtualMachineInstanceMigration(
         name=dual_stream_golden_image_vm.name,
@@ -98,11 +92,3 @@ def dual_stream_migration_metrics_vmim(
     ) as vmim:
         vmim.wait_for_status(status=vmim.Status.RUNNING, timeout=TIMEOUT_3MIN)
         yield vmim
-
-
-@pytest.fixture(scope="module")
-def dual_stream_migration_succeeded(dual_stream_golden_image_vm, dual_stream_migration_metrics_vmim):
-    dual_stream_migration_metrics_vmim.wait_for_status(
-        status=dual_stream_migration_metrics_vmim.Status.SUCCEEDED,
-        timeout=TIMEOUT_30MIN if "windows" in dual_stream_golden_image_vm.name else TIMEOUT_15MIN,
-    )

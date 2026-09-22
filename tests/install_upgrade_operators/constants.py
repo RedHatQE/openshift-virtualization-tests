@@ -12,13 +12,10 @@ TEMPLATE_VALIDATOR = "templateValidator"
 DEVELOPER_CONFIGURATION = "developerConfiguration"
 MEDIATED_DEVICES_CONFIGURATION = "mediatedDevicesConfiguration"
 # featuregates:
-DEPLOY_KUBE_SECONDARY_DNS = "deployKubeSecondaryDNS"
 ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT = "enableMultiArchBootImageImport"
-PERSISTENT_RESERVATION = "persistentReservation"
 FG_DISABLED = False
 FG_ENABLED = True
 
-FEATUREGATES = "featureGates"
 RESOURCE_TYPE_STR = "resource_type"
 RESOURCE_NAME_STR = "resource_name"
 RESOURCE_NAMESPACE_STR = "resource_namespace"
@@ -38,18 +35,6 @@ S390X_SPECIFIC_KUBEVIRT_FEATUREGATES = {"SecureExecution"}
 EXPECTED_CDI_HARDCODED_FEATUREGATES = {
     "DataVolumeClaimAdoption",
     "HonorWaitForFirstConsumer",
-}
-HCO_DEFAULT_FEATUREGATES = {
-    DEPLOY_KUBE_SECONDARY_DNS: FG_DISABLED,
-    PERSISTENT_RESERVATION: FG_DISABLED,
-    "alignCPUs": FG_DISABLED,
-    "downwardMetrics": FG_DISABLED,
-    ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT: FG_DISABLED,
-    "decentralizedLiveMigration": FG_ENABLED,
-    "declarativeHotplugVolumes": FG_ENABLED,
-    "objectGraph": FG_DISABLED,
-    "incrementalBackup": FG_DISABLED,
-    "containerPathVolumes": FG_DISABLED,
 }
 CUSTOM_DATASOURCE_NAME = "custom-datasource"
 WORKLOAD_UPDATE_STRATEGY_KEY_NAME = "workloadUpdateStrategy"

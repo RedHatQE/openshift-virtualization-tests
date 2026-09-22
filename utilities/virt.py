@@ -50,6 +50,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 import utilities.cpu
 import utilities.data_utils
+import utilities.hco
 import utilities.infra
 from libs.net.cluster import is_ipv6_single_stack_cluster
 from utilities.artifactory import get_test_artifact_server_url
@@ -64,6 +65,7 @@ from utilities.constants.components import (
     VIRT_API,
     VIRT_HANDLER,
     VIRT_LAUNCHER,
+    VIRT_OPERATOR,
 )
 from utilities.constants.hco import (
     DATA_SOURCE_NAME,
@@ -112,9 +114,8 @@ from utilities.constants.virt import (
     ROOTDISK,
     VIRTCTL,
 )
-from utilities.data_collector import collect_vnc_screenshot_for_vms
-from utilities.exceptions import MigrationStuckSchedulingError, ResourceValueError
-from utilities.hco import get_hco_namespace, wait_for_hco_conditions
+from utilities.data_collector import collect_must_gather_for_vm, collect_vnc_screenshot_for_vms
+from utilities.exceptions import MigrationFailedError, MigrationStuckSchedulingError, ResourceValueError
 from utilities.network import (
     cloud_init_network_data,
 )
@@ -1855,6 +1856,9 @@ def wait_for_running_vm(
     """
     Wait for the VMI to be in Running state.
 
+    On timeout, collects a VNC screenshot and a VM-incident must-gather
+    archive before re-raising the exception.
+
     Args:
         vm (VirtualMachine): VM object.
         wait_until_running_timeout (int): how much time to wait for VMI to reach Running state
@@ -1863,7 +1867,8 @@ def wait_for_running_vm(
         ssh_timeout (int): how much time to wait for SSH connectivity
 
     Raises:
-        TimeoutExpiredError: After timeout is reached for any of the steps
+        TimeoutExpiredError: After timeout is reached for any of the steps.
+            VNC screenshot and must-gather artifacts are collected before re-raising.
     """
     assert_vm_not_error_status(vm=vm)
     try:
@@ -1876,6 +1881,7 @@ def wait_for_running_vm(
             wait_for_ssh_connectivity(vm=vm, timeout=ssh_timeout)
     except TimeoutExpiredError:
         collect_vnc_screenshot_for_vms(vm=vm)
+        collect_must_gather_for_vm(vm=vm)
         raise
 
 
@@ -2008,6 +2014,7 @@ def migrate_vm_and_verify(
         node_before=node_before,
         wait_for_interfaces=wait_for_interfaces,
         check_ssh_connectivity=check_ssh_connectivity,
+        admin_client=client,
     )
     return None
 
@@ -2032,6 +2039,7 @@ def wait_for_migration_finished(migration: VirtualMachineInstanceMigration, time
         timeout (int): Maximum time to wait for the migration to finish.
 
     Raises:
+        MigrationFailedError: If the migration reaches terminal Failed phase.
         MigrationStuckSchedulingError: If the migration is stuck in Scheduling state.
         TimeoutExpiredError: If the migration does not finish within the timeout.
     """
@@ -2048,6 +2056,9 @@ def wait_for_migration_finished(migration: VirtualMachineInstanceMigration, time
         for sample in samples:
             if sample == migration.Status.SUCCEEDED:
                 break
+            if sample == VirtualMachineInstanceMigration.Status.FAILED:
+                log_failed_pod_events(migration=migration)
+                raise MigrationFailedError(migration_name=migration.name)
             if sample == VirtualMachineInstanceMigration.Status.SCHEDULING:
                 counter += 1
                 # If migration stuck in Scheduling state for more than 4 minutes - most likely it will be failed
@@ -2068,21 +2079,24 @@ def log_failed_pod_events(migration: VirtualMachineInstanceMigration) -> None:
     Args:
         migration (VirtualMachineInstanceMigration): Migration object.
     """
-
-    for pod in utilities.infra.get_pod_by_name_prefix(
-        client=migration.client, pod_prefix=VIRT_LAUNCHER, namespace=migration.namespace, get_all=True
-    ):
-        # Get status/events for PODs in non-running or failed state
-        if pod.status not in {Pod.Status.RUNNING, Pod.Status.COMPLETED, Pod.Status.SUCCEEDED}:
-            pod_events = [
-                event["raw_object"]["message"]
-                for event in pod.events(timeout=TIMEOUT_5SEC, field_selector="type==Warning")
-            ]
-            LOGGER.error(
-                f"POD Name: {pod.name}\n"
-                f"POD Conditions:\n {pod.instance.status.conditions[0]}\n"
-                f"POD Events:\n {', '.join(pod_events)}"
-            )
+    try:
+        for pod in utilities.infra.get_pod_by_name_prefix(
+            client=migration.client, pod_prefix=VIRT_LAUNCHER, namespace=migration.namespace, get_all=True
+        ):
+            # Get status/events for PODs in non-running or failed state
+            if pod.status not in {Pod.Status.RUNNING, Pod.Status.COMPLETED, Pod.Status.SUCCEEDED}:
+                pod_events = [
+                    event["raw_object"]["message"]
+                    for event in pod.events(timeout=TIMEOUT_5SEC, field_selector="type==Warning")
+                ]
+                conditions = pod.instance.status.conditions
+                LOGGER.error(
+                    f"POD Name: {pod.name}\n"
+                    f"POD Conditions:\n {conditions[0] if conditions else 'N/A'}\n"
+                    f"POD Events:\n {', '.join(pod_events)}"
+                )
+    except Exception:
+        LOGGER.warning(f"Failed to collect pod events for migration {migration.name}", exc_info=True)
 
 
 def verify_vm_migrated(
@@ -2090,7 +2104,29 @@ def verify_vm_migrated(
     node_before,
     wait_for_interfaces=True,
     check_ssh_connectivity=False,
+    admin_client: DynamicClient | None = None,
 ):
+    """Verify that a VM migrated to a different node.
+
+    Asserts the VMI is on a new node and that migration completed, then
+    optionally waits for network interfaces and SSH connectivity.
+
+    On timeout, collects a VNC screenshot and a VM-incident must-gather
+    archive before re-raising the exception.
+
+    Args:
+        vm: VM object whose migration is being verified.
+        node_before: Node the VM was running on before migration.
+        wait_for_interfaces (bool): Wait for VM interfaces to appear after migration.
+        check_ssh_connectivity (bool): Wait for SSH connectivity after migration.
+        admin_client (DynamicClient | None): Cluster admin client for must-gather
+            collection on timeout. Falls back to cache_admin_client() when None.
+
+    Raises:
+        AssertionError: If the VM is still on the original node or migration did not complete.
+        TimeoutExpiredError: If waiting for interfaces or SSH times out.
+            VNC screenshot and must-gather artifacts are collected before re-raising.
+    """
     vmi_name = vm.vmi.name
     vmi_node_name = vm.vmi.node.name
     assert vmi_node_name != node_before.name, f"VMI: {vmi_name} still running on the same node: {vmi_node_name}"
@@ -2106,6 +2142,7 @@ def verify_vm_migrated(
             wait_for_ssh_connectivity(vm=vm)
     except TimeoutExpiredError:
         collect_vnc_screenshot_for_vms(vm=vm)
+        collect_must_gather_for_vm(vm=vm, admin_client=admin_client)
         raise
 
 
@@ -2285,7 +2322,7 @@ def get_data_volume_template_dict_with_default_storage_class(
     return data_volume_template
 
 
-def _uncordon_and_stabilize(admin_client: DynamicClient, node: Node, hco_namespace: str) -> None:
+def _uncordon_and_stabilize(admin_client: DynamicClient, node: Node, hco_namespace: Namespace) -> None:
     """
     Uncordon a node and wait for KubeVirt to stabilize.
 
@@ -2312,7 +2349,7 @@ def cordon_node(admin_client: DynamicClient, node: Node) -> Generator[None]:
     Yields:
         None: Control returns while node is cordoned, uncordon happens on exit.
     """
-    hco_namespace = get_hco_namespace(admin_client=admin_client)
+    hco_namespace = utilities.hco.get_hco_namespace(admin_client=admin_client)
     try:
         LOGGER.info(f"Cordon the node {node.name}")
         run_command(command=shlex.split(f"oc adm cordon {node.name}"))
@@ -2323,32 +2360,36 @@ def cordon_node(admin_client: DynamicClient, node: Node) -> Generator[None]:
 
 @contextmanager
 def drain_node(
-    admin_client: DynamicClient, node: Node, hco_namespace: str, compact_cluster: bool = False
+    admin_client: DynamicClient, node: Node, hco_namespace: Namespace, compact_cluster: bool = False
 ) -> Generator[None]:
     """
     Drain a node and uncordon it on exit.
 
-    On compact clusters, relocates virt-api pods before drain to avoid webhook race conditions.
+    On compact clusters, relocates virt-api and virt-operator pods before drain to avoid
+    webhook race conditions and virt-handler cert rotation cascades.
 
     Args:
         admin_client: Admin Kubernetes client
         node: Node to drain
         hco_namespace: HCO namespace
-        compact_cluster: If True, relocate virt-api pods before drain.
+        compact_cluster: If True, relocate virt-api and virt-operator pods before drain.
     """
     if compact_cluster:
-        for pod in utilities.infra.get_pods(
-            client=admin_client,
-            namespace=hco_namespace,
-            label=f"{Pod.ApiGroup.KUBEVIRT_IO}={VIRT_API}",
-        ):
-            if pod.node.name == node.name:
-                LOGGER.info(
-                    f"Compact cluster: cordoning {node.name} and deleting virt-api pod {pod.name} "
-                    "before drain to avoid webhook race"
-                )
-                with cordon_node(admin_client=admin_client, node=node):
+        pods_to_relocate = []
+        for component in (VIRT_API, VIRT_OPERATOR):
+            for pod in utilities.infra.get_pods(
+                client=admin_client,
+                namespace=hco_namespace,
+                label=f"{Pod.ApiGroup.KUBEVIRT_IO}={component}",
+            ):
+                if pod.node.name == node.name:
+                    pods_to_relocate.append(pod)
+        if pods_to_relocate:
+            with cordon_node(admin_client=admin_client, node=node):
+                for pod in pods_to_relocate:
+                    LOGGER.info(f"Compact cluster: deleting {pod.name} from {node.name} before drain")
                     pod.delete(wait=True)
+                wait_for_kv_stabilize(admin_client=admin_client, hco_namespace=hco_namespace)
 
     try:
         LOGGER.info(f"Drain the node {node.name}")
@@ -2522,7 +2563,7 @@ def wait_for_updated_kv_value(admin_client, hco_namespace, path, value, timeout=
         LOGGER.error(f"KV CR is not updated, path: {path}, expected value: {value}, HCO annotations: {hco_annotations}")
         raise
     # After updating KV need to be sure HCO is stable
-    wait_for_hco_conditions(
+    utilities.hco.wait_for_hco_conditions(
         admin_client=admin_client,
         hco_namespace=hco_namespace,
     )
@@ -2530,6 +2571,23 @@ def wait_for_updated_kv_value(admin_client, hco_namespace, path, value, timeout=
 
 # function waits when VMIM resource created by cluster automatically (e.g. after node drain OR hotplug)
 def get_created_migration_job(vm, timeout=TIMEOUT_1MIN, client=None):
+    """Poll for a VirtualMachineInstanceMigration created automatically by the cluster.
+
+    Waits until a VMIM resource appears for the given VM's VMI (e.g. after a node
+    drain or hotplug operation).
+
+    Args:
+        vm: VirtualMachine whose VMI migration job is expected.
+        timeout: Maximum time in seconds to wait for the migration job to appear.
+        client: Optional DynamicClient to use for API queries. Falls back to default
+            client when not provided.
+
+    Returns:
+        VirtualMachineInstanceMigration: The first migration job found for the VM's VMI.
+
+    Raises:
+        TimeoutExpiredError: If no migration job is created within the timeout.
+    """
     sampler = TimeoutSampler(
         wait_timeout=timeout,
         sleep=TIMEOUT_5SEC,
@@ -2550,8 +2608,26 @@ def get_created_migration_job(vm, timeout=TIMEOUT_1MIN, client=None):
 
 
 def check_migration_process_after_node_drain(client, vm, admin_client):
-    """
-    Wait for migration process to succeed and verify that VM indeed moved to new node.
+    """Wait for a drain-triggered migration to succeed and verify the VM moved to a new node.
+
+    Waits for the source node to become unschedulable, polls for the
+    cluster-created migration job, waits for it to finish, and then asserts
+    that the VM landed on a different node with the same VMI UID (live migration,
+    not recreation).
+
+    Args:
+        client: DynamicClient used to query the migration job.
+        vm: VirtualMachine being migrated.
+        admin_client: Privileged DynamicClient used for node and pod queries.
+
+    Raises:
+        TimeoutExpiredError: If the migration job does not appear or the
+            migration does not finish within its timeout.
+        MigrationFailedError: If the migration reaches the Failed phase.
+        MigrationStuckSchedulingError: If the migration is stuck in the
+            Scheduling state.
+        AssertionError: If the VM remains on the source node or the VMI UID
+            changed (indicating recreation instead of live migration).
     """
     vmi_old_uid = vm.vmi.instance.metadata.uid
     source_node = vm.vmi.get_node(privileged_client=admin_client)
@@ -2610,7 +2686,7 @@ def wait_for_kubevirt_conditions(
 
 def wait_for_kv_stabilize(admin_client, hco_namespace):
     wait_for_kubevirt_conditions(admin_client=admin_client, hco_namespace=hco_namespace)
-    wait_for_hco_conditions(admin_client=admin_client, hco_namespace=hco_namespace)
+    utilities.hco.wait_for_hco_conditions(admin_client=admin_client, hco_namespace=hco_namespace)
 
 
 @cache

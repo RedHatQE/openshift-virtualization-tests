@@ -2,14 +2,12 @@
 
 import logging
 import os
-import re
 
 import bitmath
 import pytest
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.machine import Machine
 from ocp_resources.node import Node
-from packaging.version import Version
 from pytest_testconfig import config as py_config
 
 from utilities.constants.cluster import (
@@ -121,25 +119,3 @@ def hugepages_gib_values(workers):
         for worker in workers
         if (value := worker.instance.status.allocatable.get(NODE_HUGE_PAGES_1GI_KEY))
     ]
-
-
-@pytest.fixture(scope="session")
-def workers_rhcos_version(schedulable_nodes):
-    """Returns a dict mapping each schedulable node name to its RHCOS version.
-
-    Returns:
-        dict[str, str]: Node name to RHCOS version (e.g. {"node-1": "10.2.20260408", ...}).
-    """
-    rhcos_version_re = re.compile(r"CoreOS\s+([\d.]+)")
-    versions = {}
-    for node in schedulable_nodes:
-        os_image = node.instance.status.nodeInfo.osImage
-        match = rhcos_version_re.search(string=os_image)
-        assert match, f"Failed to parse RHCOS version from osImage '{os_image}' on node '{node.name}'"
-        versions[node.name] = match.group(1)
-    return versions
-
-
-@pytest.fixture(scope="session")
-def cluster_has_rhcos10_or_above(workers_rhcos_version):
-    return any(Version(ver) >= Version("10") for ver in workers_rhcos_version.values())

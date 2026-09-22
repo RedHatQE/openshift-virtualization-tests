@@ -13,23 +13,21 @@ from ocp_resources.storage_class import StorageClass
 from pytest_testconfig import py_config
 
 from tests.install_upgrade_operators.constants import (
-    ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT,
     EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES,
-    FG_ENABLED,
-    HCO_DEFAULT_FEATUREGATES,
     RESOURCE_NAME_STR,
     RESOURCE_NAMESPACE_STR,
     RESOURCE_TYPE_STR,
     S390X_SPECIFIC_KUBEVIRT_FEATUREGATES,
 )
+from tests.install_upgrade_operators.relationship_labels.constants import PART_OF_LABEL_KEY
 from tests.install_upgrade_operators.utils import (
     get_network_addon_config,
     get_resource_by_name,
     get_resource_from_related_object,
 )
-from utilities.constants.architecture import MULTIARCH
 from utilities.constants.components import (
     HCO_OPERATOR,
+    HCO_PART_OF_LABEL_VALUE,
     HOSTPATH_PROVISIONER_CSI,
     HPP_POOL,
 )
@@ -50,6 +48,22 @@ from utilities.storage import get_hyperconverged_cdi
 from utilities.virt import get_hyperconverged_kubevirt
 
 LOGGER = logging.getLogger(__name__)
+
+
+@pytest.fixture(scope="session")
+def discovered_cnv_deployments(admin_client, hco_namespace):
+    """Discover CNV deployments in the HCO namespace.
+
+    Returns:
+        tuple[Deployment, ...]: Deployments matching the HCO part-of label.
+    """
+    return tuple(
+        Deployment.get(
+            client=admin_client,
+            namespace=hco_namespace.name,
+            label_selector=f"{PART_OF_LABEL_KEY}={HCO_PART_OF_LABEL_VALUE}",
+        )
+    )
 
 
 @pytest.fixture(scope="session")
@@ -215,15 +229,6 @@ def xfail_if_sriov_conforma_jira_open_and_hco_operator(admin_client, hco_namespa
         is_hco_operator = any(pod.name.startswith(HCO_OPERATOR) for pod in request.getfixturevalue("cnv_pods_by_type"))
     if not is_hco_operator:
         return
-    hco_version = get_hco_version(client=admin_client, hco_ns_name=hco_namespace.name)
-    if hco_version.startswith("4.23") and is_jira_open(jira_id="CNV-92888"):
-        pytest.xfail(
-            "hco-operator image check xfailed: nightly sriov-dp-admission-controller triggers upstream registry violation (CNV-92888)"
-        )
-    if hco_version.startswith("5.0") and is_jira_open(jira_id="CNV-92889"):
-        pytest.xfail(
-            "hco-operator image check xfailed: nightly sriov-dp-admission-controller triggers upstream registry violation (CNV-92889)"
-        )
 
 
 @pytest.fixture(scope="class")
@@ -305,9 +310,6 @@ def expected_value(request, is_s390x_cluster):
     expected = request.param.copy()
     if expected == EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES and is_s390x_cluster:
         expected |= S390X_SPECIFIC_KUBEVIRT_FEATUREGATES
-    if expected == HCO_DEFAULT_FEATUREGATES:
-        if py_config["cluster_type"] == MULTIARCH:
-            expected[ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT] = FG_ENABLED
     return expected
 
 
