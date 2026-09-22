@@ -612,3 +612,325 @@ class TestFileRestoreSequentialFromSameSnapshot:
             admin_client=admin_client,
             snapshot_source=True,
         )
+
+
+class TestFileRestoreCrossNamespace:
+    """
+    Tests for restoring files from backup sources in a different namespace.
+
+    Preconditions:
+        - vm-file-restore-operator deployed and running in openshift-cnv namespace
+        - Running Linux VM with guest helper installed and filerestore user SSH-configured
+        - Backup source available in a namespace different from the target VM namespace
+        - Cross-namespace restore permissions configured for the backup source
+    """
+
+    __test__ = False
+
+    def test_restore_from_different_namespace(self):
+        """
+        Test that restore from a backup volume in a different namespace succeeds and cleans up.
+
+        Preconditions:
+            - Running Linux VM with guest helper installed and filerestore user SSH-configured
+            - Backup volume containing a file with known content in a different namespace
+            - Cross-namespace restore permissions configured for the backup volume
+            - Target file deleted from the Linux VM
+
+        Steps:
+            1. Create a VMFileRestore that references the backup volume in the source namespace
+            2. Wait for the restore operation to complete
+            3. Read the restored file from the Linux VM
+            4. Inspect both namespaces for temporary restore resources
+
+        Expected:
+            - Restore succeeds with the original file content and no temporary resources remain in either namespace
+        """
+
+
+class TestFileRestoreStorageCompatibility:
+    """
+    Tests for restore compatibility with non-default and LVM-backed storage configurations.
+
+    Preconditions:
+        - vm-file-restore-operator deployed and running in openshift-cnv namespace
+        - Running Linux VM with guest helper installed and filerestore user SSH-configured
+        - VolumeSnapshot-capable StorageClass available
+    """
+
+    __test__ = False
+
+    def test_restore_when_source_volume_mode_differs_from_cluster_default(self):
+        """
+        Test that restore succeeds when the snapshot source volume mode differs from the cluster default.
+
+        Preconditions:
+            - Running Linux VM with guest helper installed and filerestore user SSH-configured
+            - VolumeSnapshot containing a file with known content
+            - Snapshot source volume mode differs from the cluster default volume mode
+            - Target file deleted from the Linux VM
+
+        Steps:
+            1. Create a VMFileRestore from the VolumeSnapshot
+            2. Wait for the restore operation to complete
+            3. Read the restored file from the Linux VM
+
+        Expected:
+            - Restore succeeds and the restored file content matches the snapshot source
+        """
+
+    def test_restore_from_lvm_snapshot_with_volume_identifier_collision(self):
+        """
+        Test that an LVM-based snapshot restores despite matching the original volume identifier.
+
+        Markers:
+            - special_infra
+
+        Preconditions:
+            - Running Linux VM with guest helper installed and filerestore user SSH-configured
+            - LVM-backed VolumeSnapshot containing a file with known content
+            - Original volume and snapshot filesystem have the same volume identifier
+            - Target file deleted from the Linux VM
+
+        Steps:
+            1. Create a VMFileRestore from the LVM-backed VolumeSnapshot
+            2. Wait for the restore operation to complete
+            3. Read the restored file from the Linux VM
+
+        Expected:
+            - Snapshot mounts without a volume identifier collision and the file is restored with its original content
+        """
+
+
+class TestFileRestoreWindowsManualBrowsing:
+    """
+    Tests for manual browsing of Windows backup volumes.
+
+    Markers:
+        - tier3
+        - windows
+
+    Preconditions:
+        - vm-file-restore-operator deployed and running in openshift-cnv namespace
+        - Running Windows VM with OpenSSH Server and guest helper installed, and filerestore user SSH-configured
+        - NTFS backup volume containing files with known content
+    """
+
+    __test__ = False
+
+    def test_manual_browsing_of_windows_ntfs_backup_volume(self):
+        """
+        Test that manual restore mode exposes an NTFS backup volume for read-only browsing.
+
+        Preconditions:
+            - Running Windows VM with OpenSSH Server and guest helper installed, and filerestore user SSH-configured
+            - NTFS backup volume containing files with known content
+
+        Steps:
+            1. Create a manual-mode VMFileRestore from the NTFS backup volume
+            2. Wait for the backup volume to become available in the Windows VM
+            3. Read a known file from the mounted backup volume
+            4. Attempt to modify a file on the mounted backup volume
+
+        Expected:
+            - Known content can be read from the mounted backup volume and modification is denied
+        """
+
+
+class TestFileRestoreGuestConnectionInterruption:
+    """
+    Tests for restore behavior when guest connectivity is interrupted.
+
+    Preconditions:
+        - vm-file-restore-operator deployed and running in openshift-cnv namespace
+        - Running Linux VM with guest helper installed and filerestore user SSH-configured
+        - Backup volume containing multiple files
+    """
+
+    __test__ = False
+
+    def test_guest_connection_loss_during_file_transfer(self):
+        """
+        [NEGATIVE] Test that an interrupted guest connection reports partial completion and supports retry.
+
+        Preconditions:
+            - Running Linux VM with guest helper installed and filerestore user SSH-configured
+            - Backup volume containing multiple files
+            - File transfer is in progress
+
+        Steps:
+            1. Interrupt the guest connection during file transfer
+            2. Wait for the restore operation to report the interrupted transfer
+            3. Restore the guest connection
+            4. Retry the file restore request
+
+        Expected:
+            - Interrupted transfer reports partial completion and the retry restores all requested files successfully
+        """
+
+
+class TestFileRestoreOperatorUpgrade:
+    """
+    Tests for file restore resource continuity across operator upgrades.
+
+    Markers:
+        - upgrade
+        - product_upgrade_test
+
+    Preconditions:
+        - vm-file-restore-operator deployed and running in openshift-cnv namespace
+        - File restore resource exists before the operator upgrade
+    """
+
+    __test__ = False
+
+    def test_operator_upgrade_preserves_restore_resource_and_status(self):
+        """
+        Test that operator upgrade preserves an existing restore resource and its status.
+
+        Preconditions:
+            - vm-file-restore-operator deployed and running in openshift-cnv namespace
+            - File restore resource with recorded status exists before the operator upgrade
+            - Upgrade payload containing a newer vm-file-restore-operator version is available
+
+        Steps:
+            1. Upgrade OpenShift Virtualization to the target version
+            2. Wait for the upgraded vm-file-restore-operator to become ready
+            3. Read the existing file restore resource and its status
+
+        Expected:
+            - Existing restore resource and its recorded status remain unchanged after the operator upgrade
+        """
+
+
+class TestFileRestoreXFSRootDiskSnapshot:
+    """
+    Tests for restoring files from an XFS root disk snapshot.
+
+    Markers:
+        - special_infra
+
+    Preconditions:
+        - vm-file-restore-operator deployed and running in openshift-cnv namespace
+        - Running Linux VM with an XFS root filesystem, guest helper installed, and filerestore user SSH-configured
+        - LVM-backed VolumeSnapshot-capable StorageClass available
+    """
+
+    __test__ = False
+
+    def test_restore_from_xfs_root_disk_snapshot(self):
+        """
+        Test that a file is restored from an XFS root disk snapshot despite filesystem identifier reuse.
+
+        Preconditions:
+            - Running Linux VM with an XFS root filesystem, guest helper installed, and filerestore user SSH-configured
+            - LVM-backed root disk VolumeSnapshot containing a file with known content
+            - Target file deleted from the Linux VM root disk
+
+        Steps:
+            1. Create a VMFileRestore from the XFS root disk VolumeSnapshot
+            2. Wait for the restore operation to complete
+            3. Read the restored file at its original path in the Linux VM
+
+        Expected:
+            - XFS root disk snapshot mounts successfully and the file is restored with its original content
+        """
+
+
+class TestFileRestoreRootDiskManualBrowsing:
+    """
+    Tests for manual browsing of Linux root disk backups.
+
+    Preconditions:
+        - vm-file-restore-operator deployed and running in openshift-cnv namespace
+        - Running Linux VM with guest helper installed and filerestore user SSH-configured
+        - Root disk backup available for manual browsing
+    """
+
+    __test__ = False
+
+    def test_manual_browsing_of_root_disk_backup(self):
+        """
+        Test that manual restore mode exposes root disk backup contents for read-only browsing.
+
+        Parametrize:
+            - backup_source: [VolumeSnapshot, PVC]
+
+        Preconditions:
+            - Running Linux VM with guest helper installed and filerestore user SSH-configured
+            - Root disk backup containing files with known content
+
+        Steps:
+            1. Create a manual-mode VMFileRestore from the root disk backup
+            2. Wait for the backup volume to become ready for browsing
+            3. Read a known file from the mounted root disk backup
+            4. Attempt to modify a file on the mounted root disk backup
+
+        Expected:
+            - Known content can be read from the mounted root disk backup and modification is denied
+        """
+
+
+class TestFileRestoreLargeFile:
+    """
+    Tests for restoring large files from data disk snapshots.
+
+    Preconditions:
+        - vm-file-restore-operator deployed and running in openshift-cnv namespace
+        - Running Linux VM with guest helper installed and filerestore user SSH-configured
+        - VolumeSnapshot-capable StorageClass available
+    """
+
+    __test__ = False
+
+    def test_restore_big_file_from_data_disk_snapshot(self):
+        """
+        Test that a 1 GB file is restored successfully from a data disk snapshot.
+
+        Preconditions:
+            - Running Linux VM with guest helper installed and filerestore user SSH-configured
+            - Data disk VolumeSnapshot containing a 1 GB file with a recorded checksum
+            - Target file deleted from the Linux VM data disk
+
+        Steps:
+            1. Create a VMFileRestore from the data disk VolumeSnapshot for the 1 GB file
+            2. Wait for the restore operation to complete
+            3. Calculate the restored file checksum in the Linux VM
+
+        Expected:
+            - Restore succeeds and the restored 1 GB file checksum matches the snapshot source
+        """
+
+
+class TestFileRestoreConcurrentVirtualMachines:
+    """
+    Tests for concurrent file restore operations on independent virtual machines.
+
+    Markers:
+        - tier3
+
+    Preconditions:
+        - vm-file-restore-operator deployed and running in openshift-cnv namespace
+        - Two running Linux VMs with guest helper installed and filerestore user SSH-configured
+        - Independent backup volume available for each Linux VM
+    """
+
+    __test__ = False
+
+    def test_concurrent_restores_on_different_virtual_machines(self):
+        """
+        Test that concurrent file restores on different virtual machines complete independently.
+
+        Preconditions:
+            - Two running Linux VMs with guest helper installed and filerestore user SSH-configured
+            - Independent backup volume containing a file with known content for each Linux VM
+            - Target file deleted from each Linux VM
+
+        Steps:
+            1. Create a VMFileRestore for each Linux VM without waiting for the other restore to complete
+            2. Wait for both restore operations to complete
+            3. Read the restored file from each Linux VM
+
+        Expected:
+            - Both restore operations succeed independently with the original file content on their respective VMs
+        """
