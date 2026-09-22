@@ -58,6 +58,8 @@ Multiarch-dedicated tests should be isolated from regular tests. Avoid modifying
 Mark the entire file or specific classes with the `multiarch` marker:
 
 ```python
+import pytest
+
 # Module-level (preferred — marks the whole file)
 pytestmark = [pytest.mark.multiarch]
 
