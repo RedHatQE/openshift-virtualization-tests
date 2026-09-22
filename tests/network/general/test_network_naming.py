@@ -19,7 +19,7 @@ def test_vm_with_illegal_network_name(namespace, unprivileged_client, invalid_ne
 
     with pytest.raises(
         UnprocessibleEntityError,
-        match="r.*Network interface name can only contain alphabetical characters*",
+        match=r".*Network interface name can only contain alphabetical characters.*",
     ):
         with VirtualMachineForTests(
             namespace=namespace.name,

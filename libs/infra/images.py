@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import ClassVar
 
 from ocp_resources.resource import Resource
 
@@ -67,12 +68,12 @@ class Windows:
     DOCKER_IMAGE_DIR: str = "docker-local/kubevirt-common-instancetypes"
     UEFI_WIN_DIR: str = f"{DIR}/uefi"
     HA_DIR: str = f"{DIR}/HA-images"
-    ISO_BASE_DIR = f"{DIR}/install_iso"
+    ISO_BASE_DIR: ClassVar[str] = f"{DIR}/install_iso"
     ISO_WIN10_DIR: str = f"{ISO_BASE_DIR}/win10"
     ISO_WIN11_DIR: str = f"{ISO_BASE_DIR}/win11"
     ISO_WIN2022_DIR: str = f"{ISO_BASE_DIR}/win2022"
     ISO_WIN2025_DIR: str = f"{ISO_BASE_DIR}/win2025"
-    CONTAINER_DISK_DV_SIZE = "40Gi"
+    CONTAINER_DISK_DV_SIZE: ClassVar[str] = "40Gi"
     DEFAULT_DV_SIZE: str = "70Gi"
     DEFAULT_MEMORY_SIZE: str = "8Gi"
     DEFAULT_MEMORY_SIZE_WSL: str = "12Gi"

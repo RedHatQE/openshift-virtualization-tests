@@ -134,7 +134,8 @@ class TestConsole:
             mock_sampler.side_effect = set_child
 
             with patch.object(console, "_connect"):
-                result = console.__enter__()
+                enter_method = type(console).__dict__["__enter__"]
+                result = enter_method(console)
 
         # __enter__ returns the result of connect(), which returns self.child
         assert result == mock_child

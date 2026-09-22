@@ -279,19 +279,14 @@ def test_certconfigmap_incorrect_cert(
 @pytest.mark.polarion("CNV-2815")
 @pytest.mark.s390x
 def test_certconfigmap_missing_or_wrong_cm(data_volume_multi_storage_scope_function):
+    samples = TimeoutSampler(
+        wait_timeout=TIMEOUT_1MIN,
+        sleep=10,
+        func=lambda: data_volume_multi_storage_scope_function.status != DataVolume.Status.IMPORT_SCHEDULED,
+    )
     with pytest.raises(TimeoutExpiredError):
-        samples = TimeoutSampler(
-            wait_timeout=TIMEOUT_1MIN,
-            sleep=10,
-            func=lambda: data_volume_multi_storage_scope_function.status != DataVolume.Status.IMPORT_SCHEDULED,
-        )
         for sample in samples:
-            if sample:
-                LOGGER.error(
-                    f"DV status is not as expected."
-                    f"Expected: {DataVolume.Status.IMPORT_SCHEDULED}. "
-                    f"Found: {data_volume_multi_storage_scope_function.status}"
-                )
+            pass
 
 
 @pytest.mark.sno

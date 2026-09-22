@@ -230,7 +230,8 @@ class TestVeleroBackup:
         backup.Status.COMPLETED = "Completed"
         mock_backup_enter.return_value = backup
 
-        result = backup.__enter__()
+        enter_method = type(backup).__dict__["__enter__"]
+        result = enter_method(backup)
 
         mock_backup_enter.assert_called_once()
         backup.wait_for_status.assert_called_once_with(status="Completed", timeout=300)
@@ -249,7 +250,8 @@ class TestVeleroBackup:
         backup.wait_for_status = MagicMock()
         mock_backup_enter.return_value = backup
 
-        result = backup.__enter__()
+        enter_method = type(backup).__dict__["__enter__"]
+        result = enter_method(backup)
 
         mock_backup_enter.assert_called_once()
         backup.wait_for_status.assert_not_called()
@@ -647,7 +649,8 @@ class TestVeleroRestore:
 
         mock_restore_enter.return_value = restore
 
-        result = restore.__enter__()
+        enter_method = type(restore).__dict__["__enter__"]
+        result = enter_method(restore)
 
         mock_restore_enter.assert_called_once()
         restore.wait_for_status.assert_called_once_with(status="Completed", timeout=300)
@@ -663,7 +666,8 @@ class TestVeleroRestore:
 
         mock_restore_enter.return_value = restore
 
-        restore.__enter__()
+        enter_method = type(restore).__dict__["__enter__"]
+        enter_method(restore)
 
         restore.wait_for_status.assert_not_called()
 

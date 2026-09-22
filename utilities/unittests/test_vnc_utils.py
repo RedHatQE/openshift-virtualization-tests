@@ -35,7 +35,8 @@ class TestVNCConnection:
 
         vnc_conn = VNCConnection(mock_vm)
 
-        result = vnc_conn.__enter__()
+        enter_method = type(vnc_conn).__dict__["__enter__"]
+        result = enter_method(vnc_conn)
 
         assert result == mock_child
         assert vnc_conn.child == mock_child
@@ -53,7 +54,8 @@ class TestVNCConnection:
 
         vnc_conn = VNCConnection(mock_vm)
 
-        result = vnc_conn.__enter__()
+        enter_method = type(vnc_conn).__dict__["__enter__"]
+        result = enter_method(vnc_conn)
 
         assert result is None
 
@@ -99,7 +101,8 @@ class TestVNCConnection:
             mock_sampler.return_value = mock_sampler_instance
 
             vnc_conn = VNCConnection(mock_vm)
-            vnc_conn.__enter__()
+            enter_method = type(vnc_conn).__dict__["__enter__"]
+            enter_method(vnc_conn)
 
             # Check that TimeoutSampler was called with correct command
             call_args = mock_sampler.call_args

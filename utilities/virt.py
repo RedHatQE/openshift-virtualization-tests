@@ -2755,8 +2755,10 @@ def target_vm_from_cloning_job(client, cloning_job):
     assert target_vm.exists, f"{target_vm.name} VM was not created."
     running_vm(vm=target_vm)
 
-    yield target_vm
-    target_vm.clean_up()
+    try:
+        yield target_vm
+    finally:
+        target_vm.clean_up()
 
 
 def wait_for_vmi_relocation_and_running(initial_node, vm, timeout=TIMEOUT_5MIN):

@@ -202,11 +202,12 @@ class NodeNetworkConfigurationPolicy(Nncp):
         # it must be fetched and stored before the update, and compared with the new time-stamp after.
         initial_success_status_time = self._get_last_successful_transition_time()
 
-        yield
-
-        # In case the update has been executed before the NNCP reached a success status,
-        # initial_success_status_time is empty and the wait is treated without considering the timestamp.
-        self.wait_for_status_success(last_success_timestamp=initial_success_status_time)
+        try:
+            yield
+        finally:
+            # In case the update has been executed before the NNCP reached a success status,
+            # initial_success_status_time is empty and the wait is treated without considering the timestamp.
+            self.wait_for_status_success(last_success_timestamp=initial_success_status_time)
 
     def _get_last_successful_transition_time(self) -> str:
         for condition in self.instance.status.conditions:

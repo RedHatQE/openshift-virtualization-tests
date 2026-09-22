@@ -576,11 +576,7 @@ def check_parametrize_marks(decorator: ast.AST, marker_names: set[str]) -> bool:
         return False
 
     # Check each element in the list for pytest.param(..., marks=...)
-    for element in param_values.elts:
-        if has_marker_in_param(node=element, marker_names=marker_names):
-            return True
-
-    return False
+    return any(has_marker_in_param(node=element, marker_names=marker_names) for element in param_values.elts)
 
 
 def has_marker_in_param(node: ast.AST, marker_names: set[str]) -> bool:
@@ -3724,25 +3720,31 @@ class MarkerTestAnalyzer:
 def format_markdown_output(result: AnalysisResult) -> str:
     """Format analysis result as Markdown."""
     output = ["## Test Execution Plan", ""]
-    output.append(f"**Run tests with marker expression `{result.marker_expression}`: {result.should_run_tests}**")
-    output.append("")
-    output.append(f"**Reason:** {result.reason}")
-    output.append("")
+    output.extend((
+        f"**Run tests with marker expression `{result.marker_expression}`: {result.should_run_tests}**",
+        "",
+        f"**Reason:** {result.reason}",
+        "",
+    ))
 
     if result.affected_tests:
         output.append(f"### Affected tests with marker expression `{result.marker_expression}`:")
         for test in result.affected_tests:
-            output.append(f"- `{test['node_id']}`")
-            output.append(f"  - Test file: `{test['test_file']}`")
-            output.append(f"  - Dependencies affected: {len(test['dependencies'])}")
+            output.extend((
+                f"- `{test['node_id']}`",
+                f"  - Test file: `{test['test_file']}`",
+                f"  - Dependencies affected: {len(test['dependencies'])}",
+            ))
             for dep in test["dependencies"][:3]:  # Show first 3 dependencies
                 output.append(f"    - `{dep}`")
             if len(test["dependencies"]) > 3:
                 output.append(f"    - ... and {len(test['dependencies']) - 3} more")
         output.append("")
 
-    output.append(f"**Total tests with marker expression `{result.marker_expression}`:** {result.total_tests}")
-    output.append(f"**Changed files:** {len(result.changed_files)}")
+    output.extend((
+        f"**Total tests with marker expression `{result.marker_expression}`:** {result.total_tests}",
+        f"**Changed files:** {len(result.changed_files)}",
+    ))
 
     return "\n".join(output)
 

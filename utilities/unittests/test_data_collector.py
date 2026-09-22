@@ -556,7 +556,7 @@ class TestPrepareDataDir:
         mock_item.cls = None  # Set cls to None explicitly
         mock_item.session.config.getini.return_value = []
 
-        with pytest.raises(AssertionError, match="pytest.ini must include testpaths"):
+        with pytest.raises(AssertionError, match=r"pytest.ini must include testpaths"):
             prepare_pytest_item_data_dir(mock_item, "/output")
 
     @patch("os.makedirs")

@@ -656,9 +656,11 @@ def scale_deployment_replicas(deployment_name, namespace, replica_count, client)
     initial_replicas = deployment.instance.spec.replicas
     deployment.scale_replicas(replica_count=replica_count)
     deployment.wait_for_replicas(deployed=replica_count > 0)
-    yield
-    deployment.scale_replicas(replica_count=initial_replicas)
-    deployment.wait_for_replicas(deployed=initial_replicas > 0)
+    try:
+        yield
+    finally:
+        deployment.scale_replicas(replica_count=initial_replicas)
+        deployment.wait_for_replicas(deployed=initial_replicas > 0)
 
 
 def get_console_spec_links(admin_client, name):

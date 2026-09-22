@@ -160,7 +160,7 @@ def wait_for_ds(ds):
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_4MIN,
         sleep=5,
-        func=lambda: ds.instance.to_dict(),
+        func=ds.instance.to_dict,
     )
     try:
         for sample in samples:
@@ -182,7 +182,7 @@ def wait_for_dp(dp):
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_4MIN,
         sleep=5,
-        func=lambda: dp.instance.to_dict(),
+        func=dp.instance.to_dict,
     )
     try:
         for sample in samples:

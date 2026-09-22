@@ -228,10 +228,10 @@ class BaseVirtualMachine(VirtualMachine):
         Returns:
             BaseVirtualMachine instance bound to an existing cluster resource.
         """
-        obj = cls.__new__(cls)
+        obj = object.__new__(cls)
 
         VirtualMachine.__init__(
-            obj,
+            self=obj,
             namespace=namespace,
             name=name,
             client=client,

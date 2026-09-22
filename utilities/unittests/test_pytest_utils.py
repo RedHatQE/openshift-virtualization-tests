@@ -285,7 +285,7 @@ class TestConfigDefaultStorageClass:
     def test_config_default_storage_class_cmd_override(self):
         """Test default storage class override from command line"""
         mock_session = MagicMock()
-        mock_session.config.getoption.side_effect = lambda name: {
+        mock_session.config.getoption.side_effect = lambda *, name: {
             "default_storage_class": "new-sc",
             "storage_class_matrix": None,
         }.get(name)
@@ -315,7 +315,7 @@ class TestConfigDefaultStorageClass:
     def test_config_default_storage_class_matrix_override(self):
         """Test default storage class override from storage class matrix"""
         mock_session = MagicMock()
-        mock_session.config.getoption.side_effect = lambda name: {
+        mock_session.config.getoption.side_effect = lambda *, name: {
             "default_storage_class": None,
             "storage_class_matrix": "first-sc,second-sc",
         }.get(name)
@@ -345,7 +345,7 @@ class TestConfigDefaultStorageClass:
     def test_config_default_storage_class_matrix_contains_default(self):
         """Test storage class matrix contains the default storage class"""
         mock_session = MagicMock()
-        mock_session.config.getoption.side_effect = lambda name: {
+        mock_session.config.getoption.side_effect = lambda *, name: {
             "default_storage_class": None,
             "storage_class_matrix": "first-sc,original-sc",
         }.get(name)
@@ -367,7 +367,7 @@ class TestConfigDefaultStorageClass:
     def test_config_default_storage_class_no_changes(self):
         """Test no changes when no overrides provided"""
         mock_session = MagicMock()
-        mock_session.config.getoption.side_effect = lambda name: {
+        mock_session.config.getoption.side_effect = lambda *, name: {
             "default_storage_class": None,
             "storage_class_matrix": None,
         }.get(name)
@@ -397,7 +397,7 @@ class TestConfigDefaultStorageClass:
     ):
         """Test clean exit when requested default storage class is not in system matrix"""
         mock_session = MagicMock()
-        mock_session.config.getoption.side_effect = lambda name: {
+        mock_session.config.getoption.side_effect = lambda *, name: {
             "default_storage_class": "nonexistent-sc",
             "storage_class_matrix": None,
         }.get(name)
@@ -428,7 +428,7 @@ class TestConfigDefaultStorageClass:
     ):
         """Test clean exit when --storage-class-matrix contains invalid storage class names"""
         mock_session = MagicMock()
-        mock_session.config.getoption.side_effect = lambda name: {
+        mock_session.config.getoption.side_effect = lambda *, name: {
             "default_storage_class": None,
             "storage_class_matrix": "nonexistent-sc,existing-sc-1",
         }.get(name)
@@ -459,7 +459,7 @@ class TestConfigDefaultStorageClass:
     ):
         """Test clean exit when --default-storage-class is not in --storage-class-matrix"""
         mock_session = MagicMock()
-        mock_session.config.getoption.side_effect = lambda name: {
+        mock_session.config.getoption.side_effect = lambda *, name: {
             "default_storage_class": "sc-1",
             "storage_class_matrix": "sc-2",
         }.get(name)
@@ -485,7 +485,7 @@ class TestConfigDefaultStorageClass:
     def test_config_default_storage_class_both_options_valid(self):
         """Test correct update when both --default-storage-class and --storage-class-matrix are valid"""
         mock_session = MagicMock()
-        mock_session.config.getoption.side_effect = lambda name: {
+        mock_session.config.getoption.side_effect = lambda *, name: {
             "default_storage_class": "sc-1",
             "storage_class_matrix": "sc-1,sc-2",
         }.get(name)
@@ -508,7 +508,7 @@ class TestConfigDefaultStorageClass:
     def test_config_default_storage_class_same_as_global(self):
         """Test no update when --default-storage-class matches global default"""
         mock_session = MagicMock()
-        mock_session.config.getoption.side_effect = lambda name: {
+        mock_session.config.getoption.side_effect = lambda *, name: {
             "default_storage_class": "original-sc",
             "storage_class_matrix": None,
         }.get(name)
@@ -1175,7 +1175,7 @@ class TestGetArtifactoryServerUrl:
 
         with pytest.raises(
             MissingEnvironmentVariableError,
-            match="Bitwarden access is disabled.*disabled-bitwarden.*ARTIFACTORY_SERVER",
+            match=r"Bitwarden access is disabled.*disabled-bitwarden.*ARTIFACTORY_SERVER",
         ):
             get_artifactory_server_url("cluster.example.com", session=mock_session)
 
@@ -3306,11 +3306,11 @@ class TestInjectFailureJunit:
         mock_session.config.option.xmlpath = str(xml_path)
 
         # Simulate: earlier teardown raises, then finally block runs injection
-        with pytest.raises(RuntimeError, match="Earlier teardown failed"):
-            try:
+        try:
+            with pytest.raises(RuntimeError, match="Earlier teardown failed"):
                 raise RuntimeError("Earlier teardown failed")
-            finally:
-                pytest_utils_module._inject_failure_junit(session=mock_session)
+        finally:
+            pytest_utils_module._inject_failure_junit(session=mock_session)
 
         tree = ElementTree.parse(xml_path)
         testsuite = tree.getroot().find("testsuite")
