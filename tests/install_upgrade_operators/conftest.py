@@ -233,8 +233,7 @@ def ocp_resource_by_name(admin_client, ocp_resources_submodule_list, related_obj
 @pytest.fixture()
 def related_object_from_hco_status(hco_status_related_objects, cnv_related_object_matrix__function__):
     LOGGER.info(cnv_related_object_matrix__function__)
-    kind_name = list(cnv_related_object_matrix__function__.values())[0]
-    related_object_name = list(cnv_related_object_matrix__function__.keys())[0]
+    related_object_name, kind_name = next(iter(cnv_related_object_matrix__function__.items()))
     LOGGER.info(f"Looking for related object {related_object_name}, kind {kind_name}")
     for obj in hco_status_related_objects:
         if obj.name == related_object_name and obj.kind == kind_name:
