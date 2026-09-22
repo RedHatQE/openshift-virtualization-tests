@@ -22,6 +22,7 @@ from tests.storage.restricted_namespace_cloning.constants import (
     VERBS_SRC,
 )
 from tests.storage.restricted_namespace_cloning.utils import create_dv_negative, verify_snapshot_used_namespace_transfer
+from tests.storage.stop_status_utils import dv_stop_status_restart_threshold
 from utilities.constants import Images
 from utilities.constants.images import OS_FLAVOR_FEDORA
 from utilities.storage import create_vm_from_dv
@@ -52,7 +53,10 @@ def test_unprivileged_user_clone_dv_same_namespace_positive(
     permissions_pvc_source,
     dv_cloned_by_unprivileged_user_in_the_same_namespace,
 ):
-    dv_cloned_by_unprivileged_user_in_the_same_namespace.wait_for_dv_success()
+    dv_cloned_by_unprivileged_user_in_the_same_namespace.wait_for_dv_success(
+        stop_status_func=dv_stop_status_restart_threshold,
+        dv=dv_cloned_by_unprivileged_user_in_the_same_namespace,
+    )
 
 
 @pytest.mark.sno
