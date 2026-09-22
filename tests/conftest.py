@@ -87,7 +87,6 @@ from utilities.virt import (
     running_vm,
     start_and_fetch_processid_on_linux_vm,
     vm_instance_from_template,
-    wait_for_windows_vm,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -152,45 +151,6 @@ def openshift_current_version(admin_client):
 @pytest.fixture(scope="session")
 def ocp_current_version(openshift_current_version):
     return parse(version=openshift_current_version.split("-")[0])
-
-
-@pytest.fixture()
-def vm_instance_from_template_multi_storage_scope_function(
-    request,
-    unprivileged_client,
-    namespace,
-    data_volume_multi_storage_scope_function,
-    cpu_for_migration,
-):
-    """Calls vm_instance_from_template contextmanager
-
-    Creates a VM from template and starts it (if requested).
-    """
-
-    with vm_instance_from_template(
-        request=request,
-        unprivileged_client=unprivileged_client,
-        namespace=namespace,
-        existing_data_volume=data_volume_multi_storage_scope_function,
-        vm_cpu_model=(cpu_for_migration if request.param.get("set_vm_common_cpu") else None),
-    ) as vm:
-        yield vm
-
-
-"""
-Windows-specific fixtures
-"""
-
-
-@pytest.fixture()
-def started_windows_vm(
-    request,
-    vm_instance_from_template_multi_storage_scope_function,
-):
-    wait_for_windows_vm(
-        vm=vm_instance_from_template_multi_storage_scope_function,
-        version=request.param["os_version"],
-    )
 
 
 @pytest.fixture(scope="session")
