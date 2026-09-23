@@ -45,7 +45,7 @@ class TestRoleAggregationAdmin:
         Preconditions:
             - RoleBinding granting the unprivileged user the admin ClusterRole
               in the namespace
-            - HyperConverged CR spec.roleAggregationStrategy set to "Manual"
+            - HyperConverged CR spec.virtualization.roleAggregationStrategy set to "Manual"
               (role aggregation disabled)
 
         Steps:
@@ -71,7 +71,7 @@ class TestRoleAggregationAdmin:
         Preconditions:
             - RoleBinding granting the unprivileged user the admin ClusterRole
               in the namespace
-            - HyperConverged CR spec.roleAggregationStrategy restored to
+            - HyperConverged CR spec.virtualization.roleAggregationStrategy restored to
               "AggregateToDefault"
 
         Steps:
@@ -111,7 +111,7 @@ class TestRoleAggregationEdit:
         Preconditions:
             - RoleBinding granting the unprivileged user the edit ClusterRole
               in the namespace
-            - HyperConverged CR spec.roleAggregationStrategy set to "Manual"
+            - HyperConverged CR spec.virtualization.roleAggregationStrategy set to "Manual"
               (role aggregation disabled)
 
         Steps:
@@ -135,7 +135,7 @@ class TestRoleAggregationEdit:
         Preconditions:
             - RoleBinding granting the unprivileged user the edit ClusterRole
               in the namespace
-            - HyperConverged CR spec.roleAggregationStrategy restored to
+            - HyperConverged CR spec.virtualization.roleAggregationStrategy restored to
               "AggregateToDefault"
 
         Steps:
@@ -173,7 +173,7 @@ class TestRoleAggregationView:
         Preconditions:
             - RoleBinding granting the unprivileged user the view ClusterRole
               in the namespace
-            - HyperConverged CR spec.roleAggregationStrategy set to "Manual"
+            - HyperConverged CR spec.virtualization.roleAggregationStrategy set to "Manual"
               (role aggregation disabled)
 
         Steps:
@@ -197,7 +197,7 @@ class TestRoleAggregationView:
         Preconditions:
             - RoleBinding granting the unprivileged user the view ClusterRole
               in the namespace
-            - HyperConverged CR spec.roleAggregationStrategy restored to
+            - HyperConverged CR spec.virtualization.roleAggregationStrategy restored to
               "AggregateToDefault"
 
         Steps:
