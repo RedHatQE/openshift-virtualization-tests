@@ -193,6 +193,6 @@ def updated_resource_labels(ocp_resource_by_name):
 
 
 @pytest.fixture()
-def skip_if_hco_bearer_token_bug_open(ocp_resource_by_name):
+def xfail_hco_bearer_token_bug(ocp_resource_by_name):
     if ocp_resource_by_name.name == HCO_BEARER_AUTH:
-        pytest.skip(f"{HCO_BEARER_AUTH} resource labels doesn't reconcile due to 64473 bug")
+        pytest.xfail(f"{HCO_BEARER_AUTH} resource labels doesn't reconcile due to 64473 bug")
