@@ -307,6 +307,51 @@ reviews:
     tflint:
       enabled: false
 
+  post_merge_actions:
+    - name: "Create issue for Learnings added comments"
+      enabled: true
+      prompt: |
+        Scan every CodeRabbit comment on this merged PR (top-level conversation
+        comments and inline review comments).
+
+        A comment counts as a "Learnings added" comment only if the phrase
+        "Learnings added" appears as a heading in that comment. Do NOT count comments
+        where "Learnings added" appears mid-sentence.
+
+        For each "Learnings added" comment found, check whether any human
+        (i.e. not a bot account) posted a reply in the SAME thread as that
+        specific "Learnings added" comment. Only a direct reply in that
+        thread counts as acknowledgment. Do NOT treat other PR conversation
+        comments, other review threads, or unrelated later human comments as
+        acknowledgment. If a human replied in that same thread, skip it —
+        it was acknowledged.
+
+        If no human replied to a "Learnings added" comment, extract only the
+        learning content:
+        - Start right after the "Learnings added" heading.
+        - The issue body must contain ONLY the actual learning text itself.
+        - Concretely: stop at the next Markdown heading, or at whichever of
+          these known footer markers appears first (these are examples of
+          boilerplate that must never be included in the issue body):
+          - "Learnings used"
+          - "Note: Learnings are effective ..." (plain or bold "**Note:**")
+          - "Learnings are effective only in the context ..."
+          - "You are interacting with an AI system ..."
+          - "... manage existing learnings in the ..."
+          - "Review thread resolved"
+          - the closing "</details>" tag
+        - Skip it entirely if the remaining content is empty or whitespace
+          only.
+
+        For each remaining unacknowledged learning, use the GitHub MCP tool to
+        create one issue in this repository with:
+        - Title: "CodeRabbit Learning from PR #<PR number>"
+        - Body: the extracted learning text, followed by a link back to this
+          PR.
+
+        If every "Learnings added" comment was acknowledged by a human, or
+        there are no "Learnings added" comments on this PR, do nothing.
+
 chat:
   auto_reply: true
 
