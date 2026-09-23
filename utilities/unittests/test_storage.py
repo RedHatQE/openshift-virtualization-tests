@@ -1,8 +1,8 @@
-"""Unit tests for construct_datavolume_source_dict in utilities/storage.py"""
+"""Unit tests for utilities/storage.py"""
 
 import importlib
 import sys
-from unittest.mock import patch
+from unittest.mock import ANY, MagicMock, patch
 
 import pytest
 
@@ -15,7 +15,7 @@ import utilities.storage
 
 importlib.reload(utilities.storage)
 
-from utilities.storage import construct_datavolume_source_dict
+from utilities.storage import construct_datavolume_source_dict, restart_ocs_operator_for_virt_sc
 
 
 class TestConstructDatavolumeSourceDictHttp:
@@ -163,3 +163,38 @@ class TestConstructDatavolumeSourceDictUnsupported:
     def test_unsupported_source_raises_value_error(self):
         with pytest.raises(ValueError, match="Unsupported source type: ftp"):
             construct_datavolume_source_dict(source="ftp")
+
+
+class TestRestartOcsOperatorForVirtSc:
+    @patch("utilities.storage.Deployment")
+    def test_absent_deployment_raises(self, mock_deployment_cls):
+        mock_deployment = mock_deployment_cls.return_value
+        mock_deployment.exists = False
+
+        with pytest.raises(RuntimeError, match="ocs-operator deployment not found"):
+            restart_ocs_operator_for_virt_sc(admin_client=MagicMock())
+
+        mock_deployment.wait_for_replicas.assert_not_called()
+
+    @patch("utilities.storage.Deployment")
+    def test_zero_replicas_raises(self, mock_deployment_cls):
+        mock_deployment = mock_deployment_cls.return_value
+        mock_deployment.exists = True
+        mock_deployment.instance.spec.replicas = 0
+
+        with pytest.raises(RuntimeError, match="zero replicas"):
+            restart_ocs_operator_for_virt_sc(admin_client=MagicMock())
+
+    @patch("utilities.storage.TimeoutSampler")
+    @patch("utilities.storage.Deployment")
+    def test_present_deployment_deletes_pod_and_waits(self, mock_deployment_cls, mock_sampler_cls):
+        mock_deployment = mock_deployment_cls.return_value
+        mock_deployment.exists = True
+        mock_deployment.instance.spec.replicas = 1
+        mock_pod = MagicMock()
+        mock_sampler_cls.return_value = iter([mock_pod])
+
+        restart_ocs_operator_for_virt_sc(admin_client=MagicMock())
+
+        mock_pod.delete.assert_called_once_with(wait=True)
+        mock_deployment.wait_for_replicas.assert_called_once_with(timeout=ANY)
