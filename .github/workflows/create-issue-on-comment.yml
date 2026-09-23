@@ -1,0 +1,77 @@
+name: Create Issue from CodeRabbit Learning Comment
+
+on:
+  issue_comment:
+    types: [created]
+  # Inline review-thread replies (Files changed)
+  pull_request_review_comment:
+    types: [created]
+
+permissions:
+  issues: write
+  pull-requests: read
+
+jobs:
+  create-issue:
+    # issue_comment: only PR comments
+    # pull_request_review_comment: always on a PR
+    if: >
+      (
+        (github.event_name == 'issue_comment' && github.event.issue.pull_request != null) ||
+        github.event_name == 'pull_request_review_comment'
+      ) &&
+      github.event.comment.user.login == 'coderabbitai[bot]' &&
+      contains(github.event.comment.body, 'Learnings added')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Extract learning content and create issue
+        env:
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.BOT3_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+          COMMENT_AUTHOR: ${{ github.event.comment.user.login }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: |
+          set -euo pipefail
+
+          # From a "Learnings added" heading until the end of that section
+          LEARNING_CONTENT=$(printf '%s\n' "${COMMENT_BODY}" | awk '
+            # Header only (emoji / ### / <summary> OK) — not mid-sentence
+            /<summary[^>]*>.*Learnings added/ { section=1; next }
+            /^[[:space:]]*(#{1,6}[[:space:]]*)?[^[:alpha:]#]*Learnings added([[:space:]]|$)/ { section=1; next }
+            !section { next }
+
+            # Stop at next Markdown heading or known footer / later sections
+            /^[[:space:]]*#{1,6}[[:space:]]/ { exit }
+            /Learnings used/ { exit }
+            /Note:[[:space:]]*Learnings are effective/ { exit }
+            /\*\*Note:\*\*[[:space:]]*Learnings are effective/ { exit }
+            /Learnings are effective only in the context/ { exit }
+            /You are interacting with an AI system/ { exit }
+            /manage existing learnings in the/ { exit }
+            /Review thread resolved/ { exit }
+            /<\/details>/ { exit }
+
+            /<\/?details/ { next }
+            /<\/?summary/ { next }
+
+            { print }
+          ')
+
+          LEARNING_CONTENT=$(printf '%s\n' "${LEARNING_CONTENT}" | sed '/./,$!d')
+
+          if ! grep -q '[^[:space:]]' <<< "${LEARNING_CONTENT}"; then
+            echo "Could not extract Learnings added content (refusing full comment fallback)."
+            exit 1
+          fi
+
+          {
+            echo "### Learning extracted from PR #${PR_NUMBER} (by @${COMMENT_AUTHOR})"
+            echo
+            printf '%s\n' "${LEARNING_CONTENT}"
+          } > /tmp/issue_body.md
+
+          gh issue create \
+            --title "CodeRabbit Learning from PR #${PR_NUMBER}" \
+            --body-file /tmp/issue_body.md
