@@ -1,8 +1,8 @@
-"""Unit tests for construct_datavolume_source_dict in utilities/storage.py"""
+"""Unit tests for utilities/storage.py"""
 
 import importlib
 import sys
-from unittest.mock import patch
+from unittest.mock import ANY, MagicMock, call, patch
 
 import pytest
 
@@ -15,7 +15,7 @@ import utilities.storage
 
 importlib.reload(utilities.storage)
 
-from utilities.storage import construct_datavolume_source_dict
+from utilities.storage import construct_datavolume_source_dict, restart_ocs_operator_for_virt_sc
 
 
 class TestConstructDatavolumeSourceDictHttp:
@@ -163,3 +163,55 @@ class TestConstructDatavolumeSourceDictUnsupported:
     def test_unsupported_source_raises_value_error(self):
         with pytest.raises(ValueError, match="Unsupported source type: ftp"):
             construct_datavolume_source_dict(source="ftp")
+
+
+class TestRestartOcsOperatorForVirtSc:
+    @patch("utilities.storage.Deployment")
+    def test_absent_deployment_raises(self, mock_deployment_cls):
+        mock_deployment = mock_deployment_cls.return_value
+        mock_deployment.exists = False
+
+        with pytest.raises(RuntimeError, match="ocs-operator deployment not found"):
+            restart_ocs_operator_for_virt_sc(admin_client=MagicMock())
+
+        mock_deployment.wait_for_replicas.assert_not_called()
+
+    @patch("utilities.storage.Deployment")
+    def test_zero_replicas_raises(self, mock_deployment_cls):
+        mock_deployment = mock_deployment_cls.return_value
+        mock_deployment.exists = True
+        mock_deployment.instance.spec.replicas = 0
+
+        with pytest.raises(RuntimeError, match="zero replicas"):
+            restart_ocs_operator_for_virt_sc(admin_client=MagicMock())
+
+        mock_deployment.scale_replicas.assert_not_called()
+
+    @patch("utilities.storage.Deployment")
+    def test_scale_down_wait_failure_restores_replicas(self, mock_deployment_cls):
+        mock_deployment = mock_deployment_cls.return_value
+        mock_deployment.exists = True
+        mock_deployment.instance.spec.replicas = 2
+        mock_deployment.wait_for_replicas.side_effect = [TimeoutError("scale-down timed out"), None]
+
+        with pytest.raises(TimeoutError):
+            restart_ocs_operator_for_virt_sc(admin_client=MagicMock())
+
+        scale_calls = mock_deployment.scale_replicas.call_args_list
+        assert scale_calls[0] == call(replica_count=0)
+        assert scale_calls[1] == call(replica_count=2), "replicas must be restored even if scale-down wait fails"
+
+    @patch("utilities.storage.Deployment")
+    def test_present_deployment_scales_and_waits(self, mock_deployment_cls):
+        mock_deployment = mock_deployment_cls.return_value
+        mock_deployment.exists = True
+        mock_deployment.instance.spec.replicas = 2
+
+        restart_ocs_operator_for_virt_sc(admin_client=MagicMock())
+
+        assert mock_deployment.mock_calls == [
+            call.scale_replicas(replica_count=0),
+            call.wait_for_replicas(deployed=False, timeout=ANY),
+            call.scale_replicas(replica_count=2),
+            call.wait_for_replicas(timeout=ANY),
+        ]
