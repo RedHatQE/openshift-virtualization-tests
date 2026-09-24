@@ -28,6 +28,7 @@ EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES = {
     "HostDevices",
     "HypervStrictCheck",
     "KubevirtSeccompProfile",
+    "RebootPolicy",
     "Snapshot",
     "Template",
 }
