@@ -2,6 +2,8 @@ from utilities.constants import Images
 from utilities.constants.storage import StorageClassNames
 from utilities.storage import HppCsiStorageClass
 
+NUM_BLANK_DISKS = 3
+
 CIRROS_QCOW2_IMG = f"{Images.Cirros.DIR}/{Images.Cirros.QCOW2_IMG}"
 ALPINE_QCOW2_IMG = f"{Images.Alpine.DIR}/{Images.Alpine.QCOW2_IMG_VERSIONED}"
 

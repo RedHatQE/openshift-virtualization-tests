@@ -12,13 +12,16 @@ from ocp_resources.virtual_machine_restore import VirtualMachineRestore
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 from pyhelper_utils.shell import run_ssh_commands
 
-from tests.storage.snapshots.constants import WINDOWS_DIRECTORY_PATH
+from tests.storage.constants import NUM_BLANK_DISKS
+from tests.storage.snapshots.constants import NUM_MULTI_DISK_VMS, WINDOWS_DIRECTORY_PATH
 from tests.storage.utils import (
+    VMWithSeveralBlankDisks,
     assert_windows_directory_existence,
     create_windows_directory,
     set_permissions,
 )
 from tests.utils import create_windows2022_vm
+from utilities.constants.images import OS_FLAVOR_FEDORA
 from utilities.constants.pytest import UNPRIVILEGED_USER
 from utilities.constants.timeouts import (
     TIMEOUT_2MIN,
@@ -26,6 +29,7 @@ from utilities.constants.timeouts import (
     TIMEOUT_10MIN,
 )
 from utilities.storage import data_volume_template_with_source_ref_dict
+from utilities.virt import running_vm
 
 LOGGER = logging.getLogger(__name__)
 
@@ -60,14 +64,14 @@ def windows_vm_with_vtpm_for_snapshot(
     storage_class_matrix_snapshot_matrix__module__,
 ):
     with create_windows2022_vm(
-        data_volume_template=data_volume_template_with_source_ref_dict(
-            data_source=windows_validation_os_images_data_source_scope_session,
-            storage_class=next(iter(storage_class_matrix_snapshot_matrix__module__)),
-        ),
         namespace=namespace.name,
         client=unprivileged_client,
         vm_name=request.param["vm_name"],
         cpu_model=modern_cpu_for_migration,
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=windows_validation_os_images_data_source_scope_session,
+            storage_class=next(iter(storage_class_matrix_snapshot_matrix__module__)),
+        ),
     ) as vm:
         yield vm
 
@@ -149,3 +153,81 @@ def vm_restore_with_predictable_names(
     ) as vm_restore:
         vm_restore.wait_restore_done(timeout=TIMEOUT_10MIN)
         yield vm_restore
+
+
+@pytest.fixture()
+def vm_with_4_disks(
+    skip_if_no_storage_class_for_snapshot,
+    unprivileged_client,
+    namespace,
+    fedora_data_source_scope_module,
+    snapshot_storage_class_name_scope_module,
+):
+    """Fedora VM with 1 golden-image boot disk and 3 blank data disks.
+
+    Yields:
+        VirtualMachineForTests: Running 4-disk Fedora VM with SSH connectivity.
+    """
+
+    with VMWithSeveralBlankDisks(
+        name="fedora-4-disks",
+        namespace=namespace.name,
+        client=unprivileged_client,
+        os_flavor=OS_FLAVOR_FEDORA,
+        blank_disk_storage_class_name=snapshot_storage_class_name_scope_module,
+        num_blank_disks=NUM_BLANK_DISKS,
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=fedora_data_source_scope_module,
+            storage_class=snapshot_storage_class_name_scope_module,
+        ),
+        vm_instance_type_infer=True,
+        vm_preference_infer=True,
+    ) as vm:
+        running_vm(vm=vm)
+        yield vm
+
+
+@pytest.fixture()
+def vms_with_4_disks_created(
+    unprivileged_client,
+    namespace,
+    fedora_data_source_scope_module,
+    snapshot_storage_class_name_scope_module,
+):
+    """Create Fedora VMs with 1 boot disk + 3 blank data disks each.
+
+    Yields:
+        list[VirtualMachineForTests]: Deployed VMs with 4 disks each (count from NUM_MULTI_DISK_VMS).
+    """
+    vms = []
+    try:
+        for vm_index in range(NUM_MULTI_DISK_VMS):
+            vm = VMWithSeveralBlankDisks(
+                name=f"vm-4disk-{vm_index}",
+                namespace=namespace.name,
+                client=unprivileged_client,
+                os_flavor=OS_FLAVOR_FEDORA,
+                blank_disk_storage_class_name=snapshot_storage_class_name_scope_module,
+                num_blank_disks=NUM_BLANK_DISKS,
+                data_volume_template=data_volume_template_with_source_ref_dict(
+                    data_source=fedora_data_source_scope_module,
+                    storage_class=snapshot_storage_class_name_scope_module,
+                ),
+                vm_instance_type_infer=True,
+                vm_preference_infer=True,
+            )
+            vm.deploy(wait=True)
+            vms.append(vm)
+
+        yield vms
+    finally:
+        cleanup_errors = []
+        for vm in vms:
+            try:
+                vm.clean_up()
+            except Exception as error:
+                LOGGER.error(f"Failed to clean up {vm.name}: {error}")
+                cleanup_errors.append(error)
+
+        if cleanup_errors:
+            raise ExceptionGroup("VM cleanup errors", cleanup_errors)
