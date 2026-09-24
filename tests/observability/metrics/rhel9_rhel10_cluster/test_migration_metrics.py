@@ -19,46 +19,18 @@ import logging
 
 import pytest
 
-from tests.observability.metrics.constants import (
-    KUBEVIRT_VMI_MIGRATION_DATA_PROCESSED_BYTES,
-    KUBEVIRT_VMI_MIGRATION_DATA_REMAINING_BYTES,
-    KUBEVIRT_VMI_MIGRATION_DATA_TOTAL_BYTES,
-    KUBEVIRT_VMI_MIGRATION_DIRTY_MEMORY_RATE_BYTES,
-    KUBEVIRT_VMI_MIGRATION_END_TIME_SECONDS,
-    KUBEVIRT_VMI_MIGRATION_MEMORY_TRANSFER_RATE_BYTES,
-    KUBEVIRT_VMI_MIGRATION_START_TIME_SECONDS,
-)
 from tests.observability.metrics.utils import (
-    timestamp_to_seconds,
-    validate_metric_value_greater_than_initial_value,
+    validate_dual_stream_migration_metrics,
 )
 from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS, WINDOWS_LATEST, WINDOWS_LATEST_LABELS
 from utilities.constants.cluster import RHCOS9_AFFINITY, RHCOS10_AFFINITY
-from utilities.constants.timeouts import TIMEOUT_5MIN
 from utilities.constants.virt import MIGRATION_POLICY_VM_LABEL, MIGRATION_POLICY_WINDOWS_VM_LABEL
-from utilities.jira import is_jira_open
-from utilities.monitoring import validate_metrics_value
 
 LOGGER = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.mixed_os_nodes,
     pytest.mark.rwx_default_storage,
-]
-
-MIGRATION_METRICS = [
-    KUBEVIRT_VMI_MIGRATION_DATA_PROCESSED_BYTES,
-    KUBEVIRT_VMI_MIGRATION_DATA_REMAINING_BYTES,
-    KUBEVIRT_VMI_MIGRATION_MEMORY_TRANSFER_RATE_BYTES,
-    KUBEVIRT_VMI_MIGRATION_DIRTY_MEMORY_RATE_BYTES,
-    KUBEVIRT_VMI_MIGRATION_DATA_TOTAL_BYTES,
-    KUBEVIRT_VMI_MIGRATION_START_TIME_SECONDS,
-    KUBEVIRT_VMI_MIGRATION_END_TIME_SECONDS,
-]
-
-METRICS_WITH_CNV_97013_BUG = [
-    KUBEVIRT_VMI_MIGRATION_MEMORY_TRANSFER_RATE_BYTES,
-    KUBEVIRT_VMI_MIGRATION_DIRTY_MEMORY_RATE_BYTES,
 ]
 
 # Each migration policy's vmi_selector only matches VMs carrying its corresponding label.
@@ -109,7 +81,7 @@ class TestDualStreamMigrationRhcos9ToRhcos10:
     """
 
     @pytest.mark.polarion("CNV-16823")
-    def test_migration_metrics_reported(
+    def test_migration_metrics_reported_rhcos9_to_rhcos10(
         self,
         subtests,
         prometheus,
@@ -138,45 +110,12 @@ class TestDualStreamMigrationRhcos9ToRhcos10:
             The memory transfer rate (bandwidth) and dirty memory rate metrics xfail while CNV-97013
             is open (they return no data during migration).
         """
-        for metric in MIGRATION_METRICS:
-            if metric in METRICS_WITH_CNV_97013_BUG and is_jira_open(jira_id="CNV-97013"):
-                LOGGER.warning(f"CNV-97013: {metric} returns no data during migration")
-                MIGRATION_METRICS.remove(metric)
-            with subtests.test(msg=metric):
-                if metric == KUBEVIRT_VMI_MIGRATION_START_TIME_SECONDS:
-                    validate_metrics_value(
-                        prometheus=prometheus,
-                        metric_name=KUBEVIRT_VMI_MIGRATION_START_TIME_SECONDS.format(
-                            vm_name=dual_stream_golden_image_vm.name
-                        ),
-                        expected_value=str(
-                            timestamp_to_seconds(
-                                timestamp=dual_stream_golden_image_vm.vmi.instance.status.migrationState.startTimestamp
-                            )
-                        ),
-                    )
-                elif metric == KUBEVIRT_VMI_MIGRATION_END_TIME_SECONDS:
-                    dual_stream_migration_metrics_vmim.wait_for_status(
-                        status=dual_stream_migration_metrics_vmim.Status.SUCCEEDED,
-                        timeout=TIMEOUT_5MIN,
-                    )
-                    validate_metrics_value(
-                        prometheus=prometheus,
-                        metric_name=KUBEVIRT_VMI_MIGRATION_END_TIME_SECONDS.format(
-                            vm_name=dual_stream_golden_image_vm.name
-                        ),
-                        expected_value=str(
-                            timestamp_to_seconds(
-                                timestamp=dual_stream_golden_image_vm.vmi.instance.status.migrationState.endTimestamp
-                            )
-                        ),
-                    )
-                else:
-                    validate_metric_value_greater_than_initial_value(
-                        prometheus=prometheus,
-                        metric_name=metric.format(vm_name=dual_stream_golden_image_vm.name),
-                        initial_value=0,
-                    )
+        validate_dual_stream_migration_metrics(
+            subtests=subtests,
+            prometheus=prometheus,
+            vm=dual_stream_golden_image_vm,
+            vmim=dual_stream_migration_metrics_vmim,
+        )
 
 
 @pytest.mark.usefixtures("dual_stream_migration_metrics_policy", "dual_stream_migration_metrics_windows_policy")
@@ -222,7 +161,7 @@ class TestDualStreamMigrationRhcos10ToRhcos9:
     """
 
     @pytest.mark.polarion("CNV-16824")
-    def test_migration_metrics_reported(
+    def test_migration_metrics_reported_rhcos10_to_rhcos9(
         self,
         subtests,
         prometheus,
@@ -251,42 +190,9 @@ class TestDualStreamMigrationRhcos10ToRhcos9:
             Also checks the data remaining and dirty memory rate metrics. The bandwidth and dirty memory rate
             metrics are skipped while CNV-97013 is open (they return no data during migration).
         """
-        for metric in MIGRATION_METRICS:
-            if metric in METRICS_WITH_CNV_97013_BUG and is_jira_open(jira_id="CNV-97013"):
-                LOGGER.warning(f"CNV-97013: {metric} returns no data during migration")
-                MIGRATION_METRICS.remove(metric)
-            with subtests.test(msg=metric):
-                if metric == KUBEVIRT_VMI_MIGRATION_START_TIME_SECONDS:
-                    validate_metrics_value(
-                        prometheus=prometheus,
-                        metric_name=KUBEVIRT_VMI_MIGRATION_START_TIME_SECONDS.format(
-                            vm_name=dual_stream_golden_image_vm.name
-                        ),
-                        expected_value=str(
-                            timestamp_to_seconds(
-                                timestamp=dual_stream_golden_image_vm.vmi.instance.status.migrationState.startTimestamp
-                            )
-                        ),
-                    )
-                elif metric == KUBEVIRT_VMI_MIGRATION_END_TIME_SECONDS:
-                    dual_stream_migration_metrics_vmim.wait_for_status(
-                        status=dual_stream_migration_metrics_vmim.Status.SUCCEEDED,
-                        timeout=TIMEOUT_5MIN,
-                    )
-                    validate_metrics_value(
-                        prometheus=prometheus,
-                        metric_name=KUBEVIRT_VMI_MIGRATION_END_TIME_SECONDS.format(
-                            vm_name=dual_stream_golden_image_vm.name
-                        ),
-                        expected_value=str(
-                            timestamp_to_seconds(
-                                timestamp=dual_stream_golden_image_vm.vmi.instance.status.migrationState.endTimestamp
-                            )
-                        ),
-                    )
-                else:
-                    validate_metric_value_greater_than_initial_value(
-                        prometheus=prometheus,
-                        metric_name=metric.format(vm_name=dual_stream_golden_image_vm.name),
-                        initial_value=0,
-                    )
+        validate_dual_stream_migration_metrics(
+            subtests=subtests,
+            prometheus=prometheus,
+            vm=dual_stream_golden_image_vm,
+            vmim=dual_stream_migration_metrics_vmim,
+        )
