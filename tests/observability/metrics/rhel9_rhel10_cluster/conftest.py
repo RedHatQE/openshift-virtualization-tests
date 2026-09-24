@@ -26,10 +26,6 @@ def dual_stream_migration_metrics_policy(admin_client):
 
 @pytest.fixture(scope="module")
 def dual_stream_migration_metrics_windows_policy(admin_client):
-    # A plain (unthrottled) migration completes too quickly for metrics to be sampled mid-flight.
-    # The Windows template's guest memory is 8Gi, much larger than the RHEL VM's, so it needs a much
-    # higher bandwidth cap than the RHEL policy to converge in a reasonable time (~4 minutes at 32Mi/s,
-    # vs. hours at 256Ki/s).
     with MigrationPolicy(
         client=admin_client,
         name="dual-stream-migration-metrics-windows-policy",
@@ -64,8 +60,6 @@ def dual_stream_golden_image_vm(
     golden_image_data_volume_template_for_dual_stream_scope_module,
     modern_cpu_for_migration,
 ):
-    # Shared by all migration-metrics/start-time/end-time tests for a given (OS, direction), so an
-    # expensive VM (especially Windows) is created and migrated only once instead of per test.
     with vm_instance_from_template(
         request=request,
         unprivileged_client=unprivileged_client,

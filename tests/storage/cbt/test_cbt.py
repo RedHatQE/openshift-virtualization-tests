@@ -24,6 +24,8 @@ from tests.storage.cbt.utils import (
 from utilities.constants.virt import DV_DISK
 
 
+# Required at collection for storage_class_matrix__module__.
+@pytest.mark.usefixtures("storage_class_name_scope_module")
 @pytest.mark.parametrize(
     "vm_with_cbt_label",
     [{"name": "cbt-full"}],
@@ -103,6 +105,8 @@ class TestFullBackup:
         )
 
 
+# Required at collection for storage_class_matrix__module__.
+@pytest.mark.usefixtures("storage_class_name_scope_module")
 @pytest.mark.parametrize(
     "vm_with_cbt_label",
     [{"name": "cbt-incr"}],
@@ -186,6 +190,8 @@ class TestIncrementalBackup:
         )
 
 
+# Required at collection for storage_class_matrix__module__.
+@pytest.mark.usefixtures("storage_class_name_scope_module")
 @pytest.mark.parametrize(
     "vm_with_cbt_label",
     [{"name": "cbt-multi-incr"}],
@@ -283,6 +289,8 @@ class TestMultipleIncrementalBackups:
             )
 
 
+# Required at collection for storage_class_matrix__module__.
+@pytest.mark.usefixtures("storage_class_name_scope_module")
 @pytest.mark.parametrize(
     "vm_with_cbt_label",
     [{"name": "cbt-multi-disk", "data_disk_count": CBT_MULTI_DISK_DATA_DISK_COUNT}],
@@ -377,9 +385,18 @@ class TestMultipleDiskBackup:
         )
 
 
+@pytest.mark.special_infra
+@pytest.mark.rwx_default_storage
+# Required at collection for storage_class_matrix_rwx_matrix__module__.
+@pytest.mark.usefixtures("rwx_storage_class_name_scope_module")
+@pytest.mark.parametrize(
+    "vm_with_cbt_label",
+    [{"name": "cbt-migrate", "storage_class_fixture": "rwx_storage_class_name_scope_module"}],
+    indirect=True,
+)
 class TestBackupAfterLiveMigration:
     """
-    Backup and restore after VM live migration (requires RWX shared storage).
+    Incremental backup after VM live migration (backup success only).
 
     Preconditions:
         - Running VM with CBT enabled
@@ -389,51 +406,72 @@ class TestBackupAfterLiveMigration:
         - Full backup completed before migration
     """
 
-    __test__ = False  # STD placeholder - not yet implemented
-
     @pytest.mark.polarion("CNV-16005")
-    def test_incremental_backup_after_live_migration_push_mode(self):
+    def test_incremental_backup_after_live_migration_push_mode(
+        self,
+        completed_push_backup_after_live_migration,
+    ):
         """
-        Test that a VM can be backed up (push mode) after live migration and restored with post-migration data.
+        Test that an incremental backup in push mode completes successfully after live migration.
 
         Preconditions:
+            - Running CBT-enabled VM with disks on RWX storage
+            - Test data written to the VM
             - Backup PVC available
+            - Full backup completed in push mode
 
         Steps:
             1. Live migrate the VM to another node
             2. Wait for migration to complete
             3. Write new test data to VM
             4. Perform an incremental backup in push mode
-            5. Wait for backup to complete
-            6. Delete the original VM
-            7. Restore VM from the incremental backup
-            8. Start the restored VM
+            5. Wait for the backup to complete
 
         Expected:
-            - Restored VM boots successfully and pre-migration and post-migration test data are present
+            - Incremental backup completes and includes the boot disk
         """
+        incremental_backup = completed_push_backup_after_live_migration[-1]
+        assert_backup_status_includes_volumes(
+            backup_name=incremental_backup.name,
+            backup_status=incremental_backup.instance.to_dict()["status"],
+            expected_volume_names=[DV_DISK],
+            expected_backup_type=CBT_BACKUP_TYPE_INCREMENTAL,
+        )
 
     @pytest.mark.polarion("CNV-16006")
-    def test_incremental_backup_after_live_migration_pull_mode(self):
+    def test_incremental_backup_after_live_migration_pull_mode(
+        self,
+        ready_pull_backup_after_live_migration,
+    ):
         """
-        Test that a VM can be backed up (pull mode) after live migration and restored with post-migration data.
+        Test that an incremental backup in pull mode becomes ready for export after live migration.
 
         Preconditions:
+            - Running CBT-enabled VM with disks on RWX storage
+            - Test data written to the VM
             - Scratch PVC available for pull mode
+            - Full backup completed in pull mode
+            - Full pull-mode backup export is deleted before migration
+            - No active backup export during migration
 
         Steps:
-            1. Live migrate the VM to another node
-            2. Wait for migration to complete
-            3. Write new test data to VM
-            4. Perform an incremental backup in pull mode
-            5. Wait for backup to complete
-            6. Delete the original VM
-            7. Restore VM from the incremental backup
-            8. Start the restored VM
+            1. Delete the full pull-mode backup
+            2. Live migrate the VM to another node
+            3. Wait for migration to complete
+            4. Write new test data to VM
+            5. Perform an incremental backup in pull mode
+            6. Wait for the backup export to become ready
 
         Expected:
-            - Restored VM boots successfully and pre-migration and post-migration test data are present
+            - Incremental backup export is ready and includes the boot disk
         """
+        backup_name, backup_status = ready_pull_backup_after_live_migration[-1]
+        assert_backup_status_includes_volumes(
+            backup_name=backup_name,
+            backup_status=backup_status,
+            expected_volume_names=[DV_DISK],
+            expected_backup_type=CBT_BACKUP_TYPE_INCREMENTAL,
+        )
 
 
 class TestHotplugBackup:

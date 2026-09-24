@@ -15,6 +15,8 @@ Preconditions:
       sampled mid-flight.
 """
 
+import logging
+
 import pytest
 
 from tests.observability.metrics.constants import (
@@ -37,12 +39,14 @@ from utilities.constants.virt import MIGRATION_POLICY_VM_LABEL, MIGRATION_POLICY
 from utilities.jira import is_jira_open
 from utilities.monitoring import validate_metrics_value
 
+LOGGER = logging.getLogger(__name__)
+
 pytestmark = [
     pytest.mark.mixed_os_nodes,
     pytest.mark.rwx_default_storage,
 ]
 
-MIGRATION_METRICS = (
+MIGRATION_METRICS = [
     KUBEVIRT_VMI_MIGRATION_DATA_PROCESSED_BYTES,
     KUBEVIRT_VMI_MIGRATION_DATA_REMAINING_BYTES,
     KUBEVIRT_VMI_MIGRATION_MEMORY_TRANSFER_RATE_BYTES,
@@ -50,7 +54,7 @@ MIGRATION_METRICS = (
     KUBEVIRT_VMI_MIGRATION_DATA_TOTAL_BYTES,
     KUBEVIRT_VMI_MIGRATION_START_TIME_SECONDS,
     KUBEVIRT_VMI_MIGRATION_END_TIME_SECONDS,
-)
+]
 
 METRICS_WITH_CNV_97013_BUG = [
     KUBEVIRT_VMI_MIGRATION_MEMORY_TRANSFER_RATE_BYTES,
@@ -135,6 +139,9 @@ class TestDualStreamMigrationRhcos9ToRhcos10:
             is open (they return no data during migration).
         """
         for metric in MIGRATION_METRICS:
+            if metric in METRICS_WITH_CNV_97013_BUG and is_jira_open(jira_id="CNV-97013"):
+                LOGGER.warning(f"CNV-97013: {metric} returns no data during migration")
+                MIGRATION_METRICS.remove(metric)
             with subtests.test(msg=metric):
                 if metric == KUBEVIRT_VMI_MIGRATION_START_TIME_SECONDS:
                     validate_metrics_value(
@@ -148,7 +155,7 @@ class TestDualStreamMigrationRhcos9ToRhcos10:
                             )
                         ),
                     )
-                if metric == KUBEVIRT_VMI_MIGRATION_END_TIME_SECONDS:
+                elif metric == KUBEVIRT_VMI_MIGRATION_END_TIME_SECONDS:
                     dual_stream_migration_metrics_vmim.wait_for_status(
                         status=dual_stream_migration_metrics_vmim.Status.SUCCEEDED,
                         timeout=TIMEOUT_5MIN,
@@ -164,13 +171,12 @@ class TestDualStreamMigrationRhcos9ToRhcos10:
                             )
                         ),
                     )
-                if metric in METRICS_WITH_CNV_97013_BUG and is_jira_open(jira_id="CNV-97013"):
-                    pytest.xfail(reason=f"CNV-97013: {metric} returns no data during migration")
-                validate_metric_value_greater_than_initial_value(
-                    prometheus=prometheus,
-                    metric_name=metric.format(vm_name=dual_stream_golden_image_vm.name),
-                    initial_value=0,
-                )
+                else:
+                    validate_metric_value_greater_than_initial_value(
+                        prometheus=prometheus,
+                        metric_name=metric.format(vm_name=dual_stream_golden_image_vm.name),
+                        initial_value=0,
+                    )
 
 
 @pytest.mark.usefixtures("dual_stream_migration_metrics_policy", "dual_stream_migration_metrics_windows_policy")
@@ -246,6 +252,9 @@ class TestDualStreamMigrationRhcos10ToRhcos9:
             metrics are skipped while CNV-97013 is open (they return no data during migration).
         """
         for metric in MIGRATION_METRICS:
+            if metric in METRICS_WITH_CNV_97013_BUG and is_jira_open(jira_id="CNV-97013"):
+                LOGGER.warning(f"CNV-97013: {metric} returns no data during migration")
+                MIGRATION_METRICS.remove(metric)
             with subtests.test(msg=metric):
                 if metric == KUBEVIRT_VMI_MIGRATION_START_TIME_SECONDS:
                     validate_metrics_value(
@@ -259,7 +268,7 @@ class TestDualStreamMigrationRhcos10ToRhcos9:
                             )
                         ),
                     )
-                if metric == KUBEVIRT_VMI_MIGRATION_END_TIME_SECONDS:
+                elif metric == KUBEVIRT_VMI_MIGRATION_END_TIME_SECONDS:
                     dual_stream_migration_metrics_vmim.wait_for_status(
                         status=dual_stream_migration_metrics_vmim.Status.SUCCEEDED,
                         timeout=TIMEOUT_5MIN,
@@ -275,10 +284,9 @@ class TestDualStreamMigrationRhcos10ToRhcos9:
                             )
                         ),
                     )
-                if metric in METRICS_WITH_CNV_97013_BUG and is_jira_open(jira_id="CNV-97013"):
-                    pytest.xfail(reason=f"CNV-97013: {metric} returns no data during migration")
-                validate_metric_value_greater_than_initial_value(
-                    prometheus=prometheus,
-                    metric_name=metric.format(vm_name=dual_stream_golden_image_vm.name),
-                    initial_value=0,
-                )
+                else:
+                    validate_metric_value_greater_than_initial_value(
+                        prometheus=prometheus,
+                        metric_name=metric.format(vm_name=dual_stream_golden_image_vm.name),
+                        initial_value=0,
+                    )

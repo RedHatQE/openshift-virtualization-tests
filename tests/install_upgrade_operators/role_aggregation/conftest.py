@@ -31,7 +31,9 @@ def view_role_binding(admin_client, namespace):
 def aggregation_disabled(admin_client, hyperconverged_resource_scope_class):
     """HCO with roleAggregationStrategy set to Manual and aggregation labels removed."""
     with ResourceEditorValidateHCOReconcile(
-        patches={hyperconverged_resource_scope_class: {"spec": {"roleAggregationStrategy": "Manual"}}},
+        patches={
+            hyperconverged_resource_scope_class: {"spec": {"virtualization": {"roleAggregationStrategy": "Manual"}}}
+        },
         list_resource_reconcile=[KubeVirt],
         wait_for_reconcile_post_update=True,
         admin_client=admin_client,
@@ -43,7 +45,8 @@ def aggregation_disabled(admin_client, hyperconverged_resource_scope_class):
 @pytest.fixture()
 def aggregation_reenabled(admin_client, hyperconverged_resource_scope_class):
     """HCO with roleAggregationStrategy at AggregateToDefault and aggregation labels present."""
-    current_strategy = hyperconverged_resource_scope_class.instance.spec.get(
+    # if roleAggregationStrategy doesn't exist, it's the same as being AggregateToDefault
+    current_strategy = hyperconverged_resource_scope_class.instance.spec.get("virtualization", {}).get(
         "roleAggregationStrategy", "AggregateToDefault"
     )
     assert current_strategy == "AggregateToDefault", (
