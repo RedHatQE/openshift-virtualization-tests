@@ -39,12 +39,17 @@ def nodes_active_nics(
     # TODO: Reduce cognitive complexity
     def _bridge_ports(node_interface):
         ports = set()
-        if node_interface["type"] in (OVS_BRIDGE, LINUX_BRIDGE) and node_interface["bridge"].get("port"):
-            for bridge_port in node_interface["bridge"]["port"]:
-                ports.add(bridge_port["name"])
-        elif node_interface["type"] == "bond" and node_interface["link-aggregation"].get("port"):
-            for bridge_port in node_interface["link-aggregation"]["port"]:
-                ports.add(bridge_port)
+        interface_type = node_interface["type"]
+        if interface_type in (OVS_BRIDGE, LINUX_BRIDGE):
+            bridge_ports = node_interface.get("bridge", {}).get("port")
+            if bridge_ports:
+                for bridge_port in bridge_ports:
+                    ports.add(bridge_port["name"])
+        elif interface_type == "bond":
+            bond_ports = node_interface.get("link-aggregation", {}).get("port")
+            if bond_ports:
+                for bond_port in bond_ports:
+                    ports.add(bond_port)
         return ports
 
     """
@@ -92,7 +97,7 @@ def nodes_active_nics(
                 LOGGER.warning(f"{node.name} {iface_name} link is down")
                 continue
 
-            if node_iface["ipv4"].get("address"):
+            if node_iface.get("ipv4", {}).get("address"):
                 nodes_nics[node.name]["occupied"].append(iface_name)
             else:
                 nodes_nics[node.name]["available"].append(iface_name)
