@@ -75,7 +75,7 @@ def nodes_taints_before_upgrade(nodes):
 
 @pytest.fixture(scope="session")
 def cnv_upgrade(pytestconfig):
-    return pytestconfig.option.upgrade == "cnv"
+    return pytestconfig.option.upgrade in ("cnv", EUS)
 
 
 @pytest.fixture(scope="session")
