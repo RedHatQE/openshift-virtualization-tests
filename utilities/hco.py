@@ -35,6 +35,7 @@ from utilities.constants.timeouts import (
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
+    TIMEOUT_20MIN,
     TIMEOUT_30MIN,
 )
 from utilities.ssp import (
@@ -413,11 +414,16 @@ def enable_common_boot_image_import_spec_wait_for_data_import_cron(
     wait_for_at_least_one_auto_update_data_import_cron(admin_client=admin_client, namespace=namespace)
     wait_for_ssp_conditions(admin_client=admin_client, hco_namespace=hco_namespace)
     wait_for_hco_conditions(admin_client=admin_client, hco_namespace=hco_namespace)
+    # Use TIMEOUT_20MIN because this call happens
+    # immediately after HCO opt-out/re-enable, when CDI must re-schedule all import jobs.
+    # On heterogeneous ODF/Ceph clusters (e.g. s390x+arm64) the scheduling lag before the
+    # first import begins can exceed 10min, causing a false timeout on otherwise healthy clusters.
     assert verify_boot_sources_reimported(
         admin_client=admin_client,
         namespace=namespace.name,
         consecutive_checks_count=1,
         exclude_data_source_names=exclude_data_source_names,
+        timeout=TIMEOUT_20MIN,
     )
 
 

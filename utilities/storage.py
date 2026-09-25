@@ -1308,6 +1308,7 @@ def verify_boot_sources_reimported(
     namespace: str,
     consecutive_checks_count: int = 6,
     exclude_data_source_names: Collection[str] | None = None,
+    timeout: int = TIMEOUT_10MIN,
 ) -> bool:
     """Verify DataImportCron-managed DataSources reach Ready=True.
 
@@ -1321,6 +1322,9 @@ def verify_boot_sources_reimported(
         exclude_data_source_names: DataSources whose name is in this collection
             are skipped (e.g. custom DIC templates without valid sources).
             When None, all DIC-managed DataSources are verified.
+        timeout: Per-DataSource timeout in seconds. Default is TIMEOUT_10MIN.
+            Callers on slower clusters (e.g. after HCO opt-out/re-enable on ODF/Ceph)
+            may need to increase this to account for CDI import scheduling lag.
 
     Returns:
         True if all non-excluded DIC-managed DataSources reached Ready=True, otherwise False
@@ -1336,14 +1340,14 @@ def verify_boot_sources_reimported(
                 expected_conditions={DataSource.Condition.READY: DataSource.Condition.Status.TRUE},
                 resource_kind=DataSource,
                 namespace=namespace,
-                total_timeout=TIMEOUT_10MIN,
+                total_timeout=timeout,
                 consecutive_checks_count=consecutive_checks_count,
                 resource_name=data_source.name,
             )
         return True
     except TimeoutExpiredError as exception:
         LOGGER.error(
-            f"Boot source DataSource did not reach Ready=True within {TIMEOUT_10MIN}s. "
+            f"Boot source DataSource did not reach Ready=True within {timeout}s. "
             f"namespace={namespace!r}, data_source={data_source.name!r}, timeout_error={exception!r}"
         )
         return False
