@@ -390,7 +390,6 @@ def test_unprivileged_client_fails_to_list_resources(namespace, unprivileged_cli
         match=error_msg,
     ):
         list(resource.get(client=unprivileged_client, namespace=namespace.name))
-        return
 
 
 @pytest.mark.parametrize(

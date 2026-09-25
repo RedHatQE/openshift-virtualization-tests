@@ -126,27 +126,29 @@ def check_file_unchanged(orig_cksum, vm):
 def wait_for_resize(vm, count=1):
     starting_count = get_resize_count(vm=vm)
     desired_count = starting_count + count
-    yield
-    samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_4MIN,
-        sleep=5,
-        func=get_resize_count,
-        vm=vm,
-    )
     try:
-        for sample in samples:
-            current_resize_count = sample
-            LOGGER.info(
-                f"Current resize count is {current_resize_count}. Waiting until resize count is {desired_count}"
-            )
-            if current_resize_count in (desired_count, desired_count + 1):
-                break
-    except TimeoutExpiredError:
-        dmesg = run_ssh_commands(
-            host=vm.ssh_exec, commands=shlex.split("dmesg"), wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC
-        )[0]
-        LOGGER.error(f"Failed to reach resize count {desired_count}.\ndmesg:\n{dmesg}")
-        raise
+        yield
+    finally:
+        samples = TimeoutSampler(
+            wait_timeout=TIMEOUT_4MIN,
+            sleep=5,
+            func=get_resize_count,
+            vm=vm,
+        )
+        try:
+            for sample in samples:
+                current_resize_count = sample
+                LOGGER.info(
+                    f"Current resize count is {current_resize_count}. Waiting until resize count is {desired_count}"
+                )
+                if current_resize_count in (desired_count, desired_count + 1):
+                    break
+        except TimeoutExpiredError:
+            dmesg = run_ssh_commands(
+                host=vm.ssh_exec, commands=shlex.split("dmesg"), wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC
+            )[0]
+            LOGGER.error(f"Failed to reach resize count {desired_count}.\ndmesg:\n{dmesg}")
+            raise
 
 
 @contextmanager

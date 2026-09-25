@@ -133,3 +133,6 @@ docs/source/rst
 
 # For local run (debug).
 ocp_resources
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/

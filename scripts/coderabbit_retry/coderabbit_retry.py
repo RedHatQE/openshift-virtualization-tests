@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Retry CodeRabbit reviews that hit rate limits.
+r"""Retry CodeRabbit reviews that hit rate limits.
 
 Scans open, non-draft, non-WIP, non-stale, non-conflicting PRs (updated in the
 last 2 days) for CodeRabbit rate-limit comments and re-triggers review once the

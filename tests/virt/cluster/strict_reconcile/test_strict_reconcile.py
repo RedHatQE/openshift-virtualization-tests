@@ -48,7 +48,7 @@ def update_resource_and_prepare_sampler(resource, resource_dict):
     samples = TimeoutSampler(
         wait_timeout=45,
         sleep=5,
-        func=lambda: resource.instance.to_dict(),
+        func=resource.instance.to_dict,
     )
     return {
         "updated_resource": updated_resource,

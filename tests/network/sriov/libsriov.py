@@ -97,7 +97,7 @@ def sriov_vm(
         "cloud_init_data": cloud_init_data,
         "client": unprivileged_client,
         "macs": {sriov_network.name: sriov_mac},
-        "interfaces_types": {name: SRIOV for name in networks.keys()},
+        "interfaces_types": dict.fromkeys(networks.keys(), SRIOV),
     }
 
     if worker:

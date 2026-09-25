@@ -93,21 +93,21 @@ class TestNegativeVmWithInstanceTypeAndPref:
     def test_vm_start_fails_with_insufficient_cpu_for_spread_option(
         self, unprivileged_client, namespace, instance_type_for_test_scope_class, vm_preference_for_test
     ):
-        with pytest.raises(
-            UnprocessibleEntityError,
-            match=r".*vCPUs provided by the instance type are not divisible by the "
-            r"Spec.PreferSpreadSocketToCoreRatio or Spec.CPU.PreferSpreadOptions.Ratio*",
-        ):
-            with instance_type_for_test_scope_class as vm_instance_type, vm_preference_for_test as vm_preference:
-                with VirtualMachineForTests(
-                    client=unprivileged_client,
-                    name="rhel-vm-with-instance-type",
-                    namespace=namespace.name,
-                    image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
-                    vm_instance_type=vm_instance_type,
-                    vm_preference=vm_preference,
-                ):
-                    pytest.fail("Expected Failure due to UnprocessibleEntityError")
+        with instance_type_for_test_scope_class as vm_instance_type, vm_preference_for_test as vm_preference:
+            vm = VirtualMachineForTests(
+                client=unprivileged_client,
+                name="rhel-vm-with-instance-type",
+                namespace=namespace.name,
+                image=Images.Rhel.RHEL9_REGISTRY_GUEST_IMG,
+                vm_instance_type=vm_instance_type,
+                vm_preference=vm_preference,
+            )
+            with pytest.raises(
+                UnprocessibleEntityError,
+                match=r".*vCPUs provided by the instance type are not divisible by the "
+                r"Spec.PreferSpreadSocketToCoreRatio or Spec.CPU.PreferSpreadOptions.Ratio*",
+            ):
+                vm.create()
 
 
 @pytest.mark.parametrize(
@@ -164,7 +164,7 @@ class TestVmWithInstanceTypeAndPref:
         ]
         vmi_expected_values = [CLOCK_TIMEZONE, CLOCK_UTC_OFFSET, CLOCK_TIMER]
         assert vmi_clock_values == vmi_expected_values, (
-            "Not all clock fields match, VMI values: {vmi_clock_values}, expected: {vmi_expected_values}"
+            f"Not all clock fields match, VMI values: {vmi_clock_values}, expected: {vmi_expected_values}"
         )
 
     @pytest.mark.dependency(depends=["start_vm_with_instance_type_and_preference"])

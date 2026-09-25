@@ -65,7 +65,7 @@ class Console:
         self.child: pexpect.fdpexpect.fdspawn | None = None
         self._proc: subprocess.Popen[bytes] | None = None
         self.login_prompt = "login:"
-        self.prompt = prompt if prompt else [r"#", r"\$"]
+        self.prompt = prompt or [r"#", r"\$"]
         self.kubeconfig = kubeconfig
         self.cmd = self._generate_cmd()
         self.base_dir = get_data_collector_base_directory()

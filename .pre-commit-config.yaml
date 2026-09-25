@@ -1,6 +1,8 @@
 default_language_version:
   python: python3.14
 
+exclude: ^docs/site/
+
 ci:
   skip: [check-jsonschema]
 
@@ -16,7 +18,7 @@ repos:
         stages: [pre-commit]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.4
+    rev: v0.16.8
     hooks:
       - id: ruff
         stages: [pre-commit]

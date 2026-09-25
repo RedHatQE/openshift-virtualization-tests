@@ -116,7 +116,6 @@ class TestCPUHotPlug:
     def test_hotplug_cpu_above_max_value(self, vm_with_hotplug_support):
         with pytest.raises(UnprocessibleEntityError):
             hotplug_spec_vm(vm=vm_with_hotplug_support, sockets=TEN_CPU_SOCKETS)
-            pytest.fail("Socket value set higher than max value!")
 
 
 @pytest.mark.parametrize(
@@ -173,7 +172,6 @@ class TestMemoryHotPlug:
     def test_hotplug_memory_above_max_value(self, vm_with_hotplug_support):
         with pytest.raises(UnprocessibleEntityError):
             hotplug_spec_vm(vm=vm_with_hotplug_support, memory_guest=TWELVE_GI_MEMORY)
-            pytest.fail("Memory value set higher than max value!")
 
     @pytest.mark.parametrize(
         "hotplugged_sockets_memory_guest",
