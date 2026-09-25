@@ -20,7 +20,6 @@ from tests.virt.node.gpu.utils import (
 )
 from tests.virt.utils import (
     build_node_affinity_dict,
-    get_data_volume_template_dict_with_default_storage_class,
     get_num_gpu_devices_in_rhel_vm,
     running_sleep_in_linux,
     verify_gpu_device_exists_in_vm,
@@ -28,6 +27,7 @@ from tests.virt.utils import (
 )
 from utilities.virt import (
     VirtualMachineForTestsFromTemplate,
+    get_data_volume_template_dict_with_default_storage_class,
     pause_unpause_vm_and_check_connectivity,
     running_vm,
     vm_instance_from_template,
