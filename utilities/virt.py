@@ -2225,6 +2225,7 @@ def vm_instance_from_template(
         vhostmd=params.get("vhostmd"),
         machine_type=params.get("machine_type"),
         eviction_strategy=params.get("eviction_strategy"),
+        exclude_from_descheduler=params.get("exclude_from_descheduler", False),
         vm_affinity=vm_affinity,
         tpm_params=params.get("tpm_params"),
         efi_params=params.get("efi_params"),
