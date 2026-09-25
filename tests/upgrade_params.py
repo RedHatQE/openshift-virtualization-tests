@@ -25,3 +25,4 @@ STORAGE_NODE_ID_PREFIX = "tests/storage/upgrade/test_upgrade_storage.py::TestUpg
 SNAPSHOT_RESTORE_CREATE_AFTER_UPGRADE = f"{STORAGE_NODE_ID_PREFIX}::test_vm_snapshot_restore_create_after_upgrade"
 HOTPLUG_VM_AFTER_UPGRADE_NODE_ID = f"{STORAGE_NODE_ID_PREFIX}::test_vm_with_hotplug_after_upgrade"
 SNAPSHOT_RESTORE_CHECK_AFTER_UPGRADE_ID = f"{STORAGE_NODE_ID_PREFIX}::test_vm_snapshot_restore_check_after_upgrade"
+VM_TEMPLATE_NODE_ID_PREFIX = "tests/infrastructure/vm_template/test_vm_template_upgrade.py::TestVMTemplatePreUpgrade"
