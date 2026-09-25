@@ -43,6 +43,21 @@ LOGGER = logging.getLogger(__name__)
 TESTS_CLASS_NAME = "TestCommonTemplatesFedora"
 
 
+FEDORA_EXPECTED_HYPERV_FEATURES: dict = {
+    "relaxed": {},
+    "vapic": {},
+    "synictimer": {"direct": {}},
+    "vpindex": {},
+    "synic": {},
+    "spinlocks": {"spinlocks": 8191},
+    "frequencies": {},
+    "ipi": {},
+    "reenlightenment": {},
+    "reset": {},
+    "runtime": {},
+    "tlbflush": {"direct": {}, "extended": {}},
+}
+
 HYPERV_DICT = {
     "spec": {
         "template": {
@@ -60,20 +75,7 @@ HYPERV_DICT = {
                     "features": {
                         "acpi": {},
                         "apic": {},
-                        "hyperv": {
-                            "relaxed": {},
-                            "vapic": {},
-                            "synictimer": {"direct": {}},
-                            "vpindex": {},
-                            "synic": {},
-                            "spinlocks": {"spinlocks": 8191},
-                            "frequencies": {},
-                            "ipi": {},
-                            "reenlightenment": {},
-                            "reset": {},
-                            "runtime": {},
-                            "tlbflush": {},
-                        },
+                        "hyperv": FEDORA_EXPECTED_HYPERV_FEATURES,
                     },
                 }
             }
@@ -114,7 +116,11 @@ class TestCommonTemplatesFedora:
     @pytest.mark.polarion("CNV-2651")
     def test_vm_hyperv(self, admin_client, matrix_fedora_os_vm_from_template):
         LOGGER.info("Verify VMI HyperV values.")
-        check_vm_xml_hyperv(vm=matrix_fedora_os_vm_from_template, admin_client=admin_client)
+        check_vm_xml_hyperv(
+            vm=matrix_fedora_os_vm_from_template,
+            admin_client=admin_client,
+            expected_hyperv_features=FEDORA_EXPECTED_HYPERV_FEATURES,
+        )
         check_vm_xml_clock(vm=matrix_fedora_os_vm_from_template, admin_client=admin_client)
 
     @pytest.mark.sno

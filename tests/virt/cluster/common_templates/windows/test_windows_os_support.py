@@ -115,7 +115,11 @@ class TestCommonTemplatesWindows:
     @pytest.mark.polarion("CNV-2776")
     def test_hyperv(self, admin_client, matrix_windows_os_vm_from_template):
         LOGGER.info("Verify VM HyperV values.")
-        check_vm_xml_hyperv(vm=matrix_windows_os_vm_from_template, admin_client=admin_client)
+        check_vm_xml_hyperv(
+            vm=matrix_windows_os_vm_from_template,
+            admin_client=admin_client,
+            expected_hyperv_features=matrix_windows_os_vm_from_template.instance.spec.template.spec.domain.features.hyperv.to_dict(),
+        )
         check_windows_vm_hvinfo(vm=matrix_windows_os_vm_from_template)
 
     @pytest.mark.sno

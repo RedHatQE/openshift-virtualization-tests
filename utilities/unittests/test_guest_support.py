@@ -74,138 +74,182 @@ class TestAssertWindowsEfi:
             assert_windows_efi(mock_vm)
 
 
+HYPERV_FULL_EXPECTED_FEATURES = {
+    "relaxed": {},
+    "vapic": {},
+    "synictimer": {"direct": {}},
+    "vpindex": {},
+    "synic": {},
+    "spinlocks": {"spinlocks": 8191},
+    "frequencies": {},
+    "ipi": {},
+    "reenlightenment": {},
+    "reset": {},
+    "runtime": {},
+    "tlbflush": {"direct": {}, "extended": {}},
+}
+
+HYPERV_FULL_ACTUAL_XML = {
+    "relaxed": {"@state": "on"},
+    "vapic": {"@state": "on"},
+    "spinlocks": {"@state": "on", "@retries": "8191"},
+    "vpindex": {"@state": "on"},
+    "synic": {"@state": "on"},
+    "stimer": {"@state": "on", "direct": {"@state": "on"}},
+    "frequencies": {"@state": "on"},
+    "ipi": {"@state": "on"},
+    "reset": {"@state": "on"},
+    "runtime": {"@state": "on"},
+    "tlbflush": {"@state": "on", "direct": {"@state": "on"}, "extended": {"@state": "on"}},
+    "reenlightenment": {"@state": "on"},
+}
+
+
+def _make_hyperv_mock_vm(actual_xml):
+    mock_vm = MagicMock()
+    mock_vm.vmi.get_xml_dict.return_value = {"domain": {"features": {"hyperv": actual_xml}}}
+    return mock_vm
+
+
 class TestCheckVmXmlHyperv:
     """Test cases for check_vm_xml_hyperv function"""
 
     def test_check_vm_xml_hyperv_all_features_on(self):
         """Test successful validation when all HyperV features are enabled"""
-        mock_vm = MagicMock()
-        mock_admin_client = MagicMock()
+        mock_vm = _make_hyperv_mock_vm(actual_xml=HYPERV_FULL_ACTUAL_XML)
 
-        # Mock VM XML with all features enabled
-        hyperv_features = {
-            "relaxed": {"@state": "on"},
-            "vapic": {"@state": "on"},
-            "spinlocks": {"@state": "on", "@retries": "8191"},
-            "vpindex": {"@state": "on"},
-            "synic": {"@state": "on"},
-            "stimer": {"@state": "on", "direct": {"@state": "on"}},
-            "frequencies": {"@state": "on"},
-            "ipi": {"@state": "on"},
-            "reset": {"@state": "on"},
-            "runtime": {"@state": "on"},
-            "tlbflush": {"@state": "on"},
-            "reenlightenment": {"@state": "on"},
-        }
-
-        mock_vm.vmi.get_xml_dict.return_value = {"domain": {"features": {"hyperv": hyperv_features}}}
-
-        # Should not raise any exception
-        check_vm_xml_hyperv(mock_vm, admin_client=mock_admin_client)
+        check_vm_xml_hyperv(
+            mock_vm,
+            admin_client=MagicMock(),
+            expected_hyperv_features=HYPERV_FULL_EXPECTED_FEATURES,
+        )
 
     def test_check_vm_xml_hyperv_feature_off(self):
         """Test assertion failure when one HyperV feature is disabled"""
-        mock_vm = MagicMock()
-        mock_admin_client = MagicMock()
-
-        # Mock VM XML with one feature disabled
-        hyperv_features = {
-            "relaxed": {"@state": "on"},
-            "vapic": {"@state": "off"},  # This feature is disabled
-            "spinlocks": {"@state": "on", "@retries": "8191"},
-            "vpindex": {"@state": "on"},
-            "synic": {"@state": "on"},
-            "stimer": {"@state": "on", "direct": {"@state": "on"}},
-            "frequencies": {"@state": "on"},
-            "ipi": {"@state": "on"},
-            "reset": {"@state": "on"},
-            "runtime": {"@state": "on"},
-            "tlbflush": {"@state": "on"},
-            "reenlightenment": {"@state": "on"},
-        }
-
-        mock_vm.vmi.get_xml_dict.return_value = {"domain": {"features": {"hyperv": hyperv_features}}}
+        actual_xml = {**HYPERV_FULL_ACTUAL_XML, "vapic": {"@state": "off"}}
+        mock_vm = _make_hyperv_mock_vm(actual_xml=actual_xml)
 
         with pytest.raises(AssertionError, match="hyperV flags are not set correctly"):
-            check_vm_xml_hyperv(mock_vm, admin_client=mock_admin_client)
+            check_vm_xml_hyperv(
+                mock_vm,
+                admin_client=MagicMock(),
+                expected_hyperv_features=HYPERV_FULL_EXPECTED_FEATURES,
+            )
 
     def test_check_vm_xml_hyperv_spinlocks_wrong(self):
         """Test assertion failure when spinlocks retries value is incorrect"""
-        mock_vm = MagicMock()
-        mock_admin_client = MagicMock()
-
-        # Mock VM XML with wrong spinlocks value
-        hyperv_features = {
-            "relaxed": {"@state": "on"},
-            "vapic": {"@state": "on"},
-            "spinlocks": {"@state": "on", "@retries": "4096"},  # Wrong value
-            "vpindex": {"@state": "on"},
-            "synic": {"@state": "on"},
-            "stimer": {"@state": "on", "direct": {"@state": "on"}},
-            "frequencies": {"@state": "on"},
-            "ipi": {"@state": "on"},
-            "reset": {"@state": "on"},
-            "runtime": {"@state": "on"},
-            "tlbflush": {"@state": "on"},
-            "reenlightenment": {"@state": "on"},
-        }
-
-        mock_vm.vmi.get_xml_dict.return_value = {"domain": {"features": {"hyperv": hyperv_features}}}
+        actual_xml = {**HYPERV_FULL_ACTUAL_XML, "spinlocks": {"@state": "on", "@retries": "4096"}}
+        mock_vm = _make_hyperv_mock_vm(actual_xml=actual_xml)
 
         with pytest.raises(AssertionError, match="hyperV flags are not set correctly"):
-            check_vm_xml_hyperv(mock_vm, admin_client=mock_admin_client)
+            check_vm_xml_hyperv(
+                mock_vm,
+                admin_client=MagicMock(),
+                expected_hyperv_features=HYPERV_FULL_EXPECTED_FEATURES,
+            )
 
     def test_check_vm_xml_hyperv_stimer_direct_off(self):
-        """Test assertion failure when stimer direct feature is disabled"""
-        mock_vm = MagicMock()
-        mock_admin_client = MagicMock()
-
-        # Mock VM XML with stimer direct disabled
-        hyperv_features = {
-            "relaxed": {"@state": "on"},
-            "vapic": {"@state": "on"},
-            "spinlocks": {"@state": "on", "@retries": "8191"},
-            "vpindex": {"@state": "on"},
-            "synic": {"@state": "on"},
-            "stimer": {"@state": "on", "direct": {"@state": "off"}},  # Direct is disabled
-            "frequencies": {"@state": "on"},
-            "ipi": {"@state": "on"},
-            "reset": {"@state": "on"},
-            "runtime": {"@state": "on"},
-            "tlbflush": {"@state": "on"},
-            "reenlightenment": {"@state": "on"},
-        }
-
-        mock_vm.vmi.get_xml_dict.return_value = {"domain": {"features": {"hyperv": hyperv_features}}}
+        """Test assertion failure when stimer direct sub-feature is disabled"""
+        actual_xml = {**HYPERV_FULL_ACTUAL_XML, "stimer": {"@state": "on", "direct": {"@state": "off"}}}
+        mock_vm = _make_hyperv_mock_vm(actual_xml=actual_xml)
 
         with pytest.raises(AssertionError, match="hyperV flags are not set correctly"):
-            check_vm_xml_hyperv(mock_vm, admin_client=mock_admin_client)
+            check_vm_xml_hyperv(
+                mock_vm,
+                admin_client=MagicMock(),
+                expected_hyperv_features=HYPERV_FULL_EXPECTED_FEATURES,
+            )
+
+    def test_check_vm_xml_hyperv_tlbflush_direct_off(self):
+        """Test assertion failure when tlbflush direct sub-feature is disabled"""
+        actual_xml = {
+            **HYPERV_FULL_ACTUAL_XML,
+            "tlbflush": {"@state": "on", "direct": {"@state": "off"}, "extended": {"@state": "on"}},
+        }
+        mock_vm = _make_hyperv_mock_vm(actual_xml=actual_xml)
+
+        with pytest.raises(AssertionError, match="hyperV flags are not set correctly"):
+            check_vm_xml_hyperv(
+                mock_vm,
+                admin_client=MagicMock(),
+                expected_hyperv_features=HYPERV_FULL_EXPECTED_FEATURES,
+            )
+
+    def test_check_vm_xml_hyperv_tlbflush_extended_off(self):
+        """Test assertion failure when tlbflush extended sub-feature is disabled"""
+        actual_xml = {
+            **HYPERV_FULL_ACTUAL_XML,
+            "tlbflush": {"@state": "on", "direct": {"@state": "on"}, "extended": {"@state": "off"}},
+        }
+        mock_vm = _make_hyperv_mock_vm(actual_xml=actual_xml)
+
+        with pytest.raises(AssertionError, match="hyperV flags are not set correctly"):
+            check_vm_xml_hyperv(
+                mock_vm,
+                admin_client=MagicMock(),
+                expected_hyperv_features=HYPERV_FULL_EXPECTED_FEATURES,
+            )
 
     def test_check_vm_xml_hyperv_multiple_failures(self):
         """Test assertion failure with multiple incorrect HyperV settings"""
-        mock_vm = MagicMock()
-        mock_admin_client = MagicMock()
-
-        # Mock VM XML with multiple failures
-        hyperv_features = {
-            "relaxed": {"@state": "off"},  # Feature disabled
-            "vapic": {"@state": "on"},
-            "spinlocks": {"@state": "on", "@retries": "1024"},  # Wrong value
-            "vpindex": {"@state": "on"},
-            "synic": {"@state": "on"},
-            "stimer": {"@state": "on", "direct": {"@state": "off"}},  # Direct disabled
-            "frequencies": {"@state": "on"},
-            "ipi": {"@state": "on"},
-            "reset": {"@state": "on"},
-            "runtime": {"@state": "on"},
-            "tlbflush": {"@state": "on"},
-            "reenlightenment": {"@state": "on"},
+        actual_xml = {
+            **HYPERV_FULL_ACTUAL_XML,
+            "relaxed": {"@state": "off"},
+            "spinlocks": {"@state": "on", "@retries": "1024"},
+            "stimer": {"@state": "on", "direct": {"@state": "off"}},
         }
-
-        mock_vm.vmi.get_xml_dict.return_value = {"domain": {"features": {"hyperv": hyperv_features}}}
+        mock_vm = _make_hyperv_mock_vm(actual_xml=actual_xml)
 
         with pytest.raises(AssertionError, match="hyperV flags are not set correctly"):
-            check_vm_xml_hyperv(mock_vm, admin_client=mock_admin_client)
+            check_vm_xml_hyperv(
+                mock_vm,
+                admin_client=MagicMock(),
+                expected_hyperv_features=HYPERV_FULL_EXPECTED_FEATURES,
+            )
+
+    def test_check_vm_xml_hyperv_missing_feature(self):
+        """Test assertion failure when expected feature is missing from XML"""
+        actual_xml = {key: val for key, val in HYPERV_FULL_ACTUAL_XML.items() if key != "vapic"}
+        mock_vm = _make_hyperv_mock_vm(actual_xml=actual_xml)
+
+        with pytest.raises(AssertionError, match="hyperV flags are not set correctly"):
+            check_vm_xml_hyperv(
+                mock_vm,
+                admin_client=MagicMock(),
+                expected_hyperv_features=HYPERV_FULL_EXPECTED_FEATURES,
+            )
+
+    def test_check_vm_xml_hyperv_missing_sub_feature(self):
+        """Test assertion failure when expected sub-feature is missing from XML"""
+        actual_xml = {**HYPERV_FULL_ACTUAL_XML, "tlbflush": {"@state": "on", "direct": {"@state": "on"}}}
+        mock_vm = _make_hyperv_mock_vm(actual_xml=actual_xml)
+
+        with pytest.raises(AssertionError, match="hyperV flags are not set correctly"):
+            check_vm_xml_hyperv(
+                mock_vm,
+                admin_client=MagicMock(),
+                expected_hyperv_features=HYPERV_FULL_EXPECTED_FEATURES,
+            )
+
+    def test_check_vm_xml_hyperv_yaml_name_mapping(self):
+        """Test that synictimer yaml name is correctly mapped to stimer xml name"""
+        mock_vm = _make_hyperv_mock_vm(actual_xml=HYPERV_FULL_ACTUAL_XML)
+
+        check_vm_xml_hyperv(
+            mock_vm,
+            admin_client=MagicMock(),
+            expected_hyperv_features={"synictimer": {"direct": {}}},
+        )
+
+    def test_check_vm_xml_hyperv_subset_of_features(self):
+        """Test that only expected features are verified, extras in XML are ignored"""
+        mock_vm = _make_hyperv_mock_vm(actual_xml=HYPERV_FULL_ACTUAL_XML)
+
+        check_vm_xml_hyperv(
+            mock_vm,
+            admin_client=MagicMock(),
+            expected_hyperv_features={"relaxed": {}, "vapic": {}},
+        )
 
 
 class TestCheckWindowsVmHvinfo:

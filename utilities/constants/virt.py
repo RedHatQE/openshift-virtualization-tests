@@ -46,13 +46,13 @@ WIN_2K25 = "win2k25"
 WIN_2K22 = "win2k22"
 WIN_2K19 = "win2k19"
 
-HYPERV_FEATURES_LABELS_DOM_XML = [
+HYPERV_FEATURES_LABELS_VM_YAML = [
     "relaxed",
     "vapic",
     "spinlocks",
     "vpindex",
     "synic",
-    "stimer",  # synictimer in VM yaml
+    "synictimer",
     "frequencies",
     "ipi",
     "reset",
@@ -60,8 +60,6 @@ HYPERV_FEATURES_LABELS_DOM_XML = [
     "tlbflush",
     "reenlightenment",
 ]
-HYPERV_FEATURES_LABELS_VM_YAML = HYPERV_FEATURES_LABELS_DOM_XML.copy()
-HYPERV_FEATURES_LABELS_VM_YAML[HYPERV_FEATURES_LABELS_VM_YAML.index("stimer")] = "synictimer"
 
 
 # CPU topology
