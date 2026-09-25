@@ -36,6 +36,13 @@ WINDOWS_MULTI_FILE_COUNT = 3
 RESTORE_VOLUME_SUFFIX = "-restore"
 
 LINUX_VENDOR_RESTORE_CR_NAME = "flr-vendor-workflow"
+LINUX_ROOT_DISK_SNAPSHOT_RESTORE_CR_NAME = "flr-linux-root-snap"
+LINUX_ROOT_DISK_PVC_RESTORE_CR_NAME = "flr-linux-root-pvc"
+LINUX_ROOT_DISK_VM_SNAPSHOT_NAME = "file-restore-linux-root-vm-snapshot"
+LINUX_DATA_DISK_SNAPSHOT_RESTORE_CR_NAME = "flr-linux-data-snap-1"
+LINUX_DATA_DISK_SNAPSHOT_SECOND_RESTORE_CR_NAME = "flr-linux-data-snap-2"
+LINUX_TEST_FILE_NAME_2 = "file2.txt"
+LINUX_TEST_FILE_CONTENT_2 = "file-restore-test-content-2"
 WINDOWS_FILE_COUNT_RESTORE_CR_NAME = "flr-win-count"
 WINDOWS_ACL_PVC_RESTORE_CR_NAME = "flr-win-acl-pvc"
 WINDOWS_ACL_SNAPSHOT_RESTORE_CR_NAME = "flr-win-acl-snap"
