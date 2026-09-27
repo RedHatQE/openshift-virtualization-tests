@@ -8,12 +8,15 @@ from contextlib import contextmanager
 from datetime import UTC, datetime
 
 import bitmath
+import pytest
+from _pytest.subtests import Subtests
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.resource import Resource
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
+from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
 from ocp_utilities.monitoring import Prometheus
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
@@ -857,7 +860,9 @@ def validate_metric_value_cleared(
         raise
 
 
-def validate_dual_stream_migration_metrics(subtests, prometheus, vm, vmim):
+def validate_dual_stream_migration_metrics(
+    subtests: Subtests, prometheus: Prometheus, vm: VirtualMachineForTests, vmim: VirtualMachineInstanceMigration
+) -> None:
     """Polls until dual stream migration metrics are collected.
     Args:
         subtests: Sub-tests object.
@@ -866,11 +871,9 @@ def validate_dual_stream_migration_metrics(subtests, prometheus, vm, vmim):
         vmim: Virtual Machine Migration object.
     """
     for metric in MIGRATION_METRICS:
-        if metric in METRICS_WITH_CNV_97013_BUG and is_jira_open(jira_id="CNV-97013"):
-            LOGGER.warning(f"CNV-97013: {metric} returns no data during migration")
-            MIGRATION_METRICS.remove(metric)
-            continue
         with subtests.test(msg=metric):
+            if metric in METRICS_WITH_CNV_97013_BUG and is_jira_open(jira_id="CNV-97013"):
+                pytest.xfail(reason=f"CNV-97013: {metric} returns no data during migration")
             if metric == KUBEVIRT_VMI_MIGRATION_START_TIME_SECONDS:
                 validate_metrics_value(
                     prometheus=prometheus,

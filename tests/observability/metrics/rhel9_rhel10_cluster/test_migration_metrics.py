@@ -26,8 +26,6 @@ from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS, WINDOWS_LATEST, WIN
 from utilities.constants.cluster import RHCOS9_AFFINITY, RHCOS10_AFFINITY
 from utilities.constants.virt import MIGRATION_POLICY_VM_LABEL, MIGRATION_POLICY_WINDOWS_VM_LABEL
 
-LOGGER = logging.getLogger(__name__)
-
 pytestmark = [
     pytest.mark.mixed_os_nodes,
     pytest.mark.rwx_default_storage,
@@ -51,6 +49,7 @@ _MIGRATION_POLICY_WINDOWS_VM_DICT = {"spec": {"template": {"metadata": {"labels"
                 "vm_dict": _MIGRATION_POLICY_VM_DICT,
             },
             {"target_affinity": RHCOS10_AFFINITY},
+            marks=pytest.mark.special_infra,
             id="RHEL-VM",
         ),
         pytest.param(
@@ -131,6 +130,7 @@ class TestDualStreamMigrationRhcos9ToRhcos10:
                 "vm_dict": _MIGRATION_POLICY_VM_DICT,
             },
             {"target_affinity": RHCOS9_AFFINITY},
+            marks=pytest.mark.special_infra,
             id="RHEL-VM",
         ),
         pytest.param(

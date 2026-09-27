@@ -232,7 +232,7 @@ class TestEnabledMultiarchGoldenImagesSupport:
         admin_client,
         golden_images_namespace,
         base_common_templates_related_resources,
-        kubevirt_default_architecture,
+        hco_status_default_architecture,
         subtests,
     ):
         """
@@ -241,10 +241,10 @@ class TestEnabledMultiarchGoldenImagesSupport:
 
         Steps:
             1. Get architecture-agnostic DataSources from golden images namespace.
-            2. Get Kubevirt default architecture.
+            2. Get HCO default architecture.
 
         Expected:
-            - DataSource is referencing architecture-specific DataSource matching the Kubevirt default architecture.
+            - DataSource is referencing architecture-specific DataSource matching the HCO default architecture.
         """
         verify_resource_in_ns(
             expected_resource_names=base_common_templates_related_resources[DataSource.kind],
@@ -254,7 +254,7 @@ class TestEnabledMultiarchGoldenImagesSupport:
             ready_condition=DataSource.Condition.READY,
         )
         for ds_name in base_common_templates_related_resources[DataSource.kind]:
-            expected_arch_ds = f"{ds_name}-{kubevirt_default_architecture}"
+            expected_arch_ds = f"{ds_name}-{hco_status_default_architecture}"
             with subtests.test(msg=ds_name):
                 data_source = DataSource(
                     name=ds_name,
@@ -265,7 +265,7 @@ class TestEnabledMultiarchGoldenImagesSupport:
                     f"DataSource {ds_name} does not reference an architecture-specific DataSource."
                 )
                 assert source.name == expected_arch_ds, (
-                    f"DataSource {ds_name} does not reference a Kubevirt default "
+                    f"DataSource {ds_name} does not reference a HCO default "
                     f"architecture-specific DataSource (expected: {expected_arch_ds}). "
                     f"Actual source: {source.name}"
                 )
