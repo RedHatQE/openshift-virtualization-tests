@@ -8,6 +8,8 @@ from collections.abc import Generator
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from kubernetes.client.exceptions import ApiException
+from ocp_resources.exceptions import ExecOnPodError
 from ocp_resources.pod import Pod
 from pytest import Subtests
 
@@ -25,10 +27,12 @@ from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs.bgp import (
     EVPN_MAC_VRF_VNI,
     NET_TOOLS_CONTAINER_NAME,
+    OPENPE_CONTAINER_NAME,
     OPENPE_L3_VRF_NAME,
     openpe_l2_bridge_name,
     wait_for_openpe_interface,
 )
+from utilities.data_collector import get_data_collector_dir, write_to_file
 
 if TYPE_CHECKING:
     from ocp_resources.node import Node
@@ -243,6 +247,86 @@ def _build_l3_endpoint_commands(
     return commands, netns
 
 
+def _collect_evpn_failure_state(endpoint: EvpnEndpoint) -> None:
+    """Collects the external ToR state before EVPN connection cleanup.
+
+    The collector runs while the endpoint network namespace and its veth are
+    still present. This preserves the OpenPE bridge, VXLAN, FRR, and endpoint
+    state that would otherwise be removed by context-manager cleanup.
+
+    Args:
+        endpoint: External EVPN endpoint whose ToR state is collected.
+    """
+    diagnostic_commands = [
+        (
+            "OpenPE FRR",
+            OPENPE_CONTAINER_NAME,
+            (
+                "vtysh -c 'show bgp l2vpn evpn route' "
+                "-c 'show evpn vni' "
+                f"-c 'show evpn mac vni {EVPN_MAC_VRF_VNI}'; "
+                "cat /etc/perouter/frr/frr.conf"
+            ),
+        ),
+        (
+            "OpenPE network",
+            NET_TOOLS_CONTAINER_NAME,
+            "ip -d link show type vxlan; bridge link; bridge fdb show",
+        ),
+        (
+            "EVPN endpoint",
+            NET_TOOLS_CONTAINER_NAME,
+            (
+                f"ip netns exec {endpoint.netns_name} ip addr; "
+                f"ip netns exec {endpoint.netns_name} ip route; "
+                f"ip netns exec {endpoint.netns_name} ip neigh; "
+                f"ip netns exec {endpoint.netns_name} cat /tmp/iperf3.log"
+            ),
+        ),
+    ]
+    output_sections = []
+    for title, container, command in diagnostic_commands:
+        try:
+            output = endpoint.pod.execute(
+                command=["sh", "-c", command],
+                container=container,
+                ignore_rc=True,
+            )
+        except (ApiException, ExecOnPodError) as diagnostic_exception:
+            output = f"Failed to collect {title}: {diagnostic_exception}"
+        output_sections.append(f"## {title}\n$ {command}\n{output}\n")
+
+    write_to_file(
+        base_directory=get_data_collector_dir(),
+        file_name="evpn_failure_state.txt",
+        content="\n".join(output_sections),
+    )
+
+
+def assert_evpn_tcp_connection(
+    endpoint: EvpnEndpoint,
+    server: TcpServer,
+    client: EndpointTcpClient,
+) -> None:
+    """Asserts an EVPN TCP connection and captures ToR state on failure.
+
+    Args:
+        endpoint: External EVPN endpoint that originates the TCP connection.
+        server: VM-side TCP server.
+        client: Endpoint-side TCP client.
+    """
+    try:
+        connection_established = is_tcp_connection(server=server, client=client)
+    except ApiException, ExecOnPodError:
+        _collect_evpn_failure_state(endpoint=endpoint)
+        raise
+
+    if not connection_established:
+        _collect_evpn_failure_state(endpoint=endpoint)
+
+    assert connection_established, f"TCP connection to {client.server_ip}:{client.server_port} is not running"
+
+
 @contextlib.contextmanager
 def evpn_workloads_active_connections(
     endpoint: EvpnEndpoint,
@@ -323,12 +407,12 @@ def assert_evpn_workloads_connectivity(
     with evpn_workloads_active_connections(endpoint=l2_endpoint, vm=target_vm) as l2_connections:
         for l2_client, l2_server in l2_connections:
             with subtests.test(f"stretched-L2 IPv{ipaddress.ip_address(l2_client.server_ip).version}"):
-                assert is_tcp_connection(server=l2_server, client=l2_client)
+                assert_evpn_tcp_connection(endpoint=l2_endpoint, server=l2_server, client=l2_client)
 
     with evpn_workloads_active_connections(endpoint=l3_endpoint, vm=target_vm) as l3_connections:
         for l3_client, l3_server in l3_connections:
             with subtests.test(f"routed-L3 IPv{ipaddress.ip_address(l3_client.server_ip).version}"):
-                assert is_tcp_connection(server=l3_server, client=l3_client)
+                assert_evpn_tcp_connection(endpoint=l3_endpoint, server=l3_server, client=l3_client)
 
 
 def node_primary_ipv4_interface(node: Node) -> ipaddress.IPv4Interface:
