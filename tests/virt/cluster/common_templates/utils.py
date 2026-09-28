@@ -448,8 +448,8 @@ def windows_disk_space_parser(fsinfo_list):
     #  'Total bytes             : 249,381,777,408 (232.3 GB)',
     #  'Total quota free bytes  :  81,103,310,848 ( 75.5 GB)']
     disk_space = {
-        "total": re.sub(",", "", re.search(r":\s+([\d,]+)", fsinfo_list[1]).group(1)),
-        "free": re.sub(",", "", re.search(r":\s+([\d,]+)", fsinfo_list[0]).group(1)),
+        "total": re.search(r":\s+([\d,]+)", fsinfo_list[1]).group(1).replace(",", ""),
+        "free": re.search(r":\s+([\d,]+)", fsinfo_list[0]).group(1).replace(",", ""),
     }
     used = round((int(disk_space["total"]) - int(disk_space["free"])) / 1000**3)
     total = round(int(disk_space["total"]) / 1000**3)

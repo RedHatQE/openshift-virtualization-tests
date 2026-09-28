@@ -18,12 +18,12 @@ Disable a test when the failure is caused by a test framework or automation scri
 import pytest
 from utilities.constants.pytest import QUARANTINED
 
+
 @pytest.mark.xfail(
     reason=f"{QUARANTINED}: VM goes into running state unexpectedly, EXAMPLE-12345",
     run=False,
 )
-def test_vm_lifecycle():
-    ...
+def test_vm_lifecycle(): ...
 ```
 
 ### Skipping for a Product Bug
@@ -33,9 +33,9 @@ Disable a test conditionally when an actual product defect causes the failure:
 ```python
 import pytest
 
+
 @pytest.mark.jira("EXAMPLE-54321", run=False)
-def test_new_feature():
-    ...
+def test_new_feature(): ...
 ```
 
 ## Quarantine Methods Compared
