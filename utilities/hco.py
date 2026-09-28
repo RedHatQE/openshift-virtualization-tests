@@ -42,7 +42,7 @@ from utilities.ssp import (
     wait_for_deleted_data_import_crons,
     wait_for_ssp_conditions,
 )
-from utilities.storage import verify_boot_sources_reimported
+from utilities.storage import verify_boot_sources_reimported, wait_for_terminating_volume_snapshots_deleted
 
 if TYPE_CHECKING:
     from kubernetes.dynamic import DynamicClient
@@ -406,6 +406,7 @@ def enable_common_boot_image_import_spec_wait_for_data_import_cron(
     exclude_data_source_names: Collection[str] | None = None,
 ) -> None:
     hco_namespace = Namespace(client=admin_client, name=hco_resource.namespace)
+    wait_for_terminating_volume_snapshots_deleted(admin_client=admin_client, namespace=namespace)
     update_common_boot_image_import_spec(
         hco_resource=hco_resource,
         enable=True,

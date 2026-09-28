@@ -1275,6 +1275,45 @@ def wait_for_volume_snapshot_ready_to_use(namespace: str, name: str, client: Dyn
         raise
 
 
+def wait_for_terminating_volume_snapshots_deleted(
+    admin_client: DynamicClient,
+    namespace: Namespace,
+) -> None:
+    """Wait for all Terminating VolumeSnapshots in the namespace to be fully deleted.
+
+    CDI stalls when it tries to reuse a VolumeSnapshot that has deletionTimestamp set.
+    Call this before re-enabling enableCommonBootImageImport to ensure CDI starts with
+    clean snapshot state instead of reusing a stale Terminating snapshot.
+    """
+    terminating = [
+        volume_snapshot
+        for volume_snapshot in VolumeSnapshot.get(dyn_client=admin_client, namespace=namespace.name)
+        if volume_snapshot.instance.metadata.get("deletionTimestamp")
+    ]
+    if not terminating:
+        return
+
+    LOGGER.info(
+        f"Waiting for {len(terminating)} Terminating VolumeSnapshot(s) to be fully deleted "
+        f"in namespace {namespace.name!r}: {[vs.name for vs in terminating]}"
+    )
+    for volume_snapshot in terminating:
+        try:
+            for sample in TimeoutSampler(
+                wait_timeout=TIMEOUT_10MIN,
+                sleep=TIMEOUT_5SEC,
+                func=lambda: not volume_snapshot.exists,
+            ):
+                if sample:
+                    break
+        except TimeoutExpiredError:
+            LOGGER.error(
+                f"VolumeSnapshot {volume_snapshot.name!r} still Terminating after {TIMEOUT_10MIN}s "
+                f"in namespace {namespace.name!r}"
+            )
+            raise
+
+
 def wait_for_succeeded_dv(namespace: str, dv_name: str, client: DynamicClient):
     dv = DataVolume(namespace=namespace, name=dv_name, client=client)
     try:
