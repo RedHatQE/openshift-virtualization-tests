@@ -164,7 +164,7 @@ def wait_for_hco_conditions(
                 expected_conditions=EXPECTED_STATUS_CONDITIONS[resource],
                 consecutive_checks_count=consecutive_checks_count,
             )
-    if expected_conditions is not None:
+    if expected_conditions is None:
         hco_resource = utilities.infra.get_hyperconverged_resource(client=admin_client, hco_ns_name=hco_namespace.name)
         expected_conditions = get_hco_expected_conditions(hco_resource=hco_resource)
 

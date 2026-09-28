@@ -607,7 +607,7 @@ def get_hco_mismatch_statuses(hco_status_conditions, expected_hco_status):
     mismatch_statuses = []
 
     for condition_type, condition_status in expected_hco_status.items():
-        if current_status[condition_type] != condition_status:
+        if current_status.get(condition_type) != condition_status:
             mismatch_statuses.append(
                 f"Current condition type {condition_type} does not match expected status {condition_status}"
             )
