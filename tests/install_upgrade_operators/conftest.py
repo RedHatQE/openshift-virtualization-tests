@@ -22,7 +22,7 @@ from tests.install_upgrade_operators.utils import (
     get_resource_by_name,
     get_resource_from_module_name,
 )
-from utilities.constants import HCO_BEARER_AUTH, HPP_POOL
+from utilities.constants import HPP_POOL
 from utilities.hco import ResourceEditorValidateHCOReconcile, get_hco_version
 from utilities.infra import (
     get_daemonset_by_name,
@@ -239,8 +239,6 @@ def related_object_from_hco_status(hco_status_related_objects, cnv_related_objec
     for obj in hco_status_related_objects:
         if obj.name == related_object_name and obj.kind == kind_name:
             return obj
-    if related_object_name == HCO_BEARER_AUTH:
-        pytest.xfail(f"{HCO_BEARER_AUTH} secret not found in hco.status.relatedObjects due to bug 59519")
     raise ResourceNotFoundError(
         f"Related object {related_object_name}, kind {kind_name} not found in "
         f"hco.status.relatedObjects: {hco_status_related_objects}"
