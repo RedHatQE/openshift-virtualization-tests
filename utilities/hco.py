@@ -27,6 +27,7 @@ from utilities.constants.hco import (
     HCO_SUBSCRIPTION,
     IMAGE_CRON_STR,
     SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
+    VIRT_NETWORK_RESOURCES_INJECTOR_READY,
 )
 from utilities.constants.storage import StorageClassNames
 from utilities.constants.timeouts import (
@@ -114,6 +115,24 @@ class ResourceEditorValidateHCOReconcile(ResourceEditor):
         )
 
 
+def get_hco_expected_conditions(hco_resource: HyperConverged) -> dict[str, str]:
+    """Returns expected HCO status conditions based on the live HCO spec.
+
+    Includes VirtNetworkResourcesInjectorReady only when
+    spec.deployment.deployNetworkResourcesInjector is explicitly enabled.
+
+    Args:
+        hco_resource: Live HyperConverged resource object.
+
+    Returns:
+        Dict mapping condition type to expected status value.
+    """
+    conditions = dict(DEFAULT_HCO_CONDITIONS)
+    if hco_resource.instance.to_dict()["spec"].get("deployment", {}).get("deployNetworkResourcesInjector"):
+        conditions[VIRT_NETWORK_RESOURCES_INJECTOR_READY] = Resource.Condition.Status.TRUE
+    return conditions
+
+
 def wait_for_hco_conditions(
     admin_client,
     hco_namespace,
@@ -131,6 +150,9 @@ def wait_for_hco_conditions(
     stabilize first, before checking hco.status.conditions. Please note, EXPECTED_STATUS_CONDITIONS defines what all
     CRs can be checked currently. Any new CRs and associated default conditions need to be added in
     EXPECTED_STATUS_CONDITIONS in order for option list_dependent_crs_to_check to work as expected.
+
+    When expected_conditions is None, conditions are resolved dynamically from the live HCO spec
+    (e.g. VirtNetworkResourcesInjectorReady is included only when deployNetworkResourcesInjector is enabled).
     """
     if list_dependent_crs_to_check:
         LOGGER.info(f"Waiting for {len(list_dependent_crs_to_check)} CRs managed by HCO to reconcile: ")
@@ -142,10 +164,14 @@ def wait_for_hco_conditions(
                 expected_conditions=EXPECTED_STATUS_CONDITIONS[resource],
                 consecutive_checks_count=consecutive_checks_count,
             )
+    if not expected_conditions:
+        hco_resource = utilities.infra.get_hyperconverged_resource(client=admin_client, hco_ns_name=hco_namespace.name)
+        expected_conditions = get_hco_expected_conditions(hco_resource=hco_resource)
+
     utilities.infra.wait_for_consistent_resource_conditions(
         dynamic_client=admin_client,
         namespace=hco_namespace.name,
-        expected_conditions=expected_conditions or DEFAULT_HCO_CONDITIONS,
+        expected_conditions=expected_conditions,
         resource_kind=HyperConverged,
         condition_key1=condition_key1,
         condition_key2=condition_key2,

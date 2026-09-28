@@ -10,11 +10,11 @@ from ocp_resources.virtual_machine import VirtualMachine
 from pytest_testconfig import config as py_config
 
 from tests.install_upgrade_operators.product_uninstall.constants import BLOCK_REMOVAL_TEST_NODE_ID
-from utilities.constants.hco import DEFAULT_HCO_CONDITIONS
 from utilities.constants.storage import CDI_SECRETS
 from utilities.constants.timeouts import TIMEOUT_10MIN
 from utilities.hco import (
     ResourceEditorValidateHCOReconcile,
+    get_hco_expected_conditions,
     get_hco_version,
     wait_for_hco_conditions,
 )
@@ -119,12 +119,13 @@ def assert_hco_exists_after_delete(
     with pytest.raises(BadRequestError):
         hco_resource.delete(wait=True)
 
+    expected_conditions = get_hco_expected_conditions(hco_resource=hco_resource)
     actual_hco_status = {
         condition["type"]: condition["status"] for condition in hco_resource.instance.status.conditions
     }
-    assert actual_hco_status == DEFAULT_HCO_CONDITIONS, (
+    assert actual_hco_status == expected_conditions, (
         f"HCO condition is not stable. Actual HCO condition :{actual_hco_status}"
-        f"expected condition is {DEFAULT_HCO_CONDITIONS}"
+        f"expected condition is {expected_conditions}"
     )
     assert_missing_resources(
         resource_objects=[

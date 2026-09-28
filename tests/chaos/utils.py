@@ -20,7 +20,6 @@ from ocp_resources.virtual_machine_cluster_instancetype import (
 from pytest_testconfig import py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler, TimeoutWatch
 
-from utilities.constants.hco import DEFAULT_HCO_CONDITIONS
 from utilities.constants.networking import PORT_80
 from utilities.constants.timeouts import (
     TIMEOUT_1MIN,
@@ -34,6 +33,7 @@ from utilities.constants.timeouts import (
 )
 from utilities.constants.virt import MIGRATION_POLICY_VM_LABEL
 from utilities.data_collector import write_to_file
+from utilities.hco import get_hco_expected_conditions
 from utilities.infra import (
     ExecCommandOnPod,
     get_daemonsets,
@@ -215,15 +215,16 @@ def get_nodes_status(client):
 
 
 def get_hyperconverged_status_conditions(client, hco_namespace):
-    hco_instance = get_hyperconverged_resource(client=client, hco_ns_name=hco_namespace.name).instance
+    hco_resource = get_hyperconverged_resource(client=client, hco_ns_name=hco_namespace.name)
+    expected_conditions = get_hco_expected_conditions(hco_resource=hco_resource)
     hco_status_summary = (
-        "OK" if not get_hco_mismatch_statuses(hco_instance.status.conditions, DEFAULT_HCO_CONDITIONS) else "NOK"
+        "OK" if not get_hco_mismatch_statuses(hco_resource.instance.status.conditions, expected_conditions) else "NOK"
     )
 
     return {
         "hco_status": {
             "summary": hco_status_summary,
-            "hco_status_conditions": hco_instance.to_dict()["status"]["conditions"],
+            "hco_status_conditions": hco_resource.instance.to_dict()["status"]["conditions"],
         }
     }
 

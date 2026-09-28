@@ -39,6 +39,10 @@ if "utilities.hco" in sys.modules:
     del sys.modules["utilities.hco"]
 
 # Import after setting up mocks to avoid circular dependency
+from utilities.constants.hco import (
+    DEFAULT_HCO_CONDITIONS,
+    VIRT_NETWORK_RESOURCES_INJECTOR_READY,
+)
 from utilities.hco import (
     CDI,
     DEFAULT_HCO_PROGRESSING_CONDITIONS,
@@ -51,6 +55,7 @@ from utilities.hco import (
     disable_common_boot_image_import_hco_spec,
     enable_common_boot_image_import_spec_wait_for_data_import_cron,
     enabled_aaq_in_hco,
+    get_hco_expected_conditions,
     get_hco_feature_gates,
     get_hco_namespace,
     get_hco_spec,
@@ -1506,3 +1511,48 @@ class TestHcoFeatureGatesPatch:
         mock_hco = self._hco_with_gates(gates=[])
         with pytest.raises(ValueError, match="At least one gate"):
             hco_feature_gates_patch(hco_resource=mock_hco)
+
+
+class TestGetHcoExpectedConditions:
+    """Test cases for get_hco_expected_conditions."""
+
+    def _mock_hco_resource(self, spec: dict) -> MagicMock:
+        mock_resource = MagicMock()
+        mock_resource.instance.to_dict.return_value = {"spec": spec}
+        return mock_resource
+
+    def test_includes_injector_condition_when_enabled(self):
+        """Test that VirtNetworkResourcesInjectorReady is included when deployNetworkResourcesInjector is True."""
+        hco_resource = self._mock_hco_resource(spec={"deployment": {"deployNetworkResourcesInjector": True}})
+        result = get_hco_expected_conditions(hco_resource=hco_resource)
+        assert VIRT_NETWORK_RESOURCES_INJECTOR_READY in result
+        assert result[VIRT_NETWORK_RESOURCES_INJECTOR_READY] == Resource.Condition.Status.TRUE
+
+    def test_excludes_injector_condition_when_disabled(self):
+        """Test that VirtNetworkResourcesInjectorReady is excluded when deployNetworkResourcesInjector is False."""
+        hco_resource = self._mock_hco_resource(spec={"deployment": {"deployNetworkResourcesInjector": False}})
+        result = get_hco_expected_conditions(hco_resource=hco_resource)
+        assert VIRT_NETWORK_RESOURCES_INJECTOR_READY not in result
+
+    def test_excludes_injector_condition_when_deployment_key_absent(self):
+        """Test that VirtNetworkResourcesInjectorReady is excluded when deployment key is absent."""
+        hco_resource = self._mock_hco_resource(spec={})
+        result = get_hco_expected_conditions(hco_resource=hco_resource)
+        assert VIRT_NETWORK_RESOURCES_INJECTOR_READY not in result
+
+    def test_always_includes_base_conditions(self):
+        """Test that base DEFAULT_HCO_CONDITIONS are always present regardless of injector setting."""
+        hco_enabled = self._mock_hco_resource(spec={"deployment": {"deployNetworkResourcesInjector": True}})
+        hco_disabled = self._mock_hco_resource(spec={"deployment": {"deployNetworkResourcesInjector": False}})
+
+        for condition_type, condition_status in DEFAULT_HCO_CONDITIONS.items():
+            assert get_hco_expected_conditions(hco_resource=hco_enabled)[condition_type] == condition_status
+            assert get_hco_expected_conditions(hco_resource=hco_disabled)[condition_type] == condition_status
+
+    def test_does_not_mutate_default_conditions(self):
+        """Test that calling get_hco_expected_conditions does not modify DEFAULT_HCO_CONDITIONS."""
+        original_keys = set(DEFAULT_HCO_CONDITIONS.keys())
+        hco_resource = self._mock_hco_resource(spec={"deployment": {"deployNetworkResourcesInjector": True}})
+        get_hco_expected_conditions(hco_resource=hco_resource)
+        assert set(DEFAULT_HCO_CONDITIONS.keys()) == original_keys
+        assert VIRT_NETWORK_RESOURCES_INJECTOR_READY not in DEFAULT_HCO_CONDITIONS
