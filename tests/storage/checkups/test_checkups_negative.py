@@ -1,8 +1,8 @@
 import pytest
 from ocp_resources.job import Job
+from utilities.constants.pytest import QUARANTINED
 
 from tests.storage.checkups.utils import assert_results_in_configmap
-from utilities.constants.pytest import QUARANTINED
 
 DEFAULT_STORAGE_CLASS_ENTRY = "defaultStorageClass"
 MSG_NO_DEFAULT_STORAGE_CLASS = "no default storage class"
