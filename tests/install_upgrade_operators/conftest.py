@@ -17,12 +17,13 @@ from tests.install_upgrade_operators.constants import (
     RESOURCE_NAMESPACE_STR,
     RESOURCE_TYPE_STR,
 )
+from tests.install_upgrade_operators.relationship_labels.constants import PART_OF_LABEL_KEY
 from tests.install_upgrade_operators.utils import (
     get_network_addon_config,
     get_resource_by_name,
     get_resource_from_related_object,
 )
-from utilities.constants import HPP_POOL
+from utilities.constants import HCO_PART_OF_LABEL_VALUE, HPP_POOL
 from utilities.hco import ResourceEditorValidateHCOReconcile, get_hco_version
 from utilities.infra import (
     get_daemonset_by_name,
@@ -39,6 +40,22 @@ from utilities.storage import get_hyperconverged_cdi
 from utilities.virt import get_hyperconverged_kubevirt
 
 LOGGER = logging.getLogger(__name__)
+
+
+@pytest.fixture(scope="session")
+def discovered_cnv_deployments(admin_client, hco_namespace):
+    """Discover CNV deployments in the HCO namespace.
+
+    Returns:
+        tuple[Deployment, ...]: Deployments matching the HCO part-of label.
+    """
+    return tuple(
+        Deployment.get(
+            client=admin_client,
+            namespace=hco_namespace.name,
+            label_selector=f"{PART_OF_LABEL_KEY}={HCO_PART_OF_LABEL_VALUE}",
+        )
+    )
 
 
 @pytest.fixture(scope="session")
