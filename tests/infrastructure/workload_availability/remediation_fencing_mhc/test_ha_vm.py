@@ -171,7 +171,7 @@ def test_ha_vm_dv_disk_reboot(
     ha_vm_dv_disk,
 ):
     orig_node = ha_vm_dv_disk.vmi.get_node(privileged_client=admin_client)
-    ha_vm_dv_disk.ssh_exec.run_command(command=["echo", "test", ">>", "ha-test"])
+    ha_vm_dv_disk.ssh_exec.run_command(command=["echo", "test", ">>", "ha-test", "&&", "sync"])
     stop_kubelet_on_node(utility_pods=workers_utility_pods, node=orig_node)
     wait_and_verify_vmi_failover(vm=ha_vm_dv_disk, admin_client=admin_client)
     wait_node_restored(node=orig_node)

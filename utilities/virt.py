@@ -103,6 +103,7 @@ from utilities.constants.virt import (
     CLOUD_INIT_DISK_NAME,
     CLOUD_INIT_NO_CLOUD,
     CNV_VM_SSH_KEY_PATH,
+    DESCHEDULER_PREFER_NO_EVICTION_ANNOTATION,
     DV_DISK,
     ES_LIVE_MIGRATE_IF_POSSIBLE,
     ES_NONE,
@@ -542,7 +543,7 @@ class VirtualMachineForTests(VirtualMachine):
         if self.exclude_from_descheduler or effective_eviction_strategy in (ES_NONE, ES_LIVE_MIGRATE_IF_POSSIBLE):
             LOGGER.info(f"Setting descheduler exclusion annotation on VM {self.name}")
             template_annotations = self.res["spec"]["template"].setdefault("metadata", {}).setdefault("annotations", {})
-            template_annotations["descheduler.alpha.kubernetes.io/prefer-no-eviction"] = "true"
+            template_annotations[DESCHEDULER_PREFER_NO_EVICTION_ANNOTATION] = "true"
 
     def set_hugepages_page_size(self, template_spec):
         if self.hugepages_page_size:
@@ -2237,7 +2238,7 @@ def vm_instance_from_template(
         yield vm
 
 
-def _uncordon_and_stabilize(admin_client: DynamicClient, node: Node, hco_namespace: str) -> None:
+def _uncordon_and_stabilize(admin_client: DynamicClient, node: Node, hco_namespace: Namespace) -> None:
     """
     Uncordon a node and wait for KubeVirt to stabilize.
 
@@ -2275,7 +2276,7 @@ def cordon_node(admin_client: DynamicClient, node: Node) -> Generator[None]:
 
 @contextmanager
 def drain_node(
-    admin_client: DynamicClient, node: Node, hco_namespace: str, compact_cluster: bool = False
+    admin_client: DynamicClient, node: Node, hco_namespace: Namespace, compact_cluster: bool = False
 ) -> Generator[None]:
     """
     Drain a node and uncordon it on exit.

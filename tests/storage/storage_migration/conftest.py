@@ -373,7 +373,7 @@ def written_files_to_mounted_hotplugged_disks(vm_with_mounted_hotplugged_disks):
     for mount_path in MOUNT_HOTPLUGGED_DEVICE_PATHS:
         run_ssh_commands(
             host=vm_with_mounted_hotplugged_disks.ssh_exec,
-            commands=shlex.split(f"echo '{CONTENT}' | sudo tee {mount_path}/{FILE_BEFORE_STORAGE_MIGRATION}"),
+            commands=shlex.split(f"echo '{CONTENT}' | sudo tee {mount_path}/{FILE_BEFORE_STORAGE_MIGRATION} && sync"),
             wait_timeout=TIMEOUT_2MIN,
             sleep=TIMEOUT_5SEC,
         )
