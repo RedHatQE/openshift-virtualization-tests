@@ -124,7 +124,7 @@ def assert_hco_exists_after_delete(
         condition["type"]: condition["status"] for condition in hco_resource.instance.status.conditions
     }
     assert actual_hco_status == expected_conditions, (
-        f"HCO condition is not stable. Actual HCO condition :{actual_hco_status}"
+        f"HCO condition is not stable. Actual HCO condition :{actual_hco_status} "
         f"expected condition is {expected_conditions}"
     )
     assert_missing_resources(
