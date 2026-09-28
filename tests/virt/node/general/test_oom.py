@@ -120,6 +120,7 @@ def test_vm_fedora_oom(admin_client, fedora_oom_vm, fedora_oom_stress_started):
                 "memory_guest": Images.Windows.DEFAULT_MEMORY_SIZE_WSL,
                 "cpu_cores": 16,
                 "cpu_threads": 1,
+                "exclude_from_descheduler": True,
             },
             marks=pytest.mark.polarion("CNV-9893"),
         ),
