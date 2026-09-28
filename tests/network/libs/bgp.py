@@ -221,8 +221,11 @@ def generate_openpe_yaml(
         raise ValueError("worker_ipv4_list cannot be empty")
 
     evpn_route_map = "evpn-to-ocp"
+    # Workers share CLUSTER_FRR_ASN, so remove it before relaying EVPN routes
+    # through the external eBGP ToR to another worker.
     raw_config_lines = [
         f"route-map {evpn_route_map} permit 10",
+        f" set as-path exclude {CLUSTER_FRR_ASN}",
         " set ip next-hop unchanged",
         "!",
         f"router bgp {EXTERNAL_FRR_ASN}",
@@ -230,6 +233,10 @@ def generate_openpe_yaml(
     ]
     for worker_ipv4 in worker_ipv4_list:
         raw_config_lines.append(f"  neighbor {worker_ipv4} route-map {evpn_route_map} out")
+        # OpenPE enables allowas-in for eBGP EVPN neighbors. The external
+        # ToR must reject its own ASN when a worker reflects a route back,
+        # otherwise AS-path exclusion lets the route loop between workers.
+        raw_config_lines.append(f"  no neighbor {worker_ipv4} allowas-in")
     raw_config_lines.extend([
         " exit-address-family",
         "!",
