@@ -114,11 +114,11 @@ def files_created_on_pvc_disks(vm_with_dv_for_cloning):
         host=vm_with_dv_for_cloning.ssh_exec,
         commands=[
             # create file on root disk
-            shlex.split(f"echo 'TEST' > {ROOT_DISK_TEST_FILE_STR}"),
+            shlex.split(f"echo 'TEST' > {ROOT_DISK_TEST_FILE_STR} && sync"),
             # create partition and file on second disk
             shlex.split(f"sudo mkfs.ext4 {SECOND_DISK_PATH}"),
             shlex.split(f"sudo mount {SECOND_DISK_PATH} /mnt"),
-            shlex.split(f"echo 'TEST' | sudo tee {SECOND_DISK_TEST_FILE_STR}"),
+            shlex.split(f"echo 'TEST' | sudo tee {SECOND_DISK_TEST_FILE_STR} && sync"),
             # update selinux: allow snapshot for second disk
             shlex.split("sudo setsebool -P virt_qemu_ga_read_nonsecurity_files 1"),
         ],
