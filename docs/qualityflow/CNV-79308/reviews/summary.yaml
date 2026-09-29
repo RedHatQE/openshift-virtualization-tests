@@ -1,0 +1,8 @@
+status: success
+jira_id: CNV-79308
+initial_verdict: APPROVED_WITH_FINDINGS
+final_verdict: APPROVED_WITH_FINDINGS
+refinement_iterations: 0
+findings: {critical: 0, major: 0, minor: 3, actionable: 0}
+reviewed: outputs/CNV-79308/stp/CNV-79308_test_plan.md
+report: outputs/CNV-79308/reviews/CNV-79308_stp_review.md

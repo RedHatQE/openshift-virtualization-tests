@@ -1,0 +1,23 @@
+jira_id: CNV-79308
+repositories:
+  - {name: RedHatQE/openshift-virtualization-tests, branch: main, commit: fb14974}
+  - {name: kubevirt/kubevirt, branch: main, commit: 0a80423}
+branch_state: {primary_repo: clean_main, product_repo: clean_main, pull_request_heads_checked_via: GitHub API}
+impacted_features:
+  - {feature_name: VM cloning with persistent TPM or EFI state, relationship: direct, why_might_break: "Clone and restore must preserve state while assigning the target VM its own identity.", code_location: pkg/storage/snapshot/}
+  - {feature_name: Declarative creation and adoption of VM state storage, relationship: direct, why_might_break: "Ownership and lifecycle differ between generated and user-owned PVCs.", code_location: pkg/storage/backend-storage/}
+  - {feature_name: Live and storage migration of VM state, relationship: direct, why_might_break: "RWO and RWX storage require different destination and cleanup behavior.", code_location: pkg/virt-controller/watch/vmi/}
+  - {feature_name: Persistent TPM EFI and CBT workflows, relationship: adjacent, why_might_break: "Reusing state across VM identities must preserve TPM and EFI while resetting VM-specific CBT metadata when required.", code_location: pkg/virt-launcher/virtwrap/}
+existing_test_coverage:
+  - {file: tests/virt/cluster/vm_cloning/test_vm_cloning.py, coverage: "Standard Linux and Windows cloning, identity and migration", gap: "No declarative VM state clone case"}
+  - {file: tests/storage/storage_migration/test_storage_class_migration.py, coverage: "Running VM storage migration and Windows vTPM integrity", gap: "No declarative source/template ownership matrix"}
+  - {file: tests/storage/storage_migration/test_storage_class_online_offline_migration.py, coverage: "Cleanup, rollback, cancellation and volume modes", gap: "No declarative VM state lifecycle assertions"}
+  - {file: tests/virt/node/general/test_windows_vtpm_bitlocker.py, coverage: "Persistent TPM, encryption and live migration", gap: "No cloned or adopted declarative state"}
+  - {file: tests/storage/vmstate.go, source: "kubevirt/kubevirt PR 19173", coverage: "Template creation, adoption, concurrency, cleanup and legacy normalization", gap: "Draft upstream coverage does not replace downstream clone and storage-migration validation"}
+recommended_tests:
+  - {requirement: "A VM owner can clone a VM with persistent state and start the clone with preserved trust state.", test_scenario: "Clone a supported VM with declarative state and verify preserved TPM or EFI state.", test_type: Tier 2, priority: P0}
+  - {requirement: "A VM owner is protected from simultaneous use of one persistent state volume.", test_scenario: "Start a second VM from state held by a running VM and verify a clear blocked result.", test_type: Tier 1, priority: P1}
+  - {requirement: "A cluster administrator can migrate VM state to target storage without losing guest state.", test_scenario: "Migrate RWO declarative state with a creation template and verify continuity, placement and cleanup.", test_type: Tier 2, priority: P0}
+  - {requirement: "A cluster administrator receives a safe failure when RWO live migration cannot create destination state storage.", test_scenario: "Request live migration for source-only RWO state and verify it is blocked while the source VM remains usable.", test_type: Tier 2, priority: P0}
+  - {requirement: "Existing users retain implicit VM state behavior.", test_scenario: "Start and migrate a legacy VM without declarative state and verify persistent state remains usable.", test_type: Tier 2, priority: P1}
+coverage_summary: {existing_downstream_suites: 4, upstream_pr_test_files: 2, direct_downstream_gaps: 3, confidence: high}

@@ -1,0 +1,42 @@
+validation_results:
+  valid: true
+  checks:
+    content.feature_maturity: pass
+    content.known_limitation_sign_offs: pass
+    content.nfr_scenario_crossref: pass
+    content.no_code_blocks: pass
+    content.no_generic_scenarios: pass
+    content.out_of_scope_fields: pass
+    content.scenario_classification_inline: pass
+    content.scenario_ids_sequential: pass
+    content.scenario_ids_unique: pass
+    content.section_iii_1_format: pass
+    content.test_limitation_sign_offs: pass
+    content.unique_requirement_summaries: pass
+    content.valid_test_tiers: pass
+    list_items.metadata: pass
+    list_items.section_i_1: pass
+    list_items.section_i_3: pass
+    list_items.section_ii_1_out_of_scope: pass
+    list_items.section_ii_2: pass
+    list_items.section_ii_3: pass
+    list_items.section_ii_5: pass
+    list_items.section_iii: pass
+    prohibited.current_status_field: pass
+    prohibited.decision_blocks: pass
+    prohibited.old_numbering: pass
+    prohibited.real_emails: pass
+    prohibited.real_ips: pass
+    prohibited.sections: pass
+    prohibited.status_prose_in_sign_offs: pass
+    structure.all_sections_present: pass
+    structure.document_header: pass
+    structure.feature_title: pass
+    structure.horizontal_rules: pass
+    structure.test_limitations: pass
+  errors: []
+  warnings: []
+total_checks: 33
+passed: 33
+failed: 0
+warnings: 0

@@ -1,0 +1,56 @@
+pr_details:
+  - repository: kubevirt/enhancements
+    number: 313
+    title: "VEP #312: Declarative VMState PVC"
+    url: https://github.com/kubevirt/enhancements/pull/313
+    state: closed
+    draft: false
+    merged: true
+    merged_at: 2026-09-01T20:59:12Z
+    changed_files: 1
+    additions: 362
+    deletions: 0
+    files: [veps/sig-storage/312-declarative-vmstate/vep.md]
+  - repository: kubevirt/kubevirt
+    number: 16634
+    title: "Backend storage: Implement clone support"
+    url: https://github.com/kubevirt/kubevirt/pull/16634
+    state: open
+    draft: false
+    merged: false
+    updated_at: 2026-08-04T20:05:24Z
+    changed_files: 24
+    additions: 948
+    deletions: 50
+  - repository: kubevirt/kubevirt
+    number: 19173
+    title: "[WIP] VEP #312: Declarative VMState"
+    url: https://github.com/kubevirt/kubevirt/pull/19173
+    state: open
+    draft: true
+    merged: false
+    updated_at: 2026-09-28T15:12:47Z
+    changed_files: 42
+    additions: 4746
+    deletions: 47
+changed_files_summary:
+  total: 67
+  high_impact_areas: [VM state API and validation, PVC ownership and adoption, clone and restore, RWO and RWX migration, TPM EFI and CBT persistence, end-to-end storage tests]
+review_observations:
+  - The design PR is merged and defines Alpha for KubeVirt v1.10; Beta and GA remain unspecified.
+  - Both implementation PRs are open, and PR 19173 remains a draft.
+  - PR 19173's description is incomplete despite its large implementation scope.
+  - Jira CNV-98256 inaccurately describes PR 19173 as merged.
+fix_scope:
+  user_visible_changes:
+    - Users can explicitly create or reuse VM state storage.
+    - Cloned or recreated VMs can reuse preserved TPM and EFI state.
+    - Migration behavior differs by access mode and whether a creation template is available.
+  failure_paths:
+    - Reject missing source and template.
+    - Reject non-filesystem storage and fixed names on generated templates.
+    - Prevent concurrent use of one state PVC by running VMs.
+    - Block RWO live migration when only an adopted source is provided.
+  compatibility:
+    - Existing VMs without the new field continue using implicit state storage.
+    - Disabling the Alpha gate does not strand VMs already using declarative state.

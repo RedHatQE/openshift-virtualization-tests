@@ -1,0 +1,8 @@
+sanitization_summary:
+  ips_replaced: 0
+  emails_replaced: 0
+  uuids_replaced: 0
+  macs_replaced: 0
+  hostnames_replaced: 0
+  credentials_replaced: 0
+  total_replacements: 0

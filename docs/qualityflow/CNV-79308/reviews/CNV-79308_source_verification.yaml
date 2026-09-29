@@ -1,0 +1,14 @@
+jira:
+  fetched_live: true
+  issue: CNV-79308
+  acceptance_criteria: 2
+  fix_version: CNV v5.1.0
+github:
+  - {repository: kubevirt/enhancements, pull: 313, state: merged, verified_at: 2026-09-29}
+  - {repository: kubevirt/kubevirt, pull: 16634, state: open, draft: false, verified_at: 2026-09-29}
+  - {repository: kubevirt/kubevirt, pull: 19173, state: open, draft: true, verified_at: 2026-09-29}
+local_repositories:
+  - {repository: RedHatQE/openshift-virtualization-tests, branch: main, clean: true, commit: fb14974}
+  - {repository: kubevirt/kubevirt, branch: main, clean: true, commit: 0a80423}
+conflicts:
+  - Jira CNV-98256 describes PR 19173 as merged, but GitHub reports an open draft.

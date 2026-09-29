@@ -1,0 +1,70 @@
+main_issue:
+  key: CNV-79308
+  summary: Clone and Storage Migration support for VMState PVC
+  description: Jira contains the epic authoring template rather than a completed feature description.
+  status: In Progress
+  issue_type: Epic
+  priority: Normal
+  components: [Storage Ecosystem]
+  fix_versions: [CNV v5.1.0]
+  acceptance_criteria:
+    - VM clones work with VMState PVC.
+    - Migrate storage of VMState PVC is supported.
+  feature_link: https://redhat.atlassian.net/browse/VIRTSTRAT-482
+  parent_issue: {key: VIRTSTRAT-482, summary: Improve scalability of VMState storage}
+  assignee: {name: Alvaro Romero}
+  reporter: {name: Natalie Gavrielov}
+  comments:
+    - {author: Natalie Gavrielov, created: 2026-05-03, body: "The epic moved to CNV 5.1 and requires the design tracked by CNV-85157.", pr_urls_found: []}
+    - {author: Ashleigh Brennan, created: 2026-09-25, body: "Documentation impact is expected to be limited to release-note and existing-caveat updates.", pr_urls_found: []}
+linked_issues:
+  - {key: CNV-83112, summary: "MTC Storage Conversion skips or retains the persistent-state PVC on source storage", status: New, issue_type: Bug, relationship: outward, link_type: blocks, link_category: blocking, components: [Storage Platform], priority: Major, acceptance_criteria: null, pr_urls: []}
+  - {key: CNV-85157, summary: "Create a VEP to make backend storage PVC declarative", status: Closed, issue_type: Story, relationship: inward, link_type: account is impacted by, link_category: related, components: [Storage Ecosystem], acceptance_criteria: null, pr_urls: []}
+  - key: CNV-57934
+    summary: Revisit VMClone support of VMs with Backend Storage
+    status: Closed
+    issue_type: Story
+    relationship: child
+    link_category: hierarchy
+    pr_urls: [{url: https://github.com/kubevirt/kubevirt/pull/16634, source_type: custom_field}]
+  - {key: CNV-72063, summary: "POC for VM state API improvements in KubeVirt", status: Closed, issue_type: Task, relationship: child, link_category: hierarchy, pr_urls: []}
+  - key: CNV-98256
+    summary: Declarative VMState PVC
+    status: In Progress
+    issue_type: Story
+    relationship: child
+    link_category: hierarchy
+    pr_urls: [{url: https://github.com/kubevirt/kubevirt/pull/19173, source_type: description}]
+  - key: CNV-92450
+    summary: Design Persistent state PVC
+    status: Closed
+    issue_type: Story
+    relationship: related
+    link_category: related
+    pr_urls: [{url: https://github.com/kubevirt/enhancements/pull/313, source_type: custom_field}]
+subtasks:
+  - {key: CNV-79309, summary: upstream roadmap issue, status: New, pr_urls: []}
+  - {key: CNV-79310, summary: upstream design, status: New, pr_urls: []}
+  - {key: CNV-79311, summary: upstream documentation, status: New, pr_urls: []}
+  - {key: CNV-79312, summary: upgrade consideration, status: New, pr_urls: []}
+  - {key: CNV-79313, summary: test plans in polarion, status: New, pr_urls: []}
+  - {key: CNV-79314, summary: automated tests, status: New, pr_urls: []}
+  - {key: CNV-79315, summary: downstream documentation merged, status: New, pr_urls: []}
+  - {key: CNV-79316, summary: release note, status: New, pr_urls: []}
+pr_urls:
+  - {url: https://github.com/kubevirt/enhancements/pull/313, source_issue: CNV-92450, source_type: custom_field, is_main_issue: false}
+  - {url: https://github.com/kubevirt/kubevirt/pull/16634, source_issue: CNV-57934, source_type: custom_field, is_main_issue: false}
+  - {url: https://github.com/kubevirt/kubevirt/pull/19173, source_issue: CNV-98256, source_type: description, is_main_issue: false}
+feature_candidates:
+  explicit_mentions: [VM clone with persistent VM state, Declarative VM state storage, Storage migration with persistent TPM EFI or CBT state]
+  acceptance_criteria: [VM clones work with VMState PVC., Migrate storage of VMState PVC is supported.]
+  integration_points: [VM cloning and restore, Storage-class and live migration, TPM EFI and CBT state persistence, Backup restore and GitOps workflows]
+dependency_graph:
+  blocking: [CNV-83112]
+  blocked_by: []
+  related: [CNV-85157, CNV-92450]
+  parent: [VIRTSTRAT-482]
+collection_notes:
+  - Jira was fetched live on 2026-09-29.
+  - CNV-98256 calls PR 19173 merged, but GitHub reports it is still an open draft as of 2026-09-29.
+  - CNV-92450 links merged design PR 313, the authoritative VEP source.
