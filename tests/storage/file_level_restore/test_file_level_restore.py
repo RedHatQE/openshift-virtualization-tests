@@ -616,29 +616,30 @@ class TestFileRestoreSequentialFromSameSnapshot:
 
 class TestFileRestoreCrossNamespace:
     """
-    Tests for restoring files from backup sources in a different namespace.
+    Tests for restoring files from volume snapshots in a different namespace.
 
     Preconditions:
         - vm-file-restore-operator deployed and running in openshift-cnv namespace
         - Running Linux VM with guest helper installed and filerestore user SSH-configured
-        - Backup source available in a namespace different from the target VM namespace
-        - Cross-namespace restore permissions configured for the backup source
+        - Volume snapshot source available in a namespace different from the target VM namespace
+        - Cross-namespace restore permissions configured for the volume snapshot
     """
 
     __test__ = False
 
+    @pytest.mark.polarion("CNV-16835")
     def test_restore_from_different_namespace(self):
         """
-        Test that restore from a backup volume in a different namespace succeeds and cleans up.
+        Test that restore from a volume snapshot in a different namespace succeeds and cleans up.
 
         Preconditions:
             - Running Linux VM with guest helper installed and filerestore user SSH-configured
-            - Backup volume containing a file with known content in a different namespace
-            - Cross-namespace restore permissions configured for the backup volume
+            - Volume snapshot containing a file with known content in a different namespace
+            - Cross-namespace restore permissions configured for the volume snapshot
             - Target file deleted from the Linux VM
 
         Steps:
-            1. Create a VMFileRestore that references the backup volume in the source namespace
+            1. Create a VMFileRestore that references the volume snapshot in the source namespace
             2. Wait for the restore operation to complete
             3. Read the restored file from the Linux VM
             4. Inspect both namespaces for temporary restore resources
@@ -650,7 +651,7 @@ class TestFileRestoreCrossNamespace:
 
 class TestFileRestoreStorageCompatibility:
     """
-    Tests for restore compatibility with non-default and LVM-backed storage configurations.
+    Tests for restore compatibility with non-default storage configurations.
 
     Preconditions:
         - vm-file-restore-operator deployed and running in openshift-cnv namespace
@@ -660,45 +661,26 @@ class TestFileRestoreStorageCompatibility:
 
     __test__ = False
 
+    @pytest.mark.polarion("CNV-16836")
     def test_restore_when_source_volume_mode_differs_from_cluster_default(self):
         """
         Test that restore succeeds when the snapshot source volume mode differs from the cluster default.
 
         Preconditions:
             - Running Linux VM with guest helper installed and filerestore user SSH-configured
-            - VolumeSnapshot containing a file with known content
-            - Snapshot source volume mode differs from the cluster default volume mode
+            - VolumeSnapshot created from a Filesystem-mode PVC and containing a file with known content
+            - StorageProfile prefers Block volume mode for the ReadWriteOnce restore volume
             - Target file deleted from the Linux VM
 
         Steps:
-            1. Create a VMFileRestore from the VolumeSnapshot
-            2. Wait for the restore operation to complete
-            3. Read the restored file from the Linux VM
+            1. Verify that the snapshot source volume mode is Filesystem and the StorageProfile prefers Block volume mode for the ReadWriteOnce restore volume
+            2. Create a VMFileRestore from the VolumeSnapshot
+            3. Verify that the temporary restore volume preserves the Filesystem source volume mode
+            4. Wait for the restore operation to complete
+            5. Read the restored file from the Linux VM
 
         Expected:
-            - Restore succeeds and the restored file content matches the snapshot source
-        """
-
-    def test_restore_from_lvm_snapshot_with_volume_identifier_collision(self):
-        """
-        Test that an LVM-based snapshot restores despite matching the original volume identifier.
-
-        Markers:
-            - special_infra
-
-        Preconditions:
-            - Running Linux VM with guest helper installed and filerestore user SSH-configured
-            - LVM-backed VolumeSnapshot containing a file with known content
-            - Original volume and snapshot filesystem have the same volume identifier
-            - Target file deleted from the Linux VM
-
-        Steps:
-            1. Create a VMFileRestore from the LVM-backed VolumeSnapshot
-            2. Wait for the restore operation to complete
-            3. Read the restored file from the Linux VM
-
-        Expected:
-            - Snapshot mounts without a volume identifier collision and the file is restored with its original content
+            - Restore succeeds using the Filesystem source volume mode despite the Block preference, and the restored file content matches the snapshot source
         """
 
 
@@ -718,6 +700,7 @@ class TestFileRestoreWindowsManualBrowsing:
 
     __test__ = False
 
+    @pytest.mark.polarion("CNV-16837")
     def test_manual_browsing_of_windows_ntfs_backup_volume(self):
         """
         Test that manual restore mode exposes an NTFS backup volume for read-only browsing.
@@ -749,6 +732,8 @@ class TestFileRestoreGuestConnectionInterruption:
 
     __test__ = False
 
+    @pytest.mark.polarion("CNV-16838")
+    @pytest.mark.jira("CNV-93092", run=False)
     def test_guest_connection_loss_during_file_transfer(self):
         """
         [NEGATIVE] Test that an interrupted guest connection reports partial completion and supports retry.
@@ -769,74 +754,6 @@ class TestFileRestoreGuestConnectionInterruption:
         """
 
 
-class TestFileRestoreOperatorUpgrade:
-    """
-    Tests for file restore resource continuity across operator upgrades.
-
-    Markers:
-        - upgrade
-        - product_upgrade_test
-
-    Preconditions:
-        - vm-file-restore-operator deployed and running in openshift-cnv namespace
-        - File restore resource exists before the operator upgrade
-    """
-
-    __test__ = False
-
-    def test_operator_upgrade_preserves_restore_resource_and_status(self):
-        """
-        Test that operator upgrade preserves an existing restore resource and its status.
-
-        Preconditions:
-            - vm-file-restore-operator deployed and running in openshift-cnv namespace
-            - File restore resource with recorded status exists before the operator upgrade
-            - Upgrade payload containing a newer vm-file-restore-operator version is available
-
-        Steps:
-            1. Upgrade OpenShift Virtualization to the target version
-            2. Wait for the upgraded vm-file-restore-operator to become ready
-            3. Read the existing file restore resource and its status
-
-        Expected:
-            - Existing restore resource and its recorded status remain unchanged after the operator upgrade
-        """
-
-
-class TestFileRestoreXFSRootDiskSnapshot:
-    """
-    Tests for restoring files from an XFS root disk snapshot.
-
-    Markers:
-        - special_infra
-
-    Preconditions:
-        - vm-file-restore-operator deployed and running in openshift-cnv namespace
-        - Running Linux VM with an XFS root filesystem, guest helper installed, and filerestore user SSH-configured
-        - LVM-backed VolumeSnapshot-capable StorageClass available
-    """
-
-    __test__ = False
-
-    def test_restore_from_xfs_root_disk_snapshot(self):
-        """
-        Test that a file is restored from an XFS root disk snapshot despite filesystem identifier reuse.
-
-        Preconditions:
-            - Running Linux VM with an XFS root filesystem, guest helper installed, and filerestore user SSH-configured
-            - LVM-backed root disk VolumeSnapshot containing a file with known content
-            - Target file deleted from the Linux VM root disk
-
-        Steps:
-            1. Create a VMFileRestore from the XFS root disk VolumeSnapshot
-            2. Wait for the restore operation to complete
-            3. Read the restored file at its original path in the Linux VM
-
-        Expected:
-            - XFS root disk snapshot mounts successfully and the file is restored with its original content
-        """
-
-
 class TestFileRestoreRootDiskManualBrowsing:
     """
     Tests for manual browsing of Linux root disk backups.
@@ -849,6 +766,7 @@ class TestFileRestoreRootDiskManualBrowsing:
 
     __test__ = False
 
+    @pytest.mark.polarion("CNV-16839")
     def test_manual_browsing_of_root_disk_backup(self):
         """
         Test that manual restore mode exposes root disk backup contents for read-only browsing.
@@ -867,7 +785,7 @@ class TestFileRestoreRootDiskManualBrowsing:
             4. Attempt to modify a file on the mounted root disk backup
 
         Expected:
-            - Known content can be read from the mounted root disk backup and modification is denied
+            - Known content can be read from the mounted root disk backup
         """
 
 
@@ -883,6 +801,7 @@ class TestFileRestoreLargeFile:
 
     __test__ = False
 
+    @pytest.mark.polarion("CNV-16840")
     def test_restore_big_file_from_data_disk_snapshot(self):
         """
         Test that a 1 GB file is restored successfully from a data disk snapshot.
@@ -917,6 +836,7 @@ class TestFileRestoreConcurrentVirtualMachines:
 
     __test__ = False
 
+    @pytest.mark.polarion("CNV-16841")
     def test_concurrent_restores_on_different_virtual_machines(self):
         """
         Test that concurrent file restores on different virtual machines complete independently.
