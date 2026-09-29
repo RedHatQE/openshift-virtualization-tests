@@ -25,6 +25,7 @@ from tests.storage.restricted_namespace_cloning.constants import (
     VERBS_SRC_SA,
     VM_FOR_TEST,
 )
+from tests.storage.stop_status_utils import dv_stop_status_restart_threshold
 from tests.storage.utils import (
     create_cluster_role,
     create_role_binding,
@@ -88,7 +89,7 @@ def dv_cloned_from_datasource(
         storage_class=storage_class_name_scope_module,
         client=namespace.client,
     ) as dv:
-        dv.wait_for_dv_success()
+        dv.wait_for_dv_success(stop_status_func=dv_stop_status_restart_threshold, dv=dv)
         yield dv
 
 
@@ -319,7 +320,7 @@ def dv_destination_cloned_from_pvc(
         consume_wffc=False,
         annotations=BIND_IMMEDIATE_ANNOTATION,
     ) as cdv:
-        cdv.wait_for_dv_success()
+        cdv.wait_for_dv_success(stop_status_func=dv_stop_status_restart_threshold, dv=cdv)
         yield cdv
 
 
