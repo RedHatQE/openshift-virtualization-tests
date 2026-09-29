@@ -15,8 +15,6 @@ Preconditions:
       sampled mid-flight.
 """
 
-import logging
-
 import pytest
 
 from tests.observability.metrics.utils import (
@@ -24,7 +22,7 @@ from tests.observability.metrics.utils import (
 )
 from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS, WINDOWS_LATEST, WINDOWS_LATEST_LABELS
 from utilities.constants.cluster import RHCOS9_AFFINITY, RHCOS10_AFFINITY
-from utilities.constants.virt import MIGRATION_POLICY_VM_LABEL, MIGRATION_POLICY_WINDOWS_VM_LABEL
+from utilities.constants.virt import MIGRATION_POLICY_VM_LABEL
 
 pytestmark = [
     pytest.mark.mixed_os_nodes,
@@ -33,12 +31,10 @@ pytestmark = [
 
 # Each migration policy's vmi_selector only matches VMs carrying its corresponding label.
 _MIGRATION_POLICY_VM_DICT = {"spec": {"template": {"metadata": {"labels": MIGRATION_POLICY_VM_LABEL}}}}
-_MIGRATION_POLICY_WINDOWS_VM_DICT = {"spec": {"template": {"metadata": {"labels": MIGRATION_POLICY_WINDOWS_VM_LABEL}}}}
 
 
-@pytest.mark.usefixtures("dual_stream_migration_metrics_policy", "dual_stream_migration_metrics_windows_policy")
 @pytest.mark.parametrize(
-    "golden_image_data_source_for_dual_stream_scope_module, dual_stream_golden_image_vm, dual_stream_migration_metrics_vmim",
+    "golden_image_data_source_for_dual_stream_scope_module, dual_stream_golden_image_vm, updated_vm_affinity, dual_stream_migration_metrics_policy",
     [
         pytest.param(
             {"os_dict": RHEL_LATEST},
@@ -49,6 +45,7 @@ _MIGRATION_POLICY_WINDOWS_VM_DICT = {"spec": {"template": {"metadata": {"labels"
                 "vm_dict": _MIGRATION_POLICY_VM_DICT,
             },
             {"target_affinity": RHCOS10_AFFINITY},
+            {"bandwidth": "128Ki"},
             marks=pytest.mark.special_infra,
             id="RHEL-VM",
         ),
@@ -58,9 +55,10 @@ _MIGRATION_POLICY_WINDOWS_VM_DICT = {"spec": {"template": {"metadata": {"labels"
                 "vm_name": "ds-9to10-windows",
                 "template_labels": WINDOWS_LATEST_LABELS,
                 "vm_affinity": RHCOS9_AFFINITY,
-                "vm_dict": _MIGRATION_POLICY_WINDOWS_VM_DICT,
+                "vm_dict": _MIGRATION_POLICY_VM_DICT,
             },
             {"target_affinity": RHCOS10_AFFINITY},
+            {"bandwidth": "32Mi"},
             marks=[pytest.mark.special_infra, pytest.mark.high_resource_vm, pytest.mark.windows],
             id="WIN-VM",
         ),
@@ -85,6 +83,8 @@ class TestDualStreamMigrationRhcos9ToRhcos10:
         subtests,
         prometheus,
         dual_stream_golden_image_vm,
+        dual_stream_migration_metrics_policy,
+        updated_vm_affinity,
         dual_stream_migration_metrics_vmim,
     ):
         """
@@ -117,9 +117,8 @@ class TestDualStreamMigrationRhcos9ToRhcos10:
         )
 
 
-@pytest.mark.usefixtures("dual_stream_migration_metrics_policy", "dual_stream_migration_metrics_windows_policy")
 @pytest.mark.parametrize(
-    "golden_image_data_source_for_dual_stream_scope_module, dual_stream_golden_image_vm, dual_stream_migration_metrics_vmim",
+    "golden_image_data_source_for_dual_stream_scope_module, dual_stream_golden_image_vm, updated_vm_affinity, dual_stream_migration_metrics_policy",
     [
         pytest.param(
             {"os_dict": RHEL_LATEST},
@@ -130,6 +129,7 @@ class TestDualStreamMigrationRhcos9ToRhcos10:
                 "vm_dict": _MIGRATION_POLICY_VM_DICT,
             },
             {"target_affinity": RHCOS9_AFFINITY},
+            {"bandwidth": "128Ki"},
             marks=pytest.mark.special_infra,
             id="RHEL-VM",
         ),
@@ -139,9 +139,10 @@ class TestDualStreamMigrationRhcos9ToRhcos10:
                 "vm_name": "ds-10to9-windows",
                 "template_labels": WINDOWS_LATEST_LABELS,
                 "vm_affinity": RHCOS10_AFFINITY,
-                "vm_dict": _MIGRATION_POLICY_WINDOWS_VM_DICT,
+                "vm_dict": _MIGRATION_POLICY_VM_DICT,
             },
             {"target_affinity": RHCOS9_AFFINITY},
+            {"bandwidth": "32Mi"},
             marks=[pytest.mark.special_infra, pytest.mark.high_resource_vm, pytest.mark.windows],
             id="WIN-VM",
         ),
@@ -166,6 +167,8 @@ class TestDualStreamMigrationRhcos10ToRhcos9:
         subtests,
         prometheus,
         dual_stream_golden_image_vm,
+        dual_stream_migration_metrics_policy,
+        updated_vm_affinity,
         dual_stream_migration_metrics_vmim,
     ):
         """
@@ -187,8 +190,8 @@ class TestDualStreamMigrationRhcos10ToRhcos9:
           (they return no data during migration)
 
         Note:
-            Also checks the data remaining and dirty memory rate metrics. The bandwidth and dirty memory rate
-            metrics are skipped while CNV-97013 is open (they return no data during migration).
+            The memory transfer rate (bandwidth) and dirty memory rate metrics xfail while CNV-97013
+            is open (they return no data during migration).
         """
         validate_dual_stream_migration_metrics(
             subtests=subtests,
