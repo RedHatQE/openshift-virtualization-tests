@@ -785,7 +785,7 @@ class TestFileRestoreRootDiskManualBrowsing:
             4. Attempt to modify a file on the mounted root disk backup
 
         Expected:
-            - Known content can be read from the mounted root disk backup
+            - Known content can be read from the mounted root disk backup, and modification is denied
         """
 
 
