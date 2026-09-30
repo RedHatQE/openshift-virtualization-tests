@@ -111,8 +111,6 @@ def assert_missing_resources(resource_objects):
 
 
 def assert_hco_exists_after_delete(
-    admin_client,
-    hco_namespace,
     hco_resource,
     dv_resource,
 ):
@@ -209,10 +207,9 @@ def recreated_hco(
 @pytest.mark.parametrize("data_volume_scope_class", [pytest.param(DV_PARAMS)], indirect=True)
 class TestAttemptRemoveHCO:
     @pytest.mark.polarion("CNV-8615")
+    @pytest.mark.usefixtures("admin_client", "hco_namespace")
     def test_remove_hco_with_dv_no_vms(
         self,
-        admin_client,
-        hco_namespace,
         hyperconverged_resource_scope_function,
         data_volume_scope_class,
     ):
@@ -221,16 +218,14 @@ class TestAttemptRemoveHCO:
         when there is only DV exists with no VM
         """
         assert_hco_exists_after_delete(
-            admin_client=admin_client,
-            hco_namespace=hco_namespace,
             hco_resource=hyperconverged_resource_scope_function,
             dv_resource=data_volume_scope_class,
         )
 
     @pytest.mark.polarion("CNV-8613")
+    @pytest.mark.usefixtures("hco_fedora_vm")
     def test_default_uninstall_strategy(
         self,
-        hco_fedora_vm,
         hyperconverged_resource_scope_function,
         data_volume_scope_class,
         cdi_resource_scope_function,
@@ -251,11 +246,9 @@ class TestAttemptRemoveHCO:
         )
 
     @pytest.mark.polarion("CNV-8614")
+    @pytest.mark.usefixtures("admin_client", "hco_namespace", "hco_fedora_vm")
     def test_hco_removal_with_block_strategy_with_vm_and_dv(
         self,
-        admin_client,
-        hco_namespace,
-        hco_fedora_vm,
         data_volume_scope_class,
         hyperconverged_resource_scope_function,
     ):
@@ -263,18 +256,14 @@ class TestAttemptRemoveHCO:
         This test validates failure of HCO removal when both VM and DV exists
         """
         assert_hco_exists_after_delete(
-            admin_client=admin_client,
-            hco_namespace=hco_namespace,
             hco_resource=hyperconverged_resource_scope_function,
             dv_resource=data_volume_scope_class,
         )
 
     @pytest.mark.polarion("CNV-8725")
+    @pytest.mark.usefixtures("admin_client", "hco_namespace", "stopped_fedora_vm")
     def test_hco_removal_with_block_strategy_with_stopped_vm(
         self,
-        admin_client,
-        hco_namespace,
-        stopped_fedora_vm,
         hyperconverged_resource_scope_function,
         data_volume_scope_class,
     ):
@@ -283,8 +272,6 @@ class TestAttemptRemoveHCO:
         exists in stopped state
         """
         assert_hco_exists_after_delete(
-            admin_client=admin_client,
-            hco_namespace=hco_namespace,
             hco_resource=hyperconverged_resource_scope_function,
             dv_resource=data_volume_scope_class,
         )
@@ -294,9 +281,9 @@ class TestAttemptRemoveHCO:
 class TestRemoveHCO:
     @pytest.mark.polarion("CNV-8726")
     @pytest.mark.dependency(name=BLOCK_REMOVAL_TEST_NODE_ID)
+    @pytest.mark.usefixtures("removed_hco")
     def test_block_strategy_no_dv_and_no_vm(
         self,
-        removed_hco,
         hyperconverged_resource_scope_function,
     ):
         """
@@ -307,12 +294,11 @@ class TestRemoveHCO:
 
     @pytest.mark.polarion("CNV-8618")
     @pytest.mark.parametrize("data_volume_scope_function", [pytest.param(DV_PARAMS)], indirect=True)
+    @pytest.mark.usefixtures("hco_uninstall_strategy_remove_workloads", "removed_hco")
     def test_remove_strategy_with_dv_no_vm(
         self,
-        hco_uninstall_strategy_remove_workloads,
         data_volume_scope_function,
         hyperconverged_resource_scope_function,
-        removed_hco,
     ):
         """
         Remove HCO when DV exists with no VMs
@@ -322,13 +308,11 @@ class TestRemoveHCO:
 
     @pytest.mark.polarion("CNV-8617")
     @pytest.mark.parametrize("data_volume_scope_function", [pytest.param(DV_PARAMS)], indirect=True)
+    @pytest.mark.usefixtures("hco_fedora_vm", "hco_uninstall_strategy_remove_workloads", "removed_hco")
     def test_remove_strategy_with_vm_and_dv(
         self,
-        hco_fedora_vm,
-        hco_uninstall_strategy_remove_workloads,
         data_volume_scope_function,
         hyperconverged_resource_scope_function,
-        removed_hco,
     ):
         """
         Test HCO removal after setting uninstallStrategy to
@@ -338,13 +322,13 @@ class TestRemoveHCO:
         LOGGER.info(f"Successfully removed HCO with f{REMOVE_STRATEGY} uninstallStrategywith VM and DV in the cluster")
 
     @pytest.mark.polarion("CNV-8751")
+    @pytest.mark.usefixtures("recreated_hco")
     def test_recreate_hco(
         self,
         admin_client,
         hco_namespace,
         hco_version_scope_class,
         hco_status_related_objects,
-        recreated_hco,
         hyperconverged_resource_scope_function,
         cdi_resource_scope_function,
         kubevirt_resource,
