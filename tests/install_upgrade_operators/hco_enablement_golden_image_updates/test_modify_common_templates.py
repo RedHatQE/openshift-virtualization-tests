@@ -104,7 +104,7 @@ def updated_common_template(
         admin_client=admin_client,
         patches={
             hyperconverged_resource_scope_function: {
-                "spec": {SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME: updated_common_template_dict_list}
+                "spec": {"workloadSources": {SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME: updated_common_template_dict_list}}
             }
         },
         list_resource_reconcile=[CDI, SSP],

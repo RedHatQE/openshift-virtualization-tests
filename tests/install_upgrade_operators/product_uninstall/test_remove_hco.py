@@ -4,6 +4,7 @@ import pytest
 from kubernetes.dynamic.exceptions import BadRequestError
 from ocp_resources.config_map import ConfigMap
 from ocp_resources.hyperconverged import HyperConverged
+from ocp_resources.resource import Resource
 from ocp_resources.secret import Secret
 from ocp_resources.virtual_machine import VirtualMachine
 from pytest_testconfig import config as py_config
@@ -31,15 +32,20 @@ DV_PARAMS = {
 }
 
 
-def assert_expected_strategy(resource_objects, expected_strategy):
-    incorrect_components = {
-        component: resource_obj.instance.spec.uninstallStrategy
-        for component, resource_obj in resource_objects.items()
-        if resource_obj.instance.spec.uninstallStrategy != expected_strategy
-    }
+def get_uninstall_strategy(resource_obj: Resource) -> str:
+    if resource_obj.kind == HyperConverged.kind:
+        return resource_obj.instance.spec.deployment.uninstallStrategy
+    return resource_obj.instance.spec.uninstallStrategy
 
+
+def assert_expected_strategy(resource_objects: dict[str, Resource], expected_strategy: str) -> None:
+    incorrect_components = {
+        component: strategy
+        for component, resource_obj in resource_objects.items()
+        if (strategy := get_uninstall_strategy(resource_obj=resource_obj)) != expected_strategy
+    }
     assert not incorrect_components, (
-        f"Incorrect uninstallStrategy found for following component(s) {incorrect_components}"
+        f"Incorrect uninstallStrategy found for following components: {incorrect_components}"
     )
 
 
@@ -136,7 +142,9 @@ def hco_uninstall_strategy_remove_workloads(
 ):
     with ResourceEditorValidateHCOReconcile(
         admin_client=admin_client,
-        patches={hyperconverged_resource_scope_function: {"spec": {"uninstallStrategy": REMOVE_STRATEGY}}},
+        patches={
+            hyperconverged_resource_scope_function: {"spec": {"deployment": {"uninstallStrategy": REMOVE_STRATEGY}}}
+        },
     ):
         wait_for_hco_conditions(
             admin_client=admin_client,

@@ -76,7 +76,7 @@ def disabled_free_page_reporting_in_hco_cr(
         admin_client=admin_client,
         patches={
             hyperconverged_resource_scope_function: {
-                "spec": {"virtualMachineOptions": {"disableFreePageReporting": True}}
+                "spec": {"virtualization": {"virtualMachineOptions": {"disableFreePageReporting": True}}}
             }
         },
         list_resource_reconcile=[KubeVirt],
@@ -103,9 +103,9 @@ class TestFreePageReporting:
     def test_free_page_reporting_enabled_by_default(
         self, admin_client, free_page_reporting_vm, hyperconverged_resource_scope_function
     ):
-        assert not hyperconverged_resource_scope_function.instance.to_dict()["spec"]["virtualMachineOptions"][
-            "disableFreePageReporting"
-        ]
+        assert not hyperconverged_resource_scope_function.instance.to_dict()["spec"]["virtualization"][
+            "virtualMachineOptions"
+        ]["disableFreePageReporting"]
         assert_vmi_free_page_reporting(
             vm=free_page_reporting_vm,
             expected_free_page_reporting="on",

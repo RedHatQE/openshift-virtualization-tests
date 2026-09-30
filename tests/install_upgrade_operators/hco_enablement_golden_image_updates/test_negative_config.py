@@ -44,7 +44,7 @@ def editor_hyperconverged_custom_template(common_templates_scope_session, hyperc
     return ResourceEditor(
         patches={
             hyperconverged_resource_scope_function: {
-                "spec": {SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME: [custom_template_dict]}
+                "spec": {"workloadSources": {SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME: [custom_template_dict]}}
             }
         },
     )

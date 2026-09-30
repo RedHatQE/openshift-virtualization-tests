@@ -7,7 +7,6 @@ from tests.install_upgrade_operators.constants import (
     DEVELOPER_CONFIGURATION,
     EXPECTED_CDI_HARDCODED_FEATUREGATES,
     EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES,
-    FEATUREGATES,
     KEY_PATH_SEPARATOR,
     RESOURCE_NAME_STR,
     RESOURCE_NAMESPACE_STR,
@@ -18,6 +17,7 @@ from utilities.constants.components import (
     CDI_KUBEVIRT_HYPERCONVERGED,
     KUBEVIRT_KUBEVIRT_HYPERCONVERGED,
 )
+from utilities.constants.hco import FEATURE_GATES
 
 pytestmark = [pytest.mark.sno, pytest.mark.s390x, pytest.mark.skip_must_gather_collection]
 
@@ -31,10 +31,10 @@ class TestHardcodedFeatureGates:
                     RESOURCE_TYPE_STR: KubeVirt,
                     RESOURCE_NAME_STR: KUBEVIRT_KUBEVIRT_HYPERCONVERGED,
                     RESOURCE_NAMESPACE_STR: py_config["hco_namespace"],
-                    "patch": {"spec": {"configuration": {"developerConfiguration": {"featureGates": None}}}},
+                    "patch": {"spec": {"configuration": {"developerConfiguration": {FEATURE_GATES: None}}}},
                 },
                 EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES,
-                f"configuration{KEY_PATH_SEPARATOR}{DEVELOPER_CONFIGURATION}{KEY_PATH_SEPARATOR}{FEATUREGATES}",
+                f"configuration{KEY_PATH_SEPARATOR}{DEVELOPER_CONFIGURATION}{KEY_PATH_SEPARATOR}{FEATURE_GATES}",
                 marks=pytest.mark.polarion("CNV-6427"),
                 id="delete_featuregates_kubevirt_cr",
             ),
@@ -45,7 +45,7 @@ class TestHardcodedFeatureGates:
                     "patch": {"spec": {}},
                 },
                 EXPECTED_CDI_HARDCODED_FEATUREGATES,
-                f"config{KEY_PATH_SEPARATOR}{FEATUREGATES}",
+                f"config{KEY_PATH_SEPARATOR}{FEATURE_GATES}",
                 marks=(pytest.mark.polarion("CNV-6640")),
                 id="delete_featuregates_cdi_cr",
             ),

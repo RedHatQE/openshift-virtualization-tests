@@ -1,11 +1,13 @@
 import json
 import logging
+import re
 from collections.abc import Collection, Iterator
 from contextlib import contextmanager
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from kubernetes.dynamic.exceptions import NotFoundError, ResourceNotFoundError
 from ocp_resources.cdi import CDI
+from ocp_resources.custom_resource_definition import CustomResourceDefinition
 from ocp_resources.data_source import DataSource
 from ocp_resources.hyperconverged import HyperConverged
 from ocp_resources.kubevirt import KubeVirt
@@ -21,6 +23,7 @@ from utilities.constants.hco import (
     DEFAULT_HCO_CONDITIONS,
     ENABLE_COMMON_BOOT_IMAGE_IMPORT,
     EXPECTED_STATUS_CONDITIONS,
+    FEATURE_GATES,
     HCO_SUBSCRIPTION,
     IMAGE_CRON_STR,
     SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
@@ -66,6 +69,11 @@ HCO_JSONPATCH_ANNOTATION_COMPONENT_DICT = {
         "api_group_prefix": "ssp",
     },
 }
+_FG_LIST_HEADER = "Feature-Gate list:"
+# Matches "* gateName: <text> Phase: <Phase>" strictly without matching across other gate bullets
+_FG_PHASE_RE = re.compile(r"\*\s+([a-zA-Z0-9_]+):\s+[^*]+?Phase:\s+(\w+)", re.IGNORECASE)
+_FG_ENABLED_PHASES = frozenset({"beta"})
+_FG_DISABLED_PHASES = frozenset({"alpha", "deprecated"})
 
 
 class ResourceEditorValidateHCOReconcile(ResourceEditor):
@@ -197,15 +205,20 @@ def apply_np_changes(
     workloads_placement=None,
     exclude_deployments=None,
 ):
-    current_infra = hco.instance.to_dict()["spec"].get("infra")
-    current_workloads = hco.instance.to_dict()["spec"].get("workloads")
+    node_placements = hco.instance.to_dict()["spec"].get("deployment", {}).get("nodePlacements", {})
+    current_infra = node_placements.get("infra")
+    current_workloads = node_placements.get("workload")
     target_infra = infra_placement if infra_placement is not None else current_infra
     target_workloads = workloads_placement if workloads_placement is not None else current_workloads
     if target_workloads != current_workloads or target_infra != current_infra:
         patch = {
             "spec": {
-                "infra": target_infra or None,
-                "workloads": target_workloads or None,
+                "deployment": {
+                    "nodePlacements": {
+                        "infra": target_infra or None,
+                        "workload": target_workloads or None,
+                    },
+                },
             },
         }
         LOGGER.info(f"Updating HCO with node placement. {patch}")
@@ -368,7 +381,7 @@ def disable_common_boot_image_import_hco_spec(
     golden_images_data_import_crons: list[DataImportCron],
     exclude_data_source_names: Collection[str] | None = None,
 ) -> Iterator[None]:
-    if hco_resource.instance.spec[ENABLE_COMMON_BOOT_IMAGE_IMPORT]:
+    if hco_resource.instance.spec.workloadSources.enableCommonBootImageImport:
         update_common_boot_image_import_spec(
             hco_resource=hco_resource,
             enable=False,
@@ -415,7 +428,7 @@ def update_common_boot_image_import_spec(hco_resource, enable):
             for sample in TimeoutSampler(
                 wait_timeout=TIMEOUT_2MIN,
                 sleep=5,
-                func=lambda: _hco_resource.instance.spec[ENABLE_COMMON_BOOT_IMAGE_IMPORT] == _enable,
+                func=lambda: _hco_resource.instance.spec.workloadSources.enableCommonBootImageImport == _enable,
             ):
                 if sample:
                     return
@@ -424,7 +437,7 @@ def update_common_boot_image_import_spec(hco_resource, enable):
             raise
 
     editor = ResourceEditor(
-        patches={hco_resource: {"spec": {ENABLE_COMMON_BOOT_IMAGE_IMPORT: enable}}},
+        patches={hco_resource: {"spec": {"workloadSources": {ENABLE_COMMON_BOOT_IMAGE_IMPORT: enable}}}},
     )
     editor.update(backup_resources=True)
     _wait_for_spec_update(_hco_resource=hco_resource, _enable=enable)
@@ -552,7 +565,11 @@ def update_hco_templates_spec(
 ):
     with ResourceEditorValidateHCOReconcile(
         admin_client=admin_client,
-        patches={hyperconverged_resource: {"spec": {SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME: [updated_template]}}},
+        patches={
+            hyperconverged_resource: {
+                "spec": {"workloadSources": {SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME: [updated_template]}},
+            },
+        },
         list_resource_reconcile=[SSP, CDI],
         wait_for_reconcile_post_update=True,
     ):
@@ -570,11 +587,12 @@ def update_hco_templates_spec(
 
 @contextmanager
 def enabled_aaq_in_hco(client, hco_namespace, hyperconverged_resource, enable_acrq_support=False):
-    patches = {hyperconverged_resource: {"spec": {"enableApplicationAwareQuota": True}}}
+    application_aware_config = {"enable": True}
     if enable_acrq_support:
-        patches[hyperconverged_resource]["spec"]["applicationAwareConfig"] = {
-            "allowApplicationAwareClusterResourceQuota": True,
-        }
+        application_aware_config["allowApplicationAwareClusterResourceQuota"] = True
+    patches = {
+        hyperconverged_resource: {"spec": {"deployment": {"applicationAwareConfig": application_aware_config}}},
+    }
 
     with ResourceEditorValidateHCOReconcile(
         patches=patches,
@@ -603,3 +621,115 @@ def enabled_aaq_in_hco(client, hco_namespace, hyperconverged_resource, enable_ac
         raise
     except NotFoundError, ResourceNotFoundError:
         LOGGER.info("AAQ system PODs removed.")
+
+
+def get_hco_feature_gates(hco: HyperConverged) -> list[dict[str, str]]:
+    """Return the live HCO spec.featureGates list.
+
+    Args:
+        hco: HyperConverged resource to read.
+
+    Returns:
+        The feature-gates list. Missing or null is treated as an empty list (phase defaults).
+
+    Raises:
+        TypeError: If spec.featureGates is present but not a list (for example a v1beta1 dict).
+    """
+    gates = hco.instance.to_dict()["spec"].get("featureGates")
+    if gates is None:
+        return []
+    if not isinstance(gates, list):
+        raise TypeError(f"spec.featureGates must be a list, got {type(gates).__name__}: {gates}")
+    return gates
+
+
+def parse_hco_fg_phases(admin_client: DynamicClient) -> dict[str, str]:
+    """Discover feature-gate lifecycle phases from the v1 HCO CRD description.
+
+    Args:
+        admin_client: Dynamic client used to read the HyperConverged CRD.
+
+    Returns:
+        Map of gate name to lower-cased phase (alpha, beta, deprecated).
+
+    Raises:
+        ValueError: If no phases are parsed (the CRD description format likely changed).
+    """
+    crd = CustomResourceDefinition(client=admin_client, name=f"hyperconvergeds.{Resource.ApiGroup.HCO_KUBEVIRT_IO}")
+    versions = crd.instance.to_dict()["spec"]["versions"]
+    v1_version = next(version for version in versions if version["name"] == Resource.ApiVersion.V1)
+    description = v1_version["schema"]["openAPIV3Schema"]["properties"]["spec"]["properties"]["featureGates"].get(
+        "description", ""
+    )
+    gate_list = description.split(_FG_LIST_HEADER, 1)[-1] if _FG_LIST_HEADER in description else ""
+    phases = {name: phase.lower() for name, phase in _FG_PHASE_RE.findall(gate_list)}
+    if not phases:
+        raise ValueError(
+            "Failed to parse feature gate phases from the HCO CRD; "
+            "the featureGates description format may have changed."
+        )
+    return phases
+
+
+def is_feature_gate_enabled(hco_resource: HyperConverged, name: str) -> bool:
+    """Return whether a feature gate is effectively enabled on the HCO CR.
+
+    A list entry wins: omitted ``state`` is Enabled. An absent gate uses its CRD
+    lifecycle-phase default (beta enabled; alpha/deprecated disabled).
+
+    Args:
+        hco_resource: HyperConverged resource to read.
+        name: Feature gate name.
+
+    Returns:
+        True if the gate is enabled (explicitly or by phase default).
+
+    Raises:
+        KeyError: If the gate is absent from the CR and unknown in the CRD.
+        ValueError: If the CRD phase string is not a known lifecycle phase.
+    """
+    for entry in get_hco_feature_gates(hco=hco_resource):
+        if entry.get("name") == name:
+            return entry.get("state", "Enabled") != "Disabled"
+
+    phases = parse_hco_fg_phases(admin_client=hco_resource.client)
+    if name not in phases:
+        raise KeyError(f"Feature gate {name!r} not found in HCO CRD definitions.")
+
+    phase = phases[name]
+    if phase in _FG_ENABLED_PHASES:
+        return True
+    if phase in _FG_DISABLED_PHASES:
+        return False
+    raise ValueError(f"Unknown feature gate phase {phase!r} for {name!r}.")
+
+
+def hco_feature_gates_patch(
+    hco_resource: HyperConverged,
+    enable: list[str] | None = None,
+    disable: list[str] | None = None,
+) -> dict[str, Any]:
+    """Build a merge-patch for HCO spec.featureGates preserving existing gates.
+
+    Args:
+        hco_resource: HyperConverged resource whose current list is merged.
+        enable: Gate names to enable (``state`` omitted).
+        disable: Gate names to disable (``state: Disabled``).
+
+    Returns:
+        Patch dict of the form ``{"spec": {"featureGates": [...]}}``.
+
+    Raises:
+        ValueError: If both enable and disable are empty.
+    """
+    deltas = {name: True for name in enable or []}
+    deltas.update({name: False for name in disable or []})
+
+    if not deltas:
+        raise ValueError("At least one gate must be passed to enable or disable.")
+
+    merged = [dict(entry) for entry in get_hco_feature_gates(hco=hco_resource) if entry.get("name") not in deltas]
+    merged.extend(
+        {"name": name} if enabled else {"name": name, "state": "Disabled"} for name, enabled in deltas.items()
+    )
+    return {"spec": {FEATURE_GATES: merged}}

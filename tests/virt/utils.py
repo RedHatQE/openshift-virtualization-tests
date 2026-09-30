@@ -252,15 +252,17 @@ def patch_hco_cr_with_mdev_permitted_hostdevices(admin_client, hyperconverged_re
         patches={
             hyperconverged_resource: {
                 "spec": {
-                    "permittedHostDevices": {
-                        "mediatedDevices": [
-                            {
-                                "externalResourceProvider": True,
-                                "mdevNameSelector": supported_gpu_device[MDEV_NAME_STR],
-                                "resourceName": supported_gpu_device[VGPU_DEVICE_NAME_STR],
-                            }
-                        ]
-                    },
+                    "virtualization": {
+                        "permittedHostDevices": {
+                            "mediatedDevices": [
+                                {
+                                    "externalResourceProvider": True,
+                                    "mdevNameSelector": supported_gpu_device[MDEV_NAME_STR],
+                                    "resourceName": supported_gpu_device[VGPU_DEVICE_NAME_STR],
+                                }
+                            ]
+                        },
+                    }
                 }
             }
         },
@@ -405,6 +407,27 @@ def get_non_terminated_pods(client, node):
     )
 
 
+def get_pci_addresses(vm: VirtualMachineForTests) -> list[str]:
+    """Get sorted PCI device lines visible to the guest.
+
+    Each line pairs a BDF address with its device description, enabling
+    detection of both address shifts and device swaps on failure.
+
+    Args:
+        vm: Running VM with SSH access.
+
+    Returns:
+        Sorted list of lspci lines (e.g. ["00:01.0 Display controller: ..."]).
+    """
+    output = run_ssh_commands(
+        host=vm.ssh_exec,
+        commands=["lspci"],
+    )[0].strip()
+    addresses = output.splitlines()
+    LOGGER.info(f"PCI addresses for VM {vm.name}: {addresses}")
+    return addresses
+
+
 def get_boot_time_for_multiple_vms(vm_list):
     return {vm.name: get_vm_boot_time(vm=vm) for vm in vm_list}
 
@@ -490,7 +513,9 @@ def update_hco_memory_overcommit(admin_client, hco, percentage):
         patches={
             hco: {
                 "spec": {
-                    "higherWorkloadDensity": {"memoryOvercommitPercentage": percentage},
+                    "virtualization": {
+                        "higherWorkloadDensity": {"memoryOvercommitPercentage": percentage},
+                    }
                 }
             }
         },

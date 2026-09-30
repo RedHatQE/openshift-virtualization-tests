@@ -75,7 +75,7 @@ def nodes_taints_before_upgrade(nodes):
 
 @pytest.fixture(scope="session")
 def cnv_upgrade(pytestconfig):
-    return pytestconfig.option.upgrade == "cnv"
+    return pytestconfig.option.upgrade in ("cnv", EUS)
 
 
 @pytest.fixture(scope="session")
@@ -347,7 +347,9 @@ def eus_cnv_upgrade_path(
 
 @pytest.fixture(scope="session")
 def default_workload_update_strategy(hyperconverged_resource_scope_session):
-    return hyperconverged_resource_scope_session.instance.to_dict()["spec"][WORKLOAD_UPDATE_STRATEGY_KEY_NAME]
+    return hyperconverged_resource_scope_session.instance.to_dict()["spec"]["virtualization"][
+        WORKLOAD_UPDATE_STRATEGY_KEY_NAME
+    ]
 
 
 @pytest.fixture()

@@ -6,7 +6,10 @@ from ocp_resources.virtual_machine_cluster_preference import (
 )
 from pytest_testconfig import config as py_config
 
-from tests.infrastructure.instance_types.utils import assert_mismatch_vendor_label
+from tests.infrastructure.instance_types.utils import (
+    assert_mismatch_vendor_label,
+    extract_resources_from_cluster_preference_spec,
+)
 from tests.infrastructure.instance_types.vm_preference_list import VM_PREFERENCES_LIST
 from utilities.constants import Images
 from utilities.constants.architecture import SUPPORTED_CPU_ARCHITECTURES
@@ -19,29 +22,10 @@ LOGGER = logging.getLogger(__name__)
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
 
 
-def _extract_resources_from_cluster_preference_spec(cluster_preference_spec):
-    memory_guest = (
-        cluster_preference_spec.get("requirements", {}).get("memory", {}).get("guest")
-        or Images.Rhel.DEFAULT_MEMORY_SIZE
-    )
-    spread_options = cluster_preference_spec.get("cpu", {}).get("spreadOptions", {})
-
-    sockets = None
-    cores = None
-    threads = None
-
-    if cpu_guest := cluster_preference_spec.get("requirements", {}).get("cpu", {}).get("guest"):
-        cores = spread_options.get("ratio", 2) if spread_options else 1
-        sockets = max(1, cpu_guest // cores)
-        threads = 1
-
-    return memory_guest, sockets, cores, threads
-
-
 def start_vm_with_cluster_preference(client, preference_name, namespace_name):
     cluster_preference = VirtualMachineClusterPreference(client=client, name=preference_name)
 
-    memory_guest, sockets, cores, threads = _extract_resources_from_cluster_preference_spec(
+    memory_guest, sockets, cores, threads = extract_resources_from_cluster_preference_spec(
         cluster_preference_spec=cluster_preference.instance.spec
     )
 
