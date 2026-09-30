@@ -215,16 +215,16 @@ def get_nodes_status(client):
 
 
 def get_hyperconverged_status_conditions(client, hco_namespace):
-    hco_resource = get_hyperconverged_resource(client=client, hco_ns_name=hco_namespace.name)
-    expected_conditions = get_hco_expected_conditions(hco_resource=hco_resource)
+    hco_instance = get_hyperconverged_resource(client=client, hco_ns_name=hco_namespace.name).instance
+    expected_conditions = get_hco_expected_conditions(hco_instance=hco_instance)
     hco_status_summary = (
-        "OK" if not get_hco_mismatch_statuses(hco_resource.instance.status.conditions, expected_conditions) else "NOK"
+        "OK" if not get_hco_mismatch_statuses(hco_instance.status.conditions, expected_conditions) else "NOK"
     )
 
     return {
         "hco_status": {
             "summary": hco_status_summary,
-            "hco_status_conditions": hco_resource.instance.to_dict()["status"]["conditions"],
+            "hco_status_conditions": hco_instance.to_dict()["status"]["conditions"],
         }
     }
 

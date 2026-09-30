@@ -89,7 +89,7 @@ def updated_cr_with_custom_crypto_policy(
         component=request.param["component"],
         resource_list=[resource],
     ):
-        expected_conditions = get_hco_expected_conditions(hco_resource=hyperconverged_resource_scope_function)
+        expected_conditions = get_hco_expected_conditions(hco_instance=hyperconverged_resource_scope_function.instance)
         expected_conditions["TaintedConfiguration"] = Resource.Condition.Status.TRUE
         wait_for_hco_conditions(
             admin_client=admin_client,

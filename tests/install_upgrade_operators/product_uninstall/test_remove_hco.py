@@ -119,10 +119,9 @@ def assert_hco_exists_after_delete(
     with pytest.raises(BadRequestError):
         hco_resource.delete(wait=True)
 
-    expected_conditions = get_hco_expected_conditions(hco_resource=hco_resource)
-    actual_hco_status = {
-        condition["type"]: condition["status"] for condition in hco_resource.instance.status.conditions
-    }
+    hco_instance = hco_resource.instance
+    expected_conditions = get_hco_expected_conditions(hco_instance=hco_instance)
+    actual_hco_status = {condition["type"]: condition["status"] for condition in hco_instance.status.conditions}
     assert actual_hco_status == expected_conditions, (
         f"HCO condition is not stable. Actual HCO condition :{actual_hco_status} "
         f"expected condition is {expected_conditions}"

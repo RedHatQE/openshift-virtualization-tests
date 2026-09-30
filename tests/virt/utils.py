@@ -81,7 +81,7 @@ def append_feature_gate_to_hco(feature_gate, resource, client, namespace):
             ],
             value=feature_gate,
         )
-        expected_conditions = get_hco_expected_conditions(hco_resource=resource)
+        expected_conditions = get_hco_expected_conditions(hco_instance=resource.instance)
         expected_conditions["TaintedConfiguration"] = Resource.Condition.Status.TRUE
         wait_for_hco_conditions(
             admin_client=client,
