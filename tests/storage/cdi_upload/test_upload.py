@@ -240,6 +240,8 @@ def test_successful_upload_token_validity(
 def test_successful_upload_token_expiry(unprivileged_client, namespace, data_volume_multi_storage_scope_function):
     dv = data_volume_multi_storage_scope_function
     dv.wait_for_status(status=DataVolume.Status.UPLOAD_READY, timeout=TIMEOUT_3MIN)
+
+    # Create token and exit context to release resources before sleep
     with UploadTokenRequest(
         client=unprivileged_client,
         name=dv.name,
@@ -247,8 +249,18 @@ def test_successful_upload_token_expiry(unprivileged_client, namespace, data_vol
         pvc_name=dv.pvc.name,
     ) as utr:
         token = utr.create().status.token
-        LOGGER.info("Wait until token expires ...")
-        time.sleep(310)
+
+    # Sleep outside context so DataVolume and UploadTokenRequest resources are released
+    LOGGER.info("Wait until token expires ...")
+    time.sleep(310)
+
+    # Test the expired token with a fresh context
+    with UploadTokenRequest(
+        client=unprivileged_client,
+        name=dv.name,
+        namespace=namespace.name,
+        pvc_name=dv.pvc.name,
+    ) as utr:
         wait_for_upload_response_code(token=token, data="test", response_code=HTTP_UNAUTHORIZED)
 
 
