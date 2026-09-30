@@ -1,5 +1,4 @@
 import logging
-from contextlib import ExitStack
 
 import pytest
 from ocp_resources.cluster_role import ClusterRole
@@ -10,7 +9,6 @@ from ocp_resources.role_binding import RoleBinding
 from ocp_resources.utils.constants import TIMEOUT_1MINUTE
 from pytest_testconfig import config as py_config
 
-from tests.fixtures.images.utils import RoleBindingSpec
 from utilities.artifactory import (
     cleanup_artifactory_secret_and_config_map,
     get_artifactory_config_map,
@@ -53,57 +51,42 @@ def validation_os_images_role_binding(admin_client, validation_os_images_namespa
     performing a cross-namespace clone) in the validation-os-images namespace.
 
     Yields:
-        list[RoleBinding]: The RoleBindings granting the above permissions.
+        RoleBinding: The RoleBinding granting the above permission.
     """
-    bindings_spec = (
-        RoleBindingSpec(
-            name="validation-os-images-clone-sourcer",
-            subjects_kind="Group",
-            subjects_name="system:authenticated",
-            cluster_role_name=CDI_CLONE_SOURCER_CLUSTER_ROLE,
-        ),
+    role_binding = RoleBinding(
+        client=admin_client,
+        name="validation-os-images-clone-sourcer",
+        namespace=validation_os_images_namespace.name,
+        subjects_kind="Group",
+        subjects_name="system:authenticated",
+        role_ref_kind=ClusterRole.kind,
+        role_ref_name=CDI_CLONE_SOURCER_CLUSTER_ROLE,
     )
 
-    with ExitStack() as stack:
-        role_bindings = []
-        for binding_spec in bindings_spec:
-            role_binding = RoleBinding(
-                client=admin_client,
-                name=binding_spec.name,
-                namespace=validation_os_images_namespace.name,
-                subjects_kind=binding_spec.subjects_kind,
-                subjects_name=binding_spec.subjects_name,
-                role_ref_kind=ClusterRole.kind,
-                role_ref_name=binding_spec.cluster_role_name,
-            )
-            if role_binding.exists:
-                LOGGER.info(f"Reusing existing RoleBinding {role_binding.name} in {role_binding.namespace}")
-                subjects = role_binding.instance.subjects
-                assert any(
-                    subject.kind == binding_spec.subjects_kind and subject.name == binding_spec.subjects_name
-                    for subject in subjects
-                ), (
-                    f"RoleBinding {role_binding.name} is missing expected subject "
-                    f"{binding_spec.subjects_kind}/{binding_spec.subjects_name}; "
-                    f"found subjects: {[(subject.kind, subject.name) for subject in subjects]}"
-                )
-                role_ref = role_binding.instance.roleRef
-                assert role_ref.kind == ClusterRole.kind, (
-                    f"RoleBinding {role_binding.name} roleRef kind is {role_ref.kind}, expected {ClusterRole.kind}"
-                )
-                assert role_ref.name == binding_spec.cluster_role_name, (
-                    f"RoleBinding {role_binding.name} roleRef name is {role_ref.name}, "
-                    f"expected {binding_spec.cluster_role_name}"
-                )
-                role_bindings.append(role_binding)
-            else:
-                LOGGER.info(
-                    f"Creating RoleBinding {role_binding.name} in {role_binding.namespace} "
-                    f"binding {binding_spec.cluster_role_name} to {binding_spec.subjects_kind} "
-                    f"{binding_spec.subjects_name}"
-                )
-                role_bindings.append(stack.enter_context(cm=role_binding))
-        yield role_bindings
+    if role_binding.exists:
+        LOGGER.info(f"Reusing existing RoleBinding {role_binding.name} in {role_binding.namespace}")
+        subjects = role_binding.instance.subjects
+        assert any(subject.kind == "Group" and subject.name == "system:authenticated" for subject in subjects), (
+            f"RoleBinding {role_binding.name} is missing expected subject Group/system:authenticated; "
+            f"found subjects: {[(subject.kind, subject.name) for subject in subjects]}"
+        )
+        role_ref = role_binding.instance.roleRef
+        assert role_ref.kind == ClusterRole.kind, (
+            f"RoleBinding {role_binding.name} roleRef kind is {role_ref.kind}, expected {ClusterRole.kind}"
+        )
+        assert role_ref.name == CDI_CLONE_SOURCER_CLUSTER_ROLE, (
+            f"RoleBinding {role_binding.name} roleRef name is {role_ref.name}, "
+            f"expected {CDI_CLONE_SOURCER_CLUSTER_ROLE}"
+        )
+        yield role_binding
+        return
+
+    LOGGER.info(
+        f"Creating RoleBinding {role_binding.name} in {role_binding.namespace} "
+        f"binding {CDI_CLONE_SOURCER_CLUSTER_ROLE} to Group system:authenticated"
+    )
+    with role_binding as rb:
+        yield rb
 
 
 @pytest.fixture(scope="session")
