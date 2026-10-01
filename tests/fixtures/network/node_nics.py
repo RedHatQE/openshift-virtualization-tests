@@ -40,11 +40,9 @@ def nodes_active_nics(
     def _bridge_ports(node_interface):
         ports = set()
         if node_interface["type"] in (OVS_BRIDGE, LINUX_BRIDGE) and node_interface["bridge"].get("port"):
-            for bridge_port in node_interface["bridge"]["port"]:
-                ports.add(bridge_port["name"])
+            ports.update(bridge_port["name"] for bridge_port in node_interface["bridge"]["port"])
         elif node_interface["type"] == "bond" and node_interface["link-aggregation"].get("port"):
-            for bridge_port in node_interface["link-aggregation"]["port"]:
-                ports.add(bridge_port)
+            ports.update(node_interface["link-aggregation"]["port"])
         return ports
 
     """

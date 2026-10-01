@@ -110,12 +110,7 @@ with VirtualMachineForTests(name="test-vm", namespace="ns", client=client) as vm
 ```python
 from utilities.virt import migrate_vm_and_verify
 
-migration_obj = migrate_vm_and_verify(
-    vm=my_running_vm,
-    client=admin_client,
-    timeout=600,
-    check_ssh_connectivity=True
-)
+migration_obj = migrate_vm_and_verify(vm=my_running_vm, client=admin_client, timeout=600, check_ssh_connectivity=True)
 ```
 
 ---
@@ -164,12 +159,7 @@ virtctl_upload_dv(
 ```python
 from utilities.storage import create_vm_from_dv
 
-with create_vm_from_dv(
-    dv=my_uploaded_dv,
-    client=admin_client,
-    vm_name="disk-boot-vm",
-    start=True
-) as vm:
+with create_vm_from_dv(dv=my_uploaded_dv, client=admin_client, vm_name="disk-boot-vm", start=True) as vm:
     # VM is fully booted from the DV at this point
     assert vm.instance.status.printableStatus == "Running"
 ```
@@ -194,11 +184,7 @@ with create_vm_from_dv(
 ```python
 from utilities.network import ping
 
-loss_percentage = ping(
-    src_vm=client_vm,
-    dst_ip="192.168.1.10",
-    count=5
-)
+loss_percentage = ping(src_vm=client_vm, dst_ip="192.168.1.10", count=5)
 assert loss_percentage == 0.0, f"Ping failed with {loss_percentage}% loss"
 ```
 
