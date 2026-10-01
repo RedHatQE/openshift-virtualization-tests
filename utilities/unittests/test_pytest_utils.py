@@ -1239,6 +1239,16 @@ class TestGetCnvVersionExplorerUrl:
         mock_config.getoption.side_effect = lambda option: option == "install"
 
         result = get_cnv_version_explorer_url(mock_config)
+        assert result == "https://version-explorer.com"
+
+    @patch("utilities.pytest_utils.os.environ", {"CNV_VERSION_EXPLORER_URL": "https://version-explorer.com"})
+    @patch("utilities.pytest_utils.LOGGER")
+    def test_get_cnv_version_explorer_url_cnv_upgrade(self, mock_logger):
+        """Test getting CNV version explorer URL with CNV upgrade"""
+        mock_config = MagicMock()
+        mock_config.getoption.side_effect = lambda option: {"install": False, "upgrade": "cnv"}.get(option, False)
+
+        result = get_cnv_version_explorer_url(mock_config)
 
         assert result == "https://version-explorer.com"
 
@@ -1248,6 +1258,36 @@ class TestGetCnvVersionExplorerUrl:
         """Test getting CNV version explorer URL with EUS upgrade"""
         mock_config = MagicMock()
         mock_config.getoption.side_effect = lambda option: {"install": False, "upgrade": "eus"}.get(option, False)
+
+        result = get_cnv_version_explorer_url(mock_config)
+
+        assert result == "https://version-explorer.com"
+
+    @patch("utilities.pytest_utils.os.environ", {"CNV_VERSION_EXPLORER_URL": "https://version-explorer.com"})
+    @patch("utilities.pytest_utils.LOGGER")
+    def test_get_cnv_version_explorer_url_upgrade_custom_cnv(self, mock_logger):
+        """Test getting CNV version explorer URL with upgrade_custom=cnv"""
+        mock_config = MagicMock()
+        mock_config.getoption.side_effect = lambda option: {
+            "install": False,
+            "upgrade": None,
+            "upgrade_custom": "cnv",
+        }.get(option, False)
+
+        result = get_cnv_version_explorer_url(mock_config)
+
+        assert result == "https://version-explorer.com"
+
+    @patch("utilities.pytest_utils.os.environ", {"CNV_VERSION_EXPLORER_URL": "https://version-explorer.com"})
+    @patch("utilities.pytest_utils.LOGGER")
+    def test_get_cnv_version_explorer_url_upgrade_custom_eus(self, mock_logger):
+        """Test getting CNV version explorer URL with upgrade_custom=eus"""
+        mock_config = MagicMock()
+        mock_config.getoption.side_effect = lambda option: {
+            "install": False,
+            "upgrade": None,
+            "upgrade_custom": "eus",
+        }.get(option, False)
 
         result = get_cnv_version_explorer_url(mock_config)
 
