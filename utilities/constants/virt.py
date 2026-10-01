@@ -46,13 +46,13 @@ WIN_2K25 = "win2k25"
 WIN_2K22 = "win2k22"
 WIN_2K19 = "win2k19"
 
-HYPERV_FEATURES_LABELS_DOM_XML = [
+HYPERV_FEATURES_LABELS_VM_YAML = [
     "relaxed",
     "vapic",
     "spinlocks",
     "vpindex",
     "synic",
-    "stimer",  # synictimer in VM yaml
+    "synictimer",
     "frequencies",
     "ipi",
     "reset",
@@ -60,8 +60,25 @@ HYPERV_FEATURES_LABELS_DOM_XML = [
     "tlbflush",
     "reenlightenment",
 ]
-HYPERV_FEATURES_LABELS_VM_YAML = HYPERV_FEATURES_LABELS_DOM_XML.copy()
-HYPERV_FEATURES_LABELS_VM_YAML[HYPERV_FEATURES_LABELS_VM_YAML.index("stimer")] = "synictimer"
+
+# KubeVirt default when hyperv.spinlocks is enabled.
+SPINLOCKS_EXPECTED_RETRIES = 8191
+
+# Injected by the Fedora common-template test. Windows tests read the VM spec instead.
+FEDORA_EXPECTED_HYPERV_FEATURES = {
+    "relaxed": {},
+    "vapic": {},
+    "synictimer": {"direct": {}},
+    "vpindex": {},
+    "synic": {},
+    "spinlocks": {"spinlocks": SPINLOCKS_EXPECTED_RETRIES},
+    "frequencies": {},
+    "ipi": {},
+    "reenlightenment": {},
+    "reset": {},
+    "runtime": {},
+    "tlbflush": {"direct": {}, "extended": {}},
+}
 
 
 # CPU topology
