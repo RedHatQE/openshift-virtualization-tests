@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import ipaddress
+import itertools
 from ipaddress import ip_interface
 from typing import TYPE_CHECKING
 
 import pytest
 
 from libs.net.ip import filter_cluster_unsupported_addresses, filter_link_local_addresses, have_same_ip_families
-from libs.net.traffic_generator import client_server_active_connection, is_tcp_connection
+from libs.net.traffic_generator import active_tcp_connections, client_server_active_connection, is_tcp_connection
 from libs.net.vmspec import lookup_iface_status
 from tests.network.libs.localnet import (
     GUEST_2ND_IFACE_NAME,
@@ -20,6 +21,7 @@ if TYPE_CHECKING:
     from kubernetes.dynamic import DynamicClient
 
     from libs.net.traffic_generator import TcpServer, VMTcpClient
+    from libs.vm.vm import BaseVirtualMachine
 
 
 @pytest.mark.gating
@@ -102,3 +104,88 @@ def test_vmi_reports_ip_on_secondary_interface_without_vlan(
         f"IP addresses mismatch for interface {LOCALNET_BR_EX_INTERFACE_NO_VLAN} on VM {vm.name}, "
         f"Reported: {reported_ips}, Expected: {expected_ips}"
     )
+
+
+@pytest.mark.single_nic
+@pytest.mark.incremental
+@pytest.mark.usefixtures("nncp_localnet")
+class TestSharedHostnameLocalnet:
+    """Tests for VMs sharing the same spec.template.spec.hostname on localnet.
+
+    Jira: https://issues.redhat.com/browse/OCPBUGS-99277 # <skip-jira-utils-check>
+
+    Preconditions:
+        - 3 VMs with identical spec.template.spec.hostname connected to a localnet secondary network
+        - All 3 VMs Running with IPs assigned on the localnet interface
+    """
+
+    @pytest.mark.polarion("CNV-16555")
+    def test_tcp_connectivity_between_shared_hostname_vms(
+        self,
+        subtests: pytest.Subtests,
+        running_shared_hostname_vms: list[BaseVirtualMachine],
+    ):
+        """Test that VMs sharing the same hostname can communicate over localnet.
+
+        Preconditions:
+            - 3 VMs with identical spec.template.spec.hostname connected to a localnet secondary network
+            - All 3 VMs Running with IPs assigned on the localnet interface
+
+        Steps:
+            1. For each pair of VMs, establish a TCP connection over the localnet interface
+
+        Expected:
+            - TCP connectivity succeeds between all VM pairs
+        """
+        for client_vm, server_vm in itertools.combinations(running_shared_hostname_vms, 2):
+            with active_tcp_connections(
+                client_vm=client_vm,
+                server_vm=server_vm,
+                iface_name=LOCALNET_BR_EX_INTERFACE,
+            ) as connections:
+                for client, server in connections:
+                    with subtests.test(
+                        msg=f"{client_vm.name} -> {server_vm.name} IPv{ipaddress.ip_address(client.server_ip).version}"
+                    ):
+                        assert is_tcp_connection(server=server, client=client), (
+                            f"TCP connection failed: {client_vm.name} -> {server_vm.name} ({client.server_ip})"
+                        )
+
+    @pytest.mark.polarion("CNV-16556")
+    def test_tcp_connectivity_after_migration_of_shared_hostname_vm(
+        self,
+        subtests: pytest.Subtests,
+        admin_client: DynamicClient,
+        running_shared_hostname_vms: list[BaseVirtualMachine],
+    ):
+        """Test that connectivity is preserved after migrating a VM that shares its hostname.
+
+        Preconditions:
+            - 3 VMs with identical spec.template.spec.hostname connected to a localnet secondary network
+            - All 3 VMs Running with IPs assigned on the localnet interface
+
+        Steps:
+            1. Migrate one of the shared-hostname VMs
+            2. Establish TCP connections from the migrated VM to each of the other VMs
+
+        Expected:
+            - TCP connectivity succeeds from the migrated VM to all other VMs
+        """
+        migrated_vm = running_shared_hostname_vms[0]
+        migrate_vm_and_verify(vm=migrated_vm, client=admin_client)
+
+        for peer_vm in running_shared_hostname_vms[1:]:
+            with active_tcp_connections(
+                client_vm=migrated_vm,
+                server_vm=peer_vm,
+                iface_name=LOCALNET_BR_EX_INTERFACE,
+            ) as connections:
+                for client, server in connections:
+                    with subtests.test(
+                        msg=f"migrated {migrated_vm.name} -> {peer_vm.name}"
+                        f" IPv{ipaddress.ip_address(client.server_ip).version}"
+                    ):
+                        assert is_tcp_connection(server=server, client=client), (
+                            f"TCP connection failed after migration:"
+                            f" {migrated_vm.name} -> {peer_vm.name} ({client.server_ip})"
+                        )
