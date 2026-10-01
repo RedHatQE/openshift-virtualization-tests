@@ -10,6 +10,7 @@ from tests.virt.node.descheduler.constants import DESCHEDULER_SOFT_TAINT_KEY
 from utilities.constants.timeouts import (
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
+    TIMEOUT_20MIN,
     TIMEOUT_20SEC,
 )
 from utilities.constants.virt import DESCHEDULER_PREFER_NO_EVICTION_ANNOTATION
@@ -139,8 +140,10 @@ def make_vms_evictable(vms):
 
 
 def verify_at_least_one_vm_migrated(vms, node_before):
+    # The descheduler may churn through other eviction candidates before selecting a
+    # virt-launcher, so allow enough ~1-minute cycles for a VM to migrate off the node.
     samples = TimeoutSampler(
-        wait_timeout=TIMEOUT_10MIN,
+        wait_timeout=TIMEOUT_20MIN,
         sleep=TIMEOUT_20SEC,
         func=lambda: [vm.vmi.node.name for vm in vms],
     )
