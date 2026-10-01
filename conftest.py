@@ -3,6 +3,7 @@ Pytest conftest file for CNV tests
 """
 
 import datetime
+import hashlib
 import logging
 import os
 import os.path
@@ -13,6 +14,11 @@ import shutil
 import traceback
 from typing import Any
 
+# Workaround for paramiko issue #396: pkey.md5 calls hashlib.md5() without
+# usedforsecurity=False, raising UnsupportedDigestmodError on FIPS systems.
+# MD5 here is used only for display/logging purposes, not for security.
+# https://github.com/paramiko/paramiko/issues/396
+import paramiko.pkey
 import pytest
 import shortuuid
 from _pytest.config import Config
@@ -76,6 +82,8 @@ from utilities.pytest_utils import (
     update_latest_os_config,
     validate_collected_tests_arch_params,
 )
+
+vars(paramiko.pkey).update({"md5": lambda data=b"": hashlib.md5(data, usedforsecurity=False)})
 
 pytest_plugins = [
     "tests.fixtures.cluster.auth",
