@@ -98,10 +98,15 @@ class TestValidateCpuArchParams:
 
     @patch("utilities.pytest_utils.get_cluster_architecture", return_value={"amd64", "arm64"})
     def test_heterogeneous_cluster_option_not_in_cluster_raises(self, mock_get_cluster_arch):
-        """Test --cpu-arch value not in cluster arch list raises"""
+        """Test --cpu-arch value not in cluster arch list raises.
+
+        s390x is now a supported multiarch option (SUPPORTED_MULTIARCH_OPTIONS includes S390X)
+        but it is not present in this mock cluster (amd64+arm64 only), so the error is
+        'not in the cluster's arch list', not 'unsupported value(s)'.
+        """
         with pytest.raises(
             UnsupportedCPUArchitectureError,
-            match=r"unsupported value\(s\)",
+            match=r"not in the cluster's arch list",
         ):
             validate_cpu_arch_params(cpu_arch_option="s390x")
         mock_get_cluster_arch.assert_called_once()
