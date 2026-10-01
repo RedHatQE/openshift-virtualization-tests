@@ -5,6 +5,7 @@
 from unittest.mock import MagicMock, mock_open, patch
 from xml.etree import ElementTree
 
+import paramiko
 import pytest
 
 import utilities.constants
@@ -3349,3 +3350,16 @@ class TestInjectFailureJunit:
         assert xml_path.exists()
         content = xml_path.read_text()
         assert "pytest_exit" not in content, "Original XML should not be modified on write failure"
+
+
+class TestPatchParamikoForFips:
+    def test_get_fingerprint_returns_fips_safe_md5(self, monkeypatch):
+        """patch_paramiko_for_fips patches get_fingerprint to call hashlib.md5 with usedforsecurity=False."""
+        monkeypatch.setattr(paramiko.pkey.PKey, "get_fingerprint", paramiko.pkey.PKey.get_fingerprint)
+        pytest_utils_module.patch_paramiko_for_fips()
+        key = paramiko.RSAKey.generate(bits=2048)
+
+        with patch("utilities.pytest_utils.hashlib.md5") as mock_md5:
+            mock_md5.return_value.digest.return_value = b"\x00" * 16
+            key.get_fingerprint()
+            mock_md5.assert_called_once_with(key.asbytes(), usedforsecurity=False)
