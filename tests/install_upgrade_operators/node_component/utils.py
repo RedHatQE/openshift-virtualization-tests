@@ -59,12 +59,12 @@ SELECTORS = [
     ("op-comp", "op3"),
 ]
 
-INFRA_LABEL_1 = {"nodePlacement": {"nodeSelector": {"infra-comp": "infra1"}}}
-INFRA_LABEL_2 = {"nodePlacement": {"nodeSelector": {"infra-comp": "infra2"}}}
-INFRA_LABEL_3 = {"nodePlacement": {"nodeSelector": {"infra-comp": "infra3"}}}
-WORK_LABEL_1 = {"nodePlacement": {"nodeSelector": {"work-comp": "work1"}}}
-WORK_LABEL_2 = {"nodePlacement": {"nodeSelector": {"work-comp": "work2"}}}
-WORK_LABEL_3 = {"nodePlacement": {"nodeSelector": {"work-comp": "work3"}}}
+INFRA_LABEL_1 = {"nodeSelector": {"infra-comp": "infra1"}}
+INFRA_LABEL_2 = {"nodeSelector": {"infra-comp": "infra2"}}
+INFRA_LABEL_3 = {"nodeSelector": {"infra-comp": "infra3"}}
+WORK_LABEL_1 = {"nodeSelector": {"work-comp": "work1"}}
+WORK_LABEL_2 = {"nodeSelector": {"work-comp": "work2"}}
+WORK_LABEL_3 = {"nodeSelector": {"work-comp": "work3"}}
 
 SUBSCRIPTION_NODE_SELCTOR_1 = {"op-comp": "op1"}
 SUBSCRIPTION_NODE_SELCTOR_2 = {"op-comp": "op2"}
@@ -79,77 +79,73 @@ SUBSCRIPTION_TOLERATIONS = [
 
 
 NODE_PLACEMENT_INFRA = {
-    "nodePlacement": {
-        "affinity": {
-            "nodeAffinity": {
-                "requiredDuringSchedulingIgnoredDuringExecution": {
-                    "nodeSelectorTerms": [
-                        {
-                            "matchExpressions": [
-                                {
-                                    "key": "infra-comp",
-                                    "operator": "In",
-                                    "values": ["infra1", "infra2"],
-                                }
-                            ]
-                        }
-                    ]
-                }
+    "affinity": {
+        "nodeAffinity": {
+            "requiredDuringSchedulingIgnoredDuringExecution": {
+                "nodeSelectorTerms": [
+                    {
+                        "matchExpressions": [
+                            {
+                                "key": "infra-comp",
+                                "operator": "In",
+                                "values": ["infra1", "infra2"],
+                            }
+                        ]
+                    }
+                ]
             }
-        },
-        "nodeSelector": {"infra-comp": "infra1"},
-        "tolerations": [
-            {
-                "effect": "NoSchedule",
-                "key": WORKER_NODE_LABEL_KEY,
-                "operator": "Exists",
-            }
-        ],
-    }
+        }
+    },
+    "nodeSelector": {"infra-comp": "infra1"},
+    "tolerations": [
+        {
+            "effect": "NoSchedule",
+            "key": WORKER_NODE_LABEL_KEY,
+            "operator": "Exists",
+        }
+    ],
 }
 
 NODE_PLACEMENT_WORKLOADS = {
-    "nodePlacement": {
-        "affinity": {
-            "nodeAffinity": {
-                "preferredDuringSchedulingIgnoredDuringExecution": [
+    "affinity": {
+        "nodeAffinity": {
+            "preferredDuringSchedulingIgnoredDuringExecution": [
+                {
+                    "preference": {
+                        "matchExpressions": [
+                            {
+                                "key": "work-comp",
+                                "operator": "In",
+                                "values": ["work1", "work2"],
+                            }
+                        ]
+                    },
+                    "weight": 1,
+                }
+            ],
+            "requiredDuringSchedulingIgnoredDuringExecution": {
+                "nodeSelectorTerms": [
                     {
-                        "preference": {
-                            "matchExpressions": [
-                                {
-                                    "key": "work-comp",
-                                    "operator": "In",
-                                    "values": ["work1", "work2"],
-                                }
-                            ]
-                        },
-                        "weight": 1,
+                        "matchExpressions": [
+                            {
+                                "key": "work-comp",
+                                "operator": "In",
+                                "values": ["work1", "work2"],
+                            }
+                        ]
                     }
-                ],
-                "requiredDuringSchedulingIgnoredDuringExecution": {
-                    "nodeSelectorTerms": [
-                        {
-                            "matchExpressions": [
-                                {
-                                    "key": "work-comp",
-                                    "operator": "In",
-                                    "values": ["work1", "work2"],
-                                }
-                            ]
-                        }
-                    ]
-                },
-            }
-        },
-        "nodeSelector": {"work-comp": "work2"},
-        "tolerations": [
-            {
-                "effect": "NoSchedule",
-                "key": WORKER_NODE_LABEL_KEY,
-                "operator": "Exists",
-            }
-        ],
-    }
+                ]
+            },
+        }
+    },
+    "nodeSelector": {"work-comp": "work2"},
+    "tolerations": [
+        {
+            "effect": "NoSchedule",
+            "key": WORKER_NODE_LABEL_KEY,
+            "operator": "Exists",
+        }
+    ],
 }
 
 # Below list consists of Infrastructure and Workloads pods based on Daemonset and Deployments.
