@@ -14,7 +14,6 @@ from tests.virt.node.gpu.utils import (
     restart_and_check_gpu_exists,
 )
 from tests.virt.utils import (
-    get_data_volume_template_dict_with_default_storage_class,
     get_gpu_device_name_from_windows_vm,
     verify_gpu_device_exists_in_vm,
 )
@@ -22,6 +21,7 @@ from utilities.constants import Images
 from utilities.guest_support import validate_pause_unpause_windows_vm
 from utilities.virt import (
     VirtualMachineForTestsFromTemplate,
+    get_data_volume_template_dict_with_default_storage_class,
     running_vm,
 )
 

@@ -8,12 +8,15 @@ from contextlib import contextmanager
 from datetime import UTC, datetime
 
 import bitmath
+import pytest
+from _pytest.subtests import Subtests
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.resource import Resource
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
+from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
 from ocp_utilities.monitoring import Prometheus
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
@@ -25,6 +28,10 @@ from tests.observability.metrics.constants import (
     KUBE_VERSION_STR,
     KUBEVIRT_VMI_FILESYSTEM_BYTES,
     KUBEVIRT_VMI_FILESYSTEM_BYTES_WITH_MOUNT_POINT,
+    KUBEVIRT_VMI_MIGRATION_END_TIME_SECONDS,
+    KUBEVIRT_VMI_MIGRATION_START_TIME_SECONDS,
+    METRICS_WITH_CNV_97013_BUG,
+    MIGRATION_METRICS,
 )
 from utilities.artifactory import (
     cleanup_artifactory_secret_and_config_map,
@@ -58,7 +65,8 @@ from utilities.constants.timeouts import (
     TIMEOUT_30SEC,
     TIMEOUT_40MIN,
 )
-from utilities.monitoring import get_metrics_value
+from utilities.jira import is_jira_open
+from utilities.monitoring import get_metrics_value, validate_metrics_value
 from utilities.storage import construct_datavolume_source_dict
 from utilities.virt import VirtualMachineForTests, running_vm
 
@@ -850,3 +858,45 @@ def validate_metric_value_cleared(
     except TimeoutExpiredError:
         LOGGER.error(f"Metric {metric_name} still has non-zero values: {sample}")
         raise
+
+
+def validate_dual_stream_migration_metrics(
+    subtests: Subtests, prometheus: Prometheus, vm: VirtualMachineForTests, vmim: VirtualMachineInstanceMigration
+) -> None:
+    """Polls until dual stream migration metrics are collected.
+    Args:
+        subtests: Sub-tests object.
+        prometheus: Prometheus client instance.
+        vm: Virtual Machine object.
+        vmim: Virtual Machine Migration object.
+    """
+    for metric in MIGRATION_METRICS:
+        with subtests.test(msg=metric):
+            if metric in METRICS_WITH_CNV_97013_BUG and is_jira_open(jira_id="CNV-97013"):
+                pytest.xfail(reason=f"CNV-97013: {metric} returns no data during migration")
+            if metric == KUBEVIRT_VMI_MIGRATION_START_TIME_SECONDS:
+                validate_metrics_value(
+                    prometheus=prometheus,
+                    metric_name=KUBEVIRT_VMI_MIGRATION_START_TIME_SECONDS.format(vm_name=vm.name),
+                    expected_value=str(
+                        timestamp_to_seconds(timestamp=vm.vmi.instance.status.migrationState.startTimestamp)
+                    ),
+                )
+            elif metric == KUBEVIRT_VMI_MIGRATION_END_TIME_SECONDS:
+                vmim.wait_for_status(
+                    status=vmim.Status.SUCCEEDED,
+                    timeout=TIMEOUT_5MIN,
+                )
+                validate_metrics_value(
+                    prometheus=prometheus,
+                    metric_name=KUBEVIRT_VMI_MIGRATION_END_TIME_SECONDS.format(vm_name=vm.name),
+                    expected_value=str(
+                        timestamp_to_seconds(timestamp=vm.vmi.instance.status.migrationState.endTimestamp)
+                    ),
+                )
+            else:
+                validate_metric_value_greater_than_initial_value(
+                    prometheus=prometheus,
+                    metric_name=metric.format(vm_name=vm.name),
+                    initial_value=0,
+                )
