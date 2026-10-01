@@ -294,11 +294,12 @@ class TestRemoveHCO:
 
     @pytest.mark.polarion("CNV-8618")
     @pytest.mark.parametrize("data_volume_scope_function", [pytest.param(DV_PARAMS)], indirect=True)
-    @pytest.mark.usefixtures("hco_uninstall_strategy_remove_workloads", "removed_hco")
     def test_remove_strategy_with_dv_no_vm(
         self,
+        hco_uninstall_strategy_remove_workloads,
         data_volume_scope_function,
         hyperconverged_resource_scope_function,
+        removed_hco,
     ):
         """
         Remove HCO when DV exists with no VMs
@@ -308,11 +309,13 @@ class TestRemoveHCO:
 
     @pytest.mark.polarion("CNV-8617")
     @pytest.mark.parametrize("data_volume_scope_function", [pytest.param(DV_PARAMS)], indirect=True)
-    @pytest.mark.usefixtures("hco_fedora_vm", "hco_uninstall_strategy_remove_workloads", "removed_hco")
+    @pytest.mark.usefixtures("hco_fedora_vm")
     def test_remove_strategy_with_vm_and_dv(
         self,
+        hco_uninstall_strategy_remove_workloads,
         data_volume_scope_function,
         hyperconverged_resource_scope_function,
+        removed_hco,
     ):
         """
         Test HCO removal after setting uninstallStrategy to
