@@ -19,6 +19,7 @@ from timeout_sampler import TimeoutSampler
 import tests.storage.utils as storage_utils
 import utilities.storage
 from tests.os_params import RHEL_LATEST
+from tests.storage.stop_status_utils import dv_stop_status_restart_threshold
 from utilities.constants import Images
 from utilities.constants.components import CDI_UPLOADPROXY
 from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_3MIN, TIMEOUT_5MIN
@@ -170,7 +171,7 @@ def test_successful_upload_with_supported_formats(
         storage_utils.upload_token_request(
             storage_ns_name=namespace.name, pvc_name=dv.pvc.name, data=local_name, client=unprivileged_client
         )
-        dv.wait_for_dv_success()
+        dv.wait_for_dv_success(stop_status_func=dv_stop_status_restart_threshold, dv=dv)
         create_vm_from_dv(client=unprivileged_client, dv=dv)
 
 
@@ -216,7 +217,7 @@ def test_successful_upload_token_validity(
     ) as utr:
         token = utr.create().status.token
         wait_for_upload_response_code(token=token, data=upload_file_path, response_code=HTTP_OK)
-        dv.wait_for_dv_success()
+        dv.wait_for_dv_success(stop_status_func=dv_stop_status_restart_threshold, dv=dv)
 
 
 @pytest.mark.parametrize(
