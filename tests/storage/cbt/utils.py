@@ -25,17 +25,22 @@ from tests.storage.cbt.constants import (
     CBT_DATA_DISK_TEST_DATA,
     CBT_ENABLED_LABEL,
     CBT_TEST_DATA,
+    CBT_WINDOWS_BOOT_DISK_TEST_DATA_FILE,
+    CBT_WINDOWS_INCREMENTAL_TEST_DATA_FILE,
+    CBT_WINDOWS_PERSISTENT_DEVICE_PARAMS,
+    CBT_WINDOWS_VERSION,
 )
-from utilities.constants.images import OS_FLAVOR_RHEL
-from utilities.constants.instance_types import RHEL9_PREFERENCE, U1_SMALL
-from utilities.constants.timeouts import TIMEOUT_5SEC, TIMEOUT_10MIN
+from utilities.constants.images import OS_FLAVOR_RHEL, OS_FLAVOR_WIN_CONTAINER_DISK, OS_FLAVOR_WINDOWS
+from utilities.constants.instance_types import RHEL9_PREFERENCE, U1_LARGE, U1_SMALL, WINDOWS_2K22_PREFERENCE
+from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5SEC, TIMEOUT_10MIN, TIMEOUT_30MIN, TIMEOUT_60MIN
 from utilities.constants.virt import CLOUD_INIT_DISK_NAME, DV_DISK
 from utilities.storage import (
     construct_datavolume_source_dict,
     data_volume_template_with_source_ref_dict,
     write_file_via_ssh,
+    write_file_windows_vm,
 )
-from utilities.virt import VirtualMachineForTests, migrate_vm_and_verify, running_vm
+from utilities.virt import VirtualMachineForTests, migrate_vm_and_verify, running_vm, wait_for_windows_vm
 
 if TYPE_CHECKING:
     from kubernetes.dynamic import DynamicClient
@@ -154,6 +159,7 @@ def cbt_enabled_vm(
     storage_class: str,
     unique_suffix: str,
     data_disk_count: int = 0,
+    windows: bool = False,
 ) -> Generator[VirtualMachineForTests]:
     """Create a running CBT-enabled VM with test data written to every disk.
 
@@ -165,6 +171,7 @@ def cbt_enabled_vm(
         storage_class: Storage class for the boot disk and additional data disks.
         unique_suffix: Suffix used in additional data disk names.
         data_disk_count: Number of blank data disks to attach before first start.
+        windows: Create a Windows Server 2022 VM with persistent vTPM instead of RHEL.
 
     Yields:
         VirtualMachineForTests: Running VM with CBT enabled and test data written.
@@ -177,30 +184,75 @@ def cbt_enabled_vm(
         name=name,
         namespace=namespace,
         client=client,
-        vm_instance_type=VirtualMachineClusterInstancetype(client=client, name=U1_SMALL),
-        vm_preference=VirtualMachineClusterPreference(client=client, name=RHEL9_PREFERENCE),
+        vm_instance_type=VirtualMachineClusterInstancetype(
+            client=client,
+            name=U1_LARGE if windows else U1_SMALL,
+        ),
+        vm_preference=VirtualMachineClusterPreference(
+            client=client,
+            name=WINDOWS_2K22_PREFERENCE if windows else RHEL9_PREFERENCE,
+        ),
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=data_source,
             storage_class=storage_class,
         ),
-        os_flavor=OS_FLAVOR_RHEL,
+        os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK if windows else OS_FLAVOR_RHEL,
         label=CBT_ENABLED_LABEL,
+        tpm_params=CBT_WINDOWS_PERSISTENT_DEVICE_PARAMS if windows else None,
+        efi_params=CBT_WINDOWS_PERSISTENT_DEVICE_PARAMS if windows else None,
         data_disk_storage_class_name=storage_class,
         data_disk_count=data_disk_count,
         unique_suffix=unique_suffix,
     ) as vm:
-        running_vm(vm=vm)
+        running_vm(
+            vm=vm,
+            dv_wait_timeout=TIMEOUT_60MIN if windows else TIMEOUT_30MIN,
+            ssh_timeout=TIMEOUT_10MIN if windows else TIMEOUT_2MIN,
+        )
+        if windows:
+            wait_for_windows_vm(vm=vm, version=CBT_WINDOWS_VERSION)
         wait_for_vm_cbt_enabled(vm=vm)
-        write_file_via_ssh(vm=vm, filename=CBT_BOOT_DISK_TEST_DATA_FILE, content=CBT_TEST_DATA)
-        for disk_index in range(1, data_disk_count + 1):
-            volume_name = data_disk_name(index=disk_index, unique_suffix=unique_suffix)
-            write_file_via_ssh(
-                vm=vm,
-                filename=guest_device_path_for_volume(vm=vm, volume_name=volume_name),
-                content=CBT_DATA_DISK_TEST_DATA,
-                use_sudo=True,
-            )
+        write_cbt_guest_file(vm=vm, filename=cbt_boot_disk_test_data_file(vm=vm), content=CBT_TEST_DATA)
+        if not windows:
+            for disk_index in range(1, data_disk_count + 1):
+                volume_name = data_disk_name(index=disk_index, unique_suffix=unique_suffix)
+                write_cbt_guest_file(
+                    vm=vm,
+                    filename=guest_device_path_for_volume(vm=vm, volume_name=volume_name),
+                    content=CBT_DATA_DISK_TEST_DATA,
+                )
         yield vm
+
+
+def is_windows_cbt_vm(vm: VirtualMachineForTests) -> bool:
+    """Return True when the VM uses a Windows OS flavor."""
+    return OS_FLAVOR_WINDOWS in vm.os_flavor
+
+
+def cbt_boot_disk_test_data_file(vm: VirtualMachineForTests) -> str:
+    """Guest path for the initial CBT test data file on the VM boot disk."""
+    if is_windows_cbt_vm(vm=vm):
+        return CBT_WINDOWS_BOOT_DISK_TEST_DATA_FILE
+    return CBT_BOOT_DISK_TEST_DATA_FILE
+
+
+def write_cbt_guest_file(vm: VirtualMachineForTests, filename: str, content: str) -> None:
+    """Write test data into a CBT VM, using PowerShell on Windows and SSH on Linux.
+
+    Args:
+        vm: Running CBT test VM.
+        filename: Guest file path.
+        content: File contents to write.
+    """
+    if is_windows_cbt_vm(vm=vm):
+        write_file_windows_vm(vm=vm, file_path=filename, content=content)
+        return
+    write_file_via_ssh(
+        vm=vm,
+        filename=filename,
+        content=content,
+        use_sudo=filename.startswith("/dev/"),
+    )
 
 
 def guest_volume_target(vm: VirtualMachine, volume_name: str) -> str | None:
@@ -291,9 +343,18 @@ def incremental_test_data(index: int) -> str:
     return f"cbt-incremental-{index}-backup-test-data"
 
 
-def incremental_test_data_file(index: int) -> str:
+def incremental_test_data_file(index: int, vm: VirtualMachineForTests | None = None) -> str:
     """Guest file path written before the Nth (1-indexed) incremental backup in a backup chain."""
+    if vm is not None and is_windows_cbt_vm(vm=vm):
+        return CBT_WINDOWS_INCREMENTAL_TEST_DATA_FILE.format(index=index)
     return f"/tmp/cbt-incremental-{index}-test-data.txt"
+
+
+def cbt_backup_wait_timeout(vm: VirtualMachineForTests) -> int:
+    """Timeout for push-complete and pull export-ready waits."""
+    if is_windows_cbt_vm(vm=vm):
+        return TIMEOUT_30MIN
+    return TIMEOUT_10MIN
 
 
 def assert_backup_status_includes_volumes(
@@ -301,6 +362,7 @@ def assert_backup_status_includes_volumes(
     backup_status: dict[str, Any],
     expected_volume_names: list[str],
     expected_backup_type: str | None = None,
+    allow_extra_volumes: bool = False,
 ) -> None:
     """Assert a previously captured backup status includes the expected volumes.
 
@@ -312,13 +374,24 @@ def assert_backup_status_includes_volumes(
         backup_status: Previously captured backup status mapping, not a live resource.
         expected_volume_names: Volume names that must appear in ``includedVolumes``.
         expected_backup_type: Expected ``status.type`` value. When omitted, type is not checked.
+        allow_extra_volumes: When True, ``includedVolumes`` may contain additional names
+            (for example persistent vTPM or EFI volumes on Windows VMs).
     """
     included_volumes = backup_status["includedVolumes"]
     actual_volume_names = [volume["volumeName"] for volume in included_volumes]
-    assert sorted(actual_volume_names) == sorted(expected_volume_names), (
-        f"Backup {backup_name} included volumes {actual_volume_names}, "
-        f"expected {expected_volume_names}: {included_volumes}"
-    )
+    if allow_extra_volumes:
+        missing_volume_names = [
+            volume_name for volume_name in expected_volume_names if volume_name not in actual_volume_names
+        ]
+        assert not missing_volume_names, (
+            f"Backup {backup_name} included volumes {actual_volume_names}, "
+            f"missing {missing_volume_names}: {included_volumes}"
+        )
+    else:
+        assert sorted(actual_volume_names) == sorted(expected_volume_names), (
+            f"Backup {backup_name} included volumes {actual_volume_names}, "
+            f"expected {expected_volume_names}: {included_volumes}"
+        )
     if expected_backup_type is not None:
         assert backup_status["type"] == expected_backup_type, (
             f"Backup {backup_name} type is {backup_status['type']!r}, expected {expected_backup_type!r}"
@@ -344,11 +417,12 @@ def wait_for_vm_cbt_enabled(vm: VirtualMachine) -> None:
             return
 
 
-def wait_for_push_backup_complete(backup: VirtualMachineBackup) -> None:
+def wait_for_push_backup_complete(backup: VirtualMachineBackup, wait_timeout: int = TIMEOUT_10MIN) -> None:
     """Wait until a push-mode backup completes successfully.
 
     Args:
         backup: Push-mode backup resource to poll.
+        wait_timeout: Seconds to wait for Complete=True.
 
     Side effects:
         Polls the OpenShift API until the backup reports Complete=True.
@@ -360,18 +434,19 @@ def wait_for_push_backup_complete(backup: VirtualMachineBackup) -> None:
     backup.wait_for_condition(
         condition="Complete",
         status=backup.Condition.Status.TRUE,
-        timeout=TIMEOUT_10MIN,
+        timeout=wait_timeout,
         sleep_time=TIMEOUT_5SEC,
         stop_condition=CBT_BACKUP_CONDITION_FAILED,
         stop_status=backup.Condition.Status.TRUE,
     )
 
 
-def wait_for_pull_backup_export_ready(backup: VirtualMachineBackup) -> None:
+def wait_for_pull_backup_export_ready(backup: VirtualMachineBackup, wait_timeout: int = TIMEOUT_10MIN) -> None:
     """Wait until a pull-mode backup export is ready for collection.
 
     Args:
         backup: Pull-mode backup resource to poll.
+        wait_timeout: Seconds to wait for Progressing=True with reason ExportReady.
 
     Side effects:
         Polls the OpenShift API until the backup reports Progressing=True with reason
@@ -385,7 +460,7 @@ def wait_for_pull_backup_export_ready(backup: VirtualMachineBackup) -> None:
         condition="Progressing",
         status=backup.Condition.Status.TRUE,
         reason="ExportReady",
-        timeout=TIMEOUT_10MIN,
+        timeout=wait_timeout,
         sleep_time=TIMEOUT_5SEC,
         stop_condition=CBT_BACKUP_CONDITION_FAILED,
         stop_status=backup.Condition.Status.TRUE,

@@ -12,6 +12,7 @@ from tests.storage.cbt.constants import CBT_ENABLED_LABEL
 from tests.storage.cbt.utils import (
     cbt_backup_pvc,
     cbt_backup_tracker,
+    cbt_backup_wait_timeout,
     cbt_enabled_vm,
     cbt_push_backup,
     cbt_source_ref,
@@ -23,9 +24,9 @@ from tests.storage.cbt.utils import (
     wait_for_pull_backup_export_deleted,
     wait_for_pull_backup_export_ready,
     wait_for_push_backup_complete,
+    write_cbt_guest_file,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile, hco_feature_gates_patch
-from utilities.storage import write_file_via_ssh
 
 
 @pytest.fixture(scope="module")
@@ -72,7 +73,6 @@ def vm_with_cbt_label(
     unprivileged_client,
     namespace,
     cbt_hco_configured,
-    rhel9_data_source_scope_session,
     unique_suffix,
 ):
     """
@@ -85,21 +85,31 @@ def vm_with_cbt_label(
             restart) and write test data to, in addition to the boot disk.
         storage_class_fixture: Optional fixture name that provides the VM disk storage class.
             Defaults to storage_class_name_scope_module.
+        windows: Optional bool (default False). Create a Windows Server 2022 VM with persistent vTPM.
+        data_source_fixture: Optional fixture name for the boot-disk DataSource. Defaults to
+            rhel9_data_source_scope_session, or windows_validation_os_images_data_source_scope_session
+            when windows is True.
 
     Returns:
         VirtualMachine: Running VM with CBT enabled and test data written
     """
+    windows = request.param.get("windows", False)
     storage_class = request.getfixturevalue(
         argname=request.param.get("storage_class_fixture", "storage_class_name_scope_module")
     )
+    default_data_source_fixture = (
+        "windows_validation_os_images_data_source_scope_session" if windows else "rhel9_data_source_scope_session"
+    )
+    data_source = request.getfixturevalue(argname=request.param.get("data_source_fixture", default_data_source_fixture))
     with cbt_enabled_vm(
         name=f"{request.param['name']}-{unique_suffix}",
         namespace=namespace.name,
         client=unprivileged_client,
-        data_source=rhel9_data_source_scope_session,
+        data_source=data_source,
         storage_class=storage_class,
         unique_suffix=unique_suffix,
         data_disk_count=request.param.get("data_disk_count", 0),
+        windows=windows,
     ) as vm:
         yield vm
 
@@ -227,6 +237,7 @@ def completed_push_backup_chain(
             followed by each incremental backup).
     """
     incremental_count = request.param["incremental_count"]
+    backup_wait_timeout = cbt_backup_wait_timeout(vm=vm_with_cbt_label)
     with ExitStack() as stack:
         backups = []
         full_backup = stack.enter_context(
@@ -239,12 +250,12 @@ def completed_push_backup_chain(
                 force_full_backup=True,
             )
         )
-        wait_for_push_backup_complete(backup=full_backup)
+        wait_for_push_backup_complete(backup=full_backup, wait_timeout=backup_wait_timeout)
         backups.append(full_backup)
         for incremental_index in range(1, incremental_count + 1):
-            write_file_via_ssh(
+            write_cbt_guest_file(
                 vm=vm_with_cbt_label,
-                filename=incremental_test_data_file(index=incremental_index),
+                filename=incremental_test_data_file(index=incremental_index, vm=vm_with_cbt_label),
                 content=incremental_test_data(index=incremental_index),
             )
             incremental_backup = stack.enter_context(
@@ -257,7 +268,7 @@ def completed_push_backup_chain(
                     force_full_backup=False,
                 )
             )
-            wait_for_push_backup_complete(backup=incremental_backup)
+            wait_for_push_backup_complete(backup=incremental_backup, wait_timeout=backup_wait_timeout)
             backups.append(incremental_backup)
         yield backups
 
@@ -292,6 +303,7 @@ def ready_pull_backup_chain(
             order (full backup first, followed by each incremental backup).
     """
     incremental_count = request.param["incremental_count"]
+    backup_wait_timeout = cbt_backup_wait_timeout(vm=vm_with_cbt_label)
     completed_backups = []
     current_backup = deploy_cbt_pull_backup(
         name=f"full-pull-{unique_suffix}",
@@ -303,13 +315,13 @@ def ready_pull_backup_chain(
         force_full_backup=True,
     )
     try:
-        wait_for_pull_backup_export_ready(backup=current_backup)
+        wait_for_pull_backup_export_ready(backup=current_backup, wait_timeout=backup_wait_timeout)
         completed_backups.append((current_backup.name, current_backup.instance.to_dict()["status"]))
         for incremental_index in range(1, incremental_count + 1):
             delete_cbt_pull_backup_and_wait_for_export(backup=current_backup)
-            write_file_via_ssh(
+            write_cbt_guest_file(
                 vm=vm_with_cbt_label,
-                filename=incremental_test_data_file(index=incremental_index),
+                filename=incremental_test_data_file(index=incremental_index, vm=vm_with_cbt_label),
                 content=incremental_test_data(index=incremental_index),
             )
             current_backup = deploy_cbt_pull_backup(
@@ -321,7 +333,7 @@ def ready_pull_backup_chain(
                 source=backup_tracker_source,
                 force_full_backup=False,
             )
-            wait_for_pull_backup_export_ready(backup=current_backup)
+            wait_for_pull_backup_export_ready(backup=current_backup, wait_timeout=backup_wait_timeout)
             completed_backups.append((current_backup.name, current_backup.instance.to_dict()["status"]))
         yield completed_backups
     finally:
@@ -349,6 +361,7 @@ def completed_push_backup_after_live_migration(
     Returns:
         list[VirtualMachineBackup]: The full backup followed by the post-migration incremental backup.
     """
+    backup_wait_timeout = cbt_backup_wait_timeout(vm=vm_with_cbt_label)
     with ExitStack() as stack:
         full_backup = stack.enter_context(
             cm=cbt_push_backup(
@@ -360,11 +373,11 @@ def completed_push_backup_after_live_migration(
                 force_full_backup=True,
             )
         )
-        wait_for_push_backup_complete(backup=full_backup)
+        wait_for_push_backup_complete(backup=full_backup, wait_timeout=backup_wait_timeout)
         live_migrate_cbt_vm(vm=vm_with_cbt_label, client=admin_client)
-        write_file_via_ssh(
+        write_cbt_guest_file(
             vm=vm_with_cbt_label,
-            filename=incremental_test_data_file(index=1),
+            filename=incremental_test_data_file(index=1, vm=vm_with_cbt_label),
             content=incremental_test_data(index=1),
         )
         incremental_backup = stack.enter_context(
@@ -377,7 +390,7 @@ def completed_push_backup_after_live_migration(
                 force_full_backup=False,
             )
         )
-        wait_for_push_backup_complete(backup=incremental_backup)
+        wait_for_push_backup_complete(backup=incremental_backup, wait_timeout=backup_wait_timeout)
         yield [full_backup, incremental_backup]
 
 
@@ -402,6 +415,7 @@ def ready_pull_backup_after_live_migration(
         list[tuple[str, Any]]: (backup name, backup status) for the full backup and the
             post-migration incremental backup, in that order.
     """
+    backup_wait_timeout = cbt_backup_wait_timeout(vm=vm_with_cbt_label)
     completed_backups = []
     current_backup = deploy_cbt_pull_backup(
         name=f"full-pull-{unique_suffix}",
@@ -413,14 +427,14 @@ def ready_pull_backup_after_live_migration(
         force_full_backup=True,
     )
     try:
-        wait_for_pull_backup_export_ready(backup=current_backup)
+        wait_for_pull_backup_export_ready(backup=current_backup, wait_timeout=backup_wait_timeout)
         completed_backups.append((current_backup.name, current_backup.instance.to_dict()["status"]))
         delete_cbt_pull_backup_and_wait_for_export(backup=current_backup)
         current_backup = None
         live_migrate_cbt_vm(vm=vm_with_cbt_label, client=admin_client)
-        write_file_via_ssh(
+        write_cbt_guest_file(
             vm=vm_with_cbt_label,
-            filename=incremental_test_data_file(index=1),
+            filename=incremental_test_data_file(index=1, vm=vm_with_cbt_label),
             content=incremental_test_data(index=1),
         )
         current_backup = deploy_cbt_pull_backup(
@@ -432,7 +446,7 @@ def ready_pull_backup_after_live_migration(
             source=backup_tracker_source,
             force_full_backup=False,
         )
-        wait_for_pull_backup_export_ready(backup=current_backup)
+        wait_for_pull_backup_export_ready(backup=current_backup, wait_timeout=backup_wait_timeout)
         completed_backups.append((current_backup.name, current_backup.instance.to_dict()["status"]))
         yield completed_backups
     finally:
