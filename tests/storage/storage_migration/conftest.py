@@ -1,4 +1,5 @@
 import contextlib
+import logging
 import shlex
 
 import pytest
@@ -17,13 +18,16 @@ from tests.storage.storage_migration.constants import (
     FILE_BEFORE_STORAGE_MIGRATION,
     HOTPLUGGED_DEVICES,
     MOUNT_HOTPLUGGED_DEVICE_PATHS,
+    NON_EXISTENT_STORAGE_CLASS,
     NUM_HOTPLUG_DISKS,
     WINDOWS_FILE_WITH_PATH,
     WINDOWS_TEST_DIRECTORY_PATH,
 )
 from tests.storage.storage_migration.utils import (
     build_namespaces_spec_for_storage_migration,
-    wait_for_storage_migration_completed,
+    create_fedora_vm_with_instance_type,
+    get_vm_dv_names,
+    wait_for_storage_migration_phase,
 )
 from tests.storage.utils import create_windows_directory, get_storage_class_for_storage_migration
 from tests.utils import create_windows2022_vm
@@ -47,6 +51,8 @@ from utilities.virt import (
     running_vm,
     vm_instance_from_template,
 )
+
+LOGGER = logging.getLogger(__name__)
 
 DEFAULT_DV_SIZE = "1Gi"
 
@@ -88,7 +94,7 @@ def storage_mig_migration(admin_client, storage_mig_plan):
         client=admin_client,
         multi_namespace_virtual_machine_storage_migration_plan_ref={"name": storage_mig_plan.name},
     ) as mig_migration:
-        wait_for_storage_migration_completed(mig_migration=mig_migration)
+        wait_for_storage_migration_phase(mig_migration=mig_migration, expected_phase=mig_migration.Status.COMPLETED)
         yield mig_migration
 
 
@@ -264,7 +270,7 @@ def vms_boot_time_before_storage_migration(online_vms_for_storage_class_migratio
 @pytest.fixture(scope="class")
 def deleted_old_dvs_of_online_vms(unprivileged_client, storage_mig_migration, online_vms_for_storage_class_migration):
     # Wait for the storage migration to complete before reading the migrated source PVC name.
-    wait_for_storage_migration_completed(mig_migration=storage_mig_migration)
+    wait_for_storage_migration_phase(mig_migration=storage_mig_migration)
     for vm in online_vms_for_storage_class_migration:
         # status.volumeUpdateState is a transient field: it is populated only while a running VM's
         # volume migration is in progress and is cleared by virt-handler once the update completes
@@ -422,3 +428,250 @@ def cleaned_up_standalone_data_volume_after_storage_migration(unprivileged_clien
     for dv in DataVolume.get(client=unprivileged_client, namespace=namespace.name):
         if dv.name.startswith(f"{data_volume_scope_class.name}-mig"):
             assert dv.clean_up(wait=True)
+
+
+@pytest.fixture()
+def running_vm_for_scmig_test_first_ns(
+    unprivileged_client, namespace, fedora_data_source_scope_module, source_storage_class, cpu_for_migration
+):
+    yield from create_fedora_vm_with_instance_type(
+        unprivileged_client=unprivileged_client,
+        namespace_name=namespace.name,
+        data_source=fedora_data_source_scope_module,
+        source_storage_class=source_storage_class,
+        cpu_for_migration=cpu_for_migration,
+        vm_name="running-vm",
+    )
+
+
+@pytest.fixture()
+def stopped_vm_for_scmig_test_first_ns(
+    unprivileged_client, namespace, fedora_data_source_scope_module, source_storage_class, cpu_for_migration
+):
+    vm_creator = create_fedora_vm_with_instance_type(
+        unprivileged_client=unprivileged_client,
+        namespace_name=namespace.name,
+        data_source=fedora_data_source_scope_module,
+        source_storage_class=source_storage_class,
+        cpu_for_migration=cpu_for_migration,
+        vm_name="stopped-vm",
+    )
+    vm = next(vm_creator)
+    vm.stop(wait=True)
+    yield vm
+    # Exhaust the creator generator so the VM's context-manager teardown runs after the test.
+    yield from vm_creator
+
+
+@pytest.fixture()
+def running_vm_for_scmig_test_source_dvs(running_vm_for_scmig_test_first_ns):
+    yield get_vm_dv_names(vm=running_vm_for_scmig_test_first_ns)
+
+
+@pytest.fixture()
+def stopped_vm_for_scmig_test_source_dvs(stopped_vm_for_scmig_test_first_ns):
+    yield get_vm_dv_names(vm=stopped_vm_for_scmig_test_first_ns)
+
+
+@pytest.fixture()
+def combined_mode_mig_plan(
+    request,
+    admin_client,
+    migration_resources_namespace,
+    target_storage_class,
+    running_vm_for_scmig_test_first_ns,
+    stopped_vm_for_scmig_test_first_ns,
+    unique_suffix_scope_function,
+):
+    spec_retention_policy = request.param.get("spec_retention_policy")
+    ns_retention_policy = request.param.get("ns_retention_policy")
+    LOGGER.info(
+        f"Creating migration plan with spec-level retentionPolicy={spec_retention_policy} and "
+        f"namespace-level retentionPolicy={ns_retention_policy}"
+    )
+
+    namespaces_spec = build_namespaces_spec_for_storage_migration(
+        vms=[running_vm_for_scmig_test_first_ns, stopped_vm_for_scmig_test_first_ns],
+        target_storage_class=target_storage_class,
+    )
+    if ns_retention_policy:
+        for ns_entry in namespaces_spec:
+            ns_entry["retentionPolicy"] = ns_retention_policy
+
+    with MultiNamespaceVirtualMachineStorageMigrationPlan(
+        name=f"combined-mode-plan-{unique_suffix_scope_function}",
+        namespace=migration_resources_namespace.name,
+        client=admin_client,
+        namespaces=namespaces_spec,
+        retention_policy=spec_retention_policy,
+    ) as mig_plan:
+        yield mig_plan
+
+
+@pytest.fixture()
+def combined_mode_mig_migration(
+    admin_client,
+    combined_mode_mig_plan,
+    running_vm_for_scmig_test_source_dvs,
+    stopped_vm_for_scmig_test_source_dvs,
+):
+    with MultiNamespaceVirtualMachineStorageMigration(
+        name=f"mig-{combined_mode_mig_plan.name}",
+        namespace=combined_mode_mig_plan.namespace,
+        client=admin_client,
+        multi_namespace_virtual_machine_storage_migration_plan_ref={"name": combined_mode_mig_plan.name},
+    ) as mig_migration:
+        wait_for_storage_migration_phase(mig_migration=mig_migration, expected_phase=mig_migration.Status.COMPLETED)
+        yield mig_migration
+
+
+@pytest.fixture()
+def second_vm_namespace(admin_client, unprivileged_client, unique_suffix):
+    yield from create_ns(
+        admin_client=admin_client,
+        unprivileged_client=unprivileged_client,
+        name=f"test-scmig-cleanup-second-ns-{unique_suffix}",
+    )
+
+
+@pytest.fixture()
+def stopped_vm_for_scmig_test_second_ns(
+    unprivileged_client, second_vm_namespace, fedora_data_source_scope_module, source_storage_class, cpu_for_migration
+):
+    yield from create_fedora_vm_with_instance_type(
+        unprivileged_client=unprivileged_client,
+        namespace_name=second_vm_namespace.name,
+        data_source=fedora_data_source_scope_module,
+        source_storage_class=source_storage_class,
+        cpu_for_migration=cpu_for_migration,
+        vm_name="policy-vm-ns2",
+    )
+
+
+@pytest.fixture()
+def ready_vms_for_scmig_test(running_vm_for_scmig_test_first_ns, stopped_vm_for_scmig_test_second_ns):
+    stopped_vm_for_scmig_test_second_ns.stop(wait=True)
+    yield [running_vm_for_scmig_test_first_ns, stopped_vm_for_scmig_test_second_ns]
+
+
+@pytest.fixture()
+def source_dv_names_first_ns_for_scmig_test(ready_vms_for_scmig_test):
+    yield get_vm_dv_names(vm=ready_vms_for_scmig_test[0])
+
+
+@pytest.fixture()
+def source_dv_names_second_ns_for_scmig_test(ready_vms_for_scmig_test):
+    yield get_vm_dv_names(vm=ready_vms_for_scmig_test[1])
+
+
+@pytest.fixture()
+def combined_policy_and_combined_mode_mig_plan(
+    request,
+    admin_client,
+    migration_resources_namespace,
+    target_storage_class,
+    ready_vms_for_scmig_test,
+    unique_suffix_scope_function,
+):
+    spec_retention_policy = request.param["spec_retention_policy"]
+    first_ns_override_retention_policy = request.param["first_ns_override_retention_policy"]
+    LOGGER.info(
+        f"Creating migration plan with spec-level retentionPolicy={spec_retention_policy} and "
+        f"first-namespace-level override retentionPolicy={first_ns_override_retention_policy}"
+    )
+
+    namespaces_spec = build_namespaces_spec_for_storage_migration(
+        vms=ready_vms_for_scmig_test,
+        target_storage_class=target_storage_class,
+    )
+    namespaces_spec[0]["retentionPolicy"] = first_ns_override_retention_policy
+
+    with MultiNamespaceVirtualMachineStorageMigrationPlan(
+        name=f"combined-policy-plan-{unique_suffix_scope_function}",
+        namespace=migration_resources_namespace.name,
+        client=admin_client,
+        namespaces=namespaces_spec,
+        retention_policy=spec_retention_policy,
+    ) as mig_plan:
+        yield mig_plan
+
+
+@pytest.fixture()
+def combined_policy_mig_migration(
+    admin_client,
+    combined_policy_and_combined_mode_mig_plan,
+    source_dv_names_first_ns_for_scmig_test,
+    source_dv_names_second_ns_for_scmig_test,
+):
+    with MultiNamespaceVirtualMachineStorageMigration(
+        name=f"mig-{combined_policy_and_combined_mode_mig_plan.name}",
+        namespace=combined_policy_and_combined_mode_mig_plan.namespace,
+        client=admin_client,
+        multi_namespace_virtual_machine_storage_migration_plan_ref={
+            "name": combined_policy_and_combined_mode_mig_plan.name
+        },
+    ) as mig_migration:
+        wait_for_storage_migration_phase(mig_migration=mig_migration, expected_phase=mig_migration.Status.COMPLETED)
+        yield mig_migration
+
+
+@pytest.fixture()
+def failure_test_vm(
+    unprivileged_client, namespace, fedora_data_source_scope_module, source_storage_class, cpu_for_migration
+):
+    yield from create_fedora_vm_with_instance_type(
+        unprivileged_client=unprivileged_client,
+        namespace_name=namespace.name,
+        data_source=fedora_data_source_scope_module,
+        source_storage_class=source_storage_class,
+        cpu_for_migration=cpu_for_migration,
+        vm_name="failure-vm",
+    )
+
+
+@pytest.fixture()
+def failure_source_dv_names(failure_test_vm):
+    yield get_vm_dv_names(vm=failure_test_vm)
+
+
+@pytest.fixture()
+def failure_mig_plan(
+    request,
+    admin_client,
+    migration_resources_namespace,
+    failure_test_vm,
+    failure_source_dv_names,
+    unique_suffix_scope_function,
+):
+    retention_policy = request.param.get("retention_policy")
+
+    namespaces_spec = build_namespaces_spec_for_storage_migration(
+        vms=[failure_test_vm],
+        target_storage_class=NON_EXISTENT_STORAGE_CLASS,
+    )
+
+    with MultiNamespaceVirtualMachineStorageMigrationPlan(
+        name=f"failure-plan-{unique_suffix_scope_function}",
+        namespace=migration_resources_namespace.name,
+        client=admin_client,
+        namespaces=namespaces_spec,
+        retention_policy=retention_policy,
+    ) as mig_plan:
+        yield mig_plan
+
+
+@pytest.fixture()
+def failure_mig_migration(admin_client, failure_mig_plan, failure_source_dv_names):
+    with MultiNamespaceVirtualMachineStorageMigration(
+        name=f"mig-{failure_mig_plan.name}",
+        namespace=failure_mig_plan.namespace,
+        client=admin_client,
+        multi_namespace_virtual_machine_storage_migration_plan_ref={"name": failure_mig_plan.name},
+    ) as mig_migration:
+        # NOTE: This has never worked. A MultiNamespace storage migration with an invalid target
+        # storage class does not reach a terminal "Failed" phase; it loops between
+        # "RefreshStorageMigrationPlan" and "BeginLiveMigration" with a critical "PlanNotReady"
+        # condition, so this wait always times out. The tests using this fixture are quarantined
+        # (xfail, run=False) pending product clarification on failed-migration behavior (CNV-98407).
+        wait_for_storage_migration_phase(mig_migration=mig_migration, expected_phase=mig_migration.Status.FAILED)
+        yield mig_migration
