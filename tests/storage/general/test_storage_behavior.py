@@ -7,6 +7,7 @@ import logging
 import pytest
 
 from tests.storage.cdi_import.utils import wait_for_pvc_recreate
+from tests.storage.stop_status_utils import dv_stop_status_restart_threshold
 from utilities import console
 from utilities.constants import Images
 from utilities.constants.images import OS_FLAVOR_FEDORA
@@ -50,7 +51,7 @@ def test_pvc_recreates_after_deletion(fedora_data_volume, namespace, storage_cla
     wait_for_pvc_recreate(pvc=pvc, pvc_creation_timestamp=pvc_original_timestamp)
     if sc_volume_binding_mode_is_wffc(sc=storage_class_name_scope_function, client=namespace.client):
         create_dummy_first_consumer_pod(client=namespace.client, pvc=pvc)
-    fedora_data_volume.wait_for_dv_success()
+    fedora_data_volume.wait_for_dv_success(stop_status_func=dv_stop_status_restart_threshold, dv=fedora_data_volume)
 
 
 @pytest.mark.polarion("CNV-3065")
