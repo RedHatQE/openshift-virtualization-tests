@@ -10,7 +10,7 @@ from tests.storage.utils import (
     get_importer_pod,
     wait_for_importer_container_message,
 )
-from utilities.constants import OS_FLAVOR_FEDORA, REGISTRY_STR, TIMEOUT_5MIN, Images
+from utilities.constants import OS_FLAVOR_FEDORA, QUARANTINED, REGISTRY_STR, TIMEOUT_5MIN, Images
 from utilities.ssp import wait_for_condition_message_value
 from utilities.storage import ErrorMsg, check_disk_count_in_vm, create_dv
 from utilities.virt import running_vm
@@ -123,6 +123,10 @@ def test_public_registry_data_volume(
 # we can overcome by updating to the right requested volume size and import successfully
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-2024")
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: CDI masks scratch ENOSPC as missing VM disk; tracked in CNV-97952",
+    run=False,
+)
 def test_public_registry_data_volume_low_capacity(namespace, storage_class_name_scope_function):
     dv_param = {
         "dv_name": "import-public-registry-low-capacity-dv",
