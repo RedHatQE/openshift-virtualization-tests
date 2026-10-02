@@ -1,7 +1,9 @@
 import logging
 import os
 import re
+import tempfile
 from base64 import b64decode
+from datetime import datetime
 
 import py
 from kubernetes.dynamic import DynamicClient
@@ -25,6 +27,8 @@ from utilities.constants.timeouts import (
 
 LOGGER = logging.getLogger(__name__)
 
+CERT_PEM_PATTERN = re.compile(r"-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----", re.DOTALL)
+
 
 SECRETS = [
     KUBEMACPOOL_SERVICE,
@@ -36,6 +40,58 @@ API_SERVICES = [
     f"{NamespacedResource.ApiVersion.V1ALPHA3}.subresources.kubevirt.io",
     f"{NamespacedResource.ApiVersion.V1BETA1}.{NamespacedResource.ApiGroup.UPLOAD_CDI_KUBEVIRT_IO}",
 ]
+
+
+def get_most_recently_issued_cert(pem_bundle: str) -> str:
+    """
+    Extract the most recently issued certificate from a PEM bundle.
+
+    After cert renewal, the apiservice caBundle may contain multiple concatenated PEM
+    certificates with the new cert appended rather than prepended. openssl x509 only
+    processes the first cert, so callers would read stale data. This function identifies
+    the cert with the latest notBefore date so callers always operate on the freshly
+    issued certificate.
+
+    Args:
+        pem_bundle (str): PEM-encoded certificate bundle (may contain multiple certs)
+
+    Returns:
+        str: PEM content of the most recently issued certificate
+    """
+    cert_blocks = CERT_PEM_PATTERN.findall(pem_bundle)
+    if len(cert_blocks) <= 1:
+        return pem_bundle
+
+    latest_cert = pem_bundle
+    latest_not_before: datetime | None = None
+
+    for cert_pem in cert_blocks:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".pem", delete=False) as temp_file:
+            temp_file.write(cert_pem)
+            temp_path = temp_file.name
+
+        try:
+            _, out, _ = run_command(
+                command=[f"openssl x509 -in {temp_path} -noout -startdate"],
+                shell=True,
+                check=False,
+            )
+        finally:
+            os.unlink(temp_path)
+
+        match = re.search(r"notBefore=(.*)", out.strip())
+        if not match:
+            continue
+
+        # Normalize whitespace and strip timezone before parsing
+        date_parts = match.group(1).strip().split()
+        date_str = " ".join(date_parts[:-1])  # drop trailing "GMT"
+        not_before = datetime.strptime(date_str, "%b %d %H:%M:%S %Y")
+        if latest_not_before is None or not_before > latest_not_before:
+            latest_not_before = not_before
+            latest_cert = cert_pem
+
+    return latest_cert
 
 
 def get_certificates_validity_period_and_checkend_result(
@@ -72,8 +128,10 @@ def get_certificates_validity_period_and_checkend_result(
             if secret not in secrets_to_skip
         },
         **{
-            os.path.join(tmpdir, api_service): get_base64_decoded_certificate(
-                certificate_data=APIService(name=api_service, client=admin_client).instance.spec.caBundle
+            os.path.join(tmpdir, api_service): get_most_recently_issued_cert(
+                pem_bundle=get_base64_decoded_certificate(
+                    certificate_data=APIService(name=api_service, client=admin_client).instance.spec.caBundle
+                )
             )
             for api_service in API_SERVICES
         },
