@@ -244,6 +244,7 @@ class TestStorageClassMigrationWithVolumeHotplug:
     ],
     indirect=True,
 )
+@pytest.mark.conformance
 @pytest.mark.tier3
 @pytest.mark.windows
 class TestStorageClassMigrationWindowsWithVTPM:
