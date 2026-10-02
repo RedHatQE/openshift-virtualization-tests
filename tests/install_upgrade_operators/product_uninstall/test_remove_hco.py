@@ -207,7 +207,6 @@ def recreated_hco(
 @pytest.mark.parametrize("data_volume_scope_class", [pytest.param(DV_PARAMS)], indirect=True)
 class TestAttemptRemoveHCO:
     @pytest.mark.polarion("CNV-8615")
-    @pytest.mark.usefixtures("admin_client", "hco_namespace")
     def test_remove_hco_with_dv_no_vms(
         self,
         hyperconverged_resource_scope_function,
@@ -246,7 +245,7 @@ class TestAttemptRemoveHCO:
         )
 
     @pytest.mark.polarion("CNV-8614")
-    @pytest.mark.usefixtures("admin_client", "hco_namespace", "hco_fedora_vm")
+    @pytest.mark.usefixtures("hco_fedora_vm")
     def test_hco_removal_with_block_strategy_with_vm_and_dv(
         self,
         data_volume_scope_class,
@@ -261,7 +260,7 @@ class TestAttemptRemoveHCO:
         )
 
     @pytest.mark.polarion("CNV-8725")
-    @pytest.mark.usefixtures("admin_client", "hco_namespace", "stopped_fedora_vm")
+    @pytest.mark.usefixtures("stopped_fedora_vm")
     def test_hco_removal_with_block_strategy_with_stopped_vm(
         self,
         hyperconverged_resource_scope_function,
