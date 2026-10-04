@@ -1,14 +1,7 @@
 import pytest
 
-from tests.observability.metrics.constants import (
-    KUBEVIRT_VMI_MEMORY_DOMAIN_BYTE,
-    KUBEVIRT_VMI_MEMORY_SWAP_IN_TRAFFIC_BYTES,
-    KUBEVIRT_VMI_MEMORY_SWAP_OUT_TRAFFIC_BYTES,
-    KUBEVIRT_VMI_VCPU_WAIT_SECONDS_TOTAL,
-)
 from tests.observability.metrics.utils import (
     assert_vm_metric_labels,
-    compare_kubevirt_vmi_info_metric_with_vm_info,
 )
 from tests.observability.utils import validate_metrics_value
 from utilities.constants import KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS
