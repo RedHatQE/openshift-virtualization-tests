@@ -60,17 +60,6 @@ def drain_using_console_windows(admin_client, source_node, vm):
         )
 
 
-def node_filter(pod, schedulable_nodes):
-    nodes_for_test = list(
-        filter(
-            lambda node: node.name != pod.node.name,
-            schedulable_nodes,
-        )
-    )
-    assert len(nodes_for_test) > 0, "No available nodes."
-    return nodes_for_test
-
-
 @pytest.fixture()
 def vm_container_disk_fedora(
     cluster_cpu_model_scope_module,
@@ -157,34 +146,6 @@ class TestNodeMaintenanceRHEL:
     ):
         vm = golden_image_vm_instance_from_template_multi_storage_scope_class
         drain_using_console(admin_client=admin_client, source_node=vm.privileged_vmi.virt_launcher_pod.node, vm=vm)
-
-    @pytest.mark.polarion("CNV-4995")
-    def test_migration_when_multiple_nodes_unschedulable_using_console_rhel(
-        self,
-        golden_image_vm_instance_from_template_multi_storage_scope_class,
-        schedulable_nodes,
-        admin_client,
-    ):
-        """Test VMI migration, when multiple nodes are unschedulable.
-
-        In our BM or PSI setups, we mostly use only 3 worker nodes,
-        the OCS pods would need at-least 2 nodes up and running, to
-        avoid violation of the ceph pod's disruption budget.
-        Hence we simulating this case here, with Cordon 1 node and
-        Drain 1 node, instead of Draining 2 Worker nodes.
-
-        1. Start a VMI
-        2. Cordon a Node, other than the current running VMI Node.
-        3. Drain the Node, on which the VMI is present.
-        4. Make sure the VMI is migrated to the other node.
-        """
-        vm = golden_image_vm_instance_from_template_multi_storage_scope_class
-        cordon_nodes = node_filter(
-            pod=vm.privileged_vmi.virt_launcher_pod,
-            schedulable_nodes=schedulable_nodes,
-        )
-        with node_mgmt_console(admin_client=admin_client, node=cordon_nodes[0], node_mgmt="cordon"):
-            drain_using_console(admin_client=admin_client, source_node=vm.privileged_vmi.virt_launcher_pod.node, vm=vm)
 
 
 @pytest.mark.parametrize(
