@@ -9,7 +9,7 @@ from ocp_resources.data_source import DataSource
 from ocp_resources.template import Template
 
 from tests.virt.constants import MachineTypesNames
-from tests.virt.utils import get_data_volume_template_dict_with_default_storage_class, validate_machine_type
+from tests.virt.utils import validate_machine_type
 from utilities.constants.instance_types import (
     FLAVOR_STR,
     OS_STR,
@@ -20,6 +20,7 @@ from utilities.virt import (
     VirtualMachineForTests,
     VirtualMachineForTestsFromTemplate,
     fedora_vm_body,
+    get_data_volume_template_dict_with_default_storage_class,
     migrate_vm_and_verify,
     restart_vm_wait_for_running_vm,
     running_vm,
