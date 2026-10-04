@@ -179,12 +179,12 @@ class TestStorageClassMigrationWithVolumeHotplug:
         ],
         indirect=True,
     )
-    @pytest.mark.usefixtures("written_files_to_mounted_hotplugged_disks")
     def test_vm_storage_class_migration_with_hotplugged_volume(
         self,
         source_storage_class,
         target_storage_class,
         written_file_to_vms_before_migration,
+        written_files_to_mounted_hotplugged_disks,
         online_vms_for_storage_class_migration,
         vms_boot_time_before_storage_migration,
         storage_mig_plan,
