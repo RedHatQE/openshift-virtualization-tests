@@ -4,6 +4,7 @@ Clone tests
 
 import pytest
 from ocp_resources.datavolume import DataVolume
+from utilities.constants.pytest import QUARANTINED
 
 from tests.os_params import FEDORA_LATEST
 from tests.storage.utils import (
@@ -230,6 +231,10 @@ def test_successful_snapshot_clone(
         assert_pvc_snapshot_clone_annotation(pvc=pvc, storage_class=storage_class)
 
 
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: test_clone_from_fs_to_block_using_dv_template fails on s390x with filesystem-to-block clone; tracked in CNV-98725",
+    run=False,
+)
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-5607")
 @pytest.mark.s390x
