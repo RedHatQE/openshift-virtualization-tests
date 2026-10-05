@@ -50,6 +50,7 @@ import utilities.virt
 from utilities.cluster import cache_admin_client
 from utilities.constants.architecture import (
     AMD_64,
+    ARM_64,
     X86_64,
 )
 from utilities.constants.cluster import (
@@ -759,9 +760,17 @@ def download_file_from_cluster(
     return binary_file
 
 
-def get_machine_platform():
+def get_machine_platform() -> str:
+    """Return the host architecture used in cluster binary artifact names.
+
+    Returns:
+        str: Normalized machine architecture.
+    """
     os_machine_type = platform.machine()
-    return AMD_64 if os_machine_type == X86_64 else os_machine_type
+    return {
+        X86_64: AMD_64,
+        "aarch64": ARM_64,
+    }.get(os_machine_type, os_machine_type)
 
 
 def get_nodes_with_label(nodes, label):
