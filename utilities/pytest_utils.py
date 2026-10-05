@@ -1,4 +1,5 @@
 import getpass
+import hashlib
 import importlib
 import json
 import logging
@@ -11,6 +12,8 @@ import sys
 import tempfile
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any
+
+import paramiko.pkey
 
 if TYPE_CHECKING:
     from typing import TypedDict
@@ -931,3 +934,17 @@ def filter_post_test_alerts_tests(items: list[pytest.Item], config: pytest.Confi
         config.hook.pytest_deselected(items=discard_tests)
         return items_to_return
     return items
+
+
+def patch_paramiko_for_fips() -> None:
+    """Patch paramiko's PKey.get_fingerprint to use usedforsecurity=False for FIPS compatibility.
+
+    Workaround for https://github.com/paramiko/paramiko/issues/396: PKey.get_fingerprint()
+    calls hashlib.md5() without usedforsecurity=False, raising UnsupportedDigestmodError on
+    FIPS-enabled systems. MD5 here is used only for display/logging purposes, not security.
+    """
+    type.__setattr__(
+        paramiko.pkey.PKey,
+        "get_fingerprint",
+        lambda self: hashlib.md5(self.asbytes(), usedforsecurity=False).digest(),
+    )

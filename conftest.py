@@ -66,6 +66,7 @@ from utilities.pytest_utils import (
     get_matrix_params,
     get_tests_cluster_markers,
     mark_nmstate_dependent_tests,
+    patch_paramiko_for_fips,
     remove_tests_from_list,
     reorder_early_fixtures,
     run_in_progress_config_map,
@@ -621,6 +622,8 @@ def filter_sno_only_tests(items: list[Item], config: Config) -> list[Item]:
 
 
 def pytest_configure(config):
+    patch_paramiko_for_fips()
+
     # test_deprecation_audit_logs should always run regardless the path that passed to pytest.
     deprecation_tests_dir_path = "tests/deprecated_api"
     file_or_dir = config.option.file_or_dir
