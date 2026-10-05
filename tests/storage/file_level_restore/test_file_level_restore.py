@@ -620,9 +620,9 @@ class TestFileRestoreCrossNamespace:
 
     Preconditions:
         - vm-file-restore-operator deployed and running in openshift-cnv namespace
-        - Running Linux VM with guest helper installed and filerestore user SSH-configured
-        - Volume snapshot source available in a namespace different from the target VM namespace
-        - Cross-namespace restore permissions configured for the volume snapshot
+        - A Target namespace contains the running Linux VM with guest helper installed and filerestore user SSH-configured
+        - A different Source namespace contains the VolumeSnapshot
+        - Cross-namespace restore permissions configured for the source VolumeSnapshot
     """
 
     __test__ = False
@@ -633,19 +633,19 @@ class TestFileRestoreCrossNamespace:
         Test that restore from a volume snapshot in a different namespace succeeds and cleans up.
 
         Preconditions:
-            - Running Linux VM with guest helper installed and filerestore user SSH-configured
-            - Volume snapshot containing a file with known content in a different namespace
-            - Cross-namespace restore permissions configured for the volume snapshot
+            - A Target namespace contains the running Linux VM with guest helper installed and filerestore user SSH-configured
+            - A different Source namespace contains a VolumeSnapshot with a file of known content
+            - Cross-namespace restore permissions configured for the source VolumeSnapshot
             - Target file deleted from the Linux VM
 
         Steps:
-            1. Create a VMFileRestore that references the volume snapshot in the source namespace
+            1. Create a VMFileRestore in the Target namespace that references the VolumeSnapshot in the Source namespace
             2. Wait for the restore operation to complete
             3. Read the restored file from the Linux VM
-            4. Inspect both namespaces for temporary restore resources
+            4. Inspect the Target namespace for temporary restore resources
 
         Expected:
-            - Restore succeeds with the original file content and no temporary resources remain in either namespace
+            - Restore succeeds with the original file content and no temporary resources remain in the Target namespace
         """
 
 
@@ -662,25 +662,25 @@ class TestFileRestoreStorageCompatibility:
     __test__ = False
 
     @pytest.mark.polarion("CNV-16836")
-    def test_restore_when_source_volume_mode_differs_from_cluster_default(self):
+    def test_restore_with_source_volume_mode_mismatch(self):
         """
-        Test that restore succeeds when the snapshot source volume mode differs from the cluster default.
+        Test that restore succeeds when the source volume mode differs from the StorageProfile's default volume mode.
 
-        Preconditions:
-            - Running Linux VM with guest helper installed and filerestore user SSH-configured
-            - VolumeSnapshot created from a Filesystem-mode PVC and containing a file with known content
-            - StorageProfile prefers Block volume mode for the ReadWriteOnce restore volume
-            - Target file deleted from the Linux VM
+         Preconditions:
+             - Running Linux VM with guest helper installed and filerestore user SSH-configured
+             - VolumeSnapshot created from a Filesystem-mode PVC and containing a file with known content
+             - StorageProfile prefers Block volume mode for the ReadWriteOnce restore volume
+             - Target file deleted from the Linux VM
 
-        Steps:
-            1. Verify that the snapshot source volume mode is Filesystem and the StorageProfile prefers Block volume mode for the ReadWriteOnce restore volume
-            2. Create a VMFileRestore from the VolumeSnapshot
-            3. Verify that the temporary restore volume preserves the Filesystem source volume mode
-            4. Wait for the restore operation to complete
-            5. Read the restored file from the Linux VM
+         Steps:
+             1. Verify that the snapshot source volume mode is Filesystem and the StorageProfile prefers Block volume mode for the ReadWriteOnce restore volume
+             2. Create a VMFileRestore from the VolumeSnapshot
+             3. Verify that the temporary restore volume preserves the Filesystem source volume mode
+             4. Wait for the restore operation to complete
+             5. Read the restored file from the Linux VM
 
-        Expected:
-            - Restore succeeds using the Filesystem source volume mode despite the Block preference, and the restored file content matches the snapshot source
+         Expected:
+             - Restore succeeds using the Filesystem source volume mode despite the Block preference, and the restored file content matches the snapshot source
         """
 
 
