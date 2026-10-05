@@ -722,8 +722,8 @@ def hco_feature_gates_patch(
     Raises:
         ValueError: If both enable and disable are empty.
     """
-    deltas = {name: True for name in enable or []}
-    deltas.update({name: False for name in disable or []})
+    deltas = dict.fromkeys(enable or [], True)
+    deltas.update(dict.fromkeys(disable or [], False))
 
     if not deltas:
         raise ValueError("At least one gate must be passed to enable or disable.")
