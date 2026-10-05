@@ -7,6 +7,7 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from pytest_testconfig import config as py_config
 
+from tests.storage.stop_status_utils import dv_stop_status_restart_threshold
 from utilities.constants.storage import BIND_IMMEDIATE_ANNOTATION, PVC
 from utilities.constants.timeouts import TIMEOUT_20MIN
 from utilities.storage import ErrorMsg, create_dv, get_dv_size_from_datasource
@@ -38,7 +39,7 @@ def golden_image_dv_from_fedora_datasource_scope_module(
             "namespace": fedora_data_source_scope_module.namespace,
         },
     ) as dv:
-        dv.wait_for_dv_success()
+        dv.wait_for_dv_success(stop_status_func=dv_stop_status_restart_threshold, dv=dv)
         yield dv
 
 
@@ -184,4 +185,8 @@ def test_regular_user_can_create_dv_in_ns_given_proper_rolebinding(
         "Once a proper RoleBinding created, that use the os-images.kubevirt.io:edit\
         ClusterRole, a regular user can create a DV in the golden image NS.",
     )
-    dv_created_by_unprivileged_user_with_rolebinding.wait_for_dv_success(timeout=TIMEOUT_20MIN)
+    dv_created_by_unprivileged_user_with_rolebinding.wait_for_dv_success(
+        timeout=TIMEOUT_20MIN,
+        stop_status_func=dv_stop_status_restart_threshold,
+        dv=dv_created_by_unprivileged_user_with_rolebinding,
+    )

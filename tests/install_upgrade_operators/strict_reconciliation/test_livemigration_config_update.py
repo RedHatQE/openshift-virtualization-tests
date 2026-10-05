@@ -41,7 +41,11 @@ class TestLiveMigrationConfigUpdate:
             ),
             pytest.param(
                 {
-                    PATCH_STR: {SPEC_STR: {LIVE_MIGRATION_CONFIG_KEY: {ALLOW_WORKLOAD_DISRUPTION: EXPECTED_VALUE}}},
+                    PATCH_STR: {
+                        SPEC_STR: {
+                            "virtualization": {LIVE_MIGRATION_CONFIG_KEY: {ALLOW_WORKLOAD_DISRUPTION: EXPECTED_VALUE}}
+                        }
+                    },
                 },
                 ALLOW_WORKLOAD_DISRUPTION,
                 marks=pytest.mark.polarion("CNV-16551"),

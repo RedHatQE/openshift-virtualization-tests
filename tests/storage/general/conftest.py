@@ -11,6 +11,7 @@ from pytest_testconfig import config as py_config
 
 from tests.storage.cdi_import.utils import get_importer_pod_node, wait_dv_and_get_importer
 from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE
+from tests.storage.stop_status_utils import dv_stop_status_restart_threshold
 from utilities.constants import Images
 from utilities.constants.architecture import AMD_64
 from utilities.constants.images import OS_FLAVOR_FEDORA
@@ -106,6 +107,10 @@ def fedora_dv_rwx_with_importer_node(
         importer_pod_node = get_importer_pod_node(importer_pod=importer_pod)
         LOGGER.info(f"Importer pod {importer_pod.name} is running on node {importer_pod_node}")
 
-        dv.wait_for_dv_success(timeout=TIMEOUT_12MIN)
+        dv.wait_for_dv_success(
+            timeout=TIMEOUT_12MIN,
+            stop_status_func=dv_stop_status_restart_threshold,
+            dv=dv,
+        )
 
         yield dv, importer_pod_node
