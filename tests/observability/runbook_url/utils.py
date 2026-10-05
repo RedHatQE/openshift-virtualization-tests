@@ -2,8 +2,6 @@ import logging
 
 import pytest
 
-from utilities.jira import is_jira_open
-
 LOGGER = logging.getLogger(__name__)
 INFORMATIONAL_ALERTS = {"VirtPlatformAutopilotMachineConfigUpdateStaged"}
 
@@ -43,11 +41,6 @@ def validate_downstream_runbook_url(
                 continue
             with subtests.test(msg=f"{rule_name}/{alert_name}"):
                 assert runbook_url, f"Alert '{alert_name}' is missing runbook URL, runbook_url is {runbook_url}"
-                if "kubevirt/virt-platform-autopilot" in runbook_url and is_jira_open(jira_id="CNV-96023"):
-                    pytest.xfail(
-                        reason="CNV-96023: runbook not located in correct repo"
-                        " (kubevirt/virt-platform-autopilot instead of openshift/runbooks)"
-                    )
                 assert runbook_url in available_runbook_urls, (
                     f"Alert '{alert_name}' runbook URL '{runbook_url}' not found in runbooks repository"
                 )
