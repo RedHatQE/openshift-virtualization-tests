@@ -66,27 +66,21 @@ def get_most_recently_issued_cert(pem_bundle: str) -> str:
     latest_not_before: datetime | None = None
 
     for cert_pem in cert_blocks:
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".pem", delete=False) as temp_file:
-            temp_file.write(cert_pem)
-            temp_path = temp_file.name
-
-        try:
-            _, out, _ = run_command(
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = os.path.join(temp_dir, "cert.pem")
+            dump_certificates_to_files(certificates_filenames_dict={temp_path: cert_pem})
+            success, out, err = run_command(
                 command=[f"openssl x509 -in {temp_path} -noout -startdate"],
                 shell=True,
                 check=False,
             )
-        finally:
-            os.unlink(temp_path)
 
         match = re.search(r"notBefore=(.*)", out.strip())
-        if not match:
-            continue
+        if not success or not match:
+            raise ValueError(f"Failed to read notBefore from certificate: error={err} output={out}")
 
-        # Normalize whitespace and strip timezone before parsing
-        date_parts = match.group(1).strip().split()
-        date_str = " ".join(date_parts[:-1])  # drop trailing "GMT"
-        not_before = datetime.strptime(date_str, "%b %d %H:%M:%S %Y")
+        date_str = " ".join(match.group(1).split())
+        not_before = datetime.strptime(date_str, "%b %d %H:%M:%S %Y GMT")
         if latest_not_before is None or not_before > latest_not_before:
             latest_not_before = not_before
             latest_cert = cert_pem
