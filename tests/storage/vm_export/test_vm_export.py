@@ -12,7 +12,7 @@ from ocp_resources.virtual_machine_export import VirtualMachineExport
 from pytest_testconfig import config as py_config
 
 from tests.storage.vm_export.constants import VM_EXPORT_TEST_FILE_CONTENT, VM_EXPORT_TEST_FILE_NAME
-from utilities.constants import Images
+from utilities.constants import QUARANTINED, Images
 from utilities.infra import run_virtctl_command
 from utilities.storage import run_command_on_vm_and_check_output
 from utilities.virt import running_vm
@@ -63,6 +63,10 @@ def test_fail_to_vmexport_with_unprivileged_client_no_permissions(
 
 @pytest.mark.polarion("CNV-9903")
 @pytest.mark.gating()
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: Test hangs when nested PSI worker node drops during DV import; tracked in VMEDO-1105",
+    run=False,
+)
 def test_vmexport_snapshot_manifests(
     vm_from_vmexport,
 ):
