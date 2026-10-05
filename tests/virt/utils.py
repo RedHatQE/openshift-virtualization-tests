@@ -19,8 +19,6 @@ from tests.virt.node.gpu.constants import (
     VGPU_DEVICE_NAME_STR,
     VGPU_PRETTY_NAME_STR,
 )
-from utilities.artifactory import get_test_artifact_server_url
-from utilities.constants.hco import DEFAULT_HCO_CONDITIONS
 from utilities.constants.images import OS_FLAVOR_WINDOWS
 from utilities.constants.timeouts import (
     TCP_TIMEOUT_30SEC,
