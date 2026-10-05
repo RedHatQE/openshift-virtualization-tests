@@ -19,7 +19,6 @@ from utilities.constants import (
     CENTOS_STREAM9_PREFERENCE,
     CENTOS_STREAM10_PREFERENCE,
     CNV_OPERATORS,
-    CNV_PROMETHEUS_RULES,
     HCO_CATALOG_SOURCE,
     HPP_CAPABILITIES,
     MONITORING_METRICS,
@@ -192,8 +191,6 @@ cnv_crd_matrix = ALL_CNV_CRDS
 cnv_crypto_policy_matrix = [TLS_OLD_POLICY, TLS_CUSTOM_POLICY]
 
 cnv_related_object_matrix = ALL_HCO_RELATED_OBJECTS
-cnv_prometheus_rules_matrix = CNV_PROMETHEUS_RULES
-
 cnv_deployment_matrix = ALL_CNV_DEPLOYMENTS
 cnv_daemonset_matrix = ALL_CNV_DAEMONSETS
 pod_resource_validation_matrix = [{"cpu": 5}, {"memory": None}]
