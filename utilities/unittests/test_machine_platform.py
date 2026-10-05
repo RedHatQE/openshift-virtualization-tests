@@ -17,6 +17,7 @@ class TestGetMachinePlatform:
             pytest.param(AARCH_64, ARM_64, id="aarch64_to_arm64"),
             pytest.param(X86_64, AMD_64, id="x86_64_to_amd64"),
             pytest.param(S390X, S390X, id="s390x_unchanged"),
+            pytest.param("unknown_arch", "unknown_arch", id="unknown_arch_unchanged"),
         ],
     )
     def test_get_machine_platform(self, machine_type: str, expected_machine_type: str) -> None:
