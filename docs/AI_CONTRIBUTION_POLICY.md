@@ -48,10 +48,12 @@ All contributors **SHOULD** disclose AI tool use when submitting code,
 documentation, or other content to this project.
 
 Disclosure **SHOULD** take the form of a trailer line in the commit message.
-The preferred format for this project is:
+Use the trailer that best reflects the AI's involvement in the work:
 
 ```
 Assisted-by: Claude Sonnet 4.6 <noreply@anthropic.com>
+Co-authored-by: Claude Sonnet 4.6 <noreply@anthropic.com>
+Generated-by: Claude Sonnet 4.6 <noreply@anthropic.com>
 ```
 
 Including the model name is **RECOMMENDED** to provide a precise record of the tool used.
