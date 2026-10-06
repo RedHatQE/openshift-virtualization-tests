@@ -23,7 +23,7 @@ LOGGER = logging.getLogger(__name__)
 @pytest.fixture()
 def xfail_if_jira_76659_open_and_migration_controller_pod(jira_76659_open, cnv_pods_by_type):
     if any(pod.name.startswith(KUBEVIRT_MIGRATION_CONTROLLER) for pod in cnv_pods_by_type) and jira_76659_open:
-        pytest.xfail(f"{KUBEVIRT_MIGRATION_CONTROLLER} pod has no priority class name due to CNV-76659 bug")
+        pytest.xfail(f"{KUBEVIRT_MIGRATION_CONTROLLER} pod has no priority class name due to CNV-98645 bug")
 
 
 @pytest.mark.polarion("CNV-7262")

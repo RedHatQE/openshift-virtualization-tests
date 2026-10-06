@@ -146,7 +146,7 @@ def vm_with_different_qos(request, unprivileged_client, namespace):
             {"name": "guaranteed-vm", "memory_limits": Images.Fedora.DEFAULT_MEMORY_SIZE},
             marks=[
                 pytest.mark.polarion("CNV-11488"),
-                pytest.mark.jira("CNV-97174", run=False),
+                pytest.mark.jira("CNV-98658", run=False),
             ],
             id="Guaranteed_QoS",
         ),

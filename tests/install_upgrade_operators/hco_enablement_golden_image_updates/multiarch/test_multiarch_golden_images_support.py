@@ -45,7 +45,7 @@ class TestDisabledMultiarchGoldenImagesSupport:
         "resource_type",
         [
             pytest.param(DataImportCron),
-            pytest.param(DataSource, marks=pytest.mark.jira("CNV-68996", run=False)),
+            pytest.param(DataSource, marks=pytest.mark.jira("CNV-98665", run=False)),
         ],
     )
     def test_only_base_golden_image_resources_exist(
@@ -63,7 +63,7 @@ class TestDisabledMultiarchGoldenImagesSupport:
         Parametrize:
             - resource_type:
                 - DataImportCron
-                - DataSource [Markers: jira(CNV-68996)]
+                - DataSource [Markers: jira(CNV-98665)]
 
         Steps:
             1. Verify expected base resources exist in the golden images namespace.
