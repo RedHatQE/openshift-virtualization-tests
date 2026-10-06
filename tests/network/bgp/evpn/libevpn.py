@@ -32,6 +32,7 @@ from tests.network.libs.bgp import (
     openpe_l2_bridge_name,
     wait_for_openpe_interface,
 )
+from utilities.constants.timeouts import TIMEOUT_30SEC
 from utilities.data_collector import get_data_collector_dir, write_to_file
 
 if TYPE_CHECKING:
@@ -53,6 +54,8 @@ _L3_VETH_EP_SIDE: str = "veth-l3-ep"
 
 _PACKET_CAPTURE_FILTER: Final[str] = f"arp or icmp6 or (tcp port {IPERF_SERVER_PORT})"
 _PACKET_CAPTURE_LIMIT: Final[int] = 100
+_SERIAL_GETTY_DROP_IN_DIRECTORY: Final[str] = "/etc/systemd/system/serial-getty@ttyS0.service.d"
+_SERIAL_GETTY_DROP_IN_FILE: Final[str] = f"{_SERIAL_GETTY_DROP_IN_DIRECTORY}/no-start-limit.conf"
 
 
 @dataclass
@@ -95,6 +98,29 @@ class EndpointTcpClient(PodTcpClient):
         )
         self._ensure_is_running()
         return self
+
+
+def disable_vm_serial_getty_start_limit(vm: BaseVirtualMachine) -> None:
+    """Disable serial-getty restart throttling in an EVPN test VM.
+
+    EVPN connectivity setup checks multiple IPv4 and IPv6 iperf processes by
+    opening short-lived serial-console sessions. Each logout restarts the
+    serial getty, so Fedora's default limit of five starts in ten seconds can
+    leave the console unavailable for subsequent connectivity checks.
+
+    Args:
+        vm: Fedora VM whose serial console is used by traffic generators.
+    """
+    configure_command = (
+        f"sudo mkdir -p {_SERIAL_GETTY_DROP_IN_DIRECTORY} && "
+        f"printf '%s\\n' '[Unit]' 'StartLimitIntervalSec=0' | "
+        f"sudo tee {_SERIAL_GETTY_DROP_IN_FILE} >/dev/null && "
+        "sudo systemctl daemon-reload"
+    )
+    verify_command = (
+        "systemctl show serial-getty@ttyS0.service --property=StartLimitIntervalUSec --value | grep -Eq '^0(us)?$'"
+    )
+    vm.console(commands=[configure_command, verify_command], timeout=TIMEOUT_30SEC)
 
 
 def cudn_evpn_subnets() -> list[str]:
@@ -227,7 +253,7 @@ def _capture_evpn_packets(endpoint: EvpnEndpoint) -> Generator[None]:
         None while packet capture is active.
     """
     capture_log, capture_pid = _packet_capture_paths(endpoint=endpoint)
-    packet_filter = shlex.quote(_PACKET_CAPTURE_FILTER)
+    packet_filter = shlex.quote(s=_PACKET_CAPTURE_FILTER)
     capture_command = (
         f"rm -f {capture_log} {capture_pid}; "
         "if command -v tcpdump >/dev/null 2>&1; then "
