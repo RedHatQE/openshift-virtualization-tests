@@ -1,9 +1,4 @@
-import logging
-
 import pytest
-
-LOGGER = logging.getLogger(__name__)
-INFORMATIONAL_ALERTS = {"VirtPlatformAutopilotMachineConfigUpdateStaged"}
 
 
 def github_blob_url_to_raw(blob_url: str) -> str:
@@ -36,9 +31,6 @@ def validate_downstream_runbook_url(
     """
     for rule_name, alerts_dict in cnv_prometheus_rule_alerts.items():
         for alert_name, runbook_url in alerts_dict.items():
-            if alert_name in INFORMATIONAL_ALERTS:
-                LOGGER.info(f"Skipping informational alert '{alert_name}', no runbook URL expected")
-                continue
             with subtests.test(msg=f"{rule_name}/{alert_name}"):
                 assert runbook_url, f"Alert '{alert_name}' is missing runbook URL, runbook_url is {runbook_url}"
                 assert runbook_url in available_runbook_urls, (
