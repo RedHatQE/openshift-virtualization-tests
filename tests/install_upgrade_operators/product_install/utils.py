@@ -15,6 +15,7 @@ from utilities.constants.timeouts import (
     TIMEOUT_10MIN,
     TIMEOUT_15MIN,
 )
+from utilities.exceptions import ResourceMismatch
 from utilities.infra import get_not_running_pods, get_pod_by_name_prefix
 from utilities.storage import verify_hpp_pool_health
 
@@ -82,7 +83,7 @@ def restart_ocs_operator_for_virt_sc(admin_client: DynamicClient) -> None:
     )
 
     if not ocs_operator.instance.spec.replicas:
-        raise RuntimeError("ocs-operator has zero replicas; cannot restart it to create virt StorageClass")
+        raise ResourceMismatch("ocs-operator has zero replicas; cannot restart it to create virt StorageClass")
 
     LOGGER.info("Waiting for ocs-operator pod to become available before deletion (BZ2322458 workaround)")
     for ocs_pod in TimeoutSampler(
@@ -97,7 +98,7 @@ def restart_ocs_operator_for_virt_sc(admin_client: DynamicClient) -> None:
             break
 
     LOGGER.info("Deleting ocs-operator pod to trigger virt StorageClass creation (BZ2322458 workaround)")
-    ocs_pod.clean_up()
+    ocs_pod.delete(wait=True)
     ocs_operator.wait_for_replicas(timeout=TIMEOUT_10MIN)
 
 
