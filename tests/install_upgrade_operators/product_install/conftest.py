@@ -14,6 +14,7 @@ from timeout_sampler import TimeoutSampler
 from tests.install_upgrade_operators.product_install.constants import (
     HCO_NOT_INSTALLED_ALERT,
 )
+from tests.install_upgrade_operators.product_install.utils import restart_ocs_operator_for_virt_sc
 from utilities.constants.components import HCO_CATALOG_SOURCE
 from utilities.constants.hco import (
     HCO_SUBSCRIPTION,
@@ -52,7 +53,6 @@ from utilities.storage import (
     create_hpp_storage_class,
     get_default_storage_class,
     persist_storage_class_default,
-    restart_ocs_operator_for_virt_sc,
 )
 
 INSTALLATION_VERSION_MISMATCH = "98"
