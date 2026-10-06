@@ -102,11 +102,11 @@ class TestDualStreamMigrationRhcos9ToRhcos10:
         - Migration start time matches the VM's recorded start timestamp
         - Migration end time matches the VM's recorded end timestamp (after completion)
         - Data processed, data remaining, and data total metrics are non-zero
-        - Memory transfer rate and dirty memory rate metrics xfail while CNV-97013 is open
+        - Memory transfer rate and dirty memory rate metrics xfail while CNV-98666 is open
           (they return no data during migration)
 
         Note:
-            The memory transfer rate (bandwidth) and dirty memory rate metrics xfail while CNV-97013
+            The memory transfer rate (bandwidth) and dirty memory rate metrics xfail while CNV-98666
             is open (they return no data during migration).
         """
         validate_dual_stream_migration_metrics(
@@ -186,11 +186,11 @@ class TestDualStreamMigrationRhcos10ToRhcos9:
         - Migration start time matches the VM's recorded start timestamp
         - Migration end time matches the VM's recorded end timestamp (after completion)
         - Data processed, data remaining, and data total metrics are non-zero
-        - Memory transfer rate and dirty memory rate metrics xfail while CNV-97013 is open
+        - Memory transfer rate and dirty memory rate metrics xfail while CNV-98666 is open
           (they return no data during migration)
 
         Note:
-            The memory transfer rate (bandwidth) and dirty memory rate metrics xfail while CNV-97013
+            The memory transfer rate (bandwidth) and dirty memory rate metrics xfail while CNV-98666
             is open (they return no data during migration).
         """
         validate_dual_stream_migration_metrics(

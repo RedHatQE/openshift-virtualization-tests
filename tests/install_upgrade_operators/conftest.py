@@ -315,4 +315,4 @@ def expected_value(request, is_s390x_cluster):
 
 @pytest.fixture(scope="session")
 def jira_76659_open():
-    return is_jira_open(jira_id="CNV-76659")
+    return is_jira_open(jira_id="CNV-98659")
