@@ -216,7 +216,7 @@ class TestRunningVMLinuxBridgeVlanChange:
                 )
 
 
-@pytest.mark.jira("CNV-87878", run=False)
+@pytest.mark.jira("CNV-98652", run=False)
 @pytest.mark.usefixtures("non_migratable_baseline_connectivity")
 @pytest.mark.polarion("CNV-15947")
 def test_non_migratable_vm_nad_change_not_applied(
