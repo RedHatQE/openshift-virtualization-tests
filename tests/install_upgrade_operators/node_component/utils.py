@@ -370,6 +370,14 @@ def get_pod_per_nodes(admin_client, hco_namespace, filter_pods_by_name=None):
                 LOGGER.warning(f"Ignoring pods that disappeared during the query. node={pod.node.name} pod={pod.name}")
         return pods_per_nodes
 
+    def _check_pod_running(pod: Pod) -> bool:
+        # TOCTOU: pod deleted after snapshot; return False so sampler retries (CNV-98696).
+        try:
+            return pod.exists and pod.status == Pod.Status.RUNNING
+        except TimeoutExpiredError:
+            LOGGER.warning(f"Pod {pod.name} status check timed out; treating as not running (TOCTOU deletion).")
+            return False
+
     pod_names_per_nodes = {}
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_5MIN,
@@ -380,7 +388,7 @@ def get_pod_per_nodes(admin_client, hco_namespace, filter_pods_by_name=None):
     )
     try:
         for sample in samples:
-            if all(pod.exists and pod.status == Pod.Status.RUNNING for pods in sample.values() for pod in pods):
+            if all(_check_pod_running(pod) for pods in sample.values() for pod in pods):
                 pod_names_per_nodes = {node: [pod.name for pod in pods] for node, pods in sample.items()}
                 return pod_names_per_nodes
     except TimeoutExpiredError:
