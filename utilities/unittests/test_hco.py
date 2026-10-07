@@ -39,6 +39,7 @@ if "utilities.hco" in sys.modules:
     del sys.modules["utilities.hco"]
 
 # Import after setting up mocks to avoid circular dependency
+from utilities.constants.cluster import CPU_MANAGER_LABEL
 from utilities.hco import (
     CDI,
     DEFAULT_HCO_PROGRESSING_CONDITIONS,
@@ -380,13 +381,13 @@ class TestAddLabelsToNodes:
         mock_editor = MagicMock()
         mock_resource_editor_class.return_value = mock_editor
 
-        node_labels = {"cpumanager": "true"}
+        node_labels = {CPU_MANAGER_LABEL: "true"}
         result = add_labels_to_nodes([mock_node], node_labels)
 
         assert len(result) == 1
         assert mock_editor in result
         assert result[mock_editor]["node"] == "worker-0"
-        assert result[mock_editor]["labels"] == {"cpumanager": "true1"}
+        assert result[mock_editor]["labels"] == {CPU_MANAGER_LABEL: "true1"}
         mock_editor.update.assert_called_once_with(backup_resources=True)
 
     @patch("utilities.hco.ResourceEditor")
@@ -402,14 +403,14 @@ class TestAddLabelsToNodes:
         mock_editors = [MagicMock(), MagicMock(), MagicMock()]
         mock_resource_editor_class.side_effect = mock_editors
 
-        node_labels = {"cpumanager": "true", "numa": "enabled"}
+        node_labels = {CPU_MANAGER_LABEL: "true", "numa": "enabled"}
         result = add_labels_to_nodes([mock_node1, mock_node2, mock_node3], node_labels)
 
         assert len(result) == 3
         # Verify incrementing label values
-        assert result[mock_editors[0]]["labels"] == {"cpumanager": "true1", "numa": "enabled1"}
-        assert result[mock_editors[1]]["labels"] == {"cpumanager": "true2", "numa": "enabled2"}
-        assert result[mock_editors[2]]["labels"] == {"cpumanager": "true3", "numa": "enabled3"}
+        assert result[mock_editors[0]]["labels"] == {CPU_MANAGER_LABEL: "true1", "numa": "enabled1"}
+        assert result[mock_editors[1]]["labels"] == {CPU_MANAGER_LABEL: "true2", "numa": "enabled2"}
+        assert result[mock_editors[2]]["labels"] == {CPU_MANAGER_LABEL: "true3", "numa": "enabled3"}
 
 
 class TestWaitForDs:
