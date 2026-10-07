@@ -633,23 +633,36 @@ class TestConcurrentBackups:
         """
 
 
+# Required at collection for storage_class_matrix__module__.
 @pytest.mark.tier3
 @pytest.mark.windows
+@pytest.mark.usefixtures("storage_class_name_scope_module")
+@pytest.mark.parametrize(
+    "vm_with_cbt_label",
+    [{"name": "cbt-win-full", "windows": True}],
+    indirect=True,
+)
 class TestWindowsVMFullBackup:
     """
-    Full backup and restore validation for Windows VMs.
+    Full backup validation for Windows VMs with persistent vTPM (backup success only).
 
     Preconditions:
-        - Running Windows VM with CBT enabled
+        - Running Windows VM with CBT enabled and persistent vTPM
         - Test data written to Windows VM
     """
 
-    __test__ = False  # STD placeholder - not yet implemented
-
     @pytest.mark.polarion("CNV-16013")
-    def test_windows_vm_full_backup_push_mode_restore(self):
+    @pytest.mark.parametrize(
+        "completed_push_backup_chain",
+        [{"incremental_count": 0}],
+        indirect=True,
+    )
+    def test_windows_vm_full_backup_push_mode(
+        self,
+        completed_push_backup_chain,
+    ):
         """
-        Test that a Windows VM can be backed up (push mode) and restored from a full backup.
+        Test that a Windows VM full backup in push mode completes successfully.
 
         Preconditions:
             - Backup PVC available
@@ -657,19 +670,32 @@ class TestWindowsVMFullBackup:
         Steps:
             1. Create a backup tracker for the Windows VM
             2. Perform a full backup in push mode
-            3. Wait for backup to complete
-            4. Delete the original Windows VM
-            5. Restore Windows VM from the backup
-            6. Start the restored VM
+            3. Wait for the backup to complete
 
         Expected:
-            - Restored Windows VM boots successfully and test data is present
+            - Full backup completes and includes the boot disk
         """
+        full_backup = completed_push_backup_chain[0]
+        assert_backup_status_includes_volumes(
+            backup_name=full_backup.name,
+            backup_status=full_backup.instance.to_dict()["status"],
+            expected_volume_names=[DV_DISK],
+            expected_backup_type=CBT_BACKUP_TYPE_FULL,
+            allow_extra_volumes=True,
+        )
 
     @pytest.mark.polarion("CNV-16014")
-    def test_windows_vm_full_backup_pull_mode_restore(self):
+    @pytest.mark.parametrize(
+        "ready_pull_backup_chain",
+        [{"incremental_count": 0}],
+        indirect=True,
+    )
+    def test_windows_vm_full_backup_pull_mode(
+        self,
+        ready_pull_backup_chain,
+    ):
         """
-        Test that a Windows VM can be backed up (pull mode) and restored from a full backup.
+        Test that a Windows VM full backup in pull mode becomes ready for export.
 
         Preconditions:
             - Scratch PVC available for pull mode
@@ -677,66 +703,105 @@ class TestWindowsVMFullBackup:
         Steps:
             1. Create a backup tracker for the Windows VM
             2. Perform a full backup in pull mode
-            3. Wait for backup to complete
-            4. Delete the original Windows VM
-            5. Restore Windows VM from the backup
-            6. Start the restored VM
+            3. Wait for the backup export to become ready
 
         Expected:
-            - Restored Windows VM boots successfully and test data is present
+            - Backup export is ready and includes the boot disk
         """
+        backup_name, backup_status = ready_pull_backup_chain[0]
+        assert_backup_status_includes_volumes(
+            backup_name=backup_name,
+            backup_status=backup_status,
+            expected_volume_names=[DV_DISK],
+            expected_backup_type=CBT_BACKUP_TYPE_FULL,
+            allow_extra_volumes=True,
+        )
 
 
+# Required at collection for storage_class_matrix__module__.
 @pytest.mark.tier3
 @pytest.mark.windows
+@pytest.mark.usefixtures("storage_class_name_scope_module")
+@pytest.mark.parametrize(
+    "vm_with_cbt_label",
+    [{"name": "cbt-win-incr", "windows": True}],
+    indirect=True,
+)
 class TestWindowsVMIncrementalBackup:
     """
-    Incremental backup and restore validation for Windows VMs.
+    Incremental backup validation for Windows VMs with persistent vTPM (backup success only).
 
     Preconditions:
-        - Running Windows VM with CBT enabled
+        - Running Windows VM with CBT enabled and persistent vTPM
         - Full backup completed
         - Test data written to Windows VM
     """
 
-    __test__ = False  # STD placeholder - not yet implemented
-
     @pytest.mark.polarion("CNV-16015")
-    def test_windows_vm_incremental_backup_push_mode_restore(self):
+    @pytest.mark.parametrize(
+        "completed_push_backup_chain",
+        [{"incremental_count": 1}],
+        indirect=True,
+    )
+    def test_windows_vm_incremental_backup_push_mode(
+        self,
+        completed_push_backup_chain,
+    ):
         """
-        Test that a Windows VM can be backed up (push mode) and restored from an incremental backup.
+        Test that a Windows VM incremental backup in push mode completes successfully.
 
         Preconditions:
             - Backup PVC available
+            - Full backup completed in push mode
 
         Steps:
-            1. Write new test data to Windows VM
+            1. Write new test data to the Windows VM
             2. Perform an incremental backup in push mode
-            3. Wait for backup to complete
-            4. Delete the original Windows VM
-            5. Restore Windows VM from the incremental backup
-            6. Start the restored VM
+            3. Wait for the backup to complete
 
         Expected:
-            - Restored Windows VM boots successfully and all test data is present
+            - Incremental backup completes and includes the boot disk
         """
+        incremental_backup = completed_push_backup_chain[-1]
+        assert_backup_status_includes_volumes(
+            backup_name=incremental_backup.name,
+            backup_status=incremental_backup.instance.to_dict()["status"],
+            expected_volume_names=[DV_DISK],
+            expected_backup_type=CBT_BACKUP_TYPE_INCREMENTAL,
+            allow_extra_volumes=True,
+        )
 
     @pytest.mark.polarion("CNV-16016")
-    def test_windows_vm_incremental_backup_pull_mode_restore(self):
+    @pytest.mark.parametrize(
+        "ready_pull_backup_chain",
+        [{"incremental_count": 1}],
+        indirect=True,
+    )
+    def test_windows_vm_incremental_backup_pull_mode(
+        self,
+        ready_pull_backup_chain,
+    ):
         """
-        Test that a Windows VM can be backed up (pull mode) and restored from an incremental backup.
+        Test that a Windows VM incremental backup in pull mode becomes ready for export.
 
         Preconditions:
             - Scratch PVC available for pull mode
 
         Steps:
-            1. Write new test data to Windows VM
-            2. Perform an incremental backup in pull mode
-            3. Wait for backup to complete
-            4. Delete the original Windows VM
-            5. Restore Windows VM from the incremental backup
-            6. Start the restored VM
+            1. Perform a full backup in pull mode and wait until export is ready
+            2. Delete the full pull-mode backup
+            3. Write new test data to the Windows VM
+            4. Perform an incremental backup in pull mode
+            5. Wait for the backup export to become ready
 
         Expected:
-            - Restored Windows VM boots successfully and all test data is present
+            - Incremental backup export is ready and includes the boot disk
         """
+        backup_name, backup_status = ready_pull_backup_chain[-1]
+        assert_backup_status_includes_volumes(
+            backup_name=backup_name,
+            backup_status=backup_status,
+            expected_volume_names=[DV_DISK],
+            expected_backup_type=CBT_BACKUP_TYPE_INCREMENTAL,
+            allow_extra_volumes=True,
+        )
