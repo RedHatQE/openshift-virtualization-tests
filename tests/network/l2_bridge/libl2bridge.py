@@ -145,7 +145,7 @@ def hot_plug_interface(
 
     update_hot_plug_config_in_vm(vm=vm, interfaces=interfaces, networks=networks)
 
-    if is_jira_open(jira_id="CNV-77961"):
+    if is_jira_open(jira_id="CNV-98660"):
         return _lookup_hotplugged_iface_via_console(vm=vm, spec_interface_name=hot_plugged_interface_name)
 
     return lookup_iface_status(
@@ -225,12 +225,12 @@ def set_secondary_static_ip_address(
     # The function fails on timeout if the interface or its address are not found,
     # so there's no need to check its return code.
     expected_ipv4_address = IPv4Address(address=ipv4_address)
-    if is_jira_open(jira_id="CNV-77961"):
+    if is_jira_open(jira_id="CNV-98660"):
         hot_plugged_interface_ip = read_guest_interface_ipv4(
             vm=vm, interface_name=vmi_interface.interfaceName, expected_ip=expected_ipv4_address
         ).ip
         LOGGER.warning(
-            f"CNV-77961: Verified IP {hot_plugged_interface_ip} on {vmi_interface.name} via console "
+            f"CNV-98660: Verified IP {hot_plugged_interface_ip} on {vmi_interface.name} via console "
             f"(guest-agent not reporting on VM {vm.name})."
         )
     else:
@@ -285,7 +285,7 @@ def _lookup_hotplugged_iface_via_console(
     vm: VirtualMachineForTests | BaseVirtualMachine,
     spec_interface_name: str,
 ) -> ResourceField:
-    """Look up a hot-plugged interface via console when guest-agent is dead (CNV-77961).
+    """Look up a hot-plugged interface via console when guest-agent is dead (CNV-98660).
 
     Args:
         vm: The virtual machine to query.
@@ -303,7 +303,7 @@ def _lookup_hotplugged_iface_via_console(
         raise VMInterfaceStatusNotFoundError(f"Interface {spec_interface_name} not in VMI spec of {vm.name}")
 
     LOGGER.warning(
-        f"CNV-77961: Guest agent did not report interface {spec_interface_name} on VM {vm.name}, "
+        f"CNV-98660: Guest agent did not report interface {spec_interface_name} on VM {vm.name}, "
         f"falling back to console lookup by MAC {vmi_iface['macAddress']}."
     )
     cmd = "ip -j addr show"
@@ -312,7 +312,7 @@ def _lookup_hotplugged_iface_via_console(
 
     visible_ifaces = [{"ifname": iface.get("ifname"), "address": iface.get("address")} for iface in guest_interfaces]
     LOGGER.info(
-        f"CNV-77961: looking for MAC {vmi_iface['macAddress']} in guest {vm.name}, visible interfaces: {visible_ifaces}"
+        f"CNV-98660: looking for MAC {vmi_iface['macAddress']} in guest {vm.name}, visible interfaces: {visible_ifaces}"
     )
     for guest_iface in guest_interfaces:
         if guest_iface.get("address", "").lower() == vmi_iface["macAddress"].lower():
