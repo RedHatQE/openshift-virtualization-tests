@@ -374,6 +374,9 @@ def get_pod_per_nodes(admin_client, hco_namespace, filter_pods_by_name=None):
         # TOCTOU: pod deleted after snapshot; return False so sampler retries (CNV-98696).
         try:
             return pod.exists and pod.status == Pod.Status.RUNNING
+        except NotFoundError:
+            LOGGER.warning(f"Pod {pod.name} disappeared during status check; treating as not running.")
+            return False
         except TimeoutExpiredError:
             LOGGER.warning(f"Pod {pod.name} status check timed out; treating as not running (TOCTOU deletion).")
             return False
