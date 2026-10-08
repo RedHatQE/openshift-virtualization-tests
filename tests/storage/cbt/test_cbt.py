@@ -487,6 +487,7 @@ class TestHotplugBackup:
     __test__ = False  # STD placeholder - not yet implemented
 
     @pytest.mark.polarion("CNV-16009")
+    @pytest.mark.manual
     def test_backup_with_hotplugged_disk_push_mode_restore(self):
         """
         Test that a VM with hotplugged disk can be backed up (push mode) and restored with hotplugged disk data accessible.
@@ -510,6 +511,7 @@ class TestHotplugBackup:
         """
 
     @pytest.mark.polarion("CNV-16010")
+    @pytest.mark.manual
     def test_backup_with_hotplugged_disk_pull_mode_restore(self):
         """
         Test that a VM with hotplugged disk can be backed up (pull mode) and restored with hotplugged disk data accessible.
@@ -545,6 +547,7 @@ class TestBackupErrorHandling:
     __test__ = False  # STD placeholder - not yet implemented
 
     @pytest.mark.polarion("CNV-16023")
+    @pytest.mark.manual
     def test_backup_fails_when_storage_full_push_mode(self):
         """
         [NEGATIVE] Test that backup fails gracefully when backup PVC is full.
@@ -563,6 +566,7 @@ class TestBackupErrorHandling:
         """
 
     @pytest.mark.polarion("CNV-16024")
+    @pytest.mark.manual
     def test_backup_fails_when_storage_full_pull_mode(self):
         """
         [NEGATIVE] Test that backup fails gracefully when scratch PVC is full in pull mode.
@@ -593,6 +597,7 @@ class TestConcurrentBackups:
     __test__ = False  # STD placeholder - not yet implemented
 
     @pytest.mark.polarion("CNV-16011")
+    @pytest.mark.manual
     def test_concurrent_backups_push_mode_restore(self):
         """
         Test that concurrent backups (push mode) on multiple VMs complete successfully and all VMs can be restored.
@@ -613,6 +618,7 @@ class TestConcurrentBackups:
         """
 
     @pytest.mark.polarion("CNV-16012")
+    @pytest.mark.manual
     def test_concurrent_backups_pull_mode_restore(self):
         """
         Test that concurrent backups (pull mode) on multiple VMs complete successfully and all VMs can be restored.
@@ -647,6 +653,7 @@ class TestWindowsVMFullBackup:
     __test__ = False  # STD placeholder - not yet implemented
 
     @pytest.mark.polarion("CNV-16013")
+    @pytest.mark.manual
     def test_windows_vm_full_backup_push_mode_restore(self):
         """
         Test that a Windows VM can be backed up (push mode) and restored from a full backup.
@@ -667,6 +674,7 @@ class TestWindowsVMFullBackup:
         """
 
     @pytest.mark.polarion("CNV-16014")
+    @pytest.mark.manual
     def test_windows_vm_full_backup_pull_mode_restore(self):
         """
         Test that a Windows VM can be backed up (pull mode) and restored from a full backup.
@@ -702,6 +710,7 @@ class TestWindowsVMIncrementalBackup:
     __test__ = False  # STD placeholder - not yet implemented
 
     @pytest.mark.polarion("CNV-16015")
+    @pytest.mark.manual
     def test_windows_vm_incremental_backup_push_mode_restore(self):
         """
         Test that a Windows VM can be backed up (push mode) and restored from an incremental backup.
@@ -722,6 +731,7 @@ class TestWindowsVMIncrementalBackup:
         """
 
     @pytest.mark.polarion("CNV-16016")
+    @pytest.mark.manual
     def test_windows_vm_incremental_backup_pull_mode_restore(self):
         """
         Test that a Windows VM can be backed up (pull mode) and restored from an incremental backup.
