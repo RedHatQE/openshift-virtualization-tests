@@ -57,9 +57,9 @@ uv run pytest --storage-class-matrix=ocs-storagecluster-ceph-rbd-virtualization 
 --tc default_volume_mode:Block --latest-rhel -m smoke
 ```
 
-#### IBM cloud Win10 tests
+#### IBM cloud Windows tests
 
 ```
 podman run -v "$(pwd)"/toContainer:/mnt/host:Z -e KUBECONFIG=/mnt/host/kubeconfig quay.io/openshift-cnv/openshift-virtualization-tests \
-uv run pytest --tc=server_url:"X.X.X.X" --windows-os-matrix=win-10 --storage-class-matrix=ocs-storagecluster-ceph-rbd-virtualization -m ibm_bare_metal
+uv run pytest --tc=server_url:"X.X.X.X" --windows-os-matrix=win-11 --storage-class-matrix=ocs-storagecluster-ceph-rbd-virtualization -m ibm_bare_metal
 ```

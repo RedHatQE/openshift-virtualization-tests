@@ -16,7 +16,7 @@ from ocp_resources.virtual_machine_instancetype import VirtualMachineInstancetyp
 from pyhelper_utils.shell import run_ssh_commands
 
 from tests.utils import verify_wsl2_guest_works
-from tests.virt.constants import WINDOWS_10_WSL, WINDOWS_11_WSL
+from tests.virt.constants import WINDOWS_11_WSL
 from utilities.constants import Images
 from utilities.constants.images import OS_FLAVOR_WINDOWS
 from utilities.constants.timeouts import TCP_TIMEOUT_30SEC, TIMEOUT_2MIN
@@ -81,7 +81,7 @@ def windows_wsl2_vm(
     modern_cpu_for_migration,
     vm_cpu_flags,
 ):
-    """Create Windows 10/11 VM, Run VM and wait for WSL2 guest to start"""
+    """Create Windows 11 VM, run VM and wait for WSL2 guest to start."""
     preference_name = f"windows.{golden_image_data_volume_template_for_test_scope_class['spec']['sourceRef']['name'].removeprefix('win')}"
     with VirtualMachineForTests(
         name="win-wsl2",
@@ -111,10 +111,6 @@ def migrated_wsl2_vm(admin_client: DynamicClient, windows_wsl2_vm: VirtualMachin
 @pytest.mark.parametrize(
     "golden_image_data_source_for_test_scope_class",
     [
-        pytest.param(
-            {"os_dict": WINDOWS_10_WSL},
-            id="Windows-10",
-        ),
         pytest.param(
             {"os_dict": WINDOWS_11_WSL},
             id="Windows-11",
