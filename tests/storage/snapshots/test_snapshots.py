@@ -631,3 +631,62 @@ class TestRestoreMultiDiskPerformance:
 
             if cleanup_errors:
                 raise ExceptionGroup("Snapshot cleanup errors", cleanup_errors)
+
+
+@pytest.mark.mixed_os_nodes
+@pytest.mark.special_infra
+class TestSnapshotRestoreMixedRhcos:
+    """
+    Snapshot/Restore Across RHCOS 9 and RHCOS 10 Worker Nodes
+
+    STP:
+    https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/dual-stream-cluster-rhcos9-rhcos10/storage.md
+
+    Preconditions:
+        - RHCOS 9 and RHCOS 10 worker nodes in the cluster
+        - VolumeSnapshot-capable StorageClass available
+    """
+
+    @pytest.mark.polarion("CNV-96772-1")
+    def test_snapshot_rhcos9_restore_rhcos10(self):
+        """
+        Test that snapshot created on RHCOS 9 can be restored on RHCOS 10 with data integrity.
+
+        Preconditions:
+            - RHEL VM running on an RHCOS 9 worker node
+            - VM has known test data
+
+        Steps:
+            1. Create snapshot of the VM on RHCOS 9
+            2. Create new VM from snapshot targeting RHCOS 10 worker node
+            3. Verify data integrity (SHA256 checksums match)
+            4. Verify filesystem integrity
+
+        Expected:
+            - Snapshot created successfully
+            - VM restores on RHCOS 10 without errors
+            - Data checksums match original
+            - Filesystem passes integrity checks
+        """
+
+    @pytest.mark.polarion("CNV-96772-2")
+    def test_snapshot_rhcos10_restore_rhcos9(self):
+        """
+        Test that snapshot created on RHCOS 10 can be restored on RHCOS 9 with data integrity.
+
+        Preconditions:
+            - RHEL VM running on an RHCOS 10 worker node
+            - VM has known test data
+
+        Steps:
+            1. Create snapshot of the VM on RHCOS 10
+            2. Create new VM from snapshot targeting RHCOS 9 worker node
+            3. Verify data integrity (SHA256 checksums match)
+            4. Verify filesystem integrity
+
+        Expected:
+            - Snapshot created successfully
+            - VM restores on RHCOS 9 without errors
+            - Data checksums match original
+            - Filesystem passes integrity checks
+        """
