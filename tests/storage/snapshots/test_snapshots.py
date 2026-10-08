@@ -2,7 +2,10 @@
 Snapshots tests
 """
 
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 
 import pytest
 from kubernetes.client.rest import ApiException
@@ -10,6 +13,7 @@ from ocp_resources.virtual_machine_restore import VirtualMachineRestore
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS
 from tests.storage.concurrent_vm_boot.utils import run_parallel
 from tests.storage.constants import ADMIN_NAMESPACE_PARAM
 from tests.storage.snapshots.constants import (
@@ -21,13 +25,23 @@ from tests.storage.snapshots.constants import (
 from tests.storage.snapshots.utils import (
     expected_output_after_restore,
     fail_to_create_snapshot_no_permissions,
+    snapshot_restore_across_rhcos,
     start_windows_vm_after_restore,
 )
 from tests.storage.utils import assert_windows_directory_existence
-from utilities.constants.cluster import LS_COMMAND
+from utilities.constants.cluster import (
+    LS_COMMAND,
+    RHCOS9_AFFINITY,
+    RHCOS10_AFFINITY,
+)
 from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_5MIN, TIMEOUT_10MIN, TIMEOUT_10SEC
 from utilities.storage import assert_guest_disk_count, run_command_on_vm_and_check_output
 from utilities.virt import restart_vm_wait_for_running_vm, running_vm
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+
+    from utilities.virt import VirtualMachineForTestsFromTemplate
 
 LOGGER = logging.getLogger(__name__)
 
@@ -631,3 +645,121 @@ class TestRestoreMultiDiskPerformance:
 
             if cleanup_errors:
                 raise ExceptionGroup("Snapshot cleanup errors", cleanup_errors)
+
+
+@pytest.mark.mixed_os_nodes
+class TestSnapshotRestoreMixedRhcos:
+    """
+    Snapshot/Restore Across RHCOS 9 and RHCOS 10 Worker Nodes
+
+    STP:
+    https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/dual-stream-cluster-rhcos9-rhcos10/storage.md
+
+    Preconditions:
+        - RHCOS 9 and RHCOS 10 worker nodes in the cluster
+        - VolumeSnapshot-capable StorageClass available
+    """
+
+    @pytest.mark.polarion("CNV-96772-1")
+    @pytest.mark.parametrize(
+        "golden_image_data_source_for_test_scope_function, snapshot_source_vm",
+        [
+            pytest.param(
+                {"os_dict": RHEL_LATEST},
+                {
+                    "vm_name": "snap-rhcos9-restore-rhcos10-rhel",
+                    "template_labels": RHEL_LATEST_LABELS,
+                    "vm_affinity": RHCOS9_AFFINITY,
+                },
+                id="RHEL-VM",
+            ),
+        ],
+        indirect=True,
+    )
+    def test_snapshot_rhcos9_restore_rhcos10(
+        self,
+        admin_client: DynamicClient,
+        snapshot_source_vm: VirtualMachineForTestsFromTemplate,
+    ) -> None:
+        """
+        Test that snapshot created on RHCOS 9 can be restored on RHCOS 10 without data loss or corruption.
+
+        STP:
+        https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/dual-stream-cluster-rhcos9-rhcos10/storage.md
+
+        Preconditions:
+            - RHEL VM running on an RHCOS 9 worker node
+
+        Steps:
+            1. Verify VM is on RHCOS 9 worker node
+            2. Write test data to VM disk
+            3. Create snapshot of the VM
+            4. Change VM affinity to RHCOS 10 worker node
+            5. Restore VM from snapshot on RHCOS 10
+            6. Verify VM is running on RHCOS 10 node
+            7. Verify test data content is preserved after restore
+
+        Expected:
+            - Snapshot created successfully
+            - VM restores without errors
+            - VM is running on RHCOS 10 node after restore
+            - Test data content matches after restore
+        """
+        snapshot_restore_across_rhcos(
+            admin_client=admin_client,
+            vm=snapshot_source_vm,
+            expect_rhcos9_before=True,
+            target_affinity=RHCOS10_AFFINITY,
+        )
+
+    @pytest.mark.polarion("CNV-96772-2")
+    @pytest.mark.parametrize(
+        "golden_image_data_source_for_test_scope_function, snapshot_source_vm",
+        [
+            pytest.param(
+                {"os_dict": RHEL_LATEST},
+                {
+                    "vm_name": "snap-rhcos10-restore-rhcos9-rhel",
+                    "template_labels": RHEL_LATEST_LABELS,
+                    "vm_affinity": RHCOS10_AFFINITY,
+                },
+                id="RHEL-VM",
+            ),
+        ],
+        indirect=True,
+    )
+    def test_snapshot_rhcos10_restore_rhcos9(
+        self,
+        admin_client: DynamicClient,
+        snapshot_source_vm: VirtualMachineForTestsFromTemplate,
+    ) -> None:
+        """
+        Test that snapshot created on RHCOS 10 can be restored on RHCOS 9 without data loss or corruption.
+
+        STP:
+        https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/dual-stream-cluster-rhcos9-rhcos10/storage.md
+
+        Preconditions:
+            - RHEL VM running on an RHCOS 10 worker node
+
+        Steps:
+            1. Verify VM is on RHCOS 10 worker node
+            2. Write test data to VM disk
+            3. Create snapshot of the VM
+            4. Change VM affinity to RHCOS 9 worker node
+            5. Restore VM from snapshot on RHCOS 9
+            6. Verify VM is running on RHCOS 9 node
+            7. Verify test data content is preserved after restore
+
+        Expected:
+            - Snapshot created successfully
+            - VM restores without errors
+            - VM is running on RHCOS 9 node after restore
+            - Test data content matches after restore
+        """
+        snapshot_restore_across_rhcos(
+            admin_client=admin_client,
+            vm=snapshot_source_vm,
+            expect_rhcos9_before=False,
+            target_affinity=RHCOS9_AFFINITY,
+        )
