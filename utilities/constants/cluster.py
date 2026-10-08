@@ -1,7 +1,7 @@
 """Cluster infrastructure constants.
 
-Covers Kubernetes node labels (architecture, worker role, CPU model prefix, TSC
-frequency, version), generic node dict keys (NODE_STR), pod security namespace labels, Kubernetes API verb strings,
+Covers Kubernetes node labels (architecture, worker role, CPU model prefix, CPU
+manager, TSC frequency, version), generic node dict keys (NODE_STR), pod security namespace labels, Kubernetes API verb strings,
 environment variables (KUBECONFIG, WORKERS_TYPE), CNV test run markers, service
 account names, the base network-exception dictionary, and audit-log command strings.
 
@@ -47,6 +47,7 @@ RHCOS10_AFFINITY: Final[dict[str, Any]] = {
 }
 VERSION_LABEL_KEY = f"{Resource.ApiGroup.APP_KUBERNETES_IO}/version"
 CPU_MODEL_LABEL_PREFIX = f"cpu-model.node.{Resource.ApiGroup.KUBEVIRT_IO}"
+CPU_MANAGER_LABEL = f"{Resource.ApiGroup.KUBEVIRT_IO}/cpumanager"
 TSC_FREQUENCY = "tsc-frequency"
 
 POD_SECURITY_NAMESPACE_LABELS = {
