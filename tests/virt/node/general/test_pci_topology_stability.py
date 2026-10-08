@@ -71,6 +71,7 @@ def migrated_pci_topology_vm(admin_client, pci_topology_vm, initial_pci_addresse
 @pytest.fixture()
 def snapshot_restored_pci_topology_vm(admin_client, pci_topology_vm, initial_pci_addresses):
     with VirtualMachineSnapshot(
+        client=admin_client,
         name=f"{pci_topology_vm.name}-snapshot",
         namespace=pci_topology_vm.namespace,
         vm_name=pci_topology_vm.name,

@@ -274,11 +274,11 @@ def hotplugged_resource(request, unprivileged_client, hotplug_vm_for_aaq_test, a
 
 
 @pytest.fixture()
-def hotplugged_resource_exceeding_quota(request, hotplug_vm_for_aaq_test):
+def hotplugged_resource_exceeding_quota(request, admin_client, hotplug_vm_for_aaq_test):
     hotplug_spec_vm(
         vm=hotplug_vm_for_aaq_test, sockets=request.param.get("sockets"), memory_guest=request.param.get("memory_guest")
     )
-    get_created_migration_job(vm=hotplug_vm_for_aaq_test)
+    get_created_migration_job(vm=hotplug_vm_for_aaq_test, client=admin_client)
 
 
 @pytest.fixture()
