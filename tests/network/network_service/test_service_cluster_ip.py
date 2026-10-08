@@ -20,6 +20,8 @@ def test_tcp_connectivity_via_cluster_ip_service(
     cluster_ip_service_for_server_vm,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-89418  # <skip-jira-utils-check>
+
     Preconditions:
         - Server VM on pod network
         - Client VM on pod network

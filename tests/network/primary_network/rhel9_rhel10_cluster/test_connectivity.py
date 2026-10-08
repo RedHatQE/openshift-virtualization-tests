@@ -40,6 +40,8 @@ class TestConnectivity:
         Test that network connectivity over the primary network can be re-established after
         the server VM migrates from an RHCOS 9 node to an RHCOS 10 node.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/dual-stream-cluster-rhcos9-rhcos10/network.md
+
         Preconditions:
             - Server VM connected to the primary network, running on an RHCOS 9 worker node
             - Client VM connected to the primary network, running on an RHCOS 9 worker node
@@ -72,6 +74,8 @@ class TestConnectivity:
         """
         Test that network connectivity over the primary network can be re-established after
         the server VM migrates from an RHCOS 10 node to an RHCOS 9 node.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/dual-stream-cluster-rhcos9-rhcos10/network.md
 
         Preconditions:
             - Server VM connected to the primary network, running on an RHCOS 10 worker node

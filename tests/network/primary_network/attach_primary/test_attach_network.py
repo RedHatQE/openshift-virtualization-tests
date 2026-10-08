@@ -17,6 +17,8 @@ def test_restart_required_when_pod_network_attached(vm_without_pod_interface: Ba
     Test that adding a pod interface to a running VM sets RestartRequired condition.
     Verifies the scenario exposed by a bug.
 
+    Jira: https://redhat.atlassian.net/browse/CNV-87822  # <skip-jira-utils-check>
+
     Preconditions:
         - Running VM with no interfaces/networks and `autoattachPodInterface: false`
 
