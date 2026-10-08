@@ -236,6 +236,7 @@ def test_successful_snapshot_clone(
         assert_pvc_snapshot_clone_annotation(pvc=pvc, storage_class=storage_class)
 
 
+@pytest.mark.quarantined(reason="CNV-98725", run=False)
 @pytest.mark.gating
 @pytest.mark.conformance
 @pytest.mark.polarion("CNV-5607")
