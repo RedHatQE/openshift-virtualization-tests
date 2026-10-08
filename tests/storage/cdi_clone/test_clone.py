@@ -14,6 +14,7 @@ from tests.storage.utils import (
 from tests.utils import create_windows2022_vm
 from utilities.constants import Images
 from utilities.constants.images import OS_FLAVOR_FEDORA, OS_FLAVOR_WINDOWS
+from utilities.constants.pytest import QUARANTINED
 from utilities.constants.timeouts import TIMEOUT_1MIN
 from utilities.constants.virt import WIN_2K22
 from utilities.ssp import validate_os_info_vmi_vs_windows_os
@@ -236,7 +237,10 @@ def test_successful_snapshot_clone(
         assert_pvc_snapshot_clone_annotation(pvc=pvc, storage_class=storage_class)
 
 
-@pytest.mark.quarantined(reason="CNV-98725", run=False)
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: test_clone_from_fs_to_block_using_dv_template fails on s390x with filesystem-to-block clone; tracked in CNV-98725",
+    run=False,
+)
 @pytest.mark.gating
 @pytest.mark.conformance
 @pytest.mark.polarion("CNV-5607")
