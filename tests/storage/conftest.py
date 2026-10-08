@@ -503,8 +503,8 @@ def storage_class_name_scope_class(storage_class_matrix__class__):
 
 
 @pytest.fixture(scope="session")
-def cluster_csi_drivers_names():
-    yield [csi_driver.name for csi_driver in list(CSIDriver.get())]
+def cluster_csi_drivers_names(admin_client):
+    yield [csi_driver.name for csi_driver in list(CSIDriver.get(client=admin_client))]
 
 
 @pytest.fixture(scope="module")
