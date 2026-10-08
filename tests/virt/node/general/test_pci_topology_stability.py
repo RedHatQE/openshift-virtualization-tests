@@ -118,6 +118,8 @@ class TestPCITopologyStability:
         restarted_pci_topology_vm: VirtualMachineForTests,
     ):
         """
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/pci-topology-stability.md
+
         Steps:
             1. Restart the VM and wait until it is running with SSH access
             2. Capture PCI addresses from the guest
@@ -137,6 +139,8 @@ class TestPCITopologyStability:
         migrated_pci_topology_vm: VirtualMachineForTests,
     ):
         """
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/pci-topology-stability.md
+
         Steps:
             1. Live-migrate the VM and verify SSH connectivity
             2. Capture PCI addresses from the guest
@@ -157,6 +161,8 @@ class TestPCITopologyStability:
         snapshot_restored_pci_topology_vm: VirtualMachineForTests,
     ):
         """
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/pci-topology-stability.md
+
         Preconditions:
             - Storage class supports snapshots
 

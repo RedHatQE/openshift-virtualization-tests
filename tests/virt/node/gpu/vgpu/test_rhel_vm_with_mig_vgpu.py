@@ -31,6 +31,8 @@ class TestMIGVGPURHELGPUSSpec:
         """
         Test that the GPU node advertises the MIG vGPU resource after MIG vGPU configuration.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/mig-vgpu-stp.md
+
         Steps:
             1. Read the Capacity and Allocatable sections of the GPU node
 
@@ -46,6 +48,8 @@ class TestMIGVGPURHELGPUSSpec:
         """
         Test that a VM requesting a MIG vGPU device reaches Running state and the guest OS
         detects the GPU.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/mig-vgpu-stp.md
 
         Preconditions:
             - VM configured to request one MIG vGPU device, scheduled on the MIG-configured GPU node
@@ -66,6 +70,8 @@ class TestMIGVGPURHELGPUSSpec:
         Test that two VMs, each using a MIG vGPU slice from the same physical GPU, run
         concurrently.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/mig-vgpu-stp.md
+
         Preconditions:
             - Two VMs, each configured to request one MIG vGPU device from the same physical
               GPU, scheduled on the same MIG-configured GPU node
@@ -85,6 +91,8 @@ class TestMIGVGPURHELGPUSSpec:
         """
         [NEGATIVE] Test that a VM requesting a MIG vGPU device remains unschedulable when no
         MIG vGPU capacity remains on the GPU node.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/mig-vgpu-stp.md
 
         Preconditions:
             - All MIG vGPU instances on the GPU node already consumed by running VMs
