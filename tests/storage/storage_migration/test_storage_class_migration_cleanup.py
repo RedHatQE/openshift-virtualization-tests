@@ -34,6 +34,7 @@ class TestStorageMigrationRetentionPolicy:
     __test__ = False
 
     @pytest.mark.polarion("CNV-16297")
+    @pytest.mark.manual
     def test_retention_policy_default_behavior(self):
         """
         Test that default behavior is keepSource when retentionPolicy is not specified.
@@ -54,6 +55,7 @@ class TestStorageMigrationRetentionPolicy:
         """
 
     @pytest.mark.polarion("CNV-16298")
+    @pytest.mark.manual
     def test_namespace_level_retention_policy_delete_source(self):
         """
         Test namespace-level retentionPolicy=deleteSource.
@@ -76,6 +78,7 @@ class TestStorageMigrationRetentionPolicy:
         """
 
     @pytest.mark.polarion("CNV-16299")
+    @pytest.mark.manual
     def test_spec_level_retention_policy_delete_source(self):
         """
         Test plan-level retentionPolicy=deleteSource.
@@ -98,6 +101,7 @@ class TestStorageMigrationRetentionPolicy:
         """
 
     @pytest.mark.polarion("CNV-16301")
+    @pytest.mark.manual
     def test_namespace_level_retention_policy_keep_source(self):
         """
         Test namespace-level retentionPolicy=keepSource.
@@ -118,6 +122,7 @@ class TestStorageMigrationRetentionPolicy:
         """
 
     @pytest.mark.polarion("CNV-16302")
+    @pytest.mark.manual
     def test_spec_level_retention_policy_keep_source(self):
         """
         Test plan-level retentionPolicy=keepSource.
@@ -156,6 +161,7 @@ class TestStorageMigrationRetentionPolicyCombinedMode:
     __test__ = False
 
     @pytest.mark.polarion("CNV-16558")
+    @pytest.mark.manual
     def test_retention_policy_default_behavior_combined_mode(self):
         """
         Test that default behavior is keepSource with combined online+offline migration.
@@ -177,6 +183,7 @@ class TestStorageMigrationRetentionPolicyCombinedMode:
         """
 
     @pytest.mark.polarion("CNV-16559")
+    @pytest.mark.manual
     def test_namespace_level_retention_policy_delete_source_combined_mode(self):
         """
         Test namespace-level retentionPolicy=deleteSource with combined online+offline migration.
@@ -200,6 +207,7 @@ class TestStorageMigrationRetentionPolicyCombinedMode:
         """
 
     @pytest.mark.polarion("CNV-16560")
+    @pytest.mark.manual
     def test_namespace_level_retention_policy_keep_source_combined_mode(self):
         """
         Test namespace-level retentionPolicy=keepSource with combined online+offline migration.
@@ -221,6 +229,7 @@ class TestStorageMigrationRetentionPolicyCombinedMode:
         """
 
     @pytest.mark.polarion("CNV-16561")
+    @pytest.mark.manual
     def test_spec_level_retention_policy_delete_source_combined_mode(self):
         """
         Test plan-level retentionPolicy=deleteSource with combined online+offline migration.
@@ -244,6 +253,7 @@ class TestStorageMigrationRetentionPolicyCombinedMode:
         """
 
     @pytest.mark.polarion("CNV-16562")
+    @pytest.mark.manual
     def test_spec_level_retention_policy_keep_source_combined_mode(self):
         """
         Test plan-level retentionPolicy=keepSource with combined online+offline migration.
@@ -286,6 +296,7 @@ class TestStorageMigrationCombinedRetentionPolicy:
     __test__ = False
 
     @pytest.mark.polarion("CNV-16305")
+    @pytest.mark.manual
     def test_namespace_delete_overrides_plan_keep(self):
         """
         Test combination of namespace-level and plan-level retentionPolicy.
@@ -310,6 +321,7 @@ class TestStorageMigrationCombinedRetentionPolicy:
         """
 
     @pytest.mark.polarion("CNV-16306")
+    @pytest.mark.manual
     def test_namespace_keep_overrides_plan_delete(self):
         """
         Test combination: namespace-level keepSource + plan-level deleteSource.
@@ -334,6 +346,7 @@ class TestStorageMigrationCombinedRetentionPolicy:
         """
 
     @pytest.mark.polarion("CNV-16307")
+    @pytest.mark.manual
     def test_namespace_and_plan_level_delete_source_retention_policy(self):
         """
         Test combination: namespace-level deleteSource + plan-level deleteSource.
@@ -357,6 +370,7 @@ class TestStorageMigrationCombinedRetentionPolicy:
         """
 
     @pytest.mark.polarion("CNV-16308")
+    @pytest.mark.manual
     def test_namespace_and_plan_level_keep_source_retention_policy(self):
         """
         Test combination: namespace-level keepSource + plan-level keepSource.
@@ -392,6 +406,7 @@ class TestStorageMigrationFailureRetentionPolicy:
     __test__ = False
 
     @pytest.mark.polarion("CNV-16309")
+    @pytest.mark.manual
     def test_failed_migration_with_delete_source_policy(self):
         """
         Test that source PVC/DataVolume is retained when migration fails with retentionPolicy=deleteSource.
@@ -413,6 +428,7 @@ class TestStorageMigrationFailureRetentionPolicy:
         """
 
     @pytest.mark.polarion("CNV-16310")
+    @pytest.mark.manual
     def test_failed_migration_with_keep_source_policy(self):
         """
         Test that source PVC/DataVolume is retained when migration fails with retentionPolicy=keepSource.

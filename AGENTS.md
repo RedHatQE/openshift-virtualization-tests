@@ -89,8 +89,8 @@ The "no defensive programming" rule has these five exceptions:
 New feature tests MUST follow the STD-first workflow:
 
 1. **STP (Software Test Plan)** — required for new features. Must be reviewed and approved before writing STDs.
-2. **STD (Software Test Description)** — placeholder tests with docstrings (`__test__ = False`) must be reviewed before implementation.
-3. **Implementation** — only after STD review is approved.
+2. **STD (Software Test Description)** — placeholder tests with docstrings, direct `@pytest.mark.manual`, and effective `__test__ = False` must be reviewed before implementation.
+3. **Implementation** — only after STD review is approved; remove the placeholder controls when automation is added.
 
 - ❌ **NEVER** submit test implementation without prior STD review
 - ❌ **NEVER** skip the STD phase by submitting implementation directly
@@ -98,14 +98,16 @@ New feature tests MUST follow the STD-first workflow:
 
 ### Coverage Tracking
 
-- **STP link REQUIRED** — every new feature test file MUST include an STP link in the module, class, or test docstring
+**Scope:** All traceability and STD lifecycle/format rules below, including the `__test__ = False` Usage Rules, apply only to product tests under `tests/`. Utilities unit tests under `utilities/unittests/` and tooling tests under `scripts/` are exempt; they require no STP/Jira traceability or STD docstring/lifecycle controls.
+
+- **Per-test STP link REQUIRED** — every new product test function/method under `tests/` MUST include the exact `STP: <URL>` line in its own docstring when an STP exists. A module- or class-level link may provide shared context but does not replace per-test traceability
 - **STP scenario coverage REQUIRED** — when an STD or test references an STP, every scenario in that STP which is in scope for this repo MUST have a corresponding STD/test declaration, either in the same file/PR or tracked per the incremental-delivery rule below. Partial coverage without one of the documented exclusions below blocks merge.
   - **Out-of-repo scenarios are not required here** — if the STP's own Test Strategy / Testing Tools & Frameworks section assigns a scenario to a different repository or test tier (e.g., Tier 1 scenarios owned by a dedicated feature repo while this repo covers Tier 2/Tier 3), that scenario is out of scope for this repo's coverage check. Cite the STP section that assigns ownership in the PR description (`Special notes for reviewer:`); no follow-up Jira link is required since coverage lives elsewhere.
   - **Incremental delivery across multiple PRs is allowed** — in-repo STP scenarios MAY be delivered a few at a time across a series of PRs rather than all in one PR. The PR description MUST list which scenarios this PR covers and link the tracking Jira (epic or umbrella ticket) under which the remaining in-repo scenarios will be delivered.
   - **Other intentional exclusions** — for any in-repo scenario excluded for a reason other than the two cases above, document the justification in the PR description AND add a follow-up Jira link per excluded scenario.
 - **STD alignment with STP** — STD docstring `Preconditions:`, `Steps:`, and `Expected:` sections MUST align with the STP scenario description for the scenario being covered.
-- **RFE/Jira link REQUIRED when no STP exists** — if there is no STP, the module, class, or test docstring MUST include a link to the RFE or Jira epic (not support cases) for coverage tracking
-- **Traceability preservation on modification REQUIRED** — when a PR modifies a test that references an STP, Jira, or RFE link, the modified test MUST retain a valid traceability link in its module, class, or test docstring. Removal or invalidation of the only traceability reference blocks merge. For STP-linked tests, reviewers MUST additionally verify that `Preconditions:`, `Steps:`, and `Expected:` docstring sections remain consistent with the STP, and that changes to the test body (assertions, fixture usage, helper calls) do not alter what the test validates in a way that diverges from the STP scenario. Misalignment between the modified test and its STP scenario blocks merge.
+- **Jira fallback REQUIRED when no STP exists** — if there is no STP, every new product test function/method under `tests/` MUST include the exact `Jira: <issue URL>` line in its own docstring. Use RFE/Jira issue links, never support-case links; include `# <skip-jira-utils-check>` on the same line. Module- or class-level links do not replace per-test traceability
+- **Traceability preservation on modification REQUIRED** — when a PR modifies a test that references an STP, Jira, or RFE link, the modified test MUST retain its valid traceability link. New-format tests retain the direct link in their own docstring; legacy tests may retain historical labels and inherited module/class links. Removal or invalidation of the only traceability reference blocks merge. For STP-linked tests, reviewers MUST additionally verify that `Preconditions:`, `Steps:`, and `Expected:` docstring sections remain consistent with the STP, and that changes to the test body (assertions, fixture usage, helper calls) do not alter what the test validates in a way that diverges from the STP scenario. Misalignment between the modified test and its STP scenario blocks merge. New tests MUST NOT rely only on inherited module- or class-level links.
 - **Traceability on deletion REQUIRED** — when a PR deletes a test (or test class/module) that references an STP, Jira, or RFE link, the PR description MUST document the justification (e.g., scenario removed from STP, consolidated into another test, feature deprecated). If the covered issue, feature, or scenario is still valid, a follow-up Jira link for re-coverage MUST be included. Deletion of traceability-linked tests without documented justification blocks merge.
 
 ### Test Requirements
@@ -131,9 +133,11 @@ New feature tests MUST follow the STD-first workflow:
 - ✅ **ALLOWED for STD placeholder tests** - tests that contain ONLY:
   - Docstrings describing expected behavior
   - No actual implementation code (no assertions, no test logic)
-- ❌ **FORBIDDEN for implemented tests** - if a test has actual implementation code (assertions, test logic, setup/teardown), do NOT use `__test__ = False`
+  - A direct `@pytest.mark.manual` decorator
+- ❌ **FORBIDDEN for implemented tests** - if a test has actual implementation code (assertions, test logic, setup/teardown), remove both `@pytest.mark.manual` and `__test__ = False`
+- **Collection rule** - `@pytest.mark.manual` classifies a test but does not prevent pytest collection. Every docstring-only test must also have effective `__test__ = False` at module, class, or test-function scope. When partially automating a class/module, move suppression onto each remaining placeholder before removing the shared assignment.
 
-**Rationale:** STD (Standard Test Design) placeholder tests document what will be tested before implementation. These can use `__test__ = False` to prevent collection errors. Once a test has implementation code, `__test__ = False` must be removed.
+**Rationale:** STD (Standard Test Design) placeholder tests document what will be tested before implementation. These can use `__test__ = False` to prevent collection errors. Every unautomated or docstring-only test also requires a direct `@pytest.mark.manual` decorator; the marker classifies the test but does not suppress collection. Once a test has implementation code, remove both `@pytest.mark.manual` and `__test__ = False` while retaining its direct traceability line.
 
 **STD Docstring Format (MANDATORY):**
 
@@ -142,8 +146,10 @@ When writing or reviewing STD (Software Test Description) test docstrings, follo
 - ❌ **NEVER** use alternative section names.
 - Each test verifies ONE thing with ONE `Expected:` assertion (rare exceptions allowed when multiple assertions verify a single behavior — see STD doc)
 - **No implementation details in STD docstrings** — no fixture names, no code references, no variable names; describe behavior in natural language
-- **STP link REQUIRED** — must appear directly in the module, class, or test docstring (not a reference to a README or other file); place it at the level that applies
-- **Markers can be at any level** — module, class, or test docstring; place them at the level they apply to
+- **Per-test STP link REQUIRED** — when an STP exists, the exact `STP: <URL>` line must appear in every new product test function/method under `tests/` (not as a reference to a README or other file). Module- or class-level links may document shared context but do not replace the direct link
+- **Jira fallback REQUIRED** — when no STP exists, every new product test function/method under `tests/` must contain the exact `Jira: <issue URL>  # <skip-jira-utils-check>` line; use an RFE/Jira issue, not a support case
+- **Manual placeholder controls REQUIRED** — every unautomated or docstring-only test must have direct `@pytest.mark.manual` and effective `__test__ = False`; remove both when automation is added
+- **Markers can be at any level** — module, class, or test docstring; place them at the level they apply. Keep planned non-manual markers in the Phase 1 docstring. `manual` is the exception: use the direct decorator on each placeholder test. Convert planned `Markers:` entries to `pytestmark` or `@pytest.mark` decorators only during Phase 2 automation.
 - **Parametrized markers** — parameter values may have inline markers using `[Markers: ...]` syntax (e.g., `- ipv4 [Markers: ipv4]`) to differentiate common markers from parameter-specific ones
 - **Name resources by function** — in Preconditions, name objects by their role (e.g., "client VM", "server VM", "under-test VM"), not generic labels (e.g., "VM-A", "VM-B")
 - **Shared vs. test-specific preconditions** — class/module docstring holds shared `Preconditions:`, individual tests add only their own. When a shared resource (e.g., a VM) is directly used by a test, it must appear in both the shared and test-level preconditions.
