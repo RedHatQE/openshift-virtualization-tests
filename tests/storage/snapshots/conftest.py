@@ -2,8 +2,12 @@
 Pytest conftest file for CNV Storage snapshots tests
 """
 
+from __future__ import annotations
+
 import logging
 import shlex
+from collections.abc import Generator
+from typing import TYPE_CHECKING, Any
 
 import pytest
 from ocp_resources.datavolume import DataVolume
@@ -29,7 +33,15 @@ from utilities.constants.timeouts import (
     TIMEOUT_10MIN,
 )
 from utilities.storage import data_volume_template_with_source_ref_dict
-from utilities.virt import running_vm
+from utilities.virt import (
+    VirtualMachineForTestsFromTemplate,
+    running_vm,
+    vm_instance_from_template,
+)
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+    from ocp_resources.namespace import Namespace
 
 LOGGER = logging.getLogger(__name__)
 
@@ -231,3 +243,21 @@ def vms_with_4_disks_created(
 
         if cleanup_errors:
             raise ExceptionGroup("VM cleanup errors", cleanup_errors)
+
+
+@pytest.fixture()
+def snapshot_source_vm(
+    request: pytest.FixtureRequest,
+    unprivileged_client: DynamicClient,
+    namespace: Namespace,
+    golden_image_data_volume_template_for_test_scope_function: dict[str, Any],
+) -> Generator[VirtualMachineForTestsFromTemplate]:
+    """Create VM from golden image template for snapshot/restore tests."""
+    with vm_instance_from_template(
+        request=request,
+        unprivileged_client=unprivileged_client,
+        namespace=namespace,
+        data_volume_template=golden_image_data_volume_template_for_test_scope_function,
+        vm_affinity=request.param.get("vm_affinity"),
+    ) as vm:
+        yield vm
