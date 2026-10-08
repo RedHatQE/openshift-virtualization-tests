@@ -338,23 +338,6 @@ def golden_image_data_volume_template_for_test_scope_class(request, golden_image
     )
 
 
-@pytest.fixture()
-def golden_image_data_source_for_test_scope_function(request, admin_client, golden_images_namespace):
-    yield from get_or_create_golden_image_data_source(
-        admin_client=admin_client, golden_images_namespace=golden_images_namespace, os_dict=request.param["os_dict"]
-    )
-
-
-@pytest.fixture()
-def golden_image_data_volume_template_for_test_scope_function(
-    request, golden_image_data_source_for_test_scope_function
-):
-    return get_data_volume_template_dict_with_default_storage_class(
-        data_source=golden_image_data_source_for_test_scope_function,
-        storage_class=getattr(request, "param", {}).get("storage_class"),
-    )
-
-
 @pytest.fixture(scope="class")
 def vm_for_test_from_template_scope_class(
     request,
