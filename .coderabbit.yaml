@@ -144,44 +144,52 @@ reviews:
           If any required section is absent, or `What this PR does / why we need it:` has no content,
           flag it as HIGH severity and ask the author to restore the missing template section(s).
 
-      - name: "STP link required"
+      - name: "New test traceability"
         mode: error
         instructions: |
-          Check ONLY code that is newly added (not modified) in this PR's diff.
-          SKIP this check entirely for files under `utilities/unittests/` — unit tests
-          do not require STP/RFE/Jira links.
+          Check ONLY newly added product test functions/methods named `test_*` under
+          `tests/`, in new or existing files. SKIP `utilities/unittests/`.
 
-          This applies to two cases:
-          A) A newly added test file (test_*.py) under `tests/`
-          B) A newly added test function (def test_*) in an existing test file under `tests/`
+          EACH test's OWN function/method docstring MUST contain an exact, case-sensitive
+          `STP: <URL>` line when an STP exists. If no STP exists, require
+          `Jira: <issue URL>` instead (Jira/RFE issue, never a support case).
+          Search the linked design-docs repository before accepting the no-STP fallback.
+          Module/class-only links, historical `RFE:` labels, and
+          `@pytest.mark.polarion` do NOT satisfy a new test's traceability requirement.
 
-          For each case, at least one of the following MUST appear in the
-          module, class, or test function docstring:
-          - A line with "STP:" followed by a URL
-          - A line with "RFE:" followed by an issue tracker URL
-          - A line with "Jira:" followed by an issue tracker URL
+          A `Jira:` line MUST also contain `# <skip-jira-utils-check>` on the same line
+          so the jira-utils checker ignores the traceability reference:
+          `Jira: https://redhat.atlassian.net/browse/CNV-87822  # <skip-jira-utils-check>`
+          The skip marker is not required for `STP:` lines. Flag invalid or missing
+          traceability, including a missing Jira skip marker, as HIGH severity.
+          Do not impose the new syntax on unrelated historical tests.
+          Pass if no product test functions/methods are newly added.
 
-          If a module-level or class-level STP link already exists in the file,
-          newly added test functions in that same file are considered covered.
-          The @pytest.mark.polarion decorator alone does NOT satisfy this requirement.
-
-          **Jira skip-marker enforcement:**
-          When a `Jira:` line appears in a test docstring for traceability, it MUST
-          also include `# <skip-jira-utils-check>` as an inline comment on the same line.
-          This is required so the project's jira-utils checker skips traceability references.
-          - Correct:   `Jira: https://redhat.atlassian.net/browse/CNV-87822  # <skip-jira-utils-check>`
-          - Incorrect: `Jira: https://redhat.atlassian.net/browse/CNV-80580`
-          This does NOT apply to `STP:` or `RFE:` lines — only `Jira:` lines need the marker.
-          Flag a missing `# <skip-jira-utils-check>` on a `Jira:` line as HIGH severity.
-
-          Pass if no new test files and no new test functions are added in this PR.
+      - name: "Manual STD lifecycle"
+        mode: error
+        instructions: |
+          Check newly added or directly modified product test functions/methods under
+          `tests/`, plus unchanged placeholder siblings whose effective `__test__`
+          suppression is affected by a changed class/module assignment or deletion. SKIP
+          `utilities/unittests/`; do not audit unrelated unchanged historical tests.
+          Each docstring-only STD placeholder in scope MUST directly declare
+          `@pytest.mark.manual` and have effective `__test__ = False` at function,
+          containing class, or module level. `manual` classifies the test but does NOT
+          prevent collection. Automated tests MUST remove both `manual` and effective
+          `__test__ = False`. When partially automating a class/module, inspect every
+          affected sibling even when its function body is unchanged; every remaining
+          placeholder must retain direct `manual` and effective suppression until automated.
+          Other planned markers may remain in Phase 1 `Markers:` docstrings and become
+          real decorators/pytestmark only during Phase 2 automation.
 
       - name: "STP scenario coverage"
         mode: error
         instructions: |
           Apply when this PR adds, modifies, or deletes `test_*.py` under `tests/` that
-          reference an `STP:`, `Jira:`, or `RFE:` URL in a module, class, or test docstring.
-          SKIP `utilities/unittests/`.
+          reference an `STP:`, `Jira:`, or `RFE:` URL in a module,
+          class, or test docstring. SKIP `utilities/unittests/`.
+          For legacy modifications/deletions, continue recognizing historical labels and
+          inherited module/class links; do not bulk-impose the new-test syntax.
 
           **Behavior depends on traceability type:**
 
@@ -317,16 +325,21 @@ knowledge_base:
     # Link to design-docs repo for STP ↔ test traceability
     - repository: "RedHatQE/openshift-virtualization-tests-design-docs"
       instructions: |
-        Contains Software Test Plans (STPs) under stps/<sig>/ defining
-        test requirements, scenarios, and acceptance criteria.
+        STPs under stps/<sig>/ define scenarios and acceptance criteria.
 
         STRICT ENFORCEMENT (STD and test implementation PRs):
         - CRITICAL: Every STD PR MUST cover ALL STP scenarios, except
           explicitly excluded ones with justification and follow-up
           Jira link. Missing scenarios block merge.
-        - CRITICAL: Every new feature test MUST link to its STP (or
-          Jira/RFE if no STP exists) in module/class/test docstring.
-          Missing traceability links block merge.
+        - CRITICAL: Every new product test under `tests/` MUST contain exact
+          `STP: <URL>` in its own function/method docstring when an STP exists, or
+          `Jira: <issue URL>` only when none exists (Jira/RFE issue, not a support case).
+          Search this repository before accepting the Jira fallback. Inherited module/class
+          links do not count. Jira lines also require `# <skip-jira-utils-check>` inline.
+        - CRITICAL: Each docstring-only STD test under `tests/` MUST directly
+          declare `@pytest.mark.manual` and have effective `__test__ = False`.
+          Manual classifies but does not suppress collection. Remove both when automated.
+          Other planned Phase 1 markers remain in docstrings until automation.
         - HIGH: STD preconditions, steps, and expected results MUST
           align with the STP scenario description.
         - HIGH: Intentionally excluded STP scenarios require PR
@@ -342,6 +355,7 @@ knowledge_base:
           follow-up Jira link. Unjustified deletion blocks merge.
         - Jira/RFE-only tests skip STP comparison but must retain
           traceability links on modification, and justify deletion.
+          Historical labels and inherited links remain valid for legacy retention.
         - Partial coverage without justification blocks merge.
 
   # Enable code guidelines enforcement from AGENTS.md (single source of truth)
