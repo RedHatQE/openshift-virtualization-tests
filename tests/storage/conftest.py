@@ -4,6 +4,7 @@ Pytest conftest file for CNV CDI tests
 
 import base64
 import copy
+import gc
 import ipaddress
 import logging
 import os
@@ -69,6 +70,15 @@ from utilities.virt import VirtualMachineForTests, running_vm
 
 LOGGER = logging.getLogger(__name__)
 LOCAL_PATH = f"/tmp/{Images.Cdi.QCOW2_IMG}"
+
+
+@pytest.fixture(autouse=True)
+def gc_cleanup_after_storage_test():
+    """Force garbage collection after each storage test to reduce memory footprint under heavy concurrent load."""
+    yield
+    gc.collect()
+
+
 ROUTER_CERT_NAME = "router.crt"
 INTERNAL_HTTP_SELECTOR = {"matchLabels": {"name": "internal-http"}}
 INTERNAL_HTTP_TEMPLATE = {
