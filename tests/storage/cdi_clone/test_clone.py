@@ -14,6 +14,7 @@ from tests.utils import create_windows2022_vm_using_existing_dv
 from utilities.constants import (
     OS_FLAVOR_FEDORA,
     OS_FLAVOR_WINDOWS,
+    QUARANTINED,
     TIMEOUT_1MIN,
     WIN_2K22,
     Images,
@@ -230,6 +231,10 @@ def test_successful_snapshot_clone(
         assert_pvc_snapshot_clone_annotation(pvc=pvc, storage_class=storage_class)
 
 
+@pytest.mark.xfail(
+    reason=f"{QUARANTINED}: test_clone_from_fs_to_block_using_dv_template fails on s390x with filesystem-to-block clone; tracked in CNV-98725",
+    run=False,
+)
 @pytest.mark.gating
 @pytest.mark.polarion("CNV-5607")
 @pytest.mark.s390x
