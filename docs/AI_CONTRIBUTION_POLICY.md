@@ -48,13 +48,17 @@ All contributors **SHOULD** disclose AI tool use when submitting code,
 documentation, or other content to this project.
 
 Disclosure **SHOULD** take the form of a trailer line in the commit message.
-The preferred format for this project is:
+The required format for AI disclosure is:
 
 ```
 Assisted-by: Claude Sonnet 4.6 <noreply@anthropic.com>
 ```
 
 Including the model name is **RECOMMENDED** to provide a precise record of the tool used.
+
+> ⚠️ **Do NOT use `Co-Authored-By:` for AI tools.** That trailer implies human
+> co-authorship and is reserved for human contributors. Using it for an AI tool
+> misrepresents authorship and is a policy violation.
 
 All commits **MUST** also include a `Signed-off-by` trailer per the project's
 DCO requirements:

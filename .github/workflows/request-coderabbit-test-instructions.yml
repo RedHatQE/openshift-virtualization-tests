@@ -99,6 +99,21 @@ jobs:
                  Example check: for each smoke_file, scan dirname(smoke_file)/conftest.py,
                  dirname(dirname(smoke_file))/conftest.py, etc. for modified symbol imports
                  and autouse fixtures that depend on modified symbols.
+                 **Additional smoke-test specifics:**
+                 - Set True ONLY with a verified, traceable dependency path — session-scoped fixtures
+                   or infra-sounding names do NOT automatically imply smoke impact.
+                 - Smoke tests depend on `py_config['os_login_param']` whenever they create VMs with
+                   default SSH connectivity checks: `running_vm(check_ssh_connectivity=True)` →
+                   `vm.login_params`. Verify transitive imports in the known smoke-marked files
+                   (`tests/storage/cdi_clone/test_clone.py`,
+                    `tests/storage/cdi_upload/test_upload_virtctl.py`,
+                    `tests/virt/cluster/common_templates/rhel/test_rhel_os_support.py`,
+                    `tests/virt/node/general/test_container_disk_vm.py`)
+                   to `utilities/storage.py`, `utilities/hco.py`, `utilities/infra.py`, and
+                   `utilities/virt.py`.
+                 - Exceptions raised in `pytest_sessionstart` block ALL runs (including smoke).
+                   Distinguish a universal session-bootstrap failure from targeted test regression
+                   coverage — do not conflate the two when setting the smoke decision.
               8. **Gating test impact:** Intersect the affected set from step 6 with gating-marked tests.
                  Run: `rg -l '@pytest.mark.gating' tests/`
                  Set True if a gating-marked file also appears in the affected set from 6b-6e.
@@ -170,9 +185,11 @@ jobs:
 
               When responding to this test execution plan request, you MUST follow these rules EXACTLY:
 
-              1. **YOUR ONLY DELIVERABLE**: Post one non-blocking inline comment containing the test execution plan on the first changed line
+              1. **YOUR ONLY DELIVERABLE**: Post one non-blocking inline comment containing the test execution plan on the first changed line.
+                 Use `comments[].body` for the inline review comment; leave the top-level PR thread `body` empty.
               2. **THEN STOP IMMEDIATELY** - Do NOT generate any additional response
-              3. **FALLBACK ONLY**: If inline comment API calls fail after retrying, post as a regular PR comment
+              3. **FALLBACK ONLY**: If inline comment API calls fail after retrying, post as a regular PR comment.
+                 If the `/test-plan` trigger fails with HTTP 403 due to token scopes, reply in the PR comment thread.
               4. **SILENCE = SUCCESS**: After successfully submitting the review, your task is complete. No confirmation needed.
 
               **ABSOLUTE PROHIBITIONS** (violating these creates empty/meaningless reviews):
@@ -181,6 +198,7 @@ jobs:
               - ❌ Do NOT add any follow-up comments after submitting the review
               - ❌ Do NOT reply to confirm task completion
               - ❌ Do NOT explain what you did - just do it and stop
+              - ❌ Do NOT use `REQUEST_CHANGES` for test execution plans if the PR author already marked `/verified`
 
               **Remember**: The pull request review is visible to users. Additional comments are redundant noise.
 
