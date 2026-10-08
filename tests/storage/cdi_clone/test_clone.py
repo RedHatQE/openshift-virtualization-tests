@@ -4,7 +4,6 @@ Clone tests
 
 import pytest
 from ocp_resources.datavolume import DataVolume
-from utilities.constants.pytest import QUARANTINED
 
 from tests.os_params import FEDORA_LATEST
 from tests.storage.utils import (
@@ -15,6 +14,7 @@ from tests.utils import create_windows2022_vm_using_existing_dv
 from utilities.constants import (
     OS_FLAVOR_FEDORA,
     OS_FLAVOR_WINDOWS,
+    QUARANTINED,
     TIMEOUT_1MIN,
     WIN_2K22,
     Images,
