@@ -11,6 +11,8 @@ import pytest
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from timeout_sampler import TimeoutExpiredError
 
+from utilities.constants.timeouts import TIMEOUT_20MIN
+
 # Add utilities to Python path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -878,6 +880,7 @@ class TestEnableCommonBootImageImportSpecWaitForDataImportCron:
             namespace=mock_namespace.name,
             consecutive_checks_count=1,
             exclude_data_source_names=None,
+            timeout=TIMEOUT_20MIN,
         )
 
     @patch("utilities.hco.wait_for_hco_conditions")
@@ -911,6 +914,7 @@ class TestEnableCommonBootImageImportSpecWaitForDataImportCron:
             namespace=mock_namespace.name,
             consecutive_checks_count=1,
             exclude_data_source_names=exclude_names,
+            timeout=TIMEOUT_20MIN,
         )
 
 
