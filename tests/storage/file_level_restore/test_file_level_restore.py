@@ -628,6 +628,7 @@ class TestFileRestoreCrossNamespace:
     __test__ = False
 
     @pytest.mark.polarion("CNV-16835")
+    @pytest.mark.manual
     def test_restore_from_different_namespace(self):
         """
         Test that restore from a volume snapshot in a different namespace succeeds and cleans up.
@@ -662,6 +663,7 @@ class TestFileRestoreStorageCompatibility:
     __test__ = False
 
     @pytest.mark.polarion("CNV-16836")
+    @pytest.mark.manual
     def test_restore_with_source_volume_mode_mismatch(self):
         """
         Test that restore succeeds when the source volume mode differs from the StorageProfile's default volume mode.
@@ -701,6 +703,7 @@ class TestFileRestoreWindowsManualBrowsing:
     __test__ = False
 
     @pytest.mark.polarion("CNV-16837")
+    @pytest.mark.manual
     def test_manual_browsing_of_windows_ntfs_backup_volume(self):
         """
         Test that manual restore mode exposes an NTFS backup volume for read-only browsing.
@@ -734,6 +737,7 @@ class TestFileRestoreGuestConnectionInterruption:
 
     @pytest.mark.polarion("CNV-16838")
     @pytest.mark.jira("CNV-93092", run=False)
+    @pytest.mark.manual
     def test_guest_connection_loss_during_file_transfer(self):
         """
         [NEGATIVE] Test that an interrupted guest connection reports partial completion and supports retry.
@@ -767,6 +771,7 @@ class TestFileRestoreRootDiskManualBrowsing:
     __test__ = False
 
     @pytest.mark.polarion("CNV-16839")
+    @pytest.mark.manual
     def test_manual_browsing_of_root_disk_backup(self):
         """
         Test that manual restore mode exposes root disk backup contents for read-only browsing.
@@ -802,6 +807,7 @@ class TestFileRestoreLargeFile:
     __test__ = False
 
     @pytest.mark.polarion("CNV-16840")
+    @pytest.mark.manual
     def test_restore_big_file_from_data_disk_snapshot(self):
         """
         Test that a 1 GB file is restored successfully from a data disk snapshot.
@@ -837,6 +843,7 @@ class TestFileRestoreConcurrentVirtualMachines:
     __test__ = False
 
     @pytest.mark.polarion("CNV-16841")
+    @pytest.mark.manual
     def test_concurrent_restores_on_different_virtual_machines(self):
         """
         Test that concurrent file restores on different virtual machines complete independently.
