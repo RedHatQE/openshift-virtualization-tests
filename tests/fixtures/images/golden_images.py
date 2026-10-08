@@ -12,6 +12,10 @@ from utilities.constants.hco import DATA_SOURCE_NAME
 from utilities.constants.storage import OS_IMAGES_EDIT_CLUSTER_ROLE
 from utilities.ssp import get_data_import_crons
 from utilities.storage import create_or_update_data_source, data_volume
+from utilities.virt import (
+    get_data_volume_template_dict_with_default_storage_class,
+    get_or_create_golden_image_data_source,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -136,4 +140,24 @@ def latest_rhel_data_source(golden_images_namespace):
         name=py_config["latest_instance_type_rhel_os_dict"][DATA_SOURCE_NAME],
         namespace=golden_images_namespace.name,
         ensure_exists=True,
+    )
+
+
+@pytest.fixture()
+def golden_image_data_source_for_test_scope_function(request, admin_client, golden_images_namespace):
+    yield from get_or_create_golden_image_data_source(
+        admin_client=admin_client,
+        golden_images_namespace=golden_images_namespace,
+        os_dict=request.param["os_dict"],
+    )
+
+
+@pytest.fixture()
+def golden_image_data_volume_template_for_test_scope_function(
+    request,
+    golden_image_data_source_for_test_scope_function,
+):
+    return get_data_volume_template_dict_with_default_storage_class(
+        data_source=golden_image_data_source_for_test_scope_function,
+        storage_class=getattr(request, "param", {}).get("storage_class"),
     )
