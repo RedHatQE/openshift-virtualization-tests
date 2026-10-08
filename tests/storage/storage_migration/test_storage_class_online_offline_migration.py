@@ -37,6 +37,8 @@ class TestOfflineVMStorageMigrationVolumeModes:
         Test that offline VM storage migration completes successfully and preserves data
         across volume mode combinations between different storage classes.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_offline.md
+
         Preconditions:
             - Stopped VM with a data disk on the source storage class using the source volume mode
             - File written to the VM data disk with known content
@@ -74,6 +76,8 @@ class TestMixedOfflineOnlineStorageMigration:
         """
         Test that storage migration completes for a plan containing both offline and running VMs
         while each VM preserves its original state.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_offline.md
 
         Preconditions:
             - Stopped VM on the source storage class
@@ -114,6 +118,8 @@ class TestOfflineStorageMigrationCleanupPolicy:
         Test that source volumes are retained after offline VM storage migration
         when cleanup policy is set to retain.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_offline.md
+
         Preconditions:
             - Stopped VM with a data disk on the source storage class
             - File written to the VM data disk with known content
@@ -137,6 +143,8 @@ class TestOfflineStorageMigrationCleanupPolicy:
         """
         Test that source volumes are deleted after offline VM storage migration
         when cleanup policy is set to delete.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_offline.md
 
         Preconditions:
             - Stopped VM with a data disk on the source storage class
@@ -173,6 +181,8 @@ class TestOfflineVMStorageMigrationWithHotplugDisks:
     def test_offline_vm_with_hotplug_disks_storage_migration(self):
         """
         Test that offline VM storage migration migrates all disks including hotplug disks.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_offline.md
 
         Preconditions:
             - Stopped VM with boot disk and hotplug disks on the source storage class
@@ -212,6 +222,8 @@ class TestOfflineVMStorageMigrationFailureRollback:
         [NEGATIVE] Test that offline VM disk references remain unchanged and the source volume
         is preserved when storage migration fails.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_offline.md
+
         Preconditions:
             - Stopped VM with a data disk on the source storage class
             - VM disk references recorded before migration
@@ -249,6 +261,8 @@ class TestVMStartDuringStorageMigration:
         """
         Test that starting a stopped VM during storage migration succeeds
         and the VM waits for migration completion before becoming ready.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_offline.md
 
         Preconditions:
             - Stopped VM with a data disk on the source storage class
@@ -289,6 +303,8 @@ class TestCancelInProgressStorageMigration:
         """
         Test that cancelling an in-progress storage migration preserves original VM state
         for both offline and online VMs.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_offline.md
 
         Preconditions:
             - Stopped VM on the source storage class with a sufficiently large disk

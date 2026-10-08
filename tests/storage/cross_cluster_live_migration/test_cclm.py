@@ -81,6 +81,8 @@ class TestCCLMSeveralVMs:
         """
         Test that multiple VMs can be live migrated from the source cluster to the target cluster.
 
+        Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
+
         Steps:
             1. Wait for the MTV migration to reach Succeeded condition
 
@@ -99,6 +101,8 @@ class TestCCLMSeveralVMs:
     def test_verify_vms_not_rebooted_after_migration(self, local_vms_after_cclm_migration, vms_boot_id_before_cclm):
         """
         Test that VMs are not rebooted during cross-cluster live migration.
+
+        Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
 
         Preconditions:
             - Source VMs successfully migrated to the target cluster
@@ -119,6 +123,8 @@ class TestCCLMSeveralVMs:
     def test_verify_file_persisted_after_migration(self, local_vms_after_cclm_migration):
         """
         Test that files written before migration are preserved after cross-cluster live migration.
+
+        Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
 
         Preconditions:
             - Source VMs successfully migrated to the target cluster
@@ -144,6 +150,8 @@ class TestCCLMSeveralVMs:
         """
         Test that source VMs on the source cluster are stopped after cross-cluster live migration.
 
+        Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
+
         Preconditions:
             - Source VMs successfully migrated to the target cluster
 
@@ -163,6 +171,8 @@ class TestCCLMSeveralVMs:
         """
         Test that VMs can be compute live migrated within the target cluster after cross-cluster live migration.
 
+        Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
+
         Preconditions:
             - Source VMs successfully migrated to the target cluster
 
@@ -180,6 +190,8 @@ class TestCCLMSeveralVMs:
         """
         Test that source VMs on the source cluster can be deleted after cross-cluster live migration.
 
+        Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
+
         Steps:
             1. Delete each source VM on the source cluster
 
@@ -192,6 +204,8 @@ class TestCCLMSeveralVMs:
     def test_target_vms_can_be_deleted(self, local_vms_after_cclm_migration):
         """
         Test that migrated VMs on the target cluster can be deleted after cross-cluster live migration.
+
+        Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
 
         Steps:
             1. Delete each migrated VM on the target cluster
@@ -236,6 +250,8 @@ class TestCCLMWindowsWithVTPM:
         """
         Test that a Windows VM can be live migrated from the source cluster to the target cluster.
 
+        Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
+
         Steps:
             1. Wait for the MTV migration to reach Succeeded condition
 
@@ -256,6 +272,8 @@ class TestCCLMWindowsWithVTPM:
     def test_source_vms_are_stopped_after_cclm(self, vms_for_cclm):
         """
         Test that the source Windows VM on the source cluster is stopped after cross-cluster live migration.
+
+        Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
 
         Preconditions:
             - Source VM successfully migrated to the target cluster
@@ -278,6 +296,8 @@ class TestCCLMWindowsWithVTPM:
         """
         Test that a Windows VM can be compute live migrated within the target cluster after cross-cluster live migration.
 
+        Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
+
         Preconditions:
             - Source VM successfully migrated to the target cluster
 
@@ -295,6 +315,8 @@ class TestCCLMWindowsWithVTPM:
         """
         Test that the source Windows VM on the source cluster can be deleted after cross-cluster live migration.
 
+        Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
+
         Steps:
             1. Delete the source VM on the source cluster
 
@@ -307,6 +329,8 @@ class TestCCLMWindowsWithVTPM:
     def test_target_vms_can_be_deleted(self, local_vms_after_cclm_migration):
         """
         Test that the migrated Windows VM on the target cluster can be deleted after cross-cluster live migration.
+
+        Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
 
         Steps:
             1. Delete the migrated VM on the target cluster
@@ -357,6 +381,8 @@ class TestCCLMFromStorageAtoB:
         """
         Test that a VM can be cross-cluster live migrated when source and target storage classes are different.
 
+        Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
+
         Steps:
             1. Wait for the MTV migration to reach Succeeded condition
 
@@ -377,6 +403,8 @@ class TestCCLMFromStorageAtoB:
     def test_verify_vms_not_rebooted_after_migration(self, local_vms_after_cclm_migration, vms_boot_id_before_cclm):
         """
         Test that VM is not rebooted during cross-cluster live migration.
+
+        Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
 
         Preconditions:
             - Source VM successfully migrated to the target cluster
@@ -399,6 +427,8 @@ class TestCCLMFromStorageAtoB:
     def test_verify_file_persisted_after_migration(self, local_vms_after_cclm_migration):
         """
         Test that files written before migration are preserved after cross-cluster live migration.
+
+        Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
 
         Preconditions:
             - Source VM successfully migrated to the target cluster
@@ -426,6 +456,8 @@ class TestCCLMFromStorageAtoB:
         """
         Test that source VM on the source cluster is stopped after cross-cluster live migration.
 
+        Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
+
         Preconditions:
             - Source VM successfully migrated to the target cluster
 
@@ -447,6 +479,8 @@ class TestCCLMFromStorageAtoB:
         """
         Test that a VM can be compute live migrated within the target cluster after cross-cluster live migration.
 
+        Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
+
         Preconditions:
             - Source VM successfully migrated to the target cluster
 
@@ -464,6 +498,8 @@ class TestCCLMFromStorageAtoB:
         """
         Test that source VM on the source cluster can be deleted after cross-cluster live migration.
 
+        Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
+
         Steps:
             1. Delete the source VM on the source cluster
 
@@ -476,6 +512,8 @@ class TestCCLMFromStorageAtoB:
     def test_target_vms_can_be_deleted(self, local_vms_after_cclm_migration):
         """
         Test that migrated VM on the target cluster can be deleted after cross-cluster live migration.
+
+        Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
 
         Steps:
             1. Delete the migrated VM on the target cluster

@@ -46,6 +46,8 @@ class TestFileRestoreOperatorDeployment:
         Test that vm-file-restore-operator is deployed and running after OpenShift Virtualization
         installation via HCO-managed lifecycle.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
+
         Preconditions:
             - OpenShift Virtualization installed via HyperConverged CR (HCO-managed lifecycle)
             - openshift-cnv namespace exists
@@ -84,6 +86,8 @@ class TestFileRestoreBackupVendorWorkflow:
     ):
         """
         Test that the end-to-end restore workflow from request creation to file verification succeeds.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
 
         Preconditions:
             - Running Linux VM with guest helper installed and filerestore user SSH-configured
@@ -156,6 +160,8 @@ class TestFileRestoreWindowsGuestFileCount:
     ):
         """
         Test that the restored file count in status matches actual files transferred on a Windows VM.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
 
         Preconditions:
             - Running Windows VM with OpenSSH Server and guest helper installed, and filerestore user SSH-configured
@@ -235,6 +241,8 @@ class TestFileRestoreWindowsNTFSACLsAndOwnership:
         """
         Test that file restore on Windows VM from a backup PVC preserves NTFS ACLs and ownership.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
+
         Preconditions:
             - Running Windows VM with OpenSSH Server and guest helper installed, and filerestore user SSH-configured
             - NTFS backup PVC with files having known ACLs and owner SID recorded
@@ -290,6 +298,8 @@ class TestFileRestoreWindowsNTFSACLsAndOwnership:
     ):
         """
         Test that file restore on Windows VM from a volume snapshot preserves NTFS ACLs and ownership.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
 
         Preconditions:
             - VolumeSnapshot-capable StorageClass available
@@ -361,6 +371,8 @@ class TestFileRestoreWindowsDriveRoot:
         """
         Test that file restore on Windows VM succeeds when the source file is at a drive root.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
+
         Preconditions:
             - Running Windows VM with OpenSSH Server and guest helper installed, and filerestore user SSH-configured
             - Backup volume containing a file at a Windows drive root path with known content
@@ -429,6 +441,8 @@ class TestFileRestoreRootDiskToOriginalPath:
         Test that files are restored from a root disk VolumeSnapshot to their original location
         in a running Linux VM.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
+
         Preconditions:
             - Running root-only Linux VM with guest helper installed and filerestore user SSH-configured
             - Root-disk VolumeSnapshot from an online VirtualMachineSnapshot marked readyToUse=true
@@ -471,6 +485,8 @@ class TestFileRestoreRootDiskToOriginalPath:
         """
         Test that files are restored from a root disk backup PVC to their original location
         in a running Linux VM.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
 
         Preconditions:
             - Running root-only Linux VM with guest helper installed and filerestore user SSH-configured
@@ -530,6 +546,8 @@ class TestFileRestoreSequentialFromSameSnapshot:
         Test that files are restored from a data disk VolumeSnapshot in a running Linux VM
         and temporary resources are cleaned up after the operation.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
+
         Preconditions:
             - Running Linux VM with guest helper installed and filerestore user SSH-configured
             - VolumeSnapshot of the VM data disk with two distinct test files available
@@ -573,6 +591,8 @@ class TestFileRestoreSequentialFromSameSnapshot:
     ):
         """
         Test that a second restore from the same data disk VolumeSnapshot completes successfully.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
 
         Preconditions:
             - Running Linux VM with guest helper installed and filerestore user SSH-configured

@@ -41,6 +41,8 @@ class TestStorageMigrationRetentionPolicy:
 
         STP Requirement: Default cleanup policy (P1)
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_cleanup.md
+
         Preconditions:
             - VM with source PVC/DataVolume
 
@@ -61,6 +63,8 @@ class TestStorageMigrationRetentionPolicy:
         Test namespace-level retentionPolicy=deleteSource.
 
         STP Requirement: Namespace-level cleanup policy (P0)
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_cleanup.md
 
         Preconditions:
             - VM with source PVC/DataVolume
@@ -85,6 +89,8 @@ class TestStorageMigrationRetentionPolicy:
 
         STP Requirement: Plan-level cleanup policy (P0)
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_cleanup.md
+
         Preconditions:
             - VM with source PVC/DataVolume
 
@@ -108,6 +114,8 @@ class TestStorageMigrationRetentionPolicy:
 
         STP Requirement: Namespace-level cleanup policy (P0)
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_cleanup.md
+
         Preconditions:
             - VM with source PVC/DataVolume
 
@@ -128,6 +136,8 @@ class TestStorageMigrationRetentionPolicy:
         Test plan-level retentionPolicy=keepSource.
 
         STP Requirement: Plan-level cleanup policy (P0)
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_cleanup.md
 
         Preconditions:
             - VM with source PVC/DataVolume
@@ -168,6 +178,8 @@ class TestStorageMigrationRetentionPolicyCombinedMode:
 
         STP Requirement: Default cleanup policy (P1)
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_cleanup.md
+
         Preconditions:
             - Running VM (online migration) with source PVC/DataVolume
             - Stopped VM (offline migration) with source PVC/DataVolume
@@ -189,6 +201,8 @@ class TestStorageMigrationRetentionPolicyCombinedMode:
         Test namespace-level retentionPolicy=deleteSource with combined online+offline migration.
 
         STP Requirement: Namespace-level cleanup policy (P0)
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_cleanup.md
 
         Preconditions:
             - Running VM (online migration) with source PVC/DataVolume
@@ -214,6 +228,8 @@ class TestStorageMigrationRetentionPolicyCombinedMode:
 
         STP Requirement: Namespace-level cleanup policy (P0)
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_cleanup.md
+
         Preconditions:
             - Running VM (online migration) with source PVC/DataVolume
             - Stopped VM (offline migration) with source PVC/DataVolume
@@ -235,6 +251,8 @@ class TestStorageMigrationRetentionPolicyCombinedMode:
         Test plan-level retentionPolicy=deleteSource with combined online+offline migration.
 
         STP Requirement: Plan-level cleanup policy (P0)
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_cleanup.md
 
         Preconditions:
             - Running VM (online migration) with source PVC/DataVolume
@@ -259,6 +277,8 @@ class TestStorageMigrationRetentionPolicyCombinedMode:
         Test plan-level retentionPolicy=keepSource with combined online+offline migration.
 
         STP Requirement: Plan-level cleanup policy (P0)
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_cleanup.md
 
         Preconditions:
             - Running VM (online migration) with source PVC/DataVolume
@@ -304,6 +324,8 @@ class TestStorageMigrationCombinedRetentionPolicy:
         STP Requirement: Combined namespace and plan-level cleanup policies (P0)
         Namespace-level policy overrides plan-level policy for that namespace.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_cleanup.md
+
         Preconditions:
             - Two VMs with source PVCs/DataVolumes in separate namespaces
 
@@ -328,6 +350,8 @@ class TestStorageMigrationCombinedRetentionPolicy:
 
         STP Requirement: Combined namespace and plan-level cleanup policies (P0)
         Namespace-level policy overrides plan-level policy for that namespace.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_cleanup.md
 
         Preconditions:
             - Two VMs with source PVCs/DataVolumes in separate namespaces
@@ -354,6 +378,8 @@ class TestStorageMigrationCombinedRetentionPolicy:
         STP Requirement: Combined namespace and plan-level cleanup policies (P0)
         Both policies agree on deletion.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_cleanup.md
+
         Preconditions:
             - Two VMs with source PVCs/DataVolumes in separate namespaces
 
@@ -377,6 +403,8 @@ class TestStorageMigrationCombinedRetentionPolicy:
 
         STP Requirement: Combined namespace and plan-level cleanup policies (P0)
         Both policies agree on retention.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_cleanup.md
 
         Preconditions:
             - Two VMs with source PVCs/DataVolumes in separate namespaces
@@ -413,6 +441,8 @@ class TestStorageMigrationFailureRetentionPolicy:
 
         STP Requirement: Source volumes preserved on migration failure (P2)
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_cleanup.md
+
         Preconditions:
             - VM with source PVC/DataVolume
 
@@ -434,6 +464,8 @@ class TestStorageMigrationFailureRetentionPolicy:
         Test that source PVC/DataVolume is retained when migration fails with retentionPolicy=keepSource.
 
         STP Requirement: Source volumes preserved on migration failure (P2)
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_cleanup.md
 
         Preconditions:
             - VM with source PVC/DataVolume
