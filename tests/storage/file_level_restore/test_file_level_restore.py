@@ -633,6 +633,7 @@ class TestFileRestoreCrossNamespace:
         """
         Test that restore from a volume snapshot in a different namespace succeeds and cleans up.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
         Preconditions:
             - A Target namespace contains the running Linux VM with guest helper installed and filerestore user SSH-configured
             - A different Source namespace contains a VolumeSnapshot with a file of known content
@@ -668,6 +669,7 @@ class TestFileRestoreStorageCompatibility:
         """
         Test that restore succeeds when the source volume mode differs from the StorageProfile's default volume mode.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
          Preconditions:
              - Running Linux VM with guest helper installed and filerestore user SSH-configured
              - VolumeSnapshot created from a Filesystem-mode PVC and containing a file with known content
@@ -708,6 +710,7 @@ class TestFileRestoreWindowsManualBrowsing:
         """
         Test that manual restore mode exposes an NTFS backup volume for read-only browsing.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
         Preconditions:
             - Running Windows VM with OpenSSH Server and guest helper installed, and filerestore user SSH-configured
             - NTFS backup volume containing files with known content
@@ -742,6 +745,7 @@ class TestFileRestoreGuestConnectionInterruption:
         """
         [NEGATIVE] Test that an interrupted guest connection reports partial completion and supports retry.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
         Preconditions:
             - Running Linux VM with guest helper installed and filerestore user SSH-configured
             - Backup volume containing multiple files
@@ -779,6 +783,7 @@ class TestFileRestoreRootDiskManualBrowsing:
         Parametrize:
             - backup_source: [VolumeSnapshot, PVC]
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
         Preconditions:
             - Running Linux VM with guest helper installed and filerestore user SSH-configured
             - Root disk backup containing files with known content
@@ -812,6 +817,7 @@ class TestFileRestoreLargeFile:
         """
         Test that a 1 GB file is restored successfully from a data disk snapshot.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
         Preconditions:
             - Running Linux VM with guest helper installed and filerestore user SSH-configured
             - Data disk VolumeSnapshot containing a 1 GB file with a recorded checksum
@@ -848,6 +854,7 @@ class TestFileRestoreConcurrentVirtualMachines:
         """
         Test that concurrent file restores on different virtual machines complete independently.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
         Preconditions:
             - Two running Linux VMs with guest helper installed and filerestore user SSH-configured
             - Independent backup volume containing a file with known content for each Linux VM
