@@ -524,6 +524,14 @@ def pytest_collection_modifyitems(session, config, items):
     items[:] = filter_deprecated_api_tests(items=items, config=config)
     items[:] = filter_sno_only_tests(items=items, config=config)
 
+    # Run vm_export tests in the middle of the suite instead of wherever they sort alphabetically.
+    vm_export_path = "tests/storage/vm_export"
+    vm_export_items = [item for item in items if vm_export_path in str(item.fspath)]
+    if vm_export_items:
+        other_items = [item for item in items if vm_export_path not in str(item.fspath)]
+        mid = len(other_items) // 2
+        items[:] = other_items[:mid] + vm_export_items + other_items[mid:]
+
 
 def pytest_report_teststatus(report, config):
     test_name = report.head_line
