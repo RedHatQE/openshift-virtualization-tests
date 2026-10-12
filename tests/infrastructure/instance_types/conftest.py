@@ -20,7 +20,6 @@ from utilities.storage import (
 from utilities.virt import VirtualMachineForTests
 
 COMMON_INSTANCETYPE_SELECTOR = f"{Resource.ApiGroup.INSTANCETYPE_KUBEVIRT_IO}/vendor=redhat.com"
-LATEST_WINDOWS_IMAGE_NAMESPACE = "latest-windows-image"
 
 
 @pytest.fixture(scope="session")

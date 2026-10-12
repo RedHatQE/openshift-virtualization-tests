@@ -25,7 +25,6 @@ from utilities.hco import ResourceEditorValidateHCOReconcile
 pytestmark = [pytest.mark.gating, pytest.mark.arm64, pytest.mark.s390x]
 
 COMMON_TEMPLATE_DISABLE = {DATA_IMPORT_CRON_ENABLE: "false"}
-COMMON_TEMPLATE_ENABLE = {DATA_IMPORT_CRON_ENABLE: "true"}
 UPDATE_TEMPLATE_SCHEDULE = {"spec->schedule": WILDCARD_CRON_EXPRESSION}
 UPDATE_ONE_VALUE_IN_SPEC = {
     "spec->garbageCollect": "Never",

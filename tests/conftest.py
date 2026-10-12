@@ -51,7 +51,6 @@ from utilities.virt import (
 )
 
 LOGGER = logging.getLogger(__name__)
-CNV_NOT_INSTALLED = "CNV not yet installed."
 
 
 @pytest.fixture(scope="module")

@@ -74,10 +74,6 @@ from utilities.virt import (
 )
 
 NUM_TEST_VMS = 3
-NOT_PUBLISHED_MESSAGE = (
-    "This documentation is a work in progress that aligns to preview releases of the next pending "
-    "OpenShift Container Platform version"
-)
 LOGGER = logging.getLogger(__name__)
 
 

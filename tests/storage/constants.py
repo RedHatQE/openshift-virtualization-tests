@@ -1,6 +1,4 @@
 from utilities.constants import Images
-from utilities.constants.storage import StorageClassNames
-from utilities.storage import HppCsiStorageClass
 
 NUM_BLANK_DISKS = 3
 
@@ -8,13 +6,6 @@ CIRROS_QCOW2_IMG = f"{Images.Cirros.DIR}/{Images.Cirros.QCOW2_IMG}"
 ALPINE_QCOW2_IMG = f"{Images.Alpine.DIR}/{Images.Alpine.QCOW2_IMG_VERSIONED}"
 
 ADMIN_NAMESPACE_PARAM = {"use_unprivileged_client": False}
-
-HPP_STORAGE_CLASSES = [
-    StorageClassNames.HOSTPATH,
-    HppCsiStorageClass.Name.HOSTPATH_CSI_LEGACY,
-    HppCsiStorageClass.Name.HOSTPATH_CSI_BASIC,
-    HppCsiStorageClass.Name.HOSTPATH_CSI_PVC_BLOCK,
-]
 
 INTERNAL_HTTP_CONFIGMAP_NAME = "internal-https-configmap"
 HTTPS_CONFIG_MAP_NAME = "https-cert"
