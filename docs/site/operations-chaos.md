@@ -22,12 +22,9 @@ from utilities.virt import running_vm
 
 pytestmark = [
     pytest.mark.chaos,
-    pytest.mark.usefixtures(
-        "multiprocessing_start_method_fork",
-        "chaos_namespace",
-        "cluster_monitoring_process"
-    ),
+    pytest.mark.usefixtures("multiprocessing_start_method_fork", "chaos_namespace", "cluster_monitoring_process"),
 ]
+
 
 @pytest.mark.parametrize(
     "chaos_vms_list_rhel9, pod_deleting_process",
@@ -85,6 +82,7 @@ from utilities.constants import Images
 from utilities.oadp import check_file_in_running_vm
 from utilities.constants.oadp import FILE_NAME_FOR_BACKUP, TEXT_TO_TEST
 
+
 @pytest.mark.parametrize(
     "rhel_vm_with_data_volume_template",
     [
@@ -103,9 +101,7 @@ from utilities.constants.oadp import FILE_NAME_FOR_BACKUP, TEXT_TO_TEST
 def test_backup_vm_data_volume_template_with_datamover(rhel_vm_with_data_volume_template):
     # Validates the VM state was perfectly restored by Velero
     check_file_in_running_vm(
-        vm=rhel_vm_with_data_volume_template,
-        file_name=FILE_NAME_FOR_BACKUP,
-        file_content=TEXT_TO_TEST
+        vm=rhel_vm_with_data_volume_template, file_name=FILE_NAME_FOR_BACKUP, file_content=TEXT_TO_TEST
     )
 ```
 
