@@ -111,7 +111,6 @@ nit_exclude_imports =
 
 
 enable-extensions =
-    PID,
     FCN,
     UFN,
     NIC,
