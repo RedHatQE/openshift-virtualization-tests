@@ -1,8 +1,8 @@
 """OADP (OpenShift API for Data Protection) test constants.
 
 File names written inside VMs before backup, expected text strings,
-backup storage location names, and Velero backup hook annotation keys
-used across OADP test scenarios.
+backup storage location names, and Velero backup
+hook annotation keys used across OADP test scenarios.
 """
 
 FILE_NAME_FOR_BACKUP = "file_before_backup.txt"
