@@ -22,7 +22,6 @@ from utilities.infra import (
 from utilities.operator import wait_for_cluster_operator_stabilize
 from utilities.storage import get_data_sources_managed_by_data_import_cron
 
-# flake8: noqa: PID001
 LOGGER = logging.getLogger(__name__)
 
 
