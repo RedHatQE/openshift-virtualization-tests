@@ -1146,7 +1146,6 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "python-rrmngmnt" },
     { name = "python-simple-logger" },
-    { name = "python-utility-scripts" },
     { name = "pyvmomi" },
     { name = "pyyaml" },
     { name = "requests" },
@@ -1219,7 +1218,6 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.2.1" },
     { name = "python-rrmngmnt", specifier = ">=0.1.32" },
     { name = "python-simple-logger", specifier = ">=2.0.13" },
-    { name = "python-utility-scripts", specifier = ">=2.0.1" },
     { name = "pyvmomi", specifier = ">=8.0.3.0.1" },
     { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "requests", specifier = ">=2.32.3" },
@@ -1563,19 +1561,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/76/35/b25edd35d656ecb595098013a17db51e1b60035d93ac7318a815a77e08ce/pyhelper_utils-2.0.2.tar.gz", hash = "sha256:016b4c9e05cb0456e9ba79467d5496252abaea640b397faae6727ec945d9c293", size = 11632, upload-time = "2026-04-06T09:25:32.766Z" }
 
 [[package]]
-name = "pylero"
-version = "0.2.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "click" },
-    { name = "suds" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/93/a3/04efbc25a706d04d9d12cc5346b9ade9326d322496556eb07fa86b8cd3d5/pylero-0.2.0.tar.gz", hash = "sha256:534e86667e318ac353d24d041229d3f821316e0f3b659f2fd050adfcd4f3472f", size = 486274, upload-time = "2025-12-19T15:17:13.281Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/ce/24/d26a5582611ba222c2f36cbd06736af106e424776bb54277f93407672926/pylero-0.2.0-py3-none-any.whl", hash = "sha256:3fd52d56fa11b8f77313681523b2b90ab986d34cc504aa6ce846510e732a2894", size = 101341, upload-time = "2025-12-19T15:17:11.685Z" },
-]
-
-[[package]]
 name = "pynacl"
 version = "1.6.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1890,23 +1875,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/87/c7/5e1547c44e31da50a
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a4/62/02da182e544a51a5c3ccf4b03ab79df279f9c60c5e82d5e8bec7ca26ac11/python_slugify-8.0.4-py2.py3-none-any.whl", hash = "sha256:276540b79961052b66b7d116620b36518847f52d5fd9e3a70164fc8c50faa6b8", size = 10051, upload-time = "2024-02-08T18:32:43.911Z" },
 ]
-
-[[package]]
-name = "python-utility-scripts"
-version = "2.0.6"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "ast-comments" },
-    { name = "click" },
-    { name = "jira" },
-    { name = "pyhelper-utils" },
-    { name = "pylero" },
-    { name = "pytest-mock" },
-    { name = "python-simple-logger" },
-    { name = "pyyaml" },
-    { name = "tenacity" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/6c/84/eb74b833ffad45287e19964102028d7cd69b9f1bf2c5308d0be6792791ab/python_utility_scripts-2.0.6.tar.gz", hash = "sha256:a43ac3eddea5b5865b0c182b04c43457e073da360ec202ad5b0f715011213c7a", size = 21742, upload-time = "2026-03-16T12:13:10.334Z" }
 
 [[package]]
 name = "pyvmomi"
@@ -2247,15 +2215,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/2a/5f/8418daad5c353300b7661dd8ce2574b0410a6316a8be650a189d5c68d938/stevedore-5.5.0.tar.gz", hash = "sha256:d31496a4f4df9825e1a1e4f1f74d19abb0154aff311c3b376fcc89dae8fccd73", size = 513878, upload-time = "2025-08-25T12:54:26.806Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/80/c5/0c06759b95747882bb50abda18f5fb48c3e9b0fbfc6ebc0e23550b52415d/stevedore-5.5.0-py3-none-any.whl", hash = "sha256:18363d4d268181e8e8452e71a38cd77630f345b2ef6b4a8d5614dac5ee0d18cf", size = 49518, upload-time = "2025-08-25T12:54:25.445Z" },
-]
-
-[[package]]
-name = "suds"
-version = "1.2.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/3e/a1/c3783be8de318678c822d6edf9855729c528ba06ac9004398c225ecf2dbd/suds-1.2.0.tar.gz", hash = "sha256:83b162c3d2355374e11d8b9acf15eeaa158b416b4625821844f9f628d679deaf", size = 271331, upload-time = "2024-08-24T20:07:28.95Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/c4/43/658bd1825a5f58c1182269eaa6165084d8d95e031cd7e34a2a1bcf773579/suds-1.2.0-py3-none-any.whl", hash = "sha256:2cf8ed43ed8a0df350027c741f5295d6be8443d4e820cb36f2c17b033e331d5b", size = 145151, upload-time = "2024-08-24T20:07:27.206Z" },
 ]
 
 [[package]]
