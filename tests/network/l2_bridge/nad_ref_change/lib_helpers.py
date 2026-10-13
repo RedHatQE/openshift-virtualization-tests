@@ -2,23 +2,17 @@ from ipaddress import IPv4Interface, IPv6Interface
 from typing import Final
 
 from kubernetes.dynamic import DynamicClient
-from ocp_resources.datavolume import DataVolume
-from pytest_testconfig import config as py_config
 
 from libs.net.ip import filter_link_local_addresses
 from libs.net.vmspec import lookup_iface_status
 from libs.vm.factory import base_vmspec, fedora_vm
 from libs.vm.spec import (
     CloudInitNoCloud,
-    DataVolumeRef,
     Devices,
-    Disk,
     Interface,
     Multus,
     Network,
-    SpecDisk,
     VMSpec,
-    Volume,
 )
 from libs.vm.vm import BaseVirtualMachine, add_volume_disk, cloudinitdisk_storage
 from tests.network.l2_bridge.libl2bridge import LINUX_BRIDGE_IFACE_NAME_1, LINUX_BRIDGE_IFACE_NAME_2
@@ -146,55 +140,6 @@ def two_secondary_bridge_vm(
         ip_addresses=ip_addresses,
         iface_names=iface_names,
         runcmd=runcmd,
-    )
-    return fedora_vm(namespace=namespace, name=name, client=client, spec=spec)
-
-
-def non_migratable_bridge_vm(
-    namespace: str,
-    name: str,
-    client: DynamicClient,
-    nad_names: list[str],
-    ip_addresses: list[list[IPv4Interface | IPv6Interface]],
-    iface_names: list[str],
-    runcmd: list[str] | None = None,
-) -> BaseVirtualMachine:
-    """Create a Fedora VM with secondary bridge interfaces backed by an RWO DataVolume template.
-
-    The DataVolume is embedded as a dataVolumeTemplate so the VM owns and creates it.
-    The RWO access mode of the backing PVC makes the VM non-live-migratable.
-
-    Args:
-        namespace: Namespace to deploy the VM in.
-        name: VM name.
-        client: Kubernetes dynamic client.
-        nad_names: NAD names for the secondary interfaces, in spec order.
-        ip_addresses: Per-interface IP interface objects, aligned with nad_names.
-        iface_names: Logical interface names for the VM spec, aligned with nad_names.
-        runcmd: Commands to run on first boot via cloud-init runcmd. None means no extra commands.
-    """
-    data_volume = DataVolume(
-        name="non-migratable-dv",
-        namespace=namespace,
-        source_dict={"blank": {}},
-        access_modes=DataVolume.AccessMode.RWO,
-        size="20Gi",
-        storage_class=py_config["default_storage_class"],
-        api_name="storage",
-        client=client,
-    )
-    spec = _bridge_vm_spec(
-        nad_names=nad_names,
-        ip_addresses=ip_addresses,
-        iface_names=iface_names,
-        runcmd=runcmd,
-    )
-    data_volume.to_dict()
-    spec.dataVolumeTemplates = [data_volume.res]
-    spec.template.spec = add_volume_disk(
-        vmi_spec=spec.template.spec,
-        disk=SpecDisk(name=data_volume.name, disk=Disk(bus="virtio")),
-        volume=Volume(name=data_volume.name, dataVolume=DataVolumeRef(name=data_volume.name)),
     )
     return fedora_vm(namespace=namespace, name=name, client=client, spec=spec)
 

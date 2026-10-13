@@ -11,7 +11,6 @@ from libs.vm.vm import BaseVirtualMachine
 from tests.network.l2_bridge.libl2bridge import LINUX_BRIDGE_IFACE_NAME_1, LINUX_BRIDGE_IFACE_NAME_2
 from tests.network.l2_bridge.nad_ref_change.lib_helpers import (
     NET_SEED,
-    non_migratable_bridge_vm,
     two_secondary_bridge_vm,
     verify_baseline_connectivity,
 )
@@ -79,36 +78,3 @@ def baseline_connectivity(
     ref_vm: BaseVirtualMachine,
 ) -> None:
     verify_baseline_connectivity(client_vm=under_test_vm_two_ifaces, ref_vm=ref_vm)
-
-
-@pytest.fixture()
-def non_migratable_under_test_vm(
-    namespace: Namespace,
-    unprivileged_client: DynamicClient,
-    bridge_nad_a: NetworkAttachmentDefinition,
-) -> Generator[BaseVirtualMachine]:
-    iface_a_ips = random_cidr_addresses_by_family(net_seed=NET_SEED, host_address=5)
-    with non_migratable_bridge_vm(
-        namespace=namespace.name,
-        name="non-migratable-under-test-vm",
-        client=unprivileged_client,
-        nad_names=[bridge_nad_a.name],
-        ip_addresses=[iface_a_ips],
-        iface_names=[LINUX_BRIDGE_IFACE_NAME_1],
-        runcmd=ARP_ISOLATION_SYSCTL_CMD,
-    ) as vm:
-        run_vm(
-            vm=vm,
-            ip_addresses_by_spec_net_name={
-                LINUX_BRIDGE_IFACE_NAME_1: [str(addr.ip) for addr in iface_a_ips],
-            },
-        )
-        yield vm
-
-
-@pytest.fixture()
-def non_migratable_baseline_connectivity(
-    ref_vm: BaseVirtualMachine,
-    non_migratable_under_test_vm: BaseVirtualMachine,
-) -> None:
-    verify_baseline_connectivity(client_vm=non_migratable_under_test_vm, ref_vm=ref_vm)
