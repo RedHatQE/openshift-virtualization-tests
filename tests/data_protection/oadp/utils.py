@@ -5,15 +5,82 @@ from typing import TYPE_CHECKING
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 
+from utilities.constants.images import OS_FLAVOR_RHEL
 from utilities.constants.oadp import VELERO_BACKUP_HOOK_ANNOTATIONS
 from utilities.constants.timeouts import TIMEOUT_10SEC, TIMEOUT_15SEC
+from utilities.exceptions import ResourceMissingFieldError
+from utilities.virt import VirtualMachineForTests
 
 if TYPE_CHECKING:
     from kubernetes.dynamic import DynamicClient
+    from ocp_resources.virtual_machine_template import VirtualMachineTemplate
 
-    from utilities.virt import VirtualMachineForTests
 
 FILE_PATH_FOR_WINDOWS_BACKUP = "C:/oadp_file_before_backup.txt"
+
+
+def golden_image_data_volume_from_virtual_machine_template(
+    virtual_machine_template: VirtualMachineTemplate,
+) -> DataVolume:
+    """Return the golden-image DataVolume referenced by a VirtualMachineTemplate.
+
+    Captured templates point at a same-namespace golden image under
+    ``spec.virtualMachine.spec.dataVolumeTemplates[0].spec.source.pvc``.
+
+    Args:
+        virtual_machine_template: Template whose embedded VM references a golden image.
+
+    Returns:
+        DataVolume: Resource handle for the golden-image DataVolume (not created here).
+
+    Raises:
+        ResourceMissingFieldError: If the template does not reference a golden-image PVC source,
+        or the PVC source is missing ``name`` or ``namespace``.
+    """
+    data_volume_templates = virtual_machine_template.instance.spec.virtualMachine.spec.dataVolumeTemplates
+    if not data_volume_templates or not data_volume_templates[0].spec.source.pvc:
+        raise ResourceMissingFieldError(
+            f"VirtualMachineTemplate {virtual_machine_template.name} has no golden-image PVC "
+            f"in spec.virtualMachine.spec.dataVolumeTemplates[0].spec.source.pvc"
+        )
+    pvc_source = data_volume_templates[0].spec.source.pvc
+    if not pvc_source.name or not pvc_source.namespace:
+        raise ResourceMissingFieldError(
+            f"VirtualMachineTemplate {virtual_machine_template.name} golden-image PVC is missing name or namespace"
+        )
+    return DataVolume(
+        client=virtual_machine_template.client,
+        name=pvc_source.name,
+        namespace=pvc_source.namespace,
+    )
+
+
+def create_vm_from_virtual_machine_template(
+    virtual_machine_template: VirtualMachineTemplate,
+) -> VirtualMachineForTests:
+    """Process a VirtualMachineTemplate and deploy the rendered VirtualMachine.
+
+    Args:
+        virtual_machine_template: Template to process into a VirtualMachine.
+
+    Returns:
+        VirtualMachineForTests: Deployed VM created from the template.
+    """
+    process_response = virtual_machine_template.process(client=virtual_machine_template.client)
+    virtual_machine_dict = process_response.to_dict()["virtualMachine"]
+    virtual_machine_dict["metadata"]["namespace"] = virtual_machine_template.namespace
+    virtual_machine_dict.pop("status", None)
+    virtual_machine = VirtualMachineForTests(
+        name=virtual_machine_dict["metadata"]["name"],
+        namespace=virtual_machine_template.namespace,
+        client=virtual_machine_template.client,
+        body={"metadata": virtual_machine_dict["metadata"], "spec": virtual_machine_dict["spec"]},
+        generate_unique_name=False,
+        os_flavor=OS_FLAVOR_RHEL,
+        ssh=True,
+    )
+    virtual_machine.deploy(wait=True)
+    return virtual_machine
 
 
 def wait_for_restored_dv(dv: DataVolume) -> None:
