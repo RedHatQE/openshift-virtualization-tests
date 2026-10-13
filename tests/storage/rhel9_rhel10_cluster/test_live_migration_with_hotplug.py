@@ -15,22 +15,21 @@ class TestLiveMigrationWithHotplug:
     Markers:
         - mixed_os_nodes
         - rwx_default_storage
-
-    Preconditions:
-        - Dual-stream cluster with at least one RHCOS9 and one RHCOS10 worker node identified
-        - RWX-capable storage class available
     """
 
     __test__ = False
 
     @pytest.mark.manual
-    @pytest.mark.polarion("CNV-96771-1")
     def test_vm_with_hotplug_migrates_from_rhcos9_to_rhcos10(self):
         """
         Test that a VM with a hotplugged storage volume live migrates from an RHCOS9 worker node
         to an RHCOS10 worker node without data loss or corruption.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/dual-stream-cluster-rhcos9-rhcos10/storage.md
+
+        Preconditions:
+            - A dual-stream cluster has at least one RHCOS9 and one RHCOS10 worker node
+            - An RWX-capable storage class is available
 
         Steps:
             1. Create a VM with nodeAffinity set to an RHCOS9 worker node and wait for it to be Running
@@ -46,13 +45,16 @@ class TestLiveMigrationWithHotplug:
         """
 
     @pytest.mark.manual
-    @pytest.mark.polarion("CNV-96771-2")
     def test_vm_with_hotplug_migrates_from_rhcos10_to_rhcos9(self):
         """
         Test that a VM with a hotplugged storage volume live migrates from an RHCOS10 worker node
         to an RHCOS9 worker node without data loss or corruption.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/dual-stream-cluster-rhcos9-rhcos10/storage.md
+
+        Preconditions:
+            - A dual-stream cluster has at least one RHCOS9 and one RHCOS10 worker node
+            - An RWX-capable storage class is available
 
         Steps:
             1. Create a VM with nodeAffinity set to an RHCOS10 worker node and wait for it to be Running
