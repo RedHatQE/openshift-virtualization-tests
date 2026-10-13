@@ -80,7 +80,6 @@ dependencies = [
   "cachetools>=6.2.2",
   "dacite>=1.9.2",
   "python-dotenv>=1.2.1",
-  "python-utility-scripts>=2.0.1",
   "pytest-jira>=0.3.24",
 ]
 
