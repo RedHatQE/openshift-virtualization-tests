@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = "==3.12.*"
 
 [[package]]
@@ -23,15 +23,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/c6/78/7d432127c41b50bccba979505f272c16cbcadcc33645d5fa3a738110ae75/anyio-4.11.0.tar.gz", hash = "sha256:82a8d0b81e318cc5ce71a5f1f8b5c4e63619620b63141ef8c995fa0db95a57c4", size = 219094, upload-time = "2025-09-23T09:19:12.58Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/15/b3/9b1a8074496371342ec1e796a96f99c82c945a339cd81a8e73de28b4cf9e/anyio-4.11.0-py3-none-any.whl", hash = "sha256:0287e96f4d26d4149305414d4e3bc32f0dcd0862365a4bddea19d7a1ec38c4fc", size = 109097, upload-time = "2025-09-23T09:19:10.601Z" },
-]
-
-[[package]]
-name = "ast-comments"
-version = "1.2.3"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/54/9f/be024de83c52e7aecb7d3871c3e4c24bc0df377fb752fa65745c36b8f35f/ast_comments-1.2.3.tar.gz", hash = "sha256:f9d003e9608b54195bd822b1d359a18e24573d2d8beff0307d7dc6f9d0cd0ba6", size = 5360, upload-time = "2025-06-29T09:53:20.08Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/3a/c3/85f81c3fe2f7a2bd634239056bffac4bfb4324761c787845f78dc264082c/ast_comments-1.2.3-py3-none-any.whl", hash = "sha256:2b2319312027a523dd4b30381a7662da8fdd16210786db3402d8e1b1df12a886", size = 5840, upload-time = "2025-06-29T09:53:19.211Z" },
 ]
 
 [[package]]
@@ -1216,7 +1207,7 @@ requires-dist = [
     { name = "pytest-xdist", marker = "extra == 'utilities-test'", specifier = ">=3.5.0" },
     { name = "python-benedict", specifier = ">=0.34.0" },
     { name = "python-dotenv", specifier = ">=1.2.1" },
-    { name = "python-rrmngmnt", specifier = ">=0.1.32" },
+    { name = "python-rrmngmnt", specifier = ">=0.2.2" },
     { name = "python-simple-logger", specifier = ">=2.0.13" },
     { name = "pyvmomi", specifier = ">=8.0.3.0.1" },
     { name = "pyyaml", specifier = ">=6.0.2" },
@@ -2215,15 +2206,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/2a/5f/8418daad5c353300b7661dd8ce2574b0410a6316a8be650a189d5c68d938/stevedore-5.5.0.tar.gz", hash = "sha256:d31496a4f4df9825e1a1e4f1f74d19abb0154aff311c3b376fcc89dae8fccd73", size = 513878, upload-time = "2025-08-25T12:54:26.806Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/80/c5/0c06759b95747882bb50abda18f5fb48c3e9b0fbfc6ebc0e23550b52415d/stevedore-5.5.0-py3-none-any.whl", hash = "sha256:18363d4d268181e8e8452e71a38cd77630f345b2ef6b4a8d5614dac5ee0d18cf", size = 49518, upload-time = "2025-08-25T12:54:25.445Z" },
-]
-
-[[package]]
-name = "tenacity"
-version = "9.1.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/0a/d4/2b0cd0fe285e14b36db076e78c93766ff1d529d70408bd1d2a5a84f1d929/tenacity-9.1.2.tar.gz", hash = "sha256:1169d376c297e7de388d18b4481760d478b0e99a777cad3a9c86e556f4b697cb", size = 48036, upload-time = "2025-04-02T08:25:09.966Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e5/30/643397144bfbfec6f6ef821f36f33e57d35946c44a2352d3c9f0ae847619/tenacity-9.1.2-py3-none-any.whl", hash = "sha256:f77bf36710d8b73a50b2dd155c97b870017ad21afe6ab300326b0371b3b05138", size = 28248, upload-time = "2025-04-02T08:25:07.678Z" },
 ]
 
 [[package]]
