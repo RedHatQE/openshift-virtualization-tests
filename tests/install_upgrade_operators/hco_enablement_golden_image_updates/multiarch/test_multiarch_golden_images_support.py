@@ -45,7 +45,7 @@ class TestDisabledMultiarchGoldenImagesSupport:
         "resource_type",
         [
             pytest.param(DataImportCron),
-            pytest.param(DataSource, marks=pytest.mark.jira("CNV-68996", run=False)),
+            pytest.param(DataSource, marks=pytest.mark.jira("CNV-99085", run=False)),
         ],
     )
     def test_only_base_golden_image_resources_exist(
