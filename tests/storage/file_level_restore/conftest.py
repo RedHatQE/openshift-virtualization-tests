@@ -1,13 +1,25 @@
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 
 import pytest
 from ocp_resources.datavolume import DataVolume
+from ocp_resources.deployment import Deployment
+from ocp_resources.resource import ResourceEditor
+from ocp_resources.role import Role
+from ocp_resources.role_binding import RoleBinding
+from ocp_resources.storage_class import StorageClass
+from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_resources.volume_snapshot import VolumeSnapshot
 from pyhelper_utils.shell import run_ssh_commands
+from timeout_sampler import TimeoutSampler
 
 from tests.storage.file_level_restore.constants import (
+    FILE_RESTORE_OPERATOR_DEPLOYMENT_NAME,
+    FILE_RESTORE_OPERATOR_NAMESPACE,
     LINUX_DATA_DISK_MOUNT_PATH,
     LINUX_DATA_DISK_SIZE,
     LINUX_DATA_DISK_SNAPSHOT_RESTORE_CR_NAME,
@@ -31,6 +43,8 @@ from tests.storage.file_level_restore.constants import (
 )
 from tests.storage.file_level_restore.utils import (
     VirtualMachineFileRestore,
+    VolumeSnapshotContent,
+    assert_successful_restore_cleanup,
     delete_linux_data_disk_file,
     delete_linux_guest_file,
     delete_windows_guest_file,
@@ -44,16 +58,20 @@ from tests.storage.file_level_restore.utils import (
     linux_restore_test_file_path,
     linux_root_disk_online_virtual_machine_snapshot,
     linux_volume_snapshot,
+    restore_volume_name,
     wait_for_file_restore_operator_ready,
     wait_for_file_restore_phase,
     windows_data_disk_path,
     windows_data_disk_volume_snapshot,
     windows_guest_path,
 )
+from tests.storage.online_resize.utils import cksum_file
 from tests.utils import create_windows2022_vm
+from utilities.constants.cluster import POD_SECURITY_NAMESPACE_LABELS
 from utilities.constants.images import OS_FLAVOR_RHEL
 from utilities.constants.instance_types import RHEL10_PREFERENCE, U1_SMALL
-from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5SEC
+from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5MIN, TIMEOUT_5SEC, TIMEOUT_10MIN
+from utilities.infra import create_ns, unique_name
 from utilities.storage import (
     add_dv_to_vm,
     create_dv,
@@ -63,6 +81,12 @@ from utilities.storage import (
     write_file_via_ssh,
 )
 from utilities.virt import VirtualMachineForTests, running_vm
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from kubernetes.dynamic import DynamicClient
+    from ocp_resources.namespace import Namespace
 
 LOGGER = logging.getLogger(__name__)
 
@@ -75,7 +99,12 @@ def file_restore_operator(admin_client):
 
 
 @pytest.fixture(scope="class")
-def linux_data_disk(admin_client, namespace, snapshot_storage_class_name_scope_module):
+def linux_data_disk(
+    request: pytest.FixtureRequest,
+    admin_client: DynamicClient,
+    namespace: Namespace,
+    snapshot_storage_class_name_scope_module: str,
+) -> Generator[DataVolume]:
     """Blank DataVolume used as the Linux VM secondary data disk."""
     with DataVolume(
         name="file-restore-linux-data-disk",
@@ -85,6 +114,7 @@ def linux_data_disk(admin_client, namespace, snapshot_storage_class_name_scope_m
         storage_class=snapshot_storage_class_name_scope_module,
         client=admin_client,
         api_name="storage",
+        volume_mode=getattr(request, "param", {}).get("volume_mode"),
     ) as data_volume:
         yield data_volume
 
@@ -208,9 +238,13 @@ def linux_data_disk_snapshot(
 
 
 @pytest.fixture()
-def linux_test_file_on_root_disk(file_restore_linux_root_only_vm):
+def linux_test_file_on_root_disk(
+    request: pytest.FixtureRequest,
+    file_restore_linux_root_only_vm: VirtualMachineForTests,
+) -> Generator[tuple[str, str]]:
     """Test file on the Linux VM root filesystem. Yields (restore_path, content)."""
     restore_path = linux_restore_test_file_path(username=file_restore_linux_root_only_vm.username)
+    file_content = getattr(request, "param", {}).get("content", LINUX_TEST_FILE_CONTENT)
     restore_directory, _ = restore_path.rsplit("/", maxsplit=1)
     run_ssh_commands(
         host=file_restore_linux_root_only_vm.ssh_exec,
@@ -221,9 +255,9 @@ def linux_test_file_on_root_disk(file_restore_linux_root_only_vm):
     write_file_via_ssh(
         vm=file_restore_linux_root_only_vm,
         filename=restore_path,
-        content=LINUX_TEST_FILE_CONTENT,
+        content=file_content,
     )
-    yield restore_path, LINUX_TEST_FILE_CONTENT
+    yield restore_path, file_content
 
 
 @pytest.fixture()
@@ -747,4 +781,417 @@ def second_linux_data_disk_snapshot_file_restore(
             file_restore=file_restore,
             target_phase=VirtualMachineFileRestore.Phase.SUCCEEDED,
         )
+        yield file_restore
+
+
+@pytest.fixture()
+def file_restore_source_namespace(admin_client: DynamicClient) -> Generator[Namespace]:
+    """Separate namespace for a cross-namespace snapshot source."""
+    yield from create_ns(
+        name=unique_name(name="file-restore-source"),
+        admin_client=admin_client,
+        labels=POD_SECURITY_NAMESPACE_LABELS,
+    )
+
+
+@pytest.fixture()
+def cross_namespace_backup_pvc(
+    admin_client: DynamicClient,
+    file_restore_source_namespace: Namespace,
+    linux_data_disk_snapshot: VolumeSnapshot,
+    snapshot_storage_class_name_scope_module: str,
+) -> Generator[DataVolume]:
+    """Backup PVC in the source namespace, cloned from the target VM's data snapshot."""
+    with create_dv(
+        client=admin_client,
+        dv_name="file-restore-cross-namespace-backup",
+        namespace=file_restore_source_namespace.name,
+        storage_class=snapshot_storage_class_name_scope_module,
+        source_dict={
+            "snapshot": {"name": linux_data_disk_snapshot.name, "namespace": linux_data_disk_snapshot.namespace}
+        },
+    ) as data_volume:
+        data_volume.wait_for_dv_success()
+        yield data_volume
+
+
+@pytest.fixture()
+def cross_namespace_data_disk_snapshot(
+    admin_client: DynamicClient,
+    file_restore_linux_vm: VirtualMachineForTests,
+    cross_namespace_backup_pvc: DataVolume,
+    snapshot_storage_class_name_scope_module: str,
+) -> Generator[VolumeSnapshot]:
+    """Ready data-disk snapshot in a different namespace from the target VM."""
+    with linux_volume_snapshot(
+        vm=file_restore_linux_vm,
+        pvc_name=cross_namespace_backup_pvc.name,
+        snapshot_name="file-restore-cross-namespace-snapshot",
+        namespace_name=cross_namespace_backup_pvc.namespace,
+        storage_class_name=snapshot_storage_class_name_scope_module,
+        admin_client=admin_client,
+        flush_guest=False,
+    ) as snapshot:
+        yield snapshot
+
+
+@pytest.fixture()
+def cross_namespace_restore_permissions(
+    admin_client: DynamicClient,
+    cross_namespace_data_disk_snapshot: VolumeSnapshot,
+) -> Generator[RoleBinding]:
+    """Source-namespace permissions for the operator's CDI snapshot clone request."""
+    operator_service_account = Deployment(
+        name=FILE_RESTORE_OPERATOR_DEPLOYMENT_NAME,
+        namespace=FILE_RESTORE_OPERATOR_NAMESPACE,
+        client=admin_client,
+    ).instance.spec.template.spec.serviceAccountName
+    with Role(
+        name="file-restore-snapshot-source",
+        namespace=cross_namespace_data_disk_snapshot.namespace,
+        client=admin_client,
+        rules=[
+            {"apiGroups": [DataVolume.api_group], "resources": ["datavolumes/source"], "verbs": ["create"]},
+            {"apiGroups": [VolumeSnapshot.api_group], "resources": ["volumesnapshots"], "verbs": ["get"]},
+            {"apiGroups": [""], "resources": ["persistentvolumeclaims"], "verbs": ["get"]},
+        ],
+    ) as role:
+        with RoleBinding(
+            name="file-restore-snapshot-source",
+            namespace=cross_namespace_data_disk_snapshot.namespace,
+            client=admin_client,
+            subjects_kind="ServiceAccount",
+            subjects_name=operator_service_account,
+            subjects_namespace=FILE_RESTORE_OPERATOR_NAMESPACE,
+            role_ref_kind=role.kind,
+            role_ref_name=role.name,
+        ) as role_binding:
+            yield role_binding
+
+
+@pytest.fixture()
+def deleted_cross_namespace_linux_file(
+    file_restore_linux_vm: VirtualMachineForTests,
+    cross_namespace_data_disk_snapshot: VolumeSnapshot,
+    linux_test_file_on_data_disk: tuple[str, str],
+) -> tuple[str, str]:
+    """Data-disk file deleted only after the cross-namespace snapshot is ready."""
+    restore_path, _ = linux_test_file_on_data_disk
+    delete_linux_data_disk_file(vm=file_restore_linux_vm, restore_path=restore_path)
+    delete_linux_guest_file(vm=file_restore_linux_vm, guest_path=restore_path)
+    return linux_test_file_on_data_disk
+
+
+@pytest.fixture()
+def file_restore_default_storage_class(
+    admin_client: DynamicClient,
+    removed_default_storage_classes: None,
+    snapshot_storage_class_name_scope_module: str,
+) -> Generator[StorageClass]:
+    """Snapshot storage class selected as CDI's default during the compatibility test."""
+    storage_class = StorageClass(name=snapshot_storage_class_name_scope_module, client=admin_client)
+    with ResourceEditor(
+        patches={
+            storage_class: {
+                "metadata": {
+                    "annotations": {
+                        StorageClass.Annotations.IS_DEFAULT_CLASS: "true",
+                        StorageClass.Annotations.IS_DEFAULT_VIRT_CLASS: "true",
+                    }
+                }
+            }
+        }
+    ):
+        yield storage_class
+
+
+@pytest.fixture()
+def block_default_storage_profile(
+    admin_client: DynamicClient,
+    file_restore_default_storage_class: StorageClass,
+    linux_data_disk_snapshot: VolumeSnapshot,
+) -> Generator[StorageProfile]:
+    """Default restore StorageProfile preferring Block after the Filesystem backup exists."""
+    storage_profile = StorageProfile(name=file_restore_default_storage_class.name, client=admin_client)
+    claim_property_sets = [{"accessModes": [DataVolume.AccessMode.RWO], "volumeMode": DataVolume.VolumeMode.BLOCK}]
+    LOGGER.info(f"Setting StorageProfile '{storage_profile.name}' to prefer Block restore volumes")
+    with ResourceEditor(patches={storage_profile: {"spec": {"claimPropertySets": claim_property_sets}}}):
+        for effective_claim_property_sets in TimeoutSampler(
+            wait_timeout=TIMEOUT_2MIN,
+            sleep=TIMEOUT_5SEC,
+            func=lambda: storage_profile.instance.to_dict()["status"]["claimPropertySets"],
+        ):
+            if effective_claim_property_sets == claim_property_sets:
+                break
+        yield storage_profile
+
+
+@pytest.fixture()
+def deleted_linux_file_for_snapshot(
+    file_restore_linux_vm: VirtualMachineForTests,
+    linux_data_disk_snapshot: VolumeSnapshot,
+    linux_test_file_on_data_disk: tuple[str, str],
+) -> tuple[str, str]:
+    """Linux file removed after its data-disk snapshot is ready."""
+    restore_path, _ = linux_test_file_on_data_disk
+    delete_linux_data_disk_file(vm=file_restore_linux_vm, restore_path=restore_path)
+    delete_linux_guest_file(vm=file_restore_linux_vm, guest_path=restore_path)
+    return linux_test_file_on_data_disk
+
+
+@pytest.fixture()
+def linux_root_disk_browsing_source(
+    request: pytest.FixtureRequest,
+) -> VolumeSnapshot | DataVolume:
+    """Requested root-disk backup, without creating the unused source variant."""
+    return request.getfixturevalue(argname=request.param["fixture_name"])
+
+
+@pytest.fixture()
+def linux_large_file_on_data_disk(
+    file_restore_linux_vm: VirtualMachineForTests,
+) -> Generator[tuple[str, str]]:
+    """One GiB of random data on the data disk and its recorded SHA256 checksum."""
+    restore_path = f"/home/{file_restore_linux_vm.username}/{LINUX_RESTORE_TEST_DIRECTORY}/large-file.bin"
+    restore_directory, _ = restore_path.rsplit("/", maxsplit=1)
+    ensure_linux_data_disk_directory(vm=file_restore_linux_vm, relative_directory=restore_directory)
+    data_disk_path = linux_data_disk_file_path(relative_path=restore_path)
+    LOGGER.info(f"Writing 1 GiB of random data to '{data_disk_path}' on VM '{file_restore_linux_vm.name}'")
+    run_ssh_commands(
+        host=file_restore_linux_vm.ssh_exec,
+        commands=["dd", "if=/dev/urandom", f"of={data_disk_path}", "bs=1M", "count=1024", "conv=fsync", "status=none"],
+        timeout=TIMEOUT_10MIN,
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
+    )
+    checksum = cksum_file(vm=file_restore_linux_vm, filename=data_disk_path)
+    try:
+        yield restore_path, checksum
+    finally:
+        delete_linux_data_disk_file(vm=file_restore_linux_vm, restore_path=restore_path)
+        delete_linux_guest_file(vm=file_restore_linux_vm, guest_path=restore_path)
+
+
+@pytest.fixture()
+def linux_large_file_snapshot(
+    admin_client: DynamicClient,
+    namespace: Namespace,
+    snapshot_storage_class_name_scope_module: str,
+    file_restore_linux_vm: VirtualMachineForTests,
+    linux_data_disk: DataVolume,
+    linux_large_file_on_data_disk: tuple[str, str],
+) -> Generator[VolumeSnapshot]:
+    """Ready data-disk snapshot containing the complete one GiB file."""
+    with linux_volume_snapshot(
+        vm=file_restore_linux_vm,
+        pvc_name=linux_data_disk.name,
+        snapshot_name="file-restore-large-file-snapshot",
+        namespace_name=namespace.name,
+        storage_class_name=snapshot_storage_class_name_scope_module,
+        admin_client=admin_client,
+    ) as snapshot:
+        yield snapshot
+
+
+@pytest.fixture()
+def deleted_linux_large_file(
+    file_restore_linux_vm: VirtualMachineForTests,
+    linux_large_file_snapshot: VolumeSnapshot,
+    linux_large_file_on_data_disk: tuple[str, str],
+) -> tuple[str, str]:
+    """One GiB source file deleted after snapshot, with its original checksum."""
+    restore_path, _ = linux_large_file_on_data_disk
+    delete_linux_data_disk_file(vm=file_restore_linux_vm, restore_path=restore_path)
+    delete_linux_guest_file(vm=file_restore_linux_vm, guest_path=restore_path)
+    return linux_large_file_on_data_disk
+
+
+@pytest.fixture()
+def cross_namespace_file_restore(
+    admin_client: DynamicClient,
+    namespace: Namespace,
+    file_restore_linux_vm: VirtualMachineForTests,
+    cross_namespace_data_disk_snapshot: VolumeSnapshot,
+    cross_namespace_restore_permissions: RoleBinding,
+    deleted_cross_namespace_linux_file: tuple[str, str],
+) -> Generator[VirtualMachineFileRestore]:
+    """Restore request using the prepared snapshot in the source namespace."""
+    restore_path, _ = deleted_cross_namespace_linux_file
+    with VirtualMachineFileRestore(
+        name="flr-cross-namespace",
+        namespace=namespace.name,
+        target_vm_name=file_restore_linux_vm.name,
+        source_snapshot_name=cross_namespace_data_disk_snapshot.name,
+        source_namespace=cross_namespace_data_disk_snapshot.namespace,
+        source_path=restore_path,
+        client=admin_client,
+    ) as file_restore:
+        yield file_restore
+
+
+@pytest.fixture()
+def linux_data_disk_snapshot_content(
+    admin_client: DynamicClient,
+    linux_data_disk_snapshot: VolumeSnapshot,
+) -> VolumeSnapshotContent:
+    """Existing CSI snapshot content for checking the source volume mode."""
+    return VolumeSnapshotContent(
+        name=linux_data_disk_snapshot.instance.status.boundVolumeSnapshotContentName,
+        client=admin_client,
+    )
+
+
+@pytest.fixture()
+def volume_mode_mismatch_file_restore(
+    admin_client: DynamicClient,
+    namespace: Namespace,
+    file_restore_linux_vm: VirtualMachineForTests,
+    linux_data_disk_snapshot: VolumeSnapshot,
+    deleted_linux_file_for_snapshot: tuple[str, str],
+    block_default_storage_profile: StorageProfile,
+) -> Generator[VirtualMachineFileRestore]:
+    """Restore request with a Filesystem source and a Block restore preference."""
+    restore_path, _ = deleted_linux_file_for_snapshot
+    with VirtualMachineFileRestore(
+        name="flr-volume-mode-mismatch",
+        namespace=namespace.name,
+        target_vm_name=file_restore_linux_vm.name,
+        source_snapshot_name=linux_data_disk_snapshot.name,
+        source_path=restore_path,
+        client=admin_client,
+    ) as file_restore:
+        yield file_restore
+
+
+@pytest.fixture()
+def volume_mode_restore_data_volume(
+    admin_client: DynamicClient,
+    namespace: Namespace,
+    volume_mode_mismatch_file_restore: VirtualMachineFileRestore,
+) -> DataVolume:
+    """Existing operator-created restore volume with its PVC available for inspection."""
+    data_volume = DataVolume(
+        name=restore_volume_name(restore_cr_name=volume_mode_mismatch_file_restore.name),
+        namespace=namespace.name,
+        client=admin_client,
+    )
+    data_volume.wait(timeout=TIMEOUT_5MIN, wait_for_exists_only=True)
+    data_volume.pvc.wait(timeout=TIMEOUT_5MIN)
+    return data_volume
+
+
+@pytest.fixture()
+def windows_manual_browsing_file_restore(
+    admin_client: DynamicClient,
+    namespace: Namespace,
+    windows_file_restore_vm: VirtualMachineForTests,
+    windows_backup_pvc: DataVolume,
+) -> Generator[VirtualMachineFileRestore]:
+    """Manual-mode restore request for the Windows NTFS backup."""
+    with VirtualMachineFileRestore(
+        name="flr-win-manual",
+        namespace=namespace.name,
+        target_vm_name=windows_file_restore_vm.name,
+        source_pvc_name=windows_backup_pvc.name,
+        client=admin_client,
+    ) as file_restore:
+        yield file_restore
+    assert_successful_restore_cleanup(
+        vm=windows_file_restore_vm,
+        restore_cr_name=file_restore.name,
+        namespace_name=namespace.name,
+        admin_client=admin_client,
+        snapshot_source=False,
+    )
+
+
+@pytest.fixture()
+def linux_root_disk_manual_browsing_file_restore(
+    admin_client: DynamicClient,
+    namespace: Namespace,
+    file_restore_linux_root_only_vm: VirtualMachineForTests,
+    linux_root_disk_browsing_source: VolumeSnapshot | DataVolume,
+) -> Generator[VirtualMachineFileRestore]:
+    """Manual root-backup restore request, cleaned up after browsing completes."""
+    snapshot_source = isinstance(linux_root_disk_browsing_source, VolumeSnapshot)
+    with VirtualMachineFileRestore(
+        name="flr-root-manual",
+        namespace=namespace.name,
+        target_vm_name=file_restore_linux_root_only_vm.name,
+        source_snapshot_name=linux_root_disk_browsing_source.name if snapshot_source else None,
+        source_pvc_name=None if snapshot_source else linux_root_disk_browsing_source.name,
+        client=admin_client,
+    ) as file_restore:
+        yield file_restore
+    assert_successful_restore_cleanup(
+        vm=file_restore_linux_root_only_vm,
+        restore_cr_name=file_restore.name,
+        namespace_name=namespace.name,
+        admin_client=admin_client,
+        snapshot_source=snapshot_source,
+    )
+
+
+@pytest.fixture()
+def large_file_snapshot_file_restore(
+    admin_client: DynamicClient,
+    namespace: Namespace,
+    file_restore_linux_vm: VirtualMachineForTests,
+    linux_large_file_snapshot: VolumeSnapshot,
+    deleted_linux_large_file: tuple[str, str],
+) -> Generator[VirtualMachineFileRestore]:
+    """Restore request for the deleted one GiB file in the data-disk snapshot."""
+    restore_path, _ = deleted_linux_large_file
+    with VirtualMachineFileRestore(
+        name="flr-large-file",
+        namespace=namespace.name,
+        target_vm_name=file_restore_linux_vm.name,
+        source_snapshot_name=linux_large_file_snapshot.name,
+        source_path=restore_path,
+        client=admin_client,
+    ) as file_restore:
+        yield file_restore
+
+
+@pytest.fixture()
+def concurrent_data_disk_file_restore(
+    admin_client: DynamicClient,
+    namespace: Namespace,
+    file_restore_linux_vm: VirtualMachineForTests,
+    linux_backup_pvc: DataVolume,
+    deleted_linux_test_file_on_data_disk: tuple[str, str],
+    deleted_linux_test_file_on_root_disk: tuple[str, str],
+) -> Generator[VirtualMachineFileRestore]:
+    """First concurrent request, created after both VMs' backup and deletion setup."""
+    restore_path, _ = deleted_linux_test_file_on_data_disk
+    with VirtualMachineFileRestore(
+        name="flr-concurrent-data-disk",
+        namespace=namespace.name,
+        target_vm_name=file_restore_linux_vm.name,
+        source_pvc_name=linux_backup_pvc.name,
+        source_path=restore_path,
+        client=admin_client,
+    ) as file_restore:
+        yield file_restore
+
+
+@pytest.fixture()
+def concurrent_root_disk_file_restore(
+    admin_client: DynamicClient,
+    namespace: Namespace,
+    file_restore_linux_root_only_vm: VirtualMachineForTests,
+    linux_root_disk_snapshot: VolumeSnapshot,
+    deleted_linux_test_file_on_root_disk: tuple[str, str],
+    concurrent_data_disk_file_restore: VirtualMachineFileRestore,
+) -> Generator[VirtualMachineFileRestore]:
+    """Second concurrent request, created without waiting for the first to complete."""
+    restore_path, _ = deleted_linux_test_file_on_root_disk
+    with VirtualMachineFileRestore(
+        name="flr-concurrent-root-disk",
+        namespace=namespace.name,
+        target_vm_name=file_restore_linux_root_only_vm.name,
+        source_snapshot_name=linux_root_disk_snapshot.name,
+        source_path=restore_path,
+        client=admin_client,
+    ) as file_restore:
         yield file_restore

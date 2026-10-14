@@ -16,7 +16,7 @@ from ocp_resources.config_map import ConfigMap
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.pod import Pod
-from ocp_resources.resource import NamespacedResource
+from ocp_resources.resource import NamespacedResource, Resource
 from ocp_resources.storage_class import StorageClass
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 from ocp_resources.volume_snapshot import VolumeSnapshot
@@ -64,6 +64,12 @@ class VirtualMachineSnapshotContent(NamespacedResource):
     kind: str = "VirtualMachineSnapshotContent"
 
 
+class VolumeSnapshotContent(Resource):
+    """CSI snapshot content with the source PVC volume mode."""
+
+    api_group: str = Resource.ApiGroup.SNAPSHOT_STORAGE_K8S_IO
+
+
 class LinuxRootDiskVirtualMachineSnapshotInfo(NamedTuple):
     """Online VirtualMachineSnapshot metadata for root-disk FLR experiments."""
 
@@ -95,6 +101,7 @@ class VirtualMachineFileRestore(NamespacedResource):
         source_pvc_name: str | None = None,
         source_path: str | None = None,
         source_partition: int | None = None,
+        source_namespace: str | None = None,
         **kwargs: Any,
     ) -> None:
         """Create a VirtualMachineFileRestore resource.
@@ -106,6 +113,7 @@ class VirtualMachineFileRestore(NamespacedResource):
             source_path: Path on the source volume to restore. Restored to the same
                 path on the guest root filesystem (operator does not support targetPath).
             source_partition: Partition number on the source volume.
+            source_namespace: Namespace containing the source snapshot or PVC.
             **kwargs: Additional arguments passed to NamespacedResource.
         """
         super().__init__(**kwargs)
@@ -114,6 +122,7 @@ class VirtualMachineFileRestore(NamespacedResource):
         self._source_pvc_name = source_pvc_name
         self._source_path = source_path
         self._source_partition = source_partition
+        self._source_namespace = source_namespace
 
     def to_dict(self) -> None:
         """Build the VirtualMachineFileRestore manifest in ``self.res``.
@@ -143,6 +152,10 @@ class VirtualMachineFileRestore(NamespacedResource):
                 spec["source"]["pvc"] = {"name": self._source_pvc_name}
             else:
                 raise ValueError("VirtualMachineFileRestore requires either source_snapshot_name or source_pvc_name")
+
+            if self._source_namespace is not None:
+                source_kind = "snapshot" if self._source_snapshot_name else "pvc"
+                spec["source"][source_kind]["namespace"] = self._source_namespace
 
             if self._source_path is not None:
                 spec["sourcePath"] = self._source_path
@@ -893,6 +906,55 @@ def windows_guest_path(guest_path: str) -> str:
         Windows path with backslashes.
     """
     return guest_path.replace("/", "\\")
+
+
+def linux_backup_file_path(vm: VirtualMachineForTests, mount_path: str, guest_path: str) -> str:
+    """Find a guest file in a mounted backup, including backups with multiple LVs.
+
+    Args:
+        vm: Linux VM with the backup mounted.
+        mount_path: Backup mount reported by the restore operation.
+        guest_path: Original absolute path of the file in the guest.
+
+    Returns:
+        Absolute path of the unique matching file inside the backup mount.
+    """
+    matches = run_ssh_commands(
+        host=vm.ssh_exec,
+        commands=["sudo", "find", mount_path, "-type", "f", "-path", f"*{guest_path}"],
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
+    )[0].splitlines()
+    assert len(matches) == 1, f"Expected one backup of '{guest_path}' below '{mount_path}', found {matches}"
+    return matches[0]
+
+
+def assert_windows_backup_read_only(vm: VirtualMachineForTests, restore_cr_name: str, backup_file_path: str) -> None:
+    """Check the mounted backup rejects modification of a known file.
+
+    Args:
+        vm: Windows VM with the backup mounted.
+        restore_cr_name: Name of the manual-mode restore request.
+        backup_file_path: Existing file on the mounted backup.
+    """
+    volume_name = restore_volume_name(restore_cr_name=restore_cr_name)
+    command = (
+        "$ErrorActionPreference = 'Stop';"
+        f" $disk = Get-Disk | Where-Object {{ $_.SerialNumber -and $_.SerialNumber.Trim() -eq '{volume_name}' }};"
+        " if (-not $disk) { throw 'Backup disk not found' };"
+        " try {"
+        f" Add-Content -LiteralPath '{backup_file_path}' -Value 'unexpected-backup-write' -ErrorAction Stop;"
+        " Write-Output 'write-succeeded'"
+        " } catch [System.UnauthorizedAccessException], [System.IO.IOException] {"
+        " Write-Output 'write-denied' }"
+    )
+    output = run_ssh_commands(
+        host=vm.ssh_exec,
+        commands=["powershell", "-NoProfile", "-Command", command],
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
+    )[0].strip()
+    assert output == "write-denied", f"Backup file '{backup_file_path}' accepted a write: {output!r}"
 
 
 def delete_windows_guest_file(vm: VirtualMachineForTests, guest_path: str) -> None:
