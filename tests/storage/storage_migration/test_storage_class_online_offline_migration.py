@@ -31,10 +31,13 @@ class TestOfflineVMStorageMigrationVolumeModes:
     __test__ = False
 
     @pytest.mark.polarion("CNV-16796")
+    @pytest.mark.manual
     def test_offline_vm_storage_migration_across_volume_modes(self):
         """
         Test that offline VM storage migration completes successfully and preserves data
         across volume mode combinations between different storage classes.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_offline.md
 
         Preconditions:
             - Stopped VM with a data disk on the source storage class using the source volume mode
@@ -68,10 +71,13 @@ class TestMixedOfflineOnlineStorageMigration:
     __test__ = False
 
     @pytest.mark.polarion("CNV-16797")
+    @pytest.mark.manual
     def test_mixed_offline_online_vm_storage_migration(self):
         """
         Test that storage migration completes for a plan containing both offline and running VMs
         while each VM preserves its original state.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_offline.md
 
         Preconditions:
             - Stopped VM on the source storage class
@@ -106,10 +112,13 @@ class TestOfflineStorageMigrationCleanupPolicy:
     __test__ = False
 
     @pytest.mark.polarion("CNV-16798")
+    @pytest.mark.manual
     def test_source_volumes_retained_after_offline_migration(self):
         """
         Test that source volumes are retained after offline VM storage migration
         when cleanup policy is set to retain.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_offline.md
 
         Preconditions:
             - Stopped VM with a data disk on the source storage class
@@ -129,10 +138,13 @@ class TestOfflineStorageMigrationCleanupPolicy:
         """
 
     @pytest.mark.polarion("CNV-16799")
+    @pytest.mark.manual
     def test_source_volumes_deleted_after_offline_migration(self):
         """
         Test that source volumes are deleted after offline VM storage migration
         when cleanup policy is set to delete.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_offline.md
 
         Preconditions:
             - Stopped VM with a data disk on the source storage class
@@ -165,9 +177,12 @@ class TestOfflineVMStorageMigrationWithHotplugDisks:
     __test__ = False
 
     @pytest.mark.polarion("CNV-16800")
+    @pytest.mark.manual
     def test_offline_vm_with_hotplug_disks_storage_migration(self):
         """
         Test that offline VM storage migration migrates all disks including hotplug disks.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_offline.md
 
         Preconditions:
             - Stopped VM with boot disk and hotplug disks on the source storage class
@@ -201,10 +216,13 @@ class TestOfflineVMStorageMigrationFailureRollback:
     __test__ = False
 
     @pytest.mark.polarion("CNV-16802")
+    @pytest.mark.manual
     def test_offline_vm_rollback_on_migration_failure(self):
         """
         [NEGATIVE] Test that offline VM disk references remain unchanged and the source volume
         is preserved when storage migration fails.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_offline.md
 
         Preconditions:
             - Stopped VM with a data disk on the source storage class
@@ -238,10 +256,13 @@ class TestVMStartDuringStorageMigration:
     __test__ = False
 
     @pytest.mark.polarion("CNV-16803")
+    @pytest.mark.manual
     def test_vm_start_during_offline_storage_migration(self):
         """
         Test that starting a stopped VM during storage migration succeeds
         and the VM waits for migration completion before becoming ready.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_offline.md
 
         Preconditions:
             - Stopped VM with a data disk on the source storage class
@@ -277,10 +298,13 @@ class TestCancelInProgressStorageMigration:
     __test__ = False
 
     @pytest.mark.polarion("CNV-16804")
+    @pytest.mark.manual
     def test_cancel_in_progress_storage_migration(self):
         """
         Test that cancelling an in-progress storage migration preserves original VM state
         for both offline and online VMs.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_offline.md
 
         Preconditions:
             - Stopped VM on the source storage class with a sufficiently large disk

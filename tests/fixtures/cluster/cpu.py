@@ -4,6 +4,7 @@ import pytest
 from pytest_testconfig import config as py_config
 
 from utilities.constants.architecture import ARM_64
+from utilities.constants.cluster import CPU_MANAGER_LABEL
 from utilities.cpu import (
     find_common_cpu_model_for_live_migration,
     get_common_cpu_from_nodes,
@@ -75,5 +76,5 @@ def skip_if_no_common_modern_cpu(cluster_common_modern_node_cpu, nodes_cpu_archi
 
 @pytest.fixture(scope="module")
 def skip_if_no_cpumanager_workers(schedulable_nodes):
-    if not any([node.labels.cpumanager == "true" for node in schedulable_nodes]):
+    if not any([node.labels.get(CPU_MANAGER_LABEL) == "true" for node in schedulable_nodes]):
         pytest.skip("Test should run on cluster with CPU Manager")

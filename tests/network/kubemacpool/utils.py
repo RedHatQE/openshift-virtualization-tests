@@ -12,7 +12,6 @@ from utilities.virt import (
 )
 
 LOGGER = logging.getLogger(__name__)
-KMP_PODS_LABEL = "control-plane=mac-controller-manager"
 IfaceTuple = namedtuple("IfaceTuple", ["ip_address", "mac_address", "name"])
 
 

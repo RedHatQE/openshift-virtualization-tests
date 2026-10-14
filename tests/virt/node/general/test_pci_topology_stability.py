@@ -69,8 +69,9 @@ def migrated_pci_topology_vm(admin_client, pci_topology_vm, initial_pci_addresse
 
 
 @pytest.fixture()
-def snapshot_restored_pci_topology_vm(admin_client, pci_topology_vm, initial_pci_addresses):
+def snapshot_restored_pci_topology_vm(unprivileged_client, pci_topology_vm, initial_pci_addresses):
     with VirtualMachineSnapshot(
+        client=unprivileged_client,
         name=f"{pci_topology_vm.name}-snapshot",
         namespace=pci_topology_vm.namespace,
         vm_name=pci_topology_vm.name,
@@ -79,7 +80,7 @@ def snapshot_restored_pci_topology_vm(admin_client, pci_topology_vm, initial_pci
         pci_topology_vm.stop(wait=True)
         LOGGER.info(f"Restoring VM {pci_topology_vm.name} from snapshot {snapshot.name}")
         with VirtualMachineRestore(
-            client=admin_client,
+            client=unprivileged_client,
             name=f"{pci_topology_vm.name}-restore",
             namespace=pci_topology_vm.namespace,
             vm_name=pci_topology_vm.name,
@@ -118,6 +119,8 @@ class TestPCITopologyStability:
         restarted_pci_topology_vm: VirtualMachineForTests,
     ):
         """
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/pci-topology-stability.md
+
         Steps:
             1. Restart the VM and wait until it is running with SSH access
             2. Capture PCI addresses from the guest
@@ -137,6 +140,8 @@ class TestPCITopologyStability:
         migrated_pci_topology_vm: VirtualMachineForTests,
     ):
         """
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/pci-topology-stability.md
+
         Steps:
             1. Live-migrate the VM and verify SSH connectivity
             2. Capture PCI addresses from the guest
@@ -157,6 +162,8 @@ class TestPCITopologyStability:
         snapshot_restored_pci_topology_vm: VirtualMachineForTests,
     ):
         """
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/pci-topology-stability.md
+
         Preconditions:
             - Storage class supports snapshots
 

@@ -66,7 +66,7 @@ def multi_network_policy_enabled(admin_client, network_operator):
             resource_name="network",
             expected_conditions=DEFAULT_RESOURCE_CONDITIONS,
         )
-        if is_jira_open(jira_id="OCPBUGS-92080"):
+        if is_jira_open(jira_id="OCPBUGS-92080"):  # <skip-jira-utils-check>
             restart_ovnkube_node_daemonset()
         yield
     wait_for_consistent_resource_conditions(

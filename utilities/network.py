@@ -42,7 +42,6 @@ from utilities.constants.timeouts import (
 
 LOGGER = logging.getLogger(__name__)
 IFACE_UP_STATE = NodeNetworkConfigurationPolicy.Interface.State.UP
-IFACE_ABSENT_STATE = NodeNetworkConfigurationPolicy.Interface.State.ABSENT
 BOND = "bond"
 INPROGRESS = "InProgress"
 

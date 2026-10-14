@@ -42,6 +42,8 @@ class TestSriovMemoryHotplug:
         Test that after memory hot-plug on SR-IOV VM, the VMI status reflects the
         new memory and the SR-IOV interface is present in the VMI status.
 
+        Jira: https://redhat.atlassian.net/browse/CNV-69778  # <skip-jira-utils-check>
+
         Preconditions:
             - A running under-test VM with an SR-IOV interface, 1Gi initial
               memory, and 4Gi maxGuest configured
@@ -73,6 +75,8 @@ class TestSriovMemoryHotplug:
     ):
         """
         Test that SR-IOV connectivity is preserved after memory hot-plug.
+
+        Jira: https://redhat.atlassian.net/browse/CNV-69778  # <skip-jira-utils-check>
 
         Preconditions:
             - Under-test VM after memory hot-plug with SR-IOV interface present

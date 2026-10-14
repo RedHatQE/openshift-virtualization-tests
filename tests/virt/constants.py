@@ -1,17 +1,7 @@
 from copy import deepcopy
 
-import bitmath
-
-from tests.os_params import WINDOWS_10, WINDOWS_11
+from tests.os_params import WINDOWS_11
 from utilities.constants import Images
-
-VIRT_PROCESS_MEMORY_LIMITS = {
-    "virt-launcher-monitor": bitmath.MiB(25),
-    "virt-launcher": bitmath.MiB(100),
-    "virtqemud": bitmath.MiB(40),
-    "virtlogd": bitmath.MiB(25),
-}
-
 
 STRESS_CPU_MEM_IO_COMMAND = (
     "nohup stress-ng --vm {workers} --vm-bytes {memory} --vm-method all "
@@ -19,9 +9,7 @@ STRESS_CPU_MEM_IO_COMMAND = (
 )
 
 
-WINDOWS_10_WSL = deepcopy(WINDOWS_10)
 WINDOWS_11_WSL = deepcopy(WINDOWS_11)
-WINDOWS_10_WSL["image_path"] = f"{Images.Windows.UEFI_WIN_DIR}/{Images.Windows.WIN10_WSL2_IMG}"
 WINDOWS_11_WSL["image_path"] = f"{Images.Windows.DIR}/{Images.Windows.WIN11_WSL2_IMG}"
 
 

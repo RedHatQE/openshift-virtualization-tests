@@ -53,6 +53,8 @@ class TestFullBackup:
         """
         Test that a full backup in push mode completes successfully.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
+
         Preconditions:
             - Backup PVC available
 
@@ -84,6 +86,8 @@ class TestFullBackup:
     ):
         """
         Test that a full backup in pull mode becomes ready for export.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Preconditions:
             - Scratch PVC available for pull mode
@@ -135,6 +139,8 @@ class TestIncrementalBackup:
         """
         Test that an incremental backup in push mode completes successfully.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
+
         Preconditions:
             - Backup PVC available
             - Full backup completed in push mode
@@ -167,6 +173,8 @@ class TestIncrementalBackup:
     ):
         """
         Test that an incremental backup in pull mode becomes ready for export.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Preconditions:
             - Scratch PVC available for pull mode
@@ -220,6 +228,8 @@ class TestMultipleIncrementalBackups:
         Test that a full backup followed by multiple sequential incremental backups all complete
         successfully in push mode.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
+
         Preconditions:
             - Backup PVC available
 
@@ -260,6 +270,8 @@ class TestMultipleIncrementalBackups:
         """
         Test that a full backup followed by multiple sequential incremental backups all become
         ready for export in pull mode.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Preconditions:
             - Scratch PVC available for pull mode
@@ -320,6 +332,8 @@ class TestMultipleDiskBackup:
         """
         Test that a full backup in push mode completes successfully for a VM with multiple disks.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
+
         Preconditions:
             - Running CBT-enabled VM with a boot disk and two data disks
             - Test data written to all disks
@@ -358,6 +372,8 @@ class TestMultipleDiskBackup:
     ):
         """
         Test that a full backup in pull mode becomes ready for export for a VM with multiple disks.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Preconditions:
             - Running CBT-enabled VM with a boot disk and two data disks
@@ -414,6 +430,8 @@ class TestBackupAfterLiveMigration:
         """
         Test that an incremental backup in push mode completes successfully after live migration.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
+
         Preconditions:
             - Running CBT-enabled VM with disks on RWX storage
             - Test data written to the VM
@@ -445,6 +463,8 @@ class TestBackupAfterLiveMigration:
     ):
         """
         Test that an incremental backup in pull mode becomes ready for export after live migration.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Preconditions:
             - Running CBT-enabled VM with disks on RWX storage
@@ -487,9 +507,12 @@ class TestHotplugBackup:
     __test__ = False  # STD placeholder - not yet implemented
 
     @pytest.mark.polarion("CNV-16009")
+    @pytest.mark.manual
     def test_backup_with_hotplugged_disk_push_mode_restore(self):
         """
         Test that a VM with hotplugged disk can be backed up (push mode) and restored with hotplugged disk data accessible.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Preconditions:
             - Backup PVC available
@@ -510,9 +533,12 @@ class TestHotplugBackup:
         """
 
     @pytest.mark.polarion("CNV-16010")
+    @pytest.mark.manual
     def test_backup_with_hotplugged_disk_pull_mode_restore(self):
         """
         Test that a VM with hotplugged disk can be backed up (pull mode) and restored with hotplugged disk data accessible.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Preconditions:
             - Scratch PVC available for pull mode
@@ -545,9 +571,12 @@ class TestBackupErrorHandling:
     __test__ = False  # STD placeholder - not yet implemented
 
     @pytest.mark.polarion("CNV-16023")
+    @pytest.mark.manual
     def test_backup_fails_when_storage_full_push_mode(self):
         """
         [NEGATIVE] Test that backup fails gracefully when backup PVC is full.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Preconditions:
             - Backup PVC with insufficient capacity for the VM's data
@@ -563,9 +592,12 @@ class TestBackupErrorHandling:
         """
 
     @pytest.mark.polarion("CNV-16024")
+    @pytest.mark.manual
     def test_backup_fails_when_storage_full_pull_mode(self):
         """
         [NEGATIVE] Test that backup fails gracefully when scratch PVC is full in pull mode.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Preconditions:
             - Scratch PVC with insufficient capacity for the VM's data
@@ -593,9 +625,12 @@ class TestConcurrentBackups:
     __test__ = False  # STD placeholder - not yet implemented
 
     @pytest.mark.polarion("CNV-16011")
+    @pytest.mark.manual
     def test_concurrent_backups_push_mode_restore(self):
         """
         Test that concurrent backups (push mode) on multiple VMs complete successfully and all VMs can be restored.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Preconditions:
             - Backup PVCs available for each VM
@@ -613,9 +648,12 @@ class TestConcurrentBackups:
         """
 
     @pytest.mark.polarion("CNV-16012")
+    @pytest.mark.manual
     def test_concurrent_backups_pull_mode_restore(self):
         """
         Test that concurrent backups (pull mode) on multiple VMs complete successfully and all VMs can be restored.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Preconditions:
             - Scratch PVCs available for each VM (pull mode)
@@ -647,9 +685,12 @@ class TestWindowsVMFullBackup:
     __test__ = False  # STD placeholder - not yet implemented
 
     @pytest.mark.polarion("CNV-16013")
+    @pytest.mark.manual
     def test_windows_vm_full_backup_push_mode_restore(self):
         """
         Test that a Windows VM can be backed up (push mode) and restored from a full backup.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Preconditions:
             - Backup PVC available
@@ -667,9 +708,12 @@ class TestWindowsVMFullBackup:
         """
 
     @pytest.mark.polarion("CNV-16014")
+    @pytest.mark.manual
     def test_windows_vm_full_backup_pull_mode_restore(self):
         """
         Test that a Windows VM can be backed up (pull mode) and restored from a full backup.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Preconditions:
             - Scratch PVC available for pull mode
@@ -702,9 +746,12 @@ class TestWindowsVMIncrementalBackup:
     __test__ = False  # STD placeholder - not yet implemented
 
     @pytest.mark.polarion("CNV-16015")
+    @pytest.mark.manual
     def test_windows_vm_incremental_backup_push_mode_restore(self):
         """
         Test that a Windows VM can be backed up (push mode) and restored from an incremental backup.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Preconditions:
             - Backup PVC available
@@ -722,9 +769,12 @@ class TestWindowsVMIncrementalBackup:
         """
 
     @pytest.mark.polarion("CNV-16016")
+    @pytest.mark.manual
     def test_windows_vm_incremental_backup_pull_mode_restore(self):
         """
         Test that a Windows VM can be backed up (pull mode) and restored from an incremental backup.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Preconditions:
             - Scratch PVC available for pull mode

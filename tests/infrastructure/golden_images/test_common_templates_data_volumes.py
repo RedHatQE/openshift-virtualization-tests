@@ -11,9 +11,6 @@ from utilities.virt import VirtualMachineForTests, running_vm
 pytestmark = pytest.mark.post_upgrade
 
 
-NON_EXISTING_DV_NAME = "non-existing-dv"
-
-
 @pytest.fixture()
 def vm_from_golden_image_multi_storage(
     unprivileged_client,

@@ -57,6 +57,8 @@ pytestmark = [
 @pytest.mark.polarion("CNV-15227")
 def test_connectivity_between_udn_vms(vm_evpn_target, vm_evpn_reference, subtests):
     """
+    STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-network/EVPN.md
+
     Preconditions:
     - Running target under-test VM with a primary EVPN-enabled CUDN.
     - Running connectivity reference VM with a primary EVPN-enabled CUDN.
@@ -80,6 +82,8 @@ def test_connectivity_between_udn_vms(vm_evpn_target, vm_evpn_reference, subtest
 @pytest.mark.polarion("CNV-15228")
 def test_stretched_l2_connectivity_udn_vm_and_external_provider(external_l2_endpoint, vm_evpn_target, subtests):
     """
+    STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-network/EVPN.md
+
     Preconditions:
     - External Source Provider L2 endpoint.
     - Running target under-test VM with a primary EVPN-enabled CUDN.
@@ -104,6 +108,8 @@ def test_stretched_l2_connectivity_is_preserved_over_live_migration(
     subtests: pytest.Subtests,
 ):
     """
+    STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-network/EVPN.md
+
     Preconditions:
     - External Source Provider L2 endpoint.
     - Running target under-test VM with a primary EVPN-enabled CUDN.
@@ -124,6 +130,8 @@ def test_stretched_l2_connectivity_is_preserved_over_live_migration(
 @pytest.mark.polarion("CNV-15230")
 def test_routed_l3_connectivity_udn_vm_and_external_provider(external_l3_endpoint, vm_evpn_target, subtests):
     """
+    STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-network/EVPN.md
+
     Preconditions:
     - External Source Provider L3 endpoint.
     - Running target under-test VM with a primary EVPN-enabled CUDN.
@@ -148,6 +156,8 @@ def test_routed_l3_connectivity_is_preserved_over_live_migration(
     subtests: pytest.Subtests,
 ):
     """
+    STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-network/EVPN.md
+
     Preconditions:
     - External Source Provider L3 endpoint.
     - Running target under-test VM with a primary EVPN-enabled CUDN.
@@ -174,6 +184,8 @@ def test_connectivity_after_udn_vm_cold_reboot(
     subtests,
 ):
     """
+    STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-network/EVPN.md
+
     Preconditions:
     - External Source Provider L2 and L3 endpoints.
     - Running target under-test VM with a primary EVPN-enabled CUDN.
@@ -211,6 +223,8 @@ def test_source_provider_migration(
     """
     Scenario emulates a migration of an external workload (Source Provider) into the OCP cluster as a CUDN VM,
     while preserving its IP and MAC addresses, and maintaining connectivity.
+
+    STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-network/EVPN.md
 
     Preconditions:
     - External Source Provider L2 and L3 endpoints.

@@ -6,15 +6,15 @@ from utilities.constants.components import CDI_KUBEVIRT_HYPERCONVERGED
 
 
 @pytest.fixture(scope="session")
-def cdi(hco_namespace):
-    cdi = CDI(name=CDI_KUBEVIRT_HYPERCONVERGED)
+def cdi(admin_client, hco_namespace):
+    cdi = CDI(name=CDI_KUBEVIRT_HYPERCONVERGED, client=admin_client)
     assert cdi.instance is not None
     yield cdi
 
 
 @pytest.fixture(scope="session")
-def cdi_config():
-    cdi_config = CDIConfig(name="config")
+def cdi_config(admin_client):
+    cdi_config = CDIConfig(name="config", client=admin_client)
     assert cdi_config.instance is not None
     return cdi_config
 

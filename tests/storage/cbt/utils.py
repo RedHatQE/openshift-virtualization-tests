@@ -77,13 +77,16 @@ def data_disk_name(index: int, unique_suffix: str) -> str:
     return f"cbt-datadisk-{index}-{unique_suffix}"
 
 
-def blank_data_disk_template(name: str, namespace: str, storage_class_name: str) -> dict[str, Any]:
+def blank_data_disk_template(
+    name: str, namespace: str, storage_class_name: str, client: DynamicClient
+) -> dict[str, Any]:
     """Build a blank DataVolume dict for VM dataVolumeTemplates.
 
     Args:
         name: DataVolume name.
         namespace: Namespace used to construct the DataVolume, then stripped from the dict.
         storage_class_name: Storage class for the blank PVC.
+        client: DynamicClient used to render the DataVolume resource.
 
     Returns:
         dict[str, Any]: DataVolume resource dict without namespace, for dataVolumeTemplates.
@@ -91,6 +94,7 @@ def blank_data_disk_template(name: str, namespace: str, storage_class_name: str)
     data_volume = DataVolume(
         name=name,
         namespace=namespace,
+        client=client,
         source_dict=construct_datavolume_source_dict(source="blank"),
         size=CBT_DATA_DISK_SIZE,
         storage_class=storage_class_name,
@@ -139,6 +143,7 @@ class CbtVmWithDataDisks(VirtualMachineForTests):
                     name=volume_name,
                     namespace=self.namespace,
                     storage_class_name=self.data_disk_storage_class_name,
+                    client=self.client,
                 )
             )
             disks.append({"disk": {"bus": self.disk_type}, "name": volume_name})
