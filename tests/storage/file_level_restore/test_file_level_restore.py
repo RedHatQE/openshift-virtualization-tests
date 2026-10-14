@@ -36,6 +36,7 @@ from tests.storage.file_level_restore.utils import (
     restore_volume_name,
     wait_for_file_restore_operator_ready,
     wait_for_file_restore_phase,
+    windows_backup_file_path,
     windows_data_disk_path,
     windows_guest_path,
 )
@@ -832,23 +833,18 @@ class TestFileRestoreWindowsManualBrowsing:
             4. Attempt to modify a file on the mounted backup volume
 
         Expected:
-            - Known content can be read from the mounted backup volume and modification is denied
+            - Known backup content is readable and stays unchanged after a modification attempt (read-only mount)
         """
         guest_path, expected_content = windows_test_file_on_data_disk
         wait_for_file_restore_phase(
             file_restore=windows_manual_browsing_file_restore,
             target_phase=VirtualMachineFileRestore.Phase.VOLUME_READY,
         )
-        mount_path = windows_manual_browsing_file_restore.instance.status.mountPath
-        assert mount_path, f"Restore '{windows_manual_browsing_file_restore.name}' did not report a backup mount path"
-        relative_path = windows_guest_path(guest_path=guest_path).split(":\\", maxsplit=1)[1]
-        backup_file_path = f"{mount_path}\\{relative_path}"
-        verify_file_in_windows_vm(
-            windows_vm=windows_file_restore_vm,
-            file_name_with_path=backup_file_path,
-            file_content=expected_content,
+        backup_file_path = windows_backup_file_path(
+            vm=windows_file_restore_vm,
+            restore_cr_name=windows_manual_browsing_file_restore.name,
+            relative_path=windows_guest_path(guest_path=guest_path).split(":\\", maxsplit=1)[1],
         )
-
         verify_file_in_windows_vm(
             windows_vm=windows_file_restore_vm,
             file_name_with_path=backup_file_path,
@@ -856,7 +852,6 @@ class TestFileRestoreWindowsManualBrowsing:
         )
         assert_windows_backup_read_only(
             vm=windows_file_restore_vm,
-            restore_cr_name=windows_manual_browsing_file_restore.name,
             backup_file_path=backup_file_path,
         )
 

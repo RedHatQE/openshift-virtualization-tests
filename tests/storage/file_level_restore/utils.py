@@ -929,32 +929,58 @@ def linux_backup_file_path(vm: VirtualMachineForTests, mount_path: str, guest_pa
     return matches[0]
 
 
-def assert_windows_backup_read_only(vm: VirtualMachineForTests, restore_cr_name: str, backup_file_path: str) -> None:
-    """Check the mounted backup rejects modification of a known file.
+def windows_backup_file_path(vm: VirtualMachineForTests, restore_cr_name: str, relative_path: str) -> str:
+    """Find a file through the drive letter on the hotplugged backup disk.
 
     Args:
-        vm: Windows VM with the backup mounted.
-        restore_cr_name: Name of the manual-mode restore request.
-        backup_file_path: Existing file on the mounted backup.
+        vm: Windows VM with the backup attached.
+        restore_cr_name: Restore request identifying the backup disk serial.
+        relative_path: File path relative to the backup volume root.
+
+    Returns:
+        File path using the backup volume's drive letter.
     """
     volume_name = restore_volume_name(restore_cr_name=restore_cr_name)
     command = (
         "$ErrorActionPreference = 'Stop';"
-        f" $disk = Get-Disk | Where-Object {{ $_.SerialNumber -and $_.SerialNumber.Trim() -eq '{volume_name}' }};"
-        " if (-not $disk) { throw 'Backup disk not found' };"
-        " try {"
-        f" Add-Content -LiteralPath '{backup_file_path}' -Value 'unexpected-backup-write' -ErrorAction Stop;"
-        " Write-Output 'write-succeeded'"
-        " } catch [System.UnauthorizedAccessException], [System.IO.IOException] {"
-        " Write-Output 'write-denied' }"
+        f" $disk = @(Get-Disk | Where-Object {{ $_.SerialNumber -and $_.SerialNumber.Trim() -eq '{volume_name}' }});"
+        " if ($disk.Count -ne 1) { throw 'Expected one backup disk' };"
+        " $partition = @(Get-Partition -DiskNumber $disk[0].Number | Where-Object DriveLetter);"
+        " if ($partition.Count -ne 1) { throw 'Expected one backup partition with a drive letter' };"
+        f" Join-Path ([string]$partition[0].DriveLetter + ':\\') '{relative_path}'"
     )
-    output = run_ssh_commands(
+    return run_ssh_commands(
         host=vm.ssh_exec,
         commands=["powershell", "-NoProfile", "-Command", command],
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
     )[0].strip()
-    assert output == "write-denied", f"Backup file '{backup_file_path}' accepted a write: {output!r}"
+
+
+def assert_windows_backup_read_only(vm: VirtualMachineForTests, backup_file_path: str) -> None:
+    """Check backup file content stays unchanged after a write attempt.
+
+    Args:
+        vm: Windows VM with the backup mounted.
+        backup_file_path: Existing file addressed through the backup volume's drive letter.
+    """
+    read_command = f"Get-Content -LiteralPath '{backup_file_path}' -Raw -ErrorAction Stop"
+    write_command = (
+        f"try {{ Add-Content -LiteralPath '{backup_file_path}' -Value 'unexpected-backup-write' -ErrorAction Stop }}"
+        " catch { Write-Output $_.Exception.Message }"
+    )
+    before, _, after = [
+        run_ssh_commands(
+            host=vm.ssh_exec,
+            commands=["powershell", "-NoProfile", "-Command", command],
+            wait_timeout=TIMEOUT_2MIN,
+            sleep=TIMEOUT_5SEC,
+        )[0]
+        for command in (read_command, write_command, read_command)
+    ]
+    assert before == after, (
+        f"Backup file '{backup_file_path}' changed after the write attempt: before={before!r}, after={after!r}"
+    )
 
 
 def delete_windows_guest_file(vm: VirtualMachineForTests, guest_path: str) -> None:
