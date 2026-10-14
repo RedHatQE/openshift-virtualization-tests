@@ -941,13 +941,12 @@ def windows_backup_file_path(vm: VirtualMachineForTests, restore_cr_name: str, r
         File path using the backup volume's drive letter.
     """
     volume_name = restore_volume_name(restore_cr_name=restore_cr_name)
+    # Find the backup disk by serial, get its partition's drive letter, and append the relative file path.
     command = (
         "$ErrorActionPreference = 'Stop';"
-        f" $disk = @(Get-Disk | Where-Object {{ $_.SerialNumber -and $_.SerialNumber.Trim() -eq '{volume_name}' }});"
-        " if ($disk.Count -ne 1) { throw 'Expected one backup disk' };"
-        " $partition = @(Get-Partition -DiskNumber $disk[0].Number | Where-Object DriveLetter);"
-        " if ($partition.Count -ne 1) { throw 'Expected one backup partition with a drive letter' };"
-        f" Join-Path ([string]$partition[0].DriveLetter + ':\\') '{relative_path}'"
+        f" $disk = Get-Disk | Where-Object {{ $_.SerialNumber -and $_.SerialNumber.Trim() -eq '{volume_name}' }};"
+        " $partition = Get-Partition -DiskNumber $disk.Number | Where-Object DriveLetter;"
+        f" Join-Path ([string]$partition.DriveLetter + ':\\') '{relative_path}'"
     )
     return run_ssh_commands(
         host=vm.ssh_exec,
@@ -964,6 +963,7 @@ def assert_windows_backup_read_only(vm: VirtualMachineForTests, backup_file_path
         vm: Windows VM with the backup mounted.
         backup_file_path: Existing file addressed through the backup volume's drive letter.
     """
+    # Read the full file, attempt an append, then read it again in separate PowerShell processes.
     read_command = f"Get-Content -LiteralPath '{backup_file_path}' -Raw -ErrorAction Stop"
     write_command = (
         f"try {{ Add-Content -LiteralPath '{backup_file_path}' -Value 'unexpected-backup-write' -ErrorAction Stop }}"

@@ -5,10 +5,7 @@ STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob
 Jira: https://redhat.atlassian.net/browse/VIRTSTRAT-480 # <skip-jira-utils-check>
 """
 
-from __future__ import annotations
-
 from shlex import quote
-from typing import TYPE_CHECKING
 
 import pytest
 from ocp_resources.datavolume import DataVolume
@@ -47,15 +44,6 @@ from utilities.storage import (
     verify_dv_and_pvc_does_not_exist,
     verify_file_in_windows_vm,
 )
-
-if TYPE_CHECKING:
-    from kubernetes.dynamic import DynamicClient
-    from ocp_resources.namespace import Namespace
-    from ocp_resources.storage_profile import StorageProfile
-    from ocp_resources.volume_snapshot import VolumeSnapshot
-
-    from tests.storage.file_level_restore.utils import VolumeSnapshotContent
-    from utilities.virt import VirtualMachineForTests
 
 
 class TestFileRestoreOperatorDeployment:
@@ -675,13 +663,13 @@ class TestFileRestoreCrossNamespace:
     @pytest.mark.polarion("CNV-16835")
     def test_restore_from_different_namespace(
         self,
-        admin_client: DynamicClient,
-        namespace: Namespace,
-        file_restore_linux_vm: VirtualMachineForTests,
-        cross_namespace_data_disk_snapshot: VolumeSnapshot,
-        deleted_cross_namespace_linux_file: tuple[str, str],
-        cross_namespace_file_restore: VirtualMachineFileRestore,
-    ) -> None:
+        admin_client,
+        namespace,
+        file_restore_linux_vm,
+        cross_namespace_data_disk_snapshot,
+        deleted_cross_namespace_linux_file,
+        cross_namespace_file_restore,
+    ):
         """
         Test that restore from a volume snapshot in a different namespace succeeds and cleans up.
 
@@ -742,15 +730,15 @@ class TestFileRestoreStorageCompatibility:
     @pytest.mark.parametrize("linux_data_disk", [{"volume_mode": DataVolume.VolumeMode.FILE}], indirect=True)
     def test_restore_with_source_volume_mode_mismatch(
         self,
-        file_restore_linux_vm: VirtualMachineForTests,
-        linux_data_disk: DataVolume,
-        linux_data_disk_snapshot: VolumeSnapshot,
-        linux_data_disk_snapshot_content: VolumeSnapshotContent,
-        deleted_linux_file_for_snapshot: tuple[str, str],
-        block_default_storage_profile: StorageProfile,
-        volume_mode_mismatch_file_restore: VirtualMachineFileRestore,
-        volume_mode_restore_data_volume: DataVolume,
-    ) -> None:
+        file_restore_linux_vm,
+        linux_data_disk,
+        linux_data_disk_snapshot,
+        linux_data_disk_snapshot_content,
+        deleted_linux_file_for_snapshot,
+        block_default_storage_profile,
+        volume_mode_mismatch_file_restore,
+        volume_mode_restore_data_volume,
+    ):
         """
         Test that restore succeeds when the source volume mode differs from the StorageProfile's default volume mode.
 
@@ -814,10 +802,10 @@ class TestFileRestoreWindowsManualBrowsing:
     @pytest.mark.polarion("CNV-16837")
     def test_manual_browsing_of_windows_ntfs_backup_volume(
         self,
-        windows_file_restore_vm: VirtualMachineForTests,
-        windows_test_file_on_data_disk: tuple[str, str],
-        windows_manual_browsing_file_restore: VirtualMachineFileRestore,
-    ) -> None:
+        windows_file_restore_vm,
+        windows_test_file_on_data_disk,
+        windows_manual_browsing_file_restore,
+    ):
         """
         Test that manual restore mode exposes an NTFS backup volume for read-only browsing.
 
@@ -913,10 +901,10 @@ class TestFileRestoreRootDiskManualBrowsing:
     )
     def test_manual_browsing_of_root_disk_backup(
         self,
-        file_restore_linux_root_only_vm: VirtualMachineForTests,
-        linux_test_file_on_root_disk: tuple[str, str],
-        linux_root_disk_manual_browsing_file_restore: VirtualMachineFileRestore,
-    ) -> None:
+        file_restore_linux_root_only_vm,
+        linux_test_file_on_root_disk,
+        linux_root_disk_manual_browsing_file_restore,
+    ):
         """
         Test that manual restore mode exposes root disk backup contents for read-only browsing.
 
@@ -982,10 +970,10 @@ class TestFileRestoreLargeFile:
     @pytest.mark.polarion("CNV-16840")
     def test_restore_big_file_from_data_disk_snapshot(
         self,
-        file_restore_linux_vm: VirtualMachineForTests,
-        deleted_linux_large_file: tuple[str, str],
-        large_file_snapshot_file_restore: VirtualMachineFileRestore,
-    ) -> None:
+        file_restore_linux_vm,
+        deleted_linux_large_file,
+        large_file_snapshot_file_restore,
+    ):
         """
         Test that a 1 GB file is restored successfully from a data disk snapshot.
 
@@ -1039,15 +1027,15 @@ class TestFileRestoreConcurrentVirtualMachines:
     )
     def test_concurrent_restores_on_different_virtual_machines(
         self,
-        admin_client: DynamicClient,
-        namespace: Namespace,
-        file_restore_linux_vm: VirtualMachineForTests,
-        file_restore_linux_root_only_vm: VirtualMachineForTests,
-        deleted_linux_test_file_on_data_disk: tuple[str, str],
-        deleted_linux_test_file_on_root_disk: tuple[str, str],
-        concurrent_data_disk_file_restore: VirtualMachineFileRestore,
-        concurrent_root_disk_file_restore: VirtualMachineFileRestore,
-    ) -> None:
+        admin_client,
+        namespace,
+        file_restore_linux_vm,
+        file_restore_linux_root_only_vm,
+        deleted_linux_test_file_on_data_disk,
+        deleted_linux_test_file_on_root_disk,
+        concurrent_data_disk_file_restore,
+        concurrent_root_disk_file_restore,
+    ):
         """
         Test that concurrent file restores on different virtual machines complete independently.
 
