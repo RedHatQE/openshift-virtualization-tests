@@ -289,6 +289,10 @@ def generate_openpe_yaml(
     ]
     for worker_ipv4 in worker_ipv4_list:
         raw_config_lines.append(f"  neighbor {worker_ipv4} route-map {evpn_route_map} out")
+        # OpenPE enables allowas-in for eBGP EVPN neighbors. The external
+        # ToR must reject its own ASN when a worker reflects a route back,
+        # otherwise AS-path exclusion lets the route loop between workers.
+        raw_config_lines.append(f"  no neighbor {worker_ipv4} allowas-in")
     raw_config_lines.extend([
         " exit-address-family",
         "!",
