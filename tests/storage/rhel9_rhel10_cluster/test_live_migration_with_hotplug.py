@@ -8,6 +8,7 @@ Jira: https://redhat.atlassian.net/browse/CNV-85250 # <skip-jira-utils-check>
 import pytest
 
 
+@pytest.mark.special_infra
 class TestLiveMigrationWithHotplug:
     """
     Tests for live migration with hotplugged storage volumes across RHCOS9 and RHCOS10 worker nodes.
