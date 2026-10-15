@@ -21,7 +21,6 @@ from tests.install_upgrade_operators.crypto_policy.utils import (
     get_resources_crypto_policy_dict,
 )
 from utilities.constants.hco import (
-    DEFAULT_HCO_CONDITIONS,
     TLS_CUSTOM_POLICY,
     TLS_OLD_POLICY,
     TLS_SECURITY_PROFILE,
@@ -31,6 +30,7 @@ from utilities.constants.timeouts import (
     TIMEOUT_10SEC,
 )
 from utilities.hco import (
+    get_hco_expected_conditions,
     is_hco_tainted,
     update_hco_annotations,
     wait_for_hco_conditions,
@@ -89,13 +89,12 @@ def updated_cr_with_custom_crypto_policy(
         component=request.param["component"],
         resource_list=[resource],
     ):
+        expected_conditions = get_hco_expected_conditions(hco_instance=hyperconverged_resource_scope_function.instance)
+        expected_conditions["TaintedConfiguration"] = Resource.Condition.Status.TRUE
         wait_for_hco_conditions(
             admin_client=admin_client,
             hco_namespace=hco_namespace,
-            expected_conditions={
-                **DEFAULT_HCO_CONDITIONS,
-                "TaintedConfiguration": Resource.Condition.Status.TRUE,
-            },
+            expected_conditions=expected_conditions,
         )
         yield {"resource": resource, "tls_policy": value}
     assert not is_hco_tainted(admin_client=admin_client, hco_namespace=hco_namespace.name)
