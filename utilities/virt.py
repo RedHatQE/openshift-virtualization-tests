@@ -37,6 +37,8 @@ from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.template import Template
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_clone import VirtualMachineClone
+from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
+from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from ocp_resources.virtual_machine_instance_migration import (
     VirtualMachineInstanceMigration,
@@ -2478,6 +2480,39 @@ def get_kubevirt_hyperconverged_spec(admin_client, hco_namespace):
     return get_hyperconverged_kubevirt(admin_client=admin_client, hco_namespace=hco_namespace).instance.to_dict()[
         "spec"
     ]
+
+
+def vm_template_virtual_machine_spec(data_source: DataSource, storage_class: str | None) -> dict[str, Any]:
+    """Build the ``virtualMachine`` field for a VirtualMachineTemplate.
+
+    Produces a parameterized VM blueprint with ``${NAME}``, ``${INSTANCETYPE}`` and
+    ``${PREFERENCE}`` placeholders and a DataVolume cloned from ``data_source``.
+
+    Args:
+        data_source (DataSource): Golden image DataSource cloned into the rendered VM's disk.
+        storage_class (str | None): Storage class for the rendered VM's DataVolume. If None, use the cluster default.
+
+    Returns:
+        dict[str, Any]: ``virtualMachine`` field for a VirtualMachineTemplate, parameterized
+        with ``${NAME}``, ``${INSTANCETYPE}`` and ``${PREFERENCE}``.
+    """
+    virtual_machine = VirtualMachineForTests(
+        name="${NAME}",
+        namespace=data_source.namespace,
+        client=data_source.client,
+        generate_unique_name=False,
+        vm_instance_type=VirtualMachineClusterInstancetype(name="${INSTANCETYPE}", client=data_source.client),
+        vm_preference=VirtualMachineClusterPreference(name="${PREFERENCE}", client=data_source.client),
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=data_source,
+            storage_class=storage_class,
+            name="${NAME}",
+        ),
+    )
+    virtual_machine.to_dict()
+    # The rendered VirtualMachineTemplate.spec.virtualMachine field takes only metadata/spec
+    del virtual_machine.res["metadata"]["namespace"]
+    return {"metadata": virtual_machine.res["metadata"], "spec": virtual_machine.res["spec"]}
 
 
 def get_base_templates_list(client: DynamicClient) -> list[Template]:
