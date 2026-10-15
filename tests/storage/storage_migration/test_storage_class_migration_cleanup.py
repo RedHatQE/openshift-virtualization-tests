@@ -14,421 +14,312 @@ STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob
 """
 
 import pytest
+from pytest_testconfig import config as py_config
+
+from tests.storage.constants import STORAGE_CLASS_A, STORAGE_CLASS_B
+from tests.storage.storage_migration.constants import DELETE_SOURCE, KEEP_SOURCE
+from tests.storage.storage_migration.utils import (
+    verify_source_dvs_deleted,
+    verify_source_dvs_exist,
+    verify_vm_storage_class_updated,
+)
+from utilities.constants.pytest import QUARANTINED
 
 
+@pytest.mark.parametrize(
+    "source_storage_class, target_storage_class",
+    [
+        pytest.param(
+            {"source_storage_class": py_config[STORAGE_CLASS_A]},
+            {"target_storage_class": py_config[STORAGE_CLASS_B]},
+            id="source_a_target_b",
+        )
+    ],
+    indirect=True,
+)
 class TestStorageMigrationRetentionPolicy:
-    """
-    Test retentionPolicy functionality for MultiNamespaceVirtualMachineStorageMigrationPlan.
+    """Test successful retention-policy migrations."""
 
-    STP Traceability: CNV-73509 (P0, P1)
-
-    Parametrize:
-        - migration_mode:
-            - online (VM running during migration)
-            - offline (VM stopped during migration)
-
-    Preconditions:
-      - VM with source PVC/DataVolume
-    """
-
-    __test__ = False
-
+    @pytest.mark.parametrize("combined_mode_mig_plan", [pytest.param({}, id="default")], indirect=True)
     @pytest.mark.polarion("CNV-16297")
-    def test_retention_policy_default_behavior(self):
-        """
-        Test that default behavior is keepSource when retentionPolicy is not specified.
+    @pytest.mark.usefixtures("combined_mode_mig_migration")
+    def test_retention_policy_default_behavior(
+        self,
+        running_vm_for_scmig_test_first_ns,
+        stopped_vm_for_scmig_test_first_ns,
+        target_storage_class,
+        running_vm_for_scmig_test_source_dvs,
+        stopped_vm_for_scmig_test_source_dvs,
+    ):
+        """Verify the default policy keeps source volumes."""
+        for vm, source_dvs in (
+            (running_vm_for_scmig_test_first_ns, running_vm_for_scmig_test_source_dvs),
+            (stopped_vm_for_scmig_test_first_ns, stopped_vm_for_scmig_test_source_dvs),
+        ):
+            verify_vm_storage_class_updated(vm=vm, target_storage_class=target_storage_class)
+            verify_source_dvs_exist(vm=vm, source_dv_names=source_dvs)
 
-        STP Requirement: Default cleanup policy (P1)
-
-        Preconditions:
-            - VM with source PVC/DataVolume
-
-        Steps:
-            1. Create MultiNamespaceVirtualMachineStorageMigrationPlan without retentionPolicy field
-            2. Wait for migration to complete successfully
-            3. Verify VM is using new PVC/DataVolume
-            4. Check if source PVC/DataVolume exists
-
-        Expected:
-            - Source PVC/DataVolume is kept (default keepSource behavior)
-        """
-
+    @pytest.mark.parametrize(
+        "combined_mode_mig_plan", [pytest.param({"ns_retention_policy": DELETE_SOURCE}, id="ns_delete")], indirect=True
+    )
     @pytest.mark.polarion("CNV-16298")
-    def test_namespace_level_retention_policy_delete_source(self):
-        """
-        Test namespace-level retentionPolicy=deleteSource.
+    @pytest.mark.usefixtures("combined_mode_mig_migration")
+    def test_namespace_level_retention_policy_delete_source(
+        self,
+        running_vm_for_scmig_test_first_ns,
+        stopped_vm_for_scmig_test_first_ns,
+        target_storage_class,
+        running_vm_for_scmig_test_source_dvs,
+        stopped_vm_for_scmig_test_source_dvs,
+        combined_mode_mig_plan,
+    ):
+        """Verify namespace-level deleteSource deletes source volumes."""
+        for vm, source_dvs in (
+            (running_vm_for_scmig_test_first_ns, running_vm_for_scmig_test_source_dvs),
+            (stopped_vm_for_scmig_test_first_ns, stopped_vm_for_scmig_test_source_dvs),
+        ):
+            verify_vm_storage_class_updated(vm=vm, target_storage_class=target_storage_class)
+            verify_source_dvs_deleted(vm=vm, source_dv_names=source_dvs)
+        assert combined_mode_mig_plan.exists
 
-        STP Requirement: Namespace-level cleanup policy (P0)
-
-        Preconditions:
-            - VM with source PVC/DataVolume
-
-        Steps:
-            1. Create MultiNamespaceVirtualMachineStorageMigrationPlan with namespace-level retentionPolicy=deleteSource
-            2. Wait for migration to complete successfully
-            3. Verify VM is using new PVC/DataVolume
-            4. Check if source PVC/DataVolume exists
-            5. Verify MultiNamespaceVirtualMachineStorageMigrationPlan still exists
-
-        Expected:
-            - Source PVC/DataVolume is deleted
-            - MultiNamespaceVirtualMachineStorageMigrationPlan remains available after cleanup
-        """
-
+    @pytest.mark.parametrize(
+        "combined_mode_mig_plan",
+        [pytest.param({"spec_retention_policy": DELETE_SOURCE}, id="spec_delete")],
+        indirect=True,
+    )
     @pytest.mark.polarion("CNV-16299")
-    def test_spec_level_retention_policy_delete_source(self):
-        """
-        Test plan-level retentionPolicy=deleteSource.
+    @pytest.mark.usefixtures("combined_mode_mig_migration")
+    def test_spec_level_retention_policy_delete_source(
+        self,
+        running_vm_for_scmig_test_first_ns,
+        stopped_vm_for_scmig_test_first_ns,
+        target_storage_class,
+        running_vm_for_scmig_test_source_dvs,
+        stopped_vm_for_scmig_test_source_dvs,
+        combined_mode_mig_plan,
+    ):
+        """Verify plan-level deleteSource deletes source volumes."""
+        for vm, source_dvs in (
+            (running_vm_for_scmig_test_first_ns, running_vm_for_scmig_test_source_dvs),
+            (stopped_vm_for_scmig_test_first_ns, stopped_vm_for_scmig_test_source_dvs),
+        ):
+            verify_vm_storage_class_updated(vm=vm, target_storage_class=target_storage_class)
+            verify_source_dvs_deleted(vm=vm, source_dv_names=source_dvs)
+        assert combined_mode_mig_plan.exists
 
-        STP Requirement: Plan-level cleanup policy (P0)
-
-        Preconditions:
-            - VM with source PVC/DataVolume
-
-        Steps:
-            1. Create MultiNamespaceVirtualMachineStorageMigrationPlan with plan-level retentionPolicy=deleteSource
-            2. Wait for migration to complete successfully
-            3. Verify VM is using new PVC/DataVolume
-            4. Check if source PVC/DataVolume exists
-            5. Verify MultiNamespaceVirtualMachineStorageMigrationPlan still exists
-
-        Expected:
-            - Source PVC/DataVolume is deleted
-            - MultiNamespaceVirtualMachineStorageMigrationPlan remains available after cleanup
-        """
-
+    @pytest.mark.parametrize(
+        "combined_mode_mig_plan", [pytest.param({"ns_retention_policy": KEEP_SOURCE}, id="ns_keep")], indirect=True
+    )
     @pytest.mark.polarion("CNV-16301")
-    def test_namespace_level_retention_policy_keep_source(self):
-        """
-        Test namespace-level retentionPolicy=keepSource.
+    @pytest.mark.usefixtures("combined_mode_mig_migration")
+    def test_namespace_level_retention_policy_keep_source(
+        self,
+        running_vm_for_scmig_test_first_ns,
+        stopped_vm_for_scmig_test_first_ns,
+        target_storage_class,
+        running_vm_for_scmig_test_source_dvs,
+        stopped_vm_for_scmig_test_source_dvs,
+    ):
+        """Verify namespace-level keepSource keeps source volumes."""
+        for vm, source_dvs in (
+            (running_vm_for_scmig_test_first_ns, running_vm_for_scmig_test_source_dvs),
+            (stopped_vm_for_scmig_test_first_ns, stopped_vm_for_scmig_test_source_dvs),
+        ):
+            verify_vm_storage_class_updated(vm=vm, target_storage_class=target_storage_class)
+            verify_source_dvs_exist(vm=vm, source_dv_names=source_dvs)
 
-        STP Requirement: Namespace-level cleanup policy (P0)
-
-        Preconditions:
-            - VM with source PVC/DataVolume
-
-        Steps:
-            1. Create MultiNamespaceVirtualMachineStorageMigrationPlan with namespace-level retentionPolicy=keepSource
-            2. Wait for migration to complete successfully
-            3. Verify VM is using new PVC/DataVolume
-            4. Check if source PVC/DataVolume exists
-
-        Expected:
-            - Source PVC/DataVolume is kept
-        """
-
+    @pytest.mark.parametrize(
+        "combined_mode_mig_plan", [pytest.param({"spec_retention_policy": KEEP_SOURCE}, id="spec_keep")], indirect=True
+    )
     @pytest.mark.polarion("CNV-16302")
-    def test_spec_level_retention_policy_keep_source(self):
-        """
-        Test plan-level retentionPolicy=keepSource.
-
-        STP Requirement: Plan-level cleanup policy (P0)
-
-        Preconditions:
-            - VM with source PVC/DataVolume
-
-        Steps:
-            1. Create MultiNamespaceVirtualMachineStorageMigrationPlan with plan-level retentionPolicy=keepSource
-            2. Wait for migration to complete successfully
-            3. Verify VM is using new PVC/DataVolume
-            4. Check if source PVC/DataVolume exists
-
-        Expected:
-            - Source PVC/DataVolume is kept
-        """
+    @pytest.mark.usefixtures("combined_mode_mig_migration")
+    def test_spec_level_retention_policy_keep_source(
+        self,
+        running_vm_for_scmig_test_first_ns,
+        stopped_vm_for_scmig_test_first_ns,
+        target_storage_class,
+        running_vm_for_scmig_test_source_dvs,
+        stopped_vm_for_scmig_test_source_dvs,
+    ):
+        """Verify plan-level keepSource keeps source volumes."""
+        for vm, source_dvs in (
+            (running_vm_for_scmig_test_first_ns, running_vm_for_scmig_test_source_dvs),
+            (stopped_vm_for_scmig_test_first_ns, stopped_vm_for_scmig_test_source_dvs),
+        ):
+            verify_vm_storage_class_updated(vm=vm, target_storage_class=target_storage_class)
+            verify_source_dvs_exist(vm=vm, source_dv_names=source_dvs)
 
 
-class TestStorageMigrationRetentionPolicyCombinedMode:
-    """
-    Test retentionPolicy functionality with combined online+offline migration mode.
-
-    Verifies retention policies when migrating both a running VM (online) and a stopped VM (offline)
-    in the same plan. Covers the online+offline migration mode required by the STP for default,
-    namespace-level, and plan-level retention policy scenarios.
-
-    STP Traceability: CNV-73509 (P0, P1)
-
-    Preconditions:
-      - Running VM (online migration) with source PVC/DataVolume
-      - Stopped VM (offline migration) with source PVC/DataVolume
-    """
-
-    __test__ = False
-
-    @pytest.mark.polarion("CNV-16558")
-    def test_retention_policy_default_behavior_combined_mode(self):
-        """
-        Test that default behavior is keepSource with combined online+offline migration.
-
-        STP Requirement: Default cleanup policy (P1)
-
-        Preconditions:
-            - Running VM (online migration) with source PVC/DataVolume
-            - Stopped VM (offline migration) with source PVC/DataVolume
-
-        Steps:
-            1. Create MultiNamespaceVirtualMachineStorageMigrationPlan without retentionPolicy field
-            2. Wait for migration to complete successfully for both VMs
-            3. Verify both VMs are using new PVCs/DataVolumes
-            4. Check if source PVCs/DataVolumes exist for both VMs
-
-        Expected:
-            - Source PVCs/DataVolumes are kept for both VMs (default keepSource behavior)
-        """
-
-    @pytest.mark.polarion("CNV-16559")
-    def test_namespace_level_retention_policy_delete_source_combined_mode(self):
-        """
-        Test namespace-level retentionPolicy=deleteSource with combined online+offline migration.
-
-        STP Requirement: Namespace-level cleanup policy (P0)
-
-        Preconditions:
-            - Running VM (online migration) with source PVC/DataVolume
-            - Stopped VM (offline migration) with source PVC/DataVolume
-
-        Steps:
-            1. Create MultiNamespaceVirtualMachineStorageMigrationPlan with namespace-level retentionPolicy=deleteSource
-            2. Wait for migration to complete successfully for both VMs
-            3. Verify both VMs are using new PVCs/DataVolumes
-            4. Check if source PVCs/DataVolumes exist for both VMs
-            5. Verify MultiNamespaceVirtualMachineStorageMigrationPlan still exists
-
-        Expected:
-            - Source PVCs/DataVolumes are deleted for both VMs
-            - MultiNamespaceVirtualMachineStorageMigrationPlan remains available after cleanup
-        """
-
-    @pytest.mark.polarion("CNV-16560")
-    def test_namespace_level_retention_policy_keep_source_combined_mode(self):
-        """
-        Test namespace-level retentionPolicy=keepSource with combined online+offline migration.
-
-        STP Requirement: Namespace-level cleanup policy (P0)
-
-        Preconditions:
-            - Running VM (online migration) with source PVC/DataVolume
-            - Stopped VM (offline migration) with source PVC/DataVolume
-
-        Steps:
-            1. Create MultiNamespaceVirtualMachineStorageMigrationPlan with namespace-level retentionPolicy=keepSource
-            2. Wait for migration to complete successfully for both VMs
-            3. Verify both VMs are using new PVCs/DataVolumes
-            4. Check if source PVCs/DataVolumes exist for both VMs
-
-        Expected:
-            - Source PVCs/DataVolumes are kept for both VMs
-        """
-
-    @pytest.mark.polarion("CNV-16561")
-    def test_spec_level_retention_policy_delete_source_combined_mode(self):
-        """
-        Test plan-level retentionPolicy=deleteSource with combined online+offline migration.
-
-        STP Requirement: Plan-level cleanup policy (P0)
-
-        Preconditions:
-            - Running VM (online migration) with source PVC/DataVolume
-            - Stopped VM (offline migration) with source PVC/DataVolume
-
-        Steps:
-            1. Create MultiNamespaceVirtualMachineStorageMigrationPlan with plan-level retentionPolicy=deleteSource
-            2. Wait for migration to complete successfully for both VMs
-            3. Verify both VMs are using new PVCs/DataVolumes
-            4. Check if source PVCs/DataVolumes exist for both VMs
-            5. Verify MultiNamespaceVirtualMachineStorageMigrationPlan still exists
-
-        Expected:
-            - Source PVCs/DataVolumes are deleted for both VMs
-            - MultiNamespaceVirtualMachineStorageMigrationPlan remains available after cleanup
-        """
-
-    @pytest.mark.polarion("CNV-16562")
-    def test_spec_level_retention_policy_keep_source_combined_mode(self):
-        """
-        Test plan-level retentionPolicy=keepSource with combined online+offline migration.
-
-        STP Requirement: Plan-level cleanup policy (P0)
-
-        Preconditions:
-            - Running VM (online migration) with source PVC/DataVolume
-            - Stopped VM (offline migration) with source PVC/DataVolume
-
-        Steps:
-            1. Create MultiNamespaceVirtualMachineStorageMigrationPlan with plan-level retentionPolicy=keepSource
-            2. Wait for migration to complete successfully for both VMs
-            3. Verify both VMs are using new PVCs/DataVolumes
-            4. Check if source PVCs/DataVolumes exist for both VMs
-
-        Expected:
-            - Source PVCs/DataVolumes are kept for both VMs
-        """
-
-
+@pytest.mark.parametrize(
+    "source_storage_class, target_storage_class",
+    [
+        pytest.param(
+            {"source_storage_class": py_config[STORAGE_CLASS_A]},
+            {"target_storage_class": py_config[STORAGE_CLASS_B]},
+            id="source_a_target_b",
+        )
+    ],
+    indirect=True,
+)
 class TestStorageMigrationCombinedRetentionPolicy:
-    """
-    Test combination of retentionPolicy for MultiNamespaceVirtualMachineStorageMigrationPlan.
+    """Test namespace-policy precedence."""
 
-    STP Traceability: CNV-73509 (P0)
-    Note: Namespace-level policy overrides plan-level policy for that namespace.
-
-    Parametrize:
-        - migration_mode:
-            - online (both VMs running during migration)
-            - offline (both VMs stopped during migration)
-            - online+offline (one VM running, one VM stopped during migration)
-
-    Preconditions:
-      - Two VMs with source PVCs/DataVolumes in separate namespaces
-
-    """
-
-    __test__ = False
-
+    @pytest.mark.parametrize(
+        "combined_policy_and_combined_mode_mig_plan",
+        [
+            pytest.param(
+                {"spec_retention_policy": KEEP_SOURCE, "first_ns_override_retention_policy": DELETE_SOURCE},
+                id="spec_keep_ns_delete",
+            )
+        ],
+        indirect=True,
+    )
     @pytest.mark.polarion("CNV-16305")
-    def test_namespace_delete_overrides_plan_keep(self):
-        """
-        Test combination of namespace-level and plan-level retentionPolicy.
+    @pytest.mark.usefixtures("combined_policy_mig_migration")
+    def test_namespace_delete_overrides_plan_keep(
+        self,
+        running_vm_for_scmig_test_first_ns,
+        stopped_vm_for_scmig_test_second_ns,
+        target_storage_class,
+        source_dv_names_first_ns_for_scmig_test,
+        source_dv_names_second_ns_for_scmig_test,
+        combined_policy_and_combined_mode_mig_plan,
+    ):
+        """Verify namespace deleteSource overrides plan keepSource."""
+        verify_vm_storage_class_updated(
+            vm=running_vm_for_scmig_test_first_ns, target_storage_class=target_storage_class
+        )
+        verify_source_dvs_deleted(
+            vm=running_vm_for_scmig_test_first_ns, source_dv_names=source_dv_names_first_ns_for_scmig_test
+        )
+        verify_vm_storage_class_updated(
+            vm=stopped_vm_for_scmig_test_second_ns, target_storage_class=target_storage_class
+        )
+        verify_source_dvs_exist(
+            vm=stopped_vm_for_scmig_test_second_ns, source_dv_names=source_dv_names_second_ns_for_scmig_test
+        )
+        assert combined_policy_and_combined_mode_mig_plan.exists
 
-        STP Requirement: Combined namespace and plan-level cleanup policies (P0)
-        Namespace-level policy overrides plan-level policy for that namespace.
-
-        Preconditions:
-            - Two VMs with source PVCs/DataVolumes in separate namespaces
-
-        Steps:
-            1. Create MultiNamespaceVirtualMachineStorageMigrationPlan with plan-level retentionPolicy=keepSource and namespace-level retentionPolicy=deleteSource for one namespace
-            2. Wait for all migrations to complete successfully
-            3. Verify both VMs are using new PVCs
-            4. Check if source PVCs exist in both namespaces
-            5. Verify MultiNamespaceVirtualMachineStorageMigrationPlan still exists
-
-        Expected:
-            - Source PVCs in namespace with namespace-level deleteSource policy are deleted
-            - Source PVCs in namespace without namespace-level policy are kept (plan-level keepSource)
-            - MultiNamespaceVirtualMachineStorageMigrationPlan remains available after cleanup
-        """
-
+    @pytest.mark.parametrize(
+        "combined_policy_and_combined_mode_mig_plan",
+        [
+            pytest.param(
+                {"spec_retention_policy": DELETE_SOURCE, "first_ns_override_retention_policy": KEEP_SOURCE},
+                id="spec_delete_ns_keep",
+            )
+        ],
+        indirect=True,
+    )
+    @pytest.mark.xfail(reason=f"{QUARANTINED}: namespace retention policy is not applied, CNV-96425", run=False)
     @pytest.mark.polarion("CNV-16306")
-    def test_namespace_keep_overrides_plan_delete(self):
-        """
-        Test combination: namespace-level keepSource + plan-level deleteSource.
+    @pytest.mark.usefixtures("combined_policy_mig_migration")
+    def test_namespace_keep_overrides_plan_delete(
+        self,
+        running_vm_for_scmig_test_first_ns,
+        stopped_vm_for_scmig_test_second_ns,
+        target_storage_class,
+        source_dv_names_first_ns_for_scmig_test,
+        source_dv_names_second_ns_for_scmig_test,
+        combined_policy_and_combined_mode_mig_plan,
+    ):
+        """Verify namespace keepSource overrides plan deleteSource."""
+        verify_vm_storage_class_updated(
+            vm=running_vm_for_scmig_test_first_ns, target_storage_class=target_storage_class
+        )
+        verify_source_dvs_exist(
+            vm=running_vm_for_scmig_test_first_ns, source_dv_names=source_dv_names_first_ns_for_scmig_test
+        )
+        verify_vm_storage_class_updated(
+            vm=stopped_vm_for_scmig_test_second_ns, target_storage_class=target_storage_class
+        )
+        verify_source_dvs_deleted(
+            vm=stopped_vm_for_scmig_test_second_ns, source_dv_names=source_dv_names_second_ns_for_scmig_test
+        )
+        assert combined_policy_and_combined_mode_mig_plan.exists
 
-        STP Requirement: Combined namespace and plan-level cleanup policies (P0)
-        Namespace-level policy overrides plan-level policy for that namespace.
-
-        Preconditions:
-            - Two VMs with source PVCs/DataVolumes in separate namespaces
-
-        Steps:
-            1. Create MultiNamespaceVirtualMachineStorageMigrationPlan with plan-level retentionPolicy=deleteSource and namespace-level retentionPolicy=keepSource for one namespace
-            2. Wait for all migrations to complete successfully
-            3. Verify both VMs are using new PVCs
-            4. Check if source PVCs exist in both namespaces
-            5. Verify MultiNamespaceVirtualMachineStorageMigrationPlan still exists
-
-        Expected:
-            - Source PVCs in namespace with namespace-level keepSource policy are kept (namespace overrides plan)
-            - Source PVCs in namespace without namespace-level policy are deleted (plan-level deleteSource)
-            - MultiNamespaceVirtualMachineStorageMigrationPlan remains available after cleanup
-        """
-
+    @pytest.mark.parametrize(
+        "combined_policy_and_combined_mode_mig_plan",
+        [
+            pytest.param(
+                {"spec_retention_policy": DELETE_SOURCE, "first_ns_override_retention_policy": DELETE_SOURCE},
+                id="both_delete",
+            )
+        ],
+        indirect=True,
+    )
     @pytest.mark.polarion("CNV-16307")
-    def test_namespace_and_plan_level_delete_source_retention_policy(self):
-        """
-        Test combination: namespace-level deleteSource + plan-level deleteSource.
+    @pytest.mark.usefixtures("combined_policy_mig_migration")
+    def test_namespace_and_plan_level_delete_source_retention_policy(
+        self,
+        running_vm_for_scmig_test_first_ns,
+        stopped_vm_for_scmig_test_second_ns,
+        target_storage_class,
+        source_dv_names_first_ns_for_scmig_test,
+        source_dv_names_second_ns_for_scmig_test,
+        combined_policy_and_combined_mode_mig_plan,
+    ):
+        """Verify both deleteSource policies delete source volumes."""
+        for vm, source_dvs in (
+            (running_vm_for_scmig_test_first_ns, source_dv_names_first_ns_for_scmig_test),
+            (stopped_vm_for_scmig_test_second_ns, source_dv_names_second_ns_for_scmig_test),
+        ):
+            verify_vm_storage_class_updated(vm=vm, target_storage_class=target_storage_class)
+            verify_source_dvs_deleted(vm=vm, source_dv_names=source_dvs)
+        assert combined_policy_and_combined_mode_mig_plan.exists
 
-        STP Requirement: Combined namespace and plan-level cleanup policies (P0)
-        Both policies agree on deletion.
-
-        Preconditions:
-            - Two VMs with source PVCs/DataVolumes in separate namespaces
-
-        Steps:
-            1. Create MultiNamespaceVirtualMachineStorageMigrationPlan with plan-level retentionPolicy=deleteSource and namespace-level retentionPolicy=deleteSource for one namespace
-            2. Wait for all migrations to complete successfully
-            3. Verify both VMs are using new PVCs
-            4. Check if source PVCs exist in both namespaces
-            5. Verify MultiNamespaceVirtualMachineStorageMigrationPlan still exists
-
-        Expected:
-            - All source PVCs are deleted
-            - MultiNamespaceVirtualMachineStorageMigrationPlan remains available after cleanup
-        """
-
+    @pytest.mark.parametrize(
+        "combined_policy_and_combined_mode_mig_plan",
+        [
+            pytest.param(
+                {"spec_retention_policy": KEEP_SOURCE, "first_ns_override_retention_policy": KEEP_SOURCE},
+                id="both_keep",
+            )
+        ],
+        indirect=True,
+    )
     @pytest.mark.polarion("CNV-16308")
-    def test_namespace_and_plan_level_keep_source_retention_policy(self):
-        """
-        Test combination: namespace-level keepSource + plan-level keepSource.
-
-        STP Requirement: Combined namespace and plan-level cleanup policies (P0)
-        Both policies agree on retention.
-
-        Preconditions:
-            - Two VMs with source PVCs/DataVolumes in separate namespaces
-
-        Steps:
-            1. Create MultiNamespaceVirtualMachineStorageMigrationPlan with plan-level retentionPolicy=keepSource and namespace-level retentionPolicy=keepSource for one namespace
-            2. Wait for all migrations to complete successfully
-            3. Verify both VMs are using new PVCs
-            4. Check if source PVCs exist in both namespaces
-
-        Expected:
-            - All source PVCs are kept
-        """
+    @pytest.mark.usefixtures("combined_policy_mig_migration")
+    def test_namespace_and_plan_level_keep_source_retention_policy(
+        self,
+        running_vm_for_scmig_test_first_ns,
+        stopped_vm_for_scmig_test_second_ns,
+        target_storage_class,
+        source_dv_names_first_ns_for_scmig_test,
+        source_dv_names_second_ns_for_scmig_test,
+    ):
+        """Verify both keepSource policies keep source volumes."""
+        for vm, source_dvs in (
+            (running_vm_for_scmig_test_first_ns, source_dv_names_first_ns_for_scmig_test),
+            (stopped_vm_for_scmig_test_second_ns, source_dv_names_second_ns_for_scmig_test),
+        ):
+            verify_vm_storage_class_updated(vm=vm, target_storage_class=target_storage_class)
+            verify_source_dvs_exist(vm=vm, source_dv_names=source_dvs)
 
 
+@pytest.mark.parametrize(
+    "source_storage_class",
+    [pytest.param({"source_storage_class": py_config[STORAGE_CLASS_A]}, id="source_a")],
+    indirect=True,
+)
 class TestStorageMigrationFailureRetentionPolicy:
-    """
-    [NEGATIVE] Test retentionPolicy behavior when migration fails.
-    Source volumes should be retained regardless of retentionPolicy setting.
+    """[NEGATIVE] Test source-volume retention after failed migration."""
 
-    STP Traceability: CNV-73509 (P2)
-
-    Preconditions:
-      - VM with source PVC/DataVolume
-    """
-
-    __test__ = False
-
+    @pytest.mark.parametrize(
+        "failure_mig_plan", [pytest.param({"retention_policy": DELETE_SOURCE}, id="delete_source")], indirect=True
+    )
+    @pytest.mark.xfail(reason=f"{QUARANTINED}: failing migration behavior is not clarified, CNV-98407", run=False)
     @pytest.mark.polarion("CNV-16309")
-    def test_failed_migration_with_delete_source_policy(self):
-        """
-        Test that source PVC/DataVolume is retained when migration fails with retentionPolicy=deleteSource.
+    @pytest.mark.usefixtures("failure_mig_migration")
+    def test_failed_migration_with_delete_source_policy(self, failure_test_vm, failure_source_dv_names):
+        """[NEGATIVE] Verify deleteSource retains volumes after failure."""
+        verify_source_dvs_exist(vm=failure_test_vm, source_dv_names=failure_source_dv_names)
 
-        STP Requirement: Source volumes preserved on migration failure (P2)
-
-        Preconditions:
-            - VM with source PVC/DataVolume
-
-        Steps:
-            1. Create MultiNamespaceVirtualMachineStorageMigrationPlan with plan-level retentionPolicy=deleteSource and invalid target storage class
-            2. Wait for migration to fail
-            3. Check migration status
-            4. Check if source PVC/DataVolume exists
-            5. Verify VM volume references
-
-        Expected:
-            - Source PVC/DataVolume is retained despite deleteSource policy
-        """
-
+    @pytest.mark.parametrize(
+        "failure_mig_plan", [pytest.param({"retention_policy": KEEP_SOURCE}, id="keep_source")], indirect=True
+    )
+    @pytest.mark.xfail(reason=f"{QUARANTINED}: failing migration behavior is not clarified, CNV-98407", run=False)
     @pytest.mark.polarion("CNV-16310")
-    def test_failed_migration_with_keep_source_policy(self):
-        """
-        Test that source PVC/DataVolume is retained when migration fails with retentionPolicy=keepSource.
-
-        STP Requirement: Source volumes preserved on migration failure (P2)
-
-        Preconditions:
-            - VM with source PVC/DataVolume
-
-        Steps:
-            1. Create MultiNamespaceVirtualMachineStorageMigrationPlan with plan-level retentionPolicy=keepSource and invalid target storage class
-            2. Wait for migration to fail
-            3. Check migration status
-            4. Check if source PVC/DataVolume exists
-            5. Verify VM volume references
-
-        Expected:
-            - Source PVC/DataVolume is retained
-        """
+    @pytest.mark.usefixtures("failure_mig_migration")
+    def test_failed_migration_with_keep_source_policy(self, failure_test_vm, failure_source_dv_names):
+        """[NEGATIVE] Verify keepSource retains volumes after failure."""
+        verify_source_dvs_exist(vm=failure_test_vm, source_dv_names=failure_source_dv_names)
