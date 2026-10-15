@@ -914,6 +914,7 @@ def block_default_storage_profile(
             wait_timeout=TIMEOUT_2MIN,
             sleep=TIMEOUT_5SEC,
             func=lambda: storage_profile.instance.to_dict()["status"]["claimPropertySets"],
+            exceptions_dict={KeyError: []},
         ):
             if effective_claim_property_sets == claim_property_sets:
                 break
@@ -1104,14 +1105,13 @@ def volume_mode_restore_data_volume(
     namespace,
     volume_mode_mismatch_file_restore,
 ):
-    """Existing operator-created restore volume with its PVC available for inspection."""
+    """Succeeded operator-created restore volume with its PVC bound for inspection."""
     data_volume = DataVolume(
         name=restore_volume_name(restore_cr_name=volume_mode_mismatch_file_restore.name),
         namespace=namespace.name,
         client=admin_client,
     )
-    data_volume.wait(timeout=TIMEOUT_5MIN, wait_for_exists_only=True)
-    data_volume.pvc.wait(timeout=TIMEOUT_5MIN)
+    data_volume.wait_for_dv_success(timeout=TIMEOUT_5MIN)
     return data_volume
 
 
@@ -1163,13 +1163,18 @@ def linux_root_disk_manual_browsing_file_restore(
         client=admin_client,
     ) as file_restore:
         yield file_restore
-    assert_successful_restore_cleanup(
+    for _ in TimeoutSampler(
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
+        func=assert_successful_restore_cleanup,
+        exceptions_dict={AssertionError: []},
         vm=file_restore_linux_root_only_vm,
         restore_cr_name=file_restore.name,
         namespace_name=namespace.name,
         admin_client=admin_client,
         snapshot_source=snapshot_source,
-    )
+    ):
+        break
 
 
 @pytest.fixture()
