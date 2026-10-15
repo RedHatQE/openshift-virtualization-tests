@@ -50,6 +50,7 @@ class TestUpgrade:
         self,
         admin_client,
         hco_namespace,
+        active_machine_config_pools,
         cnv_target_version,
         cnv_upgrade_stream,
         fired_alerts_before_upgrade,
@@ -76,11 +77,13 @@ class TestUpgrade:
             6.2. Wait for HCO OperatorCondition to reach status Upgradeable=True.
             6.3. Wait until all the pods have been replaced.
             6.4. Wait until HCO is stable and its version is updated.
+            6.5. Wait for any autopilot-triggered MCP rollout to complete.
         """
         verify_upgrade_cnv(
             client=admin_client,
             hco_namespace=hco_namespace,
             expected_images=related_images_from_target_csv.values(),
+            machine_config_pools_list=active_machine_config_pools,
         )
 
     @pytest.mark.gating
@@ -91,6 +94,7 @@ class TestUpgrade:
         self,
         admin_client,
         hco_namespace,
+        active_machine_config_pools,
         cnv_target_version,
         cnv_upgrade_stream,
         fired_alerts_before_upgrade,
@@ -110,4 +114,5 @@ class TestUpgrade:
             client=admin_client,
             hco_namespace=hco_namespace,
             expected_images=related_images_from_target_csv.values(),
+            machine_config_pools_list=active_machine_config_pools,
         )
