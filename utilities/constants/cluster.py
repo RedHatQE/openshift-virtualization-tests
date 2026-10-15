@@ -45,6 +45,8 @@ RHCOS10_AFFINITY: Final[dict[str, Any]] = {
         }
     }
 }
+RHCOS9_VERSION: Final[str] = "CoreOS 9"
+RHCOS10_VERSION: Final[str] = "CoreOS 10"
 VERSION_LABEL_KEY = f"{Resource.ApiGroup.APP_KUBERNETES_IO}/version"
 CPU_MODEL_LABEL_PREFIX = f"cpu-model.node.{Resource.ApiGroup.KUBEVIRT_IO}"
 CPU_MANAGER_LABEL = f"{Resource.ApiGroup.KUBEVIRT_IO}/cpumanager"
