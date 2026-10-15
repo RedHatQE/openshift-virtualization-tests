@@ -83,13 +83,11 @@ def nodes_active_nics(
             if iface_name not in node_physical_nics[node.name]:
                 continue
 
-            physically_connected = (
-                ExecCommandOnPod(utility_pods=workers_utility_pods, node=node)
-                .exec(command=f"nmcli -g WIRED-PROPERTIES.CARRIER device show {iface_name}")
-                .lower()
+            carrier_response = ExecCommandOnPod(utility_pods=workers_utility_pods, node=node).exec(
+                command=f"nmcli -g WIRED-PROPERTIES.CARRIER device show {iface_name}"
             )
-            if physically_connected != "on":
-                LOGGER.warning(f"{node.name} {iface_name} link is down")
+            if carrier_response.lower() != "on":
+                LOGGER.warning(f"{node.name} {iface_name} link is down (response: {carrier_response})")
                 continue
 
             if node_iface.get("ipv4", {}).get("address"):
