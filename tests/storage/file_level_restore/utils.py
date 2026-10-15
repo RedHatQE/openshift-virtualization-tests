@@ -593,23 +593,22 @@ def install_linux_guest_helper(vm: VirtualMachineForTests, admin_client: Dynamic
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
     )
-    for script_name in (LINUX_SETUP_SCRIPT, LINUX_FILERESTORE_SCRIPT):
-        script_path = f"{stage_directory}/{script_name}"
-        encoded_script = base64.b64encode(scripts[script_name].encode()).decode()
-        run_ssh_commands(
-            host=vm.ssh_exec,
-            commands=[
-                "sudo",
-                "bash",
-                "-c",
-                (
-                    f"echo {encoded_script} | base64 -d > {script_path} "
-                    f"&& chown root:root {script_path} && chmod 0644 {script_path}"
-                ),
-            ],
-            wait_timeout=TIMEOUT_2MIN,
-            sleep=TIMEOUT_5SEC,
-        )
+    # Upload scripts over SFTP so pyhelper-utils does not log their full contents as SSH commands polluting the logs
+    with tempfile.TemporaryDirectory() as temp_directory:
+        for script_name in (LINUX_SETUP_SCRIPT, LINUX_FILERESTORE_SCRIPT):
+            script_path = f"{stage_directory}/{script_name}"
+            local_path = Path(temp_directory) / script_name
+            local_path.write_text(data=scripts[script_name], encoding="utf-8")
+            vm.ssh_exec.fs.put(path_src=str(local_path), path_dst=script_path)
+            run_ssh_commands(
+                host=vm.ssh_exec,
+                commands=[
+                    ["sudo", "chown", "root:root", script_path],
+                    ["sudo", "chmod", "0644", script_path],
+                ],
+                wait_timeout=TIMEOUT_2MIN,
+                sleep=TIMEOUT_5SEC,
+            )
 
     key_file_path = f"{stage_directory}/{OPERATOR_SSH_PUBLIC_KEY_FILE_NAME}"
     encoded_public_key = base64.b64encode(operator_public_key.encode()).decode()
