@@ -16,7 +16,7 @@ from ocp_resources.config_map import ConfigMap
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.pod import Pod
-from ocp_resources.resource import NamespacedResource
+from ocp_resources.resource import NamespacedResource, Resource
 from ocp_resources.storage_class import StorageClass
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 from ocp_resources.volume_snapshot import VolumeSnapshot
@@ -64,6 +64,12 @@ class VirtualMachineSnapshotContent(NamespacedResource):
     kind: str = "VirtualMachineSnapshotContent"
 
 
+class VolumeSnapshotContent(Resource):
+    """CSI snapshot content with the source PVC volume mode."""
+
+    api_group: str = Resource.ApiGroup.SNAPSHOT_STORAGE_K8S_IO
+
+
 class LinuxRootDiskVirtualMachineSnapshotInfo(NamedTuple):
     """Online VirtualMachineSnapshot metadata for root-disk FLR experiments."""
 
@@ -95,6 +101,7 @@ class VirtualMachineFileRestore(NamespacedResource):
         source_pvc_name: str | None = None,
         source_path: str | None = None,
         source_partition: int | None = None,
+        source_namespace: str | None = None,
         **kwargs: Any,
     ) -> None:
         """Create a VirtualMachineFileRestore resource.
@@ -106,6 +113,7 @@ class VirtualMachineFileRestore(NamespacedResource):
             source_path: Path on the source volume to restore. Restored to the same
                 path on the guest root filesystem (operator does not support targetPath).
             source_partition: Partition number on the source volume.
+            source_namespace: Namespace containing the source snapshot or PVC.
             **kwargs: Additional arguments passed to NamespacedResource.
         """
         super().__init__(**kwargs)
@@ -114,6 +122,7 @@ class VirtualMachineFileRestore(NamespacedResource):
         self._source_pvc_name = source_pvc_name
         self._source_path = source_path
         self._source_partition = source_partition
+        self._source_namespace = source_namespace
 
     def to_dict(self) -> None:
         """Build the VirtualMachineFileRestore manifest in ``self.res``.
@@ -143,6 +152,10 @@ class VirtualMachineFileRestore(NamespacedResource):
                 spec["source"]["pvc"] = {"name": self._source_pvc_name}
             else:
                 raise ValueError("VirtualMachineFileRestore requires either source_snapshot_name or source_pvc_name")
+
+            if self._source_namespace is not None:
+                source_kind = "snapshot" if self._source_snapshot_name else "pvc"
+                spec["source"][source_kind]["namespace"] = self._source_namespace
 
             if self._source_path is not None:
                 spec["sourcePath"] = self._source_path
@@ -580,23 +593,22 @@ def install_linux_guest_helper(vm: VirtualMachineForTests, admin_client: Dynamic
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
     )
-    for script_name in (LINUX_SETUP_SCRIPT, LINUX_FILERESTORE_SCRIPT):
-        script_path = f"{stage_directory}/{script_name}"
-        encoded_script = base64.b64encode(scripts[script_name].encode()).decode()
-        run_ssh_commands(
-            host=vm.ssh_exec,
-            commands=[
-                "sudo",
-                "bash",
-                "-c",
-                (
-                    f"echo {encoded_script} | base64 -d > {script_path} "
-                    f"&& chown root:root {script_path} && chmod 0644 {script_path}"
-                ),
-            ],
-            wait_timeout=TIMEOUT_2MIN,
-            sleep=TIMEOUT_5SEC,
-        )
+    # Upload scripts over SFTP so pyhelper-utils does not log their full contents as SSH commands polluting the logs
+    with tempfile.TemporaryDirectory() as temp_directory:
+        for script_name in (LINUX_SETUP_SCRIPT, LINUX_FILERESTORE_SCRIPT):
+            script_path = f"{stage_directory}/{script_name}"
+            local_path = Path(temp_directory) / script_name
+            local_path.write_text(data=scripts[script_name], encoding="utf-8")
+            vm.ssh_exec.fs.put(path_src=str(local_path), path_dst=script_path)
+            run_ssh_commands(
+                host=vm.ssh_exec,
+                commands=[
+                    ["sudo", "chown", "root:root", script_path],
+                    ["sudo", "chmod", "0644", script_path],
+                ],
+                wait_timeout=TIMEOUT_2MIN,
+                sleep=TIMEOUT_5SEC,
+            )
 
     key_file_path = f"{stage_directory}/{OPERATOR_SSH_PUBLIC_KEY_FILE_NAME}"
     encoded_public_key = base64.b64encode(operator_public_key.encode()).decode()
@@ -893,6 +905,81 @@ def windows_guest_path(guest_path: str) -> str:
         Windows path with backslashes.
     """
     return guest_path.replace("/", "\\")
+
+
+def linux_backup_file_path(vm: VirtualMachineForTests, mount_path: str, guest_path: str) -> str:
+    """Find a guest file in a mounted backup, including backups with multiple LVs.
+
+    Args:
+        vm: Linux VM with the backup mounted.
+        mount_path: Backup mount reported by the restore operation.
+        guest_path: Original absolute path of the file in the guest.
+
+    Returns:
+        Absolute path of the unique matching file inside the backup mount.
+    """
+    matches = run_ssh_commands(
+        host=vm.ssh_exec,
+        commands=["sudo", "find", mount_path, "-type", "f", "-path", f"*{guest_path}"],
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
+    )[0].splitlines()
+    assert len(matches) == 1, f"Expected one backup of '{guest_path}' below '{mount_path}', found {matches}"
+    return matches[0]
+
+
+def windows_backup_file_path(vm: VirtualMachineForTests, restore_cr_name: str, relative_path: str) -> str:
+    """Find a file through the drive letter on the hotplugged backup disk.
+
+    Args:
+        vm: Windows VM with the backup attached.
+        restore_cr_name: Restore request identifying the backup disk serial.
+        relative_path: File path relative to the backup volume root.
+
+    Returns:
+        File path using the backup volume's drive letter.
+    """
+    volume_name = restore_volume_name(restore_cr_name=restore_cr_name)
+    # Find the backup disk by serial, get its partition's drive letter, and append the relative file path.
+    command = (
+        "$ErrorActionPreference = 'Stop';"
+        f" $disk = Get-Disk | Where-Object {{ $_.SerialNumber -and $_.SerialNumber.Trim() -eq '{volume_name}' }};"
+        " $partition = Get-Partition -DiskNumber $disk.Number | Where-Object DriveLetter;"
+        f" Join-Path ([string]$partition.DriveLetter + ':\\') '{relative_path}'"
+    )
+    return run_ssh_commands(
+        host=vm.ssh_exec,
+        commands=["powershell", "-NoProfile", "-Command", command],
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
+    )[0].strip()
+
+
+def assert_windows_backup_read_only(vm: VirtualMachineForTests, backup_file_path: str) -> None:
+    """Check backup file content stays unchanged after a write attempt.
+
+    Args:
+        vm: Windows VM with the backup mounted.
+        backup_file_path: Existing file addressed through the backup volume's drive letter.
+    """
+    # Read the full file, attempt an append, then read it again in separate PowerShell processes.
+    read_command = f"Get-Content -LiteralPath '{backup_file_path}' -Raw -ErrorAction Stop"
+    write_command = (
+        f"try {{ Add-Content -LiteralPath '{backup_file_path}' -Value 'unexpected-backup-write' -ErrorAction Stop }}"
+        " catch { Write-Output $_.Exception.Message }"
+    )
+    before, _, after = [
+        run_ssh_commands(
+            host=vm.ssh_exec,
+            commands=["powershell", "-NoProfile", "-Command", command],
+            wait_timeout=TIMEOUT_2MIN,
+            sleep=TIMEOUT_5SEC,
+        )[0]
+        for command in (read_command, write_command, read_command)
+    ]
+    assert before == after, (
+        f"Backup file '{backup_file_path}' changed after the write attempt: before={before!r}, after={after!r}"
+    )
 
 
 def delete_windows_guest_file(vm: VirtualMachineForTests, guest_path: str) -> None:
