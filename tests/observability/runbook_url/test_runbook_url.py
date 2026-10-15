@@ -1,5 +1,3 @@
-import logging
-
 import pytest
 
 from tests.observability.runbook_url.utils import validate_downstream_runbook_url

@@ -47,5 +47,7 @@ def available_runbook_urls(cnv_prometheus_rule_alerts):
                         available_urls.add(runbook_url)
                         break
             except TimeoutExpiredError:
-                LOGGER.error(f"Runbook URL unreachable after retries: {raw_url}, status: {sample.status_code if sample else 'no response'}")
+                LOGGER.error(
+                    f"Runbook URL unreachable after retries: {raw_url}, status: {sample.status_code if sample else 'no response'}"
+                )
     return available_urls
