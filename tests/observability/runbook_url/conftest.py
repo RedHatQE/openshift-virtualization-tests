@@ -1,22 +1,66 @@
 import logging
 
 import pytest
+import requests
 from ocp_resources.prometheus_rule import PrometheusRule
-from pytest_testconfig import config as py_config
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler
+
+from tests.observability.runbook_url.utils import github_blob_url_to_raw
+from utilities.constants import TIMEOUT_1MIN, TIMEOUT_10SEC
 
 LOGGER = logging.getLogger(__name__)
 
 
-@pytest.fixture()
-def cnv_alerts_runbook_urls_from_prometheus_rule(cnv_prometheus_rules_matrix__function__):
-    cnv_prometheus_rule_by_name = PrometheusRule(
-        namespace=py_config["hco_namespace"],
-        name=cnv_prometheus_rules_matrix__function__,
-    )
-    LOGGER.info(f"Checking rule: {cnv_prometheus_rule_by_name.name}")
-    return {
-        alert.get("alert"): alert.get("annotations").get("runbook_url")
-        for group in cnv_prometheus_rule_by_name.instance.spec.groups
-        for alert in group["rules"]
-        if alert.get("alert")
+@pytest.fixture(scope="module")
+def cnv_prometheus_rule_alerts(admin_client, hco_namespace):
+    """All alert-to-runbook-URL mappings per CNV prometheus rule."""
+    result = {}
+    for prometheus_rule in PrometheusRule.get(dyn_client=admin_client, namespace=hco_namespace.name):
+        LOGGER.info(f"Loading alerts from rule: {prometheus_rule.name}")
+        result[prometheus_rule.name] = {
+            alert.get("alert"): (alert.get("annotations") or {}).get("runbook_url")
+            for group in prometheus_rule.instance.spec.groups
+            for alert in group["rules"]
+            if alert.get("alert")
+        }
+    return result
+
+
+@pytest.fixture(scope="module")
+def available_runbook_urls(cnv_prometheus_rule_alerts):
+    """Fetch and validate runbook URLs from the openshift/runbooks repository."""
+    unique_urls = {
+        runbook_url
+        for alerts in cnv_prometheus_rule_alerts.values()
+        for runbook_url in alerts.values()
+        if runbook_url
     }
+    LOGGER.info(f"Validating {len(unique_urls)} unique runbook URLs")
+
+    available_urls = set()
+    with requests.Session() as session:
+        for runbook_url in sorted(unique_urls):
+            raw_url = github_blob_url_to_raw(blob_url=runbook_url)
+            sample = None
+            try:
+                for sample in TimeoutSampler(
+                    wait_timeout=TIMEOUT_1MIN,
+                    sleep=TIMEOUT_10SEC,
+                    func=session.head,
+                    exceptions_dict={
+                        requests.exceptions.ConnectionError: [],
+                        requests.exceptions.Timeout: [],
+                    },
+                    url=raw_url,
+                    timeout=TIMEOUT_10SEC,
+                ):
+                    if sample.status_code == requests.codes.ok:
+                        available_urls.add(runbook_url)
+                        LOGGER.info(f"Runbook URL reachable: {raw_url}")
+                        break
+            except TimeoutExpiredError:
+                LOGGER.error(
+                    f"Runbook URL unreachable after retries: {raw_url}, "
+                    f"status: {sample.status_code if sample else 'no response'}"
+                )
+    return available_urls
