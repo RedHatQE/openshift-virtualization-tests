@@ -30,10 +30,7 @@ def cnv_prometheus_rule_alerts(admin_client, hco_namespace):
 def available_runbook_urls(cnv_prometheus_rule_alerts):
     """Fetch and validate runbook URLs from the openshift/runbooks repository."""
     unique_urls = {
-        runbook_url
-        for alerts in cnv_prometheus_rule_alerts.values()
-        for runbook_url in alerts.values()
-        if runbook_url
+        runbook_url for alerts in cnv_prometheus_rule_alerts.values() for runbook_url in alerts.values() if runbook_url
     }
     available_urls = set()
     with requests.Session() as session:
