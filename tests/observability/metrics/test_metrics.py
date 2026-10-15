@@ -75,6 +75,54 @@ class TestVMIMetricsLinuxVms:
             values_to_compare=linux_vm_info_to_compare,
         )
 
+    @pytest.mark.polarion("CNV-16853")
+    def test_vm_info_and_vmi_info_uid_differ(self, prometheus, single_metric_vm):
+        """
+        Test that kubevirt_vm_info and kubevirt_vmi_info each report the correct Kubernetes uid
+        for the same running VM, and that the two uid values differ.
+
+        No STP exists for this scenario - tracked via Jira: https://redhat.atlassian.net/browse/CNV-95597  # <skip-jira-utils-check>
+
+        Preconditions:
+            - Running Linux virtual machine
+
+        Steps:
+            1. Query kubevirt_vm_info for the virtual machine and record its uid label value
+            2. Query kubevirt_vmi_info for the virtual machine and record its uid label value
+
+        Expected:
+            - The uid label value from kubevirt_vm_info equals the virtual machine's Kubernetes uid
+            - The uid label value from kubevirt_vmi_info equals the running VMI's Kubernetes uid
+            - The uid label value from kubevirt_vm_info does not equal the uid label value from
+              kubevirt_vmi_info
+        """
+
+    test_vm_info_and_vmi_info_uid_differ.__test__ = False
+
+    @pytest.mark.polarion("CNV-16854")
+    def test_join_vmi_memory_unused_bytes_with_vm_info_by_uid(self, prometheus, single_metric_vm):
+        """
+        Test that joining kubevirt_vmi_memory_unused_bytes with kubevirt_vm_info on namespace and
+        name, carrying the uid label across via group_left, surfaces the virtual machine's uid.
+
+        No STP exists for this scenario - tracked via Jira: https://redhat.atlassian.net/browse/CNV-95597  # <skip-jira-utils-check>
+
+        Preconditions:
+            - Running Linux virtual machine
+
+        Steps:
+            1. Record the virtual machine's uid from its resource metadata
+            2. Run a Prometheus query joining kubevirt_vmi_memory_unused_bytes with
+               kubevirt_vm_info on namespace and name, with group_left carrying the uid label
+            3. Extract the uid label from the joined query result
+
+        Expected:
+            - The uid label value in the joined query result equals the virtual machine's uid
+              recorded in step 1
+        """
+
+    test_join_vmi_memory_unused_bytes_with_vm_info_by_uid.__test__ = False
+
 
 @pytest.mark.tier3
 @pytest.mark.windows
@@ -96,3 +144,165 @@ class TestVMIMetricsWindowsVms:
             expected_value="1",
             values_to_compare=windows_vm_info_to_compare,
         )
+
+    @pytest.mark.polarion("CNV-16859")
+    def test_vm_info_and_vmi_info_uid_differ_windows(self, prometheus, windows_vm_for_test):
+        """
+        Test that kubevirt_vm_info and kubevirt_vmi_info each report the correct Kubernetes uid
+        for the same running VM, and that the two uid values differ.
+
+        No STP exists for this scenario - tracked via Jira: https://redhat.atlassian.net/browse/CNV-95597  # <skip-jira-utils-check>
+
+        Preconditions:
+            - Running Windows virtual machine
+
+        Steps:
+            1. Query kubevirt_vm_info for the virtual machine and record its uid label value
+            2. Query kubevirt_vmi_info for the virtual machine and record its uid label value
+
+        Expected:
+            - The uid label value from kubevirt_vm_info equals the virtual machine's Kubernetes uid
+            - The uid label value from kubevirt_vmi_info equals the running VMI's Kubernetes uid
+            - The uid label value from kubevirt_vm_info does not equal the uid label value from
+              kubevirt_vmi_info
+        """
+
+    test_vm_info_and_vmi_info_uid_differ_windows.__test__ = False
+
+    @pytest.mark.polarion("CNV-16860")
+    def test_join_vmi_memory_unused_bytes_with_vm_info_by_uid_windows(self, prometheus, windows_vm_for_test):
+        """
+        Test that joining kubevirt_vmi_memory_unused_bytes with kubevirt_vm_info on namespace and
+        name, carrying the uid label across via group_left, surfaces the virtual machine's uid.
+
+        No STP exists for this scenario - tracked via Jira: https://redhat.atlassian.net/browse/CNV-95597  # <skip-jira-utils-check>
+
+        Preconditions:
+            - Running Windows virtual machine
+
+        Steps:
+            1. Record the virtual machine's uid from its resource metadata
+            2. Run a Prometheus query joining kubevirt_vmi_memory_unused_bytes with
+               kubevirt_vm_info on namespace and name, with group_left carrying the uid label
+            3. Extract the uid label from the joined query result
+
+        Expected:
+            - The uid label value in the joined query result equals the virtual machine's uid
+              recorded in step 1
+        """
+
+    test_join_vmi_memory_unused_bytes_with_vm_info_by_uid_windows.__test__ = False
+
+
+class TestLinuxVMAndVMIInfoUidLifecycle:
+    """
+    kubevirt_vm_info / kubevirt_vmi_info uid behavior across virtual machine stop/start and
+    delete/recreate lifecycle transitions.
+
+    No STP exists for this scenario - tracked via Jira: https://redhat.atlassian.net/browse/CNV-95597  # <skip-jira-utils-check>
+
+    Preconditions:
+        - Running Linux virtual machine, not shared with other tests in this module
+    """
+
+    __test__ = False
+
+    @pytest.mark.polarion("CNV-16855")
+    def test_vm_info_uid_unchanged_vmi_info_uid_changes_across_stop_start(self, prometheus):
+        """
+        Test that kubevirt_vm_info's uid stays unchanged and kubevirt_vmi_info's uid changes to a
+        new value across a virtual machine stop/start cycle.
+
+        Steps:
+            1. Query kubevirt_vm_info for the virtual machine and record its uid label value
+            2. Query kubevirt_vmi_info for the virtual machine and record its uid label value
+            3. Stop the virtual machine
+            4. Query kubevirt_vmi_info for the virtual machine
+            5. Query kubevirt_vm_info for the virtual machine and record its uid label value
+            6. Start the virtual machine
+            7. Query kubevirt_vmi_info for the virtual machine and record its uid label value
+
+        Expected:
+            - After the virtual machine is stopped, kubevirt_vmi_info for the virtual machine is
+              absent, and the kubevirt_vm_info uid label value from step 5 equals the value from
+              step 1
+            - After the virtual machine is started, the kubevirt_vmi_info uid label value from
+              step 7 does not equal the value from step 2
+        """
+
+    @pytest.mark.polarion("CNV-16856")
+    def test_vm_info_series_replaced_after_delete_and_recreate_with_same_name(self, prometheus):
+        """
+        Test that deleting a virtual machine and recreating a new virtual machine with the same
+        name produces a kubevirt_vm_info series with a new uid, replacing the series for the
+        deleted virtual machine's uid.
+
+        Steps:
+            1. Query kubevirt_vm_info for the virtual machine and record its uid label value
+            2. Delete the virtual machine
+            3. Create and start a new virtual machine with the same name and namespace as the
+               deleted virtual machine
+            4. Query kubevirt_vm_info for the virtual machine
+
+        Expected:
+            - The kubevirt_vm_info uid label value from step 4 does not equal the value from
+              step 1, and no active kubevirt_vm_info series reports the uid value from step 1
+        """
+
+
+@pytest.mark.tier3
+@pytest.mark.windows
+class TestWindowsVMAndVMIInfoUidLifecycle:
+    """
+    kubevirt_vm_info / kubevirt_vmi_info uid behavior across virtual machine stop/start and
+    delete/recreate lifecycle transitions.
+
+    No STP exists for this scenario - tracked via Jira: https://redhat.atlassian.net/browse/CNV-95597  # <skip-jira-utils-check>
+
+    Preconditions:
+        - Running Windows virtual machine, not shared with other tests in this module
+    """
+
+    __test__ = False
+
+    @pytest.mark.polarion("CNV-16861")
+    def test_vm_info_uid_unchanged_vmi_info_uid_changes_across_stop_start_windows(self, prometheus):
+        """
+        Test that kubevirt_vm_info's uid stays unchanged and kubevirt_vmi_info's uid changes to a
+        new value across a virtual machine stop/start cycle.
+
+        Steps:
+            1. Query kubevirt_vm_info for the virtual machine and record its uid label value
+            2. Query kubevirt_vmi_info for the virtual machine and record its uid label value
+            3. Stop the virtual machine
+            4. Query kubevirt_vmi_info for the virtual machine
+            5. Query kubevirt_vm_info for the virtual machine and record its uid label value
+            6. Start the virtual machine
+            7. Query kubevirt_vmi_info for the virtual machine and record its uid label value
+
+        Expected:
+            - After the virtual machine is stopped, kubevirt_vmi_info for the virtual machine is
+              absent, and the kubevirt_vm_info uid label value from step 5 equals the value from
+              step 1
+            - After the virtual machine is started, the kubevirt_vmi_info uid label value from
+              step 7 does not equal the value from step 2
+        """
+
+    @pytest.mark.polarion("CNV-16862")
+    def test_vm_info_series_replaced_after_delete_and_recreate_with_same_name_windows(self, prometheus):
+        """
+        Test that deleting a virtual machine and recreating a new virtual machine with the same
+        name produces a kubevirt_vm_info series with a new uid, replacing the series for the
+        deleted virtual machine's uid.
+
+        Steps:
+            1. Query kubevirt_vm_info for the virtual machine and record its uid label value
+            2. Delete the virtual machine
+            3. Create and start a new virtual machine with the same name and namespace as the
+               deleted virtual machine
+            4. Query kubevirt_vm_info for the virtual machine
+
+        Expected:
+            - The kubevirt_vm_info uid label value from step 4 does not equal the value from
+              step 1, and no active kubevirt_vm_info series reports the uid value from step 1
+        """
