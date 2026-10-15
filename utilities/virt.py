@@ -127,6 +127,7 @@ from utilities.storage import (
     get_default_storage_class,
     get_storage_class_dict_from_matrix,
 )
+from utilities.windows import get_cim_instance_json
 
 if TYPE_CHECKING:
     from libs.vm.vm import BaseVirtualMachine
@@ -1777,11 +1778,11 @@ def wait_for_windows_vm(vm, version, timeout=TIMEOUT_25MIN):
     sampler = TimeoutSampler(
         wait_timeout=timeout,
         sleep=15,
-        func=vm.ssh_exec.run_command,
-        command=shlex.split("wmic os get Caption /value"),
+        func=get_cim_instance_json,
+        ssh_exec=vm.ssh_exec,
     )
     for sample in sampler:
-        if version in str(sample):
+        if version in sample["Caption"]:
             return True
 
 
