@@ -23,7 +23,6 @@ from utilities.constants.os_matrix import (
 from utilities.storage import construct_datavolume_source_dict, get_test_artifact_server_url
 from utilities.virt import VirtualMachineForTests
 
-
 SECURE_BOOT_UNSUPPORTED_ARCHES = frozenset({ARM_64, S390X})
 
 
@@ -39,9 +38,7 @@ def skip_if_secure_boot_unsupported_arch():
     # There is no SMM on arm64/s390x, so Secure Boot cannot be enabled for guests on those arches.
     unsupported_arches = get_cluster_architecture() & SECURE_BOOT_UNSUPPORTED_ARCHES
     if unsupported_arches:
-        pytest.skip(
-            f"Secure Boot requires SMM, which is x86_64-only; unsupported on {sorted(unsupported_arches)}"
-        )
+        pytest.skip(f"Secure Boot requires SMM, which is x86_64-only; unsupported on {sorted(unsupported_arches)}")
 
 
 @pytest.fixture(scope="module")
