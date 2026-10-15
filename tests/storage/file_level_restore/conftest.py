@@ -1,6 +1,8 @@
 import logging
 
 import pytest
+from ocp_resources.cluster_role import ClusterRole
+from ocp_resources.cluster_role_binding import ClusterRoleBinding
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.resource import ResourceEditor
@@ -69,6 +71,7 @@ from utilities.constants.images import OS_FLAVOR_RHEL
 from utilities.constants.instance_types import RHEL10_PREFERENCE, U1_SMALL
 from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5MIN, TIMEOUT_5SEC, TIMEOUT_10MIN
 from utilities.infra import create_ns, unique_name
+from utilities.jira import is_jira_open
 from utilities.storage import (
     add_dv_to_vm,
     create_dv,
@@ -1033,6 +1036,46 @@ def linux_data_disk_snapshot_content(
 
 
 @pytest.fixture()
+def file_restore_snapshot_content_permission(admin_client):
+    """Temporarily grant snapshot-content read access until CNV-99267 is resolved."""
+    # Remove this workaround after https://redhat.atlassian.net/browse/CNV-99267 is resolved.
+    if not is_jira_open(jira_id="CNV-99267"):
+        yield
+        return
+
+    LOGGER.warning("Applying temporary snapshot-content read permission for CNV-99267")
+    service_account_name = Deployment(
+        name=FILE_RESTORE_OPERATOR_DEPLOYMENT_NAME,
+        namespace=FILE_RESTORE_OPERATOR_NAMESPACE,
+        client=admin_client,
+    ).instance.spec.template.spec.serviceAccountName
+    with ClusterRole(
+        name=unique_name(name="flr-snapshot-content-reader"),
+        client=admin_client,
+        rules=[
+            {
+                "apiGroups": [VolumeSnapshotContent.api_group],
+                "resources": ["volumesnapshotcontents"],
+                "verbs": ["get"],
+            }
+        ],
+    ) as cluster_role:
+        with ClusterRoleBinding(
+            name=cluster_role.name,
+            cluster_role=cluster_role.name,
+            subjects=[
+                {
+                    "kind": "ServiceAccount",
+                    "name": service_account_name,
+                    "namespace": FILE_RESTORE_OPERATOR_NAMESPACE,
+                }
+            ],
+            client=admin_client,
+        ) as role_binding:
+            yield role_binding
+
+
+@pytest.fixture()
 def volume_mode_mismatch_file_restore(
     admin_client,
     namespace,
@@ -1040,6 +1083,7 @@ def volume_mode_mismatch_file_restore(
     linux_data_disk_snapshot,
     deleted_linux_file_for_snapshot,
     block_default_storage_profile,
+    file_restore_snapshot_content_permission,
 ):
     """Restore request with a Filesystem source and a Block restore preference."""
     restore_path, _ = deleted_linux_file_for_snapshot
