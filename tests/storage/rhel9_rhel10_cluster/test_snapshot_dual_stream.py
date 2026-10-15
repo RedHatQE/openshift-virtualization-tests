@@ -12,7 +12,12 @@ import pytest
 
 from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS
 from tests.storage.rhel9_rhel10_cluster.snapshot_utils import verify_snapshot_restore_across_rhcos
-from utilities.constants.cluster import RHCOS9_AFFINITY, RHCOS10_AFFINITY
+from utilities.constants.cluster import (
+    RHCOS9_AFFINITY,
+    RHCOS9_VERSION,
+    RHCOS10_AFFINITY,
+    RHCOS10_VERSION,
+)
 
 if TYPE_CHECKING:
     from kubernetes.dynamic import DynamicClient
@@ -30,20 +35,21 @@ class TestDualStreamSnapshot:
     pytestmark = pytest.mark.usefixtures("skip_if_no_storage_class_for_snapshot")
 
     @pytest.mark.parametrize(
-        "golden_image_data_source_for_dual_stream_scope_function, dual_stream_snapshot_vm",
-        [
-            pytest.param(
+        argnames="golden_image_data_source_for_dual_stream_scope_function, dual_stream_snapshot_vm",
+        argvalues=[
+            (
                 {"os_dict": RHEL_LATEST},
                 {
                     "vm_name": "snap-rhcos9-restore-rhcos10-rhel",
                     "template_labels": RHEL_LATEST_LABELS,
                     "vm_affinity": RHCOS9_AFFINITY,
+                    "source_rhcos_version": RHCOS9_VERSION,
                     "vm_dict": {"spec": {"runStrategy": "Manual"}},
                     "start_vm": False,
                 },
-                id="RHEL-on-RHCOS9",
             ),
         ],
+        ids=["RHEL-on-RHCOS9"],
         indirect=True,
     )
     def test_snapshot_rhcos9_to_rhcos10(
@@ -78,24 +84,25 @@ class TestDualStreamSnapshot:
             admin_client=admin_client,
             vm=dual_stream_snapshot_vm,
             target_affinity=RHCOS10_AFFINITY,
-            target_rhcos_version="CoreOS 10",
+            target_rhcos_version=RHCOS10_VERSION,
         )
 
     @pytest.mark.parametrize(
-        "golden_image_data_source_for_dual_stream_scope_function, dual_stream_snapshot_vm",
-        [
-            pytest.param(
+        argnames="golden_image_data_source_for_dual_stream_scope_function, dual_stream_snapshot_vm",
+        argvalues=[
+            (
                 {"os_dict": RHEL_LATEST},
                 {
                     "vm_name": "snap-rhcos10-restore-rhcos9-rhel",
                     "template_labels": RHEL_LATEST_LABELS,
                     "vm_affinity": RHCOS10_AFFINITY,
+                    "source_rhcos_version": RHCOS10_VERSION,
                     "vm_dict": {"spec": {"runStrategy": "Manual"}},
                     "start_vm": False,
                 },
-                id="RHEL-on-RHCOS10",
             ),
         ],
+        ids=["RHEL-on-RHCOS10"],
         indirect=True,
     )
     def test_snapshot_rhcos10_to_rhcos9(
@@ -130,5 +137,5 @@ class TestDualStreamSnapshot:
             admin_client=admin_client,
             vm=dual_stream_snapshot_vm,
             target_affinity=RHCOS9_AFFINITY,
-            target_rhcos_version="CoreOS 9",
+            target_rhcos_version=RHCOS9_VERSION,
         )
