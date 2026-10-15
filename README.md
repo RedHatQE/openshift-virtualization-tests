@@ -19,6 +19,8 @@ Please follow the [Getting Started Guide](docs/GETTING_STARTED.md) and [Run the 
 ## Contribute to openshift-virtualization-tests
 Please follow the [Contributing Guide](docs/CONTRIBUTING.md) and the [Developer guide](docs/DEVELOPER_GUIDE.md)
 
+## CodeRabbit post-merge learnings
+Please follow the [CodeRabbit post-merge learnings](docs/DEVELOPER_GUIDE.md#coderabbit-post-merge-learnings) for automated follow-up PRs that document CodeRabbit learnings into `AGENTS.md`.
 
 ## Build and push
 Please follow the [Build and Push Guide](docs/CONTAINERIZE_TESTS.md) on how to build and push the tests.

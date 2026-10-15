@@ -123,6 +123,45 @@ Comment on your GitHub PR:
 
 This triggers CodeRabbit to analyze the PR's changed files and post an inline review comment with a test execution plan (smoke/gating impact, affected tests to run).
 
+### CodeRabbit post-merge learnings
+
+After a pull request merges into the default branch, CodeRabbit can open a follow-up pull request that documents new CodeRabbit "Learnings added" guidance into [`AGENTS.md`](../AGENTS.md) (and, when the learning is path-specific, into [`.coderabbit.yaml`](../.coderabbit.yaml) `reviews.path_instructions`).
+
+**Trigger**
+
+- Configured in `.coderabbit.yaml` under `reviews.post_merge_actions` as `CodeRabbit learnings from merged PR`.
+- Runs only when that action's checkbox is still checked in the CodeRabbit walkthrough at merge time.
+
+**Where it looks for learnings**
+
+CodeRabbit-authored comments that contain a "Learnings added" marker (a Markdown heading, or an HTML `<summary>…Learnings added…</summary>` details block), in any of:
+
+- top-level conversation comments
+- inline review comments (Files changed), including replies in those threads
+- pull request review bodies
+
+**Acknowledgment (when a learning is skipped)**
+
+- Inline review threads: skip the learning only if a human (not a bot) posted a direct reply **after** that "Learnings added" comment in the **same** review thread.
+- Top-level conversation comments and review bodies: a later unrelated human comment in the PR conversation does **not** count as acknowledgment; those learnings are still documented.
+
+**When it does nothing (no-op)**
+
+No follow-up pull request is opened when there are no qualifying "Learnings added" markers, every remaining learning is already documented in `AGENTS.md`, or all remaining inline learnings were acknowledged in the same thread. The post-merge result comment reports that no update was needed.
+
+If comments cannot be read at all, the action reports an incomplete scan and does not claim that no update was needed.
+
+**Follow-up pull request**
+
+When there is work to do, CodeRabbit opens one follow-up pull request against the default branch with the documented rules. The follow-up title and description are set by the CodeRabbit platform (not fully customizable via the action prompt). To find which merged pull request triggered a follow-up:
+
+- On the **source** merged pull request, open the 🚀 Post-Merge Actions result comment (it links to the follow-up).
+- On the **follow-up** pull request, check the timeline for a cross-reference to the source pull request.
+
+**Failure**
+
+If creating the follow-up pull request fails, CodeRabbit reports the failure in the post-merge result comment on the merged pull request and notifies the author.
+
 ### Re-run smoke tests
 
 Comment on your GitHub PR (OWNER / MEMBER / COLLABORATOR only):
