@@ -2,7 +2,7 @@ default_language_version:
   python: python3.14
 
 ci:
-  skip: [check-jsonschema]
+  skip: [check-jsonschema, check-staged-paths, check-linter-directives, check-python-source, check-test-std, check-stp-links]
 
 repos:
   - repo: https://github.com/PyCQA/autoflake
@@ -43,13 +43,18 @@ repos:
         stages: [pre-commit]
       - id: detect-private-key
       - id: mixed-line-ending
+      - id: check-added-large-files
+        stages: [pre-commit]
+      - id: check-toml
+        stages: [pre-commit]
   - repo: https://github.com/PyCQA/flake8
     rev: "7.3.0"
     hooks:
       - id: flake8
         language_version: python3.14
         args: [--config=.flake8]
-        exclude: "(utilities/unittests/|utilities/junit_ai_utils\\.py|scripts/std_placeholder_stats/tests/|scripts/coderabbit_retry/tests/test_coderabbit_retry\\.py)"
+        # Hook unit tests embed intentionally non-compliant source fixtures.
+        exclude: "(utilities/unittests/|utilities/junit_ai_utils\\.py|scripts/std_placeholder_stats/tests/|scripts/coderabbit_retry/tests/test_coderabbit_retry\\.py|scripts/pre_commit_hooks/tests/)"
         additional_dependencies:
           [
             "git+https://github.com/RedHatQE/flake8-plugins.git@v1.0.0",
@@ -77,6 +82,49 @@ repos:
     rev: "v8.30.0"
     hooks:
       - id: gitleaks
+
+  - repo: local
+    hooks:
+      - id: check-staged-paths
+        name: ban bad staged paths (generated docs/site, top-level tests) and staged symlinks
+        entry: uv run python scripts/pre_commit_hooks/check_policy.py --check path-policy
+        language: system
+        types: [file]
+        always_run: true
+        require_serial: true
+        stages: [pre-commit]
+      - id: check-linter-directives
+        name: linter suppression directives require approved manifest records
+        entry: uv run python scripts/pre_commit_hooks/check_policy.py --check linter-directives
+        language: system
+        types: [file]
+        always_run: true
+        require_serial: true
+        stages: [pre-commit]
+      - id: check-python-source
+        name: python source policy (forbidden constructs, imports, resource clients, test markers)
+        entry: uv run python scripts/pre_commit_hooks/check_policy.py --check python-source
+        language: system
+        types: [file]
+        always_run: true
+        require_serial: true
+        stages: [pre-commit]
+      - id: check-test-std
+        name: STD docstring and manual-marker policy for staged tests
+        entry: uv run python scripts/pre_commit_hooks/check_policy.py --check test-std
+        language: system
+        types: [file]
+        always_run: true
+        require_serial: true
+        stages: [pre-commit]
+      - id: check-stp-links
+        name: STP references must be merged in the design-docs repository
+        entry: uv run python scripts/pre_commit_hooks/check_policy.py --check stp-links
+        language: system
+        types: [file]
+        always_run: true
+        require_serial: true
+        stages: [pre-commit]
 
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v2.3.1

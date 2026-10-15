@@ -28,7 +28,6 @@ if TYPE_CHECKING:
     from utilities.virt import VirtualMachineForTests
 
 TESTS_CLASS_NAME_A_TO_B = "TestStorageClassMigrationAtoB"
-TESTS_CLASS_NAME_B_TO_A = "TestStorageClassMigrationBtoA"
 TESTS_CLASS_NAME_VOLUME_HOTPLUG = "TestStorageClassMigrationWithVolumeHotplug"
 TESTS_CLASS_NAME_WINDOWS = "TestStorageClassMigrationWindowsWithVTPM"
 

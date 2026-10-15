@@ -154,11 +154,13 @@ reviews:
           `STP: <URL>` line when an STP exists. If no STP exists, require
           `Jira: <issue URL>` instead (Jira/RFE issue, never a support case).
           Search the linked design-docs repository before accepting the no-STP fallback.
-          Module/class-only links, historical `RFE:` labels, and
-          `@pytest.mark.polarion` do NOT satisfy a new test's traceability requirement.
+          Module/class-only links and historical `RFE:` labels do NOT satisfy a new
+          test's traceability requirement.
 
-          A `Jira:` line MUST also contain `# <skip-jira-utils-check>` on the same line
-          so the jira-utils checker ignores the traceability reference:
+          Every Jira URL in a new test's docstring MUST also contain
+          `# <skip-jira-utils-check>` on the same line — regardless of whether the
+          line uses a `Jira:` label — so the jira-utils checker ignores the
+          traceability reference:
           `Jira: https://redhat.atlassian.net/browse/CNV-87822  # <skip-jira-utils-check>`
           The skip marker is not required for `STP:` lines. Flag invalid or missing
           traceability, including a missing Jira skip marker, as HIGH severity.
@@ -202,6 +204,10 @@ reviews:
           PASS if every STP scenario has a corresponding STD/test declaration in the PR (or
           existing file), OR the PR description documents intentional exclusion with a
           follow-up Jira link per excluded scenario.
+          For every new or changed STP-linked test, also verify that:
+          1. `Preconditions:`, `Steps:`, and `Expected:` docstring sections match the
+             referenced STP scenario.
+          2. Fixture, helper, assertion, and API-path behavior implements that scenario.
           Exempt from direct-declaration checks: regression scenarios intentionally excluded
           from the STP scenario table, and scenarios inherited from a parent STP via
           child-STP extension (child STPs extend the parent without duplicating its scenarios).

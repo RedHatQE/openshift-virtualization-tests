@@ -56,8 +56,18 @@ If needed, once your PR is merged to `main`, cherry-pick your PR to the relevant
 
 
 ## Prerequisites
-  - Make sure you have [pre-commit](https://pre-commit.com/) package installed
-  - Make sure you have [tox](https://tox.readthedocs.io/en/latest/) package installed
+  - Install [uv](https://docs.astral.sh/uv/)
+  - Python 3.14 or a supported `uv` Python installation
+  - Install the command-line tools used below as uv-managed tools:
+
+```bash
+uv tool install pre-commit
+uv tool install tox
+uv tool update-shell
+```
+
+Restart your shell, or source the startup file updated by `uv tool update-shell` (for example, `source ~/.bashrc`), so the tool executables are available in `PATH` to `uv run`.
+The commands below intentionally invoke both tools through `uv run`.
 
 ## Coding standards and style guide
 - Refer to the [coding_and_style guide](CODING_AND_STYLE_GUIDE.md) for style guide rules.
@@ -75,23 +85,31 @@ patch is listed in comments to the review request.
 
 ### Check the code
 
-We use check tools that are defined in .pre-commit-config.yaml file
-To install pre-commit:
+We use the checks defined in `.pre-commit-config.yaml`. Install the Git hooks with:
 
 ```bash
-pip install pre-commit --user
-pre-commit install
+uv run pre-commit install
 ```
 
-Run pre-commit:
+Run all pre-commit checks with:
 
 ```bash
-pre-commit run --all-files
+uv run pre-commit run --all-files
 ```
 
-pre-commit will try to fix the errors.
-If some errors where fixed, git add & git commit is needed again.
-commit-msg uses gitlint (<https://jorisroovers.com/gitlint/>)
+The configuration includes autoflake, Ruff, Flake8, mypy, gitleaks, TOML validation,
+large-file detection, and the `project-policy` hook. That hook checks staged paths,
+forbidden pytest skips, mechanical Python rules, explicit resource clients, reviewed
+linter-directive exceptions, and new product-test STD structure.
+
+`AGENTS.md` is authoritative for contribution policy. See the
+[`scripts/pre_commit_hooks/README.md`](../scripts/pre_commit_hooks/README.md) for the
+hook's exact scope, staged/index ratchet behavior, and limitations. In particular,
+even `uv run pre-commit run --all-files` checks the staged/index policy snapshot rather
+than auditing every historical worktree violation.
+
+Some hooks automatically fix files. If a hook changes a file, stage the fix and run the
+checks again. Commit messages are checked by gitlint (<https://jorisroovers.com/gitlint/>).
 
 
 ### tox
@@ -99,7 +117,7 @@ CI uses [tox](https://tox.readthedocs.io/en/latest/) and will run the code under
 To check for issues locally run:
 
 ```bash
-tox
+uv run tox
 ```
 
 ### Commit message

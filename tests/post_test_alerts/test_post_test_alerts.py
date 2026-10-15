@@ -27,6 +27,8 @@ def test_no_deprecated_api_alert_after_tests(prometheus, session_start_time):
     """
     Test that KubeVirtDeprecatedAPIRequested alert was not triggered during test execution.
 
+    Jira: https://redhat.atlassian.net/browse/CNV-80353  # <skip-jira-utils-check>
+
     Preconditions:
         - Prometheus is accessible on the cluster
         - Test execution completed

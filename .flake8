@@ -59,6 +59,7 @@ fcn_exclude_functions =
     netaddr,
     request,
     sub,
+    loads,
     deepcopy,
     logging,
     add_option,

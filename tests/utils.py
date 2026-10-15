@@ -33,7 +33,7 @@ from utilities.artifactory import (
     get_http_image_url,
 )
 from utilities.constants import Images
-from utilities.constants.cluster import RHSM_SECRET_NAME
+from utilities.constants.cluster import CPU_MANAGER_LABEL, RHSM_SECRET_NAME
 from utilities.constants.images import (
     OS_FLAVOR_WIN_CONTAINER_DISK,
     OS_FLAVOR_WINDOWS,
@@ -74,10 +74,6 @@ from utilities.virt import (
 )
 
 NUM_TEST_VMS = 3
-NOT_PUBLISHED_MESSAGE = (
-    "This documentation is a work in progress that aligns to preview releases of the next pending "
-    "OpenShift Container Platform version"
-)
 LOGGER = logging.getLogger(__name__)
 
 
@@ -451,7 +447,7 @@ def assert_msg(emulatorpin, vcpupin):
 
 
 def assert_virt_launcher_pod_cpu_manager_node_selector(virt_launcher_pod):
-    assert virt_launcher_pod.spec.nodeSelector.cpumanager, "NUMA Pod doesn't have cpumanager node selector"
+    assert virt_launcher_pod.spec.nodeSelector.get(CPU_MANAGER_LABEL), "NUMA Pod doesn't have cpumanager node selector"
 
 
 def assert_numa_cpu_allocation(vm_cpus, numa_nodes):
@@ -669,7 +665,7 @@ def verify_cpumanager_workers(schedulable_nodes: list[Node]) -> None:
         ResourceValueError: If no node has CPU Manager enabled.
     """
     LOGGER.info("Verifying cluster nodes have CPU Manager labels")
-    if not any(node.labels.cpumanager == "true" for node in schedulable_nodes):
+    if not any(node.labels.get(CPU_MANAGER_LABEL) == "true" for node in schedulable_nodes):
         raise ResourceValueError("Cluster does not have CPU Manager enabled on any node")
 
 

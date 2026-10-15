@@ -1,17 +1,7 @@
 from copy import deepcopy
 
-import bitmath
-
 from tests.os_params import WINDOWS_11
 from utilities.constants import Images
-
-VIRT_PROCESS_MEMORY_LIMITS = {
-    "virt-launcher-monitor": bitmath.MiB(25),
-    "virt-launcher": bitmath.MiB(100),
-    "virtqemud": bitmath.MiB(40),
-    "virtlogd": bitmath.MiB(25),
-}
-
 
 STRESS_CPU_MEM_IO_COMMAND = (
     "nohup stress-ng --vm {workers} --vm-bytes {memory} --vm-method all "

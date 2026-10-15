@@ -67,7 +67,6 @@ from utilities.operator import (
 )
 
 LOGGER = logging.getLogger(__name__)
-TIER_2_PODS_TYPE = "tier-2"
 
 
 def wait_for_pod_replacement(client, hco_namespace, pod_name, related_images, status_dict):

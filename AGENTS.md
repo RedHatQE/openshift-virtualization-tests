@@ -9,12 +9,14 @@ Coding standards, conventions, and review guidelines for openshift-virtualizatio
 
 ## Strict Rules (MANDATORY)
 
-### Linter Suppressions PROHIBITED
+### Linter Suppressions
 
-- ❌ **NEVER** add `# noqa`, `# type: ignore`, `# pylint: disable`
-- ❌ **NEVER** disable linter/mypy rules to work around issues
-- ✅ **FIX THE CODE** - If linter complains, the code is wrong
-- If you think a rule is wrong: **ASK** the user for explicit approval
+- New linter suppression directives (`noqa`, `type-ignore`, and `pylint-disable`) are prohibited unless they have an exact, reviewed record in `scripts/pre_commit_hooks/exceptions.toml`.
+- The exception manifest starts as `exceptions = []`; each record must contain exactly `rule`, `path`, `directive`, `source_fingerprint`, `reason`, and `approval_url`.
+- `rule` is one of `noqa`, `type-ignore`, or `pylint-disable`. `approval_url` must be an HTTP(S) review URL, but its syntax is not proof of approval. Reviewers must verify the actual approval and reason; never fabricate approval records.
+- A manifest exception identity is the rule, repository-relative path, normalized directive text, and a SHA-256 fingerprint of the directive plus its smallest enclosing statement's attribute-free AST. The fingerprint is stable across line shifts when the statement and directive are unchanged. When semicolons place multiple simple statements on one line, a trailing directive fingerprints the rightmost statement on that line.
+- The HEAD-versus-index linter ratchet compares directive identities by rule, normalized directive text, and source fingerprint; manifest records additionally bind the exception to the path. Existing directives with an unchanged identity are consumed one occurrence at a time; newly introduced or modified directives require an exact exception record for each remaining occurrence. One exact record authorizes one matching occurrence only. Duplicate manifest records are rejected, and there is no occurrence field. Distinct contexts may share a fingerprint, but fingerprint equality does not authorize duplicate copied suppressions automatically; a copied suppression with the same full identity is not granted another allowance by the existing record.
+- Never disable linter or mypy rules to work around issues. **FIX THE CODE** when a rule reports a real defect; ask for explicit approval when a rule itself is wrong.
 
 ### Code Reuse (Search-First Development)
 
@@ -32,6 +34,13 @@ Before writing ANY new code:
 **External package examples:**
 - **Shell commands** — use `pyhelper_utils.shell.run_command`, NEVER use `subprocess.run` directly in test/utility code
 - **OpenShift resources** — use `ocp-resources` classes, NEVER construct raw YAML dicts
+
+### Resource clients
+
+- Resource constructors and `Resource` class `.get()` calls MUST include an explicit `client=` keyword whose value is syntactically non-`None`. This covers known `Resource` subclasses and local wrappers discovered by source analysis; it excludes specs, dictionaries, dictionary lookups, and instance `.get()` calls.
+- Do not construct `DynamicClient` directly. Reuse the client already passed through the call path; do not insert a new factory solely to satisfy this policy.
+- `cache_admin_client()` is allowed only when correctness requires it. Its call site must have a nonempty comment-only line immediately before the enclosing statement or an inline comment within that statement's header, including multiline calls, decorators, and defaults. Empty comments, trailing comments on prior code, and comments in the statement body do not qualify. The hook checks only comment presence; reviewers are responsible for verifying that the explanation is correct and states the actual reason.
+- Resource discovery parses the installed `ocp_resources` source and the staged/index snapshot of local source. It lazily follows imported local modules and transitive resource bases, never imports cluster-facing modules, and must not let worktree-only source affect staged-source classification.
 
 ### Python Requirements
 
@@ -95,6 +104,11 @@ New feature tests MUST follow the STD-first workflow:
 - ❌ **NEVER** submit test implementation without prior STD review
 - ❌ **NEVER** skip the STD phase by submitting implementation directly
 - ✅ STD and implementation MAY be in the same PR if STD is clearly separated and reviewed first
+
+The `check-test-std` pre-commit hook mechanically enforces the STD docstring
+and placeholder rules above for staged tests; its exact detection semantics
+(scope resolution, `HEAD` baselines, rename handling) are documented in
+[`scripts/pre_commit_hooks/README.md`](scripts/pre_commit_hooks/README.md).
 
 ### Coverage Tracking
 
@@ -224,7 +238,7 @@ When reviewing quarantine PRs, verify the **quarantine mechanism matches the fai
       if sample:
           break
   ```
-- **NEVER use `time.sleep()` in loops** - use `timeout_sampler` with appropriate wait time
+- **NEVER add or change `time.sleep()` in Python** - use `timeout_sampler` with appropriate wait time
 - **Do NOT duplicate TimeoutSampler logs** - the sampler already logs timeout duration and exceptions. Only log additional context (e.g., resource state, what was being waited for).
 
 **Assertions:**
@@ -255,7 +269,6 @@ Internal tooling and automation scripts live in `scripts/`. Each tool has its ow
 
 - ❌ **NEVER modify files under `docs/site/`** — they are auto-generated and overwritten on each regeneration
 - ❌ **NEVER include `docs/site/` changes in PRs** — reject any PR that modifies generated docs
-- ✅ To update, generate docs manually with docsfy and commit directly to `main` (not via PR)
 
 ### Constants Module Placement
 
@@ -324,6 +337,12 @@ Add or update tests in `utilities/unittests/test_<module>.py`. New public functi
 When unit tests are not added, state why in the PR (`##### Special notes for reviewer:`) — e.g. "coverage-omitted `virt.py` helper; behavior covered by `test_migrate_snapshot_hotplugged_vm`".
 
 ## Essential Commands
+
+Pre-commit runs project policy hooks (`scripts/pre_commit_hooks/`) that
+mechanically enforce the rules above — forbidden constructs, marker policy,
+STD traceability, linter-directive exceptions, and STP link verification.
+They check the staged Git index (not the worktree), so stage intended changes
+before relying on them. See [`scripts/pre_commit_hooks/README.md`](scripts/pre_commit_hooks/README.md).
 
 ### Before Committing Verification (MANDATORY)
 
