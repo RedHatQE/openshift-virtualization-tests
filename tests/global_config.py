@@ -7,16 +7,42 @@ from ocp_resources.virtual_machine import VirtualMachine
 
 from utilities.architecture import get_cluster_architecture
 from utilities.constants import (
-    AAQ_VIRTUAL_RESOURCES, AAQ_VMI_POD_USAGE, ALL_CNV_CRDS, ALL_CNV_DAEMONSETS,
-    ALL_CNV_DEPLOYMENTS, ALL_CNV_DEPLOYMENTS_NO_HPP_POOL, ALL_CNV_PODS,
-    ALL_HCO_RELATED_OBJECTS, BASE_ARTIFACTORY_LOCATION, BREW_REGISTERY_SOURCE,
-    CENTOS_STREAM9_PREFERENCE, CENTOS_STREAM10_PREFERENCE, CNV_OPERATORS,
-    CNV_PODS_NO_HPP_CSI_HPP_POOL, HCO_CATALOG_SOURCE, HPP_CAPABILITIES, IPV4_STR,
-    IPV6_STR, MONITORING_METRICS, OS_FLAVOR_FEDORA, PRODUCTION_CATALOG_SOURCE,
-    RHEL8_PREFERENCE, RHEL9_PREFERENCE, RHEL10_PREFERENCE, TEKTON_AVAILABLE_PIPELINEREF,
-    TEKTON_AVAILABLE_TASKS, TIMEOUT_5MIN, TIMEOUT_5SEC, TLS_CUSTOM_POLICY, TLS_OLD_POLICY,
-    U1_MEDIUM_STR, VM_CONSOLE_PROXY_CLUSTER_RESOURCES, VM_CONSOLE_PROXY_NAMESPACE_RESOURCES,
-    Images, NamespacesNames, StorageClassNames,
+    AAQ_VIRTUAL_RESOURCES,
+    AAQ_VMI_POD_USAGE,
+    ALL_CNV_CRDS,
+    ALL_CNV_DAEMONSETS,
+    ALL_CNV_DEPLOYMENTS,
+    ALL_CNV_DEPLOYMENTS_NO_HPP_POOL,
+    ALL_CNV_PODS,
+    ALL_HCO_RELATED_OBJECTS,
+    BASE_ARTIFACTORY_LOCATION,
+    BREW_REGISTERY_SOURCE,
+    CENTOS_STREAM9_PREFERENCE,
+    CENTOS_STREAM10_PREFERENCE,
+    CNV_OPERATORS,
+    CNV_PODS_NO_HPP_CSI_HPP_POOL,
+    HCO_CATALOG_SOURCE,
+    HPP_CAPABILITIES,
+    IPV4_STR,
+    IPV6_STR,
+    MONITORING_METRICS,
+    OS_FLAVOR_FEDORA,
+    PRODUCTION_CATALOG_SOURCE,
+    RHEL8_PREFERENCE,
+    RHEL9_PREFERENCE,
+    RHEL10_PREFERENCE,
+    TEKTON_AVAILABLE_PIPELINEREF,
+    TEKTON_AVAILABLE_TASKS,
+    TIMEOUT_5MIN,
+    TIMEOUT_5SEC,
+    TLS_CUSTOM_POLICY,
+    TLS_OLD_POLICY,
+    U1_MEDIUM_STR,
+    VM_CONSOLE_PROXY_CLUSTER_RESOURCES,
+    VM_CONSOLE_PROXY_NAMESPACE_RESOURCES,
+    Images,
+    NamespacesNames,
+    StorageClassNames,
 )
 from utilities.storage import HppCsiStorageClass
 
@@ -60,7 +86,16 @@ cnv_must_gather_matrix = ["cnv-gather", "all-images"]
 cnv_vm_resource_requests_units_matrix = ["cores", "sockets", "threads"]
 cnv_vmi_monitoring_metrics_matrix = MONITORING_METRICS
 storage_class_matrix = [
-    {StorageClassNames.CEPH_RBD_VIRTUALIZATION: {"volume_mode": DataVolume.VolumeMode.BLOCK, "access_mode": DataVolume.AccessMode.RWX, "snapshot": True, "online_resize": True, "wffc": False, "default": True}},
+    {
+        StorageClassNames.CEPH_RBD_VIRTUALIZATION: {
+            "volume_mode": DataVolume.VolumeMode.BLOCK,
+            "access_mode": DataVolume.AccessMode.RWX,
+            "snapshot": True,
+            "online_resize": True,
+            "wffc": False,
+            "default": True,
+        }
+    },
     {HppCsiStorageClass.Name.HOSTPATH_CSI_BASIC: HPP_CAPABILITIES},
     {HppCsiStorageClass.Name.HOSTPATH_CSI_PVC_BLOCK: HPP_CAPABILITIES},
 ]
@@ -72,11 +107,28 @@ storage_class_b = StorageClassNames.CEPH_RBD_VIRTUALIZATION
 link_aggregation_mode_matrix = ["active-backup", "balance-tlb", "balance-alb"]
 link_aggregation_mode_no_connectivity_matrix = ["balance-xor", "802.3ad"]
 vm_volumes_matrix = ["container_disk_vm", "data_volume_vm"]
-run_strategy_matrix = [VirtualMachine.RunStrategy.MANUAL, VirtualMachine.RunStrategy.ALWAYS, VirtualMachine.RunStrategy.HALTED, VirtualMachine.RunStrategy.RERUNONFAILURE]
+run_strategy_matrix = [
+    VirtualMachine.RunStrategy.MANUAL,
+    VirtualMachine.RunStrategy.ALWAYS,
+    VirtualMachine.RunStrategy.HALTED,
+    VirtualMachine.RunStrategy.RERUNONFAILURE,
+]
 aaq_allocation_methods_matrix = [AAQ_VIRTUAL_RESOURCES, AAQ_VMI_POD_USAGE]
 sysprep_source_matrix = ["ConfigMap", "Secret"]
-auto_update_data_source_matrix = [{"centos-stream9": {"template_os": "centos-stream9"}}, {"fedora": {"template_os": "fedora"}}, {"rhel8": {"template_os": "rhel8.4"}}, {"rhel9": {"template_os": "rhel9.0"}}]
-data_import_cron_matrix = [{"centos-stream9": {"instance_type": U1_MEDIUM_STR, "preference": CENTOS_STREAM9_PREFERENCE}}, {"centos-stream10": {"instance_type": U1_MEDIUM_STR, "preference": CENTOS_STREAM10_PREFERENCE}}, {"fedora": {"instance_type": U1_MEDIUM_STR, "preference": OS_FLAVOR_FEDORA}}, {"rhel8": {"instance_type": U1_MEDIUM_STR, "preference": RHEL8_PREFERENCE}}, {"rhel9": {"instance_type": U1_MEDIUM_STR, "preference": RHEL9_PREFERENCE}}, {"rhel10": {"instance_type": U1_MEDIUM_STR, "preference": RHEL10_PREFERENCE}}]
+auto_update_data_source_matrix = [
+    {"centos-stream9": {"template_os": "centos-stream9"}},
+    {"fedora": {"template_os": "fedora"}},
+    {"rhel8": {"template_os": "rhel8.4"}},
+    {"rhel9": {"template_os": "rhel9.0"}},
+]
+data_import_cron_matrix = [
+    {"centos-stream9": {"instance_type": U1_MEDIUM_STR, "preference": CENTOS_STREAM9_PREFERENCE}},
+    {"centos-stream10": {"instance_type": U1_MEDIUM_STR, "preference": CENTOS_STREAM10_PREFERENCE}},
+    {"fedora": {"instance_type": U1_MEDIUM_STR, "preference": OS_FLAVOR_FEDORA}},
+    {"rhel8": {"instance_type": U1_MEDIUM_STR, "preference": RHEL8_PREFERENCE}},
+    {"rhel9": {"instance_type": U1_MEDIUM_STR, "preference": RHEL9_PREFERENCE}},
+    {"rhel10": {"instance_type": U1_MEDIUM_STR, "preference": RHEL10_PREFERENCE}},
+]
 ip_stack_version_matrix = [IPV4_STR, IPV6_STR]
 cnv_pod_priority_class_matrix = CNV_PODS_NO_HPP_CSI_HPP_POOL
 cnv_pod_matrix = ALL_CNV_PODS
@@ -93,12 +145,34 @@ cnv_vm_console_proxy_namespace_resource_matrix = VM_CONSOLE_PROXY_NAMESPACE_RESO
 vm_deploys = 1
 linux_iterations = 250
 windows_iterations = 500
-cnv_rhel_container_disk_images_matrix = [{"rhel8": {"RHEL_CONTAINER_DISK_IMAGE": getattr(Images.Rhel, "RHEL8_REGISTRY_GUEST_IMG", None)}}, {"rhel9": {"RHEL_CONTAINER_DISK_IMAGE": getattr(Images.Rhel, "RHEL9_REGISTRY_GUEST_IMG", None)}}, {"rhel10": {"RHEL_CONTAINER_DISK_IMAGE": getattr(Images.Rhel, "RHEL10_REGISTRY_GUEST_IMG", None)}}]
+cnv_rhel_container_disk_images_matrix = [
+    {"rhel8": {"RHEL_CONTAINER_DISK_IMAGE": getattr(Images.Rhel, "RHEL8_REGISTRY_GUEST_IMG", None)}},
+    {"rhel9": {"RHEL_CONTAINER_DISK_IMAGE": getattr(Images.Rhel, "RHEL9_REGISTRY_GUEST_IMG", None)}},
+    {"rhel10": {"RHEL_CONTAINER_DISK_IMAGE": getattr(Images.Rhel, "RHEL10_REGISTRY_GUEST_IMG", None)}},
+]
 cnv_tekton_pipelines_resource_matrix = TEKTON_AVAILABLE_PIPELINEREF
 cnv_tekton_tasks_resource_matrix = TEKTON_AVAILABLE_TASKS
 cnv_pod_deletion_test_matrix = [
-    {"virt-api": {"pod_prefix": "virt-api", "resource": Deployment, "namespace_name": hco_namespace, "ratio": 0.5, "interval": TIMEOUT_5SEC, "max_duration": TIMEOUT_5MIN}},
-    {"apiserver": {"pod_prefix": "apiserver", "resource": Deployment, "namespace_name": openshift_apiserver_namespace, "ratio": 0.5, "interval": TIMEOUT_5SEC, "max_duration": TIMEOUT_5MIN}},
+    {
+        "virt-api": {
+            "pod_prefix": "virt-api",
+            "resource": Deployment,
+            "namespace_name": hco_namespace,
+            "ratio": 0.5,
+            "interval": TIMEOUT_5SEC,
+            "max_duration": TIMEOUT_5MIN,
+        }
+    },
+    {
+        "apiserver": {
+            "pod_prefix": "apiserver",
+            "resource": Deployment,
+            "namespace_name": openshift_apiserver_namespace,
+            "ratio": 0.5,
+            "interval": TIMEOUT_5SEC,
+            "max_duration": TIMEOUT_5MIN,
+        }
+    },
 ]
 os_login_param: dict[str, Any] = {}
 vlans = [f"{_id}" for _id in range(1000, 1020)]
