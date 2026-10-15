@@ -28,6 +28,7 @@ from libs.net.traffic_generator import active_tcp_connections, is_tcp_connection
 from libs.net.vmspec import lookup_primary_network
 from tests.network.bgp.evpn.libevpn import (
     EVPN_CUDN_NET_SEED,
+    assert_evpn_tcp_connection,
     assert_evpn_workloads_connectivity,
     deploy_evpn_l2_endpoint,
     evpn_workloads_active_connections,
@@ -93,12 +94,13 @@ def test_stretched_l2_connectivity_udn_vm_and_external_provider(external_l2_endp
     with evpn_workloads_active_connections(endpoint=external_l2_endpoint, vm=vm_evpn_target) as connections:
         for client, server in connections:
             with subtests.test(f"IPv{ipaddress.ip_address(client.server_ip).version}"):
-                assert is_tcp_connection(server=server, client=client)
+                assert_evpn_tcp_connection(endpoint=external_l2_endpoint, server=server, client=client)
 
 
 @pytest.mark.polarion("CNV-15229")
 def test_stretched_l2_connectivity_is_preserved_over_live_migration(
     admin_client: DynamicClient,
+    external_l2_endpoint,
     evpn_stretched_l2_active_connections: list[tuple[EndpointTcpClient, TcpServer]],
     vm_evpn_target: BaseVirtualMachine,
     subtests: pytest.Subtests,
@@ -118,7 +120,7 @@ def test_stretched_l2_connectivity_is_preserved_over_live_migration(
     migrate_vm_and_verify(vm=vm_evpn_target, client=admin_client)
     for client, server in evpn_stretched_l2_active_connections:
         with subtests.test(f"IPv{ipaddress.ip_address(client.server_ip).version}"):
-            assert is_tcp_connection(server=server, client=client)
+            assert_evpn_tcp_connection(endpoint=external_l2_endpoint, server=server, client=client)
 
 
 @pytest.mark.polarion("CNV-15230")
@@ -137,12 +139,13 @@ def test_routed_l3_connectivity_udn_vm_and_external_provider(external_l3_endpoin
     with evpn_workloads_active_connections(endpoint=external_l3_endpoint, vm=vm_evpn_target) as connections:
         for client, server in connections:
             with subtests.test(f"IPv{ipaddress.ip_address(client.server_ip).version}"):
-                assert is_tcp_connection(server=server, client=client)
+                assert_evpn_tcp_connection(endpoint=external_l3_endpoint, server=server, client=client)
 
 
 @pytest.mark.polarion("CNV-15231")
 def test_routed_l3_connectivity_is_preserved_over_live_migration(
     admin_client: DynamicClient,
+    external_l3_endpoint,
     evpn_routed_l3_active_connections: list[tuple[EndpointTcpClient, TcpServer]],
     vm_evpn_target: BaseVirtualMachine,
     subtests: pytest.Subtests,
@@ -162,7 +165,7 @@ def test_routed_l3_connectivity_is_preserved_over_live_migration(
     migrate_vm_and_verify(vm=vm_evpn_target, client=admin_client)
     for client, server in evpn_routed_l3_active_connections:
         with subtests.test(f"IPv{ipaddress.ip_address(client.server_ip).version}"):
-            assert is_tcp_connection(server=server, client=client)
+            assert_evpn_tcp_connection(endpoint=external_l3_endpoint, server=server, client=client)
 
 
 @pytest.mark.polarion("CNV-15232")

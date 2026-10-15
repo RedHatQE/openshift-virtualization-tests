@@ -1,0 +1,4 @@
+nodeIndex:
+  interfaceName: openpe-uplink
+nodeName: tor
+logLevel: debug
