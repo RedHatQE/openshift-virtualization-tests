@@ -6,7 +6,7 @@ Epic: https://redhat.atlassian.net/browse/CNV-74453 # <skip-jira-utils-check>
 
 import pytest
 
-pytestmark = pytest.mark.post_upgrade
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.s390x]
 
 
 @pytest.mark.polarion("CNV-15222")

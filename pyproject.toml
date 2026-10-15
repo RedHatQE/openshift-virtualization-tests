@@ -108,6 +108,7 @@ dependencies = [
   "python-rrmngmnt>=0.2.3",
   "pyvmomi>=8.0.3.0.1",
   "pyyaml>=6.0.2",
+  "remote-pdb>=2.1.0",
   "requests>=2.32.3",
   "sh>=2.1.0",
   "shortuuid>=1.0.13",

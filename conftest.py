@@ -2,6 +2,7 @@
 Pytest conftest file for CNV tests
 """
 
+import bdb
 import datetime
 import logging
 import os
@@ -47,6 +48,7 @@ from utilities.data_collector import (
     set_data_collector_values,
 )
 from utilities.database import Database
+from utilities.debug import remote_debugger_enabled, remote_post_mortem
 from utilities.exceptions import MissingEnvironmentVariableError, StorageSanityError
 from utilities.junit_ai_utils import enrich_junit_xml, setup_ai_analysis
 from utilities.logger import setup_logging
@@ -1060,6 +1062,25 @@ def pytest_exception_interact(node: Item | Collector, call: CallInfo[Any], repor
                     )
             except Exception as current_exception:
                 LOGGER.warning(f"Failed to collect logs: {test_name}: {current_exception} {traceback.format_exc()}")
+
+    # Remote post-mortem debugger (CNV_REMOTE_PDB). Ported from RedHatQE/mtv-api-tests PR #733
+    # (by myakove — source: https://github.com/RedHatQE/mtv-api-tests/blob/main/conftest.py),
+    # adapted to this repository. Runs after must-gather collection so
+    # diagnostics are gathered before the session blocks waiting for a debugger connection. Skipped
+    # when --pdb is active so the local terminal debugger takes precedence, and skipped
+    # for BdbQuit so quitting a code breakpoint fails that test without opening another
+    # listener. A debugger quit ends the test session, matching pytest's native --pdb
+    # behavior. usepdb has a default because -p no:pdb removes the option.
+    if (
+        remote_debugger_enabled()
+        and not node.config.getoption("usepdb", default=False)
+        and call.excinfo is not None
+        and not isinstance(call.excinfo.value, bdb.BdbQuit)
+    ):
+        try:
+            remote_post_mortem(exception=call.excinfo.value)
+        except bdb.BdbQuit:
+            pytest.exit("Quitting remote debugger")
 
 
 @pytest.hookimpl(optionalhook=True)

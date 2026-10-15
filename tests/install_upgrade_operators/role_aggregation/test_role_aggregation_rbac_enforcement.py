@@ -6,6 +6,7 @@ STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob
 Markers:
     - post_upgrade
     - arm64
+    - s390x
 
 Preconditions:
     - Unprivileged user created via HTPasswd identity provider
@@ -17,7 +18,7 @@ import pytest
 from tests.install_upgrade_operators.role_aggregation.utils import wait_for_vm_list_permission
 from utilities.sanity import check_vm_creation_capability
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.arm64]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.arm64, pytest.mark.s390x]
 
 
 @pytest.mark.usefixtures("admin_role_binding")

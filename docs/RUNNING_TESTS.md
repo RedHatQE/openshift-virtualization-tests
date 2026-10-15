@@ -245,6 +245,99 @@ To skip must-gather collection on a given module or test, skip_must_gather_colle
 pytest.mark.skip_must_gather_collection
 ```
 
+## Remote Debugging
+
+Set `CNV_REMOTE_PDB=1` to enable a remote [pdb](https://docs.python.org/3/library/pdb.html) debugger reachable over a socket,
+for interactive debugging of test runs by humans or AI agents. Without the variable, debugging is completely disabled
+and the helpers below are no-ops. (Feature ported from
+[mtv-api-tests PR #733](https://github.com/RedHatQE/mtv-api-tests/pull/733) — source:
+[mtv-api-tests README, Remote Debugging](https://github.com/RedHatQE/mtv-api-tests/blob/main/README.md) —
+adapted to this repository.)
+
+Run with `-s` so the listening message is not swallowed by pytest output capture, and use a single worker (`-n 0`)
+when debugging — parallel xdist workers listen on distinct ports (`4444 +` worker index), but a debugger session per
+worker is rarely what you want.
+
+### Trigger 1 — breakpoint in code
+
+Temporarily insert a call where you want to stop (remove it when done):
+
+```python
+from utilities.debug import remote_breakpoint
+
+remote_breakpoint()
+```
+
+Run the test; the process blocks at the call and waits for a debugger connection.
+
+### Trigger 2 — post-mortem on failure
+
+With `CNV_REMOTE_PDB=1` set, any test failure automatically opens a remote post-mortem session on the failing
+traceback (no `--pdb` needed) — after must-gather collection, so diagnostics are captured before the session blocks.
+If you pass `--pdb`, the local terminal debugger takes precedence.
+
+### Attaching
+
+```bash
+host=127.0.0.1 port=4444  # from the run's "RemotePdb session open at <host>:<port>" line
+nc "$host" "$port"        # or: rlwrap nc "$host" "$port" / telnet "$host" "$port"
+```
+
+Send `c` to continue the run. `q` — or dropping the connection — quits the debugger: at a code
+breakpoint the current test fails with `BdbQuit` and the run continues; at a failure post-mortem the whole
+test session exits (matching pytest's native `--pdb` quit behavior).
+
+The debugger binds to a loopback address only (`127.0.0.1` unless `REMOTE_PDB_HOST` selects
+another loopback address) — it is never exposed on the cluster network. To debug a run inside a
+containerized/pod run, the pod must run with `CNV_REMOTE_PDB=1` — add it to the container `env`
+(or prefix the pytest command with `CNV_REMOTE_PDB=1`) before starting the run. Then forward
+the port:
+
+`oc port-forward` must stay alive while the client connects — run it in the background (or a
+separate terminal) as shown, and stop it when the session ends:
+
+```bash
+port=4444  # replace with the numeric listener port from the run's "RemotePdb session open at" line
+oc port-forward -n "$pod_namespace" "pod/$pod_name" "$port:$port" &
+forward_pid=$!
+# Readiness must not open a TCP connection: RemotePdb accepts a single client, and a
+# connecting probe (e.g. nc -z) would consume the debugger session. Inspect the local
+# listening socket without connecting instead.
+for _ in {1..30}; do
+    if ! kill -0 "$forward_pid" 2>/dev/null; then
+        echo "oc port-forward exited before becoming ready" >&2
+        exit 1
+    fi
+    if ss -ltn 2>/dev/null | grep -q ":$port "; then
+        break
+    fi
+    sleep 1
+done
+if ! kill -0 "$forward_pid" 2>/dev/null || ! ss -ltn 2>/dev/null | grep -q ":$port "; then
+    echo "Timed out waiting for oc port-forward" >&2
+    kill "$forward_pid" 2>/dev/null
+    exit 1
+fi
+nc localhost "$port"
+kill "$forward_pid"
+```
+
+`oc port-forward` without `-n` searches only your current namespace and will not find the pod.
+
+Host and port can be overridden with `REMOTE_PDB_HOST` / `REMOTE_PDB_PORT`. The host must resolve to a
+loopback address — non-loopback values are rejected with a `ValueError`, so the debugger can never be
+exposed on the cluster network.
+
+### AI agents
+
+The repo ships an agent skill for driving debugger sessions — see [`skills/`](../skills/). It is not
+auto-discovered: symlink it into your agent harness's skills directory manually (see
+`skills/README.md`), and restart the session so the harness picks it up.
+
+> **Note:** while a debugger session is attached, the test process is frozen but the cluster keeps moving —
+> migrations and reconciliation continue server-side. Use the debugger for inspection; avoid long pauses inside
+> migration polling loops.
+
 ## Network utility container
 
 Check containers/utility/README.md
