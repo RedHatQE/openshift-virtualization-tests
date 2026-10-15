@@ -19,7 +19,6 @@ from utilities.constants import (
     BREW_REGISTERY_SOURCE,
     CNV_OPERATORS,
     CNV_PODS_NO_HPP_CSI_HPP_POOL,
-    CNV_PROMETHEUS_RULES,
     DATA_SOURCE_NAME,
     FLAVOR_STR,
     HCO_CATALOG_SOURCE,
@@ -408,8 +407,6 @@ cnv_crd_matrix = ALL_CNV_CRDS
 cnv_crypto_policy_matrix = [TLS_OLD_POLICY, TLS_CUSTOM_POLICY]
 
 cnv_related_object_matrix = ALL_HCO_RELATED_OBJECTS
-cnv_prometheus_rules_matrix = CNV_PROMETHEUS_RULES
-
 cnv_deployment_matrix = ALL_CNV_DEPLOYMENTS
 cnv_deployment_no_hpp_matrix = ALL_CNV_DEPLOYMENTS_NO_HPP_POOL
 cnv_daemonset_matrix = ALL_CNV_DAEMONSETS

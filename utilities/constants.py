@@ -600,15 +600,6 @@ class UpgradeStreams:
 IMAGE_CRON_STR = "image-cron"
 TLS_SECURITY_PROFILE = "tlsSecurityProfile"
 KUBELET_READY_CONDITION = {"KubeletReady": "True"}
-CNV_PROMETHEUS_RULES = [
-    f"{PROMETHEUS_RULES_STR}-{CLUSTER_NETWORK_ADDONS_OPERATOR}",
-    KUBEVIRT_HYPERCONVERGED_PROMETHEUS_RULE,
-    "prometheus-cdi-rules",
-    "prometheus-hpp-rules",
-    "prometheus-k8s-rules-cnv",
-    "prometheus-kubevirt-rules",
-    f"kubevirt-cnv-{PROMETHEUS_RULES_STR}",
-]
 
 
 class StorageClassNames:
