@@ -20,7 +20,10 @@ from timeout_sampler import TimeoutSampler
 
 from tests.storage.cbt.constants import (
     CBT_BACKUP_CONDITION_FAILED,
+    CBT_BACKUP_TYPE_FULL,
+    CBT_BACKUP_TYPE_INCREMENTAL,
     CBT_BOOT_DISK_TEST_DATA_FILE,
+    CBT_CONCURRENT_INCREMENTAL_COUNT,
     CBT_DATA_DISK_SIZE,
     CBT_DATA_DISK_TEST_DATA,
     CBT_ENABLED_LABEL,
@@ -665,6 +668,40 @@ def delete_cbt_pull_backup_and_wait_for_export(backup: VirtualMachineBackup) -> 
     wait_for_pull_backup_export_deleted(name=backup_name, namespace=namespace, client=client)
 
 
+def delete_cbt_pull_backups_and_wait_for_exports(
+    backups: list[VirtualMachineBackup],
+    namespace: str,
+    client: DynamicClient,
+) -> None:
+    """Delete every pull-mode backup and wait until each export is gone.
+
+    A failure cleaning up one backup does not skip the rest. After every backup has
+    been attempted, the collected failures are raised together.
+
+    Args:
+        backups: Deployed pull-mode backups to delete.
+        namespace: Namespace of the backups and their exports.
+        client: Client used to poll the exports.
+
+    Side effects:
+        Deletes each backup and polls until its VirtualMachineExport is gone.
+
+    Raises:
+        ExceptionGroup: If one or more backups fail to clean up.
+    """
+    cleanup_errors: list[Exception] = []
+    for backup in backups:
+        backup_name = backup.name
+        try:
+            backup.clean_up()
+            wait_for_pull_backup_export_deleted(name=backup_name, namespace=namespace, client=client)
+        except Exception as error:
+            LOGGER.error(f"Failed to clean up pull-mode backup {backup_name}: {error}")
+            cleanup_errors.append(error)
+    if cleanup_errors:
+        raise ExceptionGroup("Pull-mode backup cleanup errors", cleanup_errors)
+
+
 def live_migrate_cbt_vm(vm: VirtualMachineForTests, client: DynamicClient) -> None:
     """Live-migrate a CBT VM and wait until CBT is Enabled again.
 
@@ -678,3 +715,39 @@ def live_migrate_cbt_vm(vm: VirtualMachineForTests, client: DynamicClient) -> No
     LOGGER.info(f"Live-migrating VM {vm.name} before incremental backup")
     migrate_vm_and_verify(vm=vm, client=client, check_ssh_connectivity=True)
     wait_for_vm_cbt_enabled(vm=vm)
+
+
+def concurrent_backup_type(backup_index: int) -> str:
+    """Return the backup type for one VM in a concurrent backup wave.
+
+    The first CBT_CONCURRENT_INCREMENTAL_COUNT VMs already have a completed full backup, so
+    their concurrent backup is incremental. Every later VM's concurrent backup is full.
+
+    Args:
+        backup_index: Zero-based index into the concurrent VM list.
+
+    Returns:
+        str: ``Incremental`` or ``Full``.
+    """
+    if backup_index < CBT_CONCURRENT_INCREMENTAL_COUNT:
+        return CBT_BACKUP_TYPE_INCREMENTAL
+    return CBT_BACKUP_TYPE_FULL
+
+
+def write_incremental_data_for_concurrent_vms(vms: list[VirtualMachineForTests]) -> None:
+    """Write new guest data on VMs whose concurrent backup is incremental.
+
+    Args:
+        vms: Concurrent VM list, in the same order used by ``concurrent_backup_type``.
+
+    Side effects:
+        Writes a new file on each VM that will take an incremental backup.
+    """
+    for backup_index, vm in enumerate(vms):
+        if concurrent_backup_type(backup_index=backup_index) == CBT_BACKUP_TYPE_FULL:
+            continue
+        write_cbt_guest_file(
+            vm=vm,
+            filename=incremental_test_data_file(index=backup_index + 1, vm=vm),
+            content=incremental_test_data(index=backup_index + 1),
+        )
