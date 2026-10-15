@@ -418,7 +418,6 @@ def sriov_network_for_hot_plug(admin_client, sriov_node_policy, namespace, sriov
 
 
 class TestHotPlugInterfaceToVmWithOnlyPrimaryInterface:
-    @pytest.mark.polarion("CNV-10115")
     @pytest.mark.post_upgrade
     @pytest.mark.dependency(
         name="test_vmi_spec_updated_with_hot_plugged_interface",
@@ -428,12 +427,15 @@ class TestHotPlugInterfaceToVmWithOnlyPrimaryInterface:
         running_vm_for_nic_hot_plug,
         hot_plugged_interface,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-21833 # <skip-jira-utils-check>
+        Polarion: CNV-10115
+        """
         wait_for_interface_hot_plug_completion(
             vmi=running_vm_for_nic_hot_plug.vmi,
             interface_name=hot_plugged_interface.name,
         )
 
-    @pytest.mark.polarion("CNV-10166")
     @pytest.mark.dependency(
         name="test_multiple_interfaces_hot_plugged",
         depends=["test_vmi_spec_updated_with_hot_plugged_interface"],
@@ -447,12 +449,16 @@ class TestHotPlugInterfaceToVmWithOnlyPrimaryInterface:
         running_vm_for_nic_hot_plug,
         multiple_hot_plugged_interfaces,
     ):
-        # Hot-plug feature should be able to support up to 4 hot-plugged interfaces
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-21833 # <skip-jira-utils-check>
+        Polarion: CNV-10166
+
+        Hot-plug feature should be able to support up to 4 hot-plugged interfaces
+        """
         for interface in multiple_hot_plugged_interfaces:
             wait_for_interface_hot_plug_completion(vmi=running_vm_for_nic_hot_plug.vmi, interface_name=interface.name)
 
     @pytest.mark.ipv4
-    @pytest.mark.polarion("CNV-10130")
     @pytest.mark.post_upgrade
     @pytest.mark.dependency(
         name=TEST_BASIC_HOT_PLUGGED_INTERFACE_CONNECTIVITY,
@@ -465,6 +471,10 @@ class TestHotPlugInterfaceToVmWithOnlyPrimaryInterface:
         hot_plugged_interface_with_address,
         network_attachment_definition_for_hot_plug,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-21833 # <skip-jira-utils-check>
+        Polarion: CNV-10130
+        """
         assert_ping_successful(
             src_vm=running_vm_for_nic_hot_plug,
             dst_ip=lookup_iface_status_ip(
@@ -474,7 +484,6 @@ class TestHotPlugInterfaceToVmWithOnlyPrimaryInterface:
             ),
         )
 
-    @pytest.mark.polarion("CNV-10137")
     @pytest.mark.dependency(
         name="test_mac_of_hot_plugged_interface_from_kubemacpool",
         depends=["test_vmi_spec_updated_with_hot_plugged_interface"],
@@ -485,6 +494,10 @@ class TestHotPlugInterfaceToVmWithOnlyPrimaryInterface:
         mac_pool,
         hot_plugged_interface,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-21833 # <skip-jira-utils-check>
+        Polarion: CNV-10137
+        """
         interface = search_hot_plugged_interface_in_vmi(
             vm=running_vm_for_nic_hot_plug, interface_name=hot_plugged_interface.name
         )
@@ -493,7 +506,6 @@ class TestHotPlugInterfaceToVmWithOnlyPrimaryInterface:
             f"of KubeMacPool range {mac_pool.range_start} - {mac_pool.range_end}"
         )
 
-    @pytest.mark.polarion("CNV-10306")
     @pytest.mark.dependency(
         name="test_primary_interface_not_modified_after_hot_plug",
         depends=[TEST_BASIC_HOT_PLUGGED_INTERFACE_CONNECTIVITY],
@@ -504,13 +516,17 @@ class TestHotPlugInterfaceToVmWithOnlyPrimaryInterface:
         mac_addresses_before_restart,
         mac_addresses_after_restart,
     ):
-        # This test is executed to verify such bug (2224104) doesn't happen again.
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-21833 # <skip-jira-utils-check>
+        Polarion: CNV-10306
+
+        This test is executed to verify such bug (2224104) doesn't happen again.
+        """
         assert mac_addresses_after_restart == mac_addresses_before_restart
 
     @pytest.mark.ipv4
     @pytest.mark.special_infra
     @pytest.mark.jumbo_frame
-    @pytest.mark.polarion("CNV-10135")
     def test_connectivity_of_hot_plugged_jumbo_interface(
         self,
         running_vm_for_jumbo_nic_hot_plug,
@@ -520,6 +536,10 @@ class TestHotPlugInterfaceToVmWithOnlyPrimaryInterface:
         running_utility_vm_for_connectivity_check,
         cluster_hardware_mtu,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-21833 # <skip-jira-utils-check>
+        Polarion: CNV-10135
+        """
         assert_ping_successful(
             src_vm=running_vm_for_jumbo_nic_hot_plug,
             dst_ip=lookup_iface_status_ip(
@@ -530,24 +550,30 @@ class TestHotPlugInterfaceToVmWithOnlyPrimaryInterface:
             packet_size=cluster_hardware_mtu,
         )
 
-    @pytest.mark.polarion("CNV-10169")
     @pytest.mark.post_upgrade
     def test_hot_plug_flat_overlay_network(
         self,
         running_vm_for_nic_hot_plug,
         hot_plugged_interface_from_flat_overlay_network,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-21833 # <skip-jira-utils-check>
+        Polarion: CNV-10169
+        """
         wait_for_interface_hot_plug_completion(
             vmi=running_vm_for_nic_hot_plug.vmi,
             interface_name=hot_plugged_interface_from_flat_overlay_network.name,
         )
 
-    @pytest.mark.polarion("CNV-10138")
     def test_mac_of_hot_plugged_interface_returned_to_kubemacpool_after_vm_delete(
         self,
         hot_plugged_kmp_interface_mac_for_vm_deletion,
         kubemacpool_controller_log_for_vm_deletion,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-21833 # <skip-jira-utils-check>
+        Polarion: CNV-10138
+        """
         assert check_mac_released(
             kubemacpool_controller_log=kubemacpool_controller_log_for_vm_deletion,
             interface_mac_address=hot_plugged_kmp_interface_mac_for_vm_deletion,
@@ -559,7 +585,6 @@ class TestHotPlugInterfaceToVmWithOnlyPrimaryInterface:
     @pytest.mark.special_infra
     @pytest.mark.ipv4
     @pytest.mark.sriov
-    @pytest.mark.polarion("CNV-10647")
     def test_connectivity_of_hot_plugged_sriov_interface(
         self,
         sriov_hot_plug_vm1,
@@ -568,6 +593,10 @@ class TestHotPlugInterfaceToVmWithOnlyPrimaryInterface:
         namespace,
         index_number,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-25461 # <skip-jira-utils-check>
+        Polarion: CNV-10647
+        """
         hot_plug_interface_and_set_address(
             vm=sriov_hot_plug_vm1,
             hot_plugged_interface_name=sriov_network_for_hot_plug.name,
@@ -617,6 +646,11 @@ class TestHotPlugInterfaceToVmWithSecondaryInterface:
         network_attachment_definition_for_hot_plug,
         guest_interface_name,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-21833 # <skip-jira-utils-check>
+        Polarion: CNV-10136
+        Polarion: CNV-10150
+        """
         assert_ping_successful(
             src_vm=running_vm_with_secondary_and_hot_plugged_interfaces,
             dst_ip=lookup_iface_status_ip(
@@ -627,7 +661,6 @@ class TestHotPlugInterfaceToVmWithSecondaryInterface:
             interface=guest_interface_name,
         )
 
-    @pytest.mark.polarion("CNV-10147")
     @pytest.mark.post_upgrade
     @pytest.mark.dependency(
         name="test_hot_unplugged_interface_removed_from_vmi_spec",
@@ -637,6 +670,10 @@ class TestHotPlugInterfaceToVmWithSecondaryInterface:
         hot_unplugged_additional_interface,
         running_vm_with_secondary_and_hot_plugged_interfaces,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-21833 # <skip-jira-utils-check>
+        Polarion: CNV-10147
+        """
         with pytest.raises(VMInterfaceStatusNotFoundError):
             search_hot_plugged_interface_in_vmi(
                 vm=running_vm_with_secondary_and_hot_plugged_interfaces,
@@ -644,7 +681,6 @@ class TestHotPlugInterfaceToVmWithSecondaryInterface:
             )
 
     @pytest.mark.ipv4
-    @pytest.mark.polarion("CNV-10148")
     @pytest.mark.post_upgrade
     @pytest.mark.dependency(
         name="test_basic_connectivity_vm_with_secondary_after_hot_unplug",
@@ -656,6 +692,10 @@ class TestHotPlugInterfaceToVmWithSecondaryInterface:
         running_utility_vm_for_connectivity_check,
         network_attachment_definition_for_hot_plug,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-21833 # <skip-jira-utils-check>
+        Polarion: CNV-10148
+        """
         assert_ping_successful(
             src_vm=running_vm_with_secondary_and_hot_plugged_interfaces,
             dst_ip=lookup_iface_status_ip(
@@ -666,7 +706,6 @@ class TestHotPlugInterfaceToVmWithSecondaryInterface:
             interface=SECONDARY_SETUP_INTERFACE_NAME,
         )
 
-    @pytest.mark.polarion("CNV-10149")
     @pytest.mark.dependency(
         name="test_mac_of_hot_plugged_interface_returned_to_kubemacpool_after_hot_unplug",
         depends=["test_hot_unplugged_interface_removed_from_vmi_spec"],
@@ -676,6 +715,10 @@ class TestHotPlugInterfaceToVmWithSecondaryInterface:
         hot_unplugged_interface_mac_address,
         kubemacpool_controller_log_for_hot_unplug,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-21833 # <skip-jira-utils-check>
+        Polarion: CNV-10149
+        """
         assert check_mac_released(
             kubemacpool_controller_log=kubemacpool_controller_log_for_hot_unplug,
             interface_mac_address=hot_unplugged_interface_mac_address,
@@ -684,13 +727,16 @@ class TestHotPlugInterfaceToVmWithSecondaryInterface:
             f"not released upon hot-unplug."
         )
 
-    @pytest.mark.polarion("CNV-10164")
     def test_hot_unplug_secondary_interface_from_setup(
         self,
         running_vm_with_secondary_and_hot_plugged_interfaces,
         hot_unplug_secondary_interface_from_setup,
         network_attachment_definition_for_hot_plug,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-21833 # <skip-jira-utils-check>
+        Polarion: CNV-10164
+        """
         with pytest.raises(VMInterfaceStatusNotFoundError):
             search_hot_plugged_interface_in_vmi(
                 vm=running_vm_with_secondary_and_hot_plugged_interfaces,
