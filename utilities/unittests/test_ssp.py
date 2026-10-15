@@ -31,7 +31,6 @@ if "utilities.ssp" in sys.modules:
 from utilities.ssp import (
     cluster_instance_type_for_hot_plug,
     create_custom_template_from_url,
-    get_cim_instance_json,
     get_data_import_crons,
     get_ga_version,
     get_reg_product_name,
@@ -430,23 +429,6 @@ class TestGetGaVersion:
         result = get_ga_version(mock_ssh_exec)
 
         assert result == "7.4.0"
-        mock_run_ssh.assert_called_once()
-
-
-class TestGetCimInstanceJson:
-    """Test cases for get_cim_instance_json function"""
-
-    @patch("utilities.ssp.run_ssh_commands")
-    def test_get_cim_instance_json_success(self, mock_run_ssh):
-        """Test successful extraction of CIM instance JSON"""
-        mock_ssh_exec = MagicMock()
-        test_json = '{"CSName": "test-host", "BuildNumber": "19042"}'
-        mock_run_ssh.return_value = [test_json]
-
-        result = get_cim_instance_json(mock_ssh_exec)
-
-        expected = {"CSName": "test-host", "BuildNumber": "19042"}
-        assert result == expected
         mock_run_ssh.assert_called_once()
 
 

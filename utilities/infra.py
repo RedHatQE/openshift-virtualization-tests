@@ -356,7 +356,8 @@ def wait_for_consistent_resource_conditions(
     actual_conditions = {}
     LOGGER.info(
         f"Waiting for resource to stabilize: resource_kind={resource_kind.__name__} conditions={expected_conditions} "
-        f"sleep={total_timeout} consecutive_checks_count={consecutive_checks_count}"
+        f"total_timeout={total_timeout} polling_interval={polling_interval} "
+        f"consecutive_checks_count={consecutive_checks_count}"
     )
     try:
         for sample in samples:
