@@ -21,7 +21,6 @@ from utilities.constants.cluster import (
 
 if TYPE_CHECKING:
     from kubernetes.dynamic import DynamicClient
-
     from utilities.virt import VirtualMachineForTestsFromTemplate
 
 

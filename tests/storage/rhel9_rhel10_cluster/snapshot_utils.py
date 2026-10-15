@@ -15,7 +15,6 @@ from utilities.virt import running_vm, set_vm_affinity
 
 if TYPE_CHECKING:
     from kubernetes.dynamic import DynamicClient
-
     from utilities.virt import VirtualMachineForTestsFromTemplate
 
 
