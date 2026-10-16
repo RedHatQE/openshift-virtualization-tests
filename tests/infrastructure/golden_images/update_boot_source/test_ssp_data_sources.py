@@ -17,7 +17,14 @@ from tests.infrastructure.golden_images.constants import (
     PVC_NOT_FOUND_ERROR,
 )
 from tests.utils import get_parameters_from_template
-from utilities.constants import DATA_SOURCE_NAME, DEFAULT_FEDORA_REGISTRY_URL, TIMEOUT_5MIN, TIMEOUT_10MIN, Images
+from utilities.constants import (
+    DATA_SOURCE_NAME,
+    DEFAULT_FEDORA_REGISTRY_URL,
+    TIMEOUT_2MIN,
+    TIMEOUT_5MIN,
+    TIMEOUT_10MIN,
+    Images,
+)
 from utilities.exceptions import ResourceValueError
 from utilities.infra import (
     cleanup_artifactory_secret_and_config_map,
@@ -203,22 +210,49 @@ def wait_for_data_import_cron_label_in_data_source_when_opt_in(data_source, opt_
 
 @contextmanager
 def update_data_source(data_source):
-    source = "pvc" if data_source.instance.spec.source.get("pvc") else "snapshot"
-    with ResourceEditor(
-        patches={
-            data_source: {
-                "spec": {
-                    "source": {
-                        source: {
-                            "name": DUMMY_VOLUME_NAME,
-                            "namespace": data_source.namespace,
-                        }
-                    }
+    """Temporarily point DataSource.spec.source at a dummy volume, then restore it.
+
+    ResourceEditor's automatic backup keeps only fields that differ from the patch, so
+    unchanged values such as pvc/snapshot namespace are omitted. After reconcile rewrites
+    the source, restoring that partial backup can fail with API 422 (CNV-98159). Pass the
+    full pre-edit spec.source via user_backups so teardown restore always includes
+    namespace.
+
+    After the test body returns, wait until the source no longer references the dummy
+    volume so restore runs against a stable reconciled object; on timeout log a warning
+    and restore anyway.
+    """
+    instance = data_source.instance
+    source = "pvc" if instance.spec.source.get("pvc") else "snapshot"
+    original_source = instance.to_dict()["spec"]["source"]
+    patch = {
+        "spec": {
+            "source": {
+                source: {
+                    "name": DUMMY_VOLUME_NAME,
+                    "namespace": data_source.namespace,
                 }
             }
         }
+    }
+    with ResourceEditor(
+        patches={data_source: patch},
+        user_backups={data_source: {"spec": {"source": original_source}}},
     ):
         yield data_source
+        try:
+            for sample in TimeoutSampler(
+                wait_timeout=TIMEOUT_2MIN,
+                sleep=5,
+                func=lambda: data_source.source.name != DUMMY_VOLUME_NAME,
+            ):
+                if sample:
+                    break
+        except TimeoutExpiredError:
+            LOGGER.warning(
+                f"DataSource {data_source.name} still references {DUMMY_VOLUME_NAME} before restore; "
+                "proceeding with restore anyway"
+            )
 
 
 @pytest.fixture()
