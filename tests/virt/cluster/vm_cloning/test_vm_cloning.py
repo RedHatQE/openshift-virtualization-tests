@@ -19,6 +19,7 @@ from tests.virt.cluster.vm_cloning.utils import (
     check_if_files_present_after_cloning,
 )
 from utilities.constants import Images
+from utilities.constants.images import OS_FLAVOR_FEDORA
 from utilities.constants.instance_types import RHEL_WITH_INSTANCETYPE_AND_PREFERENCE
 from utilities.constants.timeouts import TIMEOUT_2MIN
 from utilities.storage import (
@@ -128,7 +129,11 @@ def files_created_on_pvc_disks(vm_with_dv_for_cloning):
 
 @pytest.fixture(scope="class")
 def fedora_target_vm(unprivileged_client, cloning_job_fedora_vm):
-    with target_vm_from_cloning_job(client=unprivileged_client, cloning_job=cloning_job_fedora_vm) as target_vm:
+    with target_vm_from_cloning_job(
+        client=unprivileged_client,
+        cloning_job=cloning_job_fedora_vm,
+        os_flavor=OS_FLAVOR_FEDORA,
+    ) as target_vm:
         yield target_vm
 
 

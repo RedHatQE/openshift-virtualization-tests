@@ -1218,8 +1218,23 @@ class VirtualMachineForTests(VirtualMachine):
     @property
     def ssh_exec(self):
         # In order to use this property VM should be created with ssh=True
-        self.username = self.username or self.login_params["username"]
-        self.password = self.password or self.login_params["password"]
+        _login_params = self.login_params
+        if not self.username:
+            if "username" not in _login_params:
+                raise ValueError(
+                    f"Cannot resolve SSH credentials for VM {self.name}: "
+                    f"os_flavor={self.os_flavor!r} has no 'username' in os_login_param config "
+                    f"and cloud-init extraction did not provide one."
+                )
+            self.username = _login_params["username"]
+        if not self.password:
+            if "password" not in _login_params:
+                raise ValueError(
+                    f"Cannot resolve SSH credentials for VM {self.name}: "
+                    f"os_flavor={self.os_flavor!r} has no 'password' in os_login_param config "
+                    f"and cloud-init extraction did not provide one."
+                )
+            self.password = _login_params["password"]
 
         LOGGER.info(f"SSH command: ssh -o 'ProxyCommand={self.virtctl_port_forward_cmd}' {self.username}@{self.name}")
         host = Host(hostname=self.name)
@@ -2830,13 +2845,28 @@ class VirtualMachineForCloning(VirtualMachineForTests):
 
 
 @contextmanager
-def target_vm_from_cloning_job(client, cloning_job):
+def target_vm_from_cloning_job(client, cloning_job, os_flavor=None):
+    """Wrap the target VM created by a VirtualMachineClone job and wait for it to run.
+
+    Args:
+        client: Kubernetes dynamic client.
+        cloning_job: Completed VirtualMachineClone resource.
+        os_flavor: OS flavor string for SSH credential resolution.
+            When *None*, falls back to the first segment of the source VM name
+            (split on ``"-"``).  Callers should pass this explicitly to avoid
+            credential-lookup failures when the source name does not start with
+            a recognised OS flavour.
+
+    Yields:
+        VirtualMachineForTests: The running target VM.
+    """
     cloning_job_spec = cloning_job.instance.spec
+    resolved_os_flavor = os_flavor or cloning_job_spec.source.name.split("-")[0]
     target_vm = VirtualMachineForTests(
         client=client,
         name=cloning_job_spec.target.name,
         namespace=cloning_job.namespace,
-        os_flavor=cloning_job_spec.source.name.split("-")[0],
+        os_flavor=resolved_os_flavor,
         generate_unique_name=False,
     )
     assert target_vm.exists, f"{target_vm.name} VM was not created."

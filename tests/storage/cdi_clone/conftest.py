@@ -117,7 +117,11 @@ def target_vm_from_4_disk_clone(
         target_name="fedora-4-disks-target",
     ) as vmc:
         vmc.wait_for_status(status=VirtualMachineClone.Status.SUCCEEDED, timeout=TIMEOUT_10MIN)
-        with target_vm_from_cloning_job(client=unprivileged_client, cloning_job=vmc) as target_vm:
+        with target_vm_from_cloning_job(
+            client=unprivileged_client,
+            cloning_job=vmc,
+            os_flavor=OS_FLAVOR_FEDORA,
+        ) as target_vm:
             yield target_vm
 
 
