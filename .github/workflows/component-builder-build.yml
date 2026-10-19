@@ -14,6 +14,10 @@ on:
         description: "Base name of the Fedora checksum file"
         required: true
         type: string
+      fedora_signing_key_fingerprint:
+        description: "Fedora release signing key fingerprint (40 hex characters)"
+        required: true
+        type: string
       matrix:
         description: "JSON matrix string consumed by the build job via fromJson()"
         required: true
@@ -98,10 +102,10 @@ jobs:
         working-directory: ./containers/fedora
         env:
           URL_ARCH: ${{ matrix.url_arch }}
-          # Fedora 43 primary release signing key fingerprint.
-          # Source: https://fedoraproject.org/security
-          # Fingerprint must be updated when the Fedora version changes.
-          FEDORA_SIGNING_KEY_FINGERPRINT: "C6E7F081CF80E13146676E88829B606631645531"
+          # Fedora release signing key fingerprint, sourced from the shared
+          # component-builder config (see https://fedoraproject.org/security).
+          # Update the config value when the Fedora version changes.
+          FEDORA_SIGNING_KEY_FINGERPRINT: ${{ inputs.fedora_signing_key_fingerprint }}
         run: |
           set -euo pipefail
           FEDORA_IMAGE="${FEDORA_IMAGE_BASE}.${URL_ARCH}.qcow2"
