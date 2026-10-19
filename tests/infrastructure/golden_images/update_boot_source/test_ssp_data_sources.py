@@ -214,9 +214,8 @@ def update_data_source(data_source):
 
     ResourceEditor's automatic backup keeps only fields that differ from the patch, so
     unchanged values such as pvc/snapshot namespace are omitted. After reconcile rewrites
-    the source, restoring that partial backup can fail with API 422 (CNV-98159). Pass the
-    full pre-edit spec.source via user_backups so teardown restore always includes
-    namespace.
+    the source, restoring that partial backup can fail API validation. Pass the full
+    pre-edit spec.source via user_backups so teardown restore always includes namespace.
 
     After the test body returns, wait until the source no longer references the dummy
     volume so restore runs against a stable reconciled object; on timeout log a warning
