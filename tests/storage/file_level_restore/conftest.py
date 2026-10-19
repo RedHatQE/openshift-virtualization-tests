@@ -65,6 +65,7 @@ from tests.storage.file_level_restore.utils import (
     windows_guest_path,
 )
 from tests.storage.online_resize.utils import cksum_file
+from tests.storage.stop_status_utils import dv_stop_status_restart_threshold
 from tests.utils import create_windows2022_vm
 from utilities.constants.cluster import POD_SECURITY_NAMESPACE_LABELS
 from utilities.constants.images import OS_FLAVOR_RHEL
@@ -805,7 +806,10 @@ def cross_namespace_backup_pvc(
             "snapshot": {"name": linux_data_disk_snapshot.name, "namespace": linux_data_disk_snapshot.namespace}
         },
     ) as data_volume:
-        data_volume.wait_for_dv_success()
+        data_volume.wait_for_dv_success(
+            stop_status_func=dv_stop_status_restart_threshold,
+            dv=data_volume,
+        )
         yield data_volume
 
 
@@ -840,17 +844,18 @@ def cross_namespace_restore_permissions(
         namespace=FILE_RESTORE_OPERATOR_NAMESPACE,
         client=admin_client,
     ).instance.spec.template.spec.serviceAccountName
-    with Role(
-        name="file-restore-snapshot-source",
-        namespace=cross_namespace_data_disk_snapshot.namespace,
-        client=admin_client,
-        rules=[
-            {"apiGroups": [DataVolume.api_group], "resources": ["datavolumes/source"], "verbs": ["create"]},
-            {"apiGroups": [VolumeSnapshot.api_group], "resources": ["volumesnapshots"], "verbs": ["get"]},
-            {"apiGroups": [""], "resources": ["persistentvolumeclaims"], "verbs": ["get"]},
-        ],
-    ) as role:
-        with RoleBinding(
+    with (
+        Role(
+            name="file-restore-snapshot-source",
+            namespace=cross_namespace_data_disk_snapshot.namespace,
+            client=admin_client,
+            rules=[
+                {"apiGroups": [DataVolume.api_group], "resources": ["datavolumes/source"], "verbs": ["create"]},
+                {"apiGroups": [VolumeSnapshot.api_group], "resources": ["volumesnapshots"], "verbs": ["get"]},
+                {"apiGroups": [""], "resources": ["persistentvolumeclaims"], "verbs": ["get"]},
+            ],
+        ) as role,
+        RoleBinding(
             name="file-restore-snapshot-source",
             namespace=cross_namespace_data_disk_snapshot.namespace,
             client=admin_client,
@@ -859,8 +864,9 @@ def cross_namespace_restore_permissions(
             subjects_namespace=FILE_RESTORE_OPERATOR_NAMESPACE,
             role_ref_kind=role.kind,
             role_ref_name=role.name,
-        ) as role_binding:
-            yield role_binding
+        ) as role_binding,
+    ):
+        yield role_binding
 
 
 @pytest.fixture()
@@ -1050,18 +1056,19 @@ def file_restore_snapshot_content_permission(admin_client):
         namespace=FILE_RESTORE_OPERATOR_NAMESPACE,
         client=admin_client,
     ).instance.spec.template.spec.serviceAccountName
-    with ClusterRole(
-        name=unique_name(name="flr-snapshot-content-reader"),
-        client=admin_client,
-        rules=[
-            {
-                "apiGroups": [VolumeSnapshotContent.api_group],
-                "resources": ["volumesnapshotcontents"],
-                "verbs": ["get"],
-            }
-        ],
-    ) as cluster_role:
-        with ClusterRoleBinding(
+    with (
+        ClusterRole(
+            name=unique_name(name="flr-snapshot-content-reader"),
+            client=admin_client,
+            rules=[
+                {
+                    "apiGroups": [VolumeSnapshotContent.api_group],
+                    "resources": ["volumesnapshotcontents"],
+                    "verbs": ["get"],
+                }
+            ],
+        ) as cluster_role,
+        ClusterRoleBinding(
             name=cluster_role.name,
             cluster_role=cluster_role.name,
             subjects=[
@@ -1072,8 +1079,9 @@ def file_restore_snapshot_content_permission(admin_client):
                 }
             ],
             client=admin_client,
-        ) as role_binding:
-            yield role_binding
+        ) as role_binding,
+    ):
+        yield role_binding
 
 
 @pytest.fixture()
