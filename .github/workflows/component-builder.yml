@@ -26,6 +26,7 @@ jobs:
       fedora_version: ${{ needs.prepare.outputs.fedora_version }}
       fedora_image_base: ${{ needs.prepare.outputs.fedora_image_base }}
       fedora_checksum_base: ${{ needs.prepare.outputs.fedora_checksum_base }}
+      fedora_signing_key_fingerprint: ${{ needs.prepare.outputs.fedora_signing_key_fingerprint }}
       matrix: ${{ needs.prepare.outputs.matrix }}
       remote_repository: ${{ needs.prepare.outputs.remote_repository }}
       no_secrets: true
