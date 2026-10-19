@@ -1,15 +1,9 @@
-import logging
-
 import pytest
 
 from tests.observability.runbook_url.utils import validate_downstream_runbook_url
 
 
 class TestRunbookUrlsAndPrometheusRules:
-    @pytest.mark.xfail(
-        reason=f"{QUARANTINED}: New alerts runbooks added to upstream and not merged yet for downstream, CNV-67890",
-        run=False,
-    )
     @pytest.mark.polarion("CNV-10084")
     def test_runbook_downstream_urls(self, available_runbook_urls, cnv_prometheus_rule_alerts, subtests):
         validate_downstream_runbook_url(
