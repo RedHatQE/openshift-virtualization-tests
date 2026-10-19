@@ -881,6 +881,50 @@ def assert_successful_restore_cleanup(
         )
 
 
+@contextmanager
+def manual_browsing_file_restore(
+    vm: VirtualMachineForTests,
+    source: DataVolume | VolumeSnapshot,
+    restore_cr_name: str,
+    namespace_name: str,
+    admin_client: DynamicClient,
+) -> Iterator[VirtualMachineFileRestore]:
+    """Create a manual restore request and wait for cleanup after deleting it.
+
+    Args:
+        vm: Target virtual machine.
+        source: Backup DataVolume providing a PVC, or a VolumeSnapshot.
+        restore_cr_name: Name of the manual restore request.
+        namespace_name: Namespace for the restore request.
+        admin_client: Kubernetes admin client.
+
+    Yields:
+        Manual restore request available for browsing.
+    """
+    snapshot_source = isinstance(source, VolumeSnapshot)
+    with VirtualMachineFileRestore(
+        name=restore_cr_name,
+        namespace=namespace_name,
+        target_vm_name=vm.name,
+        source_snapshot_name=source.name if snapshot_source else None,
+        source_pvc_name=None if snapshot_source else source.name,
+        client=admin_client,
+    ) as file_restore:
+        yield file_restore
+    for _ in TimeoutSampler(
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
+        func=assert_successful_restore_cleanup,
+        exceptions_dict={AssertionError: []},
+        vm=vm,
+        restore_cr_name=file_restore.name,
+        namespace_name=namespace_name,
+        admin_client=admin_client,
+        snapshot_source=snapshot_source,
+    ):
+        break
+
+
 def linux_restore_test_file_path(username: str) -> str:
     """Return the Linux restore path for the standard test file.
 

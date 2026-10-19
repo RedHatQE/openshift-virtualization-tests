@@ -43,7 +43,6 @@ from tests.storage.file_level_restore.constants import (
 from tests.storage.file_level_restore.utils import (
     VirtualMachineFileRestore,
     VolumeSnapshotContent,
-    assert_successful_restore_cleanup,
     delete_linux_data_disk_file,
     delete_linux_guest_file,
     delete_windows_guest_file,
@@ -57,6 +56,7 @@ from tests.storage.file_level_restore.utils import (
     linux_restore_test_file_path,
     linux_root_disk_online_virtual_machine_snapshot,
     linux_volume_snapshot,
+    manual_browsing_file_restore,
     restore_volume_name,
     wait_for_file_restore_operator_ready,
     wait_for_file_restore_phase,
@@ -1131,26 +1131,14 @@ def windows_manual_browsing_file_restore(
     windows_backup_pvc,
 ):
     """Manual-mode Windows NTFS restore request, cleaned up after browsing completes."""
-    with VirtualMachineFileRestore(
-        name="flr-win-manual",
-        namespace=namespace.name,
-        target_vm_name=windows_file_restore_vm.name,
-        source_pvc_name=windows_backup_pvc.name,
-        client=admin_client,
-    ) as file_restore:
-        yield file_restore
-    for _ in TimeoutSampler(
-        wait_timeout=TIMEOUT_2MIN,
-        sleep=TIMEOUT_5SEC,
-        func=assert_successful_restore_cleanup,
-        exceptions_dict={AssertionError: []},
+    with manual_browsing_file_restore(
         vm=windows_file_restore_vm,
-        restore_cr_name=file_restore.name,
+        source=windows_backup_pvc,
+        restore_cr_name="flr-win-manual",
         namespace_name=namespace.name,
         admin_client=admin_client,
-        snapshot_source=False,
-    ):
-        break
+    ) as file_restore:
+        yield file_restore
 
 
 @pytest.fixture()
@@ -1161,28 +1149,14 @@ def linux_root_disk_manual_browsing_file_restore(
     linux_root_disk_browsing_source,
 ):
     """Manual root-backup restore request, cleaned up after browsing completes."""
-    snapshot_source = isinstance(linux_root_disk_browsing_source, VolumeSnapshot)
-    with VirtualMachineFileRestore(
-        name="flr-root-manual",
-        namespace=namespace.name,
-        target_vm_name=file_restore_linux_root_only_vm.name,
-        source_snapshot_name=linux_root_disk_browsing_source.name if snapshot_source else None,
-        source_pvc_name=None if snapshot_source else linux_root_disk_browsing_source.name,
-        client=admin_client,
-    ) as file_restore:
-        yield file_restore
-    for _ in TimeoutSampler(
-        wait_timeout=TIMEOUT_2MIN,
-        sleep=TIMEOUT_5SEC,
-        func=assert_successful_restore_cleanup,
-        exceptions_dict={AssertionError: []},
+    with manual_browsing_file_restore(
         vm=file_restore_linux_root_only_vm,
-        restore_cr_name=file_restore.name,
+        source=linux_root_disk_browsing_source,
+        restore_cr_name="flr-root-manual",
         namespace_name=namespace.name,
         admin_client=admin_client,
-        snapshot_source=snapshot_source,
-    ):
-        break
+    ) as file_restore:
+        yield file_restore
 
 
 @pytest.fixture()
