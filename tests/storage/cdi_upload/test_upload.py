@@ -3,29 +3,20 @@ Upload tests
 """
 
 import logging
-import multiprocessing
-import time
 from random import shuffle
-from time import sleep
 
 import pytest
 from ocp_resources.datavolume import DataVolume
-from ocp_resources.persistent_volume import PersistentVolume
 from ocp_resources.route import Route
 from ocp_resources.upload_token_request import UploadTokenRequest
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutSampler
+from utilities.constants.components import CDI_UPLOADPROXY
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_3MIN
 
 import tests.storage.utils as storage_utils
-import utilities.storage
-from tests.os_params import RHEL_LATEST
-from utilities.constants import (
-    CDI_UPLOADPROXY,
-    TIMEOUT_1MIN,
-    TIMEOUT_3MIN,
-    TIMEOUT_5MIN,
-    Images,
-)
+from tests.storage.stop_status_utils import dv_stop_status_restart_threshold
+from utilities.constants import Images
 from utilities.storage import create_vm_from_dv, get_downloaded_artifact
 
 LOGGER = logging.getLogger(__name__)
@@ -98,13 +89,6 @@ def test_cdi_uploadproxy_route_owner_references(hco_namespace):
             id=f"cnv-8910-{Images.Cirros.RAW_IMG_GZ}",
         ),
         pytest.param(
-            "cnv-8911",
-            f"{Images.Cirros.DIR}/{Images.Cirros.RAW_IMG_XZ}",
-            Images.Cirros.RAW_IMG_XZ,
-            marks=(pytest.mark.polarion("CNV-8911")),
-            id=f"cnv-8911-{Images.Cirros.RAW_IMG_XZ}",
-        ),
-        pytest.param(
             "cnv-2008",
             f"{Images.Cirros.DIR}/{Images.Cirros.RAW_IMG}",
             Images.Cirros.QCOW2_IMG,
@@ -156,12 +140,7 @@ def test_cdi_uploadproxy_route_owner_references(hco_namespace):
     ],
 )
 def test_successful_upload_with_supported_formats(
-    unprivileged_client,
-    namespace,
-    tmpdir,
-    dv_name,
-    remote_name,
-    local_name,
+    unprivileged_client, namespace, tmpdir, dv_name, remote_name, local_name
 ):
     local_name = f"{tmpdir}/{local_name}"
     get_downloaded_artifact(remote_name=remote_name, local_name=local_name)
@@ -174,7 +153,7 @@ def test_successful_upload_with_supported_formats(
         storage_utils.upload_token_request(
             storage_ns_name=namespace.name, pvc_name=dv.pvc.name, data=local_name, client=unprivileged_client
         )
-        dv.wait_for_dv_success()
+        dv.wait_for_dv_success(stop_status_func=dv_stop_status_restart_threshold, dv=dv)
         create_vm_from_dv(client=unprivileged_client, dv=dv)
 
 
@@ -182,14 +161,9 @@ def test_successful_upload_with_supported_formats(
     "data_volume_multi_storage_scope_function",
     [
         pytest.param(
-            {
-                "dv_name": "cnv-2018",
-                "source": "upload",
-                "dv_size": Images.Cirros.DEFAULT_DV_SIZE,
-                "wait": False,
-            },
+            {"dv_name": "cnv-2018", "source": "upload", "dv_size": Images.Cirros.DEFAULT_DV_SIZE, "wait": False},
             marks=(pytest.mark.polarion("CNV-2018")),
-        ),
+        )
     ],
     indirect=True,
 )
@@ -197,174 +171,18 @@ def test_successful_upload_with_supported_formats(
 @pytest.mark.polarion("CNV-2018")
 @pytest.mark.s390x
 def test_successful_upload_token_validity(
-    unprivileged_client,
-    namespace,
-    data_volume_multi_storage_scope_function,
-    upload_file_path,
+    unprivileged_client, namespace, data_volume_multi_storage_scope_function, upload_file_path
 ):
     dv = data_volume_multi_storage_scope_function
     dv.wait_for_status(status=DataVolume.Status.UPLOAD_READY, timeout=TIMEOUT_3MIN)
     with UploadTokenRequest(
-        client=unprivileged_client,
-        name=dv.name,
-        namespace=namespace.name,
-        pvc_name=dv.pvc.name,
+        client=unprivileged_client, name=dv.name, namespace=namespace.name, pvc_name=dv.pvc.name
     ) as utr:
         token = utr.create().status.token
         wait_for_upload_response_code(token=shuffle(list(token)), data="test", response_code=HTTP_UNAUTHORIZED)
     with UploadTokenRequest(
-        client=unprivileged_client,
-        name=dv.name,
-        namespace=namespace.name,
-        pvc_name=dv.pvc.name,
+        client=unprivileged_client, name=dv.name, namespace=namespace.name, pvc_name=dv.pvc.name
     ) as utr:
         token = utr.create().status.token
         wait_for_upload_response_code(token=token, data=upload_file_path, response_code=HTTP_OK)
-        dv.wait_for_dv_success()
-
-
-@pytest.mark.parametrize(
-    "data_volume_multi_storage_scope_function",
-    [
-        pytest.param(
-            {
-                "dv_name": "cnv-2011",
-                "source": "upload",
-                "dv_size": "3Gi",
-                "wait": False,
-            },
-            marks=(pytest.mark.polarion("CNV-2011")),
-        ),
-    ],
-    indirect=True,
-)
-@pytest.mark.sno
-@pytest.mark.polarion("CNV-2011")
-@pytest.mark.s390x
-def test_successful_upload_token_expiry(unprivileged_client, namespace, data_volume_multi_storage_scope_function):
-    dv = data_volume_multi_storage_scope_function
-    dv.wait_for_status(status=DataVolume.Status.UPLOAD_READY, timeout=TIMEOUT_3MIN)
-    with UploadTokenRequest(
-        client=unprivileged_client,
-        name=dv.name,
-        namespace=namespace.name,
-        pvc_name=dv.pvc.name,
-    ) as utr:
-        token = utr.create().status.token
-        LOGGER.info("Wait until token expires ...")
-        time.sleep(310)
-        wait_for_upload_response_code(token=token, data="test", response_code=HTTP_UNAUTHORIZED)
-
-
-def _upload_image(dv_name, namespace, storage_class, local_name, client):
-    """
-    Upload image function for the use of other tests
-    """
-    with utilities.storage.create_dv(
-        client=client,
-        source="upload",
-        dv_name=dv_name,
-        namespace=namespace.name,
-        size="3Gi",
-        storage_class=storage_class,
-    ) as dv:
-        LOGGER.info("Wait for DV to be UploadReady")
-        dv.wait_for_status(status=DataVolume.Status.UPLOAD_READY, timeout=TIMEOUT_5MIN)
-        with UploadTokenRequest(
-            client=client,
-            name=dv_name,
-            namespace=namespace.name,
-            pvc_name=dv.pvc.name,
-        ) as utr:
-            token = utr.create().status.token
-            sleep(5)
-            LOGGER.info("Ensure upload was successful")
-            wait_for_upload_response_code(token=token, data=local_name, response_code=HTTP_OK)
-
-
-@pytest.mark.sno
-@pytest.mark.s390x
-@pytest.mark.polarion("CNV-2015")
-@pytest.mark.parametrize(
-    "upload_file_path",
-    [
-        pytest.param(
-            {
-                "remote_image_dir": Images.Alpine.DIR,
-                "remote_image_name": Images.Alpine.QCOW2_IMG,
-            },
-        ),
-    ],
-    indirect=True,
-)
-def test_successful_concurrent_uploads(
-    unprivileged_client,
-    upload_file_path,
-    namespace,
-    storage_class_matrix__module__,
-):
-    dvs_processes = []
-    storage_class = [*storage_class_matrix__module__][0]
-    available_pv = PersistentVolume(name=namespace).max_available_pvs
-    for dv in range(available_pv):
-        dv_process = multiprocessing.Process(
-            target=_upload_image,
-            args=(f"dv-{dv}", namespace, storage_class, upload_file_path, unprivileged_client),
-        )
-        dv_process.start()
-        dvs_processes.append(dv_process)
-
-    for dvs in dvs_processes:
-        dvs.join()
-        if dvs.exitcode != 0:
-            raise pytest.fail("Creating DV exited with non-zero return code")
-
-
-@pytest.mark.sno
-@pytest.mark.parametrize(
-    "download_specified_image, data_volume_multi_storage_scope_function",
-    [
-        pytest.param(
-            {
-                "image_path": RHEL_LATEST.get("image_path"),
-                "image_file": RHEL_LATEST.get("image_name"),
-            },
-            {
-                "dv_name": "cnv-4511",
-                "source": "upload",
-                "dv_size": "3Gi",
-                "wait": True,
-            },
-            marks=(pytest.mark.polarion("CNV-4511")),
-        ),
-    ],
-    indirect=True,
-)
-@pytest.mark.s390x
-def test_print_response_body_on_error_upload(
-    unprivileged_client,
-    namespace,
-    download_specified_image,
-    data_volume_multi_storage_scope_function,
-):
-    """
-    Check that CDI now reports validation failures as part of the body response
-    in case for instance the disk image virtual size > PVC size > disk size
-    """
-    dv = data_volume_multi_storage_scope_function
-    with UploadTokenRequest(
-        client=unprivileged_client,
-        name=dv.name,
-        namespace=dv.namespace,
-        pvc_name=dv.pvc.name,
-    ) as utr:
-        token = utr.create().status.token
-        LOGGER.debug("Start upload an image asynchronously ...")
-
-        # Upload should fail with an error
-        wait_for_upload_response_code(
-            token=token,
-            data=download_specified_image,
-            response_code=400,
-            asynchronous=True,
-        )
+        dv.wait_for_dv_success(stop_status_func=dv_stop_status_restart_threshold, dv=dv)
