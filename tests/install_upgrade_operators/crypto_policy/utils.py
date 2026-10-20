@@ -403,3 +403,62 @@ def get_services_pqc_status(
             LOGGER.warning(f"Service {service_name} rejected all PQC groups: {pqc_groups}")
             results[service_name] = False
     return results
+
+
+def compose_openssl_curve_command(service: Service, group: str, connect_timeout: int = 10) -> str:
+    """Builds an openssl s_client command probing a single TLS group, with SNI.
+
+    Sends ``-servername <service>.<namespace>.svc`` so that name-based virtual hosts
+    (e.g. the nginx console-plugin and apiserver-proxy) present their certificate
+    instead of rejecting the handshake with ``unrecognized name``.
+
+    Args:
+        service: Service resource to probe (provides clusterIP, port and SNI name).
+        group: Single TLS group name to offer (e.g. "SecP256r1MLKEM768").
+        connect_timeout: Timeout in seconds for the TLS connection attempt.
+
+    Returns:
+        str: The openssl command string.
+    """
+    service_spec = service.instance.spec
+    servername = f"{service.name}.{service.namespace}.svc"
+    return (
+        f"echo | timeout {connect_timeout}"
+        f" openssl s_client -connect {service_spec.clusterIP}:{service_spec.ports[0].port}"
+        f" -servername {servername} -groups {group} 2>&1"
+    )
+
+
+def get_service_curve_status(
+    worker_exec: ExecCommandOnPod,
+    service: Service,
+    groups: list[str],
+) -> dict[str, bool | None]:
+    """Probes a single service for each TLS group independently.
+
+    Args:
+        worker_exec: ExecCommandOnPod instance for running commands on a worker node.
+        service: Service resource to probe.
+        groups: TLS group names to probe one at a time.
+
+    Returns:
+        dict[str, bool | None]: Mapping of group name to negotiation status:
+            True = group negotiated, False = group rejected (service reachable),
+            None = neither indicator seen (service/group unreachable).
+    """
+    status: dict[str, bool | None] = {}
+    for group in groups:
+        output = worker_exec.exec(
+            command=compose_openssl_curve_command(service=service, group=group),
+            ignore_rc=True,
+        )
+        if OPENSSL_CONNECTION_SUCCESS_INDICATOR not in output and PQC_HANDSHAKE_FAILURE_INDICATOR not in output:
+            LOGGER.warning(f"Service {service.name} unreachable for TLS group {group}")
+            status[group] = None
+        elif PQC_HANDSHAKE_FAILURE_INDICATOR in output:
+            LOGGER.info(f"Service {service.name} rejects TLS group {group}")
+            status[group] = False
+        else:
+            LOGGER.info(f"Service {service.name} negotiates TLS group {group}")
+            status[group] = True
+    return status
