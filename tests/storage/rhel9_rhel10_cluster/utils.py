@@ -100,6 +100,7 @@ def prepare_hotplug_disk(vm: VirtualMachineForTests, serial: str) -> None:
             commands=["bash", "-c", f"lsblk -rno NAME,SERIAL | grep {serial}"],
             wait_timeout=TIMEOUT_2MIN,
             sleep=TIMEOUT_5SEC,
+            exceptions_dict=None,
         )[0]
         .strip()
         .split()[0]
