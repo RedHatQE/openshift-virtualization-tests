@@ -307,6 +307,104 @@ reviews:
     tflint:
       enabled: false
 
+  post_merge_actions:
+    - name: "CodeRabbit learnings from merged PR"
+      enabled: true
+      prompt: |
+        ALWAYS APPLY THIS ACTION. Keep its walkthrough checkbox checked by
+        default on every pull request.
+
+        "Learnings added" markers almost always appear AFTER the first review, as later conversation or review-thread comments.
+        Their absence at review time must NEVER cause this action to be
+        unchecked or omitted. Evaluate whether work is needed only at merge
+        time, using the PR conversation and the PR context
+        supplied to this post-merge run.
+
+        At merge time, find CodeRabbit-authored comments on this merged PR
+        that contain a "Learnings added" marker. Use the PR conversation and
+        all its comments and the PR context already available to this action.
+        Look in whichever of these sources are available, independently:
+        - top-level conversation comments
+        - inline review comments (Files changed), including replies in those threads
+        - pull request review bodies
+
+        If comments cannot be read at all, report that the scan was incomplete; do not report "no update was needed."
+
+        A CodeRabbit comment counts as a "Learnings added" item if the
+        phrase "Learnings added" appears in either of these forms (emoji or
+        other prefixes/suffixes in the same marker are OK):
+        - a Markdown heading (for example "# Learnings added" or
+          "## Learnings added")
+        - an HTML summary tag used by CodeRabbit details blocks (for example
+          "<summary>Learnings added</summary>" or
+          "<summary>✏️ Learnings added</summary>")
+        Do NOT count mid-sentence mentions outside those marker forms.
+        Document every qualifying learning you can find from any readable source.
+
+        Acknowledgment depends on comment type:
+
+        - Inline review comments (Files changed): skip the learning only if a
+          human (not a bot) posted a direct reply AFTER that "Learnings added"
+          comment in the SAME review thread. A human comment that appears
+          before the "Learnings added" comment does NOT count as
+          acknowledgment, still document that learning.
+        - Top-level conversation comments and pull request review bodies: a
+          later human comment in the PR conversation is NOT a reply to that
+          learning and does NOT count as acknowledgment. Treat them as
+          unacknowledged and document them.
+
+        Do NOT treat other review threads, or unrelated later human comments,
+        as acknowledgment of an inline learning.
+
+        For each remaining "Learnings added" comment, extract only the
+        `Learning:` field value (the guideline text). Do NOT copy metadata
+        such as Learnt from, Repo, PR, File, Timestamp, or surrounding
+        code fences into AGENTS.md. Also read the `File:` field when present
+        (path only, ignore line ranges) as a hint for path-specific
+        learnings. Stop parsing at the next Markdown heading, the next
+        "<summary>" block, or a known footer such as "Learnings used",
+        "Note: Learnings are effective", "Review thread resolved",
+        "You are interacting with an AI system", or "</details>". Skip
+        empty or whitespace-only Learning: values.
+
+        Analyze each remaining learning against the pull request conversation,
+        all its comments, and the PR context.
+        Document every remaining learning.
+
+        For every remaining learning, decide root vs nested from the
+        learning content (not only from File:):
+        1. If the learning is a general / repository-wide rule, update or
+           append it to the root AGENTS.md even if File: points at a
+           specific file. Skip it if an equivalent rule is already
+           documented there.
+        2. If the learning is specifically about a directory or area,
+           update or create (if not existing) the nested AGENTS.md in the narrowest relevant
+           directory for that area. Prefer `File:` to choose that directory
+           when it points under the repo (for example File:
+           tests/network/foo.py -> tests/network/AGENTS.md). If File: is
+           missing, infer the directory from the learning text. Skip it if
+           an equivalent rule is already documented in that file or an
+           applicable parent AGENTS.md.
+        Do NOT update .coderabbit.yaml or reviews.path_instructions.
+
+        Apply all of those text modifications in the sandbox. If comments
+        were readable and the sandbox diff is empty (every remaining learning
+        was already documented, there were no file changes, there were no
+        qualifying "Learnings added" markers in any readable source, or all
+        remaining learnings were acknowledged in the same inline review
+        thread), do not open a follow-up PR; report that no update was needed.
+        Otherwise open ONE follow-up pull request against the default branch
+        for this merged PR. Include every remaining (unacknowledged) learning
+        from this merge in that single PR.
+        If follow-up PR creation fails, report the failure in the post-merge
+        result comment and do not claim success.
+        If comments could not be read at all, report an incomplete scan and do
+        not claim success or "no update was needed."
+
+        Do not duplicate rules that are already documented. Do not invent
+        rules that were not in those learnings. Keep edits minimal and in the
+        existing style of AGENTS.md.
+
 chat:
   auto_reply: true
 
