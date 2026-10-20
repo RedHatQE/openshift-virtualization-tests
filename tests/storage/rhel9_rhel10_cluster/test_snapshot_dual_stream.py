@@ -10,6 +10,14 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from tests.storage.rhel9_rhel10_cluster.utils import verify_snapshot_restore_across_rhcos
+from utilities.constants.cluster import (
+    RHCOS9_AFFINITY,
+    RHCOS9_VERSION,
+    RHCOS10_AFFINITY,
+    RHCOS10_VERSION,
+)
+
 if TYPE_CHECKING:
     from kubernetes.dynamic import DynamicClient
 
@@ -18,9 +26,19 @@ if TYPE_CHECKING:
 
 @pytest.mark.mixed_os_nodes
 class TestDualStreamSnapshot:
-    __test__ = False
-
-    @pytest.mark.manual
+    @pytest.mark.parametrize(
+        "dual_stream_snapshot_vm",
+        [
+            pytest.param(
+                {
+                    "vm_name": "snap-rhcos9-restore-rhcos10-rhel",
+                    "vm_affinity": RHCOS9_AFFINITY,
+                },
+                id="RHEL-on-RHCOS9",
+            ),
+        ],
+        indirect=True,
+    )
     def test_snapshot_rhcos9_to_rhcos10(
         self,
         admin_client: DynamicClient,
@@ -44,8 +62,26 @@ class TestDualStreamSnapshot:
             - VM runs on an RHCOS 10 node after restore
             - Original test data is preserved after restore
         """
+        verify_snapshot_restore_across_rhcos(
+            admin_client=admin_client,
+            vm=dual_stream_snapshot_vm,
+            target_affinity=RHCOS10_AFFINITY,
+            target_rhcos_version=RHCOS10_VERSION,
+        )
 
-    @pytest.mark.manual
+    @pytest.mark.parametrize(
+        "dual_stream_snapshot_vm",
+        [
+            pytest.param(
+                {
+                    "vm_name": "snap-rhcos10-restore-rhcos9-rhel",
+                    "vm_affinity": RHCOS10_AFFINITY,
+                },
+                id="RHEL-on-RHCOS10",
+            ),
+        ],
+        indirect=True,
+    )
     def test_snapshot_rhcos10_to_rhcos9(
         self,
         admin_client: DynamicClient,
@@ -69,3 +105,9 @@ class TestDualStreamSnapshot:
             - VM runs on an RHCOS 9 node after restore
             - Original test data is preserved after restore
         """
+        verify_snapshot_restore_across_rhcos(
+            admin_client=admin_client,
+            vm=dual_stream_snapshot_vm,
+            target_affinity=RHCOS9_AFFINITY,
+            target_rhcos_version=RHCOS9_VERSION,
+        )
