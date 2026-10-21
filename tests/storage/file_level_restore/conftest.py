@@ -834,7 +834,7 @@ def cross_namespace_data_disk_snapshot(
     with linux_volume_snapshot(
         vm=file_restore_linux_vm,
         pvc_name=cross_namespace_backup_pvc.name,
-        snapshot_name="file-restore-cross-namespace-snapshot",
+        snapshot_name=f"{cross_namespace_backup_pvc.name}-snapshot",
         namespace_name=cross_namespace_backup_pvc.namespace,
         storage_class_name=snapshot_storage_class_name_scope_module,
         admin_client=admin_client,
@@ -996,7 +996,7 @@ def linux_large_file_snapshot(
     with linux_volume_snapshot(
         vm=file_restore_linux_vm,
         pvc_name=linux_data_disk.name,
-        snapshot_name="file-restore-large-file-snapshot",
+        snapshot_name=f"{linux_data_disk.name}-large-file-snapshot",
         namespace_name=namespace.name,
         storage_class_name=snapshot_storage_class_name_scope_module,
         admin_client=admin_client,
