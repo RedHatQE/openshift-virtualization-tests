@@ -38,7 +38,6 @@ from tests.storage.file_level_restore.utils import (
     windows_guest_path,
 )
 from tests.storage.online_resize.utils import cksum_file
-from utilities.constants.storage import StorageClassNames
 from utilities.constants.timeouts import TIMEOUT_10MIN
 from utilities.storage import (
     run_command_on_vm_and_check_output,
@@ -718,12 +717,6 @@ class TestFileRestoreCrossNamespace:
 
 
 @pytest.mark.special_infra
-@pytest.mark.ocs
-@pytest.mark.parametrize(
-    "snapshot_storage_class_name_scope_module",
-    [StorageClassNames.CEPH_RBD_VIRTUALIZATION],
-    scope="module",
-)
 class TestFileRestoreStorageCompatibility:
     """
     Tests for preserving snapshot volume mode despite a different storage preference.
@@ -731,7 +724,7 @@ class TestFileRestoreStorageCompatibility:
     Preconditions:
         - vm-file-restore-operator deployed and running in openshift-cnv namespace
         - Running Linux VM with guest helper installed and filerestore user SSH-configured
-        - ODF Ceph RBD virtualization storage class is already the effective default
+        - A default storage class is already configured
         - Its StorageProfile prefers Block for ReadWriteOnce and also supports ReadWriteOnce Filesystem volumes
     """
 
@@ -757,7 +750,7 @@ class TestFileRestoreStorageCompatibility:
          Preconditions:
              - Running Linux VM with guest helper installed and filerestore user SSH-configured
              - VolumeSnapshot created from a Filesystem-mode PVC and containing a file with known content
-             - The existing default ODF Ceph RBD StorageProfile prefers Block for ReadWriteOnce and supports Filesystem
+             - The existing default StorageProfile prefers Block for ReadWriteOnce and supports Filesystem
              - Target file deleted from the Linux VM
 
          Steps:

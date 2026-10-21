@@ -67,7 +67,6 @@ from tests.utils import create_windows2022_vm
 from utilities.constants.cluster import POD_SECURITY_NAMESPACE_LABELS
 from utilities.constants.images import OS_FLAVOR_RHEL
 from utilities.constants.instance_types import RHEL10_PREFERENCE, U1_SMALL
-from utilities.constants.storage import StorageClassNames
 from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5MIN, TIMEOUT_5SEC, TIMEOUT_10MIN
 from utilities.infra import create_ns, unique_name
 from utilities.jira import is_jira_open
@@ -75,7 +74,6 @@ from utilities.storage import (
     add_dv_to_vm,
     create_dv,
     data_volume_template_with_source_ref_dict,
-    get_default_storage_class,
     virtctl_volume,
     wait_for_vm_volume_ready,
     write_file_via_ssh,
@@ -892,14 +890,10 @@ def deleted_cross_namespace_linux_file(
 
 
 @pytest.fixture(scope="module")
-def file_restore_default_storage_profile(admin_client):
-    """Return the existing ODF RBD profile after validating regression prerequisites."""
-    storage_class = get_default_storage_class(client=admin_client)
-    assert storage_class.name == StorageClassNames.CEPH_RBD_VIRTUALIZATION, (
-        f"Source volume-mode regression requires existing default StorageClass "
-        f"'{StorageClassNames.CEPH_RBD_VIRTUALIZATION}', got '{storage_class.name}'"
-    )
-    storage_profile = StorageProfile(name=storage_class.name, client=admin_client)
+def file_restore_default_storage_profile(admin_client, default_sc):
+    """Return the existing default profile after validating regression prerequisites."""
+    assert default_sc is not None, "Source volume-mode regression requires an existing default StorageClass"
+    storage_profile = StorageProfile(name=default_sc.name, client=admin_client)
     rwo_claim_property_sets = [
         claim_property_set
         for claim_property_set in storage_profile.instance.to_dict()["status"]["claimPropertySets"]
