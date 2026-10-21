@@ -93,6 +93,16 @@ def file_restore_operator(admin_client):
     yield
 
 
+@pytest.fixture(scope="module")
+def namespace(admin_client, unprivileged_client):
+    """Namespace for file-level restore test resources."""
+    yield from create_ns(
+        name="test-file-level-restore",
+        admin_client=admin_client,
+        unprivileged_client=unprivileged_client,
+    )
+
+
 @pytest.fixture(scope="class")
 def linux_data_disk(
     request,
@@ -783,7 +793,7 @@ def second_linux_data_disk_snapshot_file_restore(
 def file_restore_source_namespace(admin_client):
     """Separate namespace for a cross-namespace snapshot source."""
     yield from create_ns(
-        name=unique_name(name="file-restore-source"),
+        name=unique_name(name="test-file-restore-source"),
         admin_client=admin_client,
         labels=POD_SECURITY_NAMESPACE_LABELS,
     )
