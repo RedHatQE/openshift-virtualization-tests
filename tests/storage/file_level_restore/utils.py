@@ -215,12 +215,9 @@ def windows_data_disk_volume_snapshot(
     LOGGER.info("Flushing Windows filesystem cache before snapshot")
     run_ssh_commands(
         host=vm.ssh_exec,
-        commands=[
-            "powershell",
-            "-NoProfile",
-            "-Command",
-            f"Write-VolumeCache -DriveLetter {WINDOWS_DATA_DISK_LETTER}",
-        ],
+        commands=shlex.split(
+            f'powershell -NoProfile -Command "Write-VolumeCache -DriveLetter {WINDOWS_DATA_DISK_LETTER}"'
+        ),
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
     )
@@ -454,7 +451,7 @@ def linux_volume_snapshot(
         LOGGER.info("Flushing Linux filesystem cache before snapshot")
         run_ssh_commands(
             host=vm.ssh_exec,
-            commands=["sync"],
+            commands=shlex.split("sync"),
             wait_timeout=TIMEOUT_2MIN,
             sleep=TIMEOUT_5SEC,
         )
@@ -589,7 +586,7 @@ def install_linux_guest_helper(vm: VirtualMachineForTests, admin_client: Dynamic
     LOGGER.info(f"Staging Linux guest helpers on VM '{vm.name}' in {stage_directory}")
     run_ssh_commands(
         host=vm.ssh_exec,
-        commands=["mkdir", "-m", "0700", "-p", stage_directory],
+        commands=shlex.split(f"mkdir -m 0700 -p {shlex.quote(s=stage_directory)}"),
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
     )
@@ -603,8 +600,8 @@ def install_linux_guest_helper(vm: VirtualMachineForTests, admin_client: Dynamic
             run_ssh_commands(
                 host=vm.ssh_exec,
                 commands=[
-                    ["sudo", "chown", "root:root", script_path],
-                    ["sudo", "chmod", "0644", script_path],
+                    shlex.split(f"sudo chown root:root {shlex.quote(s=script_path)}"),
+                    shlex.split(f"sudo chmod 0644 {shlex.quote(s=script_path)}"),
                 ],
                 wait_timeout=TIMEOUT_2MIN,
                 sleep=TIMEOUT_5SEC,
@@ -612,30 +609,24 @@ def install_linux_guest_helper(vm: VirtualMachineForTests, admin_client: Dynamic
 
     key_file_path = f"{stage_directory}/{OPERATOR_SSH_PUBLIC_KEY_FILE_NAME}"
     encoded_public_key = base64.b64encode(operator_public_key.encode()).decode()
+    key_command = f"echo {encoded_public_key} | base64 -d > {key_file_path} && chmod 0600 {key_file_path}"
     run_ssh_commands(
         host=vm.ssh_exec,
-        commands=[
-            "bash",
-            "-c",
-            f"echo {encoded_public_key} | base64 -d > {key_file_path} && chmod 0600 {key_file_path}",
-        ],
+        commands=shlex.split(f"bash -c {shlex.quote(s=key_command)}"),
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
     )
     setup_script_path = f"{stage_directory}/{LINUX_SETUP_SCRIPT}"
+    setup_command = f'sudo bash {setup_script_path} "$(cat {key_file_path})"'
     run_ssh_commands(
         host=vm.ssh_exec,
-        commands=[
-            "bash",
-            "-c",
-            f'sudo bash {setup_script_path} "$(cat {key_file_path})"',
-        ],
+        commands=shlex.split(f"bash -c {shlex.quote(s=setup_command)}"),
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
     )
     run_ssh_commands(
         host=vm.ssh_exec,
-        commands=["sudo", "rm", "-rf", stage_directory],
+        commands=shlex.split(f"sudo rm -rf {shlex.quote(s=stage_directory)}"),
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
     )
@@ -658,14 +649,10 @@ def stage_windows_helper_scripts(
         scripts: Mapping of script file name to script body from the ConfigMap tarball.
     """
     LOGGER.info(f"Staging Windows helper scripts on VM '{vm.name}' in {remote_directory}")
+    command = f"New-Item -ItemType Directory -Path '{remote_directory}' -Force | Out-Null"
     run_ssh_commands(
         host=vm.ssh_exec,
-        commands=[
-            "powershell",
-            "-NoProfile",
-            "-Command",
-            f"New-Item -ItemType Directory -Path '{remote_directory}' -Force | Out-Null",
-        ],
+        commands=shlex.split(f"powershell -NoProfile -Command {shlex.quote(s=command)}"),
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
     )
@@ -716,25 +703,19 @@ def install_windows_guest_helper(vm: VirtualMachineForTests, admin_client: Dynam
     setup_script_path = windows_guest_path(
         guest_path=f"{WINDOWS_HELPER_STAGE_DIRECTORY}/{WINDOWS_SETUP_SCRIPT}",
     )
-    run_ssh_commands(
-        host=vm.ssh_exec,
-        commands=[
-            "powershell",
-            "-NoProfile",
-            "-Command",
-            (f"$pubKey = (Get-Content -LiteralPath '{windows_key_path}' -Raw).Trim(); & '{setup_script_path}' $pubKey"),
-        ],
-        wait_timeout=TIMEOUT_2MIN,
-        sleep=TIMEOUT_5SEC,
+    setup_command = (
+        f"$pubKey = (Get-Content -LiteralPath '{windows_key_path}' -Raw).Trim(); & '{setup_script_path}' $pubKey"
     )
     run_ssh_commands(
         host=vm.ssh_exec,
-        commands=[
-            "powershell",
-            "-NoProfile",
-            "-Command",
-            f"Remove-Item -LiteralPath '{WINDOWS_HELPER_STAGE_DIRECTORY}' -Recurse -Force",
-        ],
+        commands=shlex.split(f"powershell -NoProfile -Command {shlex.quote(s=setup_command)}"),
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
+    )
+    cleanup_command = f"Remove-Item -LiteralPath '{WINDOWS_HELPER_STAGE_DIRECTORY}' -Recurse -Force"
+    run_ssh_commands(
+        host=vm.ssh_exec,
+        commands=shlex.split(f"powershell -NoProfile -Command {shlex.quote(s=cleanup_command)}"),
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
     )
@@ -964,7 +945,7 @@ def linux_backup_file_path(vm: VirtualMachineForTests, mount_path: str, guest_pa
     """
     matches = run_ssh_commands(
         host=vm.ssh_exec,
-        commands=["sudo", "find", mount_path, "-type", "f", "-path", f"*{guest_path}"],
+        commands=shlex.split(f"sudo find {shlex.quote(s=mount_path)} -type f -path {shlex.quote(s=f'*{guest_path}')}"),
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
     )[0].splitlines()
@@ -993,7 +974,7 @@ def windows_backup_file_path(vm: VirtualMachineForTests, restore_cr_name: str, r
     )
     return run_ssh_commands(
         host=vm.ssh_exec,
-        commands=["powershell", "-NoProfile", "-Command", command],
+        commands=shlex.split(f"powershell -NoProfile -Command {shlex.quote(s=command)}"),
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
     )[0].strip()
@@ -1015,7 +996,7 @@ def assert_windows_backup_read_only(vm: VirtualMachineForTests, backup_file_path
     before, _, after = [
         run_ssh_commands(
             host=vm.ssh_exec,
-            commands=["powershell", "-NoProfile", "-Command", command],
+            commands=shlex.split(f"powershell -NoProfile -Command {shlex.quote(s=command)}"),
             wait_timeout=TIMEOUT_2MIN,
             sleep=TIMEOUT_5SEC,
         )[0]
@@ -1035,14 +1016,10 @@ def delete_windows_guest_file(vm: VirtualMachineForTests, guest_path: str) -> No
     """
     powershell_path = windows_guest_path(guest_path=guest_path)
     LOGGER.info(f"Deleting Windows test file '{powershell_path}'")
+    command = f"Remove-Item -LiteralPath '{powershell_path}' -Force -ErrorAction Stop"
     run_ssh_commands(
         host=vm.ssh_exec,
-        commands=[
-            "powershell",
-            "-NoProfile",
-            "-Command",
-            f"Remove-Item -LiteralPath '{powershell_path}' -Force -ErrorAction Stop",
-        ],
+        commands=shlex.split(f"powershell -NoProfile -Command {shlex.quote(s=command)}"),
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
     )
@@ -1070,9 +1047,10 @@ def delete_linux_guest_file(vm: VirtualMachineForTests, guest_path: str) -> None
     """
     quoted_guest_path = shlex.quote(s=guest_path)
     LOGGER.info(f"Deleting Linux test file '{guest_path}' from guest")
+    command = f"rm -f {quoted_guest_path} && sync"
     run_ssh_commands(
         host=vm.ssh_exec,
-        commands=["bash", "-c", f"rm -f {quoted_guest_path} && sync"],
+        commands=shlex.split(f"bash -c {shlex.quote(s=command)}"),
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
     )
@@ -1116,7 +1094,7 @@ def ensure_linux_data_disk_directory(vm: VirtualMachineForTests, relative_direct
     directory_path = linux_data_disk_file_path(relative_path=relative_directory)
     run_ssh_commands(
         host=vm.ssh_exec,
-        commands=["mkdir", "-p", directory_path],
+        commands=shlex.split(f"mkdir -p {shlex.quote(s=directory_path)}"),
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
     )
@@ -1191,7 +1169,7 @@ def initialize_and_format_windows_data_disk(vm: VirtualMachineForTests, drive_le
     )
     disk_number_output = run_ssh_commands(
         host=vm.ssh_exec,
-        commands=["powershell", "-NoProfile", "-Command", disk_number_command],
+        commands=shlex.split(f"powershell -NoProfile -Command {shlex.quote(s=disk_number_command)}"),
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
     )[0].strip()
@@ -1207,7 +1185,7 @@ def initialize_and_format_windows_data_disk(vm: VirtualMachineForTests, drive_le
     )
     run_ssh_commands(
         host=vm.ssh_exec,
-        commands=["powershell", "-NoProfile", "-Command", format_command],
+        commands=shlex.split(f"powershell -NoProfile -Command {shlex.quote(s=format_command)}"),
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
     )
@@ -1235,7 +1213,7 @@ def get_windows_file_acl_baseline(vm: VirtualMachineForTests, file_path: str) ->
     )
     output = run_ssh_commands(
         host=vm.ssh_exec,
-        commands=["powershell", "-NoProfile", "-Command", acl_command],
+        commands=shlex.split(f"powershell -NoProfile -Command {shlex.quote(s=acl_command)}"),
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
     )[0]
@@ -1288,7 +1266,7 @@ def count_files_in_windows_directory(vm: VirtualMachineForTests, directory_path:
     count_command = f"(Get-ChildItem -LiteralPath '{directory_path}' -File | Measure-Object).Count"
     count_output = run_ssh_commands(
         host=vm.ssh_exec,
-        commands=["powershell", "-NoProfile", "-Command", count_command],
+        commands=shlex.split(f"powershell -NoProfile -Command {shlex.quote(s=count_command)}"),
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
     )[0].strip()
