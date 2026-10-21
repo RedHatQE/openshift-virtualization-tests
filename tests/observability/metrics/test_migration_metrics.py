@@ -182,7 +182,7 @@ class TestKubevirtVmiMigrationMetrics:
             ),
             pytest.param(
                 KUBEVIRT_VMI_MIGRATION_DIRTY_MEMORY_RATE_BYTES,
-                marks=(pytest.mark.polarion("CNV-11599")),
+                marks=[pytest.mark.jira("CNV-99404", run=False), pytest.mark.polarion("CNV-11599")],
             ),
         ],
     )
