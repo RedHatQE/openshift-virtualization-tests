@@ -5,16 +5,13 @@ from ocp_resources.cluster_role import ClusterRole
 from ocp_resources.cluster_role_binding import ClusterRoleBinding
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
-from ocp_resources.resource import ResourceEditor
 from ocp_resources.role import Role
 from ocp_resources.role_binding import RoleBinding
-from ocp_resources.storage_class import StorageClass
 from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_resources.volume_snapshot import VolumeSnapshot
 from pyhelper_utils.shell import run_ssh_commands
-from timeout_sampler import TimeoutSampler
 
 from tests.storage.file_level_restore.constants import (
     FILE_RESTORE_OPERATOR_DEPLOYMENT_NAME,
@@ -70,6 +67,7 @@ from tests.utils import create_windows2022_vm
 from utilities.constants.cluster import POD_SECURITY_NAMESPACE_LABELS
 from utilities.constants.images import OS_FLAVOR_RHEL
 from utilities.constants.instance_types import RHEL10_PREFERENCE, U1_SMALL
+from utilities.constants.storage import StorageClassNames
 from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5MIN, TIMEOUT_5SEC, TIMEOUT_10MIN
 from utilities.infra import create_ns, unique_name
 from utilities.jira import is_jira_open
@@ -77,6 +75,7 @@ from utilities.storage import (
     add_dv_to_vm,
     create_dv,
     data_volume_template_with_source_ref_dict,
+    get_default_storage_class,
     virtctl_volume,
     wait_for_vm_volume_ready,
     write_file_via_ssh,
@@ -892,49 +891,30 @@ def deleted_cross_namespace_linux_file(
     return linux_test_file_on_data_disk
 
 
-@pytest.fixture()
-def file_restore_default_storage_class(
-    admin_client,
-    removed_default_storage_classes,
-    snapshot_storage_class_name_scope_module,
-):
-    """Snapshot storage class selected as CDI's default during the compatibility test."""
-    storage_class = StorageClass(name=snapshot_storage_class_name_scope_module, client=admin_client)
-    with ResourceEditor(
-        patches={
-            storage_class: {
-                "metadata": {
-                    "annotations": {
-                        StorageClass.Annotations.IS_DEFAULT_CLASS: "true",
-                        StorageClass.Annotations.IS_DEFAULT_VIRT_CLASS: "true",
-                    }
-                }
-            }
-        }
-    ):
-        yield storage_class
-
-
-@pytest.fixture()
-def block_default_storage_profile(
-    admin_client,
-    file_restore_default_storage_class,
-    linux_data_disk_snapshot,
-):
-    """Default restore StorageProfile preferring Block after the Filesystem backup exists."""
-    storage_profile = StorageProfile(name=file_restore_default_storage_class.name, client=admin_client)
-    claim_property_sets = [{"accessModes": [DataVolume.AccessMode.RWO], "volumeMode": DataVolume.VolumeMode.BLOCK}]
-    LOGGER.info(f"Setting StorageProfile '{storage_profile.name}' to prefer Block restore volumes")
-    with ResourceEditor(patches={storage_profile: {"spec": {"claimPropertySets": claim_property_sets}}}):
-        for effective_claim_property_sets in TimeoutSampler(
-            wait_timeout=TIMEOUT_2MIN,
-            sleep=TIMEOUT_5SEC,
-            func=lambda: storage_profile.instance.to_dict()["status"]["claimPropertySets"],
-            exceptions_dict={KeyError: []},
-        ):
-            if effective_claim_property_sets == claim_property_sets:
-                break
-        yield storage_profile
+@pytest.fixture(scope="module")
+def file_restore_default_storage_profile(admin_client):
+    """Return the existing ODF RBD profile after validating regression prerequisites."""
+    storage_class = get_default_storage_class(client=admin_client)
+    assert storage_class.name == StorageClassNames.CEPH_RBD_VIRTUALIZATION, (
+        f"Source volume-mode regression requires existing default StorageClass "
+        f"'{StorageClassNames.CEPH_RBD_VIRTUALIZATION}', got '{storage_class.name}'"
+    )
+    storage_profile = StorageProfile(name=storage_class.name, client=admin_client)
+    rwo_claim_property_sets = [
+        claim_property_set
+        for claim_property_set in storage_profile.instance.to_dict()["status"]["claimPropertySets"]
+        if DataVolume.AccessMode.RWO in claim_property_set["accessModes"]
+    ]
+    assert rwo_claim_property_sets, f"StorageProfile '{storage_profile.name}' has no ReadWriteOnce entry"
+    assert rwo_claim_property_sets[0]["volumeMode"] == DataVolume.VolumeMode.BLOCK, (
+        f"StorageProfile '{storage_profile.name}' must already prefer Block for ReadWriteOnce, "
+        f"got '{rwo_claim_property_sets[0]['volumeMode']}'"
+    )
+    assert any(
+        claim_property_set["volumeMode"] == DataVolume.VolumeMode.FILE for claim_property_set in rwo_claim_property_sets
+    ), f"StorageProfile '{storage_profile.name}' must also support ReadWriteOnce Filesystem source volumes"
+    LOGGER.info(f"Using existing StorageProfile '{storage_profile.name}' for the source volume-mode regression")
+    return storage_profile
 
 
 @pytest.fixture()
@@ -1101,7 +1081,7 @@ def volume_mode_mismatch_file_restore(
     file_restore_linux_vm,
     linux_data_disk_snapshot,
     deleted_linux_file_for_snapshot,
-    block_default_storage_profile,
+    file_restore_default_storage_profile,
     file_restore_snapshot_content_permission,
 ):
     """Restore request with a Filesystem source and a Block restore preference."""

@@ -38,6 +38,7 @@ from tests.storage.file_level_restore.utils import (
     windows_guest_path,
 )
 from tests.storage.online_resize.utils import cksum_file
+from utilities.constants.storage import StorageClassNames
 from utilities.constants.timeouts import TIMEOUT_10MIN
 from utilities.storage import (
     run_command_on_vm_and_check_output,
@@ -716,14 +717,22 @@ class TestFileRestoreCrossNamespace:
         )
 
 
+@pytest.mark.special_infra
+@pytest.mark.ocs
+@pytest.mark.parametrize(
+    "snapshot_storage_class_name_scope_module",
+    [StorageClassNames.CEPH_RBD_VIRTUALIZATION],
+    scope="module",
+)
 class TestFileRestoreStorageCompatibility:
     """
-    Tests for restore compatibility with non-default storage configurations.
+    Tests for preserving snapshot volume mode despite a different storage preference.
 
     Preconditions:
         - vm-file-restore-operator deployed and running in openshift-cnv namespace
         - Running Linux VM with guest helper installed and filerestore user SSH-configured
-        - VolumeSnapshot-capable StorageClass available
+        - ODF Ceph RBD virtualization storage class is already the effective default
+        - Its StorageProfile prefers Block for ReadWriteOnce and also supports ReadWriteOnce Filesystem volumes
     """
 
     @pytest.mark.polarion("CNV-16836")
@@ -735,18 +744,20 @@ class TestFileRestoreStorageCompatibility:
         linux_data_disk_snapshot,
         linux_data_disk_snapshot_content,
         deleted_linux_file_for_snapshot,
-        block_default_storage_profile,
+        file_restore_default_storage_profile,
         volume_mode_mismatch_file_restore,
         volume_mode_restore_data_volume,
     ):
         """
         Test that restore succeeds when the source volume mode differs from the StorageProfile's default volume mode.
 
+        Regression coverage for CNV-90086: the source volume mode must take precedence over the storage preference.
+
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
          Preconditions:
              - Running Linux VM with guest helper installed and filerestore user SSH-configured
              - VolumeSnapshot created from a Filesystem-mode PVC and containing a file with known content
-             - StorageProfile prefers Block volume mode for the ReadWriteOnce restore volume
+             - The existing default ODF Ceph RBD StorageProfile prefers Block for ReadWriteOnce and supports Filesystem
              - Target file deleted from the Linux VM
 
          Steps:
@@ -766,10 +777,13 @@ class TestFileRestoreStorageCompatibility:
         assert linux_data_disk.pvc.instance.spec.volumeMode == DataVolume.VolumeMode.FILE, (
             f"Source PVC '{linux_data_disk.name}' must use Filesystem volume mode"
         )
-        assert block_default_storage_profile.instance.status.claimPropertySets[0].to_dict() == {
-            "accessModes": [DataVolume.AccessMode.RWO],
-            "volumeMode": DataVolume.VolumeMode.BLOCK,
-        }, f"StorageProfile '{block_default_storage_profile.name}' must prefer Block for ReadWriteOnce volumes"
+        assert (
+            volume_mode_restore_data_volume.pvc.instance.spec.storageClassName
+            == file_restore_default_storage_profile.name
+        ), (
+            f"Restore PVC '{volume_mode_restore_data_volume.name}' must use StorageClass "
+            f"'{file_restore_default_storage_profile.name}' whose profile prefers Block"
+        )
         assert volume_mode_restore_data_volume.instance.spec.storage.volumeMode == DataVolume.VolumeMode.FILE, (
             f"Restore DataVolume '{volume_mode_restore_data_volume.name}' did not preserve the Filesystem source mode"
         )
