@@ -1,0 +1,18 @@
+exceptions = [
+    {
+        rule = "noqa",
+        path = "tests/storage/rhel9_rhel10_cluster/test_snapshot_dual_stream.py",
+        directive = "# noqa: PID001",
+        source_fingerprint = "sha256:0000000000000000000000000000000000000000000000000000000000000001",
+        reason = "Test is new in main (CNV-96772), cherry-picked to 5.0. STP link in docstring provides full traceability per code-first convention. Polarion ID will be backfilled when cnv-5.0 is updated with PID001 removal (pending from main).",
+        approval_url = "https://github.com/RedHatQE/openshift-virtualization-tests/pull/6675",
+    },
+    {
+        rule = "noqa",
+        path = "tests/storage/rhel9_rhel10_cluster/test_snapshot_dual_stream.py",
+        directive = "# noqa: PID001",
+        source_fingerprint = "sha256:0000000000000000000000000000000000000000000000000000000000000002",
+        reason = "Test is new in main (CNV-96772), cherry-picked to 5.0. STP link in docstring provides full traceability per code-first convention. Polarion ID will be backfilled when cnv-5.0 is updated with PID001 removal (pending from main).",
+        approval_url = "https://github.com/RedHatQE/openshift-virtualization-tests/pull/6675",
+    },
+]
