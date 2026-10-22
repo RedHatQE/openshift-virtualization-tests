@@ -64,6 +64,7 @@ dependencies = [
   "pytest-testconfig>=0.2.0",
   "python-benedict>=0.34.0",
   "python-rrmngmnt>=0.2.2",
+  "pytest-subtests>=0.13.1",
   "pyvmomi>=8.0.3.0.1",
   "python-dotenv>=1.2.1",
   "pyyaml>=6.0.2",
