@@ -104,6 +104,9 @@ fcn_exclude_functions =
     tempfile,
     urllib3,
 
+per-file-ignores =
+    tests/storage/rhel9_rhel10_cluster/test_snapshot_dual_stream.py:PID001
+
 nit_exclude_imports =
     os_params,
     upgrade_params,
