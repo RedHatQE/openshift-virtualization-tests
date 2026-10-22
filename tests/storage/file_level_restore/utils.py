@@ -16,7 +16,7 @@ from ocp_resources.config_map import ConfigMap
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.pod import Pod
-from ocp_resources.resource import NamespacedResource, Resource
+from ocp_resources.resource import NamespacedResource
 from ocp_resources.storage_class import StorageClass
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 from ocp_resources.volume_snapshot import VolumeSnapshot
@@ -62,12 +62,6 @@ class VirtualMachineSnapshotContent(NamespacedResource):
 
     api_group: str = "snapshot.kubevirt.io"
     kind: str = "VirtualMachineSnapshotContent"
-
-
-class VolumeSnapshotContent(Resource):
-    """CSI snapshot content with the source PVC volume mode."""
-
-    api_group: str = Resource.ApiGroup.SNAPSHOT_STORAGE_K8S_IO
 
 
 class LinuxRootDiskVirtualMachineSnapshotInfo(NamedTuple):

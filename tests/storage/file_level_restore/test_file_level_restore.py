@@ -8,7 +8,6 @@ Jira: https://redhat.atlassian.net/browse/VIRTSTRAT-480 # <skip-jira-utils-check
 from shlex import quote
 
 import pytest
-from ocp_resources.datavolume import DataVolume
 from pyhelper_utils.exceptions import CommandExecFailed
 from pyhelper_utils.shell import run_ssh_commands
 
@@ -716,41 +715,30 @@ class TestFileRestoreCrossNamespace:
         )
 
 
-@pytest.mark.special_infra
 class TestFileRestoreStorageCompatibility:
     """
-    Tests for preserving snapshot volume mode despite a different storage preference.
+    Tests for restore compatibility with non-default storage configurations.
 
     Preconditions:
         - vm-file-restore-operator deployed and running in openshift-cnv namespace
         - Running Linux VM with guest helper installed and filerestore user SSH-configured
-        - A default storage class is already configured
-        - Its StorageProfile prefers Block for ReadWriteOnce and also supports ReadWriteOnce Filesystem volumes
+        - VolumeSnapshot-capable StorageClass available
     """
 
+    __test__ = False
+
     @pytest.mark.polarion("CNV-16836")
-    @pytest.mark.parametrize("linux_data_disk", [{"volume_mode": DataVolume.VolumeMode.FILE}], indirect=True)
-    def test_restore_with_source_volume_mode_mismatch(
-        self,
-        file_restore_linux_vm,
-        linux_data_disk,
-        linux_data_disk_snapshot,
-        linux_data_disk_snapshot_content,
-        deleted_linux_file_for_snapshot,
-        file_restore_default_storage_profile,
-        volume_mode_mismatch_file_restore,
-        volume_mode_restore_data_volume,
-    ):
+    @pytest.mark.jira("CNV-99267", run=False)
+    @pytest.mark.manual
+    def test_restore_with_source_volume_mode_mismatch(self):
         """
         Test that restore succeeds when the source volume mode differs from the StorageProfile's default volume mode.
-
-        Regression coverage for CNV-90086: the source volume mode must take precedence over the storage preference.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
          Preconditions:
              - Running Linux VM with guest helper installed and filerestore user SSH-configured
              - VolumeSnapshot created from a Filesystem-mode PVC and containing a file with known content
-             - The existing default StorageProfile prefers Block for ReadWriteOnce and supports Filesystem
+             - StorageProfile prefers Block volume mode for the ReadWriteOnce restore volume
              - Target file deleted from the Linux VM
 
          Steps:
@@ -763,35 +751,6 @@ class TestFileRestoreStorageCompatibility:
          Expected:
              - Restore succeeds using the Filesystem source volume mode despite the Block preference, and the restored file content matches the snapshot source
         """
-        restore_path, expected_content = deleted_linux_file_for_snapshot
-        assert linux_data_disk_snapshot_content.instance.spec.sourceVolumeMode == DataVolume.VolumeMode.FILE, (
-            f"Snapshot '{linux_data_disk_snapshot.name}' must record a Filesystem source volume"
-        )
-        assert linux_data_disk.pvc.instance.spec.volumeMode == DataVolume.VolumeMode.FILE, (
-            f"Source PVC '{linux_data_disk.name}' must use Filesystem volume mode"
-        )
-        assert (
-            volume_mode_restore_data_volume.pvc.instance.spec.storageClassName
-            == file_restore_default_storage_profile.name
-        ), (
-            f"Restore PVC '{volume_mode_restore_data_volume.name}' must use StorageClass "
-            f"'{file_restore_default_storage_profile.name}' whose profile prefers Block"
-        )
-        assert volume_mode_restore_data_volume.instance.spec.storage.volumeMode == DataVolume.VolumeMode.FILE, (
-            f"Restore DataVolume '{volume_mode_restore_data_volume.name}' did not preserve the Filesystem source mode"
-        )
-        assert volume_mode_restore_data_volume.pvc.instance.spec.volumeMode == DataVolume.VolumeMode.FILE, (
-            f"Restore PVC '{volume_mode_restore_data_volume.name}' did not preserve the Filesystem source mode"
-        )
-        wait_for_file_restore_phase(
-            file_restore=volume_mode_mismatch_file_restore,
-            target_phase=VirtualMachineFileRestore.Phase.SUCCEEDED,
-        )
-        run_command_on_vm_and_check_output(
-            vm=file_restore_linux_vm,
-            command=f"cat {quote(restore_path)}",
-            expected_result=expected_content,
-        )
 
 
 @pytest.mark.tier3

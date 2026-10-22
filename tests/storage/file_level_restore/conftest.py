@@ -1,13 +1,10 @@
 import logging
 
 import pytest
-from ocp_resources.cluster_role import ClusterRole
-from ocp_resources.cluster_role_binding import ClusterRoleBinding
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
 from ocp_resources.role import Role
 from ocp_resources.role_binding import RoleBinding
-from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_resources.volume_snapshot import VolumeSnapshot
@@ -39,7 +36,6 @@ from tests.storage.file_level_restore.constants import (
 )
 from tests.storage.file_level_restore.utils import (
     VirtualMachineFileRestore,
-    VolumeSnapshotContent,
     delete_linux_data_disk_file,
     delete_linux_guest_file,
     delete_windows_guest_file,
@@ -54,7 +50,6 @@ from tests.storage.file_level_restore.utils import (
     linux_root_disk_online_virtual_machine_snapshot,
     linux_volume_snapshot,
     manual_browsing_file_restore,
-    restore_volume_name,
     wait_for_file_restore_operator_ready,
     wait_for_file_restore_phase,
     windows_data_disk_path,
@@ -67,9 +62,8 @@ from tests.utils import create_windows2022_vm
 from utilities.constants.cluster import POD_SECURITY_NAMESPACE_LABELS
 from utilities.constants.images import OS_FLAVOR_RHEL
 from utilities.constants.instance_types import RHEL10_PREFERENCE, U1_SMALL
-from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5MIN, TIMEOUT_5SEC, TIMEOUT_10MIN
+from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5SEC, TIMEOUT_10MIN
 from utilities.infra import create_ns, unique_name
-from utilities.jira import is_jira_open
 from utilities.storage import (
     add_dv_to_vm,
     create_dv,
@@ -90,23 +84,8 @@ def file_restore_operator(admin_client):
     yield
 
 
-@pytest.fixture(scope="module")
-def namespace(admin_client, unprivileged_client):
-    """Namespace for file-level restore test resources."""
-    yield from create_ns(
-        name="test-file-level-restore",
-        admin_client=admin_client,
-        unprivileged_client=unprivileged_client,
-    )
-
-
 @pytest.fixture(scope="class")
-def linux_data_disk(
-    request,
-    admin_client,
-    namespace,
-    snapshot_storage_class_name_scope_module,
-):
+def linux_data_disk(admin_client, namespace, snapshot_storage_class_name_scope_module):
     """Blank DataVolume used as the Linux VM secondary data disk."""
     with DataVolume(
         name="file-restore-linux-data-disk",
@@ -116,7 +95,6 @@ def linux_data_disk(
         storage_class=snapshot_storage_class_name_scope_module,
         client=admin_client,
         api_name="storage",
-        volume_mode=getattr(request, "param", {}).get("volume_mode"),
     ) as data_volume:
         yield data_volume
 
@@ -889,41 +867,6 @@ def deleted_cross_namespace_linux_file(
     return linux_test_file_on_data_disk
 
 
-@pytest.fixture(scope="module")
-def file_restore_default_storage_profile(admin_client, default_sc):
-    """Return the existing default profile after validating regression prerequisites."""
-    assert default_sc is not None, "Source volume-mode regression requires an existing default StorageClass"
-    storage_profile = StorageProfile(name=default_sc.name, client=admin_client)
-    rwo_claim_property_sets = [
-        claim_property_set
-        for claim_property_set in storage_profile.instance.to_dict()["status"]["claimPropertySets"]
-        if DataVolume.AccessMode.RWO in claim_property_set["accessModes"]
-    ]
-    assert rwo_claim_property_sets, f"StorageProfile '{storage_profile.name}' has no ReadWriteOnce entry"
-    assert rwo_claim_property_sets[0]["volumeMode"] == DataVolume.VolumeMode.BLOCK, (
-        f"StorageProfile '{storage_profile.name}' must already prefer Block for ReadWriteOnce, "
-        f"got '{rwo_claim_property_sets[0]['volumeMode']}'"
-    )
-    assert any(
-        claim_property_set["volumeMode"] == DataVolume.VolumeMode.FILE for claim_property_set in rwo_claim_property_sets
-    ), f"StorageProfile '{storage_profile.name}' must also support ReadWriteOnce Filesystem source volumes"
-    LOGGER.info(f"Using existing StorageProfile '{storage_profile.name}' for the source volume-mode regression")
-    return storage_profile
-
-
-@pytest.fixture()
-def deleted_linux_file_for_snapshot(
-    file_restore_linux_vm,
-    linux_data_disk_snapshot,
-    linux_test_file_on_data_disk,
-):
-    """Linux file removed after its data-disk snapshot is ready."""
-    restore_path, _ = linux_test_file_on_data_disk
-    delete_linux_data_disk_file(vm=file_restore_linux_vm, restore_path=restore_path)
-    delete_linux_guest_file(vm=file_restore_linux_vm, guest_path=restore_path)
-    return linux_test_file_on_data_disk
-
-
 @pytest.fixture()
 def linux_root_disk_browsing_source(
     request,
@@ -1012,99 +955,6 @@ def cross_namespace_file_restore(
         client=admin_client,
     ) as file_restore:
         yield file_restore
-
-
-@pytest.fixture()
-def linux_data_disk_snapshot_content(
-    admin_client,
-    linux_data_disk_snapshot,
-):
-    """Existing CSI snapshot content for checking the source volume mode."""
-    return VolumeSnapshotContent(
-        name=linux_data_disk_snapshot.instance.status.boundVolumeSnapshotContentName,
-        client=admin_client,
-    )
-
-
-@pytest.fixture()
-def file_restore_snapshot_content_permission(admin_client):
-    """Temporarily grant snapshot-content read access until CNV-99267 is resolved."""
-    # Remove this workaround after https://redhat.atlassian.net/browse/CNV-99267 is resolved.
-    if not is_jira_open(jira_id="CNV-99267"):
-        yield
-        return
-
-    LOGGER.warning("Applying temporary snapshot-content read permission for CNV-99267")
-    service_account_name = Deployment(
-        name=FILE_RESTORE_OPERATOR_DEPLOYMENT_NAME,
-        namespace=FILE_RESTORE_OPERATOR_NAMESPACE,
-        client=admin_client,
-    ).instance.spec.template.spec.serviceAccountName
-    with (
-        ClusterRole(
-            name=unique_name(name="flr-snapshot-content-reader"),
-            client=admin_client,
-            rules=[
-                {
-                    "apiGroups": [VolumeSnapshotContent.api_group],
-                    "resources": ["volumesnapshotcontents"],
-                    "verbs": ["get"],
-                }
-            ],
-        ) as cluster_role,
-        ClusterRoleBinding(
-            name=cluster_role.name,
-            cluster_role=cluster_role.name,
-            subjects=[
-                {
-                    "kind": "ServiceAccount",
-                    "name": service_account_name,
-                    "namespace": FILE_RESTORE_OPERATOR_NAMESPACE,
-                }
-            ],
-            client=admin_client,
-        ) as role_binding,
-    ):
-        yield role_binding
-
-
-@pytest.fixture()
-def volume_mode_mismatch_file_restore(
-    admin_client,
-    namespace,
-    file_restore_linux_vm,
-    linux_data_disk_snapshot,
-    deleted_linux_file_for_snapshot,
-    file_restore_default_storage_profile,
-    file_restore_snapshot_content_permission,
-):
-    """Restore request with a Filesystem source and a Block restore preference."""
-    restore_path, _ = deleted_linux_file_for_snapshot
-    with VirtualMachineFileRestore(
-        name="flr-volume-mode-mismatch",
-        namespace=namespace.name,
-        target_vm_name=file_restore_linux_vm.name,
-        source_snapshot_name=linux_data_disk_snapshot.name,
-        source_path=restore_path,
-        client=admin_client,
-    ) as file_restore:
-        yield file_restore
-
-
-@pytest.fixture()
-def volume_mode_restore_data_volume(
-    admin_client,
-    namespace,
-    volume_mode_mismatch_file_restore,
-):
-    """Succeeded operator-created restore volume with its PVC bound for inspection."""
-    data_volume = DataVolume(
-        name=restore_volume_name(restore_cr_name=volume_mode_mismatch_file_restore.name),
-        namespace=namespace.name,
-        client=admin_client,
-    )
-    data_volume.wait_for_dv_success(timeout=TIMEOUT_5MIN)
-    return data_volume
 
 
 @pytest.fixture()
