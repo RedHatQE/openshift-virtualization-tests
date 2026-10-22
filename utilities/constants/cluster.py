@@ -84,6 +84,10 @@ AUDIT_LOGS_PATH = "--path=kube-apiserver"
 
 COUNT_FIVE = 5
 
+# RHCOS versions for dual-stream cluster testing
+RHCOS9_VERSION = "CoreOS 9"
+RHCOS10_VERSION = "CoreOS 10"
+
 BASE_EXCEPTIONS_DICT: dict[type[Exception], list[str]] = {
     NewConnectionError: [],
     ConnectionRefusedError: [],
