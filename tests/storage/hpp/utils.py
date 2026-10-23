@@ -6,12 +6,13 @@ import logging
 from contextlib import contextmanager
 
 from kubernetes.dynamic import DynamicClient
+from kubernetes.dynamic.exceptions import NotFoundError
 from ocp_resources.daemonset import DaemonSet
 from ocp_resources.persistent_volume import PersistentVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.pod import Pod
 from ocp_resources.resource import ResourceEditor
-from timeout_sampler import TimeoutExpiredError, TimeoutSampler
+from timeout_sampler import TimeoutSampler
 
 from utilities.artifactory import get_http_image_url
 from utilities.constants import Images
@@ -184,8 +185,8 @@ def delete_hpp_pool_pvs(admin_client: DynamicClient):
             ):
                 try:
                     pv.delete()
-                except TimeoutExpiredError:
-                    LOGGER.info("PV was already cleaned-up")
+                except NotFoundError:
+                    LOGGER.info(f"PV {pv.name} was already cleaned-up")
 
 
 def get_utility_pod_on_specific_node(admin_client, node):
