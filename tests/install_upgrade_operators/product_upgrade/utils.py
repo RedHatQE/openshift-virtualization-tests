@@ -44,6 +44,7 @@ from utilities.constants.timeouts import (
     TIMEOUT_20MIN,
     TIMEOUT_30MIN,
     TIMEOUT_30SEC,
+    TIMEOUT_120MIN,
     TIMEOUT_180MIN,
 )
 from utilities.data_collector import write_to_file
@@ -64,6 +65,7 @@ from utilities.operator import (
     update_image_in_catalog_source,
     update_subscription_source,
     wait_for_mcp_update_completion,
+    wait_for_mcp_update_end,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -339,7 +341,14 @@ def wait_for_post_upgrade_deployments_replicas(client, hco_namespace):
         deployment.wait_for_replicas(timeout=TIMEOUT_10MIN)
 
 
-def verify_upgrade_cnv(client, hco_namespace, expected_images):
+def verify_upgrade_cnv(
+    client,
+    hco_namespace,
+    expected_images,
+    machine_config_pools_list=None,
+):
+    if machine_config_pools_list:
+        wait_for_mcp_update_end(machine_config_pools_list=machine_config_pools_list, timeout=TIMEOUT_120MIN)
     wait_for_post_upgrade_deployments_replicas(client=client, hco_namespace=hco_namespace)
 
     wait_for_expected_pods_exist(
