@@ -9,6 +9,7 @@ from utilities.constants.aaq import (
     QUOTA_FOR_POD,
 )
 from utilities.constants.architecture import (
+    AARCH_64,
     AMD_64,
     ARM_64,
     MULTIARCH,
@@ -96,6 +97,7 @@ class TestConstants:
 
     def test_architecture_constants(self):
         """Test architecture constants are defined."""
+        assert AARCH_64 == "aarch64"
         assert AMD_64 == "amd64"
         assert ARM_64 == "arm64"
         assert S390X == "s390x"

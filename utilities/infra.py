@@ -48,10 +48,6 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 
 import utilities.virt
 from utilities.cluster import cache_admin_client
-from utilities.constants.architecture import (
-    AMD_64,
-    X86_64,
-)
 from utilities.constants.cluster import (
     AUDIT_LOGS_PATH,
     KUBECONFIG,
@@ -81,6 +77,7 @@ from utilities.exceptions import (
     UrlNotFoundError,
     UtilityPodNotFoundError,
 )
+from utilities.machine_platform import get_machine_platform
 from utilities.ssp import guest_agent_version_parser
 
 NON_EXIST_URL = "https://noneexist.test"  # Use 'test' domain rfc6761
@@ -757,11 +754,6 @@ def download_file_from_cluster(
     )
     os.chmod(binary_file, stat.S_IRUSR | stat.S_IXUSR)
     return binary_file
-
-
-def get_machine_platform():
-    os_machine_type = platform.machine()
-    return AMD_64 if os_machine_type == X86_64 else os_machine_type
 
 
 def get_nodes_with_label(nodes, label):
