@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ipaddress
+import itertools
 from ipaddress import ip_interface
 from typing import TYPE_CHECKING
 
@@ -20,6 +21,7 @@ if TYPE_CHECKING:
     from kubernetes.dynamic import DynamicClient
 
     from libs.net.traffic_generator import TcpServer, VMTcpClient
+    from libs.vm.vm import BaseVirtualMachine
 
 
 @pytest.mark.gating
@@ -102,3 +104,89 @@ def test_vmi_reports_ip_on_secondary_interface_without_vlan(
         f"IP addresses mismatch for interface {LOCALNET_BR_EX_INTERFACE_NO_VLAN} on VM {vm.name}, "
         f"Reported: {reported_ips}, Expected: {expected_ips}"
     )
+
+
+@pytest.mark.single_nic
+@pytest.mark.incremental
+@pytest.mark.usefixtures("nncp_localnet")
+@pytest.mark.parametrize(
+    "ip_family",
+    [
+        pytest.param(4, marks=pytest.mark.ipv4, id="ipv4"),
+        pytest.param(6, marks=pytest.mark.ipv6, id="ipv6"),
+    ],
+)
+class TestSharedHostnameLocalnet:
+    """Tests for VMs sharing the same spec.template.spec.hostname on localnet.
+
+    Jira: https://issues.redhat.com/browse/OCPBUGS-99277  # <skip-jira-utils-check>
+
+    Preconditions:
+        - 3 VMs with identical spec.template.spec.hostname connected to a localnet secondary network
+        - All 3 VMs Running with IPs assigned on the localnet interface
+    """
+
+    def test_tcp_connectivity_between_shared_hostname_vms(
+        self,
+        ip_family: int,
+        shared_hostname_vms: tuple[BaseVirtualMachine, ...],
+    ):
+        """Test that VMs sharing the same hostname can communicate over localnet.
+
+        Jira: https://issues.redhat.com/browse/OCPBUGS-99277  # <skip-jira-utils-check>
+
+        Preconditions:
+            - 3 VMs with identical spec.template.spec.hostname connected to a localnet secondary network
+            - All 3 VMs Running with IPs assigned on the localnet interface
+
+        Steps:
+            1. For each pair of VMs, establish a TCP connection over the localnet interface
+
+        Expected:
+            - A new TCP connection succeeds between all VM pairs
+        """
+        for client_vm, server_vm in itertools.combinations(shared_hostname_vms, 2):
+            with client_server_active_connection(
+                client_vm=client_vm,
+                server_vm=server_vm,
+                spec_logical_network=LOCALNET_BR_EX_INTERFACE,
+                ip_family=ip_family,
+            ) as (client, server):
+                assert is_tcp_connection(server=server, client=client), (
+                    f"TCP connection failed: {client_vm.name} -> {server_vm.name} ({client.server_ip})"
+                )
+
+    def test_tcp_connectivity_after_migration_of_shared_hostname_vm(
+        self,
+        ip_family: int,
+        admin_client: DynamicClient,
+        shared_hostname_vms: tuple[BaseVirtualMachine, ...],
+    ):
+        """Test that a new TCP connection succeeds after migrating a VM that shares its hostname.
+
+        Jira: https://issues.redhat.com/browse/OCPBUGS-99277  # <skip-jira-utils-check>
+
+        Preconditions:
+            - 3 VMs with identical spec.template.spec.hostname connected to a localnet secondary network
+            - All 3 VMs Running with IPs assigned on the localnet interface
+
+        Steps:
+            1. Migrate one of the shared-hostname VMs
+            2. Establish TCP connections from the migrated VM to each of the other VMs
+
+        Expected:
+            - A new TCP connection succeeds from the migrated VM to all other VMs
+        """
+        migrated_vm = shared_hostname_vms[0]
+        migrate_vm_and_verify(vm=migrated_vm, client=admin_client)
+
+        for peer_vm in shared_hostname_vms[1:]:
+            with client_server_active_connection(
+                client_vm=migrated_vm,
+                server_vm=peer_vm,
+                spec_logical_network=LOCALNET_BR_EX_INTERFACE,
+                ip_family=ip_family,
+            ) as (client, server):
+                assert is_tcp_connection(server=server, client=client), (
+                    f"TCP connection failed after migration: {migrated_vm.name} -> {peer_vm.name} ({client.server_ip})"
+                )
