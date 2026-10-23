@@ -90,13 +90,13 @@ class BaseVirtualMachine(VirtualMachine):
 
     def set_interface_state(self, network_name: str, state: str) -> None:
         if not self._spec.template.spec.domain.devices:
-            raise VMInterfaceSpecNotFoundError(f"Interface {network_name} not found in VM {self.name} spec")
+            raise VMInterfaceSpecNotFoundError(vm_name=self.name, interface_name=network_name)
         for interface in self._spec.template.spec.domain.devices.interfaces or []:
             if interface.name == network_name:
                 interface.state = state
                 break
         else:
-            raise VMInterfaceSpecNotFoundError(f"Interface {network_name} not found in VM {self.name} spec")
+            raise VMInterfaceSpecNotFoundError(vm_name=self.name, interface_name=network_name)
 
         devices = asdict(obj=self._spec.template.spec.domain.devices, dict_factory=self._filter_out_none_values)
         patches = {
