@@ -569,3 +569,27 @@ class VMWithSeveralBlankDisks(VirtualMachineForTests):
             dv_templates.append(template)
             disks.append({"disk": {"bus": self.disk_type}, "name": dv_name})
             volumes.append({"name": dv_name, "dataVolume": {"name": dv_name}})
+
+
+def mount_hotplug_volume(vm: VirtualMachineForTests, device: str, mount_path: str) -> None:
+    """Format and mount a hotplugged disk device in the guest.
+
+    Args:
+        vm: VM in which to mount the device.
+        device: Full device path in the guest (e.g. '/dev/sda').
+        mount_path: Directory path to mount the device to.
+    """
+    run_ssh_commands(
+        host=vm.ssh_exec,
+        commands=[
+            shlex.split(cmd)
+            for cmd in [
+                f"sudo mkfs.ext4 {device}",
+                f"sudo mkdir -p {mount_path}",
+                f"sudo mount {device} {mount_path}",
+                f"sudo chmod 777 {mount_path}",
+            ]
+        ],
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
+    )
