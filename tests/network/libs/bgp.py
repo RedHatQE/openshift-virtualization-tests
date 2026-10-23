@@ -1,4 +1,5 @@
 import json
+import os
 import shlex
 from collections.abc import Generator
 from contextlib import contextmanager
@@ -6,26 +7,38 @@ from dataclasses import dataclass
 from typing import Final
 
 import ocp_resources.network_config_openshift_io as openshift_nc
+import yaml
 from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.bgp_session_state import BGPSessionState
 from ocp_resources.cluster_operator import ClusterOperator
+from ocp_resources.exceptions import ExecOnPodError
 from ocp_resources.frr_configuration import FRRConfiguration
 from ocp_resources.pod import Pod
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.route_advertisements import RouteAdvertisements
 from timeout_sampler import retry
 
+from libs.net.traffic_generator import PodTcpClient
 from libs.net.vmspec import IpNotFound
 from utilities.constants.hco import DEFAULT_RESOURCE_CONDITIONS
 from utilities.constants.namespaces import NamespacesNames
 from utilities.constants.networking import NET_UTIL_CONTAINER_IMAGE
 from utilities.infra import get_resources_by_name_prefix, wait_for_consistent_resource_conditions
 
-_EXTERNAL_FRR_IMAGE: Final[str] = "quay.io/frrouting/frr:10.6.0"
+OPENPE_CONTAINER_NAME: Final[str] = "openpe"
+OPENPE_IMAGE: Final[str] = os.environ.get(
+    "CNV_EXTERNAL_OPENPE_IMAGE",
+    "quay.io/openperouter/router:main",
+)
+EVPN_MAC_VRF_VNI: Final[int] = 10100
+EVPN_IP_VRF_VNI: Final[int] = 20102
+OPENPE_L3_VRF_NAME: Final[str] = "vrf-blue"
 CLUSTER_FRR_ASN: Final[int] = 64512
 EXTERNAL_FRR_ASN: Final[int] = 64000
 POD_SECONDARY_IFACE_NAME: Final[str] = "net1"
+OPENPE_UNDERLAY_IFACE_NAME: Final[str] = "openpe-uplink"
+OPENPE_ROUTER_NETNS: Final[str] = "perouter"
 NET_TOOLS_CONTAINER_NAME: Final[str] = "net-tools"
 EXTERNAL_FRR_POD_LABEL: Final[dict] = {"role": "frr-external"}
 
@@ -34,6 +47,33 @@ EXTERNAL_FRR_POD_LABEL: Final[dict] = {"role": "frr-external"}
 class ExternalFrrPodInfo:
     pod: Pod
     ipv4: str
+
+
+class OpenpeRouterTcpClient(PodTcpClient):
+    """Runs an iperf client in the external OpenPE router namespace."""
+
+    def __enter__(self) -> OpenpeRouterTcpClient:
+        self._pod.execute(
+            command=["sh", "-c", f"nohup {openpe_router_command(self._cmd)} >/tmp/iperf3.log 2>&1 &"],
+            container=self._container,
+        )
+        self._ensure_is_running()
+        return self
+
+    def __exit__(self, exc_type: BaseException, exc_value: BaseException, traceback: object) -> None:
+        self._pod.execute(
+            command=["sh", "-c", openpe_router_command(f"pkill -f {shlex.quote(self._cmd)}")],
+            container=self._container,
+            ignore_rc=True,
+        )
+
+    def is_running(self) -> bool:
+        output = self._pod.execute(
+            command=["sh", "-c", openpe_router_command(f"pgrep -f {shlex.quote(self._cmd)}")],
+            container=self._container,
+            ignore_rc=True,
+        )
+        return bool(output.strip())
 
 
 @contextmanager
@@ -176,65 +216,150 @@ def create_evpn_frr_configuration(
     )
 
 
-def generate_frr_conf(
-    external_subnet_ipv4: str,
-    nodes_ipv4_list: list[str],
-) -> str:
-    """Generates a FRR configuration for the external FRR router.
+def openpe_l2_bridge_name(vni: int) -> str:
+    """Returns the OpenPE managed L2 bridge name for the given VNI.
 
     Args:
-        external_subnet_ipv4 (str): The external IPv4 subnet to be advertised.
-        nodes_ipv4_list (list[str]): IPv4 addresses of the cluster nodes to be configured as BGP neighbors.
+        vni: MAC-VRF VNI.
 
     Returns:
-        str: The generated FRR configuration as a string.
+        Managed Linux bridge name created by OpenPE.
     """
-    if not nodes_ipv4_list:
-        raise ValueError("nodes_ipv4_list cannot be empty")
+    return f"br-hs-{vni}"
+
+
+def openpe_router_command(command: str) -> str:
+    """Returns a command that runs in OpenPE's managed router namespace.
+
+    Args:
+        command: Command to run in the router namespace.
+
+    Returns:
+        The namespace-qualified command.
+    """
+    return f"ip netns exec {OPENPE_ROUTER_NETNS} {command}"
+
+
+def openpe_router_shell_command(command: str) -> str:
+    """Returns a shell command that runs in OpenPE's router namespace.
+
+    Use this variant for compound commands containing shell operators.
+
+    Args:
+        command: Shell command to run in the router namespace.
+
+    Returns:
+        The namespace-qualified shell command.
+    """
+    return openpe_router_command(f"sh -c {shlex.quote(command)}")
+
+
+def generate_openpe_yaml(
+    worker_ipv4_list: list[str],
+    external_subnet_ipv4: str,
+    vtep_cidr: str,
+    mac_vrf_vni: int = EVPN_MAC_VRF_VNI,
+    ip_vrf_vni: int = EVPN_IP_VRF_VNI,
+) -> str:
+    """Generates OpenPE static configuration for the external ToR router.
+
+    Args:
+        worker_ipv4_list: IPv4 addresses of cluster workers to peer with.
+        external_subnet_ipv4: External IPv4 subnet advertised to the cluster.
+        vtep_cidr: Underlay subnet used to derive the OpenPE VTEP address.
+        mac_vrf_vni: MAC-VRF VNI for stretched L2 connectivity.
+        ip_vrf_vni: IP-VRF VNI for routed L3 connectivity.
+
+    Returns:
+        OpenPE static configuration YAML.
+    """
+    if not worker_ipv4_list:
+        raise ValueError("worker_ipv4_list cannot be empty")
 
     evpn_route_map = "evpn-to-ocp"
-
-    # Route-map: preserve next-hop for EVPN re-advertisement
-    lines = [
+    # Workers share CLUSTER_FRR_ASN, so remove it before relaying EVPN routes
+    # through the external eBGP ToR to another worker.
+    raw_config_lines = [
         f"route-map {evpn_route_map} permit 10",
+        f" set as-path exclude {CLUSTER_FRR_ASN}",
         " set ip next-hop unchanged",
-        "exit",
-        "",
-    ]
-
-    # BGP router and neighbor definitions (eBGP: external AS)
-    lines.extend([
+        "!",
         f"router bgp {EXTERNAL_FRR_ASN}",
-        " no bgp ebgp-requires-policy",
-        " no bgp default ipv4-unicast",
-        " no bgp network import-check",
-        "",
-    ])
-    lines.extend([f" neighbor {ip} remote-as {CLUSTER_FRR_ASN}" for ip in nodes_ipv4_list])
-    lines.append("")
-
-    # IPv4 unicast: advertise external subnet to nodes
-    lines.extend([
+        " address-family l2vpn evpn",
+    ]
+    for worker_ipv4 in worker_ipv4_list:
+        raw_config_lines.append(f"  neighbor {worker_ipv4} route-map {evpn_route_map} out")
+        # OpenPE enables allowas-in for eBGP EVPN neighbors. The external
+        # ToR must reject its own ASN when a worker reflects a route back,
+        # otherwise AS-path exclusion lets the route loop between workers.
+        raw_config_lines.append(f"  no neighbor {worker_ipv4} allowas-in")
+    raw_config_lines.extend([
+        " exit-address-family",
+        "!",
+        f"router bgp {EXTERNAL_FRR_ASN} vrf {OPENPE_L3_VRF_NAME}",
+        " address-family ipv4 unicast",
+        "  redistribute connected",
+        " exit-address-family",
+        " address-family ipv6 unicast",
+        "  redistribute connected",
+        " exit-address-family",
+        "!",
+        f"router bgp {EXTERNAL_FRR_ASN}",
         " address-family ipv4 unicast",
         f"  network {external_subnet_ipv4}",
     ])
-    for ip in nodes_ipv4_list:
-        lines.extend([
-            f"  neighbor {ip} activate",
-            f"  neighbor {ip} attribute-unchanged next-hop",
-        ])
-    lines.extend([" exit-address-family", ""])
+    for worker_ipv4 in worker_ipv4_list:
+        raw_config_lines.append(f"  neighbor {worker_ipv4} next-hop-self")
 
-    # EVPN: activate neighbors for L2VPN EVPN route exchange
-    lines.append(" address-family l2vpn evpn")
-    for ip in nodes_ipv4_list:
-        lines.extend([
-            f"  neighbor {ip} activate",
-            f"  neighbor {ip} route-map {evpn_route_map} out",
-        ])
-    lines.extend(["  advertise-all-vni", " exit-address-family"])
-
-    return "\n".join(lines)
+    openpe_config = {
+        "underlays": [
+            {
+                "asn": EXTERNAL_FRR_ASN,
+                "neighbors": [{"asn": CLUSTER_FRR_ASN, "address": worker_ipv4} for worker_ipv4 in worker_ipv4_list],
+                "interfaces": [
+                    {
+                        "type": "CNIDevice",
+                        "cniDevice": {
+                            "type": "RawConfig",
+                            "interfaceName": OPENPE_UNDERLAY_IFACE_NAME,
+                            "rawConfig": {
+                                "cniVersion": "1.0.0",
+                                "name": "openpe-external-underlay",
+                                "plugins": [
+                                    {
+                                        "type": "macvlan",
+                                        "master": POD_SECONDARY_IFACE_NAME,
+                                        "mode": "bridge",
+                                        "ipam": {"type": "dhcp"},
+                                    }
+                                ],
+                            },
+                        },
+                    }
+                ],
+                "tunnelEndpoint": {"cidrs": [vtep_cidr]},
+            }
+        ],
+        "l2vnis": [
+            {
+                "name": "mac-vrf",
+                "vni": mac_vrf_vni,
+                "hostMaster": {
+                    "type": "LinuxBridge",
+                    "linuxBridge": {"lifecycle": "Managed"},
+                },
+            }
+        ],
+        "l3vnis": [
+            {
+                "name": "ip-vrf",
+                "vrf": OPENPE_L3_VRF_NAME,
+                "vni": ip_vrf_vni,
+            }
+        ],
+        "rawfrrconfigs": [{"rawConfig": "\n".join(raw_config_lines)}],
+    }
+    return yaml.dump(openpe_config, default_flow_style=False)
 
 
 @contextmanager
@@ -242,28 +367,31 @@ def deploy_external_frr_pod(
     namespace_name: str,
     node_name: str,
     nad_name: str,
-    frr_configmap_name: str,
+    openpe_configmap_name: str,
     client: DynamicClient,
 ) -> Generator[ExternalFrrPodInfo]:
-    """Deploys an external FRR (Free Range Routing) pod in a specified namespace.
+    """Deploys an external OpenPE ToR pod in a specified namespace.
 
-    On entering the context, this function creates a privileged pod with the FRR image,
-    attaches it to a specified NetworkAttachmentDefinition (NAD), and mounts a ConfigMap for FRR
-    configuration. On exiting the context, the pod is automatically deleted.
+    On entering the context, this function creates a privileged pod with the OpenPE image,
+    attaches it to a specified NetworkAttachmentDefinition (NAD), and mounts a ConfigMap for
+    OpenPE static configuration. The service-account token is not mounted so OpenPE remains in
+    static host mode instead of switching to its Kubernetes reconciler. On exiting the context,
+    the pod is automatically deleted.
 
-    Also contains an iperf3 container to be used for connectivity testing. The process namespace
-    of the iperf3 container is shared with the frr container for the sake of process management
-    (due to the minimal capabilities of the iperf3 container).
+    Multus creates net1 in the pod network namespace. OpenPE then creates a
+    macvlan child of net1 in its managed router namespace and obtains its DHCP
+    lease through the CNI configuration. A net-tools sidecar is retained for
+    the L2 endpoint and packet-capture helpers.
 
     Args:
-        namespace_name (str): The name of the namespace where the pod will be deployed.
-        node_name (str): The name of the node where the pod will be scheduled.
-        nad_name (str): The name of the NetworkAttachmentDefinition (NAD) to attach to the pod.
-        frr_configmap_name (str): The name of the ConfigMap containing FRR configuration.
-        client (DynamicClient): The Kubernetes dynamic client.
+        namespace_name: The name of the namespace where the pod will be deployed.
+        node_name: The name of the node where the pod will be scheduled.
+        nad_name: The name of the NetworkAttachmentDefinition (NAD) to attach to the pod.
+        openpe_configmap_name: The name of the ConfigMap containing OpenPE configuration.
+        client: The Kubernetes dynamic client.
 
     Yields:
-        ExternalFrrPodInfo: The info about deployed external FRR pod, including its IPv4 address.
+        ExternalFrrPodInfo: The info about deployed external ToR pod, including its IPv4 address.
     """
     annotations = {
         f"{Pod.ApiGroup.K8S_V1_CNI_CNCF_IO}/networks": json.dumps([
@@ -272,10 +400,27 @@ def deploy_external_frr_pod(
     }
     containers = [
         {
-            "name": "frr",
-            "image": _EXTERNAL_FRR_IMAGE,
+            "name": OPENPE_CONTAINER_NAME,
+            "image": OPENPE_IMAGE,
+            "command": ["/entrypoint.sh"],
             "securityContext": {"privileged": True, "capabilities": {"add": ["NET_ADMIN"]}},
-            "volumeMounts": [{"name": frr_configmap_name, "mountPath": "/etc/frr"}],
+            "volumeMounts": [
+                {
+                    "name": openpe_configmap_name,
+                    "mountPath": "/entrypoint.sh",
+                    "subPath": "entrypoint.sh",
+                },
+                {
+                    "name": openpe_configmap_name,
+                    "mountPath": "/etc/openperouter/node-config.yaml",
+                    "subPath": "node-config.yaml",
+                },
+                {
+                    "name": openpe_configmap_name,
+                    "mountPath": "/etc/openperouter/configs/openpe_tor.yaml",
+                    "subPath": "openpe_tor.yaml",
+                },
+            ],
         },
         {
             "name": NET_TOOLS_CONTAINER_NAME,
@@ -284,7 +429,7 @@ def deploy_external_frr_pod(
             "command": ["sleep", "infinity"],
         },
     ]
-    volumes = [{"name": frr_configmap_name, "configMap": {"name": frr_configmap_name}}]
+    volumes = [{"name": openpe_configmap_name, "configMap": {"name": openpe_configmap_name, "defaultMode": 0o755}}]
 
     with Pod(
         name="frr-external",
@@ -293,20 +438,23 @@ def deploy_external_frr_pod(
         node_name=node_name,
         containers=containers,
         volumes=volumes,
+        automount_service_account_token=False,
         client=client,
         label=EXTERNAL_FRR_POD_LABEL,
     ) as pod:
         pod.wait_for_status(status=Pod.Status.RUNNING)
-        ipv4 = _acquire_dhcp_ipv4(pod=pod, iface_name=POD_SECONDARY_IFACE_NAME)
+        wait_for_openpe_router_interface(pod=pod, iface_name=OPENPE_UNDERLAY_IFACE_NAME)
+        ipv4 = _acquire_dhcp_ipv4(pod=pod, iface_name=OPENPE_UNDERLAY_IFACE_NAME)
 
         yield ExternalFrrPodInfo(pod=pod, ipv4=ipv4)
 
 
 def _acquire_dhcp_ipv4(pod: Pod, iface_name: str) -> str:
-    pod.execute(command=shlex.split(f"dhclient {iface_name}"), container=NET_TOOLS_CONTAINER_NAME)
-
     iface_info = json.loads(
-        pod.execute(command=shlex.split(f"ip -j -4 addr show {iface_name}"), container=NET_TOOLS_CONTAINER_NAME)
+        pod.execute(
+            command=shlex.split(openpe_router_command(f"ip -j -4 addr show {iface_name}")),
+            container=OPENPE_CONTAINER_NAME,
+        )
     )
     if iface_info and "addr_info" in iface_info[0]:
         for addr in iface_info[0]["addr_info"]:
@@ -342,8 +490,8 @@ def wait_for_evpn_established(frr_pod: Pod, expected_neighbors: int) -> bool:
         expected_neighbors: Number of neighbors expected to have received EVPN prefixes.
     """
     output = frr_pod.execute(
-        command=shlex.split('vtysh -c "show bgp l2vpn evpn summary json"'),
-        container="frr",
+        command=shlex.split(openpe_router_command('vtysh -c "show bgp l2vpn evpn summary json"')),
+        container=OPENPE_CONTAINER_NAME,
     )
     summary = json.loads(output)
     peers = summary.get("peers", {})
@@ -368,3 +516,47 @@ def _get_bgp_session_state(node_name: str) -> BGPSessionState:
     raise ResourceNotFoundError(
         f"BGPSessionState for node '{node_name}' not found in namespace '{NamespacesNames.OPENSHIFT_FRR_K8S}'"
     )
+
+
+@retry(
+    wait_timeout=120,
+    sleep=5,
+    exceptions_dict={ExecOnPodError: []},
+)
+def wait_for_openpe_interface(pod: Pod, iface_name: str) -> bool:
+    """Waits for an OpenPE host-side interface to exist in the external ToR pod.
+
+    Args:
+        pod: The external OpenPE pod.
+        iface_name: Interface name to wait for.
+
+    Returns:
+        True when the interface exists.
+    """
+    pod.execute(
+        command=shlex.split(f"ip link show dev {iface_name}"),
+        container=NET_TOOLS_CONTAINER_NAME,
+    )
+    return True
+
+
+@retry(
+    wait_timeout=120,
+    sleep=5,
+    exceptions_dict={ExecOnPodError: []},
+)
+def wait_for_openpe_router_interface(pod: Pod, iface_name: str) -> bool:
+    """Waits for an interface in OpenPE's managed router namespace.
+
+    Args:
+        pod: The external OpenPE pod.
+        iface_name: Interface name to wait for.
+
+    Returns:
+        True when the interface exists.
+    """
+    pod.execute(
+        command=shlex.split(openpe_router_command(f"ip link show dev {iface_name}")),
+        container=OPENPE_CONTAINER_NAME,
+    )
+    return True
