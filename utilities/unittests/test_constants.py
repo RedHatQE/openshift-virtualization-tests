@@ -101,7 +101,7 @@ class TestConstants:
         assert S390X == "s390x"
         assert X86_64 == "x86_64"
         assert MULTIARCH == "multiarch"
-        assert SUPPORTED_MULTIARCH_OPTIONS == {"amd64", "arm64"}
+        assert SUPPORTED_MULTIARCH_OPTIONS == {"amd64", "arm64", "s390x"}
         assert SUPPORTED_CPU_ARCHITECTURES == {"amd64", "arm64", "s390x"}
 
     def test_timeout_constants(self):

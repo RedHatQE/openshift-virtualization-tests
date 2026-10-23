@@ -48,8 +48,13 @@ class TestCustomNamespace:
         self,
         unprivileged_client,
         custom_vm_template_namespace,
+        first_base_template,
     ):
-        template_name = "rhel8-server-tiny"
+        # Use the first base template that was verified to exist in the custom namespace
+        # by the preceding test_base_templates_exist_in_custom_namespace dependency.
+        # This is arch-agnostic: on s390x/arm64 clusters SSP appends a suffix (e.g.
+        # "rhel8-server-tiny-s390x"), and first_base_template.name already reflects that.
+        template_name = first_base_template.name
         with pytest.raises(
             ForbiddenError,
             match=rf'.*[\\]+"{template_name}[\\]+" is forbidden: '

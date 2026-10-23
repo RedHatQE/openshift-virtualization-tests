@@ -77,7 +77,7 @@ def vm_with_hotplug_support(
     golden_image_data_volume_template_for_test_scope_class,
     modern_cpu_for_migration,
     vmx_disabled_flag,
-    is_s390x_cluster,
+    nodes_cpu_architecture,
 ):
     with VirtualMachineForTestsFromTemplate(
         name=request.param["vm_name"],
@@ -87,8 +87,8 @@ def vm_with_hotplug_support(
         client=unprivileged_client,
         data_volume_template=golden_image_data_volume_template_for_test_scope_class,
         cpu_max_sockets=EIGHT_CPU_SOCKETS,
-        # s390x doesn't support maxGuest as it doesn't support hotplug memory
-        memory_max_guest=None if is_s390x_cluster else TEN_GI_MEMORY,
+        # Memory hotplug (maxGuest) is only supported on x86_64; the virt-api webhook rejects it on s390x and arm64
+        memory_max_guest=TEN_GI_MEMORY if nodes_cpu_architecture == AMD_64 else None,
         cpu_sockets=FOUR_CPU_SOCKETS,
         cpu_threads=ONE_CPU_THREAD,
         cpu_cores=ONE_CPU_CORE,
