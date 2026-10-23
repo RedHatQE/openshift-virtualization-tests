@@ -1,4 +1,4 @@
-"""CBT backup utilities (backup success only)."""
+"""CBT backup utilities."""
 
 from __future__ import annotations
 
@@ -20,7 +20,11 @@ from timeout_sampler import TimeoutSampler
 
 from tests.storage.cbt.constants import (
     CBT_BACKUP_CONDITION_FAILED,
+    CBT_BACKUP_TYPE_FULL,
+    CBT_BACKUP_TYPE_INCREMENTAL,
     CBT_BOOT_DISK_TEST_DATA_FILE,
+    CBT_CONCURRENT_INCREMENTAL_COUNT,
+    CBT_DATA_DISK_NAME_PREFIX,
     CBT_DATA_DISK_SIZE,
     CBT_DATA_DISK_TEST_DATA,
     CBT_ENABLED_LABEL,
@@ -33,7 +37,6 @@ from tests.storage.cbt.constants import (
 from utilities.constants.images import OS_FLAVOR_RHEL, OS_FLAVOR_WIN_CONTAINER_DISK, OS_FLAVOR_WINDOWS
 from utilities.constants.instance_types import RHEL9_PREFERENCE, U1_LARGE, U1_SMALL, WINDOWS_2K22_PREFERENCE
 from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5SEC, TIMEOUT_10MIN, TIMEOUT_30MIN, TIMEOUT_60MIN
-from utilities.constants.virt import CLOUD_INIT_DISK_NAME, DV_DISK
 from utilities.storage import (
     construct_datavolume_source_dict,
     data_volume_template_with_source_ref_dict,
@@ -51,19 +54,16 @@ LOGGER = logging.getLogger(__name__)
 BYTES_PER_GIB = 1024**3
 
 
-def cbt_pvc_size_with_headroom(source_disk_size: str, headroom_gib: int = 10) -> str:
-    """Return a PVC size in Gi with headroom above the source disk capacity."""
-    source_bytes = parse_quantity(quantity=source_disk_size)
-    source_gib = int((source_bytes + BYTES_PER_GIB - 1) // BYTES_PER_GIB)
-    return f"{source_gib + headroom_gib}Gi"
+def cbt_pvc_size_for_vm(vm: VirtualMachine, headroom_gib: int = 10, backup_copies: int = 1) -> str:
+    """Return a PVC size covering every VM dataVolumeTemplate, optional extra copies, and headroom.
 
-
-def cbt_pvc_size_for_vm(vm: VirtualMachine, headroom_gib: int = 10) -> str:
-    """Return a backup/staging PVC size covering every VM dataVolumeTemplate plus headroom.
+    Pull-mode client storage keeps one full-sized raw file per checkpoint, so
+    ``backup_copies`` is the number of checkpoints that PVC must hold.
 
     Args:
         vm: VM whose dataVolumeTemplates sizes are summed.
-        headroom_gib: Extra capacity in Gi added after rounding the disk total up.
+        headroom_gib: Extra capacity in Gi added after the copied disk total.
+        backup_copies: How many full copies of the disk total to reserve.
 
     Returns:
         str: PVC size such as ``42Gi``.
@@ -74,12 +74,12 @@ def cbt_pvc_size_for_vm(vm: VirtualMachine, headroom_gib: int = 10) -> str:
         for template in templates
     )
     total_gib = int((total_bytes + BYTES_PER_GIB - 1) // BYTES_PER_GIB)
-    return cbt_pvc_size_with_headroom(source_disk_size=f"{total_gib}Gi", headroom_gib=headroom_gib)
+    return f"{total_gib * backup_copies + headroom_gib}Gi"
 
 
 def data_disk_name(index: int, unique_suffix: str) -> str:
     """Name of the Nth (1-indexed) additional blank data disk DataVolume/disk/volume for a CBT test VM."""
-    return f"cbt-datadisk-{index}-{unique_suffix}"
+    return f"{CBT_DATA_DISK_NAME_PREFIX}{index}-{unique_suffix}"
 
 
 def blank_data_disk_template(
@@ -336,20 +336,6 @@ def guest_device_path_for_volume(vm: VirtualMachine, volume_name: str) -> str:
     return f"/dev/{target}"
 
 
-def attached_data_disk_names(vm: VirtualMachine) -> list[str]:
-    """Names of additional data disk volumes attached to a VM.
-
-    Args:
-        vm: VM to inspect.
-
-    Returns:
-        list[str]: Sorted names of attached data disk volumes, excluding the boot disk and cloud-init disk.
-    """
-    volumes = vm.instance.to_dict()["spec"]["template"]["spec"]["volumes"]
-    excluded_names = {DV_DISK, CLOUD_INIT_DISK_NAME}
-    return sorted(volume["name"] for volume in volumes if volume["name"] not in excluded_names)
-
-
 def incremental_test_data(index: int) -> str:
     """Content written to the VM before the Nth (1-indexed) incremental backup in a backup chain."""
     return f"cbt-incremental-{index}-backup-test-data"
@@ -544,12 +530,26 @@ def cbt_backup_tracker(
         yield tracker
 
 
+def cbt_data_disk_volume_names(vm: VirtualMachine) -> list[str]:
+    """Names of CBT blank data-disk volumes on a VM.
+
+    Args:
+        vm: VM whose volumes are inspected.
+
+    Returns:
+        list[str]: Sorted volume names that use the CBT data-disk prefix.
+    """
+    volumes = vm.instance.to_dict()["spec"]["template"]["spec"]["volumes"]
+    return sorted(volume["name"] for volume in volumes if volume["name"].startswith(CBT_DATA_DISK_NAME_PREFIX))
+
+
 def cbt_backup_pvc(
     name: str,
     namespace: str,
     client: DynamicClient,
     vm: VirtualMachine,
     storage_class: str,
+    backup_copies: int = 1,
 ) -> PersistentVolumeClaim:
     """Build an RWO filesystem PVC sized for a CBT VM's disks.
 
@@ -561,6 +561,7 @@ def cbt_backup_pvc(
         client: Client used to create the PVC.
         vm: VM whose dataVolumeTemplates determine PVC size.
         storage_class: Storage class for the PVC.
+        backup_copies: How many full copies of the VM disks the PVC must hold.
 
     Returns:
         PersistentVolumeClaim: Undeployed RWO filesystem PVC.
@@ -570,7 +571,7 @@ def cbt_backup_pvc(
         namespace=namespace,
         client=client,
         accessmodes=PersistentVolumeClaim.AccessMode.RWO,
-        size=cbt_pvc_size_for_vm(vm=vm),
+        size=cbt_pvc_size_for_vm(vm=vm, backup_copies=backup_copies),
         storage_class=storage_class,
         volume_mode=PersistentVolumeClaim.VolumeMode.FILE,
     )
@@ -665,6 +666,40 @@ def delete_cbt_pull_backup_and_wait_for_export(backup: VirtualMachineBackup) -> 
     wait_for_pull_backup_export_deleted(name=backup_name, namespace=namespace, client=client)
 
 
+def delete_cbt_pull_backups_and_wait_for_exports(
+    backups: list[VirtualMachineBackup],
+    namespace: str,
+    client: DynamicClient,
+) -> None:
+    """Delete every pull-mode backup and wait until each export is gone.
+
+    A failure cleaning up one backup does not skip the rest. After every backup has
+    been attempted, the collected failures are raised together.
+
+    Args:
+        backups: Deployed pull-mode backups to delete.
+        namespace: Namespace of the backups and their exports.
+        client: Client used to poll the exports.
+
+    Side effects:
+        Deletes each backup and polls until its VirtualMachineExport is gone.
+
+    Raises:
+        ExceptionGroup: If one or more backups fail to clean up.
+    """
+    cleanup_errors: list[Exception] = []
+    for backup in backups:
+        backup_name = backup.name
+        try:
+            backup.clean_up()
+            wait_for_pull_backup_export_deleted(name=backup_name, namespace=namespace, client=client)
+        except Exception as error:
+            LOGGER.error(f"Failed to clean up pull-mode backup {backup_name}: {error}")
+            cleanup_errors.append(error)
+    if cleanup_errors:
+        raise ExceptionGroup("Pull-mode backup cleanup errors", cleanup_errors)
+
+
 def live_migrate_cbt_vm(vm: VirtualMachineForTests, client: DynamicClient) -> None:
     """Live-migrate a CBT VM and wait until CBT is Enabled again.
 
@@ -678,3 +713,40 @@ def live_migrate_cbt_vm(vm: VirtualMachineForTests, client: DynamicClient) -> No
     LOGGER.info(f"Live-migrating VM {vm.name} before incremental backup")
     migrate_vm_and_verify(vm=vm, client=client, check_ssh_connectivity=True)
     wait_for_vm_cbt_enabled(vm=vm)
+
+
+def concurrent_backup_type(backup_index: int) -> str:
+    """Return the backup type for one VM in a concurrent backup wave.
+
+    The first CBT_CONCURRENT_INCREMENTAL_COUNT VMs already have a completed full backup, so
+    their concurrent backup is incremental. Every later VM's concurrent backup is full.
+
+    Args:
+        backup_index: Zero-based index into the concurrent VM list.
+
+    Returns:
+        str: ``Incremental`` or ``Full``.
+    """
+    if backup_index < CBT_CONCURRENT_INCREMENTAL_COUNT:
+        return CBT_BACKUP_TYPE_INCREMENTAL
+    return CBT_BACKUP_TYPE_FULL
+
+
+def write_incremental_data_for_concurrent_vms(vms: list[VirtualMachineForTests]) -> None:
+    """Write new guest data on VMs whose concurrent backup is incremental.
+
+    Args:
+        vms: Concurrent VM list, in the same order used by ``concurrent_backup_type``.
+
+    Side effects:
+        Writes a new file on each VM that will take an incremental backup.
+    """
+    for backup_index, vm in enumerate(vms):
+        if concurrent_backup_type(backup_index=backup_index) == CBT_BACKUP_TYPE_FULL:
+            continue
+        file_index = backup_index + 1
+        write_cbt_guest_file(
+            vm=vm,
+            filename=incremental_test_data_file(index=file_index, vm=vm),
+            content=incremental_test_data(index=file_index),
+        )
