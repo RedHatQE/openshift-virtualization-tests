@@ -19,7 +19,6 @@ from utilities.constants import (
     BREW_REGISTERY_SOURCE,
     CENTOS_STREAM9_PREFERENCE,
     CENTOS_STREAM10_PREFERENCE,
-    CNV_OPERATORS,
     CNV_PODS_NO_HPP_CSI_HPP_POOL,
     HCO_CATALOG_SOURCE,
     HPP_CAPABILITIES,
@@ -202,7 +201,6 @@ cnv_deployment_matrix = ALL_CNV_DEPLOYMENTS
 cnv_deployment_no_hpp_matrix = ALL_CNV_DEPLOYMENTS_NO_HPP_POOL
 cnv_daemonset_matrix = ALL_CNV_DAEMONSETS
 pod_resource_validation_matrix = [{"cpu": 5}, {"memory": None}]
-cnv_operators_matrix = CNV_OPERATORS
 cnv_vm_console_proxy_cluster_resource_matrix = VM_CONSOLE_PROXY_CLUSTER_RESOURCES
 cnv_vm_console_proxy_namespace_resource_matrix = VM_CONSOLE_PROXY_NAMESPACE_RESOURCES
 
