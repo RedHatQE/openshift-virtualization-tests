@@ -469,9 +469,9 @@ def test_vm_annotations_in_template(base_templates):
         pytest.param(
             {
                 "dv_name": "dv-fedora",
-                "image": f"{Images.Cirros.DIR}/{Images.Cirros.QCOW2_IMG}",
+                "image": f"{Images.Alpine.DIR}/{Images.Alpine.QCOW2_IMG_VERSIONED}",
                 "storage_class": py_config["default_storage_class"],
-                "dv_size": Images.Cirros.DEFAULT_DV_SIZE,
+                "dv_size": Images.Alpine.DEFAULT_DV_SIZE,
             },
             {
                 "vm_name": "fedora-vm",
@@ -484,9 +484,10 @@ def test_vm_annotations_in_template(base_templates):
     ],
     indirect=True,
 )
+@pytest.mark.arm64
 def test_vmi_annotations(data_volume_scope_function, vm_from_template_with_existing_dv):
     """Verify that VM annotations are copied to the VMI object.
-    For this test the underlying OS is not important; using Cirros to reduce runtime.
+    For this test the underlying OS is not important; using Alpine to reduce runtime.
     """
     vm_annotations = vm_from_template_with_existing_dv.instance.spec.template.metadata.annotations
     # Use only relevant os/flavor/workload annotations

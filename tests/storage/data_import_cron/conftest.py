@@ -5,6 +5,7 @@ from ocp_resources.cluster_role import ClusterRole
 from ocp_resources.data_import_cron import DataImportCron
 from ocp_resources.data_source import DataSource
 from ocp_resources.resource import Resource
+from pytest_testconfig import config as py_config
 
 from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE
 from tests.storage.utils import create_role_binding
@@ -47,6 +48,7 @@ def vm_for_data_source_import(
         namespace=data_import_cron_pvc_target_namespace.name,
         client=unprivileged_client,
         os_flavor=OS_FLAVOR_FEDORA,
+        cpu_arch=py_config.get("cpu_arch", ""),
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=DataSource(
                 name=imported_data_source.name,

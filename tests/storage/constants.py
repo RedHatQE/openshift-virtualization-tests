@@ -1,4 +1,5 @@
 from utilities.constants import Images
+from utilities.constants.images import ArchImages
 
 NUM_BLANK_DISKS = 3
 
@@ -12,7 +13,30 @@ HTTPS_CONFIG_MAP_NAME = "https-cert"
 HTTP = "http"
 HTTPS = "https"
 
+# Import-time constant — resolves to the first arch in OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH.
+# On heterogeneous (s390x+arm64) runs this may not match --cpu-arch.
+# Use get_fedora_container_image(cpu_arch) for arch-aware selection at test runtime.
 QUAY_FEDORA_CONTAINER_IMAGE = f"docker://{Images.Fedora.FEDORA_CONTAINER_IMAGE}"
+
+_ARCH_TO_FEDORA_CONTAINER = {
+    "arm64": ArchImages.ARM64.Fedora.FEDORA_CONTAINER_IMAGE,
+    "s390x": ArchImages.S390X.Fedora.FEDORA_CONTAINER_IMAGE,
+    "amd64": ArchImages.AMD64.Fedora.FEDORA_CONTAINER_IMAGE,
+}
+
+
+def get_fedora_container_image(cpu_arch: str = "") -> str:
+    """Return the arch-aware Fedora container image URL for CDI registry imports.
+
+    Falls back to the module-level QUAY_FEDORA_CONTAINER_IMAGE when cpu_arch is
+    empty or unrecognised (e.g. non-multiarch single-arch runs where Images is
+    already set to the correct arch).
+    """
+    tag = _ARCH_TO_FEDORA_CONTAINER.get(cpu_arch)
+    if tag:
+        return f"docker://{tag}"
+    return QUAY_FEDORA_CONTAINER_IMAGE
+
 
 TEST_FILE_NAME = "test-file.txt"
 TEST_FILE_CONTENT = "test-content"

@@ -479,6 +479,7 @@ def multi_storage_cirros_vm(request, namespace, unprivileged_client, storage_cla
         dv_name=f"{request.param['dv_name']}-{storage_class_name_scope_function}",
         vm_name=request.param["vm_name"],
         annotations=request.param.get("annotations"),
+        cpu_arch=py_config.get("cpu_arch", ""),
     ) as vm:
         yield vm
 
@@ -510,9 +511,10 @@ def cluster_csi_drivers_names(admin_client):
 
 @pytest.fixture(scope="module")
 def rhel10_data_source_scope_module(golden_images_namespace):
+    cpu_arch = py_config.get("cpu_arch", "")
     return DataSource(
         namespace=golden_images_namespace.name,
-        name="rhel10",
+        name=f"rhel10-{cpu_arch}" if cpu_arch else "rhel10",
         client=golden_images_namespace.client,
         ensure_exists=True,
     )
@@ -520,9 +522,10 @@ def rhel10_data_source_scope_module(golden_images_namespace):
 
 @pytest.fixture(scope="module")
 def fedora_data_source_scope_module(golden_images_namespace):
+    cpu_arch = py_config.get("cpu_arch", "")
     return DataSource(
         namespace=golden_images_namespace.name,
-        name=OS_FLAVOR_FEDORA,
+        name=f"{OS_FLAVOR_FEDORA}-{cpu_arch}" if cpu_arch else OS_FLAVOR_FEDORA,
         client=golden_images_namespace.client,
         ensure_exists=True,
     )

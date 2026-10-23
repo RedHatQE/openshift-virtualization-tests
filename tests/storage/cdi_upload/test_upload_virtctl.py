@@ -181,7 +181,7 @@ def test_virtctl_image_upload_dv(
         check_upload_virtctl_result(result=res)
         dv = DataVolume(namespace=namespace.name, name=dv_name, client=unprivileged_client)
         dv.wait_for_dv_success(timeout=TIMEOUT_1MIN)
-        create_vm_from_dv(client=unprivileged_client, dv=dv, start=True)
+        create_vm_from_dv(client=unprivileged_client, dv=dv, start=True, cpu_arch=py_config.get("cpu_arch", ""))
 
 
 @pytest.mark.sno
@@ -271,7 +271,12 @@ class TestVirtctlUploadExistingDV:
         uploaded_dv_scope_class.wait_for_dv_success(
             stop_status_func=dv_stop_status_restart_threshold, dv=uploaded_dv_scope_class
         )
-        with create_vm_from_dv(dv=uploaded_dv_scope_class, client=unprivileged_client, start=True):
+        with create_vm_from_dv(
+            dv=uploaded_dv_scope_class,
+            client=unprivileged_client,
+            start=True,
+            cpu_arch=py_config.get("cpu_arch", ""),
+        ):
             pass
 
     @pytest.mark.polarion("CNV-4033")
@@ -344,6 +349,7 @@ def test_virtctl_image_upload_with_exist_pvc(
                 memory_guest=Images.Cirros.DEFAULT_MEMORY_SIZE,
                 pvc=empty_pvc,
                 client=namespace.client,
+                cpu_arch=py_config.get("cpu_arch", ""),
             ) as vm:
                 running_vm(vm=vm, wait_for_interfaces=False)
 

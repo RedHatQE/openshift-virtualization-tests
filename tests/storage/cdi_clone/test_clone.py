@@ -4,6 +4,7 @@ Clone tests
 
 import pytest
 from ocp_resources.datavolume import DataVolume
+from pytest_testconfig import config as py_config
 
 from tests.os_params import FEDORA_LATEST
 from tests.storage.stop_status_utils import dv_stop_status_restart_threshold
@@ -49,6 +50,7 @@ def create_vm_from_clone_dv_template(
         os_flavor=OS_FLAVOR_FEDORA,
         client=client,
         memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
+        cpu_arch=py_config.get("cpu_arch", ""),
         data_volume_template=data_volume_template_dict_with_pvc_source(
             target_dv_name=dv_name,
             target_dv_namespace=namespace_name,
@@ -101,6 +103,7 @@ def test_successful_vm_restart_with_cloned_dv(
             os_flavor=OS_FLAVOR_FEDORA,
             memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
             wait_for_interfaces=True,
+            cpu_arch=py_config.get("cpu_arch", ""),
         ) as vm_dv:
             restart_vm_wait_for_running_vm(vm=vm_dv)
 
@@ -225,6 +228,7 @@ def test_successful_snapshot_clone(
                 os_flavor=OS_FLAVOR_FEDORA,
                 memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
                 wait_for_interfaces=True,
+                cpu_arch=py_config.get("cpu_arch", ""),
             ) as vm_dv:
                 assert_guest_disk_count(vm=vm_dv)
         pvc = cdv.pvc

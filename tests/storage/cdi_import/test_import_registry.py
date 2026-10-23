@@ -5,8 +5,9 @@ import pytest
 from kubernetes.client.rest import ApiException
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.resource import Resource
+from pytest_testconfig import config as py_config
 
-from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE
+from tests.storage.constants import QUAY_FEDORA_CONTAINER_IMAGE, get_fedora_container_image
 from tests.storage.stop_status_utils import dv_stop_status_restart_threshold
 from tests.storage.utils import wait_for_dv_condition_message
 from utilities.constants import Images
@@ -99,7 +100,7 @@ def test_public_registry_data_volume(
         source=REGISTRY_STR,
         dv_name=dv_name,
         namespace=namespace.name,
-        url=QUAY_FEDORA_CONTAINER_IMAGE,
+        url=get_fedora_container_image(py_config.get("cpu_arch", "")),
         content_type=content_type,
         size=Images.Fedora.DEFAULT_DV_SIZE,
         storage_class=storage_class_name_scope_function,
@@ -115,6 +116,7 @@ def test_public_registry_data_volume(
             os_flavor=OS_FLAVOR_FEDORA,
             memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
             wait_for_interfaces=True,
+            cpu_arch=py_config.get("cpu_arch", ""),
         )
 
 
@@ -127,7 +129,7 @@ def test_public_registry_data_volume_low_capacity(unprivileged_client, namespace
     dv_param = {
         "dv_name": "import-public-registry-low-capacity-dv",
         "source": REGISTRY_STR,
-        "url": QUAY_FEDORA_CONTAINER_IMAGE,
+        "url": get_fedora_container_image(py_config.get("cpu_arch", "")),
         "storage_class": storage_class_name_scope_function,
     }
     # negative flow - low capacity volume
@@ -167,6 +169,7 @@ def test_public_registry_data_volume_low_capacity(unprivileged_client, namespace
             os_flavor=OS_FLAVOR_FEDORA,
             memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
             wait_for_interfaces=True,
+            cpu_arch=py_config.get("cpu_arch", ""),
         ) as vm_dv:
             assert_guest_disk_count(vm=vm_dv)
 

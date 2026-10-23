@@ -8,6 +8,7 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.resource import Resource
 from ocp_resources.service_account import ServiceAccount
+from pytest_testconfig import py_config
 
 from tests.storage.restricted_namespace_cloning.constants import (
     CREATE,
@@ -340,6 +341,7 @@ def vm_for_restricted_namespace_cloning_test(
         client=unprivileged_client,
         memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
         data_volume_template=data_volume_clone_settings.res,
+        cpu_arch=py_config.get("cpu_arch", ""),
     ) as vm:
         running_vm(vm=vm)
         yield vm
