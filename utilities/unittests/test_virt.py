@@ -2,6 +2,10 @@
 
 import importlib
 import sys
+from unittest.mock import MagicMock, patch
+
+from pytest import mark, raises
+from timeout_sampler import TimeoutExpiredError
 
 # conftest.py mocks utilities.virt; clear and reload the real module for these tests.
 if "utilities.virt" in sys.modules:
@@ -11,6 +15,7 @@ import utilities.virt
 
 importlib.reload(utilities.virt)
 
+from utilities import virt
 from utilities.constants.virt import (
     DESCHEDULER_PREFER_NO_EVICTION_ANNOTATION,
     ES_LIVE_MIGRATE_IF_POSSIBLE,
@@ -106,3 +111,36 @@ class TestVirtualMachineForTestsLabel:
         assert vm.body["metadata"]["labels"] == {"existing": "true"}
         assert "name" not in vm.body["metadata"]
         assert vm.res["metadata"]["name"] == "test-vm"
+
+
+@mark.unit
+class TestWaitForWindowsVm:
+    @mark.parametrize("version", ["2019", "2025"])
+    def test_waits_for_expected_caption(self, mock_vm: MagicMock, version: str) -> None:
+        samples = iter([
+            {"CSName": f"server-{version}"},
+            {"Caption": None},
+            {"Caption": ""},
+            {"Caption": "Microsoft Windows Server 2016 Standard", "CSName": f"server-{version}"},
+            {"Caption": f"Microsoft Windows Server {version} Standard"},
+        ])
+        with patch.object(target=virt, attribute="get_cim_instance_json") as cim_query:
+            with patch.object(target=virt, attribute="TimeoutSampler", return_value=samples) as sampler:
+                result = virt.wait_for_windows_vm(vm=mock_vm, version=version, timeout=30)
+
+        assert result is True, "Expected Windows version was not recognized"
+        with raises(StopIteration):
+            next(samples)
+        sampler.assert_called_once_with(
+            wait_timeout=30,
+            sleep=15,
+            func=cim_query,
+            ssh_exec=mock_vm.ssh_exec,
+        )
+
+    def test_propagates_readiness_timeout(self, mock_vm: MagicMock) -> None:
+        samples = MagicMock()
+        samples.__iter__.side_effect = TimeoutExpiredError("Timeout", "Windows OS unavailable")
+        with patch.object(target=virt, attribute="TimeoutSampler", return_value=samples):
+            with raises(TimeoutExpiredError):
+                virt.wait_for_windows_vm(vm=mock_vm, version="2025", timeout=30)

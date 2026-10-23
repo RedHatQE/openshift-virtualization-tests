@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import logging
 import os
 import re
@@ -44,6 +43,7 @@ from utilities.constants.virt import (
     EIGHT_CPU_SOCKETS,
     FOUR_GI_MEMORY,
 )
+from utilities.windows import get_cim_instance_json
 
 LOGGER = logging.getLogger(__name__)
 
@@ -201,15 +201,6 @@ def get_ga_version(ssh_exec):
         ],
         tcp_timeout=TCP_TIMEOUT_30SEC,
     )[0].strip()
-
-
-def get_cim_instance_json(ssh_exec):
-    return json.loads(
-        run_ssh_commands(
-            host=ssh_exec,
-            commands=shlex.split('powershell -c "Get-CimInstance -Class Win32_OperatingSystem | ConvertTo-Json"'),
-        )[0]
-    )
 
 
 def get_reg_product_name(ssh_exec):
