@@ -2,6 +2,7 @@
 
 import importlib
 import sys
+from unittest.mock import MagicMock, patch
 
 # conftest.py mocks utilities.virt; clear and reload the real module for these tests.
 if "utilities.virt" in sys.modules:
@@ -18,6 +19,7 @@ from utilities.constants.virt import (
     EVICTIONSTRATEGY,
 )
 from utilities.virt import VirtualMachineForTests
+from utilities.virtual_machine import vm_template_upgrade_virtual_machine_spec
 
 
 def _build_vm_stub(
@@ -106,3 +108,86 @@ class TestVirtualMachineForTestsLabel:
         assert vm.body["metadata"]["labels"] == {"existing": "true"}
         assert "name" not in vm.body["metadata"]
         assert vm.res["metadata"]["name"] == "test-vm"
+
+
+class TestVmTemplateVirtualMachineSpec:
+    def test_builds_parameterized_vm_blueprint(self):
+        data_source = MagicMock()
+        data_source.name = "rhel-ds"
+        data_source.namespace = "openshift-virtualization-os-images"
+        data_source.client = MagicMock()
+        data_source.kind = "DataSource"
+        storage_class = "my-storage-class"
+        data_volume_template = {
+            "metadata": {"name": "${NAME}"},
+            "spec": {
+                "sourceRef": {
+                    "kind": "DataSource",
+                    "name": data_source.name,
+                    "namespace": data_source.namespace,
+                },
+                "storage": {"storageClassName": storage_class},
+            },
+        }
+        virtual_machine = MagicMock()
+        virtual_machine.res = {
+            "metadata": {"name": "${NAME}", "namespace": data_source.namespace},
+            "spec": {
+                "instancetype": {"kind": "VirtualMachineClusterInstancetype", "name": "${INSTANCETYPE}"},
+                "preference": {"kind": "VirtualMachineClusterPreference", "name": "${PREFERENCE}"},
+                "dataVolumeTemplates": [data_volume_template],
+            },
+        }
+        instance_type = MagicMock()
+        preference = MagicMock()
+
+        with (
+            patch(
+                "utilities.virtual_machine.data_volume_template_with_source_ref_dict",
+                return_value=data_volume_template,
+            ) as mock_data_volume_template,
+            patch(
+                "utilities.virtual_machine.VirtualMachineClusterInstancetype",
+                return_value=instance_type,
+            ) as mock_instance_type_cls,
+            patch(
+                "utilities.virtual_machine.VirtualMachineClusterPreference",
+                return_value=preference,
+            ) as mock_preference_cls,
+            patch(
+                "utilities.virtual_machine.VirtualMachineForTests",
+                return_value=virtual_machine,
+            ) as mock_virtual_machine_cls,
+        ):
+            result = vm_template_upgrade_virtual_machine_spec(
+                data_source=data_source,
+                storage_class=storage_class,
+            )
+
+        mock_data_volume_template.assert_called_once_with(
+            data_source=data_source,
+            storage_class=storage_class,
+            name="${NAME}",
+        )
+        mock_instance_type_cls.assert_called_once_with(name="${INSTANCETYPE}", client=data_source.client)
+        mock_preference_cls.assert_called_once_with(name="${PREFERENCE}", client=data_source.client)
+        mock_virtual_machine_cls.assert_called_once_with(
+            name="${NAME}",
+            namespace=data_source.namespace,
+            client=data_source.client,
+            generate_unique_name=False,
+            vm_instance_type=instance_type,
+            vm_preference=preference,
+            data_volume_template=data_volume_template,
+        )
+        virtual_machine.to_dict.assert_called_once_with()
+        assert result["metadata"]["name"] == "${NAME}"
+        assert "namespace" not in result["metadata"]
+        assert result["spec"]["instancetype"]["name"] == "${INSTANCETYPE}"
+        assert result["spec"]["preference"]["name"] == "${PREFERENCE}"
+        assert result["spec"]["dataVolumeTemplates"][0]["spec"]["sourceRef"] == {
+            "kind": "DataSource",
+            "name": data_source.name,
+            "namespace": data_source.namespace,
+        }
+        assert result["spec"]["dataVolumeTemplates"][0]["spec"]["storage"]["storageClassName"] == storage_class
