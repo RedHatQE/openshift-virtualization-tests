@@ -1,4 +1,4 @@
-"""Unit tests for construct_datavolume_source_dict in utilities/storage.py"""
+"""Unit tests for utilities/storage.py"""
 
 import importlib
 import sys
