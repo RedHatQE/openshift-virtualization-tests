@@ -8,6 +8,7 @@ from pyhelper_utils.shell import run_ssh_commands
 
 from tests.storage.constants import TEST_FILE_NAME
 from tests.storage.rhel9_rhel10_cluster.constants import SNAPSHOT_TEST_DATA, SNAPSHOT_TEST_FILE
+from tests.storage.utils import mount_hotplug_volume
 from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5SEC, TIMEOUT_10MIN
 from utilities.storage import run_command_on_vm_and_check_output
 from utilities.virt import running_vm, set_vm_affinity
@@ -105,15 +106,4 @@ def prepare_hotplug_disk(vm: VirtualMachineForTests, serial: str) -> None:
         .strip()
         .split()[0]
     )
-    for cmd in [
-        f"sudo mkfs.ext4 /dev/{device}",
-        f"sudo mkdir -p {HOTPLUG_MOUNT_POINT}",
-        f"sudo mount /dev/{device} {HOTPLUG_MOUNT_POINT}",
-        f"sudo chmod 777 {HOTPLUG_MOUNT_POINT}",
-    ]:
-        run_ssh_commands(
-            host=vm.ssh_exec,
-            commands=["bash", "-c", cmd],
-            wait_timeout=TIMEOUT_2MIN,
-            sleep=TIMEOUT_5SEC,
-        )
+    mount_hotplug_volume(vm=vm, device=f"/dev/{device}", mount_path=HOTPLUG_MOUNT_POINT)

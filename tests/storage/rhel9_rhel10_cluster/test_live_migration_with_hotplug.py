@@ -13,12 +13,11 @@ import pytest
 
 from tests.storage.rhel9_rhel10_cluster.utils import HOTPLUG_TEST_FILE
 from utilities.constants.cluster import RHCOS9_AFFINITY, RHCOS9_WORKER_LABEL, RHCOS10_AFFINITY
-from utilities.storage import run_command_on_vm_and_check_output, wait_for_vm_volume_ready
+from utilities.storage import run_command_on_vm_and_check_output
 from utilities.virt import VirtualMachineForTests, migrate_vm_and_verify, set_vm_affinity
 
 if TYPE_CHECKING:
     from kubernetes.dynamic import DynamicClient
-    from ocp_resources.datavolume import DataVolume
 
 pytestmark = [
     pytest.mark.mixed_os_nodes,
@@ -40,7 +39,6 @@ class TestLiveMigrationWithHotplug:
         self,
         admin_client: DynamicClient,
         vm_with_hotplug_on_rhcos9: VirtualMachineForTests,
-        blank_dv_for_hotplug: DataVolume,
         written_test_data_on_rhcos9: str,
     ) -> None:
         """
@@ -67,7 +65,6 @@ class TestLiveMigrationWithHotplug:
         """
         set_vm_affinity(vm=vm_with_hotplug_on_rhcos9, affinity=RHCOS10_AFFINITY)
         migrate_vm_and_verify(vm=vm_with_hotplug_on_rhcos9, client=admin_client, check_ssh_connectivity=True)
-        wait_for_vm_volume_ready(vm=vm_with_hotplug_on_rhcos9, volume_name=blank_dv_for_hotplug.name)
         assert (
             RHCOS9_WORKER_LABEL
             not in vm_with_hotplug_on_rhcos9.vmi.get_node(privileged_client=admin_client).labels.keys()
@@ -82,7 +79,6 @@ class TestLiveMigrationWithHotplug:
         self,
         admin_client: DynamicClient,
         vm_with_hotplug_on_rhcos10: VirtualMachineForTests,
-        blank_dv_for_hotplug: DataVolume,
         written_test_data_on_rhcos10: str,
     ) -> None:
         """
@@ -109,7 +105,6 @@ class TestLiveMigrationWithHotplug:
         """
         set_vm_affinity(vm=vm_with_hotplug_on_rhcos10, affinity=RHCOS9_AFFINITY)
         migrate_vm_and_verify(vm=vm_with_hotplug_on_rhcos10, client=admin_client, check_ssh_connectivity=True)
-        wait_for_vm_volume_ready(vm=vm_with_hotplug_on_rhcos10, volume_name=blank_dv_for_hotplug.name)
         assert (
             RHCOS9_WORKER_LABEL in vm_with_hotplug_on_rhcos10.vmi.get_node(privileged_client=admin_client).labels.keys()
         ), f"VM {vm_with_hotplug_on_rhcos10.name} is not running on an RHCOS9 node after migration"

@@ -36,13 +36,12 @@ if TYPE_CHECKING:
 
 @contextmanager
 def _written_test_data(
-    namespace: Namespace,
     vm: VirtualMachineForTests,
     dv: DataVolume,
 ) -> Generator[str]:
     with virtctl_volume(
         action="add",
-        namespace=namespace.name,
+        namespace=vm.namespace,
         vm_name=vm.name,
         volume_name=dv.name,
         serial=HOTPLUG_DISK_SERIAL,
@@ -95,6 +94,7 @@ def vm_with_hotplug_on_rhcos9(
     namespace: Namespace,
     fedora_data_source_scope_module,
     modern_cpu_for_migration: str | None,
+    rwx_storage_class_name_scope_module: str,
 ) -> Generator[VirtualMachineForTests]:
     with VirtualMachineForTests(
         name="vm-hotplug-rhcos9",
@@ -104,6 +104,7 @@ def vm_with_hotplug_on_rhcos9(
         vm_preference_infer=True,
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=fedora_data_source_scope_module,
+            storage_class=rwx_storage_class_name_scope_module,
         ),
         cpu_model=modern_cpu_for_migration,
         vm_affinity=RHCOS9_AFFINITY,
@@ -118,6 +119,7 @@ def vm_with_hotplug_on_rhcos10(
     namespace: Namespace,
     fedora_data_source_scope_module,
     modern_cpu_for_migration: str | None,
+    rwx_storage_class_name_scope_module: str,
 ) -> Generator[VirtualMachineForTests]:
     with VirtualMachineForTests(
         name="vm-hotplug-rhcos10",
@@ -127,6 +129,7 @@ def vm_with_hotplug_on_rhcos10(
         vm_preference_infer=True,
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=fedora_data_source_scope_module,
+            storage_class=rwx_storage_class_name_scope_module,
         ),
         cpu_model=modern_cpu_for_migration,
         vm_affinity=RHCOS10_AFFINITY,
@@ -139,13 +142,16 @@ def vm_with_hotplug_on_rhcos10(
 def blank_dv_for_hotplug(
     unprivileged_client: DynamicClient,
     namespace: Namespace,
+    rwx_storage_class_name_scope_module: str,
+    unique_suffix_scope_function: str,
 ) -> Generator[DataVolume]:
     with create_dv(
         client=unprivileged_client,
         source="blank",
-        dv_name="blank-dv-hotplug-migration",
+        dv_name=f"blank-dv-hotplug-migration-{unique_suffix_scope_function}",
         namespace=namespace.name,
         size=BLANK_DV_SIZE,
+        storage_class=rwx_storage_class_name_scope_module,
         consume_wffc=False,
     ) as dv:
         yield dv
@@ -153,19 +159,17 @@ def blank_dv_for_hotplug(
 
 @pytest.fixture()
 def written_test_data_on_rhcos9(
-    namespace: Namespace,
     vm_with_hotplug_on_rhcos9: VirtualMachineForTests,
     blank_dv_for_hotplug: DataVolume,
 ) -> Generator[str]:
-    with _written_test_data(namespace=namespace, vm=vm_with_hotplug_on_rhcos9, dv=blank_dv_for_hotplug) as data:
+    with _written_test_data(vm=vm_with_hotplug_on_rhcos9, dv=blank_dv_for_hotplug) as data:
         yield data
 
 
 @pytest.fixture()
 def written_test_data_on_rhcos10(
-    namespace: Namespace,
     vm_with_hotplug_on_rhcos10: VirtualMachineForTests,
     blank_dv_for_hotplug: DataVolume,
 ) -> Generator[str]:
-    with _written_test_data(namespace=namespace, vm=vm_with_hotplug_on_rhcos10, dv=blank_dv_for_hotplug) as data:
+    with _written_test_data(vm=vm_with_hotplug_on_rhcos10, dv=blank_dv_for_hotplug) as data:
         yield data
