@@ -85,10 +85,26 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Collection, Sequence
 
 
-run_command = cast(
-    "Callable[..., tuple[bool, str, str]]",
-    import_module("pyhelper_utils.shell").run_command,
-)
+def run_command(command: list[str], check: bool, verify_stderr: bool) -> tuple[bool, str, str]:
+    """Run a shell command through ``pyhelper_utils``.
+
+    The implementation is imported lazily so this module stays importable
+    in stdlib-only pre-commit hook environments (see
+    ``scripts/pre_commit_hooks/check_banned.py``).
+
+    Args:
+        command: Command tokens to execute.
+        check: Whether a non-zero exit status raises an error.
+        verify_stderr: Whether output on stderr is treated as a failure.
+
+    Returns:
+        Success flag, stdout, and stderr of the command.
+    """
+    shell_run_command = cast(
+        "Callable[..., tuple[bool, str, str]]",
+        import_module("pyhelper_utils.shell").run_command,
+    )
+    return shell_run_command(command=command, check=check, verify_stderr=verify_stderr)
 
 
 @dataclass(frozen=True, slots=True)

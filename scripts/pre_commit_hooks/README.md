@@ -12,6 +12,11 @@ The check families are `path-policy`, `linter-directives`, `python-source`,
 `test-std`, and `stp-links`. Without a `--check` selection the entry point
 runs every family.
 
+A second, stateless entry point,
+[`check_banned.py`](check_banned.py) with the families `banned-paths` and
+`banned-constructs`, checks whole files supplied by pre-commit without any
+Git state. It is described under "CI enforcement" below.
+
 ## Installation and usage
 
 Install the Git hook once per clone (see
@@ -45,6 +50,31 @@ connect to a cluster, and worktree-only local source must not affect
 staged-source classification. The only network access is `check-stp-links`,
 which contacts the design-docs repository through `gh api` when staged STP
 references exist.
+
+## CI enforcement
+
+The hooks are enforced in CI in two tiers.
+
+**Stateless whole-file checks** (`check-banned-paths`,
+`check-banned-constructs`, entry point
+[`check_banned.py`](check_banned.py)) read no Git state and need no project
+environment, so they run everywhere: locally, on pre-commit.ci (which
+checks the whole committed tree with `--all-files`), and in the
+[`Pre-commit Policy Checks`](../../.github/workflows/pre-commit-policy-checks.yml)
+workflow. They only enforce rules that hold for the entire repository:
+top-level test modules, Python symlinks, relative imports, async/await,
+and direct `DynamicClient` construction.
+
+**Staged-diff checks** (the `check_policy.py` families) compare the staged
+index with `HEAD` and need the project environment (`uv`, `ocp_resources`)
+or network access (`gh` for `check-stp-links`). pre-commit.ci provides
+none of these and its clean committed checkout leaves the staged index
+empty, so these hooks are listed in the `ci: skip` section of
+`.pre-commit-config.yaml` and enforced by the
+[`Pre-commit Policy Checks`](../../.github/workflows/pre-commit-policy-checks.yml)
+GitHub Actions workflow instead. That workflow stages the pull request
+diff against the base branch (`git reset --soft` to the merge base) so the
+hooks run with their exact local semantics over the pull request changes.
 
 ## Path checks
 

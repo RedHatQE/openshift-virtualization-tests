@@ -1,0 +1,57 @@
+name: Pre-commit Policy Checks
+
+on:
+  pull_request:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+jobs:
+  policy-checks:
+    name: Run staged policy hooks on the pull request diff
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.3.0
+        with:
+          python-version: "3.14"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Install pre-commit
+        run: uv tool install pre-commit
+
+      - name: Sync project environment
+        run: uv sync
+
+      - name: Stage the pull request diff
+        run: |
+          git fetch origin main
+          BASE_SHA="$(git merge-base origin/main HEAD)"
+          git reset --soft "${BASE_SHA}"
+          echo "Policy checks run against the staged diff versus ${BASE_SHA}:"
+          git diff --cached --stat
+
+      - name: Run policy checks
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            hook_ids=(check-banned-paths check-banned-constructs)
+          else
+            hook_ids=(check-banned-paths check-banned-constructs check-staged-paths check-linter-directives check-python-source check-test-std check-stp-links)
+          fi
+          for hook_id in "${hook_ids[@]}"; do
+            pre-commit run "${hook_id}" --all-files
+          done

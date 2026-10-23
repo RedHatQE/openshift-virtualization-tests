@@ -2,6 +2,13 @@ default_language_version:
   python: python3.14
 
 ci:
+  # The staged-diff policy hooks read the Git index and need the project
+  # environment (uv, ocp_resources, gh, network), none of which pre-commit.ci
+  # provides; they are enforced by the "Pre-commit Policy Checks" GitHub
+  # Actions workflow (see .github/workflows/pre-commit-policy-checks.yml).
+  # The stateless check-banned-* hooks have no such needs and DO run on
+  # pre-commit.ci. check-jsonschema fetches a remote schema file, which
+  # pre-commit.ci also cannot do.
   skip: [check-jsonschema, check-staged-paths, check-linter-directives, check-python-source, check-test-std, check-stp-links]
 
 repos:
@@ -85,6 +92,27 @@ repos:
 
   - repo: local
     hooks:
+      # Stateless whole-file checks: no Git state and no project environment
+      # are needed, so these hooks also run on pre-commit.ci, which checks
+      # the whole committed tree with --all-files.
+      - id: check-banned-paths
+        name: ban top-level test files and Python symlinks (whole repository)
+        entry: python -m scripts.pre_commit_hooks.check_banned --check banned-paths
+        language: python
+        types_or: [file, symlink]
+        always_run: true
+        require_serial: true
+        stages: [pre-commit]
+      - id: check-banned-constructs
+        name: ban DynamicClient construction, relative imports, and async/await (whole repository)
+        entry: python -m scripts.pre_commit_hooks.check_banned --check banned-constructs
+        language: python
+        types: [python]
+        always_run: true
+        require_serial: true
+        stages: [pre-commit]
+      # Staged-diff checks: these read the Git index and need the project
+      # environment (and gh for stp-links); pre-commit.ci cannot run them.
       - id: check-staged-paths
         name: ban bad staged paths (generated docs/site, top-level tests) and staged symlinks
         entry: uv run python scripts/pre_commit_hooks/check_policy.py --check path-policy
