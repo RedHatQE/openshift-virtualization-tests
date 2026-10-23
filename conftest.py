@@ -141,6 +141,7 @@ EXCLUDE_MARKER_FROM_TIER2_MARKER = [
     "mtv",
     "multiarch",
     "mixed_os_nodes",
+    "ovs_dpdk",
 ]
 
 TEAM_MARKERS = {
