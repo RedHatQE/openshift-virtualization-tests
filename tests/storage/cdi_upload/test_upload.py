@@ -3,10 +3,8 @@ Upload tests
 """
 
 import logging
-import multiprocessing
 import time
 from random import shuffle
-from time import sleep
 
 import pytest
 from ocp_resources.datavolume import DataVolume
@@ -17,12 +15,12 @@ from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutSampler
 
 import tests.storage.utils as storage_utils
-import utilities.storage
 from tests.os_params import RHEL_LATEST
+from tests.storage.cdi_upload.utils import upload_images_to_multiple_dvs
 from tests.storage.stop_status_utils import dv_stop_status_restart_threshold
 from utilities.constants import Images
 from utilities.constants.components import CDI_UPLOADPROXY
-from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_3MIN, TIMEOUT_5MIN
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_3MIN
 from utilities.storage import create_vm_from_dv, get_downloaded_artifact
 
 LOGGER = logging.getLogger(__name__)
@@ -44,6 +42,7 @@ def wait_for_upload_response_code(token, data, response_code, asynchronous=False
     for sample in sampler:
         if sample == response_code:
             return True
+        LOGGER.info(f"Upload response code: {sample} (expecting {response_code})")
 
 
 @pytest.mark.polarion("CNV-2318")
@@ -253,36 +252,9 @@ def test_successful_upload_token_expiry(unprivileged_client, namespace, data_vol
         wait_for_upload_response_code(token=token, data="test", response_code=HTTP_UNAUTHORIZED)
 
 
-def _upload_image(dv_name, namespace, storage_class, local_name, client):
-    """
-    Upload image function for the use of other tests
-    """
-    with utilities.storage.create_dv(
-        client=client,
-        source="upload",
-        dv_name=dv_name,
-        namespace=namespace.name,
-        size="3Gi",
-        storage_class=storage_class,
-    ) as dv:
-        LOGGER.info("Wait for DV to be UploadReady")
-        dv.wait_for_status(status=DataVolume.Status.UPLOAD_READY, timeout=TIMEOUT_5MIN)
-        with UploadTokenRequest(
-            client=client,
-            name=dv_name,
-            namespace=namespace.name,
-            pvc_name=dv.pvc.name,
-        ) as utr:
-            token = utr.create().status.token
-            sleep(5)
-            LOGGER.info("Ensure upload was successful")
-            wait_for_upload_response_code(token=token, data=local_name, response_code=HTTP_OK)
-
-
 @pytest.mark.sno
 @pytest.mark.s390x
 @pytest.mark.polarion("CNV-2015")
-@pytest.mark.usefixtures("multiprocessing_start_method_fork")
 @pytest.mark.parametrize(
     "upload_file_path",
     [
@@ -302,21 +274,31 @@ def test_successful_concurrent_uploads(
     namespace,
     storage_class_matrix__module__,
 ):
-    dvs_processes = []
+    """Test concurrent uploads to multiple DataVolumes.
+
+    Preconditions:
+        - Available PVs in the cluster
+
+    Steps:
+        1. Create DataVolumes for each available PV
+        2. Wait for UPLOAD_READY status
+        3. Upload images to all DataVolumes
+
+    Expected:
+        - All uploads complete successfully with HTTP 200
+    """
     storage_class = [*storage_class_matrix__module__][0]
     available_pv = PersistentVolume(name=namespace, client=admin_client).max_available_pvs
-    for dv in range(available_pv):
-        dv_process = multiprocessing.Process(
-            target=_upload_image,
-            args=(f"dv-{dv}", namespace, storage_class, upload_file_path, unprivileged_client),
-        )
-        dv_process.start()
-        dvs_processes.append(dv_process)
+    assert available_pv > 0, "No PVs available for concurrent upload test"
 
-    for dvs in dvs_processes:
-        dvs.join()
-        if dvs.exitcode != 0:
-            raise pytest.fail("Creating DV exited with non-zero return code")
+    upload_images_to_multiple_dvs(
+        client=unprivileged_client,
+        namespace_name=namespace.name,
+        storage_class=storage_class,
+        num_dvs=available_pv,
+        upload_file_path=upload_file_path,
+        wait_for_upload_response_code=wait_for_upload_response_code,
+    )
 
 
 @pytest.mark.sno
