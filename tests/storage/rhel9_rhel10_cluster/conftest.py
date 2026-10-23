@@ -96,6 +96,14 @@ def vm_with_hotplug_on_rhcos9(
     modern_cpu_for_migration: str | None,
     rwx_storage_class_name_scope_module: str,
 ) -> Generator[VirtualMachineForTests]:
+    """Create a running Fedora VM pinned to an RHCOS9 node for hotplug testing.
+
+    VM is created with RWX storage and a modern CPU model suitable for migration,
+    then brought up and yielded for hotplug volume operations.
+
+    Yields:
+        VirtualMachineForTests: Running VM with RHCOS9 affinity.
+    """
     with VirtualMachineForTests(
         name="vm-hotplug-rhcos9",
         namespace=namespace.name,
@@ -121,6 +129,14 @@ def vm_with_hotplug_on_rhcos10(
     modern_cpu_for_migration: str | None,
     rwx_storage_class_name_scope_module: str,
 ) -> Generator[VirtualMachineForTests]:
+    """Create a running Fedora VM pinned to an RHCOS10 node for hotplug testing.
+
+    VM is created with RWX storage and a modern CPU model suitable for migration,
+    then brought up and yielded for hotplug volume operations.
+
+    Yields:
+        VirtualMachineForTests: Running VM with RHCOS10 affinity.
+    """
     with VirtualMachineForTests(
         name="vm-hotplug-rhcos10",
         namespace=namespace.name,
@@ -145,6 +161,14 @@ def blank_dv_for_hotplug(
     rwx_storage_class_name_scope_module: str,
     unique_suffix_scope_function: str,
 ) -> Generator[DataVolume]:
+    """Create a blank DataVolume with RWX storage for hotplug volume operations.
+
+    DV is created without consuming WaitForFirstConsumer (WFFC) binding,
+    allowing it to be hotplugged to a running VM.
+
+    Yields:
+        DataVolume: Blank DataVolume ready for hotplug attachment.
+    """
     with create_dv(
         client=unprivileged_client,
         source="blank",
@@ -162,6 +186,14 @@ def written_test_data_on_rhcos9(
     vm_with_hotplug_on_rhcos9: VirtualMachineForTests,
     blank_dv_for_hotplug: DataVolume,
 ) -> Generator[str]:
+    """Hotplug the blank DV to the RHCOS9 VM, format it, and write test data.
+
+    Attaches the blank volume via virtctl, prepares the disk filesystem,
+    writes a test file, then yields the expected file content for assertions.
+
+    Yields:
+        str: Content written to the hotplugged disk.
+    """
     with _written_test_data(vm=vm_with_hotplug_on_rhcos9, dv=blank_dv_for_hotplug) as data:
         yield data
 
@@ -171,5 +203,13 @@ def written_test_data_on_rhcos10(
     vm_with_hotplug_on_rhcos10: VirtualMachineForTests,
     blank_dv_for_hotplug: DataVolume,
 ) -> Generator[str]:
+    """Hotplug the blank DV to the RHCOS10 VM, format it, and write test data.
+
+    Attaches the blank volume via virtctl, prepares the disk filesystem,
+    writes a test file, then yields the expected file content for assertions.
+
+    Yields:
+        str: Content written to the hotplugged disk.
+    """
     with _written_test_data(vm=vm_with_hotplug_on_rhcos10, dv=blank_dv_for_hotplug) as data:
         yield data
