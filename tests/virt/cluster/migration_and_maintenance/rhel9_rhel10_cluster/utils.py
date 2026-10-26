@@ -1,4 +1,4 @@
-from kubernetes.dynamic import DynamicClient
+from typing import TYPE_CHECKING
 
 from utilities.constants.timeouts import TIMEOUT_10MIN, TIMEOUT_30MIN
 from utilities.virt import (
@@ -7,6 +7,9 @@ from utilities.virt import (
     wait_for_migration_finished,
     wait_for_ssh_connectivity,
 )
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
 
 
 def wait_for_autopilot_rhos_migration(vm: VirtualMachineForTests, admin_client: DynamicClient) -> None:

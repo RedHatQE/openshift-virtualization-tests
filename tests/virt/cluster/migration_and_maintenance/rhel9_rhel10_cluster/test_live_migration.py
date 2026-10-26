@@ -56,9 +56,7 @@ def test_vm_migrates_from_rhcos10_to_rhcos9_node(
     admin_client: DynamicClient,
     dual_stream_migration_vm: VirtualMachineForTests,
 ) -> None:
-    """
-    Test that live migration from an RHCOS 10 worker node to an RHCOS 9 worker node
-    completes successfully without restarting the VM.
+    """Test live migration from an RHCOS 10 worker node to an RHCOS 9 worker node.
 
     STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/dual-stream-cluster-rhcos9-rhcos10/stp.md
 
@@ -67,7 +65,8 @@ def test_vm_migrates_from_rhcos10_to_rhcos9_node(
 
     Steps:
         1. Record VM boot time
-        2. Live migrate the under-test VM to an RHCOS 9 worker node
+        2. Set the VM affinity to RHCOS 9
+        3. Autopilot live-migrates the under-test VM to an RHCOS 9 worker node
 
     Expected:
         - Live migration completes successfully and the VM is running on an RHCOS 9 worker node
@@ -114,9 +113,7 @@ def test_vm_migrates_from_rhcos9_to_rhcos10_node(
     admin_client: DynamicClient,
     dual_stream_migration_vm: VirtualMachineForTests,
 ) -> None:
-    """
-    Test that live migration from an RHCOS 9 worker node to an RHCOS 10 worker node
-    completes successfully without restarting the VM.
+    """Test live migration from an RHCOS 9 worker node to an RHCOS 10 worker node.
 
     STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/dual-stream-cluster-rhcos9-rhcos10/stp.md
 
@@ -125,7 +122,8 @@ def test_vm_migrates_from_rhcos9_to_rhcos10_node(
 
     Steps:
         1. Record VM boot time
-        2. Live migrate the under-test VM to an RHCOS 10 worker node
+        2. Set the VM affinity to RHCOS 10
+        3. Autopilot live-migrates the under-test VM to an RHCOS 10 worker node
 
     Expected:
         - Live migration completes successfully and the VM is running on an RHCOS 10 worker node
