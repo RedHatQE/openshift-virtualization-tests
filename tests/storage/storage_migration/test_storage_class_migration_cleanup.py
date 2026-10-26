@@ -2,8 +2,6 @@
 
 import pytest
 
-from tests.storage.storage_migration.constants import DELETE_SOURCE, KEEP_SOURCE
-
 
 class TestStorageMigrationRetentionPolicy:
     """Retention policy behavior for storage migration."""
