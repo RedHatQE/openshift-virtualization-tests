@@ -12,16 +12,3 @@ The retentionPolicy field can be configured at:
 
 STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_cleanup.md
 """
-
-import pytest
-from pytest_testconfig import config as py_config
-
-from tests.storage.constants import STORAGE_CLASS_A, STORAGE_CLASS_B
-from tests.storage.storage_migration.constants import DELETE_SOURCE, KEEP_SOURCE
-from tests.storage.storage_migration.utils import (
-    verify_source_dvs_deleted,
-    verify_source_dvs_exist,
-    verify_vm_storage_class_updated,
-)
-from utilities.constants.pytest import QUARANTINED
-
