@@ -8,6 +8,7 @@ import base64
 import logging
 import os
 import ssl
+from uuid import uuid4
 
 import pytest
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
@@ -530,3 +531,17 @@ def fedora_data_source_scope_module(golden_images_namespace):
 @pytest.fixture(scope="class")
 def storage_class_name_scope_class(storage_class_matrix__class__):
     return [*storage_class_matrix__class__][0]
+
+
+@pytest.fixture()
+def unique_suffix_scope_function():
+    """Provide a function-scoped unique suffix for per-test resource names.
+
+    Use this instead of the class-scoped `unique_suffix` when each test method needs a
+    distinct suffix - e.g. to keep names unique when a class- or module-scoped namespace
+    is shared, so a controller cannot match a previous test's stale resource by name.
+
+    Returns:
+        A collision-resistant hexadecimal random suffix.
+    """
+    return uuid4().hex
