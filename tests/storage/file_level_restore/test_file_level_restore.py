@@ -708,7 +708,7 @@ class TestFileRestoreStorageCompatibility:
     __test__ = False
 
     @pytest.mark.polarion("CNV-16836")
-    @pytest.mark.jira("CNV-99267", run=False)
+    @pytest.mark.jira("CNV-99953", run=False)
     @pytest.mark.manual
     def test_restore_with_source_volume_mode_mismatch(self):
         """
