@@ -546,11 +546,11 @@ def combined_mode_mig_migration(
 
 
 @pytest.fixture()
-def second_vm_namespace(admin_client, unprivileged_client, unique_suffix):
+def second_vm_namespace(admin_client, unprivileged_client, unique_suffix_scope_function):
     yield from create_ns(
         admin_client=admin_client,
         unprivileged_client=unprivileged_client,
-        name=f"test-scmig-cleanup-second-ns-{unique_suffix}",
+        name=f"test-scmig-cleanup-second-ns-{unique_suffix_scope_function}",
     )
 
 
