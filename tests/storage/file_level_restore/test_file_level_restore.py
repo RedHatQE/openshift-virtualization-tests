@@ -5,7 +5,11 @@ STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob
 Jira: https://redhat.atlassian.net/browse/VIRTSTRAT-480 # <skip-jira-utils-check>
 """
 
+from shlex import quote
+
 import pytest
+from pyhelper_utils.exceptions import CommandExecFailed
+from pyhelper_utils.shell import run_ssh_commands
 
 from tests.storage.file_level_restore.constants import (
     LINUX_VENDOR_RESTORE_CR_NAME,
@@ -20,15 +24,25 @@ from tests.storage.file_level_restore.utils import (
     VirtualMachineFileRestore,
     assert_file_restore_operator_pod_running,
     assert_successful_restore_cleanup,
+    assert_windows_backup_read_only,
     assert_windows_ntfs_acl_matches,
     count_files_in_windows_directory,
     get_restored_files_count,
+    linux_backup_file_path,
+    restore_volume_name,
     wait_for_file_restore_operator_ready,
     wait_for_file_restore_phase,
+    windows_backup_file_path,
     windows_data_disk_path,
     windows_guest_path,
 )
-from utilities.storage import run_command_on_vm_and_check_output, verify_file_in_windows_vm
+from tests.storage.online_resize.utils import cksum_file
+from utilities.constants.timeouts import TIMEOUT_10MIN
+from utilities.storage import (
+    run_command_on_vm_and_check_output,
+    verify_dv_and_pvc_does_not_exist,
+    verify_file_in_windows_vm,
+)
 
 
 class TestFileRestoreOperatorDeployment:
@@ -612,3 +626,404 @@ class TestFileRestoreSequentialFromSameSnapshot:
             admin_client=admin_client,
             snapshot_source=True,
         )
+
+
+class TestFileRestoreCrossNamespace:
+    """
+    Tests for restoring files from volume snapshots in a different namespace.
+
+    Preconditions:
+        - vm-file-restore-operator deployed and running in openshift-cnv namespace
+        - A Target namespace contains the running Linux VM with guest helper installed and filerestore user SSH-configured
+        - A different Source namespace contains the VolumeSnapshot
+        - Cross-namespace restore permissions configured for the source VolumeSnapshot
+    """
+
+    @pytest.mark.polarion("CNV-16835")
+    def test_restore_from_different_namespace(
+        self,
+        admin_client,
+        namespace,
+        file_restore_linux_vm,
+        cross_namespace_data_disk_snapshot,
+        deleted_cross_namespace_linux_file,
+        cross_namespace_file_restore,
+    ):
+        """
+        Test that restore from a volume snapshot in a different namespace succeeds and cleans up.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
+        Preconditions:
+            - A Target namespace contains the running Linux VM with guest helper installed and filerestore user SSH-configured
+            - A different Source namespace contains a VolumeSnapshot with a file of known content
+            - Cross-namespace restore permissions configured for the source VolumeSnapshot
+            - Target file deleted from the Linux VM
+
+        Steps:
+            1. Create a VMFileRestore in the Target namespace that references the VolumeSnapshot in the Source namespace
+            2. Wait for the restore operation to complete
+            3. Read the restored file from the Linux VM
+            4. Inspect the Target namespace for temporary restore resources
+
+        Expected:
+            - Restore succeeds with the original file content and no temporary resources remain in the Target namespace
+        """
+        restore_path, expected_content = deleted_cross_namespace_linux_file
+        assert cross_namespace_data_disk_snapshot.namespace != namespace.name, (
+            "Cross-namespace restore requires the snapshot and target VM to be in different namespaces"
+        )
+        wait_for_file_restore_phase(
+            file_restore=cross_namespace_file_restore,
+            target_phase=VirtualMachineFileRestore.Phase.SUCCEEDED,
+        )
+        run_command_on_vm_and_check_output(
+            vm=file_restore_linux_vm,
+            command=f"cat {quote(restore_path)}",
+            expected_result=expected_content,
+        )
+        assert_successful_restore_cleanup(
+            vm=file_restore_linux_vm,
+            restore_cr_name=cross_namespace_file_restore.name,
+            namespace_name=namespace.name,
+            admin_client=admin_client,
+            snapshot_source=True,
+        )
+        verify_dv_and_pvc_does_not_exist(
+            name=restore_volume_name(restore_cr_name=cross_namespace_file_restore.name),
+            namespace=namespace.name,
+            client=admin_client,
+        )
+
+
+class TestFileRestoreStorageCompatibility:
+    """
+    Tests for restore compatibility with non-default storage configurations.
+
+    Preconditions:
+        - vm-file-restore-operator deployed and running in openshift-cnv namespace
+        - Running Linux VM with guest helper installed and filerestore user SSH-configured
+        - VolumeSnapshot-capable StorageClass available
+    """
+
+    __test__ = False
+
+    @pytest.mark.polarion("CNV-16836")
+    @pytest.mark.jira("CNV-99267", run=False)
+    @pytest.mark.manual
+    def test_restore_with_source_volume_mode_mismatch(self):
+        """
+        Test that restore succeeds when the source volume mode differs from the StorageProfile's default volume mode.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
+         Preconditions:
+             - Running Linux VM with guest helper installed and filerestore user SSH-configured
+             - VolumeSnapshot created from a Filesystem-mode PVC and containing a file with known content
+             - StorageProfile prefers Block volume mode for the ReadWriteOnce restore volume
+             - Target file deleted from the Linux VM
+
+         Steps:
+             1. Verify that the snapshot source volume mode is Filesystem and the StorageProfile prefers Block volume mode for the ReadWriteOnce restore volume
+             2. Create a VMFileRestore from the VolumeSnapshot
+             3. Verify that the temporary restore volume preserves the Filesystem source volume mode
+             4. Wait for the restore operation to complete
+             5. Read the restored file from the Linux VM
+
+         Expected:
+             - Restore succeeds using the Filesystem source volume mode despite the Block preference, and the restored file content matches the snapshot source
+        """
+
+
+@pytest.mark.tier3
+@pytest.mark.windows
+class TestFileRestoreWindowsManualBrowsing:
+    """
+    Tests for manual browsing of Windows backup volumes.
+
+    Preconditions:
+        - vm-file-restore-operator deployed and running in openshift-cnv namespace
+        - Running Windows VM with OpenSSH Server and guest helper installed, and filerestore user SSH-configured
+        - NTFS backup volume containing files with known content
+    """
+
+    @pytest.mark.polarion("CNV-16837")
+    def test_manual_browsing_of_windows_ntfs_backup_volume(
+        self,
+        windows_file_restore_vm,
+        windows_test_file_on_data_disk,
+        windows_manual_browsing_file_restore,
+    ):
+        """
+        Test that manual restore mode exposes an NTFS backup volume for read-only browsing.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
+        Preconditions:
+            - Running Windows VM with OpenSSH Server and guest helper installed, and filerestore user SSH-configured
+            - NTFS backup volume containing files with known content
+
+        Steps:
+            1. Create a manual-mode VMFileRestore from the NTFS backup volume
+            2. Wait for the backup volume to become available in the Windows VM
+            3. Read a known file from the mounted backup volume
+            4. Attempt to modify a file on the mounted backup volume
+
+        Expected:
+            - Known backup content is readable and stays unchanged after a modification attempt (read-only mount)
+        """
+        guest_path, expected_content = windows_test_file_on_data_disk
+        wait_for_file_restore_phase(
+            file_restore=windows_manual_browsing_file_restore,
+            target_phase=VirtualMachineFileRestore.Phase.VOLUME_READY,
+        )
+        backup_file_path = windows_backup_file_path(
+            vm=windows_file_restore_vm,
+            restore_cr_name=windows_manual_browsing_file_restore.name,
+            relative_path=windows_guest_path(guest_path=guest_path).split(":\\", maxsplit=1)[1],
+        )
+        verify_file_in_windows_vm(
+            windows_vm=windows_file_restore_vm,
+            file_name_with_path=backup_file_path,
+            file_content=expected_content,
+        )
+        assert_windows_backup_read_only(
+            vm=windows_file_restore_vm,
+            backup_file_path=backup_file_path,
+        )
+
+
+class TestFileRestoreGuestConnectionInterruption:
+    """
+    Tests for restore behavior when guest connectivity is interrupted.
+
+    Preconditions:
+        - vm-file-restore-operator deployed and running in openshift-cnv namespace
+        - Running Linux VM with guest helper installed and filerestore user SSH-configured
+        - Backup volume containing multiple files
+    """
+
+    __test__ = False
+
+    @pytest.mark.polarion("CNV-16838")
+    @pytest.mark.jira("CNV-93092", run=False)
+    @pytest.mark.manual
+    def test_guest_connection_loss_during_file_transfer(self):
+        """
+        [NEGATIVE] Test that an interrupted guest connection reports partial completion and supports retry.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
+        Preconditions:
+            - Running Linux VM with guest helper installed and filerestore user SSH-configured
+            - Backup volume containing multiple files
+            - File transfer is in progress
+
+        Steps:
+            1. Interrupt the guest connection during file transfer
+            2. Wait for the restore operation to report the interrupted transfer
+            3. Restore the guest connection
+            4. Retry the file restore request
+
+        Expected:
+            - Interrupted transfer reports partial completion and the retry restores all requested files successfully
+        """
+
+
+class TestFileRestoreRootDiskManualBrowsing:
+    """
+    Tests for manual browsing of Linux root disk backups.
+
+    Preconditions:
+        - vm-file-restore-operator deployed and running in openshift-cnv namespace
+        - Running Linux VM with guest helper installed and filerestore user SSH-configured
+        - Root disk backup available for manual browsing
+    """
+
+    @pytest.mark.polarion("CNV-16839")
+    @pytest.mark.parametrize(
+        "linux_root_disk_browsing_source",
+        [
+            pytest.param({"fixture_name": "linux_root_disk_snapshot"}, id="VolumeSnapshot"),
+            pytest.param({"fixture_name": "linux_root_disk_backup_pvc"}, id="PVC"),
+        ],
+        indirect=True,
+    )
+    def test_manual_browsing_of_root_disk_backup(
+        self,
+        file_restore_linux_root_only_vm,
+        linux_test_file_on_root_disk,
+        linux_root_disk_manual_browsing_file_restore,
+    ):
+        """
+        Test that manual restore mode exposes root disk backup contents for read-only browsing.
+
+        Parametrize:
+            - backup_source: [VolumeSnapshot, PVC]
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
+        Preconditions:
+            - Running Linux VM with guest helper installed and filerestore user SSH-configured
+            - Root disk backup containing files with known content
+
+        Steps:
+            1. Create a manual-mode VMFileRestore from the root disk backup
+            2. Wait for the backup volume to become ready for browsing
+            3. Read a known file from the mounted root disk backup
+            4. Attempt to modify a file on the mounted root disk backup
+
+        Expected:
+            - Known content can be read from the mounted root disk backup, and modification is denied
+        """
+        guest_path, expected_content = linux_test_file_on_root_disk
+        wait_for_file_restore_phase(
+            file_restore=linux_root_disk_manual_browsing_file_restore,
+            target_phase=VirtualMachineFileRestore.Phase.VOLUME_READY,
+        )
+        mount_path = linux_root_disk_manual_browsing_file_restore.instance.status.mountPath
+        assert mount_path, (
+            f"Restore '{linux_root_disk_manual_browsing_file_restore.name}' did not report a backup mount path"
+        )
+        backup_file_path = linux_backup_file_path(
+            vm=file_restore_linux_root_only_vm,
+            mount_path=mount_path,
+            guest_path=guest_path,
+        )
+        run_command_on_vm_and_check_output(
+            vm=file_restore_linux_root_only_vm,
+            command=f"sudo cat {quote(backup_file_path)}",
+            expected_result=expected_content,
+        )
+        # Write as root so a permission error cannot masquerade as a read-only mount.
+        with pytest.raises(CommandExecFailed, match="Read-only file system"):
+            run_ssh_commands(
+                host=file_restore_linux_root_only_vm.ssh_exec,
+                commands=["sudo", "sh", "-c", f"printf unexpected-backup-write >> {quote(backup_file_path)}"],
+            )
+        run_command_on_vm_and_check_output(
+            vm=file_restore_linux_root_only_vm,
+            command=f"sudo cat {quote(backup_file_path)}",
+            expected_result=expected_content,
+        )
+
+
+class TestFileRestoreLargeFile:
+    """
+    Tests for restoring large files from data disk snapshots.
+
+    Preconditions:
+        - vm-file-restore-operator deployed and running in openshift-cnv namespace
+        - Running Linux VM with guest helper installed and filerestore user SSH-configured
+        - VolumeSnapshot-capable StorageClass available
+    """
+
+    @pytest.mark.polarion("CNV-16840")
+    def test_restore_big_file_from_data_disk_snapshot(
+        self,
+        file_restore_linux_vm,
+        deleted_linux_large_file,
+        large_file_snapshot_file_restore,
+    ):
+        """
+        Test that a 1 GB file is restored successfully from a data disk snapshot.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
+        Preconditions:
+            - Running Linux VM with guest helper installed and filerestore user SSH-configured
+            - Data disk VolumeSnapshot containing a 1 GB file with a recorded checksum
+            - Target file deleted from the Linux VM data disk
+
+        Steps:
+            1. Create a VMFileRestore from the data disk VolumeSnapshot for the 1 GB file
+            2. Wait for the restore operation to complete
+            3. Calculate the restored file checksum in the Linux VM
+
+        Expected:
+            - Restore succeeds and the restored 1 GB file checksum matches the snapshot source
+        """
+        restore_path, expected_checksum = deleted_linux_large_file
+        wait_for_file_restore_phase(
+            file_restore=large_file_snapshot_file_restore,
+            target_phase=VirtualMachineFileRestore.Phase.SUCCEEDED,
+            timeout=TIMEOUT_10MIN,
+        )
+        actual_checksum = cksum_file(vm=file_restore_linux_vm, filename=restore_path)
+        assert actual_checksum == expected_checksum, (
+            f"Restored 1 GiB file '{restore_path}' has checksum {actual_checksum}, expected {expected_checksum}"
+        )
+        run_command_on_vm_and_check_output(
+            vm=file_restore_linux_vm,
+            command=f"stat --format=%s {quote(restore_path)}",
+            expected_result=str(1024**3),
+        )
+
+
+@pytest.mark.tier3
+class TestFileRestoreConcurrentVirtualMachines:
+    """
+    Tests for concurrent file restore operations on independent virtual machines.
+
+    Preconditions:
+        - vm-file-restore-operator deployed and running in openshift-cnv namespace
+        - Two running Linux VMs with guest helper installed and filerestore user SSH-configured
+        - Independent backup volume available for each Linux VM
+    """
+
+    @pytest.mark.polarion("CNV-16841")
+    @pytest.mark.parametrize(
+        "linux_test_file_on_root_disk",
+        [{"content": "file-restore-concurrent-root-content"}],
+        indirect=True,
+    )
+    def test_concurrent_restores_on_different_virtual_machines(
+        self,
+        admin_client,
+        namespace,
+        file_restore_linux_vm,
+        file_restore_linux_root_only_vm,
+        deleted_linux_test_file_on_data_disk,
+        deleted_linux_test_file_on_root_disk,
+        concurrent_data_disk_file_restore,
+        concurrent_root_disk_file_restore,
+    ):
+        """
+        Test that concurrent file restores on different virtual machines complete independently.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
+        Preconditions:
+            - Two running Linux VMs with guest helper installed and filerestore user SSH-configured
+            - Independent backup volume containing a file with known content for each Linux VM
+            - Target file deleted from each Linux VM
+
+        Steps:
+            1. Create a VMFileRestore for each Linux VM without waiting for the other restore to complete
+            2. Wait for both restore operations to complete
+            3. Read the restored file from each Linux VM
+
+        Expected:
+            - Both restore operations succeed independently with the original file content on their respective VMs
+        """
+        data_restore_path, data_expected_content = deleted_linux_test_file_on_data_disk
+        root_restore_path, root_expected_content = deleted_linux_test_file_on_root_disk
+        for vm, file_restore, restore_path, expected_content, snapshot_source in (
+            (file_restore_linux_vm, concurrent_data_disk_file_restore, data_restore_path, data_expected_content, False),
+            (
+                file_restore_linux_root_only_vm,
+                concurrent_root_disk_file_restore,
+                root_restore_path,
+                root_expected_content,
+                True,
+            ),
+        ):
+            wait_for_file_restore_phase(
+                file_restore=file_restore,
+                target_phase=VirtualMachineFileRestore.Phase.SUCCEEDED,
+            )
+            run_command_on_vm_and_check_output(
+                vm=vm,
+                command=f"cat {quote(restore_path)}",
+                expected_result=expected_content,
+            )
+            assert_successful_restore_cleanup(
+                vm=vm,
+                restore_cr_name=file_restore.name,
+                namespace_name=namespace.name,
+                admin_client=admin_client,
+                snapshot_source=snapshot_source,
+            )
