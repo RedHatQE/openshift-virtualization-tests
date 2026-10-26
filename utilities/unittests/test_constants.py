@@ -97,7 +97,7 @@ class TestConstants:
 
     def test_architecture_constants(self):
         """Test architecture constants are defined."""
-        assert AARCH_64 == "aarch64"
+        assert AARCH_64 == "aarch64", "AARCH_64 must preserve the platform.machine() ARM alias"
         assert AMD_64 == "amd64"
         assert ARM_64 == "arm64"
         assert S390X == "s390x"
