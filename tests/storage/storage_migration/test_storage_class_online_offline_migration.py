@@ -31,6 +31,7 @@ class TestOfflineVMStorageMigrationVolumeModes:
     __test__ = False
 
     @pytest.mark.polarion("CNV-16796")
+    @pytest.mark.manual
     def test_offline_vm_storage_migration_across_volume_modes(self):
         """
         Test that offline VM storage migration completes successfully and preserves data
@@ -68,6 +69,7 @@ class TestMixedOfflineOnlineStorageMigration:
     __test__ = False
 
     @pytest.mark.polarion("CNV-16797")
+    @pytest.mark.manual
     def test_mixed_offline_online_vm_storage_migration(self):
         """
         Test that storage migration completes for a plan containing both offline and running VMs
@@ -106,6 +108,7 @@ class TestOfflineStorageMigrationCleanupPolicy:
     __test__ = False
 
     @pytest.mark.polarion("CNV-16798")
+    @pytest.mark.manual
     def test_source_volumes_retained_after_offline_migration(self):
         """
         Test that source volumes are retained after offline VM storage migration
@@ -129,6 +132,7 @@ class TestOfflineStorageMigrationCleanupPolicy:
         """
 
     @pytest.mark.polarion("CNV-16799")
+    @pytest.mark.manual
     def test_source_volumes_deleted_after_offline_migration(self):
         """
         Test that source volumes are deleted after offline VM storage migration
@@ -165,6 +169,7 @@ class TestOfflineVMStorageMigrationWithHotplugDisks:
     __test__ = False
 
     @pytest.mark.polarion("CNV-16800")
+    @pytest.mark.manual
     def test_offline_vm_with_hotplug_disks_storage_migration(self):
         """
         Test that offline VM storage migration migrates all disks including hotplug disks.
@@ -201,6 +206,7 @@ class TestOfflineVMStorageMigrationFailureRollback:
     __test__ = False
 
     @pytest.mark.polarion("CNV-16802")
+    @pytest.mark.manual
     def test_offline_vm_rollback_on_migration_failure(self):
         """
         [NEGATIVE] Test that offline VM disk references remain unchanged and the source volume
@@ -238,6 +244,7 @@ class TestVMStartDuringStorageMigration:
     __test__ = False
 
     @pytest.mark.polarion("CNV-16803")
+    @pytest.mark.manual
     def test_vm_start_during_offline_storage_migration(self):
         """
         Test that starting a stopped VM during storage migration succeeds
@@ -277,6 +284,7 @@ class TestCancelInProgressStorageMigration:
     __test__ = False
 
     @pytest.mark.polarion("CNV-16804")
+    @pytest.mark.manual
     def test_cancel_in_progress_storage_migration(self):
         """
         Test that cancelling an in-progress storage migration preserves original VM state
