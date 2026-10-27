@@ -7,6 +7,7 @@ from ocp_resources.role import Role
 from ocp_resources.role_binding import RoleBinding
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
+from ocp_resources.virtual_machine_file_restore import VirtualMachineFileRestore
 from ocp_resources.volume_snapshot import VolumeSnapshot
 from pyhelper_utils.shell import run_ssh_commands
 
@@ -35,7 +36,6 @@ from tests.storage.file_level_restore.constants import (
     WINDOWS_TEST_FILE_NAME,
 )
 from tests.storage.file_level_restore.utils import (
-    VirtualMachineFileRestore,
     delete_linux_data_disk_file,
     delete_linux_guest_file,
     delete_windows_guest_file,
@@ -51,7 +51,6 @@ from tests.storage.file_level_restore.utils import (
     linux_volume_snapshot,
     manual_browsing_file_restore,
     wait_for_file_restore_operator_ready,
-    wait_for_file_restore_phase,
     windows_data_disk_path,
     windows_data_disk_volume_snapshot,
     windows_guest_path,
@@ -304,7 +303,7 @@ def linux_root_disk_snapshot_file_restore(
 ):
     """Succeeded file restore from a Linux root-disk VolumeSnapshot."""
     restore_path, _ = deleted_linux_test_file_on_root_disk
-    with VirtualMachineFileRestore(
+    with VirtualMachineFileRestore.from_snapshot(
         name=LINUX_ROOT_DISK_SNAPSHOT_RESTORE_CR_NAME,
         namespace=namespace.name,
         target_vm_name=file_restore_linux_root_only_vm.name,
@@ -312,10 +311,7 @@ def linux_root_disk_snapshot_file_restore(
         source_path=restore_path,
         client=admin_client,
     ) as file_restore:
-        wait_for_file_restore_phase(
-            file_restore=file_restore,
-            target_phase=VirtualMachineFileRestore.Phase.SUCCEEDED,
-        )
+        file_restore.wait_for_phase(target_phase=VirtualMachineFileRestore.Phase.SUCCEEDED)
         yield file_restore
 
 
@@ -341,7 +337,7 @@ def linux_root_disk_backup_pvc_file_restore(
 ):
     """Succeeded file restore from a Linux root-disk backup PVC."""
     restore_path, _ = deleted_linux_test_file_on_root_disk_from_backup
-    with VirtualMachineFileRestore(
+    with VirtualMachineFileRestore.from_pvc(
         name=LINUX_ROOT_DISK_PVC_RESTORE_CR_NAME,
         namespace=namespace.name,
         target_vm_name=file_restore_linux_root_only_vm.name,
@@ -349,10 +345,7 @@ def linux_root_disk_backup_pvc_file_restore(
         source_path=restore_path,
         client=admin_client,
     ) as file_restore:
-        wait_for_file_restore_phase(
-            file_restore=file_restore,
-            target_phase=VirtualMachineFileRestore.Phase.SUCCEEDED,
-        )
+        file_restore.wait_for_phase(target_phase=VirtualMachineFileRestore.Phase.SUCCEEDED)
         yield file_restore
 
 
@@ -712,7 +705,7 @@ def first_linux_data_disk_snapshot_file_restore(
 ):
     """Succeeded restore of the first Linux data-disk file."""
     restore_path, _ = deleted_first_linux_file_on_data_disk
-    with VirtualMachineFileRestore(
+    with VirtualMachineFileRestore.from_snapshot(
         name=LINUX_DATA_DISK_SNAPSHOT_RESTORE_CR_NAME,
         namespace=namespace.name,
         target_vm_name=file_restore_linux_vm.name,
@@ -720,10 +713,7 @@ def first_linux_data_disk_snapshot_file_restore(
         source_path=restore_path,
         client=admin_client,
     ) as file_restore:
-        wait_for_file_restore_phase(
-            file_restore=file_restore,
-            target_phase=VirtualMachineFileRestore.Phase.SUCCEEDED,
-        )
+        file_restore.wait_for_phase(target_phase=VirtualMachineFileRestore.Phase.SUCCEEDED)
         yield file_restore
 
 
@@ -749,7 +739,7 @@ def second_linux_data_disk_snapshot_file_restore(
 ):
     """Succeeded restore of the second Linux data-disk file."""
     restore_path, _ = deleted_second_linux_file_on_data_disk
-    with VirtualMachineFileRestore(
+    with VirtualMachineFileRestore.from_snapshot(
         name=LINUX_DATA_DISK_SNAPSHOT_SECOND_RESTORE_CR_NAME,
         namespace=namespace.name,
         target_vm_name=file_restore_linux_vm.name,
@@ -757,10 +747,7 @@ def second_linux_data_disk_snapshot_file_restore(
         source_path=restore_path,
         client=admin_client,
     ) as file_restore:
-        wait_for_file_restore_phase(
-            file_restore=file_restore,
-            target_phase=VirtualMachineFileRestore.Phase.SUCCEEDED,
-        )
+        file_restore.wait_for_phase(target_phase=VirtualMachineFileRestore.Phase.SUCCEEDED)
         yield file_restore
 
 
@@ -945,7 +932,7 @@ def cross_namespace_file_restore(
 ):
     """Restore request using the prepared snapshot in the source namespace."""
     restore_path, _ = deleted_cross_namespace_linux_file
-    with VirtualMachineFileRestore(
+    with VirtualMachineFileRestore.from_snapshot(
         name="flr-cross-namespace",
         namespace=namespace.name,
         target_vm_name=file_restore_linux_vm.name,
@@ -1003,7 +990,7 @@ def large_file_snapshot_file_restore(
 ):
     """Restore request for the deleted one GiB file in the data-disk snapshot."""
     restore_path, _ = deleted_linux_large_file
-    with VirtualMachineFileRestore(
+    with VirtualMachineFileRestore.from_snapshot(
         name="flr-large-file",
         namespace=namespace.name,
         target_vm_name=file_restore_linux_vm.name,
@@ -1025,7 +1012,7 @@ def concurrent_data_disk_file_restore(
 ):
     """First concurrent request, created after both VMs' backup and deletion setup."""
     restore_path, _ = deleted_linux_test_file_on_data_disk
-    with VirtualMachineFileRestore(
+    with VirtualMachineFileRestore.from_pvc(
         name="flr-concurrent-data-disk",
         namespace=namespace.name,
         target_vm_name=file_restore_linux_vm.name,
@@ -1047,7 +1034,7 @@ def concurrent_root_disk_file_restore(
 ):
     """Second concurrent request, created without waiting for the first to complete."""
     restore_path, _ = deleted_linux_test_file_on_root_disk
-    with VirtualMachineFileRestore(
+    with VirtualMachineFileRestore.from_snapshot(
         name="flr-concurrent-root-disk",
         namespace=namespace.name,
         target_vm_name=file_restore_linux_root_only_vm.name,
