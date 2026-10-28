@@ -101,10 +101,14 @@ class TestConstants:
         assert AMD_64 == "amd64", "AMD_64 must be amd64"
         assert ARM_64 == "arm64", "ARM_64 must be arm64"
         assert S390X == "s390x", "S390X must be s390x"
-        assert X86_64 == "x86_64"
-        assert MULTIARCH == "multiarch"
-        assert SUPPORTED_MULTIARCH_OPTIONS == {"amd64", "arm64"}
-        assert SUPPORTED_CPU_ARCHITECTURES == {"amd64", "arm64", "s390x"}
+        assert X86_64 == "x86_64", "X86_64 must be x86_64"
+        assert MULTIARCH == "multiarch", "MULTIARCH must be multiarch"
+        assert SUPPORTED_MULTIARCH_OPTIONS == {"amd64", "arm64"}, (
+            "SUPPORTED_MULTIARCH_OPTIONS must be {amd64, arm64}"
+        )
+        assert SUPPORTED_CPU_ARCHITECTURES == {"amd64", "arm64", "s390x"}, (
+            "SUPPORTED_CPU_ARCHITECTURES must be {amd64, arm64, s390x}"
+        )
 
     def test_timeout_constants(self):
         """Test timeout constants are defined."""
