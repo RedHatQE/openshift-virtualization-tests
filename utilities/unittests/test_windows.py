@@ -12,7 +12,15 @@ from pytest import mark, raises
 from rrmngmnt.ssh import RemoteExecutor
 from rrmngmnt.user import User
 
-from utilities.windows import get_cim_instance_json, powershell_command, run_powershell_commands
+from utilities.windows import (
+    get_cim_instance_json,
+    get_ga_version,
+    get_reg_product_name,
+    get_windows_os_info,
+    get_windows_timezone,
+    powershell_command,
+    run_powershell_commands,
+)
 
 if TYPE_CHECKING:
     from pytest import LogCaptureFixture
@@ -136,3 +144,111 @@ class TestPowerShellTransport:
         with raises(OSError, match="Connection reset"):
             run_powershell_commands(ssh_exec=host, script="Get-Date")
         executor.session.return_value.__exit__.assert_called_once()
+
+
+@mark.unit
+class TestGetWindowsTimezone:
+    """Test cases for get_windows_timezone function"""
+
+    @patch("utilities.windows.run_ssh_commands")
+    def test_get_windows_timezone_success(self, mock_run_ssh):
+        """Test successful extraction of Windows timezone"""
+        mock_ssh_exec = MagicMock()
+        mock_run_ssh.return_value = ["UTC"]
+
+        result = get_windows_timezone(mock_ssh_exec)
+
+        assert result == "UTC", "Windows timezone should match the SSH command output"
+        mock_run_ssh.assert_called_once()
+
+    @patch("utilities.windows.run_ssh_commands")
+    def test_get_windows_timezone_with_standard_name(self, mock_run_ssh):
+        """Test timezone extraction with standard name only"""
+        mock_ssh_exec = MagicMock()
+        mock_run_ssh.return_value = ["StandardName: UTC"]
+
+        result = get_windows_timezone(mock_ssh_exec, get_standard_name=True)
+
+        assert result == "StandardName: UTC", "Windows timezone standard name should match the SSH command output"
+        mock_run_ssh.assert_called_once()
+
+
+@mark.unit
+class TestGetGaVersion:
+    """Test cases for get_ga_version function"""
+
+    @patch("utilities.windows.run_ssh_commands")
+    def test_get_ga_version_success(self, mock_run_ssh):
+        """Test successful extraction of GA version"""
+        mock_ssh_exec = MagicMock()
+        mock_run_ssh.return_value = ["7.4.0  "]  # With trailing space to test strip()
+
+        result = get_ga_version(mock_ssh_exec)
+
+        assert result == "7.4.0", "Guest agent version should have trailing whitespace removed"
+        mock_run_ssh.assert_called_once()
+
+
+@mark.unit
+class TestGetRegProductName:
+    """Test cases for get_reg_product_name function"""
+
+    @patch("utilities.windows.run_ssh_commands")
+    def test_get_reg_product_name_success(self, mock_run_ssh):
+        """Test successful extraction of registry product name"""
+        mock_ssh_exec = MagicMock()
+        mock_run_ssh.return_value = ["REG_SZ    Microsoft Windows Server 2019\r\n"]
+
+        result = get_reg_product_name(mock_ssh_exec)
+
+        assert result == "REG_SZ    Microsoft Windows Server 2019\r\n", (
+            "Windows registry product name output was not preserved"
+        )
+        mock_run_ssh.assert_called_once()
+
+
+@mark.unit
+class TestGetWindowsOsInfo:
+    """Test cases for get_windows_os_info function"""
+
+    @patch("utilities.windows.get_windows_timezone")
+    @patch("utilities.windows.get_reg_product_name")
+    @patch("utilities.windows.get_ga_version")
+    @patch("utilities.windows.get_cim_instance_json")
+    @patch("utilities.windows.guest_agent_version_parser")
+    def test_get_windows_os_info_success(self, mock_parser, mock_cim, mock_ga, mock_reg, mock_tz):
+        """Test successful extraction of Windows OS info"""
+        mock_ssh_exec = MagicMock()
+
+        mock_cim.return_value = {
+            "CSName": "test-host",
+            "BuildNumber": "19042",
+            "Caption": "Microsoft Windows Server 2019",
+            "Version": "10.0.19042",
+            "OSArchitecture": "64-bit",
+        }
+        mock_ga.return_value = "7.4.0"
+        mock_parser.return_value = "7.4.0"
+        mock_reg.return_value = "REG_SZ    Windows Server 2019 Standard\r\n"
+        mock_tz.return_value = "UTC"
+
+        result = get_windows_os_info(mock_ssh_exec)
+
+        expected = {
+            "guestAgentVersion": "7.4.0",
+            "hostname": "test-host",
+            "os": {
+                "name": "Microsoft Windows",
+                "kernelRelease": "19042",
+                "version": "Microsoft Windows Server 2019",
+                "prettyName": "Windows Server 2019 Standard",
+                "versionId": "2019",
+                "kernelVersion": "10.0",
+                "machine": "x86_64",
+                "id": "mswindows",
+            },
+            "timezone": "UTC",
+        }
+        assert result == expected, (
+            "Windows OS information should match the expected guest agent, OS and timezone values"
+        )

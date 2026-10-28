@@ -6,12 +6,18 @@ import json
 from base64 import b64encode
 from concurrent.futures import ThreadPoolExecutor
 from logging import LoggerAdapter, getLogger
+from re import search
 from shlex import split
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from pyhelper_utils.shell import run_ssh_commands
 
+from utilities.constants.timeouts import TCP_TIMEOUT_30SEC
+from utilities.data_utils import guest_agent_version_parser
+
 if TYPE_CHECKING:
+    from re import Match
+
     from rrmngmnt import Host
 
 
@@ -34,6 +40,92 @@ def get_cim_instance_json(ssh_exec: Host) -> dict[str, Any]:
             ),
         )[0]
     )
+
+
+def get_windows_timezone(ssh_exec: Host, get_standard_name: bool = False) -> str:
+    """Read the Windows guest's timezone through SSH.
+
+    Args:
+        ssh_exec: SSH connection to the Windows guest.
+        get_standard_name: Return only the line containing StandardName.
+
+    Returns:
+        PowerShell timezone output, optionally filtered to StandardName.
+    """
+    standard_name_cmd = '| findstr "StandardName"' if get_standard_name else ""
+    timezone_cmd = split(f'powershell -command "Get-TimeZone {standard_name_cmd}"')
+    return run_ssh_commands(host=ssh_exec, commands=[timezone_cmd], tcp_timeout=TCP_TIMEOUT_30SEC)[0]
+
+
+def get_ga_version(ssh_exec: Host) -> str:
+    """Read the Windows QEMU guest agent executable's file version.
+
+    Args:
+        ssh_exec: SSH connection to the Windows guest.
+
+    Returns:
+        File version with surrounding whitespace removed.
+    """
+    return run_ssh_commands(
+        host=ssh_exec,
+        commands=[
+            "powershell",
+            "-Command",
+            "(Get-Item",
+            "'C:\\Program Files\\Qemu-ga\\qemu-ga.exe').VersionInfo.FileVersion",
+        ],
+        tcp_timeout=TCP_TIMEOUT_30SEC,
+    )[0].strip()
+
+
+def get_reg_product_name(ssh_exec: Host) -> str:
+    """Read the Windows ProductName registry value through SSH.
+
+    Args:
+        ssh_exec: SSH connection to the Windows guest.
+
+    Returns:
+        Unmodified REG QUERY output containing ProductName.
+    """
+    return run_ssh_commands(
+        host=ssh_exec,
+        commands=split(
+            'REG QUERY "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion" /v "ProductName"'
+        ),
+        tcp_timeout=TCP_TIMEOUT_30SEC,
+    )[0]
+
+
+def get_windows_os_info(ssh_exec: Host) -> dict[str, Any]:
+    """Collect Windows guest information for comparison with guest-agent data.
+
+    Args:
+        ssh_exec: SSH connection to the Windows guest.
+
+    Returns:
+        Guest agent version, hostname, OS properties and timezone.
+    """
+    cim_instance_json = get_cim_instance_json(ssh_exec=ssh_exec)
+    return {
+        "guestAgentVersion": guest_agent_version_parser(version_string=get_ga_version(ssh_exec=ssh_exec)),
+        "hostname": cim_instance_json["CSName"],
+        "os": {
+            "name": "Microsoft Windows",
+            "kernelRelease": cim_instance_json["BuildNumber"],
+            "version": cast("Match[str]", search(pattern=r"(.+\d+)", string=cim_instance_json["Caption"])).group(1),
+            "prettyName": cast(
+                "Match[str]",
+                search(pattern=r"REG_SZ\s+(.+)\r\n", string=get_reg_product_name(ssh_exec=ssh_exec)),
+            ).group(1),
+            "versionId": cast("Match[str]", search(pattern=r"\D+(\d+)", string=cim_instance_json["Caption"])).group(1),
+            "kernelVersion": cast(
+                "Match[str]", search(pattern=r"(\d+\.\d+)\.", string=cim_instance_json["Version"])
+            ).group(1),
+            "machine": "x86_64" if "64" in cim_instance_json["OSArchitecture"] else "x86",
+            "id": "mswindows",
+        },
+        "timezone": get_windows_timezone(ssh_exec=ssh_exec),
+    }
 
 
 def powershell_command(script: str) -> list[str]:

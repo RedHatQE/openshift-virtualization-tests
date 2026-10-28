@@ -11,6 +11,7 @@ import pytest
 from utilities.data_utils import (
     authorized_key,
     base64_encode_str,
+    guest_agent_version_parser,
     name_prefix,
     private_to_public_key,
 )
@@ -249,3 +250,29 @@ class TestPrivateToPublicKey:
         for path in paths:
             result = private_to_public_key(path)
             assert result == "test_key"
+
+
+class TestGuestAgentVersionParser:
+    """Test cases for guest_agent_version_parser function"""
+
+    def test_guest_agent_version_parser_standard_format(self):
+        """Test parsing of standard version format"""
+        result = guest_agent_version_parser("7.4.0")
+        assert result == "7.4.0", "Standard guest agent version was not preserved"
+
+    def test_guest_agent_version_parser_with_extra_info(self):
+        """Test parsing of version with extra information"""
+        result = guest_agent_version_parser("7.4.0-1.el8")
+        assert result == "7.4.0-1", (
+            "Guest agent version should retain the release number and omit the distribution suffix"
+        )
+
+    def test_guest_agent_version_parser_four_part_version(self):
+        """Test parsing of four-part version"""
+        result = guest_agent_version_parser("100.0.0.0")
+        assert result == "100.0.0.0", "Four-part guest agent version was not preserved"
+
+    def test_guest_agent_version_parser_invalid_format(self):
+        """Test parsing of invalid format"""
+        with pytest.raises(AttributeError):
+            guest_agent_version_parser("invalid")
