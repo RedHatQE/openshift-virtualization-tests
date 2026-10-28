@@ -98,9 +98,9 @@ class TestConstants:
     def test_architecture_constants(self):
         """Test architecture constants are defined."""
         assert AARCH_64 == "aarch64", "AARCH_64 must be aarch64"
-        assert AMD_64 == "amd64"
-        assert ARM_64 == "arm64"
-        assert S390X == "s390x"
+        assert AMD_64 == "amd64", "AMD_64 must be amd64"
+        assert ARM_64 == "arm64", "ARM_64 must be arm64"
+        assert S390X == "s390x", "S390X must be s390x"
         assert X86_64 == "x86_64"
         assert MULTIARCH == "multiarch"
         assert SUPPORTED_MULTIARCH_OPTIONS == {"amd64", "arm64"}
