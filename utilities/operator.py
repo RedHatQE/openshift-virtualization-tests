@@ -642,8 +642,8 @@ def determine_upgrade_stream(current_version: str, target_version: str) -> str:
         ValueError: If the target version is not newer than the current version,
             or if the stream cannot be determined.
     """
-    current_cnv_version = parse(version=current_version.split("-")[0])
-    target_cnv_version = parse(version=target_version.split("-")[0])
+    current_cnv_version = parse(version=current_version.split("-", maxsplit=1)[0])
+    target_cnv_version = parse(version=target_version.split("-", maxsplit=1)[0])
 
     if current_cnv_version.major < target_cnv_version.major:
         return UpgradeStreams.X_STREAM

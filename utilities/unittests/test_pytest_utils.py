@@ -1176,7 +1176,7 @@ class TestGetArtifactoryServerUrl:
 
         with pytest.raises(
             MissingEnvironmentVariableError,
-            match="Bitwarden access is disabled.*disabled-bitwarden.*ARTIFACTORY_SERVER",
+            match=r"Bitwarden access is disabled.*disabled-bitwarden.*ARTIFACTORY_SERVER",
         ):
             get_artifactory_server_url("cluster.example.com", session=mock_session)
 
@@ -3347,7 +3347,7 @@ class TestInjectFailureJunit:
         mock_session.config.option.xmlpath = str(xml_path)
 
         # Simulate: earlier teardown raises, then finally block runs injection
-        with pytest.raises(RuntimeError, match="Earlier teardown failed"):
+        with pytest.raises(RuntimeError, match="Earlier teardown failed"):  # noqa: PT012
             try:
                 raise RuntimeError("Earlier teardown failed")
             finally:

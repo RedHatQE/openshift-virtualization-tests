@@ -413,41 +413,47 @@ def output_text(placeholder_files: list[PlaceholderFile]) -> None:
     output_lines: list[str] = []
 
     if total_tests > 0:
-        output_lines.append(separator(symbol="="))
-        output_lines.append("STD PLACEHOLDER TESTS (not yet implemented)")
-        output_lines.append(separator(symbol="="))
-        output_lines.append("")
+        output_lines.extend((
+            separator(symbol="="),
+            "STD PLACEHOLDER TESTS (not yet implemented)",
+            separator(symbol="="),
+            "",
+        ))
 
         for placeholder_file in placeholder_files:
             lines = _format_placeholder_lines(placeholder_file=placeholder_file)
             if lines:
                 output_lines.extend(lines)
 
-        output_lines.append("")
-        output_lines.append(separator(symbol="-"))
+        output_lines.extend(("", separator(symbol="-")))
         test_word = "test" if total_tests == 1 else "tests"
         file_word = "file" if total_files == 1 else "files"
-        output_lines.append(f"Total: {total_tests} placeholder {test_word} in {total_files} {file_word}")
-        output_lines.append(separator(symbol="="))
+        output_lines.extend((
+            f"Total: {total_tests} placeholder {test_word} in {total_files} {file_word}",
+            separator(symbol="="),
+        ))
 
     if total_disabled > 0:
-        output_lines.append("")
-        output_lines.append(separator(symbol="="))
-        output_lines.append("DISABLED TESTS (implemented but marked __test__ = False)")
-        output_lines.append(separator(symbol="="))
-        output_lines.append("")
+        output_lines.extend((
+            "",
+            separator(symbol="="),
+            "DISABLED TESTS (implemented but marked __test__ = False)",
+            separator(symbol="="),
+            "",
+        ))
 
         for placeholder_file in placeholder_files:
             lines = _format_disabled_lines(placeholder_file=placeholder_file)
             if lines:
                 output_lines.extend(lines)
 
-        output_lines.append("")
-        output_lines.append(separator(symbol="-"))
+        output_lines.extend(("", separator(symbol="-")))
         test_word = "test" if total_disabled == 1 else "tests"
         file_word = "file" if disabled_files == 1 else "files"
-        output_lines.append(f"Total: {total_disabled} disabled {test_word} in {disabled_files} {file_word}")
-        output_lines.append(separator(symbol="="))
+        output_lines.extend((
+            f"Total: {total_disabled} disabled {test_word} in {disabled_files} {file_word}",
+            separator(symbol="="),
+        ))
 
     for line in output_lines:
         LOGGER.info(line)

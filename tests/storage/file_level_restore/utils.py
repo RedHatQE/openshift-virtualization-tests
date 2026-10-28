@@ -6,7 +6,7 @@ import shlex
 import tarfile
 import tempfile
 import time
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, NamedTuple
@@ -189,7 +189,7 @@ def windows_data_disk_volume_snapshot(
     namespace_name: str,
     storage_class_name: str,
     admin_client: DynamicClient,
-) -> Iterator[VolumeSnapshot]:
+) -> Generator[VolumeSnapshot]:
     """Create a ready VolumeSnapshot of a Windows VM data disk PVC.
 
     Flushes the guest filesystem cache, resolves the VolumeSnapshotClass, creates the
@@ -353,7 +353,7 @@ def linux_root_disk_online_virtual_machine_snapshot(
     root_volume_name: str = DV_DISK,
     restore_path: str | None = None,
     expected_content: str | None = None,
-) -> Iterator[LinuxRootDiskVirtualMachineSnapshotInfo]:
+) -> Generator[LinuxRootDiskVirtualMachineSnapshotInfo]:
     """Create an online VirtualMachineSnapshot and yield root-disk snapshot metadata.
 
     KubeVirt creates one VolumeSnapshot per snapshottable VM volume. This helper selects the
@@ -423,7 +423,7 @@ def linux_volume_snapshot(
     admin_client: DynamicClient,
     *,
     flush_guest: bool = True,
-) -> Iterator[VolumeSnapshot]:
+) -> Generator[VolumeSnapshot]:
     """Create a ready VolumeSnapshot of a Linux VM disk PVC.
 
     Flushes the guest filesystem cache, resolves the VolumeSnapshotClass, creates the
@@ -863,7 +863,7 @@ def manual_browsing_file_restore(
     restore_cr_name: str,
     namespace_name: str,
     admin_client: DynamicClient,
-) -> Iterator[VirtualMachineFileRestore]:
+) -> Generator[VirtualMachineFileRestore]:
     """Create a manual restore request and wait for cleanup after deleting it.
 
     Args:

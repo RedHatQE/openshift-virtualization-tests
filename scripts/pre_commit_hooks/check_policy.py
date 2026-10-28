@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import string
 from ast import (
     AST,
     AnnAssign,
@@ -780,11 +781,11 @@ _GIT_SIMPLE_ESCAPES = {
 
 
 def _git_unquote(quoted: str) -> str:
-    """Decode a Git C-quoted path to its raw path.
+    r"""Decode a Git C-quoted path to its raw path.
 
     Git quotes paths that contain non-ASCII bytes or special characters by
     wrapping them in double quotes and encoding bytes as C escapes such as
-    ``\\303\\251``. ``shlex`` does not decode these escapes, so quoted paths
+    ``\303\251``. ``shlex`` does not decode these escapes, so quoted paths
     must be decoded explicitly. Invalid UTF-8 byte sequences are preserved
     with ``surrogateescape`` so distinct paths never collide on a replacement
     character.
@@ -816,9 +817,9 @@ def _git_unquote(quoted: str) -> str:
             raw.append(_GIT_SIMPLE_ESCAPES[escape])
             continue
         octal_digits = ""
-        if escape in "01234567":
+        if escape in string.octdigits:
             octal_digits = escape
-            while index < len(body) and len(octal_digits) < 3 and body[index] in "01234567":
+            while index < len(body) and len(octal_digits) < 3 and body[index] in string.octdigits:
                 octal_digits += body[index]
                 index += 1
         if octal_digits:

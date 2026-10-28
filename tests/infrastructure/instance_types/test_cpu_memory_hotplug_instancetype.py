@@ -165,4 +165,3 @@ class TestCPUHotPlugInstanceType:
     def test_hotplug_cpu_above_max_value(self, instance_type_hotplug_vm, ten_sockets_instance_type):
         with pytest.raises(UnprocessibleEntityError):
             update_vm_instancetype_name(vm=instance_type_hotplug_vm, instance_type_name=ten_sockets_instance_type.name)
-            pytest.fail("Socket value set higher than max value!")

@@ -210,4 +210,3 @@ class TestNodeCordonAndDrain:
                     client=admin_client,
                     namespace=vm.namespace,
                 )
-                pytest.fail("Cordon of a Node should not trigger VMI migration.")

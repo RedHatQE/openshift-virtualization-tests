@@ -171,7 +171,7 @@ def wait_for_address_on_iface(worker_pod, iface_name):
     if function passed in func argument failed.
     """
     sample = None
-    log = "Worker ip address for {iface_name} : {sample}"
+    log = "Worker ip address for {iface_name} : {sample}"  # noqa: RUF027
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_2MIN,
         sleep=1,
