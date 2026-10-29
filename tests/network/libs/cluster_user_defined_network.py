@@ -1,5 +1,5 @@
 from dataclasses import asdict, dataclass
-from enum import Enum
+from enum import Enum, StrEnum
 
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.cluster_user_defined_network import ClusterUserDefinedNetwork as Cudn
@@ -132,7 +132,7 @@ class ClusterUserDefinedNetwork(Cudn):
 
     class Status:
         class Condition:
-            class Type(str, Enum):
+            class Type(StrEnum):
                 NETWORK_CREATED = "NetworkCreated"
 
     def wait_for_status_success(self) -> None:

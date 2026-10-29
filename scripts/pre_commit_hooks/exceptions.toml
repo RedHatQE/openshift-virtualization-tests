@@ -1,1 +1,87 @@
-exceptions = []
+[[exceptions]]
+rule = "noqa"
+path = "utilities/unittests/test_pytest_utils.py"
+directive = "# noqa: PT012"
+source_fingerprint = "sha256:91a279febe5562d41e31894a725a89dda651409f9140dee08019026f4e29b2b3"
+reason = "Deliberate multi-statement pytest.raises body: the test verifies that a finally block injects junit failure output while an earlier exception propagates; restructuring would defeat the tested behavior."
+approval_url = "https://github.com/RedHatQE/openshift-virtualization-tests/pull/6639"
+
+[[exceptions]]
+rule = "noqa"
+path = "utilities/unittests/test_console.py"
+directive = "# noqa: PLC2801"
+source_fingerprint = "sha256:35e52b22a876df7cc0bc53994d33152f6dd49b902c9e91f4d4f9a5b4a536adde"
+reason = "Deliberate direct __enter__ call: the unit test verifies context-manager protocol behavior (return value and call counts) on mocked objects; a with-block would also invoke __exit__ and change what is tested."
+approval_url = "https://github.com/RedHatQE/openshift-virtualization-tests/pull/6639"
+
+[[exceptions]]
+rule = "noqa"
+path = "utilities/unittests/test_oadp.py"
+directive = "# noqa: PLC2801"
+source_fingerprint = "sha256:f64592d9be09fa0b8de52a23527e660c20fe894a34291a04828baad637db5034"
+reason = "Deliberate direct __enter__ call: the unit test verifies context-manager protocol behavior (return value and call counts) on mocked objects; a with-block would also invoke __exit__ and change what is tested."
+approval_url = "https://github.com/RedHatQE/openshift-virtualization-tests/pull/6639"
+
+[[exceptions]]
+rule = "noqa"
+path = "utilities/unittests/test_oadp.py"
+directive = "# noqa: PLC2801"
+source_fingerprint = "sha256:8a70e07e51e3263d3a76fadf0b2cfd62eacad59e0c94148346f6064dd4e7dd12"
+reason = "Deliberate direct __enter__ call: the unit test verifies context-manager protocol behavior (return value and call counts) on mocked objects; a with-block would also invoke __exit__ and change what is tested."
+approval_url = "https://github.com/RedHatQE/openshift-virtualization-tests/pull/6639"
+
+[[exceptions]]
+rule = "noqa"
+path = "utilities/unittests/test_oadp.py"
+directive = "# noqa: PLC2801"
+source_fingerprint = "sha256:ad80da6e156b14ee43b27449b7e9faf6005758ce9406ce530778b0e7448444b9"
+reason = "Deliberate direct __enter__ call: the unit test verifies context-manager protocol behavior (return value and call counts) on mocked objects; a with-block would also invoke __exit__ and change what is tested."
+approval_url = "https://github.com/RedHatQE/openshift-virtualization-tests/pull/6639"
+
+[[exceptions]]
+rule = "noqa"
+path = "utilities/unittests/test_oadp.py"
+directive = "# noqa: PLC2801"
+source_fingerprint = "sha256:9aad25c0278a50391f167299791b171d34afcd193eaad9edd17bbc7faddaae07"
+reason = "Deliberate direct __enter__ call: the unit test verifies context-manager protocol behavior (return value and call counts) on mocked objects; a with-block would also invoke __exit__ and change what is tested."
+approval_url = "https://github.com/RedHatQE/openshift-virtualization-tests/pull/6639"
+
+[[exceptions]]
+rule = "noqa"
+path = "utilities/unittests/test_vnc_utils.py"
+directive = "# noqa: PLC2801"
+source_fingerprint = "sha256:75eeb0665a06800b1cf56cc076d6bf00ec63db300323daaf0c42403c18650601"
+reason = "Deliberate direct __enter__ call: the unit test verifies context-manager protocol behavior (return value and call counts) on mocked objects; a with-block would also invoke __exit__ and change what is tested."
+approval_url = "https://github.com/RedHatQE/openshift-virtualization-tests/pull/6639"
+
+[[exceptions]]
+rule = "noqa"
+path = "utilities/unittests/test_vnc_utils.py"
+directive = "# noqa: PLC2801"
+source_fingerprint = "sha256:1cc24e0d5a0a368899e4cc975ab8d608c57a9f05f8f51b85664260964cf86f55"
+reason = "Deliberate direct __enter__ call: the unit test verifies context-manager protocol behavior (return value and call counts) on mocked objects; a with-block would also invoke __exit__ and change what is tested."
+approval_url = "https://github.com/RedHatQE/openshift-virtualization-tests/pull/6639"
+
+[[exceptions]]
+rule = "noqa"
+path = "utilities/unittests/test_vnc_utils.py"
+directive = "# noqa: PLC2801"
+source_fingerprint = "sha256:4143e5c66d467550bdc5cbad3850a95ef84717795fc21f6b19ca32d981eee699"
+reason = "Deliberate direct __enter__ call: the unit test verifies context-manager protocol behavior (return value and call counts) on mocked objects; a with-block would also invoke __exit__ and change what is tested."
+approval_url = "https://github.com/RedHatQE/openshift-virtualization-tests/pull/6639"
+
+[[exceptions]]
+rule = "noqa"
+path = "tests/network/utils.py"
+directive = "# noqa: RUF027"
+source_fingerprint = "sha256:52c9704975002b3665b3d5fcf63fd95abd0e6f7b0c579d2500391a0257446969"
+reason = "Intentional .format() template: the log message is formatted in two call sites (success info and timeout error) with different sample values; converting to an f-string would defeat the deferred formatting."
+approval_url = "https://github.com/RedHatQE/openshift-virtualization-tests/pull/6639"
+
+[[exceptions]]
+rule = "noqa"
+path = "utilities/pytest_utils.py"
+directive = "# noqa: PLC2801"
+source_fingerprint = "sha256:43f5323beb7cb9eb7dcecc9174d0d30c22db18fe9b0e9603464114b502c93b2b"
+reason = "Monkey-patch of paramiko PKey.get_fingerprint (FIPS workaround): type.__setattr__ is the only form that satisfies all checkers — direct attribute assignment fails mypy method-assign and setattr with a constant trips B010 set-attr-with-constant."
+approval_url = "https://github.com/RedHatQE/openshift-virtualization-tests/pull/6639"

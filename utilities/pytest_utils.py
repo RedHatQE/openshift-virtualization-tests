@@ -947,7 +947,9 @@ def patch_paramiko_for_fips() -> None:
     calls hashlib.md5() without usedforsecurity=False, raising UnsupportedDigestmodError on
     FIPS-enabled systems. MD5 here is used only for display/logging purposes, not security.
     """
-    type.__setattr__(
+    # Monkey-patch of paramiko PKey.get_fingerprint (FIPS workaround): type.__setattr__ is the
+    # only form satisfying all checkers (direct assignment fails mypy, setattr trips B010).
+    type.__setattr__(  # noqa: PLC2801
         paramiko.pkey.PKey,
         "get_fingerprint",
         lambda self: hashlib.md5(self.asbytes(), usedforsecurity=False).digest(),

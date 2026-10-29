@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Retry CodeRabbit reviews that hit rate limits.
+r"""Retry CodeRabbit reviews that hit rate limits.
 
 Scans open, non-draft, non-WIP, non-stale, non-conflicting PRs (updated in the
 last 2 days) for CodeRabbit rate-limit comments and re-triggers review once the
@@ -11,7 +11,7 @@ Intended to be invoked from GitHub Actions with env vars::
 
 Local usage (requires ``uv`` and ``myk-pi-tools`` on PATH; ``gh`` optional for token)::
 
-    REPO=owner/repo GH_TOKEN=$(gh auth token) \\
+    REPO=owner/repo GH_TOKEN=$(gh auth token) \
         uv run python3 scripts/coderabbit_retry/coderabbit_retry.py
 
 Safety limits:
