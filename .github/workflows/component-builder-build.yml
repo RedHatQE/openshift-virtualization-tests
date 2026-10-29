@@ -149,9 +149,15 @@ jobs:
           # Step 3: Verify the OpenPGP clearsignature on the CHECKSUM file
           # using gpgv and the single-key keyring.  gpgv has no trust model
           # and no keyring fallback — only keys in --keyring are accepted.
+          # Write the extracted signed payload to CHECKSUM.verified: a
+          # clearsignature only covers the text between the PGP markers, so
+          # gpgv reports "Good signature" even if unsigned lines are prepended
+          # or appended.  All later checks MUST read the extracted payload, not
+          # the original file, so injected lines outside the signature are
+          # never trusted.
           # ---------------------------------------------------------------
-          gpgv --keyring "${PINNED_KEYRING}" CHECKSUM \
-            || { echo "ERROR: OpenPGP signature verification failed for CHECKSUM"; rm -rf "${GPG_HOME}"; exit 1; }
+          gpgv --keyring "${PINNED_KEYRING}" --output CHECKSUM.verified CHECKSUM \
+            || { echo "ERROR: OpenPGP signature verification failed for CHECKSUM"; rm -rf "${GPG_HOME}" CHECKSUM.verified; exit 1; }
           echo "OpenPGP signature on CHECKSUM is valid (verified against pinned key only)"
           rm -rf "${GPG_HOME}"
 
@@ -159,13 +165,14 @@ jobs:
           # Step 4: Extract the SHA256 digest and verify the qcow2 image.
           # The Fedora CHECKSUM file uses the format: SHA256 (filename) = <digest>
           # sha256sum expects: <digest>  <filename>
+          # Read only the signature-covered payload (CHECKSUM.verified).
           # ---------------------------------------------------------------
-          grep "SHA256 (${FEDORA_IMAGE})" CHECKSUM \
+          grep "SHA256 (${FEDORA_IMAGE})" CHECKSUM.verified \
             | sed 's/SHA256 (\(.*\)) = \(.*\)/\2  \1/' \
             | sha256sum --check --status \
             || { echo "ERROR: SHA256 digest mismatch for ${FEDORA_IMAGE}"; exit 1; }
           echo "SHA256 digest verified for ${FEDORA_IMAGE}"
-          rm CHECKSUM
+          rm CHECKSUM CHECKSUM.verified
 
       - name: Install uv
         uses: astral-sh/setup-uv@v10.3.2
