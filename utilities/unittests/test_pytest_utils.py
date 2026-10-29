@@ -1176,7 +1176,7 @@ class TestGetArtifactoryServerUrl:
 
         with pytest.raises(
             MissingEnvironmentVariableError,
-            match=r"Bitwarden access is disabled.*disabled-bitwarden.*ARTIFACTORY_SERVER",
+            match="Bitwarden access is disabled.*disabled-bitwarden.*ARTIFACTORY_SERVER",
         ):
             get_artifactory_server_url("cluster.example.com", session=mock_session)
 
@@ -3346,17 +3346,12 @@ class TestInjectFailureJunit:
         mock_session = MagicMock()
         mock_session.config.option.xmlpath = str(xml_path)
 
-        # Simulate: earlier teardown raises, then finally block runs injection. The helper keeps
-        # the try/finally out of the raises body (PT012) while the exception still propagates
-        # through the finally block that injects the junit failure output.
-        def raise_with_junit_injection() -> None:
+        # Simulate: earlier teardown raises, then finally block runs injection
+        with pytest.raises(RuntimeError, match="Earlier teardown failed"):
             try:
                 raise RuntimeError("Earlier teardown failed")
             finally:
                 pytest_utils_module._inject_failure_junit(session=mock_session)
-
-        with pytest.raises(RuntimeError, match="Earlier teardown failed"):
-            raise_with_junit_injection()
 
         tree = ElementTree.parse(xml_path)
         testsuite = tree.getroot().find("testsuite")
