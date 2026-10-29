@@ -316,7 +316,7 @@ def linux_root_disk_snapshot_file_restore(
         source_path=restore_path,
         client=admin_client,
     ) as file_restore:
-        file_restore.wait_for_phase(target_phase=VirtualMachineFileRestore.Phase.SUCCEEDED)
+        file_restore.wait_for_status(status=VirtualMachineFileRestore.Phase.SUCCEEDED)
         yield file_restore
 
 
@@ -350,7 +350,7 @@ def linux_root_disk_backup_pvc_file_restore(
         source_path=restore_path,
         client=admin_client,
     ) as file_restore:
-        file_restore.wait_for_phase(target_phase=VirtualMachineFileRestore.Phase.SUCCEEDED)
+        file_restore.wait_for_status(status=VirtualMachineFileRestore.Phase.SUCCEEDED)
         yield file_restore
 
 
@@ -718,7 +718,7 @@ def first_linux_data_disk_snapshot_file_restore(
         source_path=restore_path,
         client=admin_client,
     ) as file_restore:
-        file_restore.wait_for_phase(target_phase=VirtualMachineFileRestore.Phase.SUCCEEDED)
+        file_restore.wait_for_status(status=VirtualMachineFileRestore.Phase.SUCCEEDED)
         yield file_restore
 
 
@@ -752,7 +752,7 @@ def second_linux_data_disk_snapshot_file_restore(
         source_path=restore_path,
         client=admin_client,
     ) as file_restore:
-        file_restore.wait_for_phase(target_phase=VirtualMachineFileRestore.Phase.SUCCEEDED)
+        file_restore.wait_for_status(status=VirtualMachineFileRestore.Phase.SUCCEEDED)
         yield file_restore
 
 
