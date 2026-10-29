@@ -34,9 +34,11 @@ def get_cim_instance_json(ssh_exec: Host) -> dict[str, Any]:
     return json.loads(
         s=run_ssh_commands(
             host=ssh_exec,
-            commands=split(
-                'powershell -c "Get-CimInstance -Class Win32_OperatingSystem | '
-                'Select-Object CSName, BuildNumber, Caption, Version, OSArchitecture | ConvertTo-Json"'
+            commands=powershell_command(
+                script=(
+                    "Get-CimInstance -Class Win32_OperatingSystem | "
+                    "Select-Object CSName, BuildNumber, Caption, Version, OSArchitecture | ConvertTo-Json"
+                )
             ),
         )[0]
     )
@@ -171,7 +173,17 @@ def run_powershell_commands(
     Raises:
         RuntimeError: PowerShell raises a terminating error or the last native
             command returns a nonzero exit status. The exception includes stderr;
-            stdout is never included.
+            exact occurrences of input_data are redacted and stdout is never
+            included. Scripts must avoid printing individual secrets extracted
+            from structured input_data.
+
+    Notes:
+        Cmdlet errors terminate the script through $ErrorActionPreference='Stop'.
+        In Windows PowerShell 5.1, redirecting native stderr (for example, 2>&1)
+        can also terminate the script even when the native exit code is zero.
+        For such invocations, use a child script block with a local
+        $ErrorActionPreference='Continue' and explicitly check $LASTEXITCODE,
+        throwing on failure before leaving the block.
     """
     executor = ssh_exec.executor()
     # rrmngmnt's default logger adapter includes the authentication password.
@@ -202,8 +214,10 @@ exit $global:LASTEXITCODE
             with ThreadPoolExecutor(max_workers=1) as reader:
                 stderr_result = reader.submit(stderr.read)
                 output = stdout.read().decode("utf-8-sig")
-                error_details = stderr_result.result().decode("utf-8-sig", errors="replace").strip()
+                error_details = stderr_result.result().decode(encoding="utf-8-sig", errors="replace").strip()
         if command.rc:
+            if input_data:
+                error_details = error_details.replace(input_data, "[REDACTED]")
             message = f"PowerShell operation failed (exit status {command.rc})"
             if error_details:
                 message += f": {error_details}"

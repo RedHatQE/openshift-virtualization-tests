@@ -41,14 +41,12 @@ class TestGetCimInstanceJson:
         assert result == expected, "CIM properties were not preserved"
         remote_command.assert_called_once_with(
             host=mock_vm.ssh_exec,
-            commands=[
-                "powershell",
-                "-c",
-                (
+            commands=powershell_command(
+                script=(
                     "Get-CimInstance -Class Win32_OperatingSystem | "
                     "Select-Object CSName, BuildNumber, Caption, Version, OSArchitecture | ConvertTo-Json"
                 ),
-            ],
+            ),
         )
 
     def test_rejects_invalid_json(self, mock_vm: MagicMock) -> None:
@@ -83,7 +81,7 @@ class TestPowerShellTransport:
         host.executor.return_value = executor
         stdin, stdout, stderr = MagicMock(), MagicMock(), MagicMock()
         stdout.read.return_value = output
-        stderr.read.return_value = b"Native command failed"
+        stderr.read.return_value = f"Native command failed: {secret}".encode()
         stdout.channel.recv_exit_status.return_value = exit_status
         client = MagicMock()
         client.exec_command.return_value = stdin, stdout, stderr
@@ -117,9 +115,23 @@ class TestPowerShellTransport:
         client.close.assert_called_once()
 
     @mark.parametrize(
-        "error_output,expected_details", [(b"Access is denied", "Access is denied"), (b"\xff", "\ufffd"), (b"", "")]
+        "error_output,expected_details,input_data",
+        [
+            (b"Access is denied", "Access is denied", None),
+            (b"\xff", "\ufffd", None),
+            (b"", "", None),
+            (
+                b"Failure: sensitive-input; retry sensitive-input",
+                "Failure: [REDACTED]; retry [REDACTED]",
+                "sensitive-input",
+            ),
+            ("Failure: sègreto".encode(), "Failure: [REDACTED]", "sègreto"),
+            (b"Access is denied", "Access is denied", ""),
+        ],
     )
-    def test_includes_error_details(self, mock_vm: MagicMock, error_output: bytes, expected_details: str) -> None:
+    def test_includes_error_details(
+        self, mock_vm: MagicMock, error_output: bytes, expected_details: str, input_data: str | None
+    ) -> None:
         executor = mock_vm.ssh_exec.executor.return_value
         command = executor.session.return_value.__enter__.return_value.command.return_value
         stdin, stdout, stderr = MagicMock(), MagicMock(), MagicMock()
@@ -129,7 +141,7 @@ class TestPowerShellTransport:
         command.rc = 1
 
         with raises(RuntimeError) as error:
-            run_powershell_commands(ssh_exec=mock_vm.ssh_exec, script="Get-Date")
+            run_powershell_commands(ssh_exec=mock_vm.ssh_exec, script="Get-Date", input_data=input_data)
 
         expected_message = "PowerShell operation failed (exit status 1)"
         if expected_details:
@@ -167,7 +179,7 @@ class TestGetWindowsTimezone:
         mock_ssh_exec = MagicMock()
         mock_run_ssh.return_value = ["StandardName: UTC"]
 
-        result = get_windows_timezone(mock_ssh_exec, get_standard_name=True)
+        result = get_windows_timezone(ssh_exec=mock_ssh_exec, get_standard_name=True)
 
         assert result == "StandardName: UTC", "Windows timezone standard name should match the SSH command output"
         mock_run_ssh.assert_called_once()
