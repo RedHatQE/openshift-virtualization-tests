@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any, cast
 from pyhelper_utils.shell import run_ssh_commands
 
 from utilities.constants.timeouts import TCP_TIMEOUT_30SEC
-from utilities.data_utils import guest_agent_version_parser
+from utilities.guest_agent import guest_agent_version_parser
 
 if TYPE_CHECKING:
     from re import Match
