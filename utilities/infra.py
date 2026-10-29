@@ -649,9 +649,9 @@ def scale_deployment_replicas(deployment_name, namespace, replica_count, client)
     """
     deployment = Deployment(client=client, name=deployment_name, namespace=namespace)
     initial_replicas = deployment.instance.spec.replicas
-    deployment.scale_replicas(replica_count=replica_count)
-    deployment.wait_for_replicas(deployed=replica_count > 0)
     try:
+        deployment.scale_replicas(replica_count=replica_count)
+        deployment.wait_for_replicas(deployed=replica_count > 0)
         yield
     finally:
         deployment.scale_replicas(replica_count=initial_replicas)

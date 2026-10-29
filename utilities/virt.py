@@ -2840,9 +2840,9 @@ def target_vm_from_cloning_job(client, cloning_job):
         generate_unique_name=False,
     )
     assert target_vm.exists, f"{target_vm.name} VM was not created."
-    running_vm(vm=target_vm)
 
     try:
+        running_vm(vm=target_vm)
         yield target_vm
     finally:
         target_vm.clean_up()

@@ -288,11 +288,12 @@ def terminate_process(process):
 
 @contextmanager
 def resource_log_level_error(resource):
+    previous_level = resource.logger.level
     resource.logger.setLevel(level=logging.ERROR)
     try:
         yield resource
     finally:
-        resource.logger.setLevel(level=logging.INFO)
+        resource.logger.setLevel(level=previous_level)
 
 
 def create_vm_with_nginx_service(chaos_namespace, admin_client, utility_pods, node, node_selector_label=None):
