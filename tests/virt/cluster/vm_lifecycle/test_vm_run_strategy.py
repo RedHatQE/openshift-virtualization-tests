@@ -101,6 +101,15 @@ def xfail_vm_shutdown_run_strategy_halted(run_strategy_matrix__class__):
         pytest.xfail(reason="Shutdown is not supported for Halted runStrategy")
 
 
+@pytest.fixture()
+def xfail_halted_restart(run_strategy_matrix__class__, vm_action):
+    """KubeVirt permanently rejects restart on Halted VMs with HTTP 409.
+    See virt-api/rest/lifecycle.go: RunStrategy Halted does not support manual restart requests.
+    """
+    if run_strategy_matrix__class__ == HALTED and vm_action == "restart":
+        pytest.xfail(reason="KubeVirt rejects restart on Halted VMs with HTTP 409 (by design)")
+
+
 def updated_vm_run_strategy(run_strategy, vm_for_test):
     if vm_for_test.instance.spec.runStrategy != run_strategy:
         LOGGER.info(f"Update VM with runStrategy {run_strategy}")
@@ -226,6 +235,7 @@ class TestRunStrategyBaseActions:
         self,
         lifecycle_vm,
         matrix_updated_vm_run_strategy,
+        xfail_halted_restart,
         vm_action,
     ):
         LOGGER.info(f"Verify VM with run strategy {matrix_updated_vm_run_strategy} and VM action {vm_action}")
