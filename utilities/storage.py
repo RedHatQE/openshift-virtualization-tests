@@ -478,17 +478,23 @@ def virtctl_volume(
     if bus:
         command.append(f"--bus={bus}")
 
+    add_command_returned = False
     try:
-        yield utilities.infra.run_virtctl_command(command=command, namespace=namespace)
+        result = utilities.infra.run_virtctl_command(command=command, namespace=namespace)
+        add_command_returned = True
+        yield result
     finally:
-        # clean up:
-        command = [
-            "removevolume",
-            "--persist",
-            f"{vm_name}",
-            f"--volume-name={volume_name}",
-        ]
-        utilities.infra.run_virtctl_command(command=command, namespace=namespace)
+        # Only remove a volume this context actually attempted to add: if addvolume raised
+        # before returning, the volume may pre-exist and must not be removed.
+        if add_command_returned:
+            # clean up:
+            command = [
+                "removevolume",
+                "--persist",
+                f"{vm_name}",
+                f"--volume-name={volume_name}",
+            ]
+            utilities.infra.run_virtctl_command(command=command, namespace=namespace)
 
 
 def virtctl_memory_dump(

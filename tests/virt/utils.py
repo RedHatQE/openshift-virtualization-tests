@@ -88,7 +88,9 @@ def running_sleep_in_linux(vm):
         yield
         pid_after = fetch_pid_from_linux_vm(vm=vm, process_name=process)
     finally:
-        kill_processes_by_name_linux(vm=vm, process_name=process)
+        # Tolerate an already-exited sleep process so the PID assertion below is not masked
+        # by a pkill failure in cleanup.
+        kill_processes_by_name_linux(vm=vm, process_name=process, check_rc=False)
     assert pid_orig == pid_after, f"PID mismatch: {pid_orig} != {pid_after}"
 
 
