@@ -202,7 +202,3 @@ class TestCustomNamespace:
     ):
         with pytest.raises(TimeoutExpiredError):
             wait_for_edited_label_reconciliation(template=edited_custom_namespace_template)
-            LOGGER.error(
-                f"Template {edited_custom_namespace_template.name} in custom namespace "
-                f"{custom_vm_template_namespace.name} reconciled after label edit post-revert."
-            )

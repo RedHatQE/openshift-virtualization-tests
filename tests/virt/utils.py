@@ -84,9 +84,11 @@ def running_sleep_in_linux(vm):
     process = "sleep"
     kill_processes_by_name_linux(vm=vm, process_name=process, check_rc=False)
     pid_orig = start_and_fetch_processid_on_linux_vm(vm=vm, process_name=process, args="1000", use_nohup=True)
-    yield
-    pid_after = fetch_pid_from_linux_vm(vm=vm, process_name=process)
-    kill_processes_by_name_linux(vm=vm, process_name=process)
+    try:
+        yield
+        pid_after = fetch_pid_from_linux_vm(vm=vm, process_name=process)
+    finally:
+        kill_processes_by_name_linux(vm=vm, process_name=process)
     assert pid_orig == pid_after, f"PID mismatch: {pid_orig} != {pid_after}"
 
 

@@ -99,10 +99,10 @@ def assert_instance_revision_and_memory_update(
 ) -> None:
     guest_memory = vm_for_test.vmi.instance.spec.domain.memory.guest
     assert vm_for_test.instance.status.instancetypeRef.controllerRevisionRef.name != old_revision_name, (
-        "The revisionName is still {old_revision_name}, not updated after editing"
+        f"The revisionName is still {old_revision_name}, not updated after editing"
     )
     assert guest_memory == updated_memory, (
-        "The Guest Memory in VMI is {guest_memory}, not updated to {updated_memory} after editing"
+        f"The Guest Memory in VMI is {guest_memory}, not updated to {updated_memory} after editing"
     )
 
 
