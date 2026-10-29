@@ -103,9 +103,7 @@ class TestConstants:
         assert S390X == "s390x", "S390X must be s390x"
         assert X86_64 == "x86_64", "X86_64 must be x86_64"
         assert MULTIARCH == "multiarch", "MULTIARCH must be multiarch"
-        assert SUPPORTED_MULTIARCH_OPTIONS == {"amd64", "arm64"}, (
-            "SUPPORTED_MULTIARCH_OPTIONS must be {amd64, arm64}"
-        )
+        assert SUPPORTED_MULTIARCH_OPTIONS == {"amd64", "arm64"}, "SUPPORTED_MULTIARCH_OPTIONS must be {amd64, arm64}"
         assert SUPPORTED_CPU_ARCHITECTURES == {"amd64", "arm64", "s390x"}, (
             "SUPPORTED_CPU_ARCHITECTURES must be {amd64, arm64, s390x}"
         )
