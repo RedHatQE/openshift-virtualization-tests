@@ -200,6 +200,7 @@ To update the Fedora version or target CPU architectures, update this configurat
   "fedora_version": "43",
   "fedora_image_base": "Fedora-Cloud-Base-Generic-43-1.6",
   "fedora_checksum_base": "Fedora-Cloud-43-1.6",
+  "fedora_signing_key_fingerprint": "C6E7F081CF80E13146676E88829B606631645531",
   "remote_repository": "quay.io/openshift-cnv/qe-cnv-tests-fedora-staging",
   "matrix": {
     "include": [
@@ -220,10 +221,41 @@ To update the Fedora version or target CPU architectures, update this configurat
 | `fedora_version` | Fedora major version number (e.g. `"43"`) |
 | `fedora_image_base` | Base filename of the Fedora Cloud image (without architecture suffix and extension) |
 | `fedora_checksum_base` | Base filename of the Fedora checksum file (without architecture suffix) |
+| `fedora_signing_key_fingerprint` | 40-character hex fingerprint of the Fedora release signing key used to verify the `CHECKSUM` GPG signature. **Fedora rotates this key every release, so it must be updated whenever `fedora_version` changes** (see below) |
 | `remote_repository` | Target container registry repository for tagging and pushing images (e.g. `quay.io/org/repo`) |
 | `matrix.include` | Per-architecture build parameters (`arch`, `url_arch`, `qemu_package`, `fedora_url`) |
 
 Editing `.github/component-builder-config.json` automatically updates the GitHub workflow parameters and matrix for builds, tests, and releases across all specified architectures (`amd64`, `arm64`, `s390x`).
+
+> **Bumping the Fedora version?** The `fedora_signing_key_fingerprint` is tied to a
+> specific Fedora release: each major release is signed with its own GPG key. When you
+> change `fedora_version`, you **must** also update `fedora_signing_key_fingerprint` to
+> the new release's fingerprint — otherwise the build fails fast when the pinned key is
+> not found in `fedora.gpg`. Find the fingerprint for the target release on the
+> [Fedora security / signing keys page](https://fedoraproject.org/security) (or run
+> `gpg --show-keys fedora.gpg` against the downloaded `https://fedoraproject.org/fedora.gpg`
+> keyring and pick the `Fedora (<version>)` key).
+
+### Adding a new architecture
+
+The "one-file-edit" workflow above covers bumping the Fedora version and tweaking an
+**existing** architecture's parameters. Adding a **new** architecture is more than a config
+change: the config file only carries data (`arch`, `url_arch`, `qemu_package`, `fedora_url`),
+so the per-architecture *logic* must be added in code as well. Review and update the following:
+
+- **`.github/component-builder-config.json`** — add a `matrix.include` entry for the new
+  architecture (`arch`, `url_arch`, `qemu_package`, `fedora_url`).
+- **[`build.sh`](build.sh)** — add a branch to the `CPU_ARCH` `case` statement (set
+  `CPU_ARCH_CODE`, `VIRT_TYPE`, and `BOOT_OPTS`); the default branch rejects unknown
+  architectures. Also check whether the new architecture needs any of the existing
+  architecture-specific handling (e.g. the `arm64` UEFI/NVRAM setup and BLS kernel-cmdline
+  patching, or the `arm64`-vs-other `virsh undefine --nvram` branches).
+- **[`user-data`](user-data)** — review the per-architecture `PACKAGES` list and boot steps
+  (e.g. the `s390x` package exclusions and the `s390x` `zipl` step) and adjust for the new
+  architecture as needed.
+- **Prerequisites** — add any new host tooling required to build the architecture locally
+  (e.g. `qemu-system-<arch>` and, for UEFI architectures, the matching firmware package),
+  and update the [Prerequisites](#software-requirements) list above.
 
 # Test build via GitHub
 Opening (or updating) a pull request that touches any of the following paths triggers the **Component Builder Check** workflow ([`component-builder.yml`](../../.github/workflows/component-builder.yml)):
