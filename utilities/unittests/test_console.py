@@ -157,7 +157,7 @@ class TestConsole:
             with patch.object(console, "_connect"):
                 # Deliberate direct __enter__ call: verifies the context-manager protocol (return value, call counts)
                 # on this mock; a with-block would also invoke __exit__ and change what is tested.
-                result = console.__enter__()  # noqa: PLC2801
+                result = console.__enter__()
 
         # __enter__ returns the result of connect(), which returns self.child
         assert result == mock_child

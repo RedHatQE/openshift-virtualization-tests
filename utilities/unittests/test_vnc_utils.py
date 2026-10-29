@@ -37,7 +37,7 @@ class TestVNCConnection:
 
         # Deliberate direct __enter__ call: verifies the context-manager protocol (return value, call counts)
         # on this mock; a with-block would also invoke __exit__ and change what is tested.
-        result = vnc_conn.__enter__()  # noqa: PLC2801
+        result = vnc_conn.__enter__()
 
         assert result == mock_child
         assert vnc_conn.child == mock_child
@@ -57,7 +57,7 @@ class TestVNCConnection:
 
         # Deliberate direct __enter__ call: verifies the context-manager protocol (return value, call counts)
         # on this mock; a with-block would also invoke __exit__ and change what is tested.
-        entered = vnc_conn.__enter__()  # noqa: PLC2801
+        entered = vnc_conn.__enter__()
 
         assert entered is None, "__enter__ must return None when no sample is available"
 
@@ -105,7 +105,7 @@ class TestVNCConnection:
             vnc_conn = VNCConnection(mock_vm)
             # Deliberate direct __enter__ call: verifies the context-manager protocol (return value, call counts)
             # on this mock; a with-block would also invoke __exit__ and change what is tested.
-            vnc_conn.__enter__()  # noqa: PLC2801
+            vnc_conn.__enter__()
 
             # Check that TimeoutSampler was called with correct command
             call_args = mock_sampler.call_args
