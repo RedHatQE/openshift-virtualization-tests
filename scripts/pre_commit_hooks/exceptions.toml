@@ -1,1 +1,7 @@
-exceptions = []
+[[exceptions]]
+rule = "noqa"
+path = "utilities/pytest_utils.py"
+directive = "# noqa: PLC2801"
+source_fingerprint = "sha256:43f5323beb7cb9eb7dcecc9174d0d30c22db18fe9b0e9603464114b502c93b2b"
+reason = "Monkey-patch of paramiko PKey.get_fingerprint (FIPS workaround): type.__setattr__ is the only form satisfying all checkers — direct assignment fails mypy (method-assign), plain setattr trips B010 (in ruff 0.17 defaults), and a __dict__ write fails mypy (MappingProxyType indexed assignment)."
+approval_url = "https://github.com/RedHatQE/openshift-virtualization-tests/pull/6743"
