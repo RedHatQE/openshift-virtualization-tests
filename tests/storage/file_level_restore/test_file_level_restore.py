@@ -8,7 +8,7 @@ Jira: https://redhat.atlassian.net/browse/VIRTSTRAT-480 # <skip-jira-utils-check
 from shlex import quote
 
 import pytest
-from ocp_resources.virtual_machine_file_restore import VirtualMachineFileRestore
+from ocp_resources.resource import Resource
 from pyhelper_utils.exceptions import CommandExecFailed
 from pyhelper_utils.shell import run_ssh_commands
 
@@ -115,7 +115,7 @@ class TestFileRestoreBackupVendorWorkflow:
             - Temporary resources created during the restore operation are cleaned up upon completion
         """
         restore_path, expected_content = deleted_linux_test_file_on_data_disk
-        linux_data_disk_pvc_file_restore.wait_for_status(status=VirtualMachineFileRestore.Phase.SUCCEEDED)
+        linux_data_disk_pvc_file_restore.wait_for_status(status=Resource.VirtualMachineFileRestore.Phase.SUCCEEDED)
         restored_file_count = linux_data_disk_pvc_file_restore.restored_files_count
         assert restored_file_count == 1, f"VMFileRestore reported {restored_file_count} restored files, expected 1"
         run_command_on_vm_and_check_output(
@@ -175,7 +175,9 @@ class TestFileRestoreWindowsGuestFileCount:
         restore_directory = windows_guest_path(
             guest_path=windows_data_disk_path(relative_path=WINDOWS_RESTORE_TEST_DIRECTORY),
         )
-        windows_multi_file_snapshot_file_restore.wait_for_status(status=VirtualMachineFileRestore.Phase.SUCCEEDED)
+        windows_multi_file_snapshot_file_restore.wait_for_status(
+            status=Resource.VirtualMachineFileRestore.Phase.SUCCEEDED
+        )
         reported_file_count = windows_multi_file_snapshot_file_restore.restored_files_count
         actual_file_count = count_files_in_windows_directory(
             vm=windows_file_restore_vm,
@@ -244,7 +246,7 @@ class TestFileRestoreWindowsNTFSACLsAndOwnership:
         guest_path, _ = deleted_windows_test_file_on_data_disk
         source_path = windows_guest_path(guest_path=guest_path)
         expected_acl, expected_owner = windows_ntfs_acl_baseline
-        windows_acl_pvc_file_restore.wait_for_status(status=VirtualMachineFileRestore.Phase.SUCCEEDED)
+        windows_acl_pvc_file_restore.wait_for_status(status=Resource.VirtualMachineFileRestore.Phase.SUCCEEDED)
         assert_windows_ntfs_acl_matches(
             vm=windows_file_restore_vm,
             file_path=source_path,
@@ -292,7 +294,7 @@ class TestFileRestoreWindowsNTFSACLsAndOwnership:
         guest_path, _ = deleted_windows_test_file_for_snapshot
         source_path = windows_guest_path(guest_path=guest_path)
         expected_acl, expected_owner = windows_ntfs_acl_baseline
-        windows_acl_snapshot_file_restore.wait_for_status(status=VirtualMachineFileRestore.Phase.SUCCEEDED)
+        windows_acl_snapshot_file_restore.wait_for_status(status=Resource.VirtualMachineFileRestore.Phase.SUCCEEDED)
         assert_windows_ntfs_acl_matches(
             vm=windows_file_restore_vm,
             file_path=source_path,
@@ -349,7 +351,9 @@ class TestFileRestoreWindowsDriveRoot:
             - Restored file content matches the source
         """
         guest_path, expected_content = deleted_windows_drive_root_file
-        windows_drive_root_snapshot_file_restore.wait_for_status(status=VirtualMachineFileRestore.Phase.SUCCEEDED)
+        windows_drive_root_snapshot_file_restore.wait_for_status(
+            status=Resource.VirtualMachineFileRestore.Phase.SUCCEEDED
+        )
         verify_file_in_windows_vm(
             windows_vm=windows_file_restore_vm,
             file_name_with_path=guest_path,
@@ -628,7 +632,7 @@ class TestFileRestoreCrossNamespace:
         assert cross_namespace_data_disk_snapshot.namespace != namespace.name, (
             "Cross-namespace restore requires the snapshot and target VM to be in different namespaces"
         )
-        cross_namespace_file_restore.wait_for_status(status=VirtualMachineFileRestore.Phase.SUCCEEDED)
+        cross_namespace_file_restore.wait_for_status(status=Resource.VirtualMachineFileRestore.Phase.SUCCEEDED)
         run_command_on_vm_and_check_output(
             vm=file_restore_linux_vm,
             command=f"cat {quote(restore_path)}",
@@ -723,7 +727,9 @@ class TestFileRestoreWindowsManualBrowsing:
             - Known backup content is readable and stays unchanged after a modification attempt (read-only mount)
         """
         guest_path, expected_content = windows_test_file_on_data_disk
-        windows_manual_browsing_file_restore.wait_for_status(status=VirtualMachineFileRestore.Phase.VOLUME_READY)
+        windows_manual_browsing_file_restore.wait_for_status(
+            status=Resource.VirtualMachineFileRestore.Phase.VOLUME_READY
+        )
         backup_file_path = windows_backup_file_path(
             vm=windows_file_restore_vm,
             restore_cr_name=windows_manual_browsing_file_restore.name,
@@ -823,7 +829,7 @@ class TestFileRestoreRootDiskManualBrowsing:
         """
         guest_path, expected_content = linux_test_file_on_root_disk
         linux_root_disk_manual_browsing_file_restore.wait_for_status(
-            status=VirtualMachineFileRestore.Phase.VOLUME_READY
+            status=Resource.VirtualMachineFileRestore.Phase.VOLUME_READY
         )
         mount_path = linux_root_disk_manual_browsing_file_restore.instance.status.mountPath
         assert mount_path, (
@@ -888,7 +894,7 @@ class TestFileRestoreLargeFile:
         """
         restore_path, expected_checksum = deleted_linux_large_file
         large_file_snapshot_file_restore.wait_for_status(
-            status=VirtualMachineFileRestore.Phase.SUCCEEDED, timeout=TIMEOUT_10MIN
+            status=Resource.VirtualMachineFileRestore.Phase.SUCCEEDED, timeout=TIMEOUT_10MIN
         )
         actual_checksum = cksum_file(vm=file_restore_linux_vm, filename=restore_path)
         assert actual_checksum == expected_checksum, (
@@ -958,7 +964,7 @@ class TestFileRestoreConcurrentVirtualMachines:
                 True,
             ),
         ):
-            file_restore.wait_for_status(status=VirtualMachineFileRestore.Phase.SUCCEEDED)
+            file_restore.wait_for_status(status=Resource.VirtualMachineFileRestore.Phase.SUCCEEDED)
             run_command_on_vm_and_check_output(
                 vm=vm,
                 command=f"cat {quote(restore_path)}",

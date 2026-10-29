@@ -3,6 +3,7 @@ import logging
 import pytest
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
+from ocp_resources.resource import Resource
 from ocp_resources.role import Role
 from ocp_resources.role_binding import RoleBinding
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
@@ -316,7 +317,7 @@ def linux_root_disk_snapshot_file_restore(
         source_path=restore_path,
         client=admin_client,
     ) as file_restore:
-        file_restore.wait_for_status(status=VirtualMachineFileRestore.Phase.SUCCEEDED)
+        file_restore.wait_for_status(status=Resource.VirtualMachineFileRestore.Phase.SUCCEEDED)
         yield file_restore
 
 
@@ -350,7 +351,7 @@ def linux_root_disk_backup_pvc_file_restore(
         source_path=restore_path,
         client=admin_client,
     ) as file_restore:
-        file_restore.wait_for_status(status=VirtualMachineFileRestore.Phase.SUCCEEDED)
+        file_restore.wait_for_status(status=Resource.VirtualMachineFileRestore.Phase.SUCCEEDED)
         yield file_restore
 
 
@@ -718,7 +719,7 @@ def first_linux_data_disk_snapshot_file_restore(
         source_path=restore_path,
         client=admin_client,
     ) as file_restore:
-        file_restore.wait_for_status(status=VirtualMachineFileRestore.Phase.SUCCEEDED)
+        file_restore.wait_for_status(status=Resource.VirtualMachineFileRestore.Phase.SUCCEEDED)
         yield file_restore
 
 
@@ -752,7 +753,7 @@ def second_linux_data_disk_snapshot_file_restore(
         source_path=restore_path,
         client=admin_client,
     ) as file_restore:
-        file_restore.wait_for_status(status=VirtualMachineFileRestore.Phase.SUCCEEDED)
+        file_restore.wait_for_status(status=Resource.VirtualMachineFileRestore.Phase.SUCCEEDED)
         yield file_restore
 
 
