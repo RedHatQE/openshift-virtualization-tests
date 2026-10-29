@@ -115,7 +115,7 @@ class TestConstants:
 
     def test_tcp_timeout_constants(self):
         """Test TCP timeout constants are defined."""
-        assert TCP_TIMEOUT_30SEC == 30, "TCP_TIMEOUT_30SEC must equal 30 seconds"
+        assert TCP_TIMEOUT_30SEC == 30.0
 
     def test_memory_constants(self):
         """Test memory constants are defined."""
