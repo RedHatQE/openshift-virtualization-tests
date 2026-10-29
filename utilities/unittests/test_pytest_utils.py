@@ -3346,14 +3346,17 @@ class TestInjectFailureJunit:
         mock_session = MagicMock()
         mock_session.config.option.xmlpath = str(xml_path)
 
-        # Simulate: earlier teardown raises, then finally block runs injection
-        # Deliberate multi-statement raises-body: the test verifies that a finally block injects
-        # junit failure output while an earlier exception propagates; restructuring defeats it.
-        with pytest.raises(RuntimeError, match="Earlier teardown failed"):  # noqa: PT012
+        # Simulate: earlier teardown raises, then finally block runs injection. The helper keeps
+        # the try/finally out of the raises body (PT012) while the exception still propagates
+        # through the finally block that injects the junit failure output.
+        def raise_with_junit_injection() -> None:
             try:
                 raise RuntimeError("Earlier teardown failed")
             finally:
                 pytest_utils_module._inject_failure_junit(session=mock_session)
+
+        with pytest.raises(RuntimeError, match="Earlier teardown failed"):
+            raise_with_junit_injection()
 
         tree = ElementTree.parse(xml_path)
         testsuite = tree.getroot().find("testsuite")

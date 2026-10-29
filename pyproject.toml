@@ -55,6 +55,13 @@ ignore = [
 "scripts/tests_analyzer/pytest_marker_analyzer.py" = ["N802"]
 # N802: logging.Formatter.formatTime override
 "utilities/logger.py" = ["N802"]
+# PLC2801: unit tests deliberately call __enter__ directly to verify the context-manager
+# protocol (a with-block would also invoke __exit__ and change what is tested); the flake8
+# hook already excludes this directory for the same reason (non-compliant source fixtures)
+"utilities/unittests/**" = ["PLC2801"]
+# PLC2801: the paramiko FIPS monkey-patch must use type.__setattr__ — direct assignment fails
+# mypy (method-assign) and plain setattr trips B010 (in ruff 0.17 defaults)
+"utilities/pytest_utils.py" = ["PLC2801"]
 
 [tool.ruff.lint.isort]
 order-by-type = true
