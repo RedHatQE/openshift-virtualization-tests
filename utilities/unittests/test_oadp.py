@@ -230,6 +230,8 @@ class TestVeleroBackup:
         backup.Status.COMPLETED = "Completed"
         mock_backup_enter.return_value = backup
 
+        # Deliberate direct __enter__ call: verifies the context-manager protocol (return value, call counts)
+        # on this mock; a with-block would also invoke __exit__ and change what is tested.
         result = backup.__enter__()  # noqa: PLC2801
 
         mock_backup_enter.assert_called_once()
@@ -249,6 +251,8 @@ class TestVeleroBackup:
         backup.wait_for_status = MagicMock()
         mock_backup_enter.return_value = backup
 
+        # Deliberate direct __enter__ call: verifies the context-manager protocol (return value, call counts)
+        # on this mock; a with-block would also invoke __exit__ and change what is tested.
         entered_backup = backup.__enter__()  # noqa: PLC2801
 
         mock_backup_enter.assert_called_once()
@@ -652,6 +656,8 @@ class TestVeleroRestore:
 
         mock_restore_enter.return_value = restore
 
+        # Deliberate direct __enter__ call: verifies the context-manager protocol (return value, call counts)
+        # on this mock; a with-block would also invoke __exit__ and change what is tested.
         result = restore.__enter__()  # noqa: PLC2801
 
         mock_restore_enter.assert_called_once()
@@ -668,6 +674,8 @@ class TestVeleroRestore:
 
         mock_restore_enter.return_value = restore
 
+        # Deliberate direct __enter__ call: verifies the context-manager protocol (return value, call counts)
+        # on this mock; a with-block would also invoke __exit__ and change what is tested.
         restore.__enter__()  # noqa: PLC2801
 
         restore.wait_for_status.assert_not_called()

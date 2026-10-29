@@ -3347,6 +3347,8 @@ class TestInjectFailureJunit:
         mock_session.config.option.xmlpath = str(xml_path)
 
         # Simulate: earlier teardown raises, then finally block runs injection
+        # Deliberate multi-statement raises-body: the test verifies that a finally block injects
+        # junit failure output while an earlier exception propagates; restructuring defeats it.
         with pytest.raises(RuntimeError, match="Earlier teardown failed"):  # noqa: PT012
             try:
                 raise RuntimeError("Earlier teardown failed")
