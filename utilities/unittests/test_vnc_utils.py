@@ -35,8 +35,6 @@ class TestVNCConnection:
 
         vnc_conn = VNCConnection(mock_vm)
 
-        # Deliberate direct __enter__ call: verifies the context-manager protocol (return value, call counts)
-        # on this mock; a with-block would also invoke __exit__ and change what is tested.
         result = vnc_conn.__enter__()
 
         assert result == mock_child
@@ -55,11 +53,9 @@ class TestVNCConnection:
 
         vnc_conn = VNCConnection(mock_vm)
 
-        # Deliberate direct __enter__ call: verifies the context-manager protocol (return value, call counts)
-        # on this mock; a with-block would also invoke __exit__ and change what is tested.
-        entered = vnc_conn.__enter__()
+        result = vnc_conn.__enter__()
 
-        assert entered is None, "__enter__ must return None when no sample is available"
+        assert result is None
 
     def test_vnc_connection_exit(self, mock_vm):
         """Test VNCConnection __exit__ method"""
@@ -103,8 +99,6 @@ class TestVNCConnection:
             mock_sampler.return_value = mock_sampler_instance
 
             vnc_conn = VNCConnection(mock_vm)
-            # Deliberate direct __enter__ call: verifies the context-manager protocol (return value, call counts)
-            # on this mock; a with-block would also invoke __exit__ and change what is tested.
             vnc_conn.__enter__()
 
             # Check that TimeoutSampler was called with correct command
