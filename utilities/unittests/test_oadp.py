@@ -230,7 +230,9 @@ class TestVeleroBackup:
         backup.Status.COMPLETED = "Completed"
         mock_backup_enter.return_value = backup
 
-        result = backup.__enter__()
+        # Deliberate direct __enter__ call: verifies the context-manager protocol (return value, call counts)
+        # on this mock; a with-block would also invoke __exit__ and change what is tested.
+        result = backup.__enter__()  # noqa: PLC2801
 
         mock_backup_enter.assert_called_once()
         backup.wait_for_status.assert_called_once_with(status="Completed", timeout=300)
@@ -249,11 +251,15 @@ class TestVeleroBackup:
         backup.wait_for_status = MagicMock()
         mock_backup_enter.return_value = backup
 
-        result = backup.__enter__()
+        # Deliberate direct __enter__ call: verifies the context-manager protocol (return value, call counts)
+        # on this mock; a with-block would also invoke __exit__ and change what is tested.
+        entered_backup = backup.__enter__()  # noqa: PLC2801
 
         mock_backup_enter.assert_called_once()
         backup.wait_for_status.assert_not_called()
-        assert result == backup, "Expected __enter__ to return the backup instance"
+        assert entered_backup == backup, (
+            "Expected __enter__ to return the backup instance when wait_complete is disabled"
+        )
 
     @patch("utilities.oadp._velero_teardown")
     @patch("utilities.oadp.Backup.__exit__")
@@ -650,7 +656,9 @@ class TestVeleroRestore:
 
         mock_restore_enter.return_value = restore
 
-        result = restore.__enter__()
+        # Deliberate direct __enter__ call: verifies the context-manager protocol (return value, call counts)
+        # on this mock; a with-block would also invoke __exit__ and change what is tested.
+        result = restore.__enter__()  # noqa: PLC2801
 
         mock_restore_enter.assert_called_once()
         restore.wait_for_status.assert_called_once_with(status="Completed", timeout=300)
@@ -666,7 +674,9 @@ class TestVeleroRestore:
 
         mock_restore_enter.return_value = restore
 
-        restore.__enter__()
+        # Deliberate direct __enter__ call: verifies the context-manager protocol (return value, call counts)
+        # on this mock; a with-block would also invoke __exit__ and change what is tested.
+        restore.__enter__()  # noqa: PLC2801
 
         restore.wait_for_status.assert_not_called()
 

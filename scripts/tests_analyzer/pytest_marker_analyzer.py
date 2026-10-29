@@ -576,11 +576,7 @@ def check_parametrize_marks(decorator: ast.AST, marker_names: set[str]) -> bool:
         return False
 
     # Check each element in the list for pytest.param(..., marks=...)
-    for element in param_values.elts:
-        if has_marker_in_param(node=element, marker_names=marker_names):
-            return True
-
-    return False
+    return any(has_marker_in_param(node=element, marker_names=marker_names) for element in param_values.elts)
 
 
 def has_marker_in_param(node: ast.AST, marker_names: set[str]) -> bool:
@@ -1591,7 +1587,7 @@ def _get_diff_content(
             file_path=str(relative_path),
             token=token,
         )
-        return diff_content if diff_content else None
+        return diff_content or None
 
     try:
         result = subprocess.run(
@@ -2083,7 +2079,7 @@ def _analyze_single_test_dependencies(
         max_depth = MAX_TRANSITIVE_IMPORT_DEPTH
 
         while to_visit and current_depth < max_depth:
-            current_level = to_visit[:]
+            current_level = to_visit.copy()
             to_visit = []
 
             for dep_file in current_level:
@@ -3724,25 +3720,31 @@ class MarkerTestAnalyzer:
 def format_markdown_output(result: AnalysisResult) -> str:
     """Format analysis result as Markdown."""
     output = ["## Test Execution Plan", ""]
-    output.append(f"**Run tests with marker expression `{result.marker_expression}`: {result.should_run_tests}**")
-    output.append("")
-    output.append(f"**Reason:** {result.reason}")
-    output.append("")
+    output.extend((
+        f"**Run tests with marker expression `{result.marker_expression}`: {result.should_run_tests}**",
+        "",
+        f"**Reason:** {result.reason}",
+        "",
+    ))
 
     if result.affected_tests:
         output.append(f"### Affected tests with marker expression `{result.marker_expression}`:")
         for test in result.affected_tests:
-            output.append(f"- `{test['node_id']}`")
-            output.append(f"  - Test file: `{test['test_file']}`")
-            output.append(f"  - Dependencies affected: {len(test['dependencies'])}")
+            output.extend((
+                f"- `{test['node_id']}`",
+                f"  - Test file: `{test['test_file']}`",
+                f"  - Dependencies affected: {len(test['dependencies'])}",
+            ))
             for dep in test["dependencies"][:3]:  # Show first 3 dependencies
                 output.append(f"    - `{dep}`")
             if len(test["dependencies"]) > 3:
                 output.append(f"    - ... and {len(test['dependencies']) - 3} more")
         output.append("")
 
-    output.append(f"**Total tests with marker expression `{result.marker_expression}`:** {result.total_tests}")
-    output.append(f"**Changed files:** {len(result.changed_files)}")
+    output.extend((
+        f"**Total tests with marker expression `{result.marker_expression}`:** {result.total_tests}",
+        f"**Changed files:** {len(result.changed_files)}",
+    ))
 
     return "\n".join(output)
 
@@ -3923,7 +3925,7 @@ def run_github_mode(args: argparse.Namespace) -> tuple[AnalysisResult | None, in
                 workdir.mkdir(parents=True, exist_ok=True)
             else:
                 # Use custom temp base if specified, otherwise system default
-                temp_base = args.work_dir if args.work_dir else None
+                temp_base = args.work_dir or None
                 if temp_base:
                     temp_base.mkdir(parents=True, exist_ok=True)
                 temp_dir = tempfile.mkdtemp(prefix="pytest_marker_analyzer_", dir=temp_base)

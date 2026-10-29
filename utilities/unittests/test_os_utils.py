@@ -184,7 +184,7 @@ class TestGenerateOsMatrixDict:
         del mock_images.Rhel
         mock_images.Rhel = None
 
-        with pytest.raises(ValueError, match="Unsupported OS: rhel.*Make sure it is supported"):
+        with pytest.raises(ValueError, match=r"Unsupported OS: rhel.*Make sure it is supported"):
             generate_os_matrix_dict(os_name="rhel", supported_operating_systems=["rhel-9-5"])
 
     @patch("utilities.os_utils.Images")

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 from ocp_resources.datavolume import DataVolume
@@ -15,6 +16,8 @@ if TYPE_CHECKING:
     from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
     from ocp_resources.pod import Pod
     from ocp_resources.resource import DynamicClient
+
+LOGGER = logging.getLogger(__name__)
 
 
 def get_importer_pod_node(importer_pod: Pod) -> str:
@@ -100,3 +103,27 @@ def wait_for_multus_network_status(importer_pod: Pod) -> None:
     raise TimeoutExpiredError(
         f"Multus {network_status_annotation} annotation was not populated within the timeout period."
     )
+
+
+def sample_dv_import_not_scheduled(dv: DataVolume) -> None:
+    """Sample the DataVolume status until the timeout elapses.
+
+    Logs an error for every sample whose status is not IMPORT_SCHEDULED.
+    Intended to be called inside pytest.raises(TimeoutExpiredError) when the
+    import is expected never to be scheduled.
+
+    Args:
+        dv: The DataVolume under test.
+
+    Raises:
+        TimeoutExpiredError: When the sampling window elapses.
+    """
+    for sample in TimeoutSampler(
+        wait_timeout=TIMEOUT_1MIN,
+        sleep=10,
+        func=lambda: dv.status != DataVolume.Status.IMPORT_SCHEDULED,
+    ):
+        if sample:
+            LOGGER.error(
+                f"DV status is not as expected.Expected: {DataVolume.Status.IMPORT_SCHEDULED}. Found: {dv.status}"
+            )
