@@ -171,9 +171,7 @@ def wait_for_address_on_iface(worker_pod, iface_name):
     if function passed in func argument failed.
     """
     sample = None
-    # %-style template: logging formats it lazily at both call sites (success info /
-    # timeout error) with different sample values
-    log = "Worker ip address for %s : %s"
+    log = "Worker ip address for {iface} : {address}"
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_2MIN,
         sleep=1,
@@ -183,10 +181,10 @@ def wait_for_address_on_iface(worker_pod, iface_name):
     try:
         for sample in samples:
             if sample:
-                LOGGER.info(log, iface_name, sample)
+                LOGGER.info(log.format(iface=iface_name, address=sample))
                 return sample
     except TimeoutExpiredError:
-        LOGGER.error(log, iface_name, sample)
+        LOGGER.error(log.format(iface=iface_name, address=sample))
         raise
 
 
