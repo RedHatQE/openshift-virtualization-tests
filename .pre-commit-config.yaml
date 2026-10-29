@@ -56,7 +56,7 @@ repos:
       - id: check-toml
         stages: [pre-commit]
   - repo: https://github.com/PyCQA/flake8
-    rev: "7.3.0"
+    rev: "7.4.1"
     hooks:
       - id: flake8
         language_version: python3.14
@@ -78,7 +78,7 @@ repos:
         stages: [commit-msg]
 
   - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: "0.38.0"
+    rev: "0.38.2"
     hooks:
       - id: check-jsonschema
         name: Validate .coderabbit.yaml against schema
@@ -159,7 +159,7 @@ repos:
         stages: [pre-commit]
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v2.3.1
+    rev: v2.4.0
     hooks:
       - id: mypy
         exclude: "test_(.*).py$"
