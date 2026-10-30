@@ -94,17 +94,19 @@ class ArchImages:
         Cdi = Cdi(QCOW2_IMG=CIRROS_QCOW2_IMG)
 
     class ARM64:
-        BASE_CIRROS_NAME = "cirros-0.5.2-aarch64-disk"
         BASE_ALPINE_NAME = "alpine-aarch64-disk"
         BASE_VERSIONED_ALPINE_NAME = f"alpine-{ALPINE_VERSION}-aarch64-disk"
+        # ARM64 has no Cirros image on ibmc Artifactory.
+        # Reuse Alpine aarch64 — same pattern S390X uses with Fedora.
+        # Tests that only need a bootable DV work fine (no SSH into the guest).
+        # test_virtctl_image_upload_with_exist_pvc SSHes to the VM; Alpine uses
+        # root/<empty>, set via os_login_param["alpine"] in global_config_multiarch_s390x_arm.py.
         Cirros = Cirros(
-            RAW_IMG=f"{BASE_CIRROS_NAME}.raw",
-            RAW_IMG_GZ=f"{BASE_CIRROS_NAME}.raw.gz",
-            RAW_IMG_XZ=f"{BASE_CIRROS_NAME}.raw.xz",
-            QCOW2_IMG=f"{BASE_CIRROS_NAME}.qcow2",
-            QCOW2_IMG_GZ=f"{BASE_CIRROS_NAME}.qcow2.gz",
-            QCOW2_IMG_XZ=f"{BASE_CIRROS_NAME}.qcow2.xz",
+            QCOW2_IMG=f"{BASE_ALPINE_NAME}.qcow2",
             DISK_DEMO=CIRROS_DISK_DEMO,
+            DIR=f"{BASE_IMAGES_DIR}/alpine-images",
+            DEFAULT_DV_SIZE="2Gi",
+            OS_FLAVOR=OS_FLAVOR_ALPINE,
         )
 
         Alpine = Alpine(
@@ -121,16 +123,22 @@ class ArchImages:
 
         Windows = Windows()
         Fedora = Fedora(
-            FEDORA42_IMG="Fedora-Cloud-Base-Generic-42-1.1.aarch64.qcow2",
+            # ibmc Artifactory has Fedora 43 aarch64; Fedora 42 aarch64 is absent
+            FEDORA43_IMG="Fedora-Cloud-Base-Generic-43-1.6.aarch64.qcow2",
             FEDORA_CONTAINER_IMAGE="quay.io/openshift-cnv/qe-cnv-tests-fedora:41-arm64",
             DISK_DEMO=FEDORA_DISK_DEMO,
         )
-        Fedora.LATEST_RELEASE_STR = Fedora.FEDORA42_IMG
+        Fedora.LATEST_RELEASE_STR = Fedora.FEDORA43_IMG
 
         Centos = Centos(CENTOS_STREAM_9_IMG="CentOS-Stream-GenericCloud-9-latest.aarch64.qcow2")
         Centos.LATEST_RELEASE_STR = Centos.CENTOS_STREAM_9_IMG
 
-        Cdi = Cdi(QCOW2_IMG=CIRROS_QCOW2_IMG)
+        # ARM64 has no Cirros on ibmc Artifactory; reuse Alpine aarch64.
+        Cdi = Cdi(
+            QCOW2_IMG=f"{BASE_ALPINE_NAME}.qcow2",
+            DIR=f"{BASE_IMAGES_DIR}/alpine-images",
+            DEFAULT_DV_SIZE="2Gi",
+        )
 
     class S390X:
         BASE_ALPINE_NAME = "alpine-s390x-disk"

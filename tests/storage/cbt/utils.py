@@ -16,6 +16,7 @@ from ocp_resources.virtual_machine_backup_tracker import VirtualMachineBackupTra
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from ocp_resources.virtual_machine_export import VirtualMachineExport
+from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutSampler
 
 from tests.storage.cbt.constants import (
@@ -30,6 +31,7 @@ from tests.storage.cbt.constants import (
     CBT_WINDOWS_PERSISTENT_DEVICE_PARAMS,
     CBT_WINDOWS_VERSION,
 )
+from utilities.constants.architecture import ARM_64
 from utilities.constants.images import OS_FLAVOR_RHEL, OS_FLAVOR_WIN_CONTAINER_DISK, OS_FLAVOR_WINDOWS
 from utilities.constants.instance_types import RHEL9_PREFERENCE, U1_LARGE, U1_SMALL, WINDOWS_2K22_PREFERENCE
 from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5SEC, TIMEOUT_10MIN, TIMEOUT_30MIN, TIMEOUT_60MIN
@@ -192,6 +194,9 @@ def cbt_enabled_vm(
     """
     if windows and data_disk_count > 0:
         raise ValueError("Windows CBT VMs do not support additional data disks with test data writes")
+    rhel_preference = (
+        f"{RHEL9_PREFERENCE}.{py_config['cpu_arch']}" if py_config.get("cpu_arch") in (ARM_64,) else RHEL9_PREFERENCE
+    )
     with CbtVmWithDataDisks(
         name=name,
         namespace=namespace,
@@ -202,7 +207,7 @@ def cbt_enabled_vm(
         ),
         vm_preference=VirtualMachineClusterPreference(
             client=client,
-            name=WINDOWS_2K22_PREFERENCE if windows else RHEL9_PREFERENCE,
+            name=WINDOWS_2K22_PREFERENCE if windows else rhel_preference,
         ),
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=data_source,

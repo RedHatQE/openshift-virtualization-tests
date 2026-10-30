@@ -5,6 +5,7 @@ Restricted namespace cloning
 import logging
 
 import pytest
+from pytest_testconfig import py_config
 
 from tests.storage.constants import ADMIN_NAMESPACE_PARAM
 from tests.storage.restricted_namespace_cloning.constants import (
@@ -104,6 +105,7 @@ def test_user_permissions_positive(
             vm_name="fedora-vm",
             os_flavor=OS_FLAVOR_FEDORA,
             memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
+            cpu_arch=py_config.get("cpu_arch", ""),
         ):
             pass
 

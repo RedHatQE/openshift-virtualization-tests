@@ -50,6 +50,11 @@ def verify_label(cdi_resources):
     assert not bad_pods, " ".join(bad_pods)
 
 
+# cdi-upload-prime-* pods are ephemeral upload-proxy pods created and managed by
+# cdi-controller (not cdi-operator) in CDI 5.0+. Skip the managed-by assertion for them.
+CDI_CONTROLLER_MANAGED_PREFIX = "cdi-upload-prime-"
+
+
 def verify_cdi_app_label(cdi_resources, cnv_version):
     for resource in cdi_resources:
         if resource.kind == "Secret" and resource.name not in CDI_SECRETS:
@@ -76,6 +81,10 @@ def verify_cdi_app_label(cdi_resources, cnv_version):
                 assert resource.labels[f"{Resource.ApiGroup.APP_KUBERNETES_IO}/managed-by"] == CDI_APISERVER, (
                     f"Missing label {Resource.ApiGroup.APP_KUBERNETES_IO}/managed-by for {resource.name}"
                 )
+            elif resource.name.startswith(CDI_CONTROLLER_MANAGED_PREFIX):
+                # cdi-upload-prime-* pods are controller-managed (cdi-controller) in CDI 5.0+;
+                # skip the cdi-operator assertion for them.
+                pass
             else:
                 assert resource.labels[f"{Resource.ApiGroup.APP_KUBERNETES_IO}/managed-by"] == CDI_OPERATOR, (
                     f"Missing label {Resource.ApiGroup.APP_KUBERNETES_IO}/managed-by for {resource.name}"

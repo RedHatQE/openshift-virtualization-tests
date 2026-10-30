@@ -14,6 +14,7 @@ from tests.storage.cdi_import.utils import wait_dv_and_get_importer, wait_for_mu
 from tests.storage.constants import (
     HTTP,
     QUAY_FEDORA_CONTAINER_IMAGE,
+    get_fedora_container_image,
 )
 from tests.storage.stop_status_utils import dv_stop_status_restart_threshold
 from tests.storage.utils import (
@@ -156,6 +157,7 @@ def created_vm_list(unprivileged_client, created_blank_dv_list, storage_class_na
                 data_volume=dv,
                 image=Images.Fedora.FEDORA_CONTAINER_IMAGE,
                 memory_guest=Images.Fedora.DEFAULT_MEMORY_SIZE,
+                cpu_arch=py_config.get("cpu_arch", ""),
             )
             vm.deploy(wait=True)
             vms_list.append(vm)
@@ -174,10 +176,11 @@ def dvs_and_vms_from_public_registry(unprivileged_client, namespace, storage_cla
     dvs = []
     vms = []
     try:
+        _fedora_img = get_fedora_container_image(py_config.get("cpu_arch", ""))
         for name in ("dv1", "dv2", "dv3"):
             dv = DataVolume(
                 client=unprivileged_client,
-                source_dict=construct_datavolume_source_dict(source=REGISTRY_STR, url=QUAY_FEDORA_CONTAINER_IMAGE),
+                source_dict=construct_datavolume_source_dict(source=REGISTRY_STR, url=_fedora_img),
                 name=f"import-public-registry-quay-{name}",
                 namespace=namespace.name,
                 size=Images.Fedora.DEFAULT_DV_SIZE,
@@ -196,6 +199,7 @@ def dvs_and_vms_from_public_registry(unprivileged_client, namespace, storage_cla
                 os_flavor=OS_FLAVOR_FEDORA,
                 data_volume=dv,
                 memory_requests=Images.Fedora.DEFAULT_MEMORY_SIZE,
+                cpu_arch=py_config.get("cpu_arch", ""),
             )
             vm.deploy(wait=True)
             vm.start()

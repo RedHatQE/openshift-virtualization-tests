@@ -100,9 +100,10 @@ def golden_image_data_source_scope_function(admin_client, golden_image_data_volu
 
 @pytest.fixture(scope="session")
 def rhel9_data_source_scope_session(golden_images_namespace):
+    cpu_arch = py_config.get("cpu_arch", "")
     return DataSource(
         client=golden_images_namespace.client,
-        name=RHEL9_STR,
+        name=f"{RHEL9_STR}-{cpu_arch}" if cpu_arch else RHEL9_STR,
         namespace=golden_images_namespace.name,
         ensure_exists=True,
     )
@@ -110,9 +111,10 @@ def rhel9_data_source_scope_session(golden_images_namespace):
 
 @pytest.fixture(scope="session")
 def rhel10_data_source_scope_session(golden_images_namespace):
+    cpu_arch = py_config.get("cpu_arch", "")
     return DataSource(
         namespace=golden_images_namespace.name,
-        name="rhel10",
+        name=f"rhel10-{cpu_arch}" if cpu_arch else "rhel10",
         client=golden_images_namespace.client,
         ensure_exists=True,
     )

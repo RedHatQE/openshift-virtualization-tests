@@ -311,6 +311,7 @@ class VirtualMachineForTests(VirtualMachine):
         annotations=None,
         label=None,
         exclude_from_descheduler: bool = False,
+        cpu_arch: str = "",
     ):
         """
         Virtual machine creation
@@ -477,6 +478,7 @@ class VirtualMachineForTests(VirtualMachine):
         self.vm_affinity = vm_affinity
         self.annotations = annotations
         self.exclude_from_descheduler = exclude_from_descheduler
+        self.cpu_arch = cpu_arch
 
         # Must be here to apply on existing VMs
         self.set_login_params()
@@ -524,6 +526,9 @@ class VirtualMachineForTests(VirtualMachine):
         template_spec = self.set_priority_class(template_spec=template_spec)
         template_spec = self.set_termination_grace_period(template_spec=template_spec)
         template_spec = self.set_vm_affinity_rule(template_spec=template_spec)
+
+        if self.cpu_arch:
+            template_spec["architecture"] = self.cpu_arch
 
         # Either update storage and cloud-init configuration or remove disks from spec
         if self.diskless_vm:

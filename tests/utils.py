@@ -553,6 +553,7 @@ def create_cirros_vm(
     volume_mode: str | None = None,
     cpu_model: str | None = None,
     annotations: dict[str, str] | None = None,
+    cpu_arch: str = "",
 ) -> Generator[VirtualMachineForTests]:
     artifactory_secret = get_artifactory_secret(namespace=namespace)
     artifactory_config_map = get_artifactory_config_map(namespace=namespace)
@@ -585,6 +586,7 @@ def create_cirros_vm(
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
         cpu_model=cpu_model,
         annotations=annotations,
+        cpu_arch=cpu_arch,
     ) as vm:
         if wait_running:
             running_vm(vm=vm, wait_for_interfaces=False)

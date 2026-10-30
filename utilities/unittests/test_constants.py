@@ -1,5 +1,8 @@
 """Unit tests for constants package."""
 
+from unittest.mock import patch
+
+import utilities.constants as constants_module
 from utilities.constants.aaq import (
     AAQ_NAMESPACE_LABEL,
     AAQ_VIRTUAL_RESOURCES,
@@ -101,7 +104,7 @@ class TestConstants:
         assert S390X == "s390x"
         assert X86_64 == "x86_64"
         assert MULTIARCH == "multiarch"
-        assert SUPPORTED_MULTIARCH_OPTIONS == {"amd64", "arm64"}
+        assert SUPPORTED_MULTIARCH_OPTIONS == {"amd64", "arm64", "s390x"}
         assert SUPPORTED_CPU_ARCHITECTURES == {"amd64", "arm64", "s390x"}
 
     def test_timeout_constants(self):
@@ -230,3 +233,30 @@ class TestConstants:
             "modify-windows-iso-file",
             "disk-uploader",
         ]
+
+
+class TestSelectImagesArch:
+    """Import-time `Images` arch selection must not depend on PYTHONHASHSEED."""
+
+    @staticmethod
+    def _select(argv, cluster_archs):
+        with (
+            patch.object(constants_module.sys, "argv", argv),
+            patch.object(constants_module, "_get_cluster_architecture", return_value=cluster_archs),
+        ):
+            return constants_module._select_images_arch()
+
+    def test_cpu_arch_with_equals_wins_over_set_order(self):
+        assert self._select(["pytest", "--cpu-arch=s390x"], {"arm64", "s390x"}) == "s390x"
+
+    def test_cpu_arch_with_separate_value_wins(self):
+        assert self._select(["pytest", "--cpu-arch", "arm64"], {"arm64", "s390x"}) == "arm64"
+
+    def test_without_cpu_arch_falls_back_to_sorted_first(self):
+        assert self._select(["pytest"], {"s390x", "arm64"}) == "arm64"
+
+    def test_cpu_arch_not_in_cluster_falls_back_to_sorted_first(self):
+        assert self._select(["pytest", "--cpu-arch=amd64"], {"arm64", "s390x"}) == "arm64"
+
+    def test_comma_separated_cpu_arch_falls_back_to_sorted_first(self):
+        assert self._select(["pytest", "--cpu-arch=s390x,arm64"], {"arm64", "s390x"}) == "arm64"

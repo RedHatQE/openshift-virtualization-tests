@@ -3,6 +3,7 @@ Fixtures for online resize tests
 """
 
 import pytest
+from pytest_testconfig import py_config
 
 from tests.storage.online_resize.utils import (
     SMALLEST_POSSIBLE_EXPAND,
@@ -88,6 +89,7 @@ def rhel_vm_for_online_resize(
         memory_guest=Images.Rhel.DEFAULT_MEMORY_SIZE,
         os_flavor=OS_FLAVOR_RHEL,
         cpu_model=modern_cpu_for_migration,
+        cpu_arch=py_config.get("cpu_arch", ""),
     ) as vm:
         yield vm
 

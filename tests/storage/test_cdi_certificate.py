@@ -197,7 +197,7 @@ def test_upload_after_certs_renewal(
         check_upload_virtctl_result(result=res)
         dv = DataVolume(namespace=namespace.name, name=dv_name, client=unprivileged_client)
         dv.wait_for_dv_success(timeout=TIMEOUT_1MIN)
-        create_vm_from_dv(client=unprivileged_client, dv=dv)
+        create_vm_from_dv(client=unprivileged_client, dv=dv, cpu_arch=py_config.get("cpu_arch", ""))
 
 
 @pytest.mark.parametrize(
@@ -236,7 +236,7 @@ def test_import_clone_after_certs_renewal(
         storage_class=data_volume_multi_storage_scope_module.storage_class,
     ) as cdv:
         cdv.wait_for_dv_success(timeout=TIMEOUT_3MIN)
-        create_vm_from_dv(client=unprivileged_client, dv=cdv)
+        create_vm_from_dv(client=unprivileged_client, dv=cdv, cpu_arch=py_config.get("cpu_arch", ""))
 
 
 @pytest.mark.sno
@@ -264,7 +264,7 @@ def test_upload_after_validate_aggregated_api_cert(
         check_upload_virtctl_result(result=res)
         dv = DataVolume(namespace=namespace.name, name=dv_name, client=unprivileged_client)
         dv.wait_for_dv_success(timeout=TIMEOUT_1MIN)
-        create_vm_from_dv(client=unprivileged_client, dv=dv)
+        create_vm_from_dv(client=unprivileged_client, dv=dv, cpu_arch=py_config.get("cpu_arch", ""))
 
 
 @pytest.fixture()
