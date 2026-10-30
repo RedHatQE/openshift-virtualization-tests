@@ -30,6 +30,7 @@ from tests.infrastructure.vm_console_proxy.utils import (
     create_vnc_console_token,
     get_vm_console_proxy_resource,
 )
+from utilities.architecture import get_multiarch_cpu_arch
 from utilities.constants import Images
 from utilities.constants.images import OS_FLAVOR_RHEL
 from utilities.constants.instance_types import (
@@ -105,13 +106,18 @@ def vm_console_proxy_namespace_resource(
 
 @pytest.fixture(scope="class")
 def vm_for_console_proxy(unprivileged_client, namespace):
+    # On non-amd64 clusters (e.g. s390x, arm64), use the arch-suffixed preference
+    # (e.g. "rhel.10.s390x") so the VM is scheduled on the correct architecture.
+    # get_multiarch_cpu_arch() returns the target arch on multiarch clusters, None on homogeneous.
+    cpu_arch = get_multiarch_cpu_arch()
+    preference_name = f"{RHEL10_PREFERENCE}.{cpu_arch}" if cpu_arch else RHEL10_PREFERENCE
     with VirtualMachineForTests(
         name=f"rhel-{VM_CONSOLE_PROXY}",
         image=Images.Rhel.RHEL10_REGISTRY_GUEST_IMG,
         namespace=namespace.name,
         client=unprivileged_client,
         vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL, client=unprivileged_client),
-        vm_preference=VirtualMachineClusterPreference(name=RHEL10_PREFERENCE, client=unprivileged_client),
+        vm_preference=VirtualMachineClusterPreference(name=preference_name, client=unprivileged_client),
         os_flavor=OS_FLAVOR_RHEL,
         run_strategy=VirtualMachine.RunStrategy.ALWAYS,
     ) as vm:
