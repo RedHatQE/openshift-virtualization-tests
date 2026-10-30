@@ -21,11 +21,14 @@ def check_pod_creation_failed(pod_name, client, namespace):
             return
 
 
-@pytest.mark.polarion("CNV-4900")
 def test_regular_user_cant_create_pod_in_ns(
     golden_images_namespace,
     unprivileged_client,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-4764 # <skip-jira-utils-check>
+    Polarion: CNV-4900
+    """
     check_pod_creation_failed(
         pod_name="pod-cnv-4900",
         client=unprivileged_client,
@@ -33,12 +36,15 @@ def test_regular_user_cant_create_pod_in_ns(
     )
 
 
-@pytest.mark.polarion("CNV-5276")
 def test_regular_user_with_dv_create_rolebinding_cannot_create_pod_in_golden_image_ns(
     golden_images_namespace,
     golden_images_edit_rolebinding,
     unprivileged_client,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-4764 # <skip-jira-utils-check>
+    Polarion: CNV-5276
+    """
     check_pod_creation_failed(
         pod_name="pod-cnv-5276",
         client=unprivileged_client,

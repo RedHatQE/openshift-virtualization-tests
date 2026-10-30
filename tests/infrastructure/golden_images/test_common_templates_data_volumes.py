@@ -78,7 +78,6 @@ def storage_class_from_config_different_from_data_source(fedora_data_source):
                 "image": FEDORA_LATEST.get("image_path"),
                 "dv_size": FEDORA_LATEST.get("dv_size"),
             },
-            marks=pytest.mark.polarion("CNV-5582"),
         ),
     ],
     indirect=True,
@@ -88,6 +87,10 @@ def test_vm_from_golden_image_cluster_default_storage_class(
     golden_image_data_volume_multi_storage_scope_function,
     vm_from_golden_image_multi_storage,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-6319 # <skip-jira-utils-check>
+    Polarion: CNV-5582
+    """
     vm_from_golden_image_multi_storage.ssh_exec.executor().is_connective()
 
 
@@ -105,18 +108,25 @@ def test_vm_from_golden_image_cluster_default_storage_class(
                 "vm_name": "fedora-vm",
                 "template_labels": FEDORA_LATEST_LABELS,
             },
-            marks=pytest.mark.polarion("CNV-5530"),
         ),
     ],
     indirect=True,
 )
 def test_vm_with_existing_dv(data_volume_scope_function, vm_from_template_with_existing_dv):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-6319 # <skip-jira-utils-check>
+    Polarion: CNV-5530
+    """
     vm_from_template_with_existing_dv.ssh_exec.executor().is_connective()
 
 
-@pytest.mark.polarion("CNV-5529")
 def test_vm_dv_with_different_sc(
     fedora_vm_from_data_source,
 ):
-    # VM cloned PVC storage class is different from the original golden image storage class
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-6319 # <skip-jira-utils-check>
+    Polarion: CNV-5529
+
+    VM cloned PVC storage class is different from the original golden image storage class
+    """
     running_vm(vm=fedora_vm_from_data_source)
