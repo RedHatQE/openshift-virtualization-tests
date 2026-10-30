@@ -55,6 +55,8 @@ def hotplugged_vm(
     unprivileged_client,
     golden_image_data_source_scope_class,
     modern_cpu_for_migration,
+    is_s390x_cluster,
+    vmx_disabled_flag,
 ):
     with VirtualMachineForTestsFromTemplate(
         name=request.param["vm_name"],
@@ -64,12 +66,14 @@ def hotplugged_vm(
         client=unprivileged_client,
         data_source=golden_image_data_source_scope_class,
         cpu_max_sockets=EIGHT_CPU_SOCKETS,
-        memory_max_guest=TEN_GI_MEMORY,
-        cpu_sockets=FOUR_CPU_SOCKETS,
-        cpu_threads=ONE_CPU_THREAD,
-        cpu_cores=ONE_CPU_CORE,
+        # s390x doesn't support maxGuest as it doesn't support hotplug memory
+        memory_max_guest=None if is_s390x_cluster else TEN_GI_MEMORY,
+        cpu_sockets=request.param.get("cpu_sockets", FOUR_CPU_SOCKETS),
+        cpu_threads=request.param.get("cpu_threads", ONE_CPU_THREAD),
+        cpu_cores=request.param.get("cpu_cores", ONE_CPU_CORE),
         memory_guest=FOUR_GI_MEMORY,
         cpu_model=modern_cpu_for_migration,
+        cpu_flags=vmx_disabled_flag,
     ) as vm:
         running_vm(vm=vm)
         yield vm
