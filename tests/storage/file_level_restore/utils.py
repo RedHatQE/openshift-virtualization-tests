@@ -18,6 +18,7 @@ from ocp_resources.deployment import Deployment
 from ocp_resources.pod import Pod
 from ocp_resources.resource import NamespacedResource
 from ocp_resources.storage_class import StorageClass
+from ocp_resources.virtual_machine_file_restore import VirtualMachineFileRestore
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 from ocp_resources.volume_snapshot import VolumeSnapshot
 from ocp_resources.volume_snapshot_class import VolumeSnapshotClass
@@ -69,94 +70,6 @@ class LinuxRootDiskVirtualMachineSnapshotInfo(NamedTuple):
 
     vm_snapshot: VirtualMachineSnapshot
     root_volume_snapshot_name: str
-
-
-class VirtualMachineFileRestore(NamespacedResource):
-    """KubeVirt VirtualMachineFileRestore custom resource."""
-
-    api_group: str = "filerestore.kubevirt.io"
-
-    class Phase:
-        NEW = "New"
-        INIT = "Init"
-        HOTPLUGGING = "Hotplugging"
-        WAITING_FOR_ATTACHMENT = "WaitingForAttachment"
-        SSH_CONNECTING = "SSHConnecting"
-        RESTORING = "Restoring"
-        VOLUME_READY = "VolumeReady"
-        CLEANUP = "Cleanup"
-        SUCCEEDED = "Succeeded"
-        FAILED = "Failed"
-
-    def __init__(
-        self,
-        target_vm_name: str,
-        source_snapshot_name: str | None = None,
-        source_pvc_name: str | None = None,
-        source_path: str | None = None,
-        source_partition: int | None = None,
-        source_namespace: str | None = None,
-        **kwargs: Any,
-    ) -> None:
-        """Create a VirtualMachineFileRestore resource.
-
-        Args:
-            target_vm_name: Name of the target VirtualMachine.
-            source_snapshot_name: VolumeSnapshot name to restore from.
-            source_pvc_name: PVC name to restore from.
-            source_path: Path on the source volume to restore. Restored to the same
-                path on the guest root filesystem (operator does not support targetPath).
-            source_partition: Partition number on the source volume.
-            source_namespace: Namespace containing the source snapshot or PVC.
-            **kwargs: Additional arguments passed to NamespacedResource.
-        """
-        super().__init__(**kwargs)
-        self._target_vm_name = target_vm_name
-        self._source_snapshot_name = source_snapshot_name
-        self._source_pvc_name = source_pvc_name
-        self._source_path = source_path
-        self._source_partition = source_partition
-        self._source_namespace = source_namespace
-
-    def to_dict(self) -> None:
-        """Build the VirtualMachineFileRestore manifest in ``self.res``.
-
-        Calls the base ``to_dict()`` first, then populates ``spec`` when this
-        resource was constructed programmatically (no ``kind_dict`` or
-        ``yaml_file``). The guard prevents duplicate spec injection if
-        ``to_dict()`` is invoked more than once.
-
-        Side effects:
-            Mutates ``self.res`` in place by updating ``spec``.
-        """
-        super().to_dict()
-        if not self.kind_dict and not self.yaml_file:
-            spec: dict[str, Any] = {
-                "target": {
-                    "apiGroup": "kubevirt.io",
-                    "kind": "VirtualMachine",
-                    "name": self._target_vm_name,
-                },
-                "source": {},
-            }
-
-            if self._source_snapshot_name:
-                spec["source"]["snapshot"] = {"name": self._source_snapshot_name}
-            elif self._source_pvc_name:
-                spec["source"]["pvc"] = {"name": self._source_pvc_name}
-            else:
-                raise ValueError("VirtualMachineFileRestore requires either source_snapshot_name or source_pvc_name")
-
-            if self._source_namespace is not None:
-                source_kind = "snapshot" if self._source_snapshot_name else "pvc"
-                spec["source"][source_kind]["namespace"] = self._source_namespace
-
-            if self._source_path is not None:
-                spec["sourcePath"] = self._source_path
-            if self._source_partition is not None:
-                spec["sourcePartition"] = self._source_partition
-
-            self.res.setdefault("spec", {}).update(spec)
 
 
 def volume_snapshot_class_for_storage_class(storage_class_name: str, admin_client: DynamicClient) -> str:
@@ -716,58 +629,6 @@ def install_windows_guest_helper(vm: VirtualMachineForTests, admin_client: Dynam
     LOGGER.info(f"Windows guest helper installed on VM '{vm.name}'")
 
 
-def wait_for_file_restore_phase(
-    file_restore: VirtualMachineFileRestore,
-    target_phase: str,
-    timeout: int = TIMEOUT_5MIN,
-) -> None:
-    """Wait for VirtualMachineFileRestore to reach a target phase.
-
-    Args:
-        file_restore: The VirtualMachineFileRestore resource to monitor.
-        target_phase: The phase to wait for.
-        timeout: Maximum wait time in seconds.
-
-    Raises:
-        AssertionError: If the restore reaches Failed phase.
-    """
-    LOGGER.info(f"Waiting for VirtualMachineFileRestore '{file_restore.name}' to reach phase '{target_phase}'")
-    previous_phase = None
-    for sample in TimeoutSampler(
-        wait_timeout=timeout,
-        sleep=TIMEOUT_5SEC,
-        func=lambda: file_restore.instance.get("status", {}),
-    ):
-        phase = sample.get("phase")
-        if phase != previous_phase:
-            LOGGER.info(f"VirtualMachineFileRestore '{file_restore.name}' phase: {phase}")
-            previous_phase = phase
-        if phase == target_phase:
-            return
-        if phase == VirtualMachineFileRestore.Phase.FAILED:
-            error_message = sample.get("errorMessage", "Unknown error")
-            raise AssertionError(f"VirtualMachineFileRestore '{file_restore.name}' failed: {error_message}")
-
-
-def get_restored_files_count(file_restore: VirtualMachineFileRestore) -> int:
-    """Return restoredFilesCount from the VirtualMachineFileRestore status.
-
-    Args:
-        file_restore: The VirtualMachineFileRestore resource.
-
-    Returns:
-        Number of files reported as restored.
-
-    Raises:
-        AssertionError: If restoredFilesCount is not set.
-    """
-    restored_files_count = file_restore.instance.get("status", {}).get("restoredFilesCount")
-    assert restored_files_count is not None, (
-        f"VirtualMachineFileRestore '{file_restore.name}' status.restoredFilesCount is not set"
-    )
-    return int(restored_files_count)
-
-
 def restore_volume_name(restore_cr_name: str) -> str:
     """Return the hotplug volume name used by the operator for a restore CR.
 
@@ -877,12 +738,13 @@ def manual_browsing_file_restore(
         Manual restore request available for browsing.
     """
     snapshot_source = isinstance(source, VolumeSnapshot)
-    with VirtualMachineFileRestore(
+    restore_factory = VirtualMachineFileRestore.from_snapshot if snapshot_source else VirtualMachineFileRestore.from_pvc
+    source_kwargs = {"source_snapshot_name": source.name} if snapshot_source else {"source_pvc_name": source.name}
+    with restore_factory(
         name=restore_cr_name,
         namespace=namespace_name,
         target_vm_name=vm.name,
-        source_snapshot_name=source.name if snapshot_source else None,
-        source_pvc_name=None if snapshot_source else source.name,
+        **source_kwargs,
         client=admin_client,
     ) as file_restore:
         yield file_restore
