@@ -81,7 +81,8 @@ jobs:
             $QEMU_PACKAGE \
             libvirt-daemon-system \
             virtinst cloud-image-utils \
-            libguestfs-tools
+            libguestfs-tools \
+            podman
 
       - name: Tweak hosted runner to enable 'virt-sysprep'
         # https://bugs.launchpad.net/ubuntu/+source/linux/+bug/759725
