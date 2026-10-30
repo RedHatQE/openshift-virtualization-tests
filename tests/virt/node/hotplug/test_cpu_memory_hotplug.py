@@ -6,14 +6,6 @@ from typing import TYPE_CHECKING
 import pytest
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
-
-from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS, WINDOWS_LATEST, WINDOWS_LATEST_LABELS
-from tests.utils import (
-    assert_guest_os_memory_amount,
-    assert_restart_required_condition,
-    hotplug_spec_vm,
-    wait_for_guest_os_cpu_count,
-)
 from utilities.constants.images import OS_FLAVOR_WINDOWS
 from utilities.constants.virt import (
     FIVE_GI_MEMORY,
@@ -21,6 +13,14 @@ from utilities.constants.virt import (
     SIX_GI_MEMORY,
     TEN_CPU_SOCKETS,
     TWELVE_GI_MEMORY,
+)
+
+from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS, WINDOWS_LATEST, WINDOWS_LATEST_LABELS
+from tests.utils import (
+    assert_guest_os_memory_amount,
+    assert_restart_required_condition,
+    hotplug_spec_vm,
+    wait_for_guest_os_cpu_count,
 )
 from utilities.virt import (
     migrate_vm_and_verify,
