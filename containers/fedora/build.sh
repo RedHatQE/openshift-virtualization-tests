@@ -248,13 +248,13 @@ rm -f "${CLOUD_INIT_ISO}"
 
 mkdir $BUILD_DIR
 echo "Snapshot image"
-qemu-img convert -c -O qcow2 "${WORK_IMAGE}" "${BUILD_DIR}/${FEDORA_IMAGE}"
+qemu-img convert -c -O qcow2 "${WORK_IMAGE}" "${BUILD_DIR}/${FEDORA_IMAGE##*/}"
 
 echo "Create Dockerfile"
 
 cat <<EOF > "${BUILD_DIR}/Dockerfile"
 FROM scratch
-COPY --chown=107:107 ${FEDORA_IMAGE} /disk/
+COPY --chown=107:107 ${FEDORA_IMAGE##*/} /disk/
 EOF
 
 # Run build/save commands in a subshell so cleanup executes from the original directory
