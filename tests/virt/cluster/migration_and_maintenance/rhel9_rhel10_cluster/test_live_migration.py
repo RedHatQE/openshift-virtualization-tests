@@ -12,9 +12,10 @@ from typing import TYPE_CHECKING
 import pytest
 
 from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS, WINDOWS_LATEST, WINDOWS_LATEST_LABELS
+from tests.virt.cluster.migration_and_maintenance.rhel9_rhel10_cluster.utils import wait_for_autopilot_rhos_migration
 from tests.virt.utils import verify_guest_boot_time
 from utilities.constants.cluster import RHCOS9_AFFINITY, RHCOS9_WORKER_LABEL, RHCOS10_AFFINITY
-from utilities.virt import VirtualMachineForTests, get_vm_boot_time, migrate_vm_and_verify, set_vm_affinity
+from utilities.virt import VirtualMachineForTests, get_vm_boot_time, set_vm_affinity
 
 if TYPE_CHECKING:
     from kubernetes.dynamic import DynamicClient
@@ -55,9 +56,7 @@ def test_vm_migrates_from_rhcos10_to_rhcos9_node(
     admin_client: DynamicClient,
     dual_stream_migration_vm: VirtualMachineForTests,
 ) -> None:
-    """
-    Test that live migration from an RHCOS 10 worker node to an RHCOS 9 worker node
-    completes successfully without restarting the VM.
+    """Test live migration from an RHCOS 10 worker node to an RHCOS 9 worker node.
 
     STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/dual-stream-cluster-rhcos9-rhcos10/stp.md
 
@@ -66,7 +65,8 @@ def test_vm_migrates_from_rhcos10_to_rhcos9_node(
 
     Steps:
         1. Record VM boot time
-        2. Live migrate the under-test VM to an RHCOS 9 worker node
+        2. Set the VM affinity to RHCOS 9
+        3. Autopilot live-migrates the under-test VM to an RHCOS 9 worker node
 
     Expected:
         - Live migration completes successfully and the VM is running on an RHCOS 9 worker node
@@ -74,7 +74,7 @@ def test_vm_migrates_from_rhcos10_to_rhcos9_node(
     """
     boot_time = get_vm_boot_time(vm=dual_stream_migration_vm)
     set_vm_affinity(vm=dual_stream_migration_vm, affinity=RHCOS9_AFFINITY)
-    migrate_vm_and_verify(vm=dual_stream_migration_vm, client=admin_client, check_ssh_connectivity=True)
+    wait_for_autopilot_rhos_migration(vm=dual_stream_migration_vm, admin_client=admin_client)
     assert RHCOS9_WORKER_LABEL in dual_stream_migration_vm.vmi.get_node(privileged_client=admin_client).labels.keys(), (
         f"VM {dual_stream_migration_vm.name} is not running on an RHCOS 9 node after migration"
     )
@@ -113,9 +113,7 @@ def test_vm_migrates_from_rhcos9_to_rhcos10_node(
     admin_client: DynamicClient,
     dual_stream_migration_vm: VirtualMachineForTests,
 ) -> None:
-    """
-    Test that live migration from an RHCOS 9 worker node to an RHCOS 10 worker node
-    completes successfully without restarting the VM.
+    """Test live migration from an RHCOS 9 worker node to an RHCOS 10 worker node.
 
     STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/dual-stream-cluster-rhcos9-rhcos10/stp.md
 
@@ -124,7 +122,8 @@ def test_vm_migrates_from_rhcos9_to_rhcos10_node(
 
     Steps:
         1. Record VM boot time
-        2. Live migrate the under-test VM to an RHCOS 10 worker node
+        2. Set the VM affinity to RHCOS 10
+        3. Autopilot live-migrates the under-test VM to an RHCOS 10 worker node
 
     Expected:
         - Live migration completes successfully and the VM is running on an RHCOS 10 worker node
@@ -132,7 +131,7 @@ def test_vm_migrates_from_rhcos9_to_rhcos10_node(
     """
     boot_time = get_vm_boot_time(vm=dual_stream_migration_vm)
     set_vm_affinity(vm=dual_stream_migration_vm, affinity=RHCOS10_AFFINITY)
-    migrate_vm_and_verify(vm=dual_stream_migration_vm, client=admin_client, check_ssh_connectivity=True)
+    wait_for_autopilot_rhos_migration(vm=dual_stream_migration_vm, admin_client=admin_client)
     assert (
         RHCOS9_WORKER_LABEL not in dual_stream_migration_vm.vmi.get_node(privileged_client=admin_client).labels.keys()
     ), f"VM {dual_stream_migration_vm.name} is not running on an RHCOS 10 node after migration"
