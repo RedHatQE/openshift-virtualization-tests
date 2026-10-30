@@ -23,7 +23,6 @@ from utilities.constants.timeouts import (
     TIMEOUT_5MIN,
     TIMEOUT_30MIN,
 )
-from utilities.ssp import get_windows_timezone
 from utilities.virt import (
     guest_reboot,
     run_os_command,
@@ -31,6 +30,7 @@ from utilities.virt import (
     wait_for_ssh_connectivity,
     wait_for_vm_interfaces,
 )
+from utilities.windows import get_windows_timezone
 
 LOGGER = logging.getLogger(__name__)
 

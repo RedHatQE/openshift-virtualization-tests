@@ -81,7 +81,7 @@ from utilities.exceptions import (
     UrlNotFoundError,
     UtilityPodNotFoundError,
 )
-from utilities.ssp import guest_agent_version_parser
+from utilities.guest_agent import guest_agent_version_parser
 
 NON_EXIST_URL = "https://noneexist.test"  # Use 'test' domain rfc6761
 EXCLUDED_FROM_URL_VALIDATION = ("", NON_EXIST_URL)
