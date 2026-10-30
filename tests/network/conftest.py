@@ -16,6 +16,7 @@ from timeout_sampler import TimeoutExpiredError
 from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
 from utilities.constants.components import CLUSTER, CLUSTER_NETWORK_ADDONS_OPERATOR, VIRT_HANDLER
 from utilities.constants.namespaces import NamespacesNames
+from utilities.constants.networking import OVS_DPDK_DRA_DRIVER_NAMESPACE
 from utilities.infra import (
     get_deployment_by_name,
     wait_for_pods_running,
@@ -174,6 +175,10 @@ def network_sanity(
             )
             return
 
+        if any(test.get_closest_marker("ovs_dpdk") for test in collected_tests):
+            LOGGER.info("OVS-DPDK tests do not require multiple host NICs; skipping multi NIC verification")
+            return
+
         LOGGER.info("Verifying if the cluster has multiple NICs for network tests")
         # Lazily resolve hosts_common_available_ports only when needed
         hosts_common_available_ports = _request.getfixturevalue(argname="hosts_common_available_ports")
@@ -195,6 +200,21 @@ def network_sanity(
                 )
             else:
                 LOGGER.info("Validated network lane is running against a DPDK-enabled cluster")
+
+    def _verify_ovsdpdk():
+        if any(test.get_closest_marker("ovs_dpdk") for test in collected_tests):
+            LOGGER.info("Verifying if the cluster supports running OVS-DPDK tests")
+            ovs_dpdk_namespace = Namespace(name=OVS_DPDK_DRA_DRIVER_NAMESPACE, client=admin_client)
+            if not ovs_dpdk_namespace.exists:
+                failure_msgs.append(
+                    f"OVS-DPDK DRA driver is not installed, the '{OVS_DPDK_DRA_DRIVER_NAMESPACE}' namespace "
+                    "does not exist"
+                )
+            else:
+                LOGGER.info(
+                    f"Validated network lane is running against an OVS-DPDK-enabled cluster "
+                    f"with '{OVS_DPDK_DRA_DRIVER_NAMESPACE}' namespace"
+                )
 
     def _verify_service_mesh():
         if any(test.get_closest_marker("service_mesh") for test in collected_tests):
@@ -283,6 +303,7 @@ def network_sanity(
 
     _verify_multi_nic(_request=request)
     _verify_dpdk()
+    _verify_ovsdpdk()
     _verify_service_mesh()
     _verify_jumbo_frame()
     _verify_sriov()

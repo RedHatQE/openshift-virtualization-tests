@@ -12,11 +12,26 @@ Markers:
 
 import pytest
 
-__test__ = False
+from libs.net.traffic_generator import TcpServer, VMTcpClient, is_tcp_connection
+
+pytestmark = [
+    pytest.mark.ovs_dpdk,
+    pytest.mark.special_infra,
+]
 
 
-@pytest.mark.manual
-def test_connectivity_is_preserved_during_live_migration():
+@pytest.mark.parametrize(
+    "ip_family",
+    [
+        pytest.param(4, marks=pytest.mark.ipv4, id="ipv4"),
+        pytest.param(6, marks=pytest.mark.ipv6, id="ipv6"),
+    ],
+    indirect=True,
+)
+def test_connectivity_is_preserved_during_live_migration(
+    ip_family: int,
+    ovs_dpdk_live_migration_active_tcp_by_family: dict[int, tuple[VMTcpClient, TcpServer]],
+):
     """
     Test that TCP connectivity from the under-test VM to the reference VM is preserved
     during live migration, for the parametrized IP family.
@@ -32,11 +47,16 @@ def test_connectivity_is_preserved_during_live_migration():
         - Running under-test VM with a ResourceClaimTemplate-backed OVS-DPDK network device
         - Running reference VM with a ResourceClaimTemplate-backed OVS-DPDK network device
         - Active TCP connection established from the under-test VM to the reference VM
+        - Live migration of the under-test VM has completed
 
     Steps:
-        1. Live-migrate the under-test VM and wait for migration completion
+        1.  Verify TCP connectivity from the under-test VM to the reference VM
 
     Expected:
         - The active TCP connection from the under-test VM to the reference VM is preserved
           during the migration
     """
+    client, server = ovs_dpdk_live_migration_active_tcp_by_family[ip_family]
+    assert is_tcp_connection(server=server, client=client), (
+        f"TCP connection lost after live migration of {client.vm.name} over IPv{ip_family}"
+    )

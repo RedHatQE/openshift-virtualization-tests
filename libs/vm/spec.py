@@ -33,6 +33,7 @@ class VMISpec:
     volumes: list[Volume] | None = None
     terminationGracePeriodSeconds: int | None = None  # noqa: N815
     affinity: Affinity | None = None
+    resourceClaims: list[VMResourceClaim] | None = None  # noqa: N815
 
 
 @dataclass
@@ -85,6 +86,18 @@ class Interface:
 
 
 @dataclass
+class NetworkResourceClaim:
+    claimName: str  # noqa: N815
+    requestName: str  # noqa: N815
+
+
+@dataclass
+class VMResourceClaim:
+    name: str
+    resourceClaimTemplateName: str  # noqa: N815
+
+
+@dataclass
 class NetBinding:
     name: str
 
@@ -94,6 +107,7 @@ class Network:
     name: str
     pod: dict[Any, Any] | None = None
     multus: Multus | None = None
+    resourceClaim: NetworkResourceClaim | None = None  # noqa: N815
 
 
 @dataclass

@@ -84,6 +84,7 @@ _SPECIAL_INFRA_REQUIRED_MARKERS = frozenset({
     "bgp",
     "ibm_bare_metal",
     "dpdk",
+    "ovs_dpdk",
     "swap",
     "cpu_manager",
     "numa",
