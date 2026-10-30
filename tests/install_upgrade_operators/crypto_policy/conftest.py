@@ -25,16 +25,21 @@ from tests.install_upgrade_operators.constants import (
 from tests.install_upgrade_operators.crypto_policy.constants import (
     CONSOLE_PLUGIN_SERVICE_PORT,
     CRYPTO_POLICY_SPEC_DICT,
+    CURVE_PROBE_EXCLUDED,
     KUBEVIRT_TLS_CONFIG_STR,
     MANAGED_CRS_LIST_WITH_AAQ,
     PQC_GROUP_SECP256R1_MLKEM768,
     PQC_GROUP_SECP384R1_MLKEM1024,
     PQC_GROUP_X25519_MLKEM768,
     TLS_MODERN_PROFILE,
+    TLS_PROPAGATION_CUSTOM_GROUPS,
+    TLS_PROPAGATION_CUSTOM_PROFILE,
+    TLS_PROPAGATION_OMITTED_GROUP,
 )
 from tests.install_upgrade_operators.crypto_policy.utils import (
     get_node_available_tls_groups,
     get_resource_crypto_policy,
+    get_service_curve_status,
     get_services_pqc_status,
     update_apiserver_crypto_policy,
 )
@@ -49,7 +54,11 @@ from utilities.constants.components import (
 from utilities.constants.hco import TLS_SECURITY_PROFILE
 from utilities.constants.timeouts import TIMEOUT_60MIN
 from utilities.exceptions import MissingResourceException
-from utilities.hco import enabled_aaq_in_hco, wait_for_hco_conditions
+from utilities.hco import (
+    ResourceEditorValidateHCOReconcile,
+    enabled_aaq_in_hco,
+    wait_for_hco_conditions,
+)
 from utilities.infra import ExecCommandOnPod
 from utilities.operator import wait_for_cluster_operator_stabilize
 
@@ -264,4 +273,42 @@ def pqc_status_by_service(
         f"PQC probe summary: {len(accepted)} accepted, {len(rejected)} rejected ({rejected}),"
         f" {len(unreachable)} unreachable ({unreachable})"
     )
+    return results
+
+
+@pytest.fixture()
+def custom_curve_profile_applied(admin_client, enabled_aaq, hyperconverged_resource_scope_function):
+    """Applies a Custom TLS curve profile directly to HCO, reconciles, and reverts on exit."""
+    with ResourceEditorValidateHCOReconcile(
+        admin_client=admin_client,
+        patches={
+            hyperconverged_resource_scope_function: {
+                "spec": {"security": {TLS_SECURITY_PROFILE: TLS_PROPAGATION_CUSTOM_PROFILE}}
+            }
+        },
+        list_resource_reconcile=MANAGED_CRS_LIST_WITH_AAQ,
+        wait_for_reconcile_post_update=True,
+    ):
+        yield
+
+
+@pytest.fixture()
+def curve_status_by_service(
+    verified_node_pqc_support,
+    custom_curve_profile_applied,
+    console_plugin_test_network_policy,
+    workers_utility_pods,
+    worker_node1,
+    cnv_services_with_template,
+):
+    """Per-curve negotiation status for each CNV service under the Custom curve profile."""
+    probe_groups = [*TLS_PROPAGATION_CUSTOM_GROUPS, TLS_PROPAGATION_OMITTED_GROUP]
+    worker_exec = ExecCommandOnPod(utility_pods=workers_utility_pods, node=worker_node1)
+    results = {
+        service.name: get_service_curve_status(worker_exec=worker_exec, service=service, groups=probe_groups)
+        for service in cnv_services_with_template
+        if service.name not in CURVE_PROBE_EXCLUDED
+    }
+    for service_name, group_status in results.items():
+        LOGGER.info(f"Curve probe {service_name}: {group_status}")
     return results
