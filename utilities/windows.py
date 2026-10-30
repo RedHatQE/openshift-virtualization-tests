@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 from logging import LoggerAdapter, getLogger
 from re import search
 from shlex import split
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 from pyhelper_utils.shell import run_ssh_commands
 
@@ -16,8 +16,6 @@ from utilities.constants.timeouts import TCP_TIMEOUT_30SEC
 from utilities.guest_agent import guest_agent_version_parser
 
 if TYPE_CHECKING:
-    from re import Match
-
     from rrmngmnt import Host
 
 
@@ -106,23 +104,27 @@ def get_windows_os_info(ssh_exec: Host) -> dict[str, Any]:
 
     Returns:
         Guest agent version, hostname, OS properties and timezone.
+
+    Raises:
+        AttributeError: OS version or registry product name has an unsupported format.
     """
     cim_instance_json = get_cim_instance_json(ssh_exec=ssh_exec)
+    version_match = search(pattern=r"(.+\d+)", string=cim_instance_json["Caption"])
+    product_name_match = search(pattern=r"REG_SZ\s+(.+)\r\n", string=get_reg_product_name(ssh_exec=ssh_exec))
+    version_id_match = search(pattern=r"\D+(\d+)", string=cim_instance_json["Caption"])
+    kernel_version_match = search(pattern=r"(\d+\.\d+)\.", string=cim_instance_json["Version"])
+    if version_match is None or product_name_match is None or version_id_match is None or kernel_version_match is None:
+        raise AttributeError("Unsupported Windows OS version or registry product name format")
     return {
         "guestAgentVersion": guest_agent_version_parser(version_string=get_ga_version(ssh_exec=ssh_exec)),
         "hostname": cim_instance_json["CSName"],
         "os": {
             "name": "Microsoft Windows",
             "kernelRelease": cim_instance_json["BuildNumber"],
-            "version": cast("Match[str]", search(pattern=r"(.+\d+)", string=cim_instance_json["Caption"])).group(1),
-            "prettyName": cast(
-                "Match[str]",
-                search(pattern=r"REG_SZ\s+(.+)\r\n", string=get_reg_product_name(ssh_exec=ssh_exec)),
-            ).group(1),
-            "versionId": cast("Match[str]", search(pattern=r"\D+(\d+)", string=cim_instance_json["Caption"])).group(1),
-            "kernelVersion": cast(
-                "Match[str]", search(pattern=r"(\d+\.\d+)\.", string=cim_instance_json["Version"])
-            ).group(1),
+            "version": version_match.group(1),
+            "prettyName": product_name_match.group(1),
+            "versionId": version_id_match.group(1),
+            "kernelVersion": kernel_version_match.group(1),
             "machine": "x86_64" if "64" in cim_instance_json["OSArchitecture"] else "x86",
             "id": "mswindows",
         },

@@ -1,10 +1,6 @@
 """QEMU guest-agent helpers shared by Linux and Windows guests."""
 
 from re import search
-from typing import TYPE_CHECKING, cast
-
-if TYPE_CHECKING:
-    from re import Match
 
 
 def guest_agent_version_parser(version_string: str) -> str:
@@ -19,4 +15,7 @@ def guest_agent_version_parser(version_string: str) -> str:
     Raises:
         AttributeError: No supported version pattern is found in the input.
     """
-    return cast("Match[str]", search(pattern=r"[0-9]+\.[0-9]+\.[0-9]+(?:[.|-][0-9]+)?", string=version_string)).group(0)
+    version_match = search(pattern=r"[0-9]+\.[0-9]+\.[0-9]+(?:[.|-][0-9]+)?", string=version_string)
+    if version_match is None:
+        raise AttributeError("No supported QEMU guest-agent version found in the input")
+    return version_match.group(0)

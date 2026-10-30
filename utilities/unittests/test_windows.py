@@ -223,6 +223,25 @@ class TestGetRegProductName:
 class TestGetWindowsOsInfo:
     """Test cases for get_windows_os_info function"""
 
+    @mark.parametrize(
+        "caption,product_name,version",
+        [
+            ("invalid", "REG_SZ    Windows Server 2019 Standard\r\n", "10.0.19042"),
+            ("2019", "REG_SZ    Windows Server 2019 Standard\r\n", "10.0.19042"),
+            ("Microsoft Windows Server 2019", "invalid", "10.0.19042"),
+            ("Microsoft Windows Server 2019", "REG_SZ    Windows Server 2019 Standard\r\n", "invalid"),
+        ],
+    )
+    def test_rejects_unsupported_os_info_format(
+        self, mock_vm: MagicMock, caption: str, product_name: str, version: str
+    ) -> None:
+        with (
+            patch("utilities.windows.get_cim_instance_json", return_value={"Caption": caption, "Version": version}),
+            patch("utilities.windows.get_reg_product_name", return_value=product_name),
+        ):
+            with raises(AttributeError, match="Unsupported Windows OS version or registry product name format"):
+                get_windows_os_info(ssh_exec=mock_vm.ssh_exec)
+
     @patch("utilities.windows.get_windows_timezone")
     @patch("utilities.windows.get_reg_product_name")
     @patch("utilities.windows.get_ga_version")
