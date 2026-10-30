@@ -8,8 +8,9 @@ from tests.infrastructure.vm_template.constants import (
     VM_TEMPLATE_UPGRADE_TEMPLATE_NAME,
     VM_TEMPLATE_UPGRADE_VM_NAME,
 )
-from tests.infrastructure.vm_template.utils import process_and_create_vm, vm_template_upgrade_virtual_machine_spec
+from tests.infrastructure.vm_template.utils import process_and_create_vm
 from utilities.constants.timeouts import TIMEOUT_1MIN
+from utilities.virtual_machine import vm_template_upgrade_virtual_machine_spec
 
 
 @pytest.fixture(scope="session")
