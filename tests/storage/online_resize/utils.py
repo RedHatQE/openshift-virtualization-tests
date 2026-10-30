@@ -126,7 +126,13 @@ def check_file_unchanged(orig_cksum, vm):
 def wait_for_resize(vm, count=1):
     starting_count = get_resize_count(vm=vm)
     desired_count = starting_count + count
-    yield
+    try:
+        yield
+    finally:
+        _wait_for_resize_count(vm=vm, desired_count=desired_count)
+
+
+def _wait_for_resize_count(vm, desired_count):
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_4MIN,
         sleep=5,

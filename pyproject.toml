@@ -3,11 +3,19 @@ preview = true
 line-length = 120
 fix = true
 output-format = "grouped"
+# docs/site is auto-generated (docsfy) and must never be modified in PRs;
+# ruff >= 0.17 formats markdown code blocks, so it must be excluded entirely
+# (extend-exclude keeps ruff's default exclusions on top of this one)
+# utilities/unittests is out of scope for linters (matches the flake8 hook exclusion)
+extend-exclude = ["docs/site", "utilities/unittests"]
 
 [tool.ruff.format]
-exclude = [".git", ".venv", ".mypy_cache", ".tox", "__pycache__"]
+exclude = [".git", ".venv", ".mypy_cache", ".tox", "__pycache__", "utilities/unittests"]
 
 [tool.ruff.lint]
+# FCN codes come from the RedHatQE flake8 fork (function-names plugin); ruff does not
+# know them, so without this RUF100 strips their noqa directives on every --fix run
+external = ["FCN"]
 extend-select = [
   "PLC0415", # import-outside-top-level
   "N802",    # function name should be lowercase — method overrides from stdlib
@@ -20,6 +28,7 @@ ignore = [
   "SIM117",  # nested with statements — existing pattern, keep as-is
   "C419",    # unnecessary-comprehension-in-call — may change list vs generator semantics
   "RUF015",  # unnecessary-iterable-allocation-for-first-element — changes exception type
+  "PLW0108", # unnecessary-lambda — TimeoutSampler funcs need late binding of dynamic .instance attrs
   "DTZ005",  # datetime.now() without tz — requires careful refactoring
   "DTZ006",  # datetime.fromtimestamp() without tz
   "DTZ007",  # naive datetime from strptime()

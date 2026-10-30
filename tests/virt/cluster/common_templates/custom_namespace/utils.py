@@ -141,9 +141,11 @@ def diskless_vm_from_template(client, name, namespace, base_template_labels):
         labels=template_labels,
         diskless_vm=True,
     )
-    yield vm
-    if vm.exists:
-        vm.clean_up()
+    try:
+        yield vm
+    finally:
+        if vm.exists:
+            vm.clean_up()
 
 
 def remove_templates(templates_list):
