@@ -13,9 +13,7 @@ from tests.utils import (
 )
 from utilities.constants import (
     FIVE_GI_MEMORY,
-    FOUR_CPU_SOCKETS,
     FOUR_GI_MEMORY,
-    SIX_CPU_SOCKETS,
     SIX_GI_MEMORY,
     TEN_CPU_SOCKETS,
     TWELVE_GI_MEMORY,
@@ -25,6 +23,13 @@ from utilities.virt import (
     restart_vm_wait_for_running_vm,
 )
 
+INITIAL_CPU_SOCKETS = 2
+INITIAL_CPU_CORES = 2
+INITIAL_CPU_THREADS = 1
+
+TARGET_CPU_SOCKETS = INITIAL_CPU_SOCKETS + 1
+
+EXPECTED_GUEST_VCPUS = INITIAL_CPU_CORES * TARGET_CPU_SOCKETS * INITIAL_CPU_THREADS
 pytestmark = [pytest.mark.rwx_default_storage, pytest.mark.data_collector_scope(scope="module")]
 
 
@@ -54,12 +59,24 @@ def hotplug_vm_snapshot(hotplugged_vm):
     [
         pytest.param(
             {"os_dict": RHEL_LATEST},
-            {"template_labels": RHEL_LATEST_LABELS, "vm_name": "rhel-latest-cpu-hotplug-vm"},
+            {
+                "template_labels": RHEL_LATEST_LABELS,
+                "vm_name": "rhel-latest-cpu-hotplug-vm",
+                "cpu_cores": INITIAL_CPU_CORES,
+                "cpu_sockets": INITIAL_CPU_SOCKETS,
+                "cpu_threads": INITIAL_CPU_THREADS,
+            },
             id="RHEL-VM",
         ),
         pytest.param(
             {"os_dict": WINDOWS_LATEST},
-            {"template_labels": WINDOWS_LATEST_LABELS, "vm_name": "windows-latest-cpu-hotplug-vm"},
+            {
+                "template_labels": WINDOWS_LATEST_LABELS,
+                "vm_name": "windows-latest-cpu-hotplug-vm",
+                "cpu_cores": INITIAL_CPU_CORES,
+                "cpu_sockets": INITIAL_CPU_SOCKETS,
+                "cpu_threads": INITIAL_CPU_THREADS,
+            },
             id="WIN-VM",
             marks=[pytest.mark.special_infra, pytest.mark.high_resource_vm],
         ),
@@ -68,12 +85,12 @@ def hotplug_vm_snapshot(hotplugged_vm):
 )
 class TestCPUHotPlug:
     @pytest.mark.parametrize(
-        "hotplugged_sockets_memory_guest", [pytest.param({"sockets": SIX_CPU_SOCKETS})], indirect=True
+        "hotplugged_sockets_memory_guest", [pytest.param({"sockets": TARGET_CPU_SOCKETS})], indirect=True
     )
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::hotplug_cpu")
     @pytest.mark.polarion("CNV-10695")
     def test_hotplug_cpu(self, hotplugged_sockets_memory_guest, hotplugged_vm):
-        wait_for_guest_os_cpu_count(vm=hotplugged_vm, spec_cpu_amount=SIX_CPU_SOCKETS)
+        wait_for_guest_os_cpu_count(vm=hotplugged_vm, spec_cpu_amount=EXPECTED_GUEST_VCPUS)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu"])
     @pytest.mark.polarion("CNV-10696")
@@ -87,7 +104,7 @@ class TestCPUHotPlug:
 
     @pytest.mark.parametrize(
         "hotplugged_sockets_memory_guest",
-        [pytest.param({"sockets": FOUR_CPU_SOCKETS, "skip_migration": True})],
+        [pytest.param({"sockets": INITIAL_CPU_SOCKETS, "skip_migration": True})],
         indirect=True,
     )
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu"])
@@ -115,7 +132,11 @@ class TestCPUHotPlug:
         ),
         pytest.param(
             {"os_dict": WINDOWS_LATEST},
-            {"template_labels": WINDOWS_LATEST_LABELS, "vm_name": "windows-latest-memory-hotplug-vm"},
+            {
+                "template_labels": WINDOWS_LATEST_LABELS,
+                "vm_name": "windows-latest-memory-hotplug-vm",
+                "cpu_cores": INITIAL_CPU_CORES,
+            },
             id="WIN-VM",
             marks=[pytest.mark.special_infra, pytest.mark.high_resource_vm],
         ),
