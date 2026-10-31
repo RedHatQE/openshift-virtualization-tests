@@ -361,6 +361,9 @@ uv run tox
 # Run utilities unit tests
 uv run tox -e utilities-unittests
 
+# Run scripts unit tests
+uv run tox -e scripts-unittests
+
 ```
 
 **No exceptions.** Fix all failures before committing. Do not use `--no-verify` to bypass hooks.

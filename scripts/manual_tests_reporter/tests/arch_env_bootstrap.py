@@ -1,5 +1,4 @@
-# Co-authored-by: Claude <noreply@anthropic.com>
-"""Shared test bootstrap for ReportPortal test packages.
+"""Architecture environment bootstrap for the manual_tests_reporter test package.
 
 Sets ``OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH`` early enough that
 module-level imports in ``cluster_info.py`` can resolve without a live
