@@ -65,9 +65,9 @@ def hotplugged_vm(
         data_source=golden_image_data_source_scope_class,
         cpu_max_sockets=EIGHT_CPU_SOCKETS,
         memory_max_guest=TEN_GI_MEMORY,
-        cpu_sockets=FOUR_CPU_SOCKETS,
-        cpu_threads=ONE_CPU_THREAD,
-        cpu_cores=ONE_CPU_CORE,
+        cpu_sockets=request.param.get("cpu_sockets", FOUR_CPU_SOCKETS),
+        cpu_threads=request.param.get("cpu_threads", ONE_CPU_THREAD),
+        cpu_cores=request.param.get("cpu_cores", ONE_CPU_CORE),
         memory_guest=FOUR_GI_MEMORY,
         cpu_model=modern_cpu_for_migration,
     ) as vm:
