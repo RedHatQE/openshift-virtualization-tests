@@ -36,7 +36,7 @@ from tests.storage.cbt.utils import (
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile, hco_feature_gates_patch
 
-LOGGER = getLogger(__name__)
+LOGGER = getLogger(name=__name__)
 
 
 @pytest.fixture(scope="module")
