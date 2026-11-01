@@ -156,16 +156,18 @@ reviews:
           explicit syntactically non-`None` `client=` argument
         - `cache_admin_client()` without an immediate comment explaining why it is
           required at that call site
-        When no wrapper exists for the kind, the fix is a local `Resource`/
-        `NamespacedResource` subclass colocated with its users (examples:
-        `libs/net/netattachdef.py`, `tests/storage/file_level_restore/utils.py`)
-        or an upstream contribution to `openshift-python-wrapper` — NOT a direct
-        dynamic-client lookup. There is NO exception: a literal `apiVersion`/`kind`
-        in the call site is precisely the case a wrapper exists for, and
-        runtime-discovered kinds (e.g. CRD-defined kinds read from the cluster) must
-        be handled once inside a shared `utilities/` helper that owns the dynamic
-        lookup — never ad hoc in a test or feature util. Existing occurrences in
-        `main` are grandfathered only; flag any extension, copy, or new occurrence.
+        When no wrapper exists for the kind, the ONLY acceptable remedy is an
+        upstream contribution to `openshift-python-wrapper` that is then used by
+        the test — NOT a direct dynamic-client lookup and NOT a hand-rolled
+        `Resource`/`NamespacedResource` subclass added inside this repo. Flag any
+        new local resource subclass as HIGH; the existing ones
+        (`libs/net/netattachdef.py`, `tests/storage/file_level_restore/utils.py`)
+        are legacy and must not be extended or copied. There is NO exception and no
+        fallback: a literal `apiVersion`/`kind` in the call site is precisely the
+        case an upstream wrapper exists for, and a helper that hides a dynamic
+        lookup is equally unacceptable. Two legacy lookups remain in `main`
+        (`test_must_gather.py`, `role_aggregation/conftest.py`): flag them as
+        outstanding migration debt and flag any extension, copy, or new occurrence.
 
         ## Error contract for resource lookups
         Flag as MEDIUM a helper that mixes error styles for the same lookup — e.g.
