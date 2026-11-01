@@ -13,20 +13,17 @@ import json
 import logging
 import re
 import shlex
-from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from kubernetes.client.rest import ApiException
-from kubernetes.dynamic import DynamicClient
 from kubernetes.utils.quantity import parse_quantity
 from ocp_resources.config_map import ConfigMap
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.pod import Pod
 from ocp_resources.secret import Secret
-from ocp_resources.virtual_machine_backup import VirtualMachineBackup
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from pyhelper_utils.shell import run_ssh_commands
@@ -56,15 +53,23 @@ from utilities.constants.virt import DV_DISK
 from utilities.storage import verify_file_in_windows_vm
 from utilities.virt import VirtualMachineForTests, running_vm, wait_for_windows_vm
 
+if TYPE_CHECKING:
+    from collections.abc import Callable, Generator
+
+    from kubernetes.dynamic import DynamicClient
+    from ocp_resources.virtual_machine_backup import VirtualMachineBackup
+
 LOGGER = logging.getLogger(__name__)
 
 # The unprivileged test user can only admit restricted-v2/v3 pods. Those SCCs
-# assign the namespace UID and fsGroup, and restricted-v3 requires hostUsers=false.
-# Pinning qemu uid 1000 and gid 107 is rejected.
+# assign the namespace UID and fsGroup. Pinning qemu uid 1000 and gid 107 is rejected.
+# hostUsers stays unset. false puts the pod in a user namespace, and container
+# create then fails with "setgroups: Invalid argument" because the qe-net-utils
+# supplementary groups are outside the mapped range. restricted-v2 admits the pod
+# with hostUsers unset.
 CBT_RUNNER_POD_SECURITY_CONTEXT: dict[str, Any] = {
     "seccompProfile": {"type": "RuntimeDefault"},
     "runAsNonRoot": True,
-    "hostUsers": False,
 }
 
 BACKUP_DIR = "/backup"

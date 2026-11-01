@@ -130,10 +130,14 @@ def _convert_qcow2_to_raw(*, source_qcow2: str, target_file: str) -> None:
 
 
 def _copy_qcow2_chain_to_workdir(*, qcow2_files: list[str], volume_work_dir: str) -> list[str]:
-    """Copy a qcow2 chain onto writable storage so rebase can retarget backing files."""
+    """Copy incremental overlays onto writable storage.
+
+    ``qemu-img rebase -u`` rewrites only the overlay header. Convert reads the full
+    base image from the backup mount, so the base stays on that mount.
+    """
     os.makedirs(volume_work_dir, exist_ok=True)
-    work_files: list[str] = []
-    for file_index, qcow2_file in enumerate(qcow2_files):
+    work_files: list[str] = [qcow2_files[0]]
+    for file_index, qcow2_file in enumerate(qcow2_files[1:], start=1):
         work_path = str(Path(volume_work_dir) / f"chain-{file_index}-{Path(qcow2_file).name}")
         subprocess.run(["cp", qcow2_file, work_path], check=True)
         work_files.append(work_path)

@@ -701,9 +701,12 @@ def concurrent_push_backup_chains(
                 )
             )
             backup_chains[backup_index].append(preparatory_backup)
-            preparatory_backups.append(preparatory_backup)
-        for preparatory_backup in preparatory_backups:
-            wait_for_push_backup_complete(backup=preparatory_backup)
+            preparatory_backups.append((vm, preparatory_backup))
+        for vm, preparatory_backup in preparatory_backups:
+            wait_for_push_backup_complete(
+                backup=preparatory_backup,
+                wait_timeout=cbt_backup_wait_timeout(vm=vm),
+            )
         write_incremental_data_for_concurrent_vms(vms=concurrent_cbt_vms)
         concurrent_backups = []
         for backup_index, vm in enumerate(concurrent_cbt_vms):
@@ -721,10 +724,13 @@ def concurrent_push_backup_chains(
                 )
             )
             backup_chains[backup_index].append(concurrent_backup)
-            concurrent_backups.append(concurrent_backup)
+            concurrent_backups.append((vm, concurrent_backup))
         LOGGER.info(f"Waiting for {len(concurrent_backups)} simultaneous push-mode backups")
-        for concurrent_backup in concurrent_backups:
-            wait_for_push_backup_complete(backup=concurrent_backup)
+        for vm, concurrent_backup in concurrent_backups:
+            wait_for_push_backup_complete(
+                backup=concurrent_backup,
+                wait_timeout=cbt_backup_wait_timeout(vm=vm),
+            )
         yield backup_chains
 
 
@@ -793,8 +799,12 @@ def ready_concurrent_pull_backups(
                 preparatory_backups.append((backup_index, preparatory_backup))
                 deployed_backups.append(preparatory_backup)
             for backup_index, preparatory_backup in preparatory_backups:
-                LOGGER.info(f"Waiting for preparatory pull backup of VM {concurrent_cbt_vms[backup_index].name}")
-                wait_for_pull_backup_export_ready(backup=preparatory_backup)
+                vm = concurrent_cbt_vms[backup_index]
+                LOGGER.info(f"Waiting for preparatory pull backup of VM {vm.name}")
+                wait_for_pull_backup_export_ready(
+                    backup=preparatory_backup,
+                    wait_timeout=cbt_backup_wait_timeout(vm=vm),
+                )
                 collect_cbt_pull_backup(
                     backup=preparatory_backup,
                     vm=concurrent_cbt_vms[backup_index],
@@ -823,8 +833,11 @@ def ready_concurrent_pull_backups(
                 concurrent_backups.append(concurrent_backup)
                 deployed_backups.append(concurrent_backup)
             LOGGER.info(f"Waiting for {len(concurrent_backups)} simultaneous pull-mode backups")
-            for concurrent_backup in concurrent_backups:
-                wait_for_pull_backup_export_ready(backup=concurrent_backup)
+            for backup_index, concurrent_backup in enumerate(concurrent_backups):
+                wait_for_pull_backup_export_ready(
+                    backup=concurrent_backup,
+                    wait_timeout=cbt_backup_wait_timeout(vm=concurrent_cbt_vms[backup_index]),
+                )
             captured_backups: list[tuple[str, dict[str, Any]]] = []
             for backup_index, concurrent_backup in enumerate(concurrent_backups):
                 checkpoint_index = 0 if concurrent_backup_type(backup_index=backup_index) == CBT_BACKUP_TYPE_FULL else 1
