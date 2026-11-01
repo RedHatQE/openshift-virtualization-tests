@@ -42,7 +42,7 @@ class TestLoadConfigExplicitPath:
         config_path = tmp_path / "config.yaml"
         config_path.write_text(data="teams: NETWORK\n", encoding="utf-8")
 
-        with pytest.raises(ClickException, match=r"Unknown config key.*teams"):
+        with pytest.raises(expected_exception=ClickException, match=r"Unknown config key.*teams"):
             load_config(config_path=config_path)
 
     def test_non_string_value_rejected(self, tmp_path: Path) -> None:
@@ -50,7 +50,7 @@ class TestLoadConfigExplicitPath:
         config_path = tmp_path / "config.yaml"
         config_path.write_text(data="team: 5\n", encoding="utf-8")
 
-        with pytest.raises(ClickException, match=r"'team'.*non-empty string"):
+        with pytest.raises(expected_exception=ClickException, match=r"'team'.*non-empty string"):
             load_config(config_path=config_path)
 
     def test_numeric_value_hint_mentions_quoting(self, tmp_path: Path) -> None:
@@ -58,7 +58,7 @@ class TestLoadConfigExplicitPath:
         config_path = tmp_path / "config.yaml"
         config_path.write_text(data="cnv-version: 4.22\n", encoding="utf-8")
 
-        with pytest.raises(ClickException, match="YAML parsed a number"):
+        with pytest.raises(expected_exception=ClickException, match="YAML parsed a number"):
             load_config(config_path=config_path)
 
     def test_boolean_value_hint_mentions_quoting(self, tmp_path: Path) -> None:
@@ -66,7 +66,7 @@ class TestLoadConfigExplicitPath:
         config_path = tmp_path / "config.yaml"
         config_path.write_text(data="team: true\n", encoding="utf-8")
 
-        with pytest.raises(ClickException, match="YAML parsed a boolean"):
+        with pytest.raises(expected_exception=ClickException, match="YAML parsed a boolean"):
             load_config(config_path=config_path)
 
     def test_merge_key_config_loads(self, tmp_path: Path) -> None:
@@ -83,7 +83,7 @@ class TestLoadConfigExplicitPath:
         config_path = tmp_path / "config.yaml"
         config_path.write_text(data="<<: {team: NETWORK, team: STORAGE}\n", encoding="utf-8")
 
-        with pytest.raises(ClickException, match="not valid YAML"):
+        with pytest.raises(expected_exception=ClickException, match="not valid YAML"):
             load_config(config_path=config_path)
 
     def test_unhashable_merge_source_key_rejected(self, tmp_path: Path) -> None:
@@ -91,7 +91,7 @@ class TestLoadConfigExplicitPath:
         config_path = tmp_path / "config.yaml"
         config_path.write_text(data="<<: {[team]: NETWORK}\n", encoding="utf-8")
 
-        with pytest.raises(ClickException, match="not valid YAML"):
+        with pytest.raises(expected_exception=ClickException, match="not valid YAML"):
             load_config(config_path=config_path)
 
     def test_unhashable_top_level_key_rejected(self, tmp_path: Path) -> None:
@@ -99,7 +99,7 @@ class TestLoadConfigExplicitPath:
         config_path = tmp_path / "config.yaml"
         config_path.write_text(data="[team]: NETWORK\n", encoding="utf-8")
 
-        with pytest.raises(ClickException, match="not valid YAML"):
+        with pytest.raises(expected_exception=ClickException, match="not valid YAML"):
             load_config(config_path=config_path)
 
     def test_repeated_merge_marker_rejected(self, tmp_path: Path) -> None:
@@ -107,7 +107,7 @@ class TestLoadConfigExplicitPath:
         config_path = tmp_path / "config.yaml"
         config_path.write_text(data="<<: {team: NETWORK}\n<<: {tier: TIER-2}\n", encoding="utf-8")
 
-        with pytest.raises(ClickException, match="not valid YAML"):
+        with pytest.raises(expected_exception=ClickException, match="not valid YAML"):
             load_config(config_path=config_path)
 
     def test_explicit_key_overrides_merged_value(self, tmp_path: Path) -> None:
@@ -124,7 +124,7 @@ class TestLoadConfigExplicitPath:
         config_path = tmp_path / "config.yaml"
         config_path.write_text(data="team: NETWORK\nteam: STORAGE\n", encoding="utf-8")
 
-        with pytest.raises(ClickException, match="not valid YAML"):
+        with pytest.raises(expected_exception=ClickException, match="not valid YAML"):
             load_config(config_path=config_path)
 
     def test_non_string_key_rejected(self, tmp_path: Path) -> None:
@@ -132,7 +132,7 @@ class TestLoadConfigExplicitPath:
         config_path = tmp_path / "config.yaml"
         config_path.write_text(data="5: x\n", encoding="utf-8")
 
-        with pytest.raises(ClickException, match="non-string key"):
+        with pytest.raises(expected_exception=ClickException, match="non-string key"):
             load_config(config_path=config_path)
 
     def test_non_mapping_config_rejected(self, tmp_path: Path) -> None:
@@ -140,7 +140,7 @@ class TestLoadConfigExplicitPath:
         config_path = tmp_path / "config.yaml"
         config_path.write_text(data="- team\n- bundle\n", encoding="utf-8")
 
-        with pytest.raises(ClickException, match="must be a YAML mapping"):
+        with pytest.raises(expected_exception=ClickException, match="must be a YAML mapping"):
             load_config(config_path=config_path)
 
     def test_invalid_yaml_rejected(self, tmp_path: Path) -> None:
@@ -148,7 +148,7 @@ class TestLoadConfigExplicitPath:
         config_path = tmp_path / "config.yaml"
         config_path.write_text(data="team: [unclosed\n", encoding="utf-8")
 
-        with pytest.raises(ClickException, match="not valid YAML"):
+        with pytest.raises(expected_exception=ClickException, match="not valid YAML"):
             load_config(config_path=config_path)
 
 
@@ -176,12 +176,12 @@ class TestLoadConfigDefaultPath:
         config_path = tmp_path / "config.yaml"
         config_path.write_bytes(data="team: NETWORK\n".encode(encoding="utf-16"))
 
-        with pytest.raises(ClickException, match="not valid UTF-8"):
+        with pytest.raises(expected_exception=ClickException, match="not valid UTF-8"):
             load_config(config_path=config_path)
 
     def test_unreadable_config_rejected(self, tmp_path: Path) -> None:
         """Verify an unreadable config path (a directory) fails with a clean error."""
-        with pytest.raises(ClickException, match="Cannot read config file"):
+        with pytest.raises(expected_exception=ClickException, match="Cannot read config file"):
             load_config(config_path=tmp_path)
 
     def test_none_value_hint_mentions_missing_value(self, tmp_path: Path) -> None:
@@ -189,7 +189,7 @@ class TestLoadConfigDefaultPath:
         config_path = tmp_path / "config.yaml"
         config_path.write_text(data="team:\n", encoding="utf-8")
 
-        with pytest.raises(ClickException, match="no value for 'team'"):
+        with pytest.raises(expected_exception=ClickException, match="no value for 'team'"):
             load_config(config_path=config_path)
 
     def test_import_time_home_failure_disables_default_path(self, monkeypatch: pytest.MonkeyPatch) -> None:
