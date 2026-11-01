@@ -612,21 +612,19 @@ def completed_concurrent_push_backups(
             if concurrent_backup_type(backup_index=backup_index) == CBT_BACKUP_TYPE_FULL:
                 continue
             LOGGER.info(f"Starting preparatory full push backup for VM {vm.name}")
-            preparatory_backups.append(
-                (
-                    vm,
-                    stack.enter_context(
-                        cm=cbt_push_backup(
-                            name=f"prep-full-push-{backup_index + 1}-{unique_suffix}",
-                            namespace=namespace.name,
-                            client=unprivileged_client,
-                            pvc_name=concurrent_push_backup_pvcs[backup_index].name,
-                            source=cbt_source_ref(resource=concurrent_cbt_backup_trackers[backup_index]),
-                            force_full_backup=True,
-                        )
-                    ),
-                )
-            )
+            preparatory_backups.append((
+                vm,
+                stack.enter_context(
+                    cm=cbt_push_backup(
+                        name=f"prep-full-push-{backup_index + 1}-{unique_suffix}",
+                        namespace=namespace.name,
+                        client=unprivileged_client,
+                        pvc_name=concurrent_push_backup_pvcs[backup_index].name,
+                        source=cbt_source_ref(resource=concurrent_cbt_backup_trackers[backup_index]),
+                        force_full_backup=True,
+                    )
+                ),
+            ))
         for vm, preparatory_backup in preparatory_backups:
             wait_for_push_backup_complete(
                 backup=preparatory_backup,
@@ -638,21 +636,19 @@ def completed_concurrent_push_backups(
             force_full_backup = concurrent_backup_type(backup_index=backup_index) == CBT_BACKUP_TYPE_FULL
             backup_name_prefix = "full" if force_full_backup else "incr"
             LOGGER.info(f"Starting concurrent push backup {backup_name_prefix} for VM {vm.name}")
-            concurrent_backups.append(
-                (
-                    vm,
-                    stack.enter_context(
-                        cm=cbt_push_backup(
-                            name=f"{backup_name_prefix}-push-{backup_index + 1}-{unique_suffix}",
-                            namespace=namespace.name,
-                            client=unprivileged_client,
-                            pvc_name=concurrent_push_backup_pvcs[backup_index].name,
-                            source=cbt_source_ref(resource=concurrent_cbt_backup_trackers[backup_index]),
-                            force_full_backup=force_full_backup,
-                        )
-                    ),
-                )
-            )
+            concurrent_backups.append((
+                vm,
+                stack.enter_context(
+                    cm=cbt_push_backup(
+                        name=f"{backup_name_prefix}-push-{backup_index + 1}-{unique_suffix}",
+                        namespace=namespace.name,
+                        client=unprivileged_client,
+                        pvc_name=concurrent_push_backup_pvcs[backup_index].name,
+                        source=cbt_source_ref(resource=concurrent_cbt_backup_trackers[backup_index]),
+                        force_full_backup=force_full_backup,
+                    )
+                ),
+            ))
         LOGGER.info(f"Waiting for {len(concurrent_backups)} simultaneous push-mode backups")
         for vm, concurrent_backup in concurrent_backups:
             wait_for_push_backup_complete(
