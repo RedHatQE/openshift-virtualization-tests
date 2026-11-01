@@ -30,6 +30,52 @@ reviews:
         These rules apply only to feature/integration tests under `tests/`.
         DO still enforce: code quality, type hints, naming conventions, and all other coding standards.
 
+    - path: "utilities/**"
+      instructions: |
+        ## Shared utilities — placement and typing rules
+        Scope: production modules under `utilities/` (including
+        `utilities/constants/`); NOT `utilities/unittests/` — test-local helpers
+        and inline fixture constants are legitimate there.
+        New public functions MUST be type-hinted. Place functions in the
+        domain-matching module (network.py for networking, storage.py for storage,
+        etc.) — flag additions to the wrong domain module as HIGH. Constants belong
+        in `utilities/constants/<domain>.py`, not inline — flag inline constants as
+        MEDIUM. Unit-test expectations for changed behavior are enforced by the
+        "Utilities unit test coverage" pre-merge check.
+
+    - path: "libs/**"
+      instructions: |
+        ## Shared libraries — strict typing
+        mypy strict mode applies: every function fully typed, type-only imports
+        under `if TYPE_CHECKING:`, Google-format docstrings on public functions
+        with non-obvious return values or side effects. Flag any missing
+        annotation as HIGH.
+
+    - path: "scripts/**"
+      instructions: |
+        ## Tooling code — exemption scope
+        Files under `scripts/` are standalone CLI tooling, NOT product tests.
+        Do NOT enforce: STD docstrings, STP/Jira/RFE links, coverage tracking,
+        special_infra, or tier markers.
+        DO enforce (flag violations as MEDIUM unless noted): type hints,
+        Google docstrings on public functions with non-obvious return values or
+        side effects, no dead code, `pyhelper_utils.shell.run_command` instead
+        of subprocess, TimeoutSampler instead of time.sleep, f-string logging,
+        and named arguments for multi-argument calls.
+
+    - path: ".github/workflows/**"
+      instructions: |
+        ## Workflow conventions
+        - NEVER interpolate attacker-controllable expressions (`github.head_ref`,
+          ref names, PR titles) directly inside `run: |` shell text — pass them
+          through `env:` and read `$VAR`. Numeric, repo-controlled contexts (e.g.
+          `github.event.pull_request.number`) are acceptable. Flag violations as
+          CRITICAL (shell injection).
+        - `persist-credentials: false` on checkout steps — flag missing as MEDIUM.
+        - Python is 3.14 (`default_language_version`); provision via astral-sh/setup-uv.
+        - `uv run` only — never bare python/pip/pytest in CI. Flag as MEDIUM.
+        - Never suggest bypassing pre-commit hooks (--no-verify).
+
     - path: "tests/**"
       instructions: |
         ## STP traceability — inline comments required
@@ -68,6 +114,29 @@ reviews:
 
         Exempt (do NOT require `special_infra`): `single_nic`, `remote_cluster`, `mixed_os_nodes`,
         `cclm`, and operator-only markers (`hpp`, `mtv`, `tekton`, `service_mesh`, `nmstate`).
+
+        ## Quarantine mechanism matching
+        The quarantine mechanism MUST match the failure category (see the
+        Quarantine Review Checkpoints table in AGENTS.md and
+        docs/QUARANTINE_GUIDELINES.md):
+        - Confirmed product bug → `@pytest.mark.jira("CNV-XXXXX", run=False)`
+        - Automation issue or unidentified root cause →
+          `@pytest.mark.xfail(reason=f"{QUARANTINED}: ...", run=False)`
+        Flag mismatches as HIGH. The `quarantined` marker is added automatically
+        at collection time — flag any EXPLICIT `@pytest.mark.quarantined` as
+        CRITICAL; it must be removed.
+
+        ## Implicit markers
+        Team markers (`network`, `storage`, `virt`, `iuo`, `observability`,
+        `infrastructure`, `data_protection`, `chaos`) are added automatically
+        based on directory location. `tier2` is added automatically to every test
+        without an exclusion marker (see `EXCLUDE_MARKER_FROM_TIER2_MARKER` in
+        conftest.py). Flag explicit `@pytest.mark.tier2` or team-marker
+        additions as MEDIUM (remove them).
+
+        ## Forbidden skips
+        `pytest.skip`, `@pytest.mark.skip`, and `@pytest.mark.skipif` are forbidden.
+        Flag any addition as HIGH.
 
     - path: "**"
       instructions: |
@@ -117,6 +186,16 @@ reviews:
 
   # Abort review if PR is closed
   abort_on_close: true
+
+  # Automatic approvals: CodeRabbit approves the PR once the latest commit
+  # has a completed review, all its review comments are resolved, no
+  # pre-merge checks are failing, and the PR's merge risk is within the
+  # configured limit. allow_author_approval: false also blocks authors
+  # from using @coderabbitai approve and resolve on their own PRs.
+  auto_approvals:
+    enabled: true
+    allow_author_approval: false
+    max_merge_risk: low
 
   # Pre-merge checks for PR quality
   pre_merge_checks:
@@ -253,6 +332,20 @@ reviews:
           re-coverage MUST be included.
           FAIL if deleted without documented justification.
 
+      - name: "Utilities unit test coverage"
+        # Advisory for now (phased rollout); tighten to error once the check has
+        # proven accurate on real PRs.
+        mode: warning
+        instructions: |
+          When a `utilities/**/*.py` file that is not coverage-omitted in
+          `[tool.coverage.run] omit` (pyproject.toml) changes, verify the PR also
+          updates `utilities/unittests/test_<module>.py`, OR the PR description's
+          `Special notes for reviewer:` section documents why tests were not added
+          (coverage-omitted module with thin parameter pass-through covered by
+          integration tests, or a docs-only/import-only/rename change).
+          Flag missing tests without documented justification as a warning-level
+          finding; this check is advisory and does not block merge.
+
   # Auto-review configuration
   auto_review:
     enabled: true
@@ -261,8 +354,11 @@ reviews:
     auto_pause_after_reviewed_commits: 0
     ignore_title_keywords:
       - "WIP"
+    # cnv-4.23 is the final 4.x release; future release branches are 5.x only.
     base_branches:
       - main
+      - cnv-5.0
+      - cnv-4.23
       - cnv-4.22
       - cnv-4.21
       - cnv-4.20
@@ -293,6 +389,12 @@ reviews:
     # GitHub Actions workflow validation
     actionlint:
       enabled: true
+    # GitHub Actions security (template injection and other workflow issues)
+    zizmor:
+      enabled: true
+    # Secret detection (complements gitleaks)
+    trufflehog:
+      enabled: true
     # Dockerfile linting
     hadolint:
       enabled: true
@@ -303,12 +405,18 @@ reviews:
     github-checks:
       enabled: true
       timeout_ms: 90000
-    # Disabled tools (no JS/TS, PHP, Ruby, Kotlin, Rust, or Terraform in this repo)
+    # Disabled tools (no JS/TS, PHP, Ruby, Kotlin, Rust, Terraform, Swift, SQL,
+    # OpenAPI, Verilog/HDL, or web/mobile framework code in this repo; explicit
+    # disables guard against new default-on tools under early_access)
     biome:
       enabled: false
     eslint:
       enabled: false
     phpstan:
+      enabled: false
+    phpmd:
+      enabled: false
+    phpcs:
       enabled: false
     rubocop:
       enabled: false
@@ -320,6 +428,126 @@ reviews:
       enabled: false
     tflint:
       enabled: false
+    swiftlint:
+      enabled: false
+    smartyLint:
+      enabled: false
+    emberTemplateLint:
+      enabled: false
+    reactDoctor:
+      enabled: false
+    shopifyThemeCheck:
+      enabled: false
+    squawk:
+      enabled: false
+    prismaLint:
+      enabled: false
+    oasdiff:
+      enabled: false
+    verilator:
+      enabled: false
+    # Python linting is ruff's job (flake8 rules were migrated to ruff);
+    # flake8 would duplicate findings against a config it does not read
+    flake8:
+      enabled: false
+
+  post_merge_actions:
+    - name: "CodeRabbit learnings from merged PR"
+      enabled: true
+      prompt: |
+        ALWAYS APPLY THIS ACTION. Keep its walkthrough checkbox checked by
+        default on every pull request.
+
+        "Learnings added" markers almost always appear AFTER the first review, as later conversation or review-thread comments.
+        Their absence at review time must NEVER cause this action to be
+        unchecked or omitted. Evaluate whether work is needed only at merge
+        time, using the PR conversation and the PR context
+        supplied to this post-merge run.
+
+        At merge time, find CodeRabbit-authored comments on this merged PR
+        that contain a "Learnings added" marker. Use the PR conversation and
+        all its comments and the PR context already available to this action.
+        Look in whichever of these sources are available, independently:
+        - top-level conversation comments
+        - inline review comments (Files changed), including replies in those threads
+        - pull request review bodies
+
+        If comments cannot be read at all, report that the scan was incomplete; do not report "no update was needed."
+
+        A CodeRabbit comment counts as a "Learnings added" item if the
+        phrase "Learnings added" appears in either of these forms (emoji or
+        other prefixes/suffixes in the same marker are OK):
+        - a Markdown heading (for example "# Learnings added" or
+          "## Learnings added")
+        - an HTML summary tag used by CodeRabbit details blocks (for example
+          "<summary>Learnings added</summary>" or
+          "<summary>✏️ Learnings added</summary>")
+        Do NOT count mid-sentence mentions outside those marker forms.
+        Document every qualifying learning you can find from any readable source.
+
+        Acknowledgment depends on comment type:
+
+        - Inline review comments (Files changed): skip the learning only if a
+          human (not a bot) posted a direct reply AFTER that "Learnings added"
+          comment in the SAME review thread. A human comment that appears
+          before the "Learnings added" comment does NOT count as
+          acknowledgment, still document that learning.
+        - Top-level conversation comments and pull request review bodies: a
+          later human comment in the PR conversation is NOT a reply to that
+          learning and does NOT count as acknowledgment. Treat them as
+          unacknowledged and document them.
+
+        Do NOT treat other review threads, or unrelated later human comments,
+        as acknowledgment of an inline learning.
+
+        For each remaining "Learnings added" comment, extract only the
+        `Learning:` field value (the guideline text). Do NOT copy metadata
+        such as Learnt from, Repo, PR, File, Timestamp, or surrounding
+        code fences into AGENTS.md. Also read the `File:` field when present
+        (path only, ignore line ranges) as a hint for path-specific
+        learnings. Stop parsing at the next Markdown heading, the next
+        "<summary>" block, or a known footer such as "Learnings used",
+        "Note: Learnings are effective", "Review thread resolved",
+        "You are interacting with an AI system", or "</details>". Skip
+        empty or whitespace-only Learning: values.
+
+        Analyze each remaining learning against the pull request conversation,
+        all its comments, and the PR context.
+        Document every remaining learning.
+
+        For every remaining learning, decide root vs nested from the
+        learning content (not only from File:):
+        1. If the learning is a general / repository-wide rule, update or
+           append it to the root AGENTS.md even if File: points at a
+           specific file. Skip it if an equivalent rule is already
+           documented there.
+        2. If the learning is specifically about a directory or area,
+           update or create (if not existing) the nested AGENTS.md in the narrowest relevant
+           directory for that area. Prefer `File:` to choose that directory
+           when it points under the repo (for example File:
+           tests/network/foo.py -> tests/network/AGENTS.md). If File: is
+           missing, infer the directory from the learning text. Skip it if
+           an equivalent rule is already documented in that file or an
+           applicable parent AGENTS.md.
+        Do NOT update .coderabbit.yaml or reviews.path_instructions.
+
+        Apply all of those text modifications in the sandbox. If comments
+        were readable and the sandbox diff is empty (every remaining learning
+        was already documented, there were no file changes, there were no
+        qualifying "Learnings added" markers in any readable source, or all
+        remaining learnings were acknowledged in the same inline review
+        thread), do not open a follow-up PR; report that no update was needed.
+        Otherwise open ONE follow-up pull request against the default branch
+        for this merged PR. Include every remaining (unacknowledged) learning
+        from this merge in that single PR.
+        If follow-up PR creation fails, report the failure in the post-merge
+        result comment and do not claim success.
+        If comments could not be read at all, report an incomplete scan and do
+        not claim success or "no update was needed."
+
+        Do not duplicate rules that are already documented. Do not invent
+        rules that were not in those learnings. Keep edits minimal and in the
+        existing style of AGENTS.md.
 
 chat:
   auto_reply: true
@@ -370,6 +598,12 @@ knowledge_base:
     filePatterns:
       - "AGENTS.md"
       - "docs/AI_CONTRIBUTION_POLICY.md"
+      - files: "docs/CODING_AND_STYLE_GUIDE.md"
+        applyTo: "**"
+      - files: "docs/SOFTWARE_TEST_DESCRIPTION.md"
+        applyTo: "tests/**"
+      - files: "docs/QUARANTINE_GUIDELINES.md"
+        applyTo: "tests/**"
 
   # Enable learning from repository patterns
   learnings:

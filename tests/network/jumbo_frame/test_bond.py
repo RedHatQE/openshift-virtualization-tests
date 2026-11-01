@@ -210,7 +210,6 @@ def running_bond_bridge_attached_vmb(bond_bridge_attached_vmb):
 
 class TestBondJumboFrame:
     @pytest.mark.ipv4
-    @pytest.mark.polarion("CNV-3367")
     def test_connectivity_over_linux_bond_large_mtu(
         self,
         namespace,
@@ -223,6 +222,9 @@ class TestBondJumboFrame:
         running_bond_bridge_attached_vmb,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/KNIP-770 # <skip-jira-utils-check>
+        Polarion: CNV-3367
+
         Check connectivity over linux bridge with custom MTU
         """
         icmp_header = 8
@@ -236,7 +238,6 @@ class TestBondJumboFrame:
         )
 
     @pytest.mark.ipv4
-    @pytest.mark.polarion("CNV-3368")
     def test_negative_mtu_linux_bond(
         self,
         namespace,
@@ -249,6 +250,9 @@ class TestBondJumboFrame:
         running_bond_bridge_attached_vmb,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/KNIP-770 # <skip-jira-utils-check>
+        Polarion: CNV-3368
+
         Check connectivity failed when packet size is higher than custom MTU
         """
         assert_no_ping(

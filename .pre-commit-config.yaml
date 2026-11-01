@@ -2,6 +2,14 @@ default_language_version:
   python: python3.14
 
 ci:
+  # The staged-diff policy hooks read the Git index and need the project
+  # environment (uv, ocp_resources, gh, network), none of which pre-commit.ci
+  # provides; they are enforced by the "Pre-commit Policy Checks" GitHub
+  # Actions workflow (see .github/workflows/pre-commit-policy-checks.yml —
+  # keep the hook lists in both files in sync when adding staged-diff hooks).
+  # The stateless check-banned-* hooks have no such needs and DO run on
+  # pre-commit.ci. check-jsonschema fetches a remote schema file, which
+  # pre-commit.ci also cannot do.
   skip: [check-jsonschema, check-staged-paths, check-linter-directives, check-python-source, check-test-std, check-stp-links]
 
 repos:
@@ -48,7 +56,7 @@ repos:
       - id: check-toml
         stages: [pre-commit]
   - repo: https://github.com/PyCQA/flake8
-    rev: "7.3.0"
+    rev: "7.4.1"
     hooks:
       - id: flake8
         language_version: python3.14
@@ -70,7 +78,7 @@ repos:
         stages: [commit-msg]
 
   - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: "0.38.0"
+    rev: "0.38.2"
     hooks:
       - id: check-jsonschema
         name: Validate .coderabbit.yaml against schema
@@ -85,6 +93,30 @@ repos:
 
   - repo: local
     hooks:
+      # Stateless whole-file checks: no Git state and no project environment
+      # are needed, so these hooks also run on pre-commit.ci, which checks
+      # the whole committed tree with --all-files.
+      - id: check-banned-paths
+        name: ban top-level test files and Python symlinks (whole repository)
+        entry: python -m scripts.pre_commit_hooks.check_banned --check banned-paths
+        language: python
+        types_or: [file, symlink]
+        always_run: true
+        require_serial: true
+        stages: [pre-commit]
+      - id: check-banned-constructs
+        # DynamicClient construction and relative imports are banned in the
+        # whole repository; async/await is enforced in the code roots
+        # (libs/, scripts/, tests/, utilities/) by check_test_basics.
+        name: ban DynamicClient construction and relative imports (whole repository) and async/await (code roots)
+        entry: python -m scripts.pre_commit_hooks.check_banned --check banned-constructs
+        language: python
+        types_or: [python, symlink]
+        always_run: true
+        require_serial: true
+        stages: [pre-commit]
+      # Staged-diff checks: these read the Git index and need the project
+      # environment (and gh for stp-links); pre-commit.ci cannot run them.
       - id: check-staged-paths
         name: ban bad staged paths (generated docs/site, top-level tests) and staged symlinks
         entry: uv run python scripts/pre_commit_hooks/check_policy.py --check path-policy
@@ -127,7 +159,7 @@ repos:
         stages: [pre-commit]
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v2.3.1
+    rev: v2.4.0
     hooks:
       - id: mypy
         exclude: "test_(.*).py$"

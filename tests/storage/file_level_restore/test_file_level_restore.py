@@ -5,7 +5,11 @@ STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob
 Jira: https://redhat.atlassian.net/browse/VIRTSTRAT-480 # <skip-jira-utils-check>
 """
 
+from shlex import quote
+
 import pytest
+from pyhelper_utils.exceptions import CommandExecFailed
+from pyhelper_utils.shell import run_ssh_commands
 
 from tests.storage.file_level_restore.constants import (
     LINUX_VENDOR_RESTORE_CR_NAME,
@@ -20,15 +24,25 @@ from tests.storage.file_level_restore.utils import (
     VirtualMachineFileRestore,
     assert_file_restore_operator_pod_running,
     assert_successful_restore_cleanup,
+    assert_windows_backup_read_only,
     assert_windows_ntfs_acl_matches,
     count_files_in_windows_directory,
     get_restored_files_count,
+    linux_backup_file_path,
+    restore_volume_name,
     wait_for_file_restore_operator_ready,
     wait_for_file_restore_phase,
+    windows_backup_file_path,
     windows_data_disk_path,
     windows_guest_path,
 )
-from utilities.storage import run_command_on_vm_and_check_output, verify_file_in_windows_vm
+from tests.storage.online_resize.utils import cksum_file
+from utilities.constants.timeouts import TIMEOUT_10MIN
+from utilities.storage import (
+    run_command_on_vm_and_check_output,
+    verify_dv_and_pvc_does_not_exist,
+    verify_file_in_windows_vm,
+)
 
 
 class TestFileRestoreOperatorDeployment:
@@ -645,11 +659,16 @@ class TestFileRestoreCrossNamespace:
         - Cross-namespace restore permissions configured for the source VolumeSnapshot
     """
 
-    __test__ = False
-
     @pytest.mark.polarion("CNV-16835")
-    @pytest.mark.manual
-    def test_restore_from_different_namespace(self):
+    def test_restore_from_different_namespace(
+        self,
+        admin_client,
+        namespace,
+        file_restore_linux_vm,
+        cross_namespace_data_disk_snapshot,
+        deleted_cross_namespace_linux_file,
+        cross_namespace_file_restore,
+    ):
         """
         Test that restore from a volume snapshot in a different namespace succeeds and cleans up.
 
@@ -669,6 +688,31 @@ class TestFileRestoreCrossNamespace:
         Expected:
             - Restore succeeds with the original file content and no temporary resources remain in the Target namespace
         """
+        restore_path, expected_content = deleted_cross_namespace_linux_file
+        assert cross_namespace_data_disk_snapshot.namespace != namespace.name, (
+            "Cross-namespace restore requires the snapshot and target VM to be in different namespaces"
+        )
+        wait_for_file_restore_phase(
+            file_restore=cross_namespace_file_restore,
+            target_phase=VirtualMachineFileRestore.Phase.SUCCEEDED,
+        )
+        run_command_on_vm_and_check_output(
+            vm=file_restore_linux_vm,
+            command=f"cat {quote(restore_path)}",
+            expected_result=expected_content,
+        )
+        assert_successful_restore_cleanup(
+            vm=file_restore_linux_vm,
+            restore_cr_name=cross_namespace_file_restore.name,
+            namespace_name=namespace.name,
+            admin_client=admin_client,
+            snapshot_source=True,
+        )
+        verify_dv_and_pvc_does_not_exist(
+            name=restore_volume_name(restore_cr_name=cross_namespace_file_restore.name),
+            namespace=namespace.name,
+            client=admin_client,
+        )
 
 
 class TestFileRestoreStorageCompatibility:
@@ -684,6 +728,7 @@ class TestFileRestoreStorageCompatibility:
     __test__ = False
 
     @pytest.mark.polarion("CNV-16836")
+    @pytest.mark.jira("CNV-99267", run=False)
     @pytest.mark.manual
     def test_restore_with_source_volume_mode_mismatch(self):
         """
@@ -708,13 +753,11 @@ class TestFileRestoreStorageCompatibility:
         """
 
 
+@pytest.mark.tier3
+@pytest.mark.windows
 class TestFileRestoreWindowsManualBrowsing:
     """
     Tests for manual browsing of Windows backup volumes.
-
-    Markers:
-        - tier3
-        - windows
 
     Preconditions:
         - vm-file-restore-operator deployed and running in openshift-cnv namespace
@@ -722,11 +765,13 @@ class TestFileRestoreWindowsManualBrowsing:
         - NTFS backup volume containing files with known content
     """
 
-    __test__ = False
-
     @pytest.mark.polarion("CNV-16837")
-    @pytest.mark.manual
-    def test_manual_browsing_of_windows_ntfs_backup_volume(self):
+    def test_manual_browsing_of_windows_ntfs_backup_volume(
+        self,
+        windows_file_restore_vm,
+        windows_test_file_on_data_disk,
+        windows_manual_browsing_file_restore,
+    ):
         """
         Test that manual restore mode exposes an NTFS backup volume for read-only browsing.
 
@@ -742,8 +787,27 @@ class TestFileRestoreWindowsManualBrowsing:
             4. Attempt to modify a file on the mounted backup volume
 
         Expected:
-            - Known content can be read from the mounted backup volume and modification is denied
+            - Known backup content is readable and stays unchanged after a modification attempt (read-only mount)
         """
+        guest_path, expected_content = windows_test_file_on_data_disk
+        wait_for_file_restore_phase(
+            file_restore=windows_manual_browsing_file_restore,
+            target_phase=VirtualMachineFileRestore.Phase.VOLUME_READY,
+        )
+        backup_file_path = windows_backup_file_path(
+            vm=windows_file_restore_vm,
+            restore_cr_name=windows_manual_browsing_file_restore.name,
+            relative_path=windows_guest_path(guest_path=guest_path).split(":\\", maxsplit=1)[1],
+        )
+        verify_file_in_windows_vm(
+            windows_vm=windows_file_restore_vm,
+            file_name_with_path=backup_file_path,
+            file_content=expected_content,
+        )
+        assert_windows_backup_read_only(
+            vm=windows_file_restore_vm,
+            backup_file_path=backup_file_path,
+        )
 
 
 class TestFileRestoreGuestConnectionInterruption:
@@ -792,11 +856,21 @@ class TestFileRestoreRootDiskManualBrowsing:
         - Root disk backup available for manual browsing
     """
 
-    __test__ = False
-
     @pytest.mark.polarion("CNV-16839")
-    @pytest.mark.manual
-    def test_manual_browsing_of_root_disk_backup(self):
+    @pytest.mark.parametrize(
+        "linux_root_disk_browsing_source",
+        [
+            pytest.param({"fixture_name": "linux_root_disk_snapshot"}, id="VolumeSnapshot"),
+            pytest.param({"fixture_name": "linux_root_disk_backup_pvc"}, id="PVC"),
+        ],
+        indirect=True,
+    )
+    def test_manual_browsing_of_root_disk_backup(
+        self,
+        file_restore_linux_root_only_vm,
+        linux_test_file_on_root_disk,
+        linux_root_disk_manual_browsing_file_restore,
+    ):
         """
         Test that manual restore mode exposes root disk backup contents for read-only browsing.
 
@@ -817,6 +891,36 @@ class TestFileRestoreRootDiskManualBrowsing:
         Expected:
             - Known content can be read from the mounted root disk backup, and modification is denied
         """
+        guest_path, expected_content = linux_test_file_on_root_disk
+        wait_for_file_restore_phase(
+            file_restore=linux_root_disk_manual_browsing_file_restore,
+            target_phase=VirtualMachineFileRestore.Phase.VOLUME_READY,
+        )
+        mount_path = linux_root_disk_manual_browsing_file_restore.instance.status.mountPath
+        assert mount_path, (
+            f"Restore '{linux_root_disk_manual_browsing_file_restore.name}' did not report a backup mount path"
+        )
+        backup_file_path = linux_backup_file_path(
+            vm=file_restore_linux_root_only_vm,
+            mount_path=mount_path,
+            guest_path=guest_path,
+        )
+        run_command_on_vm_and_check_output(
+            vm=file_restore_linux_root_only_vm,
+            command=f"sudo cat {quote(backup_file_path)}",
+            expected_result=expected_content,
+        )
+        # Write as root so a permission error cannot masquerade as a read-only mount.
+        with pytest.raises(CommandExecFailed, match="Read-only file system"):
+            run_ssh_commands(
+                host=file_restore_linux_root_only_vm.ssh_exec,
+                commands=["sudo", "sh", "-c", f"printf unexpected-backup-write >> {quote(backup_file_path)}"],
+            )
+        run_command_on_vm_and_check_output(
+            vm=file_restore_linux_root_only_vm,
+            command=f"sudo cat {quote(backup_file_path)}",
+            expected_result=expected_content,
+        )
 
 
 class TestFileRestoreLargeFile:
@@ -829,11 +933,13 @@ class TestFileRestoreLargeFile:
         - VolumeSnapshot-capable StorageClass available
     """
 
-    __test__ = False
-
     @pytest.mark.polarion("CNV-16840")
-    @pytest.mark.manual
-    def test_restore_big_file_from_data_disk_snapshot(self):
+    def test_restore_big_file_from_data_disk_snapshot(
+        self,
+        file_restore_linux_vm,
+        deleted_linux_large_file,
+        large_file_snapshot_file_restore,
+    ):
         """
         Test that a 1 GB file is restored successfully from a data disk snapshot.
 
@@ -851,14 +957,27 @@ class TestFileRestoreLargeFile:
         Expected:
             - Restore succeeds and the restored 1 GB file checksum matches the snapshot source
         """
+        restore_path, expected_checksum = deleted_linux_large_file
+        wait_for_file_restore_phase(
+            file_restore=large_file_snapshot_file_restore,
+            target_phase=VirtualMachineFileRestore.Phase.SUCCEEDED,
+            timeout=TIMEOUT_10MIN,
+        )
+        actual_checksum = cksum_file(vm=file_restore_linux_vm, filename=restore_path)
+        assert actual_checksum == expected_checksum, (
+            f"Restored 1 GiB file '{restore_path}' has checksum {actual_checksum}, expected {expected_checksum}"
+        )
+        run_command_on_vm_and_check_output(
+            vm=file_restore_linux_vm,
+            command=f"stat --format=%s {quote(restore_path)}",
+            expected_result=str(1024**3),
+        )
 
 
+@pytest.mark.tier3
 class TestFileRestoreConcurrentVirtualMachines:
     """
     Tests for concurrent file restore operations on independent virtual machines.
-
-    Markers:
-        - tier3
 
     Preconditions:
         - vm-file-restore-operator deployed and running in openshift-cnv namespace
@@ -866,11 +985,23 @@ class TestFileRestoreConcurrentVirtualMachines:
         - Independent backup volume available for each Linux VM
     """
 
-    __test__ = False
-
     @pytest.mark.polarion("CNV-16841")
-    @pytest.mark.manual
-    def test_concurrent_restores_on_different_virtual_machines(self):
+    @pytest.mark.parametrize(
+        "linux_test_file_on_root_disk",
+        [{"content": "file-restore-concurrent-root-content"}],
+        indirect=True,
+    )
+    def test_concurrent_restores_on_different_virtual_machines(
+        self,
+        admin_client,
+        namespace,
+        file_restore_linux_vm,
+        file_restore_linux_root_only_vm,
+        deleted_linux_test_file_on_data_disk,
+        deleted_linux_test_file_on_root_disk,
+        concurrent_data_disk_file_restore,
+        concurrent_root_disk_file_restore,
+    ):
         """
         Test that concurrent file restores on different virtual machines complete independently.
 
@@ -888,3 +1019,31 @@ class TestFileRestoreConcurrentVirtualMachines:
         Expected:
             - Both restore operations succeed independently with the original file content on their respective VMs
         """
+        data_restore_path, data_expected_content = deleted_linux_test_file_on_data_disk
+        root_restore_path, root_expected_content = deleted_linux_test_file_on_root_disk
+        for vm, file_restore, restore_path, expected_content, snapshot_source in (
+            (file_restore_linux_vm, concurrent_data_disk_file_restore, data_restore_path, data_expected_content, False),
+            (
+                file_restore_linux_root_only_vm,
+                concurrent_root_disk_file_restore,
+                root_restore_path,
+                root_expected_content,
+                True,
+            ),
+        ):
+            wait_for_file_restore_phase(
+                file_restore=file_restore,
+                target_phase=VirtualMachineFileRestore.Phase.SUCCEEDED,
+            )
+            run_command_on_vm_and_check_output(
+                vm=vm,
+                command=f"cat {quote(restore_path)}",
+                expected_result=expected_content,
+            )
+            assert_successful_restore_cleanup(
+                vm=vm,
+                restore_cr_name=file_restore.name,
+                namespace_name=namespace.name,
+                admin_client=admin_client,
+                snapshot_source=snapshot_source,
+            )
