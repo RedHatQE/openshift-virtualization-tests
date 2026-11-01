@@ -54,8 +54,15 @@ def _check_merge_source_duplicates(loader: _UniqueKeySafeLoader, source: yaml.Ma
     silently last-win.
     """
     seen_keys: set[object] = set()
+    merge_marker_seen = False
     for key_node, value_node in source.value:
         if key_node.tag == _YAML_MERGE_TAG:
+            if merge_marker_seen:
+                raise yaml.constructor.ConstructorError(
+                    problem="repeated merge key '<<' in merge source",
+                    problem_mark=key_node.start_mark,
+                )
+            merge_marker_seen = True
             _check_merge_value_duplicates(loader=loader, merge_value=value_node)
             continue
         key = loader.construct_object(node=key_node, deep=True)

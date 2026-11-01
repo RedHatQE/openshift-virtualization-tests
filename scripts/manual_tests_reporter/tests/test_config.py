@@ -86,6 +86,14 @@ class TestLoadConfigExplicitPath:
         with pytest.raises(expected_exception=ClickException, match="not valid YAML"):
             load_config(config_path=config_path)
 
+    def test_repeated_merge_marker_in_merge_source_rejected(self, tmp_path: Path) -> None:
+        """Verify repeated nested merge keys inside a merge source are rejected."""
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text(data="<<: {<<: {team: NETWORK}, <<: {team: STORAGE}}\n", encoding="utf-8")
+
+        with pytest.raises(expected_exception=ClickException, match="not valid YAML"):
+            load_config(config_path=config_path)
+
     def test_unhashable_merge_source_key_rejected(self, tmp_path: Path) -> None:
         """Verify a YAML complex key in a merge source fails as a YAML error."""
         config_path = tmp_path / "config.yaml"
