@@ -1,0 +1,10 @@
+root-approvers: False
+approvers:
+  - dshchedr
+  - vsibirsk
+reviewers:
+  - dshchedr
+  - vsibirsk
+  - akri3i
+  - SamAlber
+  - ameya-keskar
