@@ -877,6 +877,129 @@ def filter_multiarch_tests(items: list[pytest.Item], config: pytest.Config) -> l
     return items_to_return
 
 
+def filter_upgrade_tests(
+    items: list[pytest.Item],
+    config: pytest.Config,
+) -> tuple[list[pytest.Item], list[pytest.Item]]:
+    """Split collected items into upgrade-lane keep and discard lists.
+
+    When an upgrade marker (``--upgrade`` or ``--upgrade_custom``) is configured,
+    only the upgrade tests matching the upgraded product are kept; ``post_test_alerts``
+    tests are always kept. When no upgrade marker is configured, all upgrade tests
+    are discarded.
+
+    Args:
+        items: Collected pytest items.
+        config: Pytest config object, used to read upgrade lane options.
+
+    Returns:
+        Tuple of (items to keep, items to discard).
+    """
+    upgrade_tests: list[pytest.Item] = []
+    non_upgrade_tests: list[pytest.Item] = []
+    always_keep: list[pytest.Item] = []
+    upgrade_markers = {"upgrade", "upgrade_custom"}
+    chosen_upgrade_markers = {marker for marker in upgrade_markers if config.getoption(f"--{marker}")}
+    upgrade_markers_to_collect = chosen_upgrade_markers or upgrade_markers
+
+    for item in items:
+        if "post_test_alerts" in item.keywords:
+            always_keep.append(item)
+        elif upgrade_markers_to_collect.intersection(set(item.keywords)):
+            upgrade_tests.append(item)
+        else:
+            non_upgrade_tests.append(item)
+
+    if chosen_upgrade_markers:
+        upgrade_tests, discard = remove_upgrade_tests_based_on_config(
+            cnv_source=config.getoption("--cnv-source"),
+            upgrade_tests=upgrade_tests,
+        )
+        return [*upgrade_tests, *always_keep], [*non_upgrade_tests, *discard]
+
+    return [*non_upgrade_tests, *always_keep], upgrade_tests
+
+
+def remove_upgrade_tests_based_on_config(
+    cnv_source: str,
+    upgrade_tests: list[pytest.Item],
+) -> tuple[list[pytest.Item], list[pytest.Item]]:
+    """Filter the correct upgrade tests to execute based on config, since only one lane can be chosen.
+
+    If performing OCP upgrade, keep only the tests with pytest.mark.ocp_upgrade.
+    If performing EUS upgrade, keep only the tests with pytest.mark.eus_upgrade.
+    If performing CNV upgrade, keep only the tests with pytest.mark.cnv_upgrade.
+    In addition, determine if we are running the cnv upgrade test for production source or for stage/osbs.
+
+    Args:
+        cnv_source: cnv source option.
+        upgrade_tests: list of upgrade tests.
+
+    Returns:
+        Tuple of (tests to keep, tests to discard).
+    """
+    keep: list[pytest.Item] = []
+    marker_str = f"{py_config['upgraded_product']}_upgrade"
+
+    for test in upgrade_tests:
+        if marker_str == "cnv_upgrade" and "cnv_upgrade_process" in test.name:
+            # choose the right cnv_upgrade test according to cnv_source.
+            # production cnv_upgrade_test if prod source, otherwise the stage/osbs one
+            if (cnv_source == "production") == ("production_source" in test.name):
+                keep.append(test)
+        elif marker_str in test.keywords:
+            keep.append(test)
+
+    discard = [test for test in upgrade_tests if test not in keep]
+    return keep, discard
+
+
+def filter_deprecated_api_tests(items: list[pytest.Item], config: pytest.Config) -> list[pytest.Item]:
+    """Deselect deprecated-api tests on install/upgrade lanes or when explicitly requested.
+
+    Args:
+        items: Collected pytest items.
+        config: Pytest config object, used to read CLI options and report deselections.
+
+    Returns:
+        The retained pytest items.
+
+    Side Effects:
+        Reports removed deprecated-api items through ``pytest_deselected``.
+    """
+    if (
+        config.getoption("--skip-deprecated-api-test")
+        or config.getoption("--install")
+        or config.getoption("--upgrade")
+        or config.getoption("--upgrade_custom")
+    ):
+        discard_tests, items_to_return = remove_tests_from_list(items=items, filter_str="deprecated_api")
+        config.hook.pytest_deselected(items=discard_tests)
+        return items_to_return
+    return items
+
+
+def filter_sno_only_tests(items: list[pytest.Item], config: pytest.Config) -> list[pytest.Item]:
+    """Deselect single-node-only tests when the marker expression targets something else.
+
+    Args:
+        items: Collected pytest items.
+        config: Pytest config object, used to read the marker expression and report deselections.
+
+    Returns:
+        The retained pytest items.
+
+    Side Effects:
+        Reports removed single-node items through ``pytest_deselected``.
+    """
+    marker_expression = config.getoption("-m")
+    if marker_expression and "sno" not in marker_expression:
+        discard_tests, items_to_return = remove_tests_from_list(items=items, filter_str="single_node_tests")
+        config.hook.pytest_deselected(items=discard_tests)
+        return items_to_return
+    return items
+
+
 def assert_incremental_classes_fully_collected(items: list[pytest.Item]) -> None:
     """Verify that all tests defined in incremental classes were collected.
 
