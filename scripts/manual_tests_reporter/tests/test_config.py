@@ -69,6 +69,24 @@ class TestLoadConfigExplicitPath:
         with pytest.raises(ClickException, match="YAML parsed a boolean"):
             load_config(config_path=config_path)
 
+    def test_merge_key_config_loads(self, tmp_path: Path) -> None:
+        """Verify YAML merge keys still work with the duplicate-key loader."""
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text(data="<<: {team: NETWORK, tier: TIER-2}\nservice: my-service\n", encoding="utf-8")
+
+        config, _source = load_config(config_path=config_path)
+
+        assert config == {"team": "NETWORK", "tier": "TIER-2", "service": "my-service"}, f"Got {config!r}"
+
+    def test_explicit_key_overrides_merged_value(self, tmp_path: Path) -> None:
+        """Verify an explicit key overrides a value merged via YAML merge key."""
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text(data="<<: {team: NETWORK}\nteam: STORAGE\n", encoding="utf-8")
+
+        config, _source = load_config(config_path=config_path)
+
+        assert config == {"team": "STORAGE"}, f"Got {config!r}"
+
     def test_duplicate_config_key_rejected(self, tmp_path: Path) -> None:
         """Verify duplicate mapping keys in the config file are rejected, not last-wins."""
         config_path = tmp_path / "config.yaml"

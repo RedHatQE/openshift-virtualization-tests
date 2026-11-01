@@ -25,6 +25,11 @@ class _UniqueKeySafeLoader(yaml.SafeLoader):
     """Safe YAML loader that rejects duplicate mapping keys."""
 
 
+# Merge-key tag (``<<``) — flattened by construct_mapping, which also lets an
+# explicit key override a value merged from another mapping.
+_YAML_MERGE_TAG = "tag:yaml.org,2002:merge"
+
+
 def _construct_unique_mapping(
     loader: _UniqueKeySafeLoader,
     node: yaml.MappingNode,
@@ -32,6 +37,10 @@ def _construct_unique_mapping(
 ) -> dict:
     seen_keys: set[object] = set()
     for key_node, _value_node in node.value:
+        if key_node.tag == _YAML_MERGE_TAG:
+            # Merged mappings are constructed (and duplicate-checked) on their
+            # own through this same constructor; skip the merge marker itself.
+            continue
         key = loader.construct_object(node=key_node, deep=deep)
         if key in seen_keys:
             raise yaml.constructor.ConstructorError(
