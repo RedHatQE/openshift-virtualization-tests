@@ -30,6 +30,22 @@ class _UniqueKeySafeLoader(yaml.SafeLoader):
 _YAML_MERGE_TAG = "tag:yaml.org,2002:merge"
 
 
+def _ensure_hashable_key(key: object, key_node: yaml.Node) -> None:
+    """Reject an unhashable mapping key as a YAML error.
+
+    A YAML complex key (e.g. ``[team]: value``) constructs to a list, which
+    would otherwise raise a bare ``TypeError`` from the set lookup before
+    PyYAML's own unhashable-key check can produce a ``ConstructorError``.
+    """
+    try:
+        hash(key)
+    except TypeError as type_error:
+        raise yaml.constructor.ConstructorError(
+            problem=f"unhashable key {key!r}",
+            problem_mark=key_node.start_mark,
+        ) from type_error
+
+
 def _check_merge_source_duplicates(loader: _UniqueKeySafeLoader, source: yaml.MappingNode) -> None:
     """Reject duplicate keys inside a merge source before flattening.
 
@@ -43,6 +59,7 @@ def _check_merge_source_duplicates(loader: _UniqueKeySafeLoader, source: yaml.Ma
             _check_merge_value_duplicates(loader=loader, merge_value=value_node)
             continue
         key = loader.construct_object(node=key_node, deep=True)
+        _ensure_hashable_key(key=key, key_node=key_node)
         if key in seen_keys:
             raise yaml.constructor.ConstructorError(
                 problem=f"duplicate key {key!r} in merge source",
@@ -80,6 +97,7 @@ def _construct_unique_mapping(
             _check_merge_value_duplicates(loader=loader, merge_value=value_node)
             continue
         key = loader.construct_object(node=key_node, deep=deep)
+        _ensure_hashable_key(key=key, key_node=key_node)
         if key in seen_keys:
             raise yaml.constructor.ConstructorError(
                 problem=f"duplicate key {key!r}",
