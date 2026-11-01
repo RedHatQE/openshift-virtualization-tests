@@ -138,8 +138,44 @@ reviews:
         `pytest.skip`, `@pytest.mark.skip`, and `@pytest.mark.skipif` are forbidden.
         Flag any addition as HIGH.
 
+        ## Type hints for new test helpers
+        New public functions in `tests/**/utils.py` (and new fixtures/helpers in
+        feature `conftest.py`) MUST annotate their arguments and return type.
+        Types documented only in prose inside the docstring, or a bare `dict`/
+        `list` return with no annotation on the signature, is a HIGH finding.
+
     - path: "**"
       instructions: |
+        ## Resource access
+        Cluster resources MUST be read through an openshift-python-wrapper
+        `Resource` class. Flag ALL of the following as HIGH:
+        - `client.resources.get(api_version=..., kind=...)` — building a raw
+          dynamic-client handle instead of using a wrapper class
+        - chaining `.get(...)`, `.items`, or `.to_dict()` onto such a handle
+        - a `Resource`/`NamespacedResource` constructor or `.get()` call without an
+          explicit syntactically non-`None` `client=` argument
+        - `cache_admin_client()` without an immediate comment explaining why it is
+          required at that call site
+        When no wrapper exists for the kind, the fix is a local `Resource`/
+        `NamespacedResource` subclass colocated with its users (examples:
+        `libs/net/netattachdef.py`, `tests/storage/file_level_restore/utils.py`)
+        or an upstream contribution to `openshift-python-wrapper` — NOT a direct
+        dynamic-client lookup. There is NO exception: a literal `apiVersion`/`kind`
+        in the call site is precisely the case a wrapper exists for, and
+        runtime-discovered kinds (e.g. CRD-defined kinds read from the cluster) must
+        be handled once inside a shared `utilities/` helper that owns the dynamic
+        lookup — never ad hoc in a test or feature util. Existing occurrences in
+        `main` are grandfathered only; flag any extension, copy, or new occurrence.
+
+        ## Error contract for resource lookups
+        Flag as MEDIUM a helper that mixes error styles for the same lookup — e.g.
+        a hand-rolled `ValueError` for one missing field plus an undocumented
+        `KeyError`, `IndexError`, or client `NotFoundError` for another. Also flag
+        docstring `Raises:` sections that list implementation-detail exceptions
+        instead of one contextual exception naming the resource. A resource fetched
+        through a wrapper reports absence via `exists`/`ResourceNotFoundError`, not
+        a hand-rolled `ValueError`.
+
         ## Approval Policy
         You may approve the PR when ALL of the following are true:
         - All your review comments have been addressed with either:
