@@ -12,6 +12,7 @@ from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from pytest_testconfig import config as py_config
 
 from libs.net.vmspec import VMInterfaceSpecNotFoundError
+from libs.vm.affinity import wait_for_vmi_template_affinity
 from libs.vm.spec import (
     Affinity,
     CloudInitNoCloud,
@@ -151,14 +152,24 @@ class BaseVirtualMachine(VirtualMachine):
 
         Serializes without dict_factory so that None-valued fields (e.g. podAffinity: None)
         are preserved as null in the merge patch, ensuring the old affinity type is removed.
+        Waits until the running VMI spec affinity matches the template.
 
         Args:
             affinity: Affinity object to set, or None to clear.
+
+        Raises:
+            VMIAffinityNotSyncedError: If the running VMI affinity does not match the template within timeout.
         """
         self._spec.template.spec.affinity = affinity
         template_affinity = asdict(obj=affinity) if affinity else None
+        vmi_resource_version = self.vmi.instance.metadata.resourceVersion
         patches = {self: {"spec": {"template": {"spec": {"affinity": template_affinity}}}}}
         ResourceEditor(patches=patches).update()
+        wait_for_vmi_template_affinity(
+            vm=self,
+            affinity=affinity,
+            resource_version=vmi_resource_version,
+        )
 
     @property
     def template_spec(self) -> VMISpec:
