@@ -1,8 +1,8 @@
 """CBT backup fixtures (backup success only)."""
 
-import logging
 import secrets
 from contextlib import ExitStack
+from logging import getLogger
 
 import pytest
 from ocp_resources.kubevirt import KubeVirt
@@ -36,7 +36,7 @@ from tests.storage.cbt.utils import (
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile, hco_feature_gates_patch
 
-LOGGER = logging.getLogger(__name__)
+LOGGER = getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
