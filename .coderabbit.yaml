@@ -170,13 +170,20 @@ reviews:
         outstanding migration debt and flag any extension, copy, or new occurrence.
 
         ## Error contract for resource lookups
-        Flag as MEDIUM a helper that mixes error styles for the same lookup — e.g.
-        a hand-rolled `ValueError` for one missing field plus an undocumented
-        `KeyError`, `IndexError`, or client `NotFoundError` for another. Also flag
-        docstring `Raises:` sections that list implementation-detail exceptions
-        instead of one contextual exception naming the resource. A resource fetched
-        through a wrapper reports absence via `exists`/`ResourceNotFoundError`, not
-        a hand-rolled `ValueError`.
+        Each helper that reads a resource MUST expose one documented, contextual
+        absence signal naming the resource, with the wrapper's raw signal mapped
+        onto it. Flag as MEDIUM a helper that mixes error styles for the same
+        lookup (e.g. a hand-rolled `ValueError` for one missing field plus an
+        undocumented `KeyError`, `IndexError`, or client `NotFoundError` for
+        another), that both raises and returns `None` for absence, or whose
+        docstring `Raises:` section lists implementation-detail exceptions
+        instead of the contextual exception it raises. Wrapper signals are inputs
+        to that contract, not the contract itself: `.instance` raises
+        `kubernetes.dynamic.exceptions.NotFoundError`, `.exists` catches it and
+        returns `None` without raising, and `ResourceNotFoundError` is raised only
+        when `ensure_exists=True` was passed (at construction time, so a resource
+        can still disappear later). Require the helper to translate whichever
+        signal it uses into its documented contextual exception.
 
         ## Approval Policy
         You may approve the PR when ALL of the following are true:
