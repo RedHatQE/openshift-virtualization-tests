@@ -78,6 +78,22 @@ class TestLoadConfigExplicitPath:
 
         assert config == {"team": "NETWORK", "tier": "TIER-2", "service": "my-service"}, f"Got {config!r}"
 
+    def test_duplicate_key_in_merge_source_rejected(self, tmp_path: Path) -> None:
+        """Verify duplicate keys inside a merge source fail instead of last-winning."""
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text(data="<<: {team: NETWORK, team: STORAGE}\n", encoding="utf-8")
+
+        with pytest.raises(ClickException, match="not valid YAML"):
+            load_config(config_path=config_path)
+
+    def test_repeated_merge_marker_rejected(self, tmp_path: Path) -> None:
+        """Verify repeated merge keys fail instead of silently merging."""
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text(data="<<: {team: NETWORK}\n<<: {tier: TIER-2}\n", encoding="utf-8")
+
+        with pytest.raises(ClickException, match="not valid YAML"):
+            load_config(config_path=config_path)
+
     def test_explicit_key_overrides_merged_value(self, tmp_path: Path) -> None:
         """Verify an explicit key overrides a value merged via YAML merge key."""
         config_path = tmp_path / "config.yaml"

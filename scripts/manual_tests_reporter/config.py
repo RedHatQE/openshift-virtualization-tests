@@ -30,16 +30,54 @@ class _UniqueKeySafeLoader(yaml.SafeLoader):
 _YAML_MERGE_TAG = "tag:yaml.org,2002:merge"
 
 
+def _check_merge_source_duplicates(loader: _UniqueKeySafeLoader, source: yaml.MappingNode) -> None:
+    """Reject duplicate keys inside a merge source before flattening.
+
+    flatten_mapping splices merge-source pairs directly into the parent
+    mapping without constructing them, so duplicates there would otherwise
+    silently last-win.
+    """
+    seen_keys: set[object] = set()
+    for key_node, value_node in source.value:
+        if key_node.tag == _YAML_MERGE_TAG:
+            _check_merge_value_duplicates(loader=loader, merge_value=value_node)
+            continue
+        key = loader.construct_object(node=key_node, deep=True)
+        if key in seen_keys:
+            raise yaml.constructor.ConstructorError(
+                problem=f"duplicate key {key!r} in merge source",
+                problem_mark=key_node.start_mark,
+            )
+        seen_keys.add(key)
+
+
+def _check_merge_value_duplicates(loader: _UniqueKeySafeLoader, merge_value: yaml.Node) -> None:
+    """Duplicate-check a merge value: a mapping or a sequence of mappings."""
+    if isinstance(merge_value, yaml.MappingNode):
+        _check_merge_source_duplicates(loader=loader, source=merge_value)
+    elif isinstance(merge_value, yaml.SequenceNode):
+        for item in merge_value.value:
+            _check_merge_value_duplicates(loader=loader, merge_value=item)
+
+
 def _construct_unique_mapping(
     loader: _UniqueKeySafeLoader,
     node: yaml.MappingNode,
     deep: bool = False,
 ) -> dict:
     seen_keys: set[object] = set()
-    for key_node, _value_node in node.value:
+    merge_marker_seen = False
+    for key_node, value_node in node.value:
         if key_node.tag == _YAML_MERGE_TAG:
-            # Merged mappings are constructed (and duplicate-checked) on their
-            # own through this same constructor; skip the merge marker itself.
+            if merge_marker_seen:
+                raise yaml.constructor.ConstructorError(
+                    problem="repeated merge key '<<'",
+                    problem_mark=key_node.start_mark,
+                )
+            merge_marker_seen = True
+            # Merged pairs are flattened (not constructed) by construct_mapping;
+            # check the merge source for duplicates here instead.
+            _check_merge_value_duplicates(loader=loader, merge_value=value_node)
             continue
         key = loader.construct_object(node=key_node, deep=deep)
         if key in seen_keys:
