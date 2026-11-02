@@ -1,3 +1,7 @@
+root-approvers: False
+approvers:
+  - EdDev
+  - servolkov
 reviewers:
   - hmeir
   - rlobillo
