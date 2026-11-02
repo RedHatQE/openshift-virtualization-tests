@@ -36,6 +36,7 @@ from scripts.manual_tests_reporter.collector import (
 from scripts.manual_tests_reporter.config import (
     ATTRIBUTE_CONFIG_KEYS,
     CONFIG_KEY_TO_ATTRIBUTE_KEY,
+    UniqueKeySafeLoader,
     load_config,
 )
 from scripts.manual_tests_reporter.junit_report import (
@@ -353,7 +354,7 @@ def _load_batch_file(batch_path: Path) -> tuple[list[ManualTestResult], dict[str
             ``attributes`` is not a list.
     """
     try:
-        raw = yaml.safe_load(batch_path.read_text(encoding="utf-8"))
+        raw = yaml.load(stream=batch_path.read_text(encoding="utf-8"), Loader=UniqueKeySafeLoader)
     except UnicodeDecodeError as exc:
         raise click.ClickException(f"Batch file {batch_path} is not valid UTF-8: {exc}") from exc
     except (OSError, YAMLError) as exc:

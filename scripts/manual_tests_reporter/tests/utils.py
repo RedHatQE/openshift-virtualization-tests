@@ -162,3 +162,37 @@ def write_minimal_tests_dir(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     return tests_dir
+
+
+def write_config_file(tmp_path: Path, content: str) -> Path:
+    """Write a reporter config file.
+
+    Args:
+        tmp_path: Pytest tmp_path the file is created under.
+        content: Config file content.
+
+    Returns:
+        Path to the written config file.
+    """
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(data=content, encoding="utf-8")
+    return config_path
+
+
+def write_minimal_batch(tmp_path: Path) -> tuple[Path, Path]:
+    """Create a minimal tests dir and a batch file with one passing result.
+
+    Args:
+        tmp_path: Pytest tmp_path the files are created under.
+
+    Returns:
+        Tuple of (tests_dir, batch_path). The batch contains a single
+        passing result for the minimal manual test node ID.
+    """
+    tests_dir = write_minimal_tests_dir(tmp_path=tmp_path)
+    batch_path = tmp_path / "batch.yaml"
+    batch_path.write_text(
+        data=("results:\n  - test: tests/test_manual_minimal.py::test_minimal\n    status: passed\n"),
+        encoding="utf-8",
+    )
+    return tests_dir, batch_path

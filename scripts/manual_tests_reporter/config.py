@@ -21,7 +21,7 @@ import yaml
 from yaml import YAMLError
 
 
-class _UniqueKeySafeLoader(yaml.SafeLoader):
+class UniqueKeySafeLoader(yaml.SafeLoader):
     """Safe YAML loader that rejects duplicate mapping keys."""
 
 
@@ -46,7 +46,7 @@ def _ensure_hashable_key(key: object, key_node: yaml.Node) -> None:
         ) from type_error
 
 
-def _check_merge_source_duplicates(loader: _UniqueKeySafeLoader, source: yaml.MappingNode) -> None:
+def _check_merge_source_duplicates(loader: UniqueKeySafeLoader, source: yaml.MappingNode) -> None:
     """Reject duplicate keys inside a merge source before flattening.
 
     flatten_mapping splices merge-source pairs directly into the parent
@@ -75,7 +75,7 @@ def _check_merge_source_duplicates(loader: _UniqueKeySafeLoader, source: yaml.Ma
         seen_keys.add(key)
 
 
-def _check_merge_value_duplicates(loader: _UniqueKeySafeLoader, merge_value: yaml.Node) -> None:
+def _check_merge_value_duplicates(loader: UniqueKeySafeLoader, merge_value: yaml.Node) -> None:
     """Duplicate-check a merge value: a mapping or a sequence of mappings."""
     if isinstance(merge_value, yaml.MappingNode):
         _check_merge_source_duplicates(loader=loader, source=merge_value)
@@ -85,7 +85,7 @@ def _check_merge_value_duplicates(loader: _UniqueKeySafeLoader, merge_value: yam
 
 
 def _construct_unique_mapping(
-    loader: _UniqueKeySafeLoader,
+    loader: UniqueKeySafeLoader,
     node: yaml.MappingNode,
     deep: bool = False,
 ) -> dict:
@@ -114,7 +114,7 @@ def _construct_unique_mapping(
     return loader.construct_mapping(node, deep=deep)
 
 
-_UniqueKeySafeLoader.add_constructor(
+UniqueKeySafeLoader.add_constructor(
     tag=yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
     constructor=_construct_unique_mapping,
 )
@@ -181,7 +181,7 @@ def load_config(config_path: Path | None) -> tuple[dict[str, str], str]:
 
     try:
         with effective_path.open(encoding="utf-8") as handle:
-            raw_config = yaml.load(stream=handle, Loader=_UniqueKeySafeLoader)
+            raw_config = yaml.load(stream=handle, Loader=UniqueKeySafeLoader)
     except OSError as exc:
         raise click.ClickException(f"Cannot read config file {source}: {exc}") from exc
     except UnicodeDecodeError as exc:

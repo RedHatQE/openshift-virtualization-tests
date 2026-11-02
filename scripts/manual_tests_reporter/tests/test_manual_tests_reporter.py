@@ -33,7 +33,9 @@ from scripts.manual_tests_reporter.tests.utils import (
     capture_uploaded_xml,
     cleanup_kept_junit_report,
     required_attr_args,
+    write_config_file,
     write_manual_tests_dir,
+    write_minimal_batch,
     write_minimal_tests_dir,
 )
 
@@ -180,7 +182,7 @@ class TestLoadBatchFile:
         )
 
         with pytest.raises(
-            ClickException,
+            expected_exception=ClickException,
             match=(
                 r"Invalid status 'maybe' for test 'tests/net/test_a\.py::TestA::test_one' "
                 "in batch file .*; expected one of: FAILED, PASSED, SKIPPED"
@@ -199,6 +201,17 @@ class TestLoadBatchFile:
         results, _metadata = _load_batch_file(batch_path=batch_path)
         assert results[0].status == "PASSED", "Expected: trailing whitespace in status is tolerated"
 
+    def test_load_batch_file_duplicate_status_key_rejected(self, tmp_path: Path) -> None:
+        """Verify a duplicated status key in a batch entry is rejected, not last-won."""
+        batch_path = tmp_path / "batch.yaml"
+        batch_path.write_text(
+            data=("results:\n  - test: tests/net/test_a.py::TestA::test_one\n    status: failed\n    status: passed\n"),
+            encoding="utf-8",
+        )
+
+        with pytest.raises(expected_exception=ClickException, match="Failed to read batch file"):
+            _load_batch_file(batch_path=batch_path)
+
     def test_load_batch_file_invalid_test_type(self, tmp_path: Path) -> None:
         """Verify non-string test values raise a ClickException."""
         batch_path = tmp_path / "batch.yaml"
@@ -207,7 +220,7 @@ class TestLoadBatchFile:
             encoding="utf-8",
         )
 
-        with pytest.raises(ClickException, match="Invalid test type"):
+        with pytest.raises(expected_exception=ClickException, match="Invalid test type"):
             _load_batch_file(batch_path=batch_path)
 
     def test_load_batch_file_null_comment_coerced(self, tmp_path: Path) -> None:
@@ -229,7 +242,7 @@ class TestLoadBatchFile:
             encoding="utf-8",
         )
 
-        with pytest.raises(ClickException, match="missing or null 'test' key"):
+        with pytest.raises(expected_exception=ClickException, match="missing or null 'test' key"):
             _load_batch_file(batch_path=batch_path)
 
     def test_load_batch_file_strips_whitespace_from_metadata_and_comment(self, tmp_path: Path) -> None:
@@ -270,7 +283,7 @@ class TestLoadBatchFile:
             encoding="utf-8",
         )
 
-        with pytest.raises(ClickException, match=f"Invalid {metadata_key} type"):
+        with pytest.raises(expected_exception=ClickException, match=f"Invalid {metadata_key} type"):
             _load_batch_file(batch_path=batch_path)
 
 
@@ -349,9 +362,9 @@ class TestFromClusterImportGuard:
         )
 
         monkeypatch.setattr(
-            reporter_module,
-            "_CLUSTER_INFO_IMPORT_ERROR",
-            "Invalid kube-config file. No configuration found.",
+            target=reporter_module,
+            name="_CLUSTER_INFO_IMPORT_ERROR",
+            value="Invalid kube-config file. No configuration found.",
         )
         runner = CliRunner()
         result = runner.invoke(
@@ -372,7 +385,7 @@ class TestFromClusterImportGuard:
             encoding="utf-8",
         )
 
-        monkeypatch.setattr(reporter_module, "_CLUSTER_INFO_IMPORT_ERROR", None)
+        monkeypatch.setattr(target=reporter_module, name="_CLUSTER_INFO_IMPORT_ERROR", value=None)
         monkeypatch.setenv(name="OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH", value="amd64")
         runner = CliRunner()
         result = runner.invoke(
@@ -401,7 +414,7 @@ class TestLoadBatchFileAttributes:
             ),
             encoding="utf-8",
         )
-        with pytest.raises(ClickException, match="Invalid attributes entry"):
+        with pytest.raises(expected_exception=ClickException, match="Invalid attributes entry"):
             _load_batch_file(batch_path=batch_path)
 
 
@@ -421,7 +434,7 @@ class TestMergeBatchMetadata:
             ),
             encoding="utf-8",
         )
-        with pytest.raises(ClickException, match="non-empty string key and value"):
+        with pytest.raises(expected_exception=ClickException, match="non-empty string key and value"):
             _load_batch_file(batch_path=batch_path)
 
     def test_batch_attributes_duplicate_key_rejected(self, tmp_path: Path) -> None:
@@ -441,7 +454,7 @@ class TestMergeBatchMetadata:
             ),
             encoding="utf-8",
         )
-        with pytest.raises(ClickException, match="Duplicate attribute key"):
+        with pytest.raises(expected_exception=ClickException, match="Duplicate attribute key"):
             _load_batch_file(batch_path=batch_path)
 
     def test_batch_attributes_non_list_rejected(self, tmp_path: Path) -> None:
@@ -458,7 +471,7 @@ class TestMergeBatchMetadata:
             ),
             encoding="utf-8",
         )
-        with pytest.raises(ClickException, match="Invalid attributes type"):
+        with pytest.raises(expected_exception=ClickException, match="Invalid attributes type"):
             _load_batch_file(batch_path=batch_path)
 
     def test_batch_attributes_case_duplicate_rejected(self, tmp_path: Path) -> None:
@@ -478,7 +491,7 @@ class TestMergeBatchMetadata:
             ),
             encoding="utf-8",
         )
-        with pytest.raises(ClickException, match="Duplicate attribute key"):
+        with pytest.raises(expected_exception=ClickException, match="Duplicate attribute key"):
             _load_batch_file(batch_path=batch_path)
 
     def test_batch_attributes_values_stripped(self, tmp_path: Path) -> None:
@@ -1219,25 +1232,9 @@ class TestTeamInference:
 
 
 class TestConfigFileIntegration:
-    def _write_config(self, tmp_path: Path, content: str) -> Path:
-        """Write a config file and return its path."""
-        config_path = tmp_path / "config.yaml"
-        config_path.write_text(data=content, encoding="utf-8")
-        return config_path
-
-    def _write_batch(self, tmp_path: Path) -> tuple[Path, Path]:
-        """Write a minimal tests dir and batch file with one passing result."""
-        tests_dir = write_minimal_tests_dir(tmp_path=tmp_path)
-        batch_path = tmp_path / "batch.yaml"
-        batch_path.write_text(
-            data=("results:\n  - test: tests/test_manual_minimal.py::test_minimal\n    status: passed\n"),
-            encoding="utf-8",
-        )
-        return tests_dir, batch_path
-
     def test_all_attribute_config_keys_reach_run_attributes(self, tmp_path: Path) -> None:
         """Verify every accepted attribute config key has CLI wiring (drift guard)."""
-        tests_dir, batch_path = self._write_batch(tmp_path=tmp_path)
+        tests_dir, batch_path = write_minimal_batch(tmp_path=tmp_path)
         # Generate the config and expectations from the key map so a new
         # CONFIG_KEY_TO_ATTRIBUTE_KEY entry fails this test until it is wired
         # through the CLI options and reaches the run attributes.
@@ -1250,7 +1247,7 @@ class TestConfigFileIntegration:
             expected_value = value.upper() if attr_key in ("TEAM", "TIER") else value
             expected_lines.append(f"{attr_key} = {expected_value}")
         config_lines.append("service: drift-guard-service")
-        config_path = self._write_config(
+        config_path = write_config_file(
             tmp_path=tmp_path,
             content="\n".join(config_lines) + "\n",
         )
@@ -1277,7 +1274,7 @@ class TestConfigFileIntegration:
 
     def test_all_attribute_config_keys_reach_replay_gap_fill(self, tmp_path: Path) -> None:
         """Verify every accepted attribute config key has replay gap-fill wiring (drift guard)."""
-        tests_dir, batch_path = self._write_batch(tmp_path=tmp_path)
+        tests_dir, batch_path = write_minimal_batch(tmp_path=tmp_path)
         # A partial saved list (TEAM only): the replay branch must gap-fill
         # every other attribute key from the generated config.
         batch_path.write_text(
@@ -1300,7 +1297,7 @@ class TestConfigFileIntegration:
             # TEAM comes from the saved attributes, not the config; TIER is uppercased
             expected_value = value.upper() if attr_key == "TIER" else value
             expected_lines.append(f"{attr_key} = {expected_value}")
-        config_path = self._write_config(
+        config_path = write_config_file(
             tmp_path=tmp_path,
             content="\n".join(config_lines) + "\n",
         )
@@ -1327,8 +1324,8 @@ class TestConfigFileIntegration:
 
     def test_config_supplies_required_attributes(self, tmp_path: Path) -> None:
         """Verify a config file supplies every required attribute without CLI flags."""
-        tests_dir, batch_path = self._write_batch(tmp_path=tmp_path)
-        config_path = self._write_config(
+        tests_dir, batch_path = write_minimal_batch(tmp_path=tmp_path)
+        config_path = write_config_file(
             tmp_path=tmp_path,
             content=(
                 "team: NETWORK\n"
@@ -1364,8 +1361,8 @@ class TestConfigFileIntegration:
 
     def test_cli_flag_overrides_config(self, tmp_path: Path) -> None:
         """Verify an explicit CLI flag wins over the config-file value."""
-        tests_dir, batch_path = self._write_batch(tmp_path=tmp_path)
-        config_path = self._write_config(tmp_path=tmp_path, content="team: NETWORK\n")
+        tests_dir, batch_path = write_minimal_batch(tmp_path=tmp_path)
+        config_path = write_config_file(tmp_path=tmp_path, content="team: NETWORK\n")
         result = CliRunner().invoke(
             cli=main,
             args=[
@@ -1383,7 +1380,7 @@ class TestConfigFileIntegration:
 
     def test_retry_replay_ignores_config_attributes(self, tmp_path: Path) -> None:
         """Verify a retry file's saved attributes are not disturbed by config defaults."""
-        tests_dir, batch_path = self._write_batch(tmp_path=tmp_path)
+        tests_dir, batch_path = write_minimal_batch(tmp_path=tmp_path)
         # Simulate a retry file: saved attributes + the same values as metadata.
         batch_path.write_text(
             data=(
@@ -1415,7 +1412,7 @@ class TestConfigFileIntegration:
             ),
             encoding="utf-8",
         )
-        config_path = self._write_config(tmp_path=tmp_path, content="team: STORAGE\nbundle: v4.23.0\n")
+        config_path = write_config_file(tmp_path=tmp_path, content="team: STORAGE\nbundle: v4.23.0\n")
         result = CliRunner().invoke(
             cli=main,
             args=[
@@ -1438,7 +1435,7 @@ class TestConfigFileIntegration:
 
     def test_retry_replay_fills_gaps_from_config(self, tmp_path: Path) -> None:
         """Verify a partially-filled saved attribute list gets config gap-fills."""
-        tests_dir, batch_path = self._write_batch(tmp_path=tmp_path)
+        tests_dir, batch_path = write_minimal_batch(tmp_path=tmp_path)
         # Hand-written batch carrying only TEAM in its attributes list.
         batch_path.write_text(
             data=(
@@ -1452,7 +1449,7 @@ class TestConfigFileIntegration:
             ),
             encoding="utf-8",
         )
-        config_path = self._write_config(
+        config_path = write_config_file(
             tmp_path=tmp_path,
             content=(
                 "team: STORAGE\n"
@@ -1491,7 +1488,7 @@ class TestConfigFileIntegration:
 
     def test_retry_replay_keeps_saved_cnv_when_config_fills_bundle(self, tmp_path: Path) -> None:
         """Verify a saved CNV version is not re-derived when config fills the missing BUNDLE."""
-        tests_dir, batch_path = self._write_batch(tmp_path=tmp_path)
+        tests_dir, batch_path = write_minimal_batch(tmp_path=tmp_path)
         # Saved attributes carry the recorded CNV version but no BUNDLE.
         batch_path.write_text(
             data=(
@@ -1507,7 +1504,7 @@ class TestConfigFileIntegration:
             ),
             encoding="utf-8",
         )
-        config_path = self._write_config(
+        config_path = write_config_file(
             tmp_path=tmp_path,
             content=(
                 "team: STORAGE\n"
@@ -1544,7 +1541,7 @@ class TestConfigFileIntegration:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Verify a restored TEAM attribute counts as the run team (no false warning)."""
-        tests_dir, batch_path = self._write_batch(tmp_path=tmp_path)
+        tests_dir, batch_path = write_minimal_batch(tmp_path=tmp_path)
         # Saved attributes carry TEAM plus every required attribute, but
         # metadata.team is absent. Run without --dry-run so the warning check
         # (skipped in dry runs) is actually reached; the mocked preflight
@@ -1594,7 +1591,7 @@ class TestConfigFileIntegration:
 
     def test_saved_team_attribute_beats_metadata_team(self, tmp_path: Path) -> None:
         """Verify a restored TEAM attribute wins over the batch file's metadata team."""
-        tests_dir, batch_path = self._write_batch(tmp_path=tmp_path)
+        tests_dir, batch_path = write_minimal_batch(tmp_path=tmp_path)
         # A hand-edited retry file whose metadata team conflicts with the
         # saved TEAM attribute: the replay must keep the recorded value.
         batch_path.write_text(
@@ -1626,7 +1623,7 @@ class TestConfigFileIntegration:
 
     def test_metadata_team_fills_saved_list_without_team(self, tmp_path: Path) -> None:
         """Verify metadata team fills a restored list that lacks a TEAM attribute."""
-        tests_dir, batch_path = self._write_batch(tmp_path=tmp_path)
+        tests_dir, batch_path = write_minimal_batch(tmp_path=tmp_path)
         # Hand-written batch carrying only BUNDLE in its attributes list.
         batch_path.write_text(
             data=(
@@ -1656,7 +1653,7 @@ class TestConfigFileIntegration:
 
     def test_retry_replay_without_config_attribute_keys_prints_no_note(self, tmp_path: Path) -> None:
         """Verify no replay note when the config carries no attribute keys."""
-        tests_dir, batch_path = self._write_batch(tmp_path=tmp_path)
+        tests_dir, batch_path = write_minimal_batch(tmp_path=tmp_path)
         batch_path.write_text(
             data=(
                 "metadata:\n"
@@ -1669,7 +1666,7 @@ class TestConfigFileIntegration:
             ),
             encoding="utf-8",
         )
-        config_path = self._write_config(tmp_path=tmp_path, content="service: other-service\n")
+        config_path = write_config_file(tmp_path=tmp_path, content="service: other-service\n")
 
         result = CliRunner().invoke(
             cli=main,
@@ -1690,7 +1687,7 @@ class TestConfigFileIntegration:
 
     def test_auto_discovered_config_used_by_main(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Verify a config at the default path is auto-discovered by main."""
-        tests_dir, batch_path = self._write_batch(tmp_path=tmp_path)
+        tests_dir, batch_path = write_minimal_batch(tmp_path=tmp_path)
         default_config = tmp_path / "discovered.yaml"
         default_config.write_text(data=f"tests-dir: {tests_dir}\nteam: NETWORK\n", encoding="utf-8")
         monkeypatch.setattr(
@@ -1713,7 +1710,7 @@ class TestConfigFileIntegration:
     def test_tests_dir_from_config(self, tmp_path: Path) -> None:
         """Verify the scan directory comes from the config when --tests-dir is absent."""
         tests_dir = write_minimal_tests_dir(tmp_path=tmp_path)
-        config_path = self._write_config(tmp_path=tmp_path, content=f"tests-dir: {tests_dir}\n")
+        config_path = write_config_file(tmp_path=tmp_path, content=f"tests-dir: {tests_dir}\n")
 
         result = CliRunner().invoke(
             cli=main,
@@ -1724,7 +1721,7 @@ class TestConfigFileIntegration:
 
     def test_config_tests_dir_must_exist(self, tmp_path: Path) -> None:
         """Verify a config tests-dir pointing nowhere fails cleanly."""
-        config_path = self._write_config(
+        config_path = write_config_file(
             tmp_path=tmp_path,
             content=f"tests-dir: {tmp_path / 'does-not-exist'}\n",
         )
@@ -1736,7 +1733,7 @@ class TestConfigFileIntegration:
 
     def test_config_tests_dir_unresolvable_home_fails_cleanly(self, tmp_path: Path) -> None:
         """Verify a config tests-dir with an unknown ~user fails cleanly, not a traceback."""
-        config_path = self._write_config(
+        config_path = write_config_file(
             tmp_path=tmp_path,
             content="tests-dir: ~no-such-user-xyz/manual-tests\n",
         )
@@ -1762,7 +1759,7 @@ class TestConfigFileIntegration:
             data=("results:\n  - test: tests/test_network_manual.py::test_minimal\n    status: passed\n"),
             encoding="utf-8",
         )
-        config_path = self._write_config(tmp_path=tmp_path, content="team: STORAGE\n")
+        config_path = write_config_file(tmp_path=tmp_path, content="team: STORAGE\n")
 
         result = CliRunner().invoke(
             cli=main,
@@ -1785,7 +1782,7 @@ class TestConfigFileIntegration:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Verify --from-cluster over a retry file is not a replay: config defaults apply."""
-        tests_dir, batch_path = self._write_batch(tmp_path=tmp_path)
+        tests_dir, batch_path = write_minimal_batch(tmp_path=tmp_path)
         # A retry file with saved attributes that will NOT be restored because
         # --from-cluster resolves cluster attributes instead.
         batch_path.write_text(
@@ -1800,7 +1797,7 @@ class TestConfigFileIntegration:
             ),
             encoding="utf-8",
         )
-        config_path = self._write_config(tmp_path=tmp_path, content="arch: s390x\n")
+        config_path = write_config_file(tmp_path=tmp_path, content="arch: s390x\n")
         monkeypatch.setattr(target=reporter_module, name="_CLUSTER_INFO_IMPORT_ERROR", value=None)
         monkeypatch.delenv(name="OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH", raising=False)
         cluster_attrs = [
@@ -1844,7 +1841,7 @@ class TestConfigFileIntegration:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Verify --from-cluster yielding zero attributes still replays the saved run."""
-        tests_dir, batch_path = self._write_batch(tmp_path=tmp_path)
+        tests_dir, batch_path = write_minimal_batch(tmp_path=tmp_path)
         # A retry file whose saved attributes WILL be restored: --from-cluster
         # resolved no cluster attributes, so the run is a replay after all.
         batch_path.write_text(
@@ -1861,7 +1858,7 @@ class TestConfigFileIntegration:
             ),
             encoding="utf-8",
         )
-        config_path = self._write_config(tmp_path=tmp_path, content="team: STORAGE\narch: amd64\n")
+        config_path = write_config_file(tmp_path=tmp_path, content="team: STORAGE\narch: amd64\n")
         monkeypatch.setattr(target=reporter_module, name="_CLUSTER_INFO_IMPORT_ERROR", value=None)
         monkeypatch.delenv(name="OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH", raising=False)
         with (
@@ -1900,7 +1897,7 @@ class TestConfigFileIntegration:
 
     def test_batch_metadata_team_beats_config(self, tmp_path: Path) -> None:
         """Verify non-replay batch-file metadata wins over config-file defaults."""
-        tests_dir, batch_path = self._write_batch(tmp_path=tmp_path)
+        tests_dir, batch_path = write_minimal_batch(tmp_path=tmp_path)
         batch_path.write_text(
             data=(
                 "metadata:\n"
@@ -1911,7 +1908,7 @@ class TestConfigFileIntegration:
             ),
             encoding="utf-8",
         )
-        config_path = self._write_config(tmp_path=tmp_path, content="team: STORAGE\n")
+        config_path = write_config_file(tmp_path=tmp_path, content="team: STORAGE\n")
 
         result = CliRunner().invoke(
             cli=main,
@@ -1931,8 +1928,8 @@ class TestConfigFileIntegration:
 
     def test_config_value_beats_cluster_attribute(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Verify a config-file attribute overrides a cluster-derived value."""
-        tests_dir, batch_path = self._write_batch(tmp_path=tmp_path)
-        config_path = self._write_config(tmp_path=tmp_path, content="arch: s390x\n")
+        tests_dir, batch_path = write_minimal_batch(tmp_path=tmp_path)
+        config_path = write_config_file(tmp_path=tmp_path, content="arch: s390x\n")
         monkeypatch.setattr(target=reporter_module, name="_CLUSTER_INFO_IMPORT_ERROR", value=None)
         monkeypatch.delenv(name="OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH", raising=False)
         cluster_attrs = [
@@ -1969,7 +1966,7 @@ class TestConfigFileIntegration:
 
     def test_config_values_are_stripped(self, tmp_path: Path) -> None:
         """Verify whitespace-padded config values are stripped on load."""
-        config_path = self._write_config(tmp_path=tmp_path, content='team: "  NETWORK  "\n')
+        config_path = write_config_file(tmp_path=tmp_path, content='team: "  NETWORK  "\n')
 
         config, _source = load_config(config_path=config_path)
 

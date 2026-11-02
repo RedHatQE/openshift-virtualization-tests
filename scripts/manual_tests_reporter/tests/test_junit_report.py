@@ -33,7 +33,7 @@ class TestCoerceStatus:
 
     def test_invalid_status_raises(self) -> None:
         """Verify an unrecognized status raises ValueError."""
-        with pytest.raises(ValueError, match="Invalid status"):
+        with pytest.raises(expected_exception=ValueError, match="Invalid status"):
             coerce_status(value="maybe")
 
     def test_valid_statuses_derived_from_status_literal(self) -> None:
@@ -206,7 +206,7 @@ class TestUploadJunitReport:
             target="scripts.manual_tests_reporter.junit_report.run_command",
             side_effect=FileNotFoundError("datadog-ci"),
         ):
-            with pytest.raises(DatadogUploadError, match="Failed to run datadog-ci"):
+            with pytest.raises(expected_exception=DatadogUploadError, match="Failed to run datadog-ci"):
                 upload_junit_report(xml_path=xml_path, service="svc", tags=[])
 
     def test_upload_failure_raises(self, tmp_path: Path) -> None:
@@ -217,7 +217,7 @@ class TestUploadJunitReport:
             target="scripts.manual_tests_reporter.junit_report.run_command",
             return_value=(False, "", "api key invalid"),
         ):
-            with pytest.raises(DatadogUploadError, match="api key invalid"):
+            with pytest.raises(expected_exception=DatadogUploadError, match="api key invalid"):
                 upload_junit_report(xml_path=xml_path, service="svc", tags=[])
 
     def test_upload_without_tags_omits_flag(self, tmp_path: Path) -> None:

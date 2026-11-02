@@ -465,7 +465,7 @@ class TestCollectManualTests:
             encoding="utf-8",
         )
 
-        with pytest.raises(ClickException, match="Invalid marker expression"):
+        with pytest.raises(expected_exception=ClickException, match="Invalid marker expression"):
             collect_manual_tests(tests_dir=tests_dir, marker_filter="smoke and (")
 
 
@@ -527,7 +527,7 @@ class TestMatchesMarkerFilter:
     def test_unparseable_expression_raises(self) -> None:
         """Verify an unparseable marker expression fails fast instead of matching nothing."""
         detail = make_detail(test_markers=["gating"])
-        with pytest.raises(ClickException, match="Invalid marker expression"):
+        with pytest.raises(expected_exception=ClickException, match="Invalid marker expression"):
             _matches_marker_filter(detail=detail, marker_filter="gating and")
 
     def test_pathologically_nested_expression_fails_cleanly(self) -> None:
@@ -538,7 +538,7 @@ class TestMatchesMarkerFilter:
         ClickException as any other invalid expression.
         """
         detail = make_detail(test_markers=["manual"])
-        with pytest.raises(ClickException, match="Invalid marker expression"):
+        with pytest.raises(expected_exception=ClickException, match="Invalid marker expression"):
             _matches_marker_filter(detail=detail, marker_filter="not " * 20000 + "manual")
 
 
@@ -614,20 +614,20 @@ class TestSafeEvalBoolExpr:
 
     def test_rejects_function_call(self) -> None:
         """Verify function calls are rejected."""
-        with pytest.raises(TypeError, match="Disallowed AST node"):
+        with pytest.raises(expected_exception=TypeError, match="Disallowed AST node"):
             _safe_eval_bool_expr(expr="__import__('os')")
 
     def test_rejects_attribute_access(self) -> None:
         """Verify attribute access is rejected."""
-        with pytest.raises(TypeError, match="Disallowed AST node"):
+        with pytest.raises(expected_exception=TypeError, match="Disallowed AST node"):
             _safe_eval_bool_expr(expr="True.__class__")
 
     def test_rejects_string_constant(self) -> None:
         """Verify non-boolean constants are rejected."""
-        with pytest.raises(TypeError, match="Disallowed constant"):
+        with pytest.raises(expected_exception=TypeError, match="Disallowed constant"):
             _safe_eval_bool_expr(expr="'injection'")
 
     def test_rejects_numeric_constant(self) -> None:
         """Verify numeric constants are rejected."""
-        with pytest.raises(TypeError, match="Disallowed constant"):
+        with pytest.raises(expected_exception=TypeError, match="Disallowed constant"):
             _safe_eval_bool_expr(expr="42")

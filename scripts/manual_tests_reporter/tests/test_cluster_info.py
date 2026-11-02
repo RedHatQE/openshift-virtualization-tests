@@ -108,7 +108,7 @@ class TestGetClusterAttributes:
             patch(target=f"{CLUSTER_INFO_MODULE}.HyperConverged", side_effect=ApiException(status=403)),
             patch(target=f"{CLUSTER_INFO_MODULE}.get_infrastructure", side_effect=ApiException(status=403)),
             patch(target=f"{CLUSTER_INFO_MODULE}.get_default_storage_class", side_effect=ApiException(status=403)),
-            patch(target=f"{CLUSTER_INFO_MODULE}.Subscription", side_effect=ApiException(status=403)),
+            patch(target=f"{CLUSTER_INFO_MODULE}.Subscription.get", side_effect=ApiException(status=403)),
         ):
             attrs = get_cluster_attributes()
 
@@ -132,7 +132,7 @@ class TestGetClusterAttributes:
             patch(target=f"{CLUSTER_INFO_MODULE}.HyperConverged", side_effect=ApiException(status=403)),
             patch(target=f"{CLUSTER_INFO_MODULE}.get_infrastructure", return_value=infra_mock),
             patch(target=f"{CLUSTER_INFO_MODULE}.get_default_storage_class", side_effect=ApiException(status=403)),
-            patch(target=f"{CLUSTER_INFO_MODULE}.Subscription", side_effect=ApiException(status=403)),
+            patch(target=f"{CLUSTER_INFO_MODULE}.Subscription.get", side_effect=ApiException(status=403)),
         ):
             attrs = get_cluster_attributes()
 
@@ -148,7 +148,7 @@ class TestGetClusterAttributes:
             patch(target=f"{CLUSTER_INFO_MODULE}.HyperConverged", side_effect=HTTPError("connection reset")),
             patch(target=f"{CLUSTER_INFO_MODULE}.get_infrastructure", side_effect=HTTPError("connection reset")),
             patch(target=f"{CLUSTER_INFO_MODULE}.get_default_storage_class", side_effect=HTTPError("connection reset")),
-            patch(target=f"{CLUSTER_INFO_MODULE}.Subscription", side_effect=HTTPError("connection reset")),
+            patch(target=f"{CLUSTER_INFO_MODULE}.Subscription.get", side_effect=HTTPError("connection reset")),
         ):
             attrs = get_cluster_attributes()
 
