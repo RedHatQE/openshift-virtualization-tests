@@ -675,8 +675,9 @@ def delete_cbt_pull_backups_and_wait_for_exports(
 ) -> None:
     """Delete every pull-mode backup and wait until each export is gone.
 
-    A failure cleaning up one backup does not skip the rest. After every backup has
-    been attempted, the collected failures are raised together.
+    A failure cleaning up one backup does not skip the rest, and a failed backup
+    deletion still waits for that backup's export. After every attempt, the
+    collected failures are raised together.
 
     Args:
         backups: Deployed pull-mode backups to delete.
@@ -694,9 +695,13 @@ def delete_cbt_pull_backups_and_wait_for_exports(
         backup_name = backup.name
         try:
             backup.clean_up()
-            wait_for_pull_backup_export_deleted(name=backup_name, namespace=namespace, client=client)
         except Exception as error:
             LOGGER.error(f"Failed to clean up pull-mode backup {backup_name}: {error}")
+            cleanup_errors.append(error)
+        try:
+            wait_for_pull_backup_export_deleted(name=backup_name, namespace=namespace, client=client)
+        except Exception as error:
+            LOGGER.error(f"Failed waiting for pull-mode export {backup_name} to be deleted: {error}")
             cleanup_errors.append(error)
     if cleanup_errors:
         raise ExceptionGroup("Pull-mode backup cleanup errors", cleanup_errors)
