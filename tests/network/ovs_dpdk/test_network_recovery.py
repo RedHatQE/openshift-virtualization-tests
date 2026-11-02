@@ -49,7 +49,7 @@ class TestConnectivityAfterDpdkBackingDriverRestart:
             1. Poll TCP connectivity from the under-test VM to the reference VM
 
         Expected:
-            - The new TCP connectivity to the reference VM is successful
+            - The new TCP connection to the reference VM is successful
         """
 
     @pytest.mark.manual
@@ -69,7 +69,7 @@ class TestConnectivityAfterDpdkBackingDriverRestart:
             2. Poll TCP connectivity from the new VM to the reference VM
 
         Expected:
-            - The new TCP connectivity to the reference VM is successful
+            - The new TCP connection to the reference VM is successful
         """
 
     @pytest.mark.manual
@@ -93,3 +93,32 @@ class TestConnectivityAfterDpdkBackingDriverRestart:
             - The active TCP connection from the under-test VM to the reference VM is preserved
               during the migration
         """
+
+
+@pytest.mark.manual
+def test_connectivity_after_guest_reboot():
+    """
+    Test that TCP connectivity from the under-test VM to the reference VM is successful
+    after the under-test VM guest is rebooted, for the parametrized IP family.
+
+    STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-network/ovs-dpdk-tp-stp.md
+
+    Parametrize:
+        - ip_family:
+            - ipv4 [Markers: ipv4]
+            - ipv6 [Markers: ipv6]
+
+    Preconditions:
+        - Running under-test VM with a ResourceClaim-backed OVS-DPDK network device
+        - Running reference VM with a ResourceClaimTemplate-backed OVS-DPDK network device
+        - Under-test VM guest is rebooted, running and ready
+
+    Steps:
+        1. Establish TCP connection from the under-test VM to the reference VM
+
+    Expected:
+        - The new TCP connection to the reference VM is successful
+    """
+
+
+test_connectivity_after_guest_reboot.__test__ = False

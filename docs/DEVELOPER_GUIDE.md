@@ -98,14 +98,17 @@ uv run pre-commit run --all-files
 ```
 
 The configuration includes autoflake, Ruff, Flake8, mypy, gitleaks, TOML validation,
-large-file detection, and the `project-policy` hook. That hook checks staged paths,
-forbidden pytest skips, mechanical Python rules, explicit resource clients, reviewed
-linter-directive exceptions, and new product-test STD structure.
+large-file detection, and the project policy hooks: the stateless
+`check-banned-paths`/`check-banned-constructs` whole-file hooks and the staged-diff
+`check_policy.py` families (staged paths, forbidden pytest skips, mechanical Python
+rules, explicit resource clients, reviewed linter-directive exceptions, new
+product-test STD structure, and STP link verification).
 
 `AGENTS.md` is authoritative for contribution policy. See the
 [`scripts/pre_commit_hooks/README.md`](../scripts/pre_commit_hooks/README.md) for the
-hook's exact scope, staged/index ratchet behavior, and limitations. In particular,
-even `uv run pre-commit run --all-files` checks the staged/index policy snapshot rather
+hooks' exact scope, staged/index ratchet behavior, and the CI enforcement tiers
+(pre-commit.ci for the stateless hooks, the Pre-commit Policy Checks GitHub Actions
+workflow for the staged-diff tier). In particular, even `uv run pre-commit run --all-files` checks the staged/index policy snapshot rather
 than auditing every historical worktree violation.
 
 Some hooks automatically fix files. If a hook changes a file, stage the fix and run the

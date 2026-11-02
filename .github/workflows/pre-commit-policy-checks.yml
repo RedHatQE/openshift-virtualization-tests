@@ -1,0 +1,102 @@
+name: Pre-commit Policy Checks
+
+on:
+  # Policy checks run for pull requests targeting main and the release
+  # branches whose trees are verified clean (4.21+, 5.x). The 4.19/4.20
+  # trees contain legacy violations (relative imports in kubemacpool tests)
+  # that the whole-repo tier would false-fail on, so they stay excluded.
+  # 4.23 is the final 4.x release; future branches are 5.x only.
+  pull_request:
+    branches:
+      - main
+      - cnv-4.21
+      - cnv-4.22
+      - cnv-4.23
+      - "cnv-5.*"
+
+  # Manual dispatch: the staged-diff tier cannot be reproduced outside a
+  # pull request (on main the staged diff is empty, so the staged-only
+  # hooks would pass vacuously), so dispatch runs only the stateless
+  # whole-file hooks. pre-commit.ci already enforces those on every push;
+  # dispatch exists for manual smoke runs of that tier.
+  workflow_dispatch:
+
+# Cancel superseded runs on rapid iterative pushes.
+concurrency:
+  group: policy-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  policy-checks:
+    name: Run policy hooks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.3.0
+        with:
+          python-version: "3.14"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      # uv tool install is the uv-managed mechanism for running pre-commit,
+      # which is not a project dependency: the stateless check-banned-*
+      # hooks must run without the project environment, so pre-commit is
+      # installed as a standalone tool.
+      - name: Install pre-commit
+        run: uv tool install pre-commit
+
+      # The staged-diff hooks need the project environment; the stateless
+      # dispatch tier does not, so both environment setup and staging are
+      # limited to pull_request events.
+      - name: Sync project environment
+        if: github.event_name == 'pull_request'
+        run: uv sync --locked
+
+      # Stage the pull request diff: the merge base of the PR's target
+      # branch and HEAD, so the staged index equals the pull request
+      # changes and the staged hooks run with their exact local semantics.
+      # checkout@v7 with fetch-depth: 0 already provides the target branch.
+      # The base ref is passed through env (not interpolated into the run
+      # script) to keep shell injection out of the command text.
+      - name: Stage the pull request diff
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          BASE_BRANCH="origin/${BASE_REF}"
+          BASE_SHA="$(git merge-base "${BASE_BRANCH}" HEAD)"
+          git reset --soft "${BASE_SHA}"
+          echo "Policy checks run against the staged diff versus ${BASE_BRANCH} (${BASE_SHA}):"
+          git diff --cached --stat
+
+      - name: Run policy checks
+        env:
+          # The default token can read the public design-docs repository
+          # that check-stp-links verifies STP references against.
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            hook_ids=(check-banned-paths check-banned-constructs)
+          else
+            # Keep this list in sync with the ci: skip section of
+            # .pre-commit-config.yaml (the hooks pre-commit.ci cannot run)
+            # plus the stateless check-banned-* hooks. The two lists
+            # intentionally differ: this workflow adds the stateless
+            # check-banned-* hooks and also runs check-jsonschema (the
+            # runner has network access for its remote schema fetch).
+            hook_ids=(check-banned-paths check-banned-constructs check-jsonschema check-staged-paths check-linter-directives check-python-source check-test-std check-stp-links)
+          fi
+          for hook_id in "${hook_ids[@]}"; do
+            pre-commit run "${hook_id}" --all-files
+          done
