@@ -694,10 +694,15 @@ def delete_cbt_pull_backups_and_wait_for_exports(
     for backup in backups:
         backup_name = backup.name
         try:
-            backup.clean_up()
+            deleted = backup.clean_up()
         except Exception as error:
             LOGGER.error(f"Failed to clean up pull-mode backup {backup_name}: {error}")
             cleanup_errors.append(error)
+        else:
+            if not deleted:
+                error = RuntimeError(f"Pull-mode backup {backup_name} was not deleted")
+                LOGGER.error(str(error))
+                cleanup_errors.append(error)
     for backup in backups:
         backup_name = backup.name
         try:
