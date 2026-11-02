@@ -9,7 +9,7 @@ lets the tester mark each as pass/fail/skip, and uploads the results to
 ## Usage
 
 ```bash
-# Interactive run for a team directory (team auto-inferred from path)
+# Interactive run for a team directory (team derived from the folder)
 uv run python -m scripts.manual_tests_reporter.manual_tests_reporter \
     --tests-dir tests/network --from-cluster
 
@@ -20,7 +20,7 @@ uv run python -m scripts.manual_tests_reporter.manual_tests_reporter \
 # or --from-cluster (see below).
 uv run python -m scripts.manual_tests_reporter.manual_tests_reporter \
     --tests-dir tests/storage -m "gating" -k test_snapshot \
-    --bundle v4.22.0.rhel9-102 --team STORAGE --tier TIER-2 --from-cluster
+    --bundle v4.22.0.rhel9-102 --tier TIER-2 --from-cluster
 
 # Dry run (no upload)
 uv run python -m scripts.manual_tests_reporter.manual_tests_reporter \
@@ -61,7 +61,6 @@ Optional YAML defaults so repeated runs do not need the same CLI flags:
 ```yaml
 # ~/.config/manual_tests_reporter/config.yaml (or pass --config <path>)
 tests-dir: tests/network
-team: NETWORK
 tier: TIER-2
 bundle: v4.22.0.rhel9-102
 cnv-version: "4.22"
@@ -80,7 +79,7 @@ exists, or explicitly via `--config <path>`. A `tests-dir` starting with
 `~` is expanded; like `--tests-dir`, relative paths resolve against the
 directory the tool is launched from. Values must be non-empty strings —
 quote values that look like numbers or booleans (e.g.
-`cnv-version: '4.22'`, `team: 'true'`); unquoted, YAML parses them as
+`cnv-version: '4.22'`, `tier: 'true'`); unquoted, YAML parses them as
 numbers/booleans and the loader rejects them.
 
 Precedence (highest first):
@@ -94,8 +93,8 @@ Precedence (highest first):
    is *not* a replay: cluster-derived values replace the saved attributes)
 3. This config file
 4. Cluster-derived values (`--from-cluster`)
-5. Team inference from the tests directory (last-resort fallback, never
-   applied to a replayed retry)
+5. TEAM derived from the tests directory — the only fresh-run source of
+   TEAM, never applied to a replayed retry (see Team derivation)
 
 Config values therefore behave like pre-set CLI flags: they override
 cluster-derived attributes on fresh runs, while a one-off CLI flag still
@@ -141,7 +140,6 @@ automatically on upload failure or early quit for retry):
 
 ```yaml
 metadata:
-  team: NETWORK          # optional, fills --team if not given
   bundle: v4.22.0        # optional, fills --bundle if not given
   attributes:            # optional, saved run attributes from a retry file;
     - key: TEAM          # each entry must be a {key: str, value: str} dict
@@ -154,8 +152,9 @@ results:
 ```
 
 When `attributes` are restored (a retry replay), the saved values win over
-`metadata.team` and `metadata.bundle`; the metadata values fill only keys the
-saved list lacks.
+`metadata.bundle`; the metadata value fills only keys the saved list lacks.
+A `metadata.team` key is ignored — TEAM is derived from the tests directory
+(see below) or restored with the saved run.
 
 Notes:
 
@@ -170,6 +169,31 @@ On upload failure the results are saved to a timestamped YAML file —
 retry with `--batch-file <file>`. The JUnit XML report is written to a
 system temp directory: it is deleted after a successful upload and kept
 (its path printed) only when the upload fails.
+
+### Team derivation
+
+There is no `--team` flag: TEAM is derived from the scanned tests directory —
+the folder directly under `tests/` (or the selected folder itself), mapped to
+the Datadog team:
+
+| Folder | TEAM |
+|---|---|
+| network | NETWORK |
+| storage | STORAGE |
+| data_protection | STORAGE |
+| virt | VIRT |
+| observability | IUO |
+| infrastructure | INFRASTRUCTURE |
+| install_upgrade_operators | IUO |
+| chaos | CHAOS |
+| after_cluster_deploy_sanity | IUO |
+| deprecated_api | IUO |
+| post_test_alerts | IUO |
+| scale | SCALE |
+
+A directory that maps to no team (e.g. the whole `tests/` root) uploads
+without a TEAM attribute. A retry replay keeps the TEAM recorded in its saved
+attributes.
 
 ## Modules
 

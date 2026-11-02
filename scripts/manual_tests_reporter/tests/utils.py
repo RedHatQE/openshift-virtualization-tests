@@ -80,26 +80,21 @@ def make_detail(
 MINIMAL_MANUAL_TEST_SOURCE = "import pytest\n\n\n@pytest.mark.manual\ndef test_minimal():\n    pass\n"
 
 
-def required_attr_args(tests_dir: Path, team: str | None = "NETWORK") -> list[str]:
+def required_attr_args(tests_dir: Path) -> list[str]:
     """Build CLI args providing every required run attribute.
 
     Args:
         tests_dir: Tests directory to scan.
-        team: Team flag value; ``None`` omits ``--team`` for team-less runs.
 
     Returns:
-        Flag list with ``--tests-dir``, ``--team`` and all required
-        attribute overrides for an upload-ready (non-dry-run) run.
+        Flag list with ``--tests-dir`` and all required attribute
+        overrides for an upload-ready (non-dry-run) run. TEAM is derived
+        from the tests directory, not passed as a flag.
     """
     args = [
         "--tests-dir",
         str(tests_dir),
     ]
-    if team is not None:
-        args.extend([
-            "--team",
-            team,
-        ])
     args.extend([
         "--bundle",
         "v4.22.0",
@@ -130,10 +125,10 @@ def write_manual_tests_dir(tmp_path: Path, test_count: int = 1) -> Path:
 
     Returns:
         Path to the created tests directory. Node IDs are
-        ``tests/test_manual_multi.py::test_manual_<n>``.
+        ``tests/network/test_manual_multi.py::test_manual_<n>``.
     """
-    tests_dir = tmp_path / "tests"
-    tests_dir.mkdir()
+    tests_dir = tmp_path / "tests" / "network"
+    tests_dir.mkdir(parents=True)
     source = "import pytest\n\n\n"
     for index in range(test_count):
         source += f"\n\n@pytest.mark.manual\ndef test_manual_{index}():\n    pass\n"
@@ -153,10 +148,10 @@ def write_minimal_tests_dir(tmp_path: Path) -> Path:
     Returns:
         Path to the created tests directory containing a single
         ``@pytest.mark.manual`` test with node ID
-        ``tests/test_manual_minimal.py::test_minimal``.
+        ``tests/network/test_manual_minimal.py::test_minimal``.
     """
-    tests_dir = tmp_path / "tests"
-    tests_dir.mkdir()
+    tests_dir = tmp_path / "tests" / "network"
+    tests_dir.mkdir(parents=True)
     (tests_dir / "test_manual_minimal.py").write_text(
         data=MINIMAL_MANUAL_TEST_SOURCE,
         encoding="utf-8",
@@ -192,7 +187,7 @@ def write_minimal_batch(tmp_path: Path) -> tuple[Path, Path]:
     tests_dir = write_minimal_tests_dir(tmp_path=tmp_path)
     batch_path = tmp_path / "batch.yaml"
     batch_path.write_text(
-        data=("results:\n  - test: tests/test_manual_minimal.py::test_minimal\n    status: passed\n"),
+        data=("results:\n  - test: tests/network/test_manual_minimal.py::test_minimal\n    status: passed\n"),
         encoding="utf-8",
     )
     return tests_dir, batch_path

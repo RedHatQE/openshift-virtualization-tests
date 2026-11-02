@@ -85,6 +85,36 @@ _DEFECT_TYPES: dict[str, str] = {
 
 _DEFAULT_SERVICE = "cnv-manual-tests"
 
+# Tests-directory folder (directly under ``tests/``) → Datadog TEAM attribute.
+# TEAM is derived from the scanned directory, never hand-specified: the
+# ``--team`` flag was dropped because the tests directory is the single
+# source of truth — a hand-specified team could contradict the folder that
+# produced the run.
+#
+# This mapping deliberately DIFFERS from the pytest-side TEAM_MARKERS in the
+# root conftest.py: TEAM_MARKERS is a marker taxonomy (several folders carry
+# multiple team markers), while this maps each folder to its single Datadog
+# reporting owner. Known divergences from the marker taxonomy:
+# data_protection reports under STORAGE, observability under IUO, and the
+# multi-marker folders (deprecated_api, post_test_alerts) plus the marker-less
+# folder after_cluster_deploy_sanity report under IUO, while the marker-less
+# folder scale reports under SCALE. A drift-guard
+# test keeps every new tests/ folder mapped.
+_FOLDER_TO_TEAM = {
+    "network": "NETWORK",
+    "storage": "STORAGE",
+    "data_protection": "STORAGE",
+    "virt": "VIRT",
+    "observability": "IUO",
+    "infrastructure": "INFRASTRUCTURE",
+    "install_upgrade_operators": "IUO",
+    "chaos": "CHAOS",
+    "after_cluster_deploy_sanity": "IUO",
+    "deprecated_api": "IUO",
+    "post_test_alerts": "IUO",
+    "scale": "SCALE",
+}
+
 
 def _build_run_attributes(
     team: str | None = None,
@@ -102,8 +132,9 @@ def _build_run_attributes(
     """Build run attribute list from CLI args and optional cluster attributes.
 
     Cluster-derived attributes serve as defaults; explicit CLI values
-    override them.  ``MANUAL`` is always present; ``TEAM`` is present
-    when provided or inferred.
+    override them.  ``MANUAL`` is always present; ``TEAM`` is present when
+    derived from the tests directory, or restored from a replayed run's
+    saved attributes.
 
     Args:
         team: Team name (e.g. ``NETWORK``).
@@ -159,7 +190,12 @@ def _build_run_attributes(
     attrs_by_key["MANUAL"] = "true"
 
     if team:
-        attrs_by_key["TEAM"] = team.upper()
+        # Preserved verbatim: a derived team is already upper-case (every
+        # _FOLDER_TO_TEAM value is), while a replayed run must reproduce its
+        # recorded TEAM attribute exactly — re-casing here would make the
+        # "Using team from restored attributes" echo disagree with the
+        # uploaded tag. The suite-name label normalizes for display instead.
+        attrs_by_key["TEAM"] = team
 
     if tier is not None:
         attrs_by_key["TIER"] = tier.upper()
@@ -331,7 +367,6 @@ def _load_batch_file(batch_path: Path) -> tuple[list[ManualTestResult], dict[str
     Expected format::
 
         metadata:
-            team: NETWORK
             bundle: v4.22.0
         results:
           - test: "tests/foo/test_bar.py::TestClass::test_method"
@@ -343,8 +378,9 @@ def _load_batch_file(batch_path: Path) -> tuple[list[ManualTestResult], dict[str
 
     Returns:
         Tuple of (results list, metadata dict). Metadata may contain
-        ``team``, ``bundle``, and ``attributes`` from a previous
-        session's saved file.
+        ``bundle`` and ``attributes`` from a previous session's saved
+        file. A ``team`` metadata key is ignored — TEAM is derived from
+        the tests directory.
 
     Raises:
         click.ClickException: If the file format is invalid, a status
@@ -415,19 +451,28 @@ def _load_batch_file(batch_path: Path) -> tuple[list[ManualTestResult], dict[str
     metadata: dict[str, Any] = {}  # values can be str or list[dict]
     raw_metadata = raw.get("metadata", {})
     if isinstance(raw_metadata, dict):
-        for key in ("team", "bundle"):
-            raw_value = raw_metadata.get(key)
-            if raw_value is None:
-                continue
-            if not isinstance(raw_value, str):
+        # A legacy batch/retry file may still declare metadata.team (older
+        # runs wrote it unconditionally, including `team: null` for team-less
+        # sessions). Surface a real declaration instead of silently diverging
+        # from it; a null value declares nothing and does not warn.
+        declared_team = raw_metadata.get("team")
+        if declared_team:
+            LOGGER.warning(
+                f"Batch file {batch_path} declares metadata.team {declared_team!r} - it is ignored; "
+                "TEAM is derived from the tests directory (a replayed retry uses its saved TEAM "
+                "attribute; add a TEAM entry to metadata.attributes to restore one)"
+            )
+        raw_bundle = raw_metadata.get("bundle")
+        if raw_bundle is not None:
+            if not isinstance(raw_bundle, str):
                 raise click.ClickException(
-                    f"Invalid {key} type in batch metadata: expected string, got {type(raw_value).__name__}"
+                    f"Invalid bundle type in batch metadata: expected string, got {type(raw_bundle).__name__}"
                 )
-            stripped_value = raw_value.strip()
-            if stripped_value:
-                # Strip so hand-edited padding (e.g. `team: " NETWORK "`)
+            stripped_bundle = raw_bundle.strip()
+            if stripped_bundle:
+                # Strip so hand-edited padding (e.g. `bundle: " v4.22 "`)
                 # cannot produce a padded Datadog tag value.
-                metadata[key] = stripped_value
+                metadata["bundle"] = stripped_bundle
         saved_attrs = raw_metadata.get("attributes")
         if saved_attrs is not None and not isinstance(saved_attrs, list):
             raise click.ClickException(
@@ -468,24 +513,23 @@ def _load_batch_file(batch_path: Path) -> tuple[list[ManualTestResult], dict[str
 
 def _merge_batch_metadata(
     batch_metadata: dict[str, Any],
-    team: str | None,
     bundle: str | None,
     cluster_attrs: list[dict[str, str]] | None,
-) -> tuple[str | None, str | None, list[dict[str, str]] | None, bool]:
-    """Fill missing team, bundle, and cluster attributes from batch metadata.
+) -> tuple[str | None, list[dict[str, str]] | None, bool]:
+    """Fill missing bundle and restore saved cluster attributes from batch metadata.
 
     CLI-provided values win; batch-file metadata fills the gaps; saved
     run attributes from a retry file are restored only when no cluster
-    attributes were resolved.
+    attributes were resolved. TEAM is never taken from metadata — it is
+    derived from the tests directory (or restored with the saved run).
 
     Args:
         batch_metadata: Metadata loaded from the batch YAML file.
-        team: Team name from the --team CLI flag, if any.
         bundle: Bundle version from CLI, if any.
         cluster_attrs: Cluster-derived attributes, if any.
 
     Returns:
-        Tuple of (team, bundle, cluster_attrs, restored) with metadata merged
+        Tuple of (bundle, cluster_attrs, restored) with metadata merged
         in; ``restored`` is True when the batch file's saved run attributes
         were restored into ``cluster_attrs`` (i.e. the run is a replay).
     """
@@ -502,23 +546,6 @@ def _merge_batch_metadata(
             message=f"Note: {len(saved_attrs)} saved attributes from the batch file are ignored — "
             "cluster-derived attributes take precedence."
         )
-    # Saved attributes carry the recorded run; metadata values fill only what
-    # the saved list lacks (mirroring the BUNDLE fill below), so a replay
-    # never overrides its recorded TEAM with the batch file's metadata.
-    batch_team = batch_metadata.get("team")
-    if not team and batch_team:
-        if restored:
-            assert cluster_attrs is not None, "Restored attributes must be a list when restored is set"
-        if not restored or not any(attr["key"] == "TEAM" for attr in cluster_attrs or []):
-            team = batch_team
-            click.echo(message=f"Using team from batch file: {team}")
-    if restored:
-        assert cluster_attrs is not None, "Restored attributes must be a list when restored is set"
-        if not team:
-            saved_team = next((attr["value"] for attr in cluster_attrs if attr["key"] == "TEAM"), None)
-            if saved_team:
-                team = saved_team
-                click.echo(message=f"Using team from restored attributes: {team}")
     batch_bundle = batch_metadata.get("bundle")
     if batch_bundle and not bundle:
         if restored:
@@ -533,12 +560,11 @@ def _merge_batch_metadata(
         else:
             bundle = batch_bundle
             click.echo(message=f"Using bundle from batch file: {bundle}")
-    return team, bundle, cluster_attrs, restored
+    return bundle, cluster_attrs, restored
 
 
 def _save_results_for_retry(
     results: list[ManualTestResult],
-    team: str | None,
     bundle: str | None,
     attributes: list[dict[str, str]] | None = None,
 ) -> Path | None:
@@ -551,10 +577,9 @@ def _save_results_for_retry(
 
     Args:
         results: List of ``ManualTestResult`` objects to save.
-        team: Team name; a team-less session serializes ``null`` so a
-            retry does not fabricate a ``TEAM`` attribute.
         bundle: Bundle version.
-        attributes: Run attributes to preserve for retry.
+        attributes: Run attributes to preserve for retry. The TEAM
+            attribute, when present, preserves the team for the retry.
 
     Returns:
         Path to the saved YAML file, or None when saving failed.
@@ -568,7 +593,6 @@ def _save_results_for_retry(
 
     payload: dict[str, Any] = {
         "metadata": {
-            "team": team,
             "bundle": bundle,
             "attributes": attributes or [],
             "saved_at": datetime.now(tz=UTC).isoformat(),
@@ -592,12 +616,6 @@ def _save_results_for_retry(
     "uploads them to Datadog Test Optimization via `datadog-ci junit upload`.",
 )
 @click.option("--bundle", type=str, default=None, help="Bundle version prefix (e.g., v4.22.0.rhel9-102)")
-@click.option(
-    "--team",
-    type=str,
-    default=None,
-    help="Team name (e.g., NETWORK, STORAGE, VIRT). Auto-inferred from --tests-dir if not set.",
-)
 @click.option("--tier", type=str, default=None, help="Tier label (e.g., TIER-2)")
 @click.option(
     "--tests-dir",
@@ -643,7 +661,6 @@ def _save_results_for_retry(
 )
 def main(
     bundle: str | None,
-    team: str | None,
     tier: str | None,
     tests_dir: Path | None,
     marker: str | None,
@@ -734,17 +751,24 @@ def main(
     # restore decision (only when no cluster attributes were resolved), so a
     # from-cluster run over a retry file is NOT a replay.
     replaying_saved_run = False
+    # Team is never a CLI/config input: it is restored with a replayed run
+    # or derived from the scanned tests directory (step 2c below).
+    team: str | None = None
 
     if batch_file:
         results, batch_metadata = _load_batch_file(batch_path=batch_file)
         skipped_count = sum(1 for result in results if result.status == "SKIPPED")
         collected_count = len(results)
-        team, bundle, cluster_attrs, replaying_saved_run = _merge_batch_metadata(
+        bundle, cluster_attrs, replaying_saved_run = _merge_batch_metadata(
             batch_metadata=batch_metadata,
-            team=team,
             bundle=bundle,
             cluster_attrs=cluster_attrs,
         )
+        if replaying_saved_run and cluster_attrs:
+            # A replay reproduces the recorded run: keep its TEAM, if any.
+            team = next((attr["value"] for attr in cluster_attrs if attr["key"] == "TEAM"), None)
+            if team:
+                click.echo(message=f"Using team from restored attributes: {team}")
         # Re-collect manual tests to rebuild the node_id → Polarion ID
         # lookup so retried reports keep their Polarion linkage.
         collected_tests = collect_manual_tests(
@@ -809,7 +833,6 @@ def main(
                 return cli_value
             return config.get(config_key)
 
-        team = _replay_config_default(cli_value=team, config_key="team")
         tier = _replay_config_default(cli_value=tier, config_key="tier")
         cnv_version = _replay_config_default(cli_value=cnv_version, config_key="cnv-version")
         arch = _replay_config_default(cli_value=arch, config_key="arch")
@@ -819,7 +842,6 @@ def main(
         storage_class = _replay_config_default(cli_value=storage_class, config_key="sc")
         channel = _replay_config_default(cli_value=channel, config_key="channel")
     else:
-        team = _config_default(cli_value=team, config_key="team")
         tier = _config_default(cli_value=tier, config_key="tier")
         bundle = _config_default(cli_value=bundle, config_key="bundle")
         cnv_version = _config_default(cli_value=cnv_version, config_key="cnv-version")
@@ -830,19 +852,35 @@ def main(
         storage_class = _config_default(cli_value=storage_class, config_key="sc")
         channel = _config_default(cli_value=channel, config_key="channel")
 
-    # ── 2c. Infer team from tests_dir as the last-resort fallback ──
+    # ── 2c. Derive team from the scanned tests directory ──
     if not team and not replaying_saved_run:
-        resolved_parts = tests_dir.resolve().parts
-        try:
-            # Use the LAST "tests" component so a repo checked out under a
-            # path that itself contains an earlier "tests" component still
-            # infers the team from the real tests directory.
-            tests_index = len(resolved_parts) - 1 - resolved_parts[::-1].index("tests")
-            if tests_index + 1 < len(resolved_parts):
-                team = resolved_parts[tests_index + 1].upper()
-                click.echo(message=f"Inferred team: {team} (from {tests_dir})")
-        except ValueError:
-            pass  # "tests" not found in path — no inference possible
+        resolved = tests_dir.resolve()
+        parts = resolved.parts
+        # Candidate folders, most-authoritative first: the folder directly
+        # under each "tests" path component, deepest (last) first — the
+        # deepest "tests" child wins, so a checkout path containing an
+        # earlier "tests" component still derives from the real tests
+        # directory. A nested "tests" dir whose own child is a mapped folder
+        # (e.g. tests/network/tests/storage) therefore DOES win over the outer
+        # folder: the deepest child is authoritative by design. Unmapped
+        # deepest children fall through to the shallower "tests" children,
+        # then to the selected folder itself (e.g. a standalone
+        # --tests-dir network). Checking the tests-root children before the
+        # basename keeps a nested leaf whose basename matches another team
+        # (e.g. tests/observability/storage) attributed to its parent team.
+        tests_child_candidates = [parts[index + 1] for index in range(len(parts) - 1) if parts[index] == "tests"]
+        candidate_folders = [*reversed(tests_child_candidates), resolved.name]
+        for folder in candidate_folders:
+            team = _FOLDER_TO_TEAM.get(folder)
+            if team:
+                click.echo(message=f"Derived team: {team} (from {tests_dir})")
+                break
+        else:
+            LOGGER.warning(f"Tests directory {tests_dir} maps to no team - TEAM attribute will be omitted")
+            click.echo(
+                message=f"Warning: {tests_dir} maps to no team - the run will not be team-filterable.",
+                err=True,
+            )
 
     # ── 3. Build run attributes ──
     attributes = _build_run_attributes(
@@ -886,12 +924,6 @@ def main(
             raise click.ClickException(
                 f"Missing required run attributes: {missing_names}\n"
                 f"Provide them via CLI flags ({missing_flags}), the config file, or --from-cluster."
-            )
-        if not team:
-            LOGGER.warning("No team provided or inferred — run will not be team-filterable")
-            click.echo(
-                message="Warning: no team provided or inferred - this run will not be team-filterable.",
-                err=True,
             )
         # Preflight upload prerequisites before the tester spends time on
         # verdicts; dry-run skips these since nothing is uploaded.
@@ -947,11 +979,10 @@ def main(
     # ── 7. Quit early: keep partial results, upload nothing ──
     team_label = team.upper() if team else "ALL"
     if quit_early:
-        # The real (possibly None) team is saved; "ALL" stays a display-only
-        # sentinel so a retry of a team-less session stays team-less.
+        # The saved TEAM attribute (when present) keeps the team for the
+        # retry; a team-less session saves no TEAM and stays team-less.
         saved_path = _save_results_for_retry(
             results=results,
-            team=team,
             bundle=bundle,
             attributes=attributes,
         )
@@ -1013,7 +1044,6 @@ def main(
         LOGGER.error(str(exc))
         saved_path = _save_results_for_retry(
             results=results,
-            team=team,
             bundle=bundle,
             attributes=attributes,
         )
@@ -1033,7 +1063,6 @@ def main(
         # the upload-failure handler uses, instead of exiting with a traceback.
         saved_path = _save_results_for_retry(
             results=results,
-            team=team,
             bundle=bundle,
             attributes=attributes,
         )

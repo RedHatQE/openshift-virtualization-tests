@@ -20,11 +20,11 @@ class TestLoadConfigExplicitPath:
     def test_valid_config_loaded(self, tmp_path: Path) -> None:
         """Verify a valid config file loads with its source path."""
         config_path = tmp_path / "config.yaml"
-        config_path.write_text(data="team: NETWORK\nbundle: v4.22.0\n", encoding="utf-8")
+        config_path.write_text(data="tier: TIER-2\nbundle: v4.22.0\n", encoding="utf-8")
 
         config, source = load_config(config_path=config_path)
 
-        assert config == {"team": "NETWORK", "bundle": "v4.22.0"}, f"Got {config!r}"
+        assert config == {"tier": "TIER-2", "bundle": "v4.22.0"}, f"Got {config!r}"
         assert source == str(config_path), f"Got {source!r}"
 
     def test_empty_config_file(self, tmp_path: Path) -> None:
@@ -45,12 +45,28 @@ class TestLoadConfigExplicitPath:
         with pytest.raises(expected_exception=ClickException, match=r"Unknown config key.*teams"):
             load_config(config_path=config_path)
 
+    def test_removed_team_key_rejected_with_migration_hint(self, tmp_path: Path) -> None:
+        """Verify a legacy 'team' key fails with an actionable removal hint.
+
+        Older READMEs documented a 'team' config key; users carrying such a
+        file must be told the key was removed rather than seeing a generic
+        unknown-key error.
+        """
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text(data="team: NETWORK\n", encoding="utf-8")
+
+        with pytest.raises(
+            expected_exception=ClickException,
+            match=r"'team' key was removed - TEAM is now derived from the tests directory",
+        ):
+            load_config(config_path=config_path)
+
     def test_non_string_value_rejected(self, tmp_path: Path) -> None:
         """Verify a non-string config value fails cleanly."""
         config_path = tmp_path / "config.yaml"
-        config_path.write_text(data="team: 5\n", encoding="utf-8")
+        config_path.write_text(data="tier: 5\n", encoding="utf-8")
 
-        with pytest.raises(expected_exception=ClickException, match=r"'team'.*non-empty string"):
+        with pytest.raises(expected_exception=ClickException, match=r"'tier'.*non-empty string"):
             load_config(config_path=config_path)
 
     def test_numeric_value_hint_mentions_quoting(self, tmp_path: Path) -> None:
@@ -64,7 +80,7 @@ class TestLoadConfigExplicitPath:
     def test_boolean_value_hint_mentions_quoting(self, tmp_path: Path) -> None:
         """Verify a boolean YAML value fails with a boolean hint, not the number hint."""
         config_path = tmp_path / "config.yaml"
-        config_path.write_text(data="team: true\n", encoding="utf-8")
+        config_path.write_text(data="tier: true\n", encoding="utf-8")
 
         with pytest.raises(expected_exception=ClickException, match="YAML parsed a boolean"):
             load_config(config_path=config_path)
@@ -72,11 +88,11 @@ class TestLoadConfigExplicitPath:
     def test_merge_key_config_loads(self, tmp_path: Path) -> None:
         """Verify YAML merge keys still work with the duplicate-key loader."""
         config_path = tmp_path / "config.yaml"
-        config_path.write_text(data="<<: {team: NETWORK, tier: TIER-2}\nservice: my-service\n", encoding="utf-8")
+        config_path.write_text(data="<<: {bundle: v4.22.0, tier: TIER-2}\nservice: my-service\n", encoding="utf-8")
 
         config, _source = load_config(config_path=config_path)
 
-        assert config == {"team": "NETWORK", "tier": "TIER-2", "service": "my-service"}, f"Got {config!r}"
+        assert config == {"bundle": "v4.22.0", "tier": "TIER-2", "service": "my-service"}, f"Got {config!r}"
 
     def test_duplicate_key_in_merge_source_rejected(self, tmp_path: Path) -> None:
         """Verify duplicate keys inside a merge source fail instead of last-winning."""
@@ -121,11 +137,11 @@ class TestLoadConfigExplicitPath:
     def test_explicit_key_overrides_merged_value(self, tmp_path: Path) -> None:
         """Verify an explicit key overrides a value merged via YAML merge key."""
         config_path = tmp_path / "config.yaml"
-        config_path.write_text(data="<<: {team: NETWORK}\nteam: STORAGE\n", encoding="utf-8")
+        config_path.write_text(data="<<: {tier: TIER-2}\ntier: TIER-3\n", encoding="utf-8")
 
         config, _source = load_config(config_path=config_path)
 
-        assert config == {"team": "STORAGE"}, f"Got {config!r}"
+        assert config == {"tier": "TIER-3"}, f"Got {config!r}"
 
     def test_duplicate_config_key_rejected(self, tmp_path: Path) -> None:
         """Verify duplicate mapping keys in the config file are rejected, not last-wins."""
@@ -195,9 +211,9 @@ class TestLoadConfigDefaultPath:
     def test_none_value_hint_mentions_missing_value(self, tmp_path: Path) -> None:
         """Verify a key with no value fails with a hint to set a string."""
         config_path = tmp_path / "config.yaml"
-        config_path.write_text(data="team:\n", encoding="utf-8")
+        config_path.write_text(data="tier:\n", encoding="utf-8")
 
-        with pytest.raises(expected_exception=ClickException, match="no value for 'team'"):
+        with pytest.raises(expected_exception=ClickException, match="no value for 'tier'"):
             load_config(config_path=config_path)
 
     def test_import_time_home_failure_disables_default_path(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -224,22 +240,22 @@ class TestLoadConfigDefaultPath:
     def test_default_file_loaded_when_present(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Verify the default config path is used when it exists."""
         default_path = tmp_path / "config.yaml"
-        default_path.write_text(data="team: STORAGE\n", encoding="utf-8")
+        default_path.write_text(data="tier: TIER-3\n", encoding="utf-8")
         monkeypatch.setattr(target=config_module, name="DEFAULT_CONFIG_PATH", value=default_path)
 
         config, source = load_config(config_path=None)
 
-        assert config == {"team": "STORAGE"}, f"Got {config!r}"
+        assert config == {"tier": "TIER-3"}, f"Got {config!r}"
         assert source == str(default_path), f"Got {source!r}"
 
     def test_explicit_path_wins_over_default(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Verify an explicit --config path ignores the default path entirely."""
         default_path = tmp_path / "default.yaml"
-        default_path.write_text(data="team: STORAGE\n", encoding="utf-8")
+        default_path.write_text(data="tier: TIER-3\n", encoding="utf-8")
         monkeypatch.setattr(target=config_module, name="DEFAULT_CONFIG_PATH", value=default_path)
         explicit_path = tmp_path / "explicit.yaml"
-        explicit_path.write_text(data="team: NETWORK\n", encoding="utf-8")
+        explicit_path.write_text(data="tier: TIER-2\n", encoding="utf-8")
 
         config, _source = load_config(config_path=explicit_path)
 
-        assert config == {"team": "NETWORK"}, f"Got {config!r}"
+        assert config == {"tier": "TIER-2"}, f"Got {config!r}"

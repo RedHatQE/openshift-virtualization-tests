@@ -133,7 +133,6 @@ except RuntimeError:
 # generated drift-guard tests exercise both the fresh-run and replay CLI
 # wiring, so a new attribute cannot be accepted-but-ignored.
 CONFIG_KEY_TO_ATTRIBUTE_KEY = {
-    "team": "TEAM",
     "tier": "TIER",
     "bundle": "BUNDLE",
     "cnv-version": "CNV_XY_VER",
@@ -203,9 +202,15 @@ def load_config(config_path: Path | None) -> tuple[dict[str, str], str]:
 
     unknown_keys = sorted(set(raw_config) - _ACCEPTED_CONFIG_KEYS)
     if unknown_keys:
+        removal_hint = ""
+        if "team" in unknown_keys:
+            removal_hint = (
+                " The 'team' key was removed - TEAM is now derived from the "
+                "tests directory; delete the key from the config file."
+            )
         raise click.ClickException(
             f"Unknown config key(s) in {source}: {', '.join(unknown_keys)}. "
-            f"Valid keys: {', '.join(sorted(_ACCEPTED_CONFIG_KEYS))}"
+            f"Valid keys: {', '.join(sorted(_ACCEPTED_CONFIG_KEYS))}.{removal_hint}"
         )
 
     validated: dict[str, str] = {}
