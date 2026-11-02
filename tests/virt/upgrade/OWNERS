@@ -1,2 +1,6 @@
+root-approvers: False
+approvers:
+  - dshchedr
+  - vsibirsk
 reviewers:
   - hmeir
