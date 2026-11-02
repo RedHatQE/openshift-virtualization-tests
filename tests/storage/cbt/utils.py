@@ -507,10 +507,15 @@ def wait_for_pull_backup_export_deleted(name: str, namespace: str, client: Dynam
 
     Side effects:
         Polls the OpenShift API until the VirtualMachineExport is deleted.
+
+    Raises:
+        RuntimeError: If the export is still present when the wait times out.
     """
     export = VirtualMachineExport(name=name, namespace=namespace, client=client)
     LOGGER.info(f"Waiting for VirtualMachineExport {namespace}/{name} to be deleted")
-    export.wait_deleted(timeout=TIMEOUT_10MIN)
+    deleted = export.wait_deleted(timeout=TIMEOUT_10MIN)
+    if not deleted:
+        raise RuntimeError(f"VirtualMachineExport {namespace}/{name} was not deleted")
 
 
 def cbt_source_ref(resource: VirtualMachine | VirtualMachineBackupTracker) -> dict[str, str]:
@@ -700,9 +705,9 @@ def delete_cbt_pull_backups_and_wait_for_exports(
             cleanup_errors.append(error)
         else:
             if not deleted:
-                error = RuntimeError(f"Pull-mode backup {backup_name} was not deleted")
-                LOGGER.error(str(error))
-                cleanup_errors.append(error)
+                cleanup_error = RuntimeError(f"Pull-mode backup {backup_name} was not deleted")
+                LOGGER.error(str(cleanup_error))
+                cleanup_errors.append(cleanup_error)
     for backup in backups:
         backup_name = backup.name
         try:
