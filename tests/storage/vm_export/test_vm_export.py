@@ -23,6 +23,10 @@ ERROR_MSG_USER_CANNOT_CREATE_VM_EXPORT = (
     rf".*{VIRTUALMACHINEEXPORTS}.*in API group.*{Resource.ApiGroup.EXPORT_KUBEVIRT_IO}.*in the namespace"
 )
 
+# Run vm_export tests after test_windows_memory_dump instead of wherever they sort alphabetically,
+# so they land roughly in the middle of the suite.
+pytestmark = pytest.mark.order(after="tests/storage/memory_dump/test_memory_dump.py::test_windows_memory_dump")
+
 
 @pytest.mark.parametrize(
     "namespace, data_volume_scope_function",
