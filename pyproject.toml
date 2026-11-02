@@ -6,6 +6,9 @@ output-format = "grouped"
 # docs/site is auto-generated (docsfy) and must never be modified in PRs;
 # ruff >= 0.17 formats markdown code blocks, so it must be excluded entirely
 # (extend-exclude keeps ruff's default exclusions on top of this one)
+# force-exclude makes the exclusions apply to explicitly passed files too (the
+# ruff-pre-commit hooks already pass --force-exclude, this covers direct invocations)
+force-exclude = true
 # utilities/unittests is out of scope for linters (matches the flake8 hook exclusion)
 extend-exclude = ["docs/site", "utilities/unittests"]
 
