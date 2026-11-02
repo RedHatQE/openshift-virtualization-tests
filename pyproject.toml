@@ -29,6 +29,15 @@ ignore = [
   "C419",    # unnecessary-comprehension-in-call — may change list vs generator semantics
   "RUF015",  # unnecessary-iterable-allocation-for-first-element — changes exception type
   "PLW0108", # unnecessary-lambda — TimeoutSampler funcs need late binding of dynamic .instance attrs
+  "FURB113", # repeated-append — append-in-loop is the established style; extend() rewrites hurt readability
+  "FURB142", # for-loop-set-mutations — add()-in-loop is the established style; update() rewrites hurt readability
+  "C420",    # unnecessary-dict-comprehension-for-iterable — comprehension form is the established style
+  "RUF055",  # unnecessary-regular-expression — re.sub with a plain pattern is the established style
+  "PLC0207", # missing-maxsplit-arg — plain split()[0] is the established style
+  "FURB156", # hardcoded-string-charset — literal charset strings are fine
+  "SIM110",  # reimplemented-builtin — explicit for/return loop is the established style
+  "FURB145", # slice-copy — the [:] copy idiom is the established style
+  "UP042",   # replace-str-enum — (str, Enum) keeps str(member) output as "Class.MEMBER"
   "DTZ005",  # datetime.now() without tz — requires careful refactoring
   "DTZ006",  # datetime.fromtimestamp() without tz
   "DTZ007",  # naive datetime from strptime()

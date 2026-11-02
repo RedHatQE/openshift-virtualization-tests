@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import string
 from ast import (
     AST,
     AnnAssign,
@@ -849,9 +848,9 @@ def _git_unquote(quoted: str) -> str:
             raw.append(_GIT_SIMPLE_ESCAPES[escape])
             continue
         octal_digits = ""
-        if escape in string.octdigits:
+        if escape in "01234567":
             octal_digits = escape
-            while index < len(body) and len(octal_digits) < 3 and body[index] in string.octdigits:
+            while index < len(body) and len(octal_digits) < 3 and body[index] in "01234567":
                 octal_digits += body[index]
                 index += 1
         if octal_digits:
