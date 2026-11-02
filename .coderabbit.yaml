@@ -138,8 +138,58 @@ reviews:
         `pytest.skip`, `@pytest.mark.skip`, and `@pytest.mark.skipif` are forbidden.
         Flag any addition as HIGH.
 
+        ## Type hints for new test helpers
+        New public functions in `tests/**/utils.py` (and new fixtures/helpers in
+        feature `conftest.py`) MUST annotate their arguments and return type.
+        Types documented only in prose inside the docstring, or a bare `dict`/
+        `list` return with no annotation on the signature, is a HIGH finding.
+
     - path: "**"
       instructions: |
+        ## Resource access
+        Cluster resources MUST be read through an openshift-python-wrapper
+        `Resource` class. Flag ALL of the following as HIGH:
+        - `client.resources.get(api_version=..., kind=...)` — building a raw
+          dynamic-client handle instead of using a wrapper class
+        - chaining `.get(...)`, `.items`, or `.to_dict()` onto such a handle
+        - a `Resource`/`NamespacedResource` constructor or `.get()` call without an
+          explicit syntactically non-`None` `client=` argument
+        - `cache_admin_client()` without an immediate comment explaining why it is
+          required at that call site
+        When no wrapper exists for the kind, the ONLY acceptable remedy is an
+        upstream contribution to `openshift-python-wrapper` that is then used by
+        the test — NOT a direct dynamic-client lookup and NOT a hand-rolled
+        `Resource`/`NamespacedResource` subclass added inside this repo. Flag any
+        new local resource subclass as HIGH; the existing ones
+        (`libs/net/netattachdef.py`, `tests/storage/file_level_restore/utils.py`)
+        are legacy and must not be extended or copied. There is NO exception and no
+        fallback: a literal `apiVersion`/`kind` in the call site is precisely the
+        case an upstream wrapper exists for, and a helper that hides a dynamic
+        lookup is equally unacceptable. Two legacy lookups remain in `main`
+        (`test_must_gather.py`, `role_aggregation/conftest.py`): flag them as
+        outstanding migration debt and flag any extension, copy, or new occurrence.
+
+        ## Error contract for resource lookups
+        Each helper that reads a resource MUST expose one documented absence
+        contract naming the resource: a contextual exception, or — when absence
+        is a normal outcome — a documented optional return (e.g.
+        `find_pod(...) -> Pod | None`). Flag as MEDIUM a helper that mixes error
+        styles for the same lookup (e.g. a hand-rolled `ValueError` for one
+        missing field plus an undocumented `KeyError`, `IndexError`, or client
+        `NotFoundError` for another), that both raises and returns `None` for
+        absence, or whose docstring `Raises:` section lists implementation-detail
+        exceptions instead of the contextual exception it raises. Wrapper signals
+        are inputs to that contract, not the contract itself: `.instance` raises
+        `kubernetes.dynamic.exceptions.NotFoundError`, `.exists` catches it and
+        returns `None` without raising, and the wrapper's existence check raises
+        `ResourceNotFoundError` when `ensure_exists=True` was passed (at
+        construction time, so a resource can still disappear later).
+        `ResourceNotFoundError` also comes from other paths — kubernetes API
+        discovery for an unknown kind, and helpers such as
+        `VirtualMachineInstance.get_virt_launcher_pod()` for a missing dependent
+        object. Require the helper to map whichever signal it uses onto its
+        documented contract.
+
         ## Approval Policy
         You may approve the PR when ALL of the following are true:
         - All your review comments have been addressed with either:
