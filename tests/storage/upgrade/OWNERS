@@ -1,2 +1,5 @@
+root-approvers: False
+approvers:
+  - jpeimer
 reviewers:
   - hmeir
