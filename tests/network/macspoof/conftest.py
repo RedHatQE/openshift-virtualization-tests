@@ -1,5 +1,4 @@
 import logging
-import re
 import shlex
 from collections import OrderedDict
 
@@ -206,7 +205,7 @@ def stopped_vms(linux_bridge_attached_running_vma, linux_bridge_attached_running
 @pytest.fixture()
 def mac_spoof_disabled_nad(linux_macspoof_nad):
     config = linux_macspoof_nad.instance.spec.config
-    config = re.sub('"macspoofchk": true', '"macspoofchk": false', config)
+    config = config.replace('"macspoofchk": true', '"macspoofchk": false')
     ResourceEditor(
         patches={
             linux_macspoof_nad: {
