@@ -48,7 +48,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 
 import utilities.virt
 from utilities.cluster import cache_admin_client
-from utilities.constants.architecture import AARCH_64, AMD_64, ARM_64, X86_64
+from utilities.constants.architecture import AMD_64, ARM_64
 from utilities.constants.cluster import (
     AUDIT_LOGS_PATH,
     KUBECONFIG,
@@ -761,10 +761,15 @@ def get_machine_platform() -> str:
 
     Returns:
         str: ``amd64`` for ``x86_64``, ``arm64`` for ``aarch64``, otherwise the
-        unmodified ``platform.machine()`` value.
+        lowercased ``platform.machine()`` value.
     """
-    machine_type = platform.machine()
-    return {X86_64: AMD_64, AARCH_64: ARM_64}.get(machine_type, machine_type)
+    match machine := platform.machine().lower():
+        case "x86_64":
+            return AMD_64
+        case "aarch64":
+            return ARM_64
+        case _:
+            return machine
 
 
 def get_nodes_with_label(nodes, label):
