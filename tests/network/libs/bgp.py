@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import shlex
 from collections.abc import Generator
@@ -8,6 +9,7 @@ from typing import Final
 
 import ocp_resources.network_config_openshift_io as openshift_nc
 import yaml
+from kubernetes.client.exceptions import ApiException
 from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.bgp_session_state import BGPSessionState
@@ -17,14 +19,18 @@ from ocp_resources.frr_configuration import FRRConfiguration
 from ocp_resources.pod import Pod
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.route_advertisements import RouteAdvertisements
-from timeout_sampler import retry
+from timeout_sampler import TimeoutExpiredError, retry
 
 from libs.net.traffic_generator import PodTcpClient
 from libs.net.vmspec import IpNotFound
 from utilities.constants.hco import DEFAULT_RESOURCE_CONDITIONS
 from utilities.constants.namespaces import NamespacesNames
 from utilities.constants.networking import NET_UTIL_CONTAINER_IMAGE
+from utilities.constants.timeouts import TIMEOUT_5SEC
+from utilities.data_collector import get_data_collector_dir, write_to_file
 from utilities.infra import get_resources_by_name_prefix, wait_for_consistent_resource_conditions
+
+LOGGER = logging.getLogger(__name__)
 
 OPENPE_CONTAINER_NAME: Final[str] = "openpe"
 OPENPE_IMAGE: Final[str] = os.environ.get(
@@ -41,6 +47,41 @@ OPENPE_UNDERLAY_IFACE_NAME: Final[str] = "openpe-uplink"
 OPENPE_ROUTER_NETNS: Final[str] = "perouter"
 NET_TOOLS_CONTAINER_NAME: Final[str] = "net-tools"
 EXTERNAL_FRR_POD_LABEL: Final[dict] = {"role": "frr-external"}
+
+
+def _collect_external_router_startup_failure(pod: Pod) -> None:
+    """Write diagnostics before an external router pod is deleted after startup failure.
+
+    Args:
+        pod: The external router pod whose startup timed out.
+    """
+    output_sections = []
+
+    try:
+        pod_status = pod.instance.status
+        output_sections.append(f"## Pod status and conditions\n{yaml.dump(pod_status.to_dict())}\n")
+    except (ApiException, ResourceNotFoundError) as diagnostic_exception:
+        output_sections.append(f"## Pod status and conditions\nFailed to collect: {diagnostic_exception}\n")
+
+    try:
+        pod_events = [event["raw_object"] for event in pod.events(timeout=TIMEOUT_5SEC)]
+        output_sections.append(f"## Pod events\n{yaml.dump(pod_events)}\n")
+    except (ApiException, ResourceNotFoundError) as diagnostic_exception:
+        output_sections.append(f"## Pod events\nFailed to collect: {diagnostic_exception}\n")
+
+    for container_name in (OPENPE_CONTAINER_NAME, NET_TOOLS_CONTAINER_NAME):
+        try:
+            container_logs = pod.log(container=container_name, tail_lines=500)
+            output_sections.append(f"## {container_name} container logs\n{container_logs}\n")
+        except (ApiException, ResourceNotFoundError) as diagnostic_exception:
+            output_sections.append(f"## {container_name} container logs\nFailed to collect: {diagnostic_exception}\n")
+
+    write_to_file(
+        base_directory=get_data_collector_dir(),
+        file_name="external_router_startup_failure.txt",
+        content="\n".join(output_sections),
+    )
+    LOGGER.error("External router startup diagnostics written to external_router_startup_failure.txt")
 
 
 @dataclass
@@ -442,9 +483,13 @@ def deploy_external_frr_pod(
         client=client,
         label=EXTERNAL_FRR_POD_LABEL,
     ) as pod:
-        pod.wait_for_status(status=Pod.Status.RUNNING)
-        wait_for_openpe_router_interface(pod=pod, iface_name=OPENPE_UNDERLAY_IFACE_NAME)
-        ipv4 = _acquire_dhcp_ipv4(pod=pod, iface_name=OPENPE_UNDERLAY_IFACE_NAME)
+        try:
+            pod.wait_for_status(status=Pod.Status.RUNNING)
+            wait_for_openpe_router_interface(pod=pod, iface_name=OPENPE_UNDERLAY_IFACE_NAME)
+            ipv4 = _acquire_dhcp_ipv4(pod=pod, iface_name=OPENPE_UNDERLAY_IFACE_NAME)
+        except IpNotFound, TimeoutExpiredError:
+            _collect_external_router_startup_failure(pod=pod)
+            raise
 
         yield ExternalFrrPodInfo(pod=pod, ipv4=ipv4)
 
