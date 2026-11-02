@@ -19,7 +19,6 @@ from tests.virt.node.gpu.constants import (
     VGPU_DEVICE_NAME_STR,
     VGPU_PRETTY_NAME_STR,
 )
-from utilities.constants.hco import DEFAULT_HCO_CONDITIONS
 from utilities.constants.images import OS_FLAVOR_WINDOWS
 from utilities.constants.timeouts import (
     TCP_TIMEOUT_30SEC,
@@ -31,6 +30,7 @@ from utilities.constants.timeouts import (
 )
 from utilities.hco import (
     ResourceEditorValidateHCOReconcile,
+    get_hco_expected_conditions,
     is_hco_tainted,
     update_hco_annotations,
     wait_for_hco_conditions,
@@ -67,13 +67,12 @@ def append_feature_gate_to_hco(feature_gate, resource, client, namespace):
             ],
             value=feature_gate,
         )
+        expected_conditions = get_hco_expected_conditions(hco_instance=resource.instance)
+        expected_conditions["TaintedConfiguration"] = Resource.Condition.Status.TRUE
         wait_for_hco_conditions(
             admin_client=client,
             hco_namespace=namespace,
-            expected_conditions={
-                **DEFAULT_HCO_CONDITIONS,
-                "TaintedConfiguration": Resource.Condition.Status.TRUE,
-            },
+            expected_conditions=expected_conditions,
         )
         yield
     assert not is_hco_tainted(admin_client=client, hco_namespace=namespace.name)
