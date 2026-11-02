@@ -20,7 +20,8 @@ def expected_output_after_restore(snapshot_number):
     """
     files = []
     for idx in range(snapshot_number - 1):
-        files.extend((f"before-snap-{idx + 1}.txt", f"after-snap-{idx + 1}.txt"))
+        files.append(f"before-snap-{idx + 1}.txt")
+        files.append(f"after-snap-{idx + 1}.txt")
     files.append(f"before-snap-{snapshot_number}.txt ")
     files.sort()
     return " ".join(files)

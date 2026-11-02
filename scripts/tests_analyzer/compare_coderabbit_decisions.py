@@ -493,15 +493,13 @@ def compare_pr(
 
 def generate_detailed_mismatch_analysis(result: ComparisonResult) -> list[str]:
     """Generate detailed analysis for a mismatch case."""
-    lines: list[str] = []
+    lines = []
 
-    lines.extend((
-        f"### PR #{result.pr_number} - [{result.pr_title}]({result.pr_url})",
-        "",
-        f"**Author:** {result.pr_author}",
-        f"**CodeRabbit decision:** {'Run' if result.coderabbit.should_run else 'Skip'}",
-        f"**Analyzer decision:** {'Run' if result.analyzer.should_run else 'Skip'}",
-    ))
+    lines.append(f"### PR #{result.pr_number} - [{result.pr_title}]({result.pr_url})")
+    lines.append("")
+    lines.append(f"**Author:** {result.pr_author}")
+    lines.append(f"**CodeRabbit decision:** {'Run' if result.coderabbit.should_run else 'Skip'}")
+    lines.append(f"**Analyzer decision:** {'Run' if result.analyzer.should_run else 'Skip'}")
     if result.analyzer.marker_expression:
         lines.append(f"**Marker expression:** `{result.analyzer.marker_expression}`")
     lines.append("")
@@ -531,7 +529,8 @@ def generate_detailed_mismatch_analysis(result: ComparisonResult) -> list[str]:
         lines.append("")
 
     # Show analyzer reasoning
-    lines.extend((f"**Analyzer reasoning:** {result.analyzer.reason}", ""))
+    lines.append(f"**Analyzer reasoning:** {result.analyzer.reason}")
+    lines.append("")
 
     return lines
 
@@ -570,7 +569,8 @@ def generate_markdown_report(results: list[ComparisonResult], repo: str, *, deta
 
     if comparable:
         accuracy = (len(matches) / len(comparable)) * 100
-        lines.extend((f"**Agreement Rate:** {accuracy:.1f}%", ""))
+        lines.append(f"**Agreement Rate:** {accuracy:.1f}%")
+        lines.append("")
 
     # Mismatches section (most important)
     if mismatches:
@@ -604,7 +604,8 @@ def generate_markdown_report(results: list[ComparisonResult], repo: str, *, deta
             ])
             for mismatch in mismatches:
                 lines.extend(generate_detailed_mismatch_analysis(result=mismatch))
-                lines.extend(("---", ""))
+                lines.append("---")
+                lines.append("")
 
     # Matches section
     if matches:
