@@ -153,6 +153,7 @@ TEAM_MARKERS = {
     "infrastructure": ["infrastructure", "deprecated_api", "post_test_alerts"],
     "data_protection": ["data_protection", "deprecated_api", "post_test_alerts"],
 }
+# Tests in these directories always run and run last; see pytest_configure.
 NAMESPACE_COLLECTION = {
     "storage": [NamespacesNames.OPENSHIFT_STORAGE],
     "network": [],
@@ -629,24 +630,15 @@ def filter_sno_only_tests(items: list[Item], config: Config) -> list[Item]:
 def pytest_configure(config):
     patch_paramiko_for_fips()
 
-    # test_deprecation_audit_logs should always run regardless the path that passed to pytest.
-    deprecation_tests_dir_path = "tests/deprecated_api"
+    # deprecated_api and post_test_alerts tests always run, regardless of the path passed to
+    # pytest and regardless of the `-m` expression (the built-in marker filter runs after this
+    # hook). filter_deprecated_api_tests / filter_post_test_alerts_tests drop them when skipped.
     file_or_dir = config.option.file_or_dir
-    if file_or_dir and deprecation_tests_dir_path not in file_or_dir and file_or_dir != ["tests"]:
-        config.option.file_or_dir.append(deprecation_tests_dir_path)
-
-    # post_test_alerts tests should always run regardless the path that passed to pytest.
-    post_test_alerts_dir_path = "tests/post_test_alerts"
-    if file_or_dir and post_test_alerts_dir_path not in file_or_dir and file_or_dir != ["tests"]:
-        config.option.file_or_dir.append(post_test_alerts_dir_path)
-
-    # Bypass -m deselection for post_test_alerts on upgrade lanes (built-in filter runs after always_keep).
-    if (config.getoption("--upgrade") or config.getoption("--upgrade_custom")) and not config.getoption(
-        "--skip-post-test-alerts"
-    ):
-        markexpr = config.option.markexpr
-        if markexpr:
-            config.option.markexpr = f"({markexpr}) or post_test_alerts"
+    if file_or_dir and file_or_dir != ["tests"]:
+        always_run_dirs = ["tests/deprecated_api", "tests/post_test_alerts"]
+        file_or_dir.extend(path for path in always_run_dirs if path not in file_or_dir)
+        if markexpr := config.option.markexpr:
+            config.option.markexpr = f"({markexpr}) or deprecated_api or post_test_alerts"
 
     if conformance_storage_class := config.getoption("conformance_storage_class"):
         py_config["storage_class_matrix"] = StorageClassConfig(
