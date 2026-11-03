@@ -79,7 +79,7 @@ def data_source_labels_by_opt_in_status(data_source, opt_in):
     if opt_in:
         data_source_labels[DATA_SOURCE_MANAGED_BY_CDI_LABEL] = "true"
     else:
-        del data_source_labels[DATA_SOURCE_MANAGED_BY_CDI_LABEL]
+        data_source_labels[DATA_SOURCE_MANAGED_BY_CDI_LABEL] = None
     return data_source_labels
 
 
@@ -107,9 +107,9 @@ def wait_for_data_import_cron_label_in_data_source_when_opt_in(data_source, opt_
         for sample in TimeoutSampler(
             wait_timeout=TIMEOUT_5MIN,
             sleep=5,
-            func=lambda: DATA_SOURCE_MANAGED_BY_CDI_LABEL in data_source.labels,
+            func=lambda: DATA_SOURCE_MANAGED_BY_CDI_LABEL in data_source.labels.keys(),
         ):
-            if (sample and opt_in) or not (sample and opt_in):
+            if sample == opt_in:
                 return
     except TimeoutExpiredError:
         LOGGER.error(
