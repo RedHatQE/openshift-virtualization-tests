@@ -11,3 +11,6 @@ WINDOWS_FILE_WITH_PATH = f"{WINDOWS_TEST_DIRECTORY_PATH}\\{WINDOWS_FILE_BEFORE_S
 NUM_HOTPLUG_DISKS = 3
 HOTPLUGGED_DEVICES = [f"/dev/sd{chr(ord('a') + idx)}" for idx in range(NUM_HOTPLUG_DISKS)]
 MOUNT_HOTPLUGGED_DEVICE_PATHS = [f"/mnt/hotplug-{idx}" for idx in range(NUM_HOTPLUG_DISKS)]
+
+# Per-namespace migration phase while VM volumes are being copied (offline) or live migrated (online)
+STORAGE_MIGRATION_IN_PROGRESS_PHASE = "WaitForLiveMigrationToComplete"
