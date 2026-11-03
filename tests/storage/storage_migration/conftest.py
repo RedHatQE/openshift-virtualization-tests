@@ -25,8 +25,12 @@ from tests.storage.storage_migration.constants import (
 )
 from tests.storage.storage_migration.utils import (
     build_namespaces_spec_for_storage_migration,
+    build_namespaces_spec_with_target_volume_mode,
     create_fedora_vm_with_instance_type,
+    data_volume_template_with_volume_mode,
     get_vm_dv_names,
+    wait_for_offline_storage_migration_completed,
+    wait_for_storage_migration_in_progress,
     wait_for_storage_migration_phase,
 )
 from tests.storage.utils import create_windows_directory, get_storage_class_for_storage_migration
@@ -34,9 +38,9 @@ from tests.utils import create_windows2022_vm
 from utilities.constants import Images
 from utilities.constants.images import OS_FLAVOR_FEDORA, OS_FLAVOR_RHEL
 from utilities.constants.instance_types import U1_SMALL
-from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5SEC
+from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5SEC, TIMEOUT_10MIN
 from utilities.exceptions import StorageMigrationError
-from utilities.infra import create_ns
+from utilities.infra import create_ns, unique_name
 from utilities.jira import is_jira_open
 from utilities.storage import (
     construct_datavolume_source_dict,
@@ -701,5 +705,264 @@ def failure_mig_migration(admin_client, failure_mig_plan, failure_source_dv_name
         # "RefreshStorageMigrationPlan" and "BeginLiveMigration" with a critical "PlanNotReady"
         # condition, so this wait always times out. The tests using this fixture are quarantined
         # (xfail, run=False) pending product clarification on failed-migration behavior (CNV-98407).
+        wait_for_storage_migration_phase(mig_migration=mig_migration, expected_phase=mig_migration.Status.FAILED)
+        yield mig_migration
+
+
+@pytest.fixture()
+def stopped_vm_with_written_file_for_scmig(
+    unprivileged_client, namespace, fedora_data_source_scope_module, source_storage_class, cpu_for_migration
+):
+    vm_creator = create_fedora_vm_with_instance_type(
+        unprivileged_client=unprivileged_client,
+        namespace_name=namespace.name,
+        data_source=fedora_data_source_scope_module,
+        source_storage_class=source_storage_class,
+        cpu_for_migration=cpu_for_migration,
+        vm_name="offline-vm-with-file",
+    )
+    vm = next(vm_creator)
+    write_file(vm=vm, filename=FILE_BEFORE_STORAGE_MIGRATION, content=CONTENT, stop_vm=True)
+    yield vm
+    # Exhaust the creator generator so the VM's context-manager teardown runs after the test.
+    yield from vm_creator
+
+
+@pytest.fixture()
+def stopped_vm_with_written_file_source_dv_names(stopped_vm_with_written_file_for_scmig):
+    yield get_vm_dv_names(vm=stopped_vm_with_written_file_for_scmig)
+
+
+@pytest.fixture()
+def stopped_vm_with_volume_mode_for_scmig(
+    unprivileged_client,
+    namespace,
+    fedora_data_source_scope_module,
+    source_storage_class,
+    source_volume_mode,
+    cpu_for_migration,
+):
+    with VirtualMachineForTests(
+        name="offline-vm-volume-mode",
+        namespace=namespace.name,
+        client=unprivileged_client,
+        os_flavor=OS_FLAVOR_FEDORA,
+        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL, client=unprivileged_client),
+        vm_preference=VirtualMachineClusterPreference(name=OS_FLAVOR_FEDORA, client=unprivileged_client),
+        data_volume_template=data_volume_template_with_volume_mode(
+            data_source=fedora_data_source_scope_module,
+            storage_class=source_storage_class,
+            volume_mode=source_volume_mode,
+            dv_name=unique_name(name="offline-vm-volume-mode-dv"),
+        ),
+        cpu_model=cpu_for_migration,
+    ) as vm:
+        running_vm(vm=vm)
+        write_file(vm=vm, filename=FILE_BEFORE_STORAGE_MIGRATION, content=CONTENT, stop_vm=True)
+        yield vm
+
+
+@pytest.fixture()
+def volume_mode_offline_mig_plan(
+    admin_client,
+    migration_resources_namespace,
+    target_storage_class,
+    target_volume_mode,
+    stopped_vm_with_volume_mode_for_scmig,
+    unique_suffix_scope_function,
+):
+    with MultiNamespaceVirtualMachineStorageMigrationPlan(
+        name=f"volume-mode-plan-{unique_suffix_scope_function}",
+        namespace=migration_resources_namespace.name,
+        client=admin_client,
+        namespaces=build_namespaces_spec_with_target_volume_mode(
+            vms=[stopped_vm_with_volume_mode_for_scmig],
+            target_storage_class=target_storage_class,
+            target_volume_mode=target_volume_mode,
+        ),
+    ) as mig_plan:
+        yield mig_plan
+
+
+@pytest.fixture()
+def volume_mode_offline_mig_migration(admin_client, volume_mode_offline_mig_plan):
+    with MultiNamespaceVirtualMachineStorageMigration(
+        name=f"mig-{volume_mode_offline_mig_plan.name}",
+        namespace=volume_mode_offline_mig_plan.namespace,
+        client=admin_client,
+        multi_namespace_virtual_machine_storage_migration_plan_ref={"name": volume_mode_offline_mig_plan.name},
+    ) as mig_migration:
+        wait_for_offline_storage_migration_completed(mig_migration=mig_migration)
+        yield mig_migration
+
+
+@pytest.fixture()
+def offline_vm_mig_plan(
+    request,
+    admin_client,
+    migration_resources_namespace,
+    target_storage_class,
+    stopped_vm_with_written_file_for_scmig,
+    stopped_vm_with_written_file_source_dv_names,
+    unique_suffix_scope_function,
+):
+    retention_policy = request.param.get("retention_policy")
+    LOGGER.info(f"Creating offline VM migration plan with retentionPolicy={retention_policy}")
+    with MultiNamespaceVirtualMachineStorageMigrationPlan(
+        name=f"offline-vm-plan-{unique_suffix_scope_function}",
+        namespace=migration_resources_namespace.name,
+        client=admin_client,
+        namespaces=build_namespaces_spec_for_storage_migration(
+            vms=[stopped_vm_with_written_file_for_scmig],
+            target_storage_class=target_storage_class,
+        ),
+        retention_policy=retention_policy,
+    ) as mig_plan:
+        yield mig_plan
+
+
+@pytest.fixture()
+def offline_vm_mig_migration(admin_client, offline_vm_mig_plan):
+    with MultiNamespaceVirtualMachineStorageMigration(
+        name=f"mig-{offline_vm_mig_plan.name}",
+        namespace=offline_vm_mig_plan.namespace,
+        client=admin_client,
+        multi_namespace_virtual_machine_storage_migration_plan_ref={"name": offline_vm_mig_plan.name},
+    ) as mig_migration:
+        wait_for_offline_storage_migration_completed(mig_migration=mig_migration)
+        yield mig_migration
+
+
+@pytest.fixture()
+def offline_vm_mig_migration_in_progress(admin_client, offline_vm_mig_plan):
+    with MultiNamespaceVirtualMachineStorageMigration(
+        name=f"mig-{offline_vm_mig_plan.name}",
+        namespace=offline_vm_mig_plan.namespace,
+        client=admin_client,
+        multi_namespace_virtual_machine_storage_migration_plan_ref={"name": offline_vm_mig_plan.name},
+    ) as mig_migration:
+        wait_for_storage_migration_in_progress(mig_migration=mig_migration)
+        yield mig_migration
+
+
+@pytest.fixture()
+def started_vm_during_offline_scmig(stopped_vm_with_written_file_for_scmig, offline_vm_mig_migration_in_progress):
+    LOGGER.info(
+        f"Starting VM {stopped_vm_with_written_file_for_scmig.name} while storage migration "
+        f"{offline_vm_mig_migration_in_progress.name} is in progress"
+    )
+    stopped_vm_with_written_file_for_scmig.start(wait=False)
+    yield stopped_vm_with_written_file_for_scmig
+
+
+@pytest.fixture()
+def running_vm_for_scmig_test_boot_time(running_vm_for_scmig_test_first_ns):
+    yield get_vm_boot_time(vm=running_vm_for_scmig_test_first_ns)
+
+
+@pytest.fixture()
+def combined_mode_mig_migration_in_progress(
+    admin_client,
+    combined_mode_mig_plan,
+    running_vm_for_scmig_test_source_dvs,
+    stopped_vm_for_scmig_test_source_dvs,
+    running_vm_for_scmig_test_boot_time,
+):
+    with MultiNamespaceVirtualMachineStorageMigration(
+        name=f"mig-{combined_mode_mig_plan.name}",
+        namespace=combined_mode_mig_plan.namespace,
+        client=admin_client,
+        multi_namespace_virtual_machine_storage_migration_plan_ref={"name": combined_mode_mig_plan.name},
+    ) as mig_migration:
+        wait_for_storage_migration_in_progress(mig_migration=mig_migration)
+        yield mig_migration
+
+
+@pytest.fixture()
+def cancelled_combined_mode_mig_migration(combined_mode_mig_migration_in_progress):
+    # Deleting the migration cancels it: the controller holds the resource with a finalizer while it
+    # reverts the VMs to their source volumes (Canceling -> CleanupCancelledMigrations -> Canceled), then
+    # removes the finalizer. The Canceled phase lasts a single reconcile, so a completed deletion is the
+    # reliable signal that the cancellation finished.
+    LOGGER.info(f"Cancelling storage migration {combined_mode_mig_migration_in_progress.name}")
+    assert combined_mode_mig_migration_in_progress.delete(wait=True, timeout=TIMEOUT_10MIN), (
+        f"Storage migration {combined_mode_mig_migration_in_progress.name} was not cancelled"
+    )
+    yield combined_mode_mig_migration_in_progress
+
+
+@pytest.fixture(scope="class")
+def stopped_vm_with_written_files_on_hotplugged_disks(written_files_to_mounted_hotplugged_disks):
+    write_file(
+        vm=written_files_to_mounted_hotplugged_disks,
+        filename=FILE_BEFORE_STORAGE_MIGRATION,
+        content=CONTENT,
+        stop_vm=True,
+    )
+    yield written_files_to_mounted_hotplugged_disks
+
+
+@pytest.fixture(scope="class")
+def hotplug_offline_mig_plan(
+    admin_client,
+    migration_resources_namespace,
+    target_storage_class,
+    stopped_vm_with_written_files_on_hotplugged_disks,
+    unique_suffix,
+):
+    with MultiNamespaceVirtualMachineStorageMigrationPlan(
+        name=f"hotplug-offline-plan-{unique_suffix}",
+        namespace=migration_resources_namespace.name,
+        client=admin_client,
+        namespaces=build_namespaces_spec_for_storage_migration(
+            vms=[stopped_vm_with_written_files_on_hotplugged_disks],
+            target_storage_class=target_storage_class,
+        ),
+    ) as mig_plan:
+        yield mig_plan
+
+
+@pytest.fixture(scope="class")
+def hotplug_offline_mig_migration(admin_client, hotplug_offline_mig_plan):
+    with MultiNamespaceVirtualMachineStorageMigration(
+        name=f"mig-{hotplug_offline_mig_plan.name}",
+        namespace=hotplug_offline_mig_plan.namespace,
+        client=admin_client,
+        multi_namespace_virtual_machine_storage_migration_plan_ref={"name": hotplug_offline_mig_plan.name},
+    ) as mig_migration:
+        wait_for_offline_storage_migration_completed(mig_migration=mig_migration)
+        yield mig_migration
+
+
+@pytest.fixture()
+def offline_failure_mig_plan(
+    admin_client,
+    migration_resources_namespace,
+    stopped_vm_for_scmig_test_first_ns,
+    stopped_vm_for_scmig_test_source_dvs,
+    unique_suffix_scope_function,
+):
+    with MultiNamespaceVirtualMachineStorageMigrationPlan(
+        name=f"offline-failure-plan-{unique_suffix_scope_function}",
+        namespace=migration_resources_namespace.name,
+        client=admin_client,
+        namespaces=build_namespaces_spec_for_storage_migration(
+            vms=[stopped_vm_for_scmig_test_first_ns],
+            target_storage_class=NON_EXISTENT_STORAGE_CLASS,
+        ),
+    ) as mig_plan:
+        yield mig_plan
+
+
+@pytest.fixture()
+def offline_failure_mig_migration(admin_client, offline_failure_mig_plan):
+    with MultiNamespaceVirtualMachineStorageMigration(
+        name=f"mig-{offline_failure_mig_plan.name}",
+        namespace=offline_failure_mig_plan.namespace,
+        client=admin_client,
+        multi_namespace_virtual_machine_storage_migration_plan_ref={"name": offline_failure_mig_plan.name},
+    ) as mig_migration:
+        # Same limitation as failure_mig_migration: an invalid target storage class does not reach a
+        # terminal "Failed" phase (CNV-98407), so tests using this fixture are quarantined.
         wait_for_storage_migration_phase(mig_migration=mig_migration, expected_phase=mig_migration.Status.FAILED)
         yield mig_migration
