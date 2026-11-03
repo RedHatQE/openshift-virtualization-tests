@@ -5,6 +5,7 @@ import shlex
 from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
+from ipaddress import ip_network
 from typing import Final
 
 import ocp_resources.network_config_openshift_io as openshift_nc
@@ -45,6 +46,7 @@ EXTERNAL_FRR_ASN: Final[int] = 64000
 POD_SECONDARY_IFACE_NAME: Final[str] = "net1"
 OPENPE_UNDERLAY_IFACE_NAME: Final[str] = "openpe-uplink"
 OPENPE_ROUTER_NETNS: Final[str] = "perouter"
+OPENPE_NODE_INDEX: Final[int] = 0
 NET_TOOLS_CONTAINER_NAME: Final[str] = "net-tools"
 EXTERNAL_FRR_POD_LABEL: Final[dict] = {"role": "frr-external"}
 
@@ -316,6 +318,9 @@ def generate_openpe_yaml(
     """
     if not worker_ipv4_list:
         raise ValueError("worker_ipv4_list cannot be empty")
+
+    vtep_address = ip_network(address=vtep_cidr)[OPENPE_NODE_INDEX]
+    LOGGER.info(f"OpenPE static node index {OPENPE_NODE_INDEX} selects VTEP {vtep_address} from {vtep_cidr}")
 
     evpn_route_map = "evpn-to-ocp"
     # Workers share CLUSTER_FRR_ASN, so remove it before relaying EVPN routes
