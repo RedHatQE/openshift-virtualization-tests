@@ -75,6 +75,27 @@ class TestVMIMetricsLinuxVms:
             values_to_compare=linux_vm_info_to_compare,
         )
 
+    @pytest.mark.polarion("CNV-XXXXX")  # TODO: replace with real Polarion ID
+    @pytest.mark.manual
+    def test_kubevirt_vmi_info_has_panic_device_true(self):
+        """
+        Test that kubevirt_vmi_info reports has_panic_device="true" for a virtual machine
+        configured with a panic device.
+
+        Jira: https://redhat.atlassian.net/browse/CNV-95849  # <skip-jira-utils-check>
+
+        Preconditions:
+            - Running Linux virtual machine configured with a panic device
+
+        Steps:
+            1. Query kubevirt_vmi_info for the virtual machine
+
+        Expected:
+            - The has_panic_device label on kubevirt_vmi_info equals "true"
+        """
+
+    test_kubevirt_vmi_info_has_panic_device_true.__test__ = False
+
 
 @pytest.mark.tier3
 @pytest.mark.windows
@@ -96,3 +117,24 @@ class TestVMIMetricsWindowsVms:
             expected_value="1",
             values_to_compare=windows_vm_info_to_compare,
         )
+
+    @pytest.mark.polarion("CNV-XXXXX")  # TODO: replace with real Polarion ID
+    @pytest.mark.manual
+    def test_kubevirt_vmi_info_has_panic_device_false_windows(self):
+        """
+        Test that kubevirt_vmi_info reports has_panic_device="false" for a Windows virtual machine
+        that does not have a panic device configured.
+
+        Jira: https://redhat.atlassian.net/browse/CNV-95849  # <skip-jira-utils-check>
+
+        Preconditions:
+            - Running Windows virtual machine without a panic device configured
+
+        Steps:
+            1. Query kubevirt_vmi_info for the virtual machine
+
+        Expected:
+            - The has_panic_device label on kubevirt_vmi_info equals "false"
+        """
+
+    test_kubevirt_vmi_info_has_panic_device_false_windows.__test__ = False
