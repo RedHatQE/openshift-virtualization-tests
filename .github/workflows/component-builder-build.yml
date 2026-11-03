@@ -94,6 +94,7 @@ jobs:
           sudo sed -i 's/^#*group = .*/group = "root"/' /etc/libvirt/qemu.conf
           sudo systemctl restart libvirtd
           sudo usermod -aG libvirt,kvm "$USER"
+          sudo chgrp "$(id -gn)" /var/run/libvirt/libvirt-sock
           sudo chmod 0666 /var/run/libvirt/libvirt-sock
           sudo virsh net-start default || true
 
@@ -137,8 +138,9 @@ jobs:
           # Import all keys from the bundle so we can query them.
           gpg --homedir "${GPG_HOME}" --import "${GPG_HOME}/fedora.gpg"
           # Confirm the pinned fingerprint is present before exporting.
-          if ! gpg --homedir "${GPG_HOME}" --fingerprint --with-colons \
-               | grep -q "^fpr:.*:${FEDORA_SIGNING_KEY_FINGERPRINT}:$"; then
+          FEDORA_SIGNING_KEY_FINGERPRINT="${FEDORA_SIGNING_KEY_FINGERPRINT^^}"
+          fingerprints="$(gpg --homedir "${GPG_HOME}" --fingerprint --with-colons)"
+          if ! grep -q "^fpr:.*:${FEDORA_SIGNING_KEY_FINGERPRINT}:$" <<< "${fingerprints}"; then
             echo "ERROR: Pinned fingerprint ${FEDORA_SIGNING_KEY_FINGERPRINT} not found in fedora.gpg"
             rm -rf "${GPG_HOME}"
             exit 1
