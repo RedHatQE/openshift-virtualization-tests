@@ -537,6 +537,11 @@ class TestCancelInProgressStorageMigration:
         - VM disk references recorded before migration
     """
 
+    @pytest.mark.xfail(
+        reason=f"{QUARANTINED}: Canceled state is not set when a running migration is deleted, "
+        "functionality not covered yet, CNV-95502",
+        run=False,
+    )
     @pytest.mark.polarion("CNV-16804")
     @pytest.mark.usefixtures("cancelled_combined_mode_mig_migration")
     def test_cancel_in_progress_storage_migration(
