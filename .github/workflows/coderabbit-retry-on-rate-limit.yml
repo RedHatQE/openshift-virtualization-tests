@@ -45,7 +45,7 @@ jobs:
           sparse-checkout-cone-mode: false
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v10.3.2
+        uses: astral-sh/setup-uv@v10.3.3
         with:
           # Pin the interpreter: requires-python (>=3.14) has no upper bound,
           # so uv otherwise picks the newest CPython (3.15), for which the
