@@ -26,9 +26,22 @@ if [ -z $IMAGE_BUILD_CMD ]; then
 fi
 
 RUN_TMP_DIR=$(mktemp -d)
+
+# Determine once, before the cleanup trap is set, whether the serial console log
+# must be read with sudo. Under qemu:///system (CI) QEMU runs privileged and owns
+# the log, so it is read with sudo; -n keeps sudo non-interactive so it never
+# blocks on a password prompt. Under qemu:///session (typical local runs) QEMU runs
+# as the invoking user and the log is directly readable, so no sudo is used. The
+# array stays empty in that case and expands to nothing at every use site.
+sudo_if_qemu_system=()
+if [ "$(virsh uri 2>/dev/null)" = "qemu:///system" ]; then
+    sudo_if_qemu_system=(sudo -n)
+fi
+
 cleanup_build_resources() {
     if [ -n "${CONSOLE_PID:-}" ]; then
-        kill "${CONSOLE_PID}" 2>/dev/null || true
+        "${sudo_if_qemu_system[@]}" pkill -TERM -P "${CONSOLE_PID}" 2>/dev/null || true
+        "${sudo_if_qemu_system[@]}" kill "${CONSOLE_PID}" 2>/dev/null || true
     fi
     virsh destroy "${NAME}" 2>/dev/null || true
     if [ "${CPU_ARCH:-}" = "arm64" ]; then
@@ -167,13 +180,12 @@ if virsh domstate "${NAME}" &>/dev/null; then
 fi
 
 CONSOLE_LOG="${RUN_TMP_DIR}/console-${NAME}.log"
-# Pre-create the log file. virt-install/virsh use virtinst's default connection
-# URI, which resolves to qemu:///system here; libvirt's DAC security driver
-# relabels files it is handed (such as this serial log) to the QEMU user for the
-# VM's lifetime, so owner/group rw here is enough for both the invoking user and
-# the relabeled QEMU process.
-touch "${CONSOLE_LOG}"
-chmod 0660 "${CONSOLE_LOG}"
+# virt-install/virsh use virtinst's default connection URI, which resolves to
+# qemu:///system here, so QEMU writes this serial log as a privileged process
+# (root/libvirt-qemu). libvirt owns and (re)creates the file on the QEMU side
+# with a mode that excludes the unprivileged runner, so pre-creating it as the
+# runner with any owner/mode does not survive. The log is therefore streamed
+# back with sudo below rather than read directly.
 echo "Run the VM (ctrl+] to exit)"
 virt-install \
   --memory 2048 \
@@ -193,9 +205,11 @@ virt-install \
 
 # When NO_SECRETS==true:
 # Stream the guest serial console log to stdout so CI logs show what is happening inside the VM.
-# tail -n +1 -f works without a TTY and streams as lines are written by the guest.
+# sudo_if_qemu_system (computed above) is empty for qemu:///session and "sudo -n"
+# for qemu:///system. tail -n +1 -F works without a TTY, streams as the guest
+# writes, and retries if libvirt (re)creates the file after the VM starts.
 if [ "${NO_SECRETS}" = "true" ]; then
-  tail -n +1 -f "${CONSOLE_LOG}" &
+  "${sudo_if_qemu_system[@]}" tail -n +1 -F "${CONSOLE_LOG}" &
   CONSOLE_PID=$!
 else
   echo "NO_SECRETS unset: not streaming guest serial console to CI logs"
