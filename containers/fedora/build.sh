@@ -167,9 +167,11 @@ if virsh domstate "${NAME}" &>/dev/null; then
 fi
 
 CONSOLE_LOG="${RUN_TMP_DIR}/console-${NAME}.log"
-# Pre-create the log file. QEMU runs as the same user invoking this script
-# (qemu:///session, the libvirt default when no --connect is specified), so
-# owner rw access is sufficient; group rw is kept for headroom.
+# Pre-create the log file. virt-install/virsh use virtinst's default connection
+# URI, which resolves to qemu:///system here; libvirt's DAC security driver
+# relabels files it is handed (such as this serial log) to the QEMU user for the
+# VM's lifetime, so owner/group rw here is enough for both the invoking user and
+# the relabeled QEMU process.
 touch "${CONSOLE_LOG}"
 chmod 0660 "${CONSOLE_LOG}"
 echo "Run the VM (ctrl+] to exit)"

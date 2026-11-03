@@ -88,6 +88,15 @@ jobs:
         # https://bugs.launchpad.net/ubuntu/+source/linux/+bug/759725
         run: sudo chmod 0644 /boot/vmlinuz*
 
+      - name: Enable libvirt system access for the runner user
+        run: |
+          sudo sed -i 's/^#*user = .*/user = "root"/' /etc/libvirt/qemu.conf
+          sudo sed -i 's/^#*group = .*/group = "root"/' /etc/libvirt/qemu.conf
+          sudo systemctl restart libvirtd
+          sudo usermod -aG libvirt,kvm "$USER"
+          sudo chmod 0666 /var/run/libvirt/libvirt-sock
+          sudo virsh net-start default || true
+
       - name: Fetch base Fedora image
         working-directory: ./containers/fedora
         env:
