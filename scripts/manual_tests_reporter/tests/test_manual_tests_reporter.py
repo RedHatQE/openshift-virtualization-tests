@@ -59,7 +59,6 @@ class TestBuildRunAttributes:
             team="NETWORK",
             bundle="v4.22.0",
             cnv_version="4.22",
-            arch="amd64",
             ocp_version="4.22.0",
             cluster_name="bm15a",
             cluster_domain="bm15a.example.com",
@@ -68,13 +67,11 @@ class TestBuildRunAttributes:
         )
         keys = {attr["key"] for attr in result}
 
-        assert "ARCH" in keys, "Expected: explicit CLI args produce short key names"
         assert "OCP" in keys, "Expected: explicit CLI args produce short key names"
         assert "CNV_XY_VER" in keys, "Expected: explicit CLI args produce short key names"
         assert "SC" in keys, "Expected: explicit CLI args produce short key names"
         assert "BUNDLE" in keys, "Expected: explicit CLI args produce short key names"
         assert "TEAM" in keys, "Expected: explicit CLI args produce short key names"
-        assert "ARCHITECTURE" not in keys, "Expected: explicit CLI args produce short key names"
         assert "OCP_VERSION" not in keys, "Expected: explicit CLI args produce short key names"
         assert "CNV_VERSION" not in keys, "Expected: explicit CLI args produce short key names"
         assert "STORAGE_CLASS" not in keys, "Expected: explicit CLI args produce short key names"
@@ -388,25 +385,164 @@ class TestFromClusterImportGuard:
             "Expected: clean ClickException guidance when cluster modules did not load"
         )
 
-    def test_from_cluster_with_arch_env_var_rejected(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Verify --from-cluster fails cleanly when the arch env var overrides detection."""
-        batch_path = tmp_path / "batch.yaml"
+    def test_from_cluster_zero_attributes_points_at_cluster_access(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Verify the missing-attributes error hints at cluster access when --from-cluster resolved nothing.
+
+        A user who already passed --from-cluster additionally gets a hint
+        pointing at cluster access (KUBECONFIG) when the flag resolved no
+        attributes — the generic remedy line stays, the hint supplements it.
+        """
+        tests_dir, batch_path = write_minimal_batch(tmp_path=tmp_path)
+        monkeypatch.setattr(target=reporter_module, name="_CLUSTER_INFO_IMPORT_ERROR", value=None)
+        with (
+            patch(
+                target="scripts.manual_tests_reporter.manual_tests_reporter.get_cluster_attributes",
+                return_value=object(),
+            ),
+            patch(
+                target="scripts.manual_tests_reporter.manual_tests_reporter.cluster_attributes_to_run_attrs",
+                return_value=[],
+            ),
+        ):
+            result = CliRunner().invoke(
+                cli=main,
+                args=[
+                    "--tests-dir",
+                    str(tests_dir),
+                    "--batch-file",
+                    str(batch_path),
+                    "--from-cluster",
+                ],
+            )
+
+        assert result.exit_code != 0, "Expected: upload validation fails without required attributes"
+        assert "Missing required run attributes" in result.output, "Expected: the missing-attributes error is raised"
+        assert (
+            "--from-cluster resolved no cluster attributes; check cluster access and permissions (KUBECONFIG)"
+            in result.output
+        ), "Expected: cluster-access hint appended when --from-cluster resolved nothing"
+
+    def test_from_cluster_zero_attributes_hint_survives_partial_replay(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Verify the cluster-access hint survives a partial retry-file restore.
+
+        The hint is gated on what the cluster itself resolved, not on the
+        post-merge attribute list: restoring saved attributes from a retry
+        file must not suppress the hint when --from-cluster resolved
+        nothing.
+        """
+        tests_dir, batch_path = write_minimal_batch(tmp_path=tmp_path)
         batch_path.write_text(
-            data=("results:\n  - test: tests/net/test_a.py::TestA::test_one\n    status: passed\n"),
+            data=(
+                "metadata:\n"
+                "  attributes:\n"
+                "    - key: team\n"
+                "      value: NETWORK\n"
+                "results:\n"
+                "  - test: tests/network/test_manual_minimal.py::test_minimal\n"
+                "    status: passed\n"
+            ),
             encoding="utf-8",
         )
-
         monkeypatch.setattr(target=reporter_module, name="_CLUSTER_INFO_IMPORT_ERROR", value=None)
-        monkeypatch.setenv(name="OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH", value="amd64")
-        runner = CliRunner()
-        result = runner.invoke(
-            cli=main,
-            args=["--batch-file", str(batch_path), "--from-cluster", "--dry-run"],
+        with (
+            patch(
+                target="scripts.manual_tests_reporter.manual_tests_reporter.get_cluster_attributes",
+                return_value=object(),
+            ),
+            patch(
+                target="scripts.manual_tests_reporter.manual_tests_reporter.cluster_attributes_to_run_attrs",
+                return_value=[],
+            ),
+        ):
+            result = CliRunner().invoke(
+                cli=main,
+                args=[
+                    "--tests-dir",
+                    str(tests_dir),
+                    "--batch-file",
+                    str(batch_path),
+                    "--from-cluster",
+                ],
+            )
+
+        assert result.exit_code != 0, "Expected: upload validation fails without required attributes"
+        assert "--from-cluster resolved no cluster attributes" in result.output, (
+            "Expected: hint present even though a partial retry file restored one attribute"
         )
 
-        assert result.exit_code != 0, "Expected: --from-cluster fails with the arch env var set"
-        assert "cannot be combined with OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH" in result.output, (
-            "Expected: clean ClickException when the env var would override arch detection"
+    def test_from_cluster_partial_resolution_no_zero_hint(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Verify the cluster-access hint stays absent when the cluster resolved something.
+
+        A partial cluster resolution (some attributes, others still missing)
+        must not claim the cluster resolved nothing.
+        """
+        tests_dir, batch_path = write_minimal_batch(tmp_path=tmp_path)
+        monkeypatch.setattr(target=reporter_module, name="_CLUSTER_INFO_IMPORT_ERROR", value=None)
+        with (
+            patch(
+                target="scripts.manual_tests_reporter.manual_tests_reporter.get_cluster_attributes",
+                return_value=object(),
+            ),
+            patch(
+                target="scripts.manual_tests_reporter.manual_tests_reporter.cluster_attributes_to_run_attrs",
+                return_value=[{"key": "CLUSTER_NAME", "value": "bm15a"}],
+            ),
+        ):
+            result = CliRunner().invoke(
+                cli=main,
+                args=[
+                    "--tests-dir",
+                    str(tests_dir),
+                    "--batch-file",
+                    str(batch_path),
+                    "--from-cluster",
+                ],
+            )
+
+        assert result.exit_code != 0, "Expected: upload validation fails without required attributes"
+        assert "--from-cluster resolved no cluster attributes" not in result.output, (
+            "Expected: no zero-resolution hint when the cluster resolved an attribute"
+        )
+
+    def test_underivable_bundle_names_the_culprit(self, tmp_path: Path) -> None:
+        """Verify a bundle without a major.minor version is named in the error.
+
+        A malformed --bundle must not surface as a bare missing-attribute
+        error: the message names the bundle value and asks for an explicit
+        --cnv-version.
+        """
+        tests_dir, batch_path = write_minimal_batch(tmp_path=tmp_path)
+        result = CliRunner().invoke(
+            cli=main,
+            args=[
+                "--tests-dir",
+                str(tests_dir),
+                "--batch-file",
+                str(batch_path),
+                "--bundle",
+                "v4",
+                "--ocp-version",
+                "4.22.0",
+                "--cluster-name",
+                "bm15a",
+                "--cluster-domain",
+                "bm15a.example.com",
+                "--sc",
+                "ocs",
+                "--channel",
+                "candidate",
+            ],
+        )
+
+        assert result.exit_code != 0, "Expected: upload validation fails for an underivable bundle"
+        assert "The bundle 'v4' has no major.minor version; pass --cnv-version explicitly" in result.output, (
+            "Expected: the underivable bundle is named as the culprit"
         )
 
 
@@ -732,6 +868,71 @@ class TestDryRunReadinessWarning:
         assert result.exit_code == 0, "Expected: dry-run never fails on missing attributes"
         assert "upload would fail — missing:" in result.stderr, "Expected: warning listing missing attributes"
         assert "No data was uploaded" in result.output, "Expected: dry-run still exits without uploading"
+
+    def test_dry_run_warning_carries_extra_guidance(self, tmp_path: Path) -> None:
+        """Verify the dry-run warning carries the same extra guidance as the hard error.
+
+        An underivable bundle must be named in the dry-run warning too —
+        dry-run is the documented pre-flight mode, so its prediction must
+        match what the real upload error would say.
+        """
+        tests_dir, batch_path = write_minimal_batch(tmp_path=tmp_path)
+        result = CliRunner().invoke(
+            cli=main,
+            args=[
+                "--tests-dir",
+                str(tests_dir),
+                "--batch-file",
+                str(batch_path),
+                "--bundle",
+                "v4",
+                "--dry-run",
+            ],
+        )
+
+        assert result.exit_code == 0, "Expected: dry-run never fails on missing attributes"
+        assert "upload would fail — missing:" in result.stderr, "Expected: warning listing missing attributes"
+        assert "The bundle 'v4' has no major.minor version; pass --cnv-version explicitly" in result.stderr, (
+            "Expected: underivable-bundle guidance in the dry-run warning"
+        )
+
+    def test_dry_run_warning_carries_cluster_access_hint(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Verify the dry-run warning carries the cluster-access hint on zero resolution.
+
+        Dry-run is the documented pre-flight mode: its prediction must
+        match what the real upload error would say when --from-cluster
+        resolved nothing.
+        """
+        tests_dir, batch_path = write_minimal_batch(tmp_path=tmp_path)
+        monkeypatch.setattr(target=reporter_module, name="_CLUSTER_INFO_IMPORT_ERROR", value=None)
+        with (
+            patch(
+                target="scripts.manual_tests_reporter.manual_tests_reporter.get_cluster_attributes",
+                return_value=object(),
+            ),
+            patch(
+                target="scripts.manual_tests_reporter.manual_tests_reporter.cluster_attributes_to_run_attrs",
+                return_value=[],
+            ),
+        ):
+            result = CliRunner().invoke(
+                cli=main,
+                args=[
+                    "--tests-dir",
+                    str(tests_dir),
+                    "--batch-file",
+                    str(batch_path),
+                    "--from-cluster",
+                    "--dry-run",
+                ],
+            )
+
+        assert result.exit_code == 0, "Expected: dry-run never fails on missing attributes"
+        assert "upload would fail — missing:" in result.stderr, "Expected: warning listing missing attributes"
+        assert (
+            "--from-cluster resolved no cluster attributes; check cluster access and permissions (KUBECONFIG)"
+            in result.stderr
+        ), "Expected: cluster-access hint in the dry-run warning"
 
 
 class TestInteractiveFlow:
@@ -1534,7 +1735,6 @@ class TestConfigFileIntegration:
                 "bundle: v4.22.0\n"
                 "ocp-version: 4.22.0\n"
                 "cnv-version: '4.22'\n"
-                "arch: amd64\n"
                 "cluster-name: bm15a\n"
                 "cluster-domain: bm15a.example.com\n"
                 "sc: ocs-storagecluster-ceph-rbd\n"
@@ -1633,6 +1833,7 @@ class TestConfigFileIntegration:
         )
         assert "TEAM = NETWORK" in result.output, "Expected: saved team is replayed, not the config team"
         assert "CNV_XY_VER = 4.21" in result.output, "Expected: saved CNV version is replayed, not re-derived"
+        assert "ARCH = amd64" in result.output, "Expected: legacy saved ARCH survives replay (recorded values stand)"
 
     def test_retry_replay_fills_gaps_from_config(self, tmp_path: Path) -> None:
         """Verify a partially-filled saved attribute list gets config gap-fills."""
@@ -1655,7 +1856,6 @@ class TestConfigFileIntegration:
             content=(
                 "bundle: v4.22.0\n"
                 "cnv-version: '4.22'\n"
-                "arch: amd64\n"
                 "ocp-version: 4.22.0\n"
                 "cluster-name: bm15a\n"
                 "cluster-domain: bm15a.example.com\n"
@@ -1708,7 +1908,6 @@ class TestConfigFileIntegration:
             tmp_path=tmp_path,
             content=(
                 "bundle: v4.23.0\n"
-                "arch: amd64\n"
                 "ocp-version: 4.22.0\n"
                 "cluster-name: bm15a\n"
                 "cluster-domain: bm15a.example.com\n"
@@ -1994,11 +2193,9 @@ class TestConfigFileIntegration:
             ),
             encoding="utf-8",
         )
-        config_path = write_config_file(tmp_path=tmp_path, content="arch: s390x\n")
+        config_path = write_config_file(tmp_path=tmp_path, content="sc: ocs\n")
         monkeypatch.setattr(target=reporter_module, name="_CLUSTER_INFO_IMPORT_ERROR", value=None)
-        monkeypatch.delenv(name="OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH", raising=False)
         cluster_attrs = [
-            {"key": "ARCH", "value": "amd64"},
             {"key": "CLUSTER_NAME", "value": "bm15a"},
         ]
         with (
@@ -2032,7 +2229,7 @@ class TestConfigFileIntegration:
         assert "1 saved attributes from the batch file are ignored" in result.output, (
             "Expected: skipped saved attributes are reported, not silently discarded"
         )
-        assert "ARCH = s390x" in result.output, "Expected: config defaults apply to the from-cluster run"
+        assert "SC = ocs" in result.output, "Expected: config defaults apply to the from-cluster run"
 
     def test_from_cluster_with_no_cluster_attributes_replays_saved_run(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -2047,17 +2244,16 @@ class TestConfigFileIntegration:
                 "  attributes:\n"
                 "    - key: TEAM\n"
                 "      value: NETWORK\n"
-                "    - key: ARCH\n"
-                "      value: s390x\n"
+                "    - key: CHANNEL\n"
+                "      value: candidate\n"
                 "results:\n"
                 "  - test: tests/network/test_manual_minimal.py::test_minimal\n"
                 "    status: passed\n"
             ),
             encoding="utf-8",
         )
-        config_path = write_config_file(tmp_path=tmp_path, content="arch: amd64\n")
+        config_path = write_config_file(tmp_path=tmp_path, content="channel: stable\n")
         monkeypatch.setattr(target=reporter_module, name="_CLUSTER_INFO_IMPORT_ERROR", value=None)
-        monkeypatch.delenv(name="OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH", raising=False)
         with (
             patch(
                 target="scripts.manual_tests_reporter.manual_tests_reporter.get_cluster_attributes",
@@ -2086,11 +2282,11 @@ class TestConfigFileIntegration:
         assert "Restored 2 attributes from batch file." in result.output, (
             "Expected: saved attributes restored because no cluster attributes were resolved"
         )
-        assert "config defaults for arch are ignored" in result.output, (
+        assert "config defaults for channel are ignored" in result.output, (
             "Expected: replay note — the empty from-cluster result does not turn the run fresh"
         )
         assert "TEAM = NETWORK" in result.output, "Expected: saved TEAM stands over the config team"
-        assert "ARCH = s390x" in result.output, "Expected: saved ARCH stands over the config arch"
+        assert "CHANNEL = candidate" in result.output, "Expected: saved CHANNEL stands over the config channel"
 
     def test_batch_metadata_team_ignored_for_fresh_run(self, tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
         """Verify non-replay batch-file metadata team is ignored; the derived team wins."""
@@ -2165,11 +2361,10 @@ class TestConfigFileIntegration:
     def test_config_value_beats_cluster_attribute(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Verify a config-file attribute overrides a cluster-derived value."""
         tests_dir, batch_path = write_minimal_batch(tmp_path=tmp_path)
-        config_path = write_config_file(tmp_path=tmp_path, content="arch: s390x\n")
+        config_path = write_config_file(tmp_path=tmp_path, content="sc: ocs\n")
         monkeypatch.setattr(target=reporter_module, name="_CLUSTER_INFO_IMPORT_ERROR", value=None)
-        monkeypatch.delenv(name="OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH", raising=False)
         cluster_attrs = [
-            {"key": "ARCH", "value": "amd64"},
+            {"key": "SC", "value": "ocs-storagecluster-ceph-rbd"},
             {"key": "CLUSTER_NAME", "value": "bm15a"},
         ]
         with (
@@ -2197,8 +2392,8 @@ class TestConfigFileIntegration:
             )
 
         assert result.exit_code == 0, result.output
-        assert "ARCH = s390x" in result.output, "Expected: config arch beats the cluster-derived arch"
-        assert "ARCH = amd64" not in result.output, "Expected: cluster arch is overridden"
+        assert "SC = ocs" in result.output, "Expected: config sc beats the cluster-derived sc"
+        assert "SC = ocs-storagecluster-ceph-rbd" not in result.output, "Expected: cluster sc is overridden"
 
     def test_config_values_are_stripped(self, tmp_path: Path) -> None:
         """Verify whitespace-padded config values are stripped on load."""

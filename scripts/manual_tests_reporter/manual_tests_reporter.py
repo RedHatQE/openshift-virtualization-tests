@@ -49,6 +49,7 @@ from scripts.manual_tests_reporter.junit_report import (
     upload_junit_report,
     write_junit_report,
 )
+from scripts.manual_tests_reporter.versions import cnv_xy_version_from_version_string
 from utilities.exceptions import UnsupportedCPUArchitectureError
 
 # The cluster_info import transitively pulls the utilities.* chain, which
@@ -120,7 +121,6 @@ def _build_run_attributes(
     team: str | None = None,
     bundle: str | None = None,
     cnv_version: str | None = None,
-    arch: str | None = None,
     ocp_version: str | None = None,
     cluster_name: str | None = None,
     cluster_domain: str | None = None,
@@ -140,7 +140,6 @@ def _build_run_attributes(
         team: Team name (e.g. ``NETWORK``).
         bundle: Bundle version string.
         cnv_version: CNV X.Y version override.
-        arch: Architecture override.
         ocp_version: OCP version override.
         cluster_name: Cluster name override.
         cluster_domain: Cluster domain override.
@@ -162,7 +161,6 @@ def _build_run_attributes(
     overrides: dict[str, str | None] = {
         "BUNDLE": bundle,
         "CNV_XY_VER": cnv_version,
-        "ARCH": arch,
         "OCP": ocp_version,
         "CLUSTER_NAME": cluster_name,
         "CLUSTER_DOMAIN": cluster_domain,
@@ -179,10 +177,9 @@ def _build_run_attributes(
     # An explicit --bundle overrides cluster-derived CNV_XY_VER; a cluster-derived
     # bundle only fills CNV_XY_VER when it is missing.
     if cnv_version is None and "BUNDLE" in attrs_by_key and (bundle is not None or "CNV_XY_VER" not in attrs_by_key):
-        bundle_val = attrs_by_key["BUNDLE"].lstrip("v")
-        parts = bundle_val.split(".")
-        if len(parts) >= 2:
-            attrs_by_key["CNV_XY_VER"] = f"{parts[0]}.{parts[1]}"
+        derived_xy = cnv_xy_version_from_version_string(version_string=attrs_by_key["BUNDLE"])
+        if derived_xy is not None:
+            attrs_by_key["CNV_XY_VER"] = derived_xy
 
     # Mandatory attributes
     # Run-type tag (Datadog: manual:true), mirroring the always-emitted
@@ -631,7 +628,6 @@ def _save_results_for_retry(
     "-k", "--keyword", type=str, default=None, help="Keyword filter on test node IDs (e.g., 'test_connectivity')"
 )
 @click.option("--from-cluster", is_flag=True, default=False, help="Auto-fill attributes from connected cluster")
-@click.option("--arch", type=str, default=None, help="Override architecture")
 @click.option("--ocp-version", type=str, default=None, help="Override OCP version")
 @click.option("--cnv-version", type=str, default=None, help="Override CNV X.Y version")
 @click.option("--cluster-name", type=str, default=None, help="Override cluster name")
@@ -666,7 +662,6 @@ def main(
     marker: str | None,
     keyword: str | None,
     from_cluster: bool,
-    arch: str | None,
     ocp_version: str | None,
     cnv_version: str | None,
     cluster_name: str | None,
@@ -720,26 +715,21 @@ def main(
 
     # ── 1. Resolve cluster attributes ──
     cluster_attrs: list[dict[str, str]] | None = None
+    # Immutable count of what --from-cluster actually resolved: the list
+    # itself is later filled by restored batch attributes and config
+    # gap-fills, so it cannot tell "the cluster resolved nothing" at
+    # validation time — this count can.
+    cluster_attr_count = 0
     if from_cluster:
         if _CLUSTER_INFO_IMPORT_ERROR is not None:
             raise click.ClickException(
                 f"--from-cluster requires cluster access, but the cluster modules "
                 f"failed to load: {_CLUSTER_INFO_IMPORT_ERROR}\n"
-                "Provide a kubeconfig. (OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH "
-                "overrides real architecture detection and must not be combined "
-                "with --from-cluster.)"
-            )
-        # The env var overrides real architecture detection, so combining it with
-        # --from-cluster would silently upload an env-overridden ARCH alongside
-        # genuinely cluster-derived attributes.
-        if os.environ.get("OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH"):
-            raise click.ClickException(
-                "--from-cluster cannot be combined with "
-                "OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH: the env var overrides "
-                "real architecture detection."
+                "Provide a kubeconfig."
             )
         raw_cluster = get_cluster_attributes()
         cluster_attrs = cluster_attributes_to_run_attrs(cluster_attrs=raw_cluster)
+        cluster_attr_count = len(cluster_attrs)
         click.echo(message=f"Loaded {len(cluster_attrs)} attributes from connected cluster.")
 
     # ── 2. Collect results ──
@@ -835,7 +825,6 @@ def main(
 
         tier = _replay_config_default(cli_value=tier, config_key="tier")
         cnv_version = _replay_config_default(cli_value=cnv_version, config_key="cnv-version")
-        arch = _replay_config_default(cli_value=arch, config_key="arch")
         ocp_version = _replay_config_default(cli_value=ocp_version, config_key="ocp-version")
         cluster_name = _replay_config_default(cli_value=cluster_name, config_key="cluster-name")
         cluster_domain = _replay_config_default(cli_value=cluster_domain, config_key="cluster-domain")
@@ -845,7 +834,6 @@ def main(
         tier = _config_default(cli_value=tier, config_key="tier")
         bundle = _config_default(cli_value=bundle, config_key="bundle")
         cnv_version = _config_default(cli_value=cnv_version, config_key="cnv-version")
-        arch = _config_default(cli_value=arch, config_key="arch")
         ocp_version = _config_default(cli_value=ocp_version, config_key="ocp-version")
         cluster_name = _config_default(cli_value=cluster_name, config_key="cluster-name")
         cluster_domain = _config_default(cli_value=cluster_domain, config_key="cluster-domain")
@@ -887,7 +875,6 @@ def main(
         team=team,
         bundle=bundle,
         cnv_version=cnv_version,
-        arch=arch,
         ocp_version=ocp_version,
         cluster_name=cluster_name,
         cluster_domain=cluster_domain,
@@ -909,7 +896,6 @@ def main(
         "BUNDLE": "--bundle",
         "OCP": "--ocp-version",
         "CNV_XY_VER": "--cnv-version",
-        "ARCH": "--arch",
         "CLUSTER_NAME": "--cluster-name",
         "CLUSTER_DOMAIN": "--cluster-domain",
         "SC": "--sc",
@@ -917,6 +903,24 @@ def main(
     }
     present_keys = {attr["key"] for attr in attributes}
     missing = {key: flag for key, flag in required_attr_keys.items() if key not in present_keys}
+    # Extra guidance appended to both the hard error and the dry-run
+    # warning when the generic remedy line would mislead.
+    extra_guidance = ""
+    if from_cluster and not cluster_attr_count:
+        # --from-cluster resolved nothing, so the "or --from-cluster"
+        # advice below would mislead a user who already passed the flag:
+        # point at cluster access instead. Restored retry-file attributes
+        # do NOT suppress this — the count reflects only what the cluster
+        # itself resolved.
+        extra_guidance = (
+            "\n--from-cluster resolved no cluster attributes; check cluster access and permissions (KUBECONFIG)."
+        )
+    if "CNV_XY_VER" in missing and cnv_version is None and bundle:
+        # A bundle was supplied (CLI, config, cluster, batch metadata, or a
+        # restored retry file — the step-3 backfill above normalizes them
+        # all into `bundle`) but its X.Y version was underivable — name the
+        # culprit instead of a bare missing-attribute error.
+        extra_guidance += f"\nThe bundle '{bundle}' has no major.minor version; pass --cnv-version explicitly."
     if not dry_run:
         if missing:
             missing_names = ", ".join(sorted(missing.keys()))
@@ -924,6 +928,7 @@ def main(
             raise click.ClickException(
                 f"Missing required run attributes: {missing_names}\n"
                 f"Provide them via CLI flags ({missing_flags}), the config file, or --from-cluster."
+                f"{extra_guidance}"
             )
         # Preflight upload prerequisites before the tester spends time on
         # verdicts; dry-run skips these since nothing is uploaded.
@@ -936,7 +941,10 @@ def main(
     elif missing:
         # Dry-run should predict upload readiness, not skip validation.
         missing_names = ", ".join(sorted(missing.keys()))
-        click.echo(message=f"WARNING: upload would fail — missing: {missing_names}", err=True)
+        click.echo(
+            message=f"WARNING: upload would fail — missing: {missing_names}{extra_guidance}",
+            err=True,
+        )
 
     quit_early = False
     interrupted = False

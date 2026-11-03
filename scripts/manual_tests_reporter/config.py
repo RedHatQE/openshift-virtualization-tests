@@ -136,7 +136,6 @@ CONFIG_KEY_TO_ATTRIBUTE_KEY = {
     "tier": "TIER",
     "bundle": "BUNDLE",
     "cnv-version": "CNV_XY_VER",
-    "arch": "ARCH",
     "ocp-version": "OCP",
     "cluster-name": "CLUSTER_NAME",
     "cluster-domain": "CLUSTER_DOMAIN",
@@ -152,6 +151,17 @@ _NON_ATTRIBUTE_CONFIG_KEYS = frozenset({"tests-dir", "service"})
 
 # All accepted config keys.
 _ACCEPTED_CONFIG_KEYS = ATTRIBUTE_CONFIG_KEYS | _NON_ATTRIBUTE_CONFIG_KEYS
+
+# Keys that were removed from the accepted set, mapped to the hint a user
+# carrying an old config file needs to migrate. Appended to the unknown-key
+# error in sorted-key order.
+_REMOVED_CONFIG_KEY_HINTS = {
+    "arch": " The 'arch' key was removed - the arch tag is no longer uploaded; delete the key from the config file.",
+    "team": (
+        " The 'team' key was removed - TEAM is now derived from the tests "
+        "directory; delete the key from the config file."
+    ),
+}
 
 
 def load_config(config_path: Path | None) -> tuple[dict[str, str], str]:
@@ -202,12 +212,9 @@ def load_config(config_path: Path | None) -> tuple[dict[str, str], str]:
 
     unknown_keys = sorted(set(raw_config) - _ACCEPTED_CONFIG_KEYS)
     if unknown_keys:
-        removal_hint = ""
-        if "team" in unknown_keys:
-            removal_hint = (
-                " The 'team' key was removed - TEAM is now derived from the "
-                "tests directory; delete the key from the config file."
-            )
+        removal_hint = "".join(
+            _REMOVED_CONFIG_KEY_HINTS[key] for key in unknown_keys if key in _REMOVED_CONFIG_KEY_HINTS
+        )
         raise click.ClickException(
             f"Unknown config key(s) in {source}: {', '.join(unknown_keys)}. "
             f"Valid keys: {', '.join(sorted(_ACCEPTED_CONFIG_KEYS))}.{removal_hint}"

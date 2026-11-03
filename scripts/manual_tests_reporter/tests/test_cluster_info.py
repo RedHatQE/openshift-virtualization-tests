@@ -47,10 +47,9 @@ class TestClusterAttributesToRunAttrs:
     def test_none_fields_excluded(self) -> None:
         """Verify None fields are omitted from the run attributes."""
         result = cluster_attributes_to_run_attrs(
-            cluster_attrs=ClusterAttributes(arch="amd64", ocp_version="4.22.0"),
+            cluster_attrs=ClusterAttributes(ocp_version="4.22.0"),
         )
         assert result == [
-            {"key": "ARCH", "value": "amd64"},
             {"key": "OCP", "value": "4.22.0"},
         ], f"Expected only the filled fields, got {result!r}"
 
@@ -58,7 +57,6 @@ class TestClusterAttributesToRunAttrs:
         """Verify all filled fields map to their run-attribute keys."""
         result = cluster_attributes_to_run_attrs(
             cluster_attrs=ClusterAttributes(
-                arch="amd64",
                 ocp_version="4.22.0",
                 cnv_xy_version="4.22",
                 bundle="v4.22.0.rhel9-102",
@@ -70,7 +68,6 @@ class TestClusterAttributesToRunAttrs:
         )
         attrs_by_key = {attr["key"]: attr["value"] for attr in result}
         assert attrs_by_key == {
-            "ARCH": "amd64",
             "OCP": "4.22.0",
             "CNV_XY_VER": "4.22",
             "BUNDLE": "v4.22.0.rhel9-102",
@@ -82,7 +79,7 @@ class TestClusterAttributesToRunAttrs:
 
     def test_manual_attribute_not_added_here(self) -> None:
         """Verify the MANUAL attribute is not injected by this converter."""
-        result = cluster_attributes_to_run_attrs(cluster_attrs=ClusterAttributes(arch="amd64"))
+        result = cluster_attributes_to_run_attrs(cluster_attrs=ClusterAttributes(ocp_version="4.22.0"))
         assert all(attr["key"] != "MANUAL" for attr in result), (
             "Expected: MANUAL is added by _build_run_attributes, not here"
         )
@@ -103,7 +100,6 @@ class TestGetClusterAttributes:
         """Verify per-query failures warn and leave only the filled fields."""
         with (
             patch(target=f"{CLUSTER_INFO_MODULE}.cache_admin_client", return_value=MagicMock()),
-            patch(target=f"{CLUSTER_INFO_MODULE}.get_cluster_architecture", return_value={"amd64"}),
             patch(target=f"{CLUSTER_INFO_MODULE}.get_clusterversion", side_effect=ApiException(status=403)),
             patch(target=f"{CLUSTER_INFO_MODULE}.HyperConverged", side_effect=ApiException(status=403)),
             patch(target=f"{CLUSTER_INFO_MODULE}.get_infrastructure", side_effect=ApiException(status=403)),
@@ -112,7 +108,6 @@ class TestGetClusterAttributes:
         ):
             attrs = get_cluster_attributes()
 
-        assert attrs.arch == "amd64", f"Expected 'amd64', got {attrs.arch!r}"
         assert attrs.ocp_version is None, "Expected: failed queries leave fields as None"
         assert attrs.bundle is None, "Expected: failed queries leave fields as None"
         assert attrs.cluster_name is None, "Expected: failed queries leave fields as None"
@@ -127,7 +122,6 @@ class TestGetClusterAttributes:
 
         with (
             patch(target=f"{CLUSTER_INFO_MODULE}.cache_admin_client", return_value=MagicMock()),
-            patch(target=f"{CLUSTER_INFO_MODULE}.get_cluster_architecture", side_effect=ApiException(status=403)),
             patch(target=f"{CLUSTER_INFO_MODULE}.get_clusterversion", side_effect=ApiException(status=403)),
             patch(target=f"{CLUSTER_INFO_MODULE}.HyperConverged", side_effect=ApiException(status=403)),
             patch(target=f"{CLUSTER_INFO_MODULE}.get_infrastructure", return_value=infra_mock),
@@ -143,7 +137,6 @@ class TestGetClusterAttributes:
         """Verify a transport failure mid-query (HTTPError) fails soft per attribute."""
         with (
             patch(target=f"{CLUSTER_INFO_MODULE}.cache_admin_client", return_value=MagicMock()),
-            patch(target=f"{CLUSTER_INFO_MODULE}.get_cluster_architecture", side_effect=HTTPError("connection reset")),
             patch(target=f"{CLUSTER_INFO_MODULE}.get_clusterversion", side_effect=HTTPError("connection reset")),
             patch(target=f"{CLUSTER_INFO_MODULE}.HyperConverged", side_effect=HTTPError("connection reset")),
             patch(target=f"{CLUSTER_INFO_MODULE}.get_infrastructure", side_effect=HTTPError("connection reset")),
@@ -152,7 +145,6 @@ class TestGetClusterAttributes:
         ):
             attrs = get_cluster_attributes()
 
-        assert attrs.arch is None, "Expected: transport error degrades to None, not a traceback"
         assert attrs.ocp_version is None, "Expected: transport error degrades to None, not a traceback"
         assert attrs.bundle is None, "Expected: transport error degrades to None, not a traceback"
         assert attrs.cluster_name is None, "Expected: transport error degrades to None, not a traceback"

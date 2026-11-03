@@ -102,8 +102,6 @@ def required_attr_args(tests_dir: Path) -> list[str]:
         "4.22.0",
         "--cnv-version",
         "4.22",
-        "--arch",
-        "amd64",
         "--cluster-name",
         "bm15a",
         "--cluster-domain",

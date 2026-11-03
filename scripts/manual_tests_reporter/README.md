@@ -14,7 +14,7 @@ uv run python -m scripts.manual_tests_reporter.manual_tests_reporter \
     --tests-dir tests/network --from-cluster
 
 # With filters and explicit attributes
-# Note: non-dry-run uploads require BUNDLE, OCP, CNV_XY_VER, ARCH,
+# Note: non-dry-run uploads require BUNDLE, OCP, CNV_XY_VER,
 # CLUSTER_NAME, CLUSTER_DOMAIN, SC and CHANNEL — provide them via flags,
 # a config file (~/.config/manual_tests_reporter/config.yaml or --config),
 # or --from-cluster (see below).
@@ -44,8 +44,7 @@ uv run python -m scripts.manual_tests_reporter.manual_tests_reporter \
 - Cluster access (a kubeconfig) is only needed for `--from-cluster`. Scan,
   batch, and dry-run runs work on hosts without a kubeconfig — cluster modules
   load lazily and their failure is reported cleanly when `--from-cluster` is
-  used. Note: `OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH` overrides real
-  architecture detection and must not be combined with `--from-cluster`.
+  used.
 - A `KUBECONFIG` pointing at an unreachable or black-holed address (e.g. a
   stale kubeconfig for a decommissioned cluster) delays *every* invocation by
   the TCP connect timeout (minutes), even for cluster-independent runs — the
@@ -64,7 +63,6 @@ tests-dir: tests/network
 tier: TIER-2
 bundle: v4.22.0.rhel9-102
 cnv-version: "4.22"
-arch: amd64
 ocp-version: "4.19.0"
 cluster-name: bm15a
 cluster-domain: bm15a.example.com
@@ -73,7 +71,10 @@ channel: stable
 service: cnv-manual-tests
 ```
 
-Every key is optional; unknown keys are rejected. The file is picked up
+Every key is optional; unknown keys are rejected. The `arch` key was removed
+(the arch tag is no longer uploaded) — delete it from an existing config
+file; the loader rejects it with a hint. Retry files recorded before the
+removal keep their saved `ARCH` attribute on replay. The file is picked up
 automatically from `~/.config/manual_tests_reporter/config.yaml` when it
 exists, or explicitly via `--config <path>`. A `tests-dir` starting with
 `~` is expanded; like `--tests-dir`, relative paths resolve against the
@@ -112,7 +113,7 @@ wins for a single run. `--dry-run` shows the effective values.
    anything.
 3. **Report** — a JUnit XML report is built: one `<testsuite>` per run,
    one `<testcase>` per manual test, with run attributes (team, bundle,
-   arch, cluster, …) and Polarion IDs as properties. Durations are not
+   cluster, …) and Polarion IDs as properties. Durations are not
    tracked for manual verdicts, so suites and testcases report `time="0"`.
 4. **Upload** — `datadog-ci junit upload --service cnv-manual-tests`
    pushes the report so manual runs appear in Test Optimization next to
@@ -128,7 +129,7 @@ or `datadog-ci`, invalid batch file or marker expression) exit 1.
 ### Required run attributes
 
 Runs that upload (i.e. without `--dry-run`) require the run attributes
-`BUNDLE`, `OCP`, `CNV_XY_VER`, `ARCH`, `CLUSTER_NAME`, `CLUSTER_DOMAIN`,
+`BUNDLE`, `OCP`, `CNV_XY_VER`, `CLUSTER_NAME`, `CLUSTER_DOMAIN`,
 `SC` and `CHANNEL`. Provide them via the corresponding CLI flags, a config
 file (see [Config file](#config-file)), or auto-fill them from the connected cluster with `--from-cluster`
 (explicit CLI values override cluster-derived ones).

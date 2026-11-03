@@ -61,6 +61,36 @@ class TestLoadConfigExplicitPath:
         ):
             load_config(config_path=config_path)
 
+    def test_removed_arch_key_rejected_with_removal_hint(self, tmp_path: Path) -> None:
+        """Verify a legacy 'arch' key fails with an actionable removal hint.
+
+        The 'arch' run attribute is no longer uploaded; users carrying an
+        'arch' config line must be told to delete it rather than seeing a
+        generic unknown-key error.
+        """
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text(data="arch: amd64\n", encoding="utf-8")
+
+        with pytest.raises(
+            expected_exception=ClickException,
+            match=r"'arch' key was removed - the arch tag is no longer uploaded; delete the key from the config file",
+        ):
+            load_config(config_path=config_path)
+
+    def test_removed_keys_list_all_removal_hints(self, tmp_path: Path) -> None:
+        """Verify all removal hints surface for a config with several removed keys."""
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text(data="team: NETWORK\narch: amd64\n", encoding="utf-8")
+
+        with pytest.raises(
+            expected_exception=ClickException,
+            match=(
+                r"'arch' key was removed - the arch tag is no longer uploaded"
+                r".*'team' key was removed - TEAM is now derived from the tests directory"
+            ),
+        ):
+            load_config(config_path=config_path)
+
     def test_non_string_value_rejected(self, tmp_path: Path) -> None:
         """Verify a non-string config value fails cleanly."""
         config_path = tmp_path / "config.yaml"

@@ -1,7 +1,7 @@
 # Co-authored-by: Claude <noreply@anthropic.com>
 """Auto-fill run attributes from a connected cluster.
 
-Queries the OpenShift cluster for architecture, versions, storage class,
+Queries the OpenShift cluster for versions, storage class,
 and cluster identity. The attributes are attached to the manual test
 results report as JUnit properties and Datadog tags.
 """
@@ -18,10 +18,9 @@ from ocp_resources.subscription import Subscription
 from simple_logger.logger import get_logger
 from urllib3.exceptions import HTTPError
 
-from utilities.architecture import get_cluster_architecture
+from scripts.manual_tests_reporter.versions import cnv_xy_version_from_version_string
 from utilities.cluster import cache_admin_client
 from utilities.constants.namespaces import NamespacesNames
-from utilities.exceptions import UnsupportedCPUArchitectureError
 from utilities.infra import get_clusterversion, get_infrastructure
 from utilities.storage import get_default_storage_class
 
@@ -33,7 +32,6 @@ class ClusterAttributes:
     """Run attributes auto-filled from a connected cluster.
 
     Attributes:
-        arch: CPU architecture (e.g., "amd64").
         ocp_version: OpenShift version (e.g., "4.22.0-ec.4").
         cnv_xy_version: CNV major.minor version (e.g., "4.22").
         bundle: Full CNV bundle version (e.g., "v4.22.0.rhel9-102").
@@ -43,7 +41,6 @@ class ClusterAttributes:
         channel: HCO subscription channel (e.g., "candidate").
     """
 
-    arch: str | None = None
     ocp_version: str | None = None
     cnv_xy_version: str | None = None
     bundle: str | None = None
@@ -101,15 +98,6 @@ def get_cluster_attributes() -> ClusterAttributes:
         LOGGER.warning(f"Failed to connect to cluster: {exc}")
         return attrs
 
-    # Architecture
-    # UnsupportedCPUArchitectureError: empty node list; TypeError: env var has
-    # unexpected shape; ApiException: unreachable cluster.
-    try:
-        arch_set = get_cluster_architecture()
-        attrs.arch = "multiarch" if len(arch_set) > 1 else next(iter(arch_set))
-    except (AttributeError, KeyError, TypeError, UnsupportedCPUArchitectureError, ApiException, HTTPError) as exc:
-        LOGGER.warning(f"Failed to get cluster architecture: {exc}")
-
     # OCP version
     # AttributeError/KeyError: ClusterVersion status.desired absent on a
     # cluster that is still rolling out; ApiException: unreachable cluster.
@@ -134,9 +122,7 @@ def get_cluster_attributes() -> ClusterAttributes:
         if hco.exists:
             hco_version = hco.instance.status.versions[0].version
             attrs.bundle = f"v{hco_version}"
-            version_parts = hco_version.split(".")
-            if len(version_parts) >= 2:
-                attrs.cnv_xy_version = f"{version_parts[0]}.{version_parts[1]}"
+            attrs.cnv_xy_version = cnv_xy_version_from_version_string(version_string=hco_version)
     except (AttributeError, KeyError, IndexError, TypeError, ApiException, HTTPError) as exc:
         LOGGER.warning(f"Failed to get CNV/HCO version: {exc}")
 
@@ -187,7 +173,6 @@ def cluster_attributes_to_run_attrs(cluster_attrs: ClusterAttributes) -> list[di
         List of attribute dicts, excluding None values.
     """
     mapping: dict[str, str | None] = {
-        "ARCH": cluster_attrs.arch,
         "OCP": cluster_attrs.ocp_version,
         "CNV_XY_VER": cluster_attrs.cnv_xy_version,
         "BUNDLE": cluster_attrs.bundle,
