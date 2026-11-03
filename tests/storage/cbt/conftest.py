@@ -61,12 +61,6 @@ def cbt_hco_configured(
         yield
 
 
-@pytest.fixture(scope="module")
-def rwx_storage_class_name_scope_module(storage_class_matrix_rwx_matrix__module__):
-    """Storage class name from the RWX-only storage class matrix."""
-    return [*storage_class_matrix_rwx_matrix__module__][0]
-
-
 @pytest.fixture()
 def vm_with_cbt_label(
     request,

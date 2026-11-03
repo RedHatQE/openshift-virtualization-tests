@@ -36,8 +36,11 @@ LOGGER = logging.getLogger(__name__)
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.arm64]
 
 
-@pytest.mark.polarion("CNV-12414")
 def test_updated_rhel_image(golden_images_data_import_crons_scope_class, latest_rhel_release_versions_dict, subtests):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-11791 # <skip-jira-utils-check>
+    Polarion: CNV-12414
+    """
     cpu_arch = py_config["cpu_arch"]
     arch_suffix = f"-{cpu_arch}"
     rhel_dics = [
@@ -61,15 +64,21 @@ def test_updated_rhel_image(golden_images_data_import_crons_scope_class, latest_
 class TestDataImportCronValidation:
     """verify existing DICs behavior"""
 
-    @pytest.mark.polarion("CNV-7531")
     @pytest.mark.s390x
     def test_opt_in_data_import_cron_creation(self, admin_client, golden_images_namespace):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-11791 # <skip-jira-utils-check>
+        Polarion: CNV-7531
+        """
         LOGGER.info("Verify all DataImportCrons are created when opted in")
         wait_for_existing_auto_update_data_import_crons(admin_client=admin_client, namespace=golden_images_namespace)
 
-    @pytest.mark.polarion("CNV-8032")
     @pytest.mark.s390x
     def test_data_import_cron_blocked_update(self, admin_client, golden_images_data_import_crons_scope_function):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-11791 # <skip-jira-utils-check>
+        Polarion: CNV-8032
+        """
         first_data_import_cron = golden_images_data_import_crons_scope_function[0]
         LOGGER.info(f"Verify dataImportCron {first_data_import_cron.name} cannot be updated.")
         with pytest.raises(UnprocessibleEntityError, match=r".*Cannot update DataImportCron Spec.*"):
@@ -83,12 +92,15 @@ class TestDataImportCronValidation:
 class TestDataImportCronOptOutOptIn:
     """Tests for DICs opt-out/opt-in."""
 
-    @pytest.mark.polarion("CNV-7532")
     def test_data_import_cron_deletion_on_opt_out(
         self,
         golden_images_data_import_crons_scope_function,
         disabled_common_boot_image_import_hco_spec_scope_function,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-11791 # <skip-jira-utils-check>
+        Polarion: CNV-7532
+        """
         LOGGER.info("Verify DataImportCrons are deleted after opt-out.")
         wait_for_deleted_data_import_crons(data_import_crons=golden_images_data_import_crons_scope_function)
 
@@ -101,7 +113,6 @@ class TestDataImportCronOptOutOptIn:
                     "data_import_cron_source_url": DEFAULT_FEDORA_REGISTRY_URL,
                     "managed_data_source_name": CUSTOM_DATA_SOURCE_NAME,
                 },
-                marks=(pytest.mark.polarion("CNV-8096")),
             ),
         ],
         indirect=True,
@@ -113,6 +124,10 @@ class TestDataImportCronOptOutOptIn:
         disabled_common_boot_image_import_hco_spec_scope_function,
         golden_images_namespace,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-11791 # <skip-jira-utils-check>
+        Polarion: CNV-8096
+        """
         LOGGER.info("Test Custom DataImportCron is not deleted after opt-out")
         assert DataImportCron(
             client=admin_client,
@@ -120,7 +135,6 @@ class TestDataImportCronOptOutOptIn:
             namespace=golden_images_namespace.name,
         ).exists, f"Custom DataImportCron {CUSTOM_DATA_IMPORT_CRON_NAME} not found after opt out"
 
-    @pytest.mark.polarion("CNV-7669")
     def test_opt_in_recreates_all_default_dics(
         self,
         admin_client,
@@ -128,6 +142,10 @@ class TestDataImportCronOptOutOptIn:
         disabled_common_boot_image_import_hco_spec_scope_function,
         enabled_common_boot_image_import_feature_gate_scope_function,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-11791 # <skip-jira-utils-check>
+        Polarion: CNV-7669
+        """
         LOGGER.info("Verify dataImportCron is re-created after opt-out -> opt-in")
         wait_for_existing_auto_update_data_import_crons(admin_client=admin_client, namespace=golden_images_namespace)
 
@@ -135,9 +153,12 @@ class TestDataImportCronOptOutOptIn:
 class TestDataImportCronReconciliation:
     """Tests for DIC recreation after deletion"""
 
-    @pytest.mark.polarion("CNV-7569")
     @pytest.mark.s390x
     def test_data_import_cron_auto_recreation_after_deletion(self, golden_images_data_import_crons_scope_function):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-11791 # <skip-jira-utils-check>
+        Polarion: CNV-7569
+        """
         data_import_cron = golden_images_data_import_crons_scope_function[0]
         LOGGER.info(f"Verify dataImportCron {data_import_cron.name} is reconciled after deletion.")
         data_import_cron_orig_uid = data_import_cron.instance.metadata.uid
@@ -168,7 +189,6 @@ class TestCustomDataImportCron:
                     "data_import_cron_source_url": DEFAULT_FEDORA_REGISTRY_URL,
                     "managed_data_source_name": CUSTOM_DATA_SOURCE_NAME,
                 },
-                marks=(pytest.mark.polarion("CNV-7885")),
             ),
         ],
         indirect=True,
@@ -179,6 +199,10 @@ class TestCustomDataImportCron:
         reconciled_custom_data_source,
         vm_from_custom_data_import_cron,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-11791 # <skip-jira-utils-check>
+        Polarion: CNV-7885
+        """
         LOGGER.info(
             "Test VM running using DataSource from custom DataImportCron "
             f"{updated_hco_with_custom_data_import_cron_scope_function['metadata']['name']}"
@@ -194,7 +218,6 @@ class TestCustomDataImportCron:
                     "data_import_cron_source_url": "docker://non-existing-url",
                     "managed_data_source_name": "non-existing-url-data-source",
                 },
-                marks=(pytest.mark.polarion("CNV-7575")),
             ),
         ],
         indirect=True,
@@ -207,6 +230,10 @@ class TestCustomDataImportCron:
         failed_volume_creation,
         updated_data_import_cron,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-11791 # <skip-jira-utils-check>
+        Polarion: CNV-7575
+        """
         LOGGER.info("Verify custom volume is created after DataImportCron update with a valid registry URL.")
         wait_for_created_volume_from_data_import_cron(custom_data_source=custom_data_source_scope_function)
 
@@ -219,7 +246,6 @@ class TestCustomDataImportCron:
                     "data_import_cron_source_url": "non-existing-url",
                     "managed_data_source_name": "invalid-source-url-data-source",
                 },
-                marks=(pytest.mark.polarion("CNV-8078")),
             ),
         ],
         indirect=True,
@@ -229,6 +255,11 @@ class TestCustomDataImportCron:
         updated_hco_with_custom_data_import_cron_scope_function,
         ssp_resource_scope_function,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-11791 # <skip-jira-utils-check>
+        Polarion: CNV-8078
+        """
+
         def get_ssp_degraded_condition(_ssp_cr):
             return [
                 condition
@@ -259,7 +290,6 @@ class TestCustomDataImportCron:
 class TestDataSourceVmCreation:
     """verify vm creation for datasources created from SSP data import cron"""
 
-    @pytest.mark.polarion("CNV-9917")
     def test_all_datasources_support_vm_creation(
         self,
         unprivileged_client,
@@ -267,6 +297,10 @@ class TestDataSourceVmCreation:
         golden_images_namespace,
         golden_images_data_import_crons_scope_function,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-7299 # <skip-jira-utils-check>
+        Polarion: CNV-9917
+        """
         failed_data_source_list = []
         for data_source in golden_images_data_import_crons_scope_function:
             data_source_name = data_source.instance.spec.managedDataSource
@@ -295,10 +329,13 @@ class TestDataSourceVmCreation:
 class TestDataImportCronDefaultStorageClass:
     """Tests for DataImportCron with different storage classes"""
 
-    @pytest.mark.polarion("CNV-7594")
     def test_data_import_cron_uses_default_storage_class(
         self, updated_default_storage_class_scope_function, created_data_import_cron, data_import_cron_pvc
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-11791 # <skip-jira-utils-check>
+        Polarion: CNV-7594
+        """
         LOGGER.info(
             "Test DataImportCron and DV creation when using default storage class "
             f"{updated_default_storage_class_scope_function.name}"

@@ -6,11 +6,13 @@ from tests.network.libs.localnet import LOCALNET_IPAM_INTERFACE
 
 
 @pytest.mark.ipv4
-@pytest.mark.polarion("CNV-14043")
 def test_tcp_connectivity_between_vms_with_localnet_ipam_nic(
     localnet_ipam_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine],
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-64523 # <skip-jira-utils-check>
+    Polarion: CNV-14043
+
     Verify TCP connectivity between VMs with localnet IPAM.
 
     Preconditions:

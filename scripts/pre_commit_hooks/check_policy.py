@@ -53,8 +53,6 @@ from importlib import import_module
 from json import loads
 from pathlib import Path
 from re import compile as re_compile
-from sys import argv
-from sys import modules as system_modules
 from typing import TYPE_CHECKING, cast
 
 from scripts.pre_commit_hooks.ast_names import dotted_name
@@ -79,16 +77,32 @@ from scripts.pre_commit_hooks.check_stp_links import (
 )
 from scripts.pre_commit_hooks.check_test_basics import check_test_basics
 from scripts.pre_commit_hooks.check_test_std import check_test_std
-from scripts.pre_commit_hooks.policy_types import PolicyViolation
+from scripts.pre_commit_hooks.policy_types import PolicyViolation, parse_check_arguments, report_violations
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Collection, Sequence
 
 
-run_command = cast(
-    "Callable[..., tuple[bool, str, str]]",
-    import_module("pyhelper_utils.shell").run_command,
-)
+def run_command(command: list[str], check: bool, verify_stderr: bool) -> tuple[bool, str, str]:
+    """Run a shell command through ``pyhelper_utils``.
+
+    The implementation is imported lazily so this module stays importable
+    in stdlib-only pre-commit hook environments (see
+    ``scripts/pre_commit_hooks/check_banned.py``).
+
+    Args:
+        command: Command tokens to execute.
+        check: Whether a non-zero exit status raises an error.
+        verify_stderr: Whether output on stderr is treated as a failure.
+
+    Returns:
+        Success flag, stdout, and stderr of the command.
+    """
+    shell_run_command = cast(
+        "Callable[..., tuple[bool, str, str]]",
+        import_module("pyhelper_utils.shell").run_command,
+    )
+    return shell_run_command(command=command, check=check, verify_stderr=verify_stderr)
 
 
 @dataclass(frozen=True, slots=True)
@@ -198,7 +212,7 @@ def _scope_statements(statements: Sequence[stmt]) -> tuple[stmt, ...]:
 
 
 @dataclass(frozen=True, slots=True)
-class _Scopes:
+class Scopes:
     root: _Scope
     node_scopes: dict[AST, _Scope]
     node_phases: dict[AST, int]
@@ -224,8 +238,8 @@ class _ScopeBuilder:
         self._loop_exits: list[_LoopExits] = []
         self._visit(node=tree, scope=self.root)
 
-    def build(self) -> _Scopes:
-        return _Scopes(
+    def build(self) -> Scopes:
+        return Scopes(
             root=self.root,
             node_scopes=self.node_scopes,
             node_phases=self.node_phases,
@@ -742,15 +756,33 @@ class _ScopeBuilder:
             self._visit(node=statement, scope=class_scope)
 
 
-def _scopes(
+def scopes(
     tree: Module,
     module_name: tuple[str, ...] = (),
     is_package: bool = False,
-) -> _Scopes:
+) -> Scopes:
+    """Build the scope analysis for one module's AST.
+
+    Args:
+        tree: Parsed module AST to analyze.
+        module_name: Dotted module name parts of the file being analyzed.
+        is_package: Whether the file is a package ``__init__.py``.
+
+    Returns:
+        Scope bindings for every node in the tree.
+    """
     return _ScopeBuilder(tree=tree, module_name=module_name, is_package=is_package).build()
 
 
-def _module_name(file_path: Path) -> tuple[str, ...]:
+def module_name(file_path: Path) -> tuple[str, ...]:
+    """Derive the dotted module name parts for a repository path.
+
+    Args:
+        file_path: Repository-relative Python file path.
+
+    Returns:
+        Module name parts, with the ``__init__`` suffix dropped for packages.
+    """
     parts = file_path.with_suffix("").parts
     return parts[:-1] if parts and parts[-1] == "__init__" else parts
 
@@ -1164,6 +1196,7 @@ def check_top_level_test_path(file_path: Path) -> PolicyViolation | None:
     return None
 
 
+DYNAMIC_CLIENT_MESSAGE = "reuse the DynamicClient passed through the call path instead of constructing one"
 _DYNAMIC_CLIENT_NAMES = {
     ("kubernetes", "dynamic", "DynamicClient"),
     ("kubernetes", "dynamic", "client", "DynamicClient"),
@@ -1177,7 +1210,7 @@ def _root_name(node: AST) -> Name | None:
     return node if isinstance(node, Name) else None
 
 
-def _bindings_for_name(name: str, reference: AST, scopes: _Scopes) -> tuple[_Binding, ...]:
+def _bindings_for_name(name: str, reference: AST, scopes: Scopes) -> tuple[_Binding, ...]:
     reference_scope = scopes.node_scopes.get(reference, scopes.root)
     current_scope: _Scope | None = reference_scope
     root_name = _root_name(node=reference)
@@ -1208,15 +1241,29 @@ def _bindings_for_name(name: str, reference: AST, scopes: _Scopes) -> tuple[_Bin
     return ()
 
 
-def _resolved_names(
+def resolved_names(
     node: AST,
-    scopes: _Scopes,
+    scopes: Scopes,
     resolving: frozenset[AST] = frozenset(),
 ) -> frozenset[tuple[str, ...]]:
+    """Resolve the dotted names an expression can evaluate to at its call site.
+
+    Unlike a final-binding resolver, bindings are resolved as of the
+    referencing node, so aliases rebound later do not retroactively change
+    earlier calls.
+
+    Args:
+        node: Expression node to resolve.
+        scopes: Scope analysis of the enclosing module.
+        resolving: Nodes currently being resolved (cycle guard).
+
+    Returns:
+        Fully qualified dotted names the expression may evaluate to.
+    """
     if isinstance(node, NamedExpr):
         node = node.value
     if isinstance(node, IfExp):
-        return _resolved_names(node=node.body, scopes=scopes, resolving=resolving) | _resolved_names(
+        return resolved_names(node=node.body, scopes=scopes, resolving=resolving) | resolved_names(
             node=node.orelse,
             scopes=scopes,
             resolving=resolving,
@@ -1237,7 +1284,7 @@ def _resolved_names(
         elif binding.value is not None:
             resolved.update(
                 (*binding_name, *suffix)
-                for binding_name in _resolved_names(
+                for binding_name in resolved_names(
                     node=binding.value,
                     scopes=scopes,
                     resolving=resolving | {binding.node},
@@ -1246,21 +1293,30 @@ def _resolved_names(
     return frozenset(resolved)
 
 
-def _is_dynamic_client_call(node: Call, scopes: _Scopes) -> bool:
-    return bool(_resolved_names(node=node.func, scopes=scopes) & ({("DynamicClient",)} | _DYNAMIC_CLIENT_NAMES))
+def is_dynamic_client_call(node: Call, scopes: Scopes) -> bool:
+    """Check whether a call node constructs a ``DynamicClient``.
+
+    Args:
+        node: Call node to classify.
+        scopes: Scope analysis of the enclosing module.
+
+    Returns:
+        True when the call resolves to ``DynamicClient`` or a known alias.
+    """
+    return bool(resolved_names(node=node.func, scopes=scopes) & ({("DynamicClient",)} | _DYNAMIC_CLIENT_NAMES))
 
 
-def _is_pytest_skip_call(node: Call, scopes: _Scopes) -> bool:
-    return ("pytest", "skip") in _resolved_names(node=node.func, scopes=scopes)
+def _is_pytest_skip_call(node: Call, scopes: Scopes) -> bool:
+    return ("pytest", "skip") in resolved_names(node=node.func, scopes=scopes)
 
 
 def _is_forbidden_skip_decorator(
     node: expr,
-    scopes: _Scopes,
+    scopes: Scopes,
     resolving: frozenset[AST] = frozenset(),
 ) -> bool:
     marker = node.func if isinstance(node, Call) else node
-    if bool(_resolved_names(node=marker, scopes=scopes) & set(_FORBIDDEN_SKIP_MARKERS)):
+    if bool(resolved_names(node=marker, scopes=scopes) & set(_FORBIDDEN_SKIP_MARKERS)):
         return True
     # A decorator name whose module-scope value embeds a forbidden marker (for
     # example ``value = wrap(pytest.mark.skip)``) is rejected like a pytestmark
@@ -1279,7 +1335,7 @@ def _pytestmark_value_children(node: expr) -> tuple[expr, ...]:
 
 def _is_forbidden_bound_name(
     node: expr,
-    scopes: _Scopes,
+    scopes: Scopes,
     resolving: frozenset[AST],
 ) -> bool:
     if not isinstance(node, Name):
@@ -1304,7 +1360,7 @@ def _is_forbidden_bound_name(
 
 def _is_forbidden_pytestmark_value(
     node: expr,
-    scopes: _Scopes,
+    scopes: Scopes,
     resolving: frozenset[AST] = frozenset(),
 ) -> bool:
     if _is_forbidden_skip_decorator(node=node, scopes=scopes, resolving=resolving):
@@ -1318,7 +1374,7 @@ def _is_forbidden_pytestmark_value(
 def _name_intersects_added_lines(
     node: Name,
     added_lines: Collection[int],
-    scopes: _Scopes,
+    scopes: Scopes,
     resolving: frozenset[AST],
 ) -> bool:
     return any(
@@ -1346,7 +1402,7 @@ def _value_children(node: AST) -> tuple[AST, ...]:
 def _value_intersects_added_lines(
     node: AST,
     added_lines: Collection[int] | None,
-    scopes: _Scopes,
+    scopes: Scopes,
     resolving: frozenset[AST] = frozenset(),
 ) -> bool:
     if added_lines is None:
@@ -1389,7 +1445,7 @@ def _node_or_dependency_intersects_added_lines(
     node: AST,
     dependency: AST,
     added_lines: Collection[int] | None,
-    scopes: _Scopes,
+    scopes: Scopes,
 ) -> bool:
     return _node_intersects_added_lines(node=node, added_lines=added_lines) or _value_intersects_added_lines(
         node=dependency, added_lines=added_lines, scopes=scopes
@@ -1400,7 +1456,7 @@ def _pytestmark_is_added(
     node: stmt,
     value: expr,
     added_lines: Collection[int] | None,
-    scopes: _Scopes,
+    scopes: Scopes,
 ) -> bool:
     return _node_or_dependency_intersects_added_lines(
         node=node, dependency=value, added_lines=added_lines, scopes=scopes
@@ -1411,7 +1467,7 @@ def _check_module_pytestmark(
     file_path: Path,
     node: stmt,
     added_lines: Collection[int] | None,
-    scopes: _Scopes,
+    scopes: Scopes,
 ) -> PolicyViolation | None:
     value = _pytestmark_value(node=node)
     if value is None or not _is_forbidden_pytestmark_value(node=value, scopes=scopes):
@@ -1425,16 +1481,16 @@ def _check_module_pytestmark(
     )
 
 
-def _call_message(node: Call, scopes: _Scopes) -> str | None:
-    if _is_dynamic_client_call(node=node, scopes=scopes):
-        return "reuse the DynamicClient passed through the call path instead of constructing one"
+def _call_message(node: Call, scopes: Scopes) -> str | None:
+    if is_dynamic_client_call(node=node, scopes=scopes):
+        return DYNAMIC_CLIENT_MESSAGE
     if _is_pytest_skip_call(node=node, scopes=scopes):
         return "pytest.skip() is forbidden"
     return None
 
 
-def _pytest_param_marker_message(node: Call, scopes: _Scopes) -> str | None:
-    if ("pytest", "param") not in _resolved_names(node=node.func, scopes=scopes):
+def _pytest_param_marker_message(node: Call, scopes: Scopes) -> str | None:
+    if ("pytest", "param") not in resolved_names(node=node.func, scopes=scopes):
         return None
     marks = next((keyword.value for keyword in node.keywords if keyword.arg == "marks"), None)
     if marks is None or not _is_forbidden_pytestmark_value(node=marks, scopes=scopes):
@@ -1446,7 +1502,7 @@ def _check_call(
     file_path: Path,
     node: Call,
     added_lines: Collection[int] | None,
-    scopes: _Scopes,
+    scopes: Scopes,
 ) -> PolicyViolation | None:
     message = _call_message(node=node, scopes=scopes)
     dependency: AST = node.func
@@ -1472,7 +1528,7 @@ def _check_decorators(
     file_path: Path,
     node: ClassDef | FunctionDef | AsyncFunctionDef,
     added_lines: Collection[int] | None,
-    scopes: _Scopes,
+    scopes: Scopes,
 ) -> list[PolicyViolation]:
     return [
         PolicyViolation(
@@ -1492,7 +1548,7 @@ def _check_ast_node(
     file_path: Path,
     node: AST,
     added_lines: Collection[int] | None,
-    scopes: _Scopes,
+    scopes: Scopes,
 ) -> list[PolicyViolation]:
     if isinstance(node, Call):
         violation = _check_call(file_path=file_path, node=node, added_lines=added_lines, scopes=scopes)
@@ -1506,7 +1562,7 @@ def _check_module_assignments(
     file_path: Path,
     tree: Module,
     added_lines: Collection[int] | None,
-    scopes: _Scopes,
+    scopes: Scopes,
 ) -> list[PolicyViolation]:
     assignment_types = (Assign, AnnAssign, AugAssign)
     return [
@@ -1529,7 +1585,7 @@ def _check_ast_nodes(
     file_path: Path,
     tree: Module,
     added_lines: Collection[int] | None,
-    scopes: _Scopes,
+    scopes: Scopes,
 ) -> list[PolicyViolation]:
     violations: list[PolicyViolation] = []
     for node in walk(tree):
@@ -1545,31 +1601,33 @@ def _check_source_tree(
     head_source: str | None,
     resource_classes: Collection[tuple[str, ...]] | None,
 ) -> list[PolicyViolation]:
-    module_name = _module_name(file_path=file_path)
+    module_name_parts = module_name(file_path=file_path)
     is_package = file_path.name == "__init__.py"
-    scopes = _scopes(tree=tree, module_name=module_name, is_package=is_package)
+    scopes_result = scopes(tree=tree, module_name=module_name_parts, is_package=is_package)
 
     def resolve_name(node: AST) -> frozenset[tuple[str, ...]]:
-        return _resolved_names(node=node, scopes=scopes)
+        return resolved_names(node=node, scopes=scopes_result)
 
     def node_or_dependency_intersects(node: AST, dependency: AST) -> bool:
         return _node_or_dependency_intersects_added_lines(
             node=node,
             dependency=dependency,
             added_lines=added_lines,
-            scopes=scopes,
+            scopes=scopes_result,
         )
 
     head_tree = parse(source=head_source, filename=str(file_path)) if head_source is not None else None
     head_scopes = (
-        _scopes(tree=head_tree, module_name=module_name, is_package=is_package) if head_tree is not None else None
+        scopes(tree=head_tree, module_name=module_name_parts, is_package=is_package) if head_tree is not None else None
     )
 
     def head_resolve_name(node: AST) -> frozenset[tuple[str, ...]]:
-        return _resolved_names(node=node, scopes=head_scopes) if head_scopes is not None else frozenset()
+        return resolved_names(node=node, scopes=head_scopes) if head_scopes is not None else frozenset()
 
-    violations = _check_module_assignments(file_path=file_path, tree=tree, added_lines=added_lines, scopes=scopes)
-    violations += _check_ast_nodes(file_path=file_path, tree=tree, added_lines=added_lines, scopes=scopes)
+    violations = _check_module_assignments(
+        file_path=file_path, tree=tree, added_lines=added_lines, scopes=scopes_result
+    )
+    violations += _check_ast_nodes(file_path=file_path, tree=tree, added_lines=added_lines, scopes=scopes_result)
     violations += check_resource_clients(
         file_path=file_path,
         source=source,
@@ -1706,36 +1764,6 @@ def check_file(
 
 
 _CHECK_FAMILIES = ("path-policy", "linter-directives", "python-source", "test-std", "stp-links")
-
-
-def _parse_arguments(arguments: Sequence[str] | None) -> tuple[list[str], frozenset[str]]:
-    """Split command-line arguments into filenames and selected check families.
-
-    Args:
-        arguments: Raw arguments, or ``None`` to use command-line arguments.
-
-    Returns:
-        Filenames and the selected check families; without an explicit
-        ``--check`` selection every family runs.
-    """
-    raw_arguments = list(argv[1:]) if arguments is None else list(arguments)
-    file_names: list[str] = []
-    selected: set[str] = set()
-    index = 0
-    while index < len(raw_arguments):
-        argument = raw_arguments[index]
-        if argument == "--check":
-            index += 1
-            if index >= len(raw_arguments):
-                raise SystemExit("check_policy: --check requires a check family name")
-            selected.add(raw_arguments[index])
-        else:
-            file_names.append(argument)
-        index += 1
-    unknown_families = selected - set(_CHECK_FAMILIES)
-    if unknown_families:
-        raise SystemExit(f"check_policy: unknown check family: {sorted(unknown_families)}")
-    return file_names, frozenset(selected) or frozenset(_CHECK_FAMILIES)
 
 
 def _resolved_added_lines(staged_changes: StagedChanges, file_path: Path) -> Collection[int] | None:
@@ -1899,11 +1927,11 @@ def _python_source_violations(
         Source-level violations for the supplied files.
     """
     imported_modules = {
-        module_name
+        imported
         for path in staged_python_paths
-        for module_name in imported_module_names(
+        for imported in imported_module_names(
             tree=parse(source=staged_changes.sources[path], filename=str(path)),
-            module_name=_module_name(file_path=path),
+            module_name=module_name(file_path=path),
         )
     }
     relevant_modules = {
@@ -2031,7 +2059,11 @@ def main(arguments: Sequence[str] | None = None) -> int:
     Returns:
         Zero when all files comply, otherwise one.
     """
-    file_names, selected_checks = _parse_arguments(arguments=arguments)
+    file_names, selected_checks = parse_check_arguments(
+        program_name="check_policy",
+        check_families=_CHECK_FAMILIES,
+        arguments=arguments,
+    )
     staged_changes = _staged_changes()
     file_paths = [Path(file_name) for file_name in file_names]
     staged_python_sources = {
@@ -2068,17 +2100,7 @@ def main(arguments: Sequence[str] | None = None) -> int:
     if "stp-links" in selected_checks:
         violations.extend(_stp_links_violations(staged_changes=staged_changes, staged_python_paths=staged_python_paths))
 
-    violations.sort(
-        key=lambda violation: (
-            violation.file_path.as_posix(),
-            violation.line_number is None,
-            violation.line_number or 0,
-            violation.message,
-        )
-    )
-    for violation in violations:
-        print(violation, file=system_modules["sys"].stderr)
-    return int(bool(violations))
+    return report_violations(violations=violations)
 
 
 if __name__ == "__main__":
