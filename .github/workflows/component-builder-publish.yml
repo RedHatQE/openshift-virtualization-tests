@@ -83,5 +83,6 @@ jobs:
           podman manifest create "${REMOTE_REPOSITORY}":"${remote_tag}" "${arch_images[@]}"
           # Confirm every expected platform is present before publishing
           podman manifest inspect "${REMOTE_REPOSITORY}":"${remote_tag}" \
-            | jq -e --argjson n "${#architectures[@]}" '(.manifests | length) == $n'
+            | jq -e --argjson want "$(printf '%s\n' "${architectures[@]}" | jq -R . | jq -sc 'sort')" \
+                '([.manifests[].platform.architecture] | sort) == $want'
           podman manifest push "${REMOTE_REPOSITORY}":"${remote_tag}" --all --format=v2s2
