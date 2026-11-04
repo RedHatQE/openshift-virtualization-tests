@@ -1,8 +1,8 @@
 # Co-authored-by: Claude <noreply@anthropic.com>
 """Auto-fill ReportPortal launch attributes from a connected cluster.
 
-Queries the OpenShift cluster for architecture, versions, storage class,
-and cluster identity.
+Queries the OpenShift cluster for versions, storage class, and cluster
+identity.
 """
 
 from __future__ import annotations
@@ -15,9 +15,8 @@ from urllib.parse import urlparse
 from ocp_resources.hyperconverged import HyperConverged
 from ocp_resources.subscription import Subscription
 
-from utilities.architecture import get_cluster_architecture
+from scripts.reportportal.rp_manual_reporter.versions import cnv_xy_version_from_version_string
 from utilities.cluster import cache_admin_client
-from utilities.exceptions import UnsupportedCPUArchitectureError
 from utilities.infra import get_clusterversion, get_infrastructure
 from utilities.storage import get_default_storage_class
 
@@ -29,7 +28,6 @@ class ClusterAttributes:
     """Launch attributes auto-filled from a connected cluster.
 
     Attributes:
-        arch: CPU architecture (e.g., "amd64").
         ocp_version: OpenShift version (e.g., "4.22.0-ec.4").
         cnv_xy_version: CNV major.minor version (e.g., "4.22").
         bundle: Full CNV bundle version (e.g., "v4.22.0.rhel9-102").
@@ -39,7 +37,6 @@ class ClusterAttributes:
         channel: HCO subscription channel (e.g., "candidate").
     """
 
-    arch: str | None = None
     ocp_version: str | None = None
     cnv_xy_version: str | None = None
     bundle: str | None = None
@@ -85,13 +82,6 @@ def get_cluster_attributes() -> ClusterAttributes:
         LOGGER.warning(f"Failed to connect to cluster: {exc}")
         return attrs
 
-    # Architecture
-    try:
-        arch_set = get_cluster_architecture()
-        attrs.arch = "multiarch" if len(arch_set) > 1 else next(iter(arch_set))
-    except (AttributeError, KeyError, TypeError, UnsupportedCPUArchitectureError) as exc:
-        LOGGER.warning(f"Failed to get cluster architecture: {exc}")
-
     # OCP version
     try:
         cluster_version = get_clusterversion(client=client)
@@ -109,9 +99,7 @@ def get_cluster_attributes() -> ClusterAttributes:
         if hco.exists:
             hco_version = hco.instance.status.versions[0].version
             attrs.bundle = f"v{hco_version}"
-            version_parts = hco_version.split(".")
-            if len(version_parts) >= 2:
-                attrs.cnv_xy_version = f"{version_parts[0]}.{version_parts[1]}"
+            attrs.cnv_xy_version = cnv_xy_version_from_version_string(version=hco_version)
     except (AttributeError, KeyError, IndexError, TypeError) as exc:
         LOGGER.warning(f"Failed to get CNV/HCO version: {exc}")
 
@@ -155,7 +143,6 @@ def cluster_attributes_to_launch_attrs(cluster_attrs: ClusterAttributes) -> list
         List of attribute dicts for RPClient, excluding None values.
     """
     mapping: dict[str, Any] = {
-        "ARCH": cluster_attrs.arch,
         "OCP": cluster_attrs.ocp_version,
         "CNV_XY_VER": cluster_attrs.cnv_xy_version,
         "BUNDLE": cluster_attrs.bundle,

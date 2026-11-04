@@ -296,8 +296,8 @@ class TestMatchesKeywordFilter:
 class TestBuildLaunchAttributeKeys:
     """Verify that _build_launch_attributes emits the correct attribute keys.
 
-    Tests the key naming contract (ARCH not ARCHITECTURE, OCP not OCP_VERSION)
-    via _build_launch_attributes which is importable without cluster dependencies.
+    Tests the key naming contract (OCP not OCP_VERSION) via
+    _build_launch_attributes which is importable without cluster dependencies.
     """
 
     def test_explicit_attrs_emit_short_keys(self) -> None:
@@ -306,7 +306,6 @@ class TestBuildLaunchAttributeKeys:
             team="NETWORK",
             bundle="v4.22.0",
             cnv_version="4.22",
-            arch="amd64",
             ocp_version="4.22.0",
             cluster_name="bm15a",
             cluster_domain="bm15a.example.com",
@@ -315,13 +314,11 @@ class TestBuildLaunchAttributeKeys:
         )
         keys = {attr["key"] for attr in result}
 
-        assert "ARCH" in keys
         assert "OCP" in keys
         assert "CNV_XY_VER" in keys
         assert "SC" in keys
         assert "BUNDLE" in keys
         assert "TEAM" in keys
-        assert "ARCHITECTURE" not in keys
         assert "OCP_VERSION" not in keys
         assert "CNV_VERSION" not in keys
         assert "STORAGE_CLASS" not in keys
@@ -405,4 +402,37 @@ class TestBuildLaunchAttributes:
         """Verify CNV_XY_VER is not set when BUNDLE is missing."""
         result = _build_launch_attributes()
         attrs_by_key = {attr["key"]: attr["value"] for attr in result}
-        assert "CNV_XY_VER" not in attrs_by_key
+        assert "CNV_XY_VER" not in attrs_by_key, "CNV_XY_VER must stay unset when no BUNDLE is available"
+
+    def test_explicit_unparseable_bundle_drops_cluster_cnv_version(self) -> None:
+        """Verify an explicit bundle without a major.minor pair drops CNV_XY_VER.
+
+        Keeping the cluster-derived CNV_XY_VER would push a launch whose BUNDLE
+        and CNV_XY_VER contradict each other; dropping the key makes the
+        required-attribute validation fail fast instead.
+        """
+        result = _build_launch_attributes(
+            bundle="4.",
+            cluster_attrs=[
+                {"key": "BUNDLE", "value": "v4.22.0"},
+                {"key": "CNV_XY_VER", "value": "4.22"},
+            ],
+        )
+        attrs_by_key = {attr["key"]: attr["value"] for attr in result}
+        assert "CNV_XY_VER" not in attrs_by_key, "Contradictory cluster-derived CNV_XY_VER must be dropped"
+        assert attrs_by_key["BUNDLE"] == "4.", "The explicit bundle value must still be reported"
+
+    def test_explicit_cnv_version_survives_unparseable_bundle(self) -> None:
+        """Verify an explicit --cnv-version is never dropped because of the bundle.
+
+        The bundle is authoritative when it carries a major.minor pair, but a
+        bundle that carries none must not erase the version the user stated
+        explicitly.
+        """
+        result = _build_launch_attributes(
+            bundle="latest",
+            cnv_version="4.22",
+            cluster_attrs=[{"key": "CNV_XY_VER", "value": "4.21"}],
+        )
+        attrs_by_key = {attr["key"]: attr["value"] for attr in result}
+        assert attrs_by_key["CNV_XY_VER"] == "4.22", "Explicit --cnv-version must win over both bundle and cluster"

@@ -51,7 +51,6 @@ and populates these attributes automatically:
 
 | Attribute        | Description                                    | Example                          |
 |------------------|------------------------------------------------|----------------------------------|
-| `ARCH`           | CPU architecture of the cluster nodes          | `amd64`                          |
 | `OCP`            | OpenShift platform version                     | `4.22.0-ec.4`                    |
 | `CNV_XY_VER`     | CNV major.minor version                        | `4.22`                           |
 | `BUNDLE`         | Full CNV/HCO bundle version                    | `v4.22.0.rhel9-102`              |
@@ -93,7 +92,6 @@ uv run python -m scripts.reportportal.rp_manual_reporter.rp_manual_reporter \
     --bundle v4.22.0-test \
     --ocp-version 4.19.0 \
     --cnv-version 4.22 \
-    --arch amd64 \
     --cluster-name my-cluster \
     --cluster-domain apps.my-cluster.example.com \
     --sc ocs-storagecluster-ceph-rbd \
@@ -101,7 +99,7 @@ uv run python -m scripts.reportportal.rp_manual_reporter.rp_manual_reporter \
     --tests-dir tests/network/
 ```
 
-> **Note:** All 8 attributes above are mandatory. The tool will refuse to push
+> **Note:** All 7 attributes above are mandatory. The tool will refuse to push
 > if any are missing (unless running with `--dry-run`).
 
 ---
@@ -129,7 +127,6 @@ uv run python -m scripts.reportportal.rp_manual_reporter.rp_manual_reporter \
     --bundle v4.22.0-test \
     --ocp-version 4.19.0 \
     --cnv-version 4.22 \
-    --arch amd64 \
     --cluster-name my-cluster \
     --cluster-domain apps.my-cluster.example.com \
     --sc ocs-storagecluster-ceph-rbd \
@@ -307,7 +304,6 @@ results:
 | `--from-cluster`    | No       | `false`         | Auto-fill launch attributes from the connected cluster |
 | `--bundle`          | No*      | —               | CNV/HCO bundle version (e.g., `v4.22.0.rhel9-102`)   |
 | `--cnv-version`     | No*      | —               | CNV major.minor version (e.g., `4.22`)                |
-| `--arch`            | No*      | —               | Cluster CPU architecture (e.g., `amd64`)              |
 | `--ocp-version`     | No*      | —               | OpenShift version (e.g., `4.22.0-ec.4`)               |
 | `--cluster-name`    | No*      | —               | Cluster infrastructure name (e.g., `bm15a-tlv2`)     |
 | `--cluster-domain`  | No*      | —               | Cluster base domain (e.g., `abi.cnv-qe.rhood.us`)    |

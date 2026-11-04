@@ -29,6 +29,7 @@ from scripts.reportportal.rp_manual_reporter.collector import (
     PlaceholderTestDetail,
     collect_placeholder_details,
 )
+from scripts.reportportal.rp_manual_reporter.versions import cnv_xy_version_from_version_string
 from scripts.reportportal.rp_utils.naming import node_id_to_rp_name
 from scripts.reportportal.rp_utils.rp_client import RPClient
 
@@ -67,7 +68,6 @@ def _build_launch_attributes(
     team: str | None = None,
     bundle: str | None = None,
     cnv_version: str | None = None,
-    arch: str | None = None,
     ocp_version: str | None = None,
     cluster_name: str | None = None,
     cluster_domain: str | None = None,
@@ -85,7 +85,6 @@ def _build_launch_attributes(
         team: Team name (e.g. ``NETWORK``).
         bundle: Bundle version string.
         cnv_version: CNV X.Y version override.
-        arch: Architecture override.
         ocp_version: OCP version override.
         cluster_name: Cluster name override.
         cluster_domain: Cluster domain override.
@@ -107,7 +106,6 @@ def _build_launch_attributes(
     overrides: dict[str, str | None] = {
         "BUNDLE": bundle,
         "CNV_XY_VER": cnv_version,
-        "ARCH": arch,
         "OCP": ocp_version,
         "CLUSTER_NAME": cluster_name,
         "CLUSTER_DOMAIN": cluster_domain,
@@ -123,10 +121,17 @@ def _build_launch_attributes(
     # When bundle is explicitly provided (CLI arg), always override cluster-derived CNV_XY_VER
     # When bundle comes from cluster only, derive if CNV_XY_VER is missing
     if "BUNDLE" in attrs_by_key and (bundle is not None or "CNV_XY_VER" not in attrs_by_key):
-        bundle_val = attrs_by_key["BUNDLE"].lstrip("v")
-        parts = bundle_val.split(".")
-        if len(parts) >= 2:
-            attrs_by_key["CNV_XY_VER"] = f"{parts[0]}.{parts[1]}"
+        derived_xy_version = cnv_xy_version_from_version_string(
+            version=attrs_by_key["BUNDLE"],
+        )
+        if derived_xy_version:
+            attrs_by_key["CNV_XY_VER"] = derived_xy_version
+        elif bundle is not None and cnv_version is None:
+            # An explicit bundle that carries no major.minor pair must not leave a
+            # *cluster-derived* CNV_XY_VER behind that contradicts it; dropping the key
+            # lets the required-attribute check fail fast instead of mislabelling the launch.
+            # An explicit --cnv-version is never dropped: it stays the user's stated intent.
+            attrs_by_key.pop("CNV_XY_VER", None)
 
     # Mandatory attributes
     if team:
@@ -507,7 +512,6 @@ def _push_results_to_rp(
     "-k", "--keyword", type=str, default=None, help="Keyword filter on test node IDs (e.g., 'test_connectivity')"
 )
 @click.option("--from-cluster", is_flag=True, default=False, help="Auto-fill attributes from connected cluster")
-@click.option("--arch", type=str, default=None, help="Override architecture")
 @click.option("--ocp-version", type=str, default=None, help="Override OCP version")
 @click.option("--cnv-version", type=str, default=None, help="Override CNV X.Y version")
 @click.option("--cluster-name", type=str, default=None, help="Override cluster name")
@@ -540,7 +544,6 @@ def main(
     marker: str | None,
     keyword: str | None,
     from_cluster: bool,
-    arch: str | None,
     ocp_version: str | None,
     cnv_version: str | None,
     cluster_name: str | None,
@@ -582,7 +585,6 @@ def main(
         team=team,
         bundle=bundle,
         cnv_version=cnv_version,
-        arch=arch,
         ocp_version=ocp_version,
         cluster_name=cluster_name,
         cluster_domain=cluster_domain,
@@ -628,7 +630,6 @@ def main(
             team=team,
             bundle=bundle,
             cnv_version=cnv_version,
-            arch=arch,
             ocp_version=ocp_version,
             cluster_name=cluster_name,
             cluster_domain=cluster_domain,
@@ -663,7 +664,6 @@ def main(
         "BUNDLE": "--bundle",
         "OCP": "--ocp-version",
         "CNV_XY_VER": "--cnv-version",
-        "ARCH": "--arch",
         "CLUSTER_NAME": "--cluster-name",
         "CLUSTER_DOMAIN": "--cluster-domain",
         "SC": "--sc",
