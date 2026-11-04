@@ -1,6 +1,5 @@
 import logging
 from contextlib import contextmanager
-from typing import TYPE_CHECKING
 
 import deepdiff
 from benedict import benedict
@@ -40,8 +39,6 @@ from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_condi
 from utilities.infra import ExecCommandOnPod
 from utilities.operator import wait_for_cluster_operator_stabilize
 
-if TYPE_CHECKING:
-    from kubernetes.dynamic.resource import ResourceField
 LOGGER = logging.getLogger(__name__)
 
 
@@ -340,21 +337,41 @@ def get_node_available_tls_groups(utility_pods: list, node: Node) -> list[str]:
     return [group.strip() for group in output.strip().split(":") if group.strip()]
 
 
-def compose_openssl_pqc_command(service_spec: ResourceField, groups: str, connect_timeout: int = 10) -> str:
-    """Builds an openssl s_client command with PQC group negotiation.
+def compose_openssl_probe_command(
+    service: Service, groups: str, connect_timeout: int = 10, use_sni: bool = False
+) -> str:
+    """Builds an openssl s_client command probing the given TLS group(s).
 
     Args:
-        service_spec: Service spec object with clusterIP and ports.
+        service: Service resource to probe (provides clusterIP, port and SNI name).
         groups: Colon-separated TLS group names to offer (e.g. "SecP256r1MLKEM768:secp256r1").
         connect_timeout: Timeout in seconds for the TLS connection attempt.
+        use_sni: When True, send ``-servername <service>.<namespace>.svc`` so that
+            name-based virtual hosts (e.g. the nginx console-plugin and apiserver-proxy)
+            present their certificate instead of rejecting with ``unrecognized name``.
 
     Returns:
         str: The openssl command string.
     """
+    service_spec = service.instance.spec
+    sni = f" -servername {service.name}.{service.namespace}.svc" if use_sni else ""
     return (
         f"echo | timeout {connect_timeout}"
-        f" openssl s_client -connect {service_spec.clusterIP}:{service_spec.ports[0].port} -groups {groups} 2>&1"
+        f" openssl s_client -connect {service_spec.clusterIP}:{service_spec.ports[0].port}{sni} -groups {groups} 2>&1"
     )
+
+
+def classify_openssl_probe_output(output: str) -> bool | None:
+    """Classifies an openssl s_client probe output into a negotiation result.
+
+    Returns:
+        bool | None: True if the handshake succeeded (group negotiated / profile accepted),
+            False if the service rejected the group (reachable but refused), and None when
+            neither indicator is present (service/group unreachable or ambiguous).
+    """
+    if OPENSSL_CONNECTION_SUCCESS_INDICATOR not in output and PQC_HANDSHAKE_FAILURE_INDICATOR not in output:
+        return None
+    return PQC_HANDSHAKE_FAILURE_INDICATOR not in output
 
 
 def get_services_pqc_status(
@@ -382,15 +399,15 @@ def get_services_pqc_status(
         accepted = False
         unreachable = True
         for group in pqc_groups:
-            command = compose_openssl_pqc_command(
-                service_spec=service.instance.spec,
-                groups=group,
+            output = worker_exec.exec(
+                command=compose_openssl_probe_command(service=service, groups=group),
+                ignore_rc=True,
             )
-            output = worker_exec.exec(command=command, ignore_rc=True)
-            if OPENSSL_CONNECTION_SUCCESS_INDICATOR not in output and PQC_HANDSHAKE_FAILURE_INDICATOR not in output:
+            negotiated = classify_openssl_probe_output(output=output)
+            if negotiated is None:
                 continue
             unreachable = False
-            if PQC_HANDSHAKE_FAILURE_INDICATOR not in output:
+            if negotiated:
                 LOGGER.info(f"Service {service_name} accepts PQC ({group})")
                 accepted = True
                 break
@@ -405,36 +422,12 @@ def get_services_pqc_status(
     return results
 
 
-def compose_openssl_curve_command(service: Service, group: str, connect_timeout: int = 10) -> str:
-    """Builds an openssl s_client command probing a single TLS group, with SNI.
-
-    Sends ``-servername <service>.<namespace>.svc`` so that name-based virtual hosts
-    (e.g. the nginx console-plugin and apiserver-proxy) present their certificate
-    instead of rejecting the handshake with ``unrecognized name``.
-
-    Args:
-        service: Service resource to probe (provides clusterIP, port and SNI name).
-        group: Single TLS group name to offer (e.g. "SecP256r1MLKEM768").
-        connect_timeout: Timeout in seconds for the TLS connection attempt.
-
-    Returns:
-        str: The openssl command string.
-    """
-    service_spec = service.instance.spec
-    servername = f"{service.name}.{service.namespace}.svc"
-    return (
-        f"echo | timeout {connect_timeout}"
-        f" openssl s_client -connect {service_spec.clusterIP}:{service_spec.ports[0].port}"
-        f" -servername {servername} -groups {group} 2>&1"
-    )
-
-
 def get_service_curve_status(
     worker_exec: ExecCommandOnPod,
     service: Service,
     groups: list[str],
 ) -> dict[str, bool | None]:
-    """Probes a single service for each TLS group independently.
+    """Probes a single service for each TLS group independently (with SNI).
 
     Args:
         worker_exec: ExecCommandOnPod instance for running commands on a worker node.
@@ -449,16 +442,9 @@ def get_service_curve_status(
     status: dict[str, bool | None] = {}
     for group in groups:
         output = worker_exec.exec(
-            command=compose_openssl_curve_command(service=service, group=group),
+            command=compose_openssl_probe_command(service=service, groups=group, use_sni=True),
             ignore_rc=True,
         )
-        if OPENSSL_CONNECTION_SUCCESS_INDICATOR not in output and PQC_HANDSHAKE_FAILURE_INDICATOR not in output:
-            LOGGER.warning(f"Service {service.name} unreachable for TLS group {group}")
-            status[group] = None
-        elif PQC_HANDSHAKE_FAILURE_INDICATOR in output:
-            LOGGER.info(f"Service {service.name} rejects TLS group {group}")
-            status[group] = False
-        else:
-            LOGGER.info(f"Service {service.name} negotiates TLS group {group}")
-            status[group] = True
+        status[group] = classify_openssl_probe_output(output=output)
+        LOGGER.info(f"Service {service.name} TLS group {group}: negotiated={status[group]}")
     return status

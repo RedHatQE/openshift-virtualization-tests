@@ -9,11 +9,12 @@ import logging
 import pytest
 
 from tests.install_upgrade_operators.crypto_policy.constants import (
-    CONSOLE_PLUGIN_SERVICE_NAME,
     CURVE_PROPAGATION_PENDING,
+    FIPS_GO_UNSUPPORTED_GROUPS,
     NON_FIPS_GROUPS,
     TLS_PROPAGATION_CUSTOM_GROUPS,
 )
+from utilities.constants.components import KUBEVIRT_CONSOLE_PLUGIN_SERVICE
 from utilities.jira import is_jira_open
 
 LOGGER = logging.getLogger(__name__)
@@ -54,13 +55,18 @@ def test_custom_profile_curves_propagate_to_cnv_services(
             )
 
         expected_negotiable = set(TLS_PROPAGATION_CUSTOM_GROUPS)
-        # Curve25519-based groups are not FIPS-approved: Go services drop them under FIPS,
-        # and the console-plugin handler strips them unconditionally (GetFIPSCompliantGroups).
         if fips_enabled_cluster:
             assert service_name in services_tls_runtime, f"TLS runtime not detected for service {service_name}"
+            # Under FIPS, Go services reject every ML-KEM hybrid and X25519 (matching the
+            # PQC audit test), while OpenSSL services still negotiate the NIST-paired hybrids
+            # but not the Curve25519-based groups.
             if services_tls_runtime[service_name] == "go":
+                expected_negotiable.difference_update(FIPS_GO_UNSUPPORTED_GROUPS)
+            else:
                 expected_negotiable.difference_update(NON_FIPS_GROUPS)
-        if service_name == CONSOLE_PLUGIN_SERVICE_NAME:
+        # The console-plugin handler strips Curve25519-based groups unconditionally
+        # (GetFIPSCompliantGroups), so it never negotiates them on any cluster.
+        if service_name == KUBEVIRT_CONSOLE_PLUGIN_SERVICE:
             expected_negotiable.difference_update(NON_FIPS_GROUPS)
 
         for group, negotiated in group_status.items():

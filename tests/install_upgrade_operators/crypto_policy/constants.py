@@ -9,6 +9,7 @@ from ocp_resources.network_addons_config import NetworkAddonsConfig
 from ocp_resources.ssp import SSP
 
 from tests.install_upgrade_operators.constants import KEY_PATH_SEPARATOR
+from utilities.constants.components import KUBEVIRT_CONSOLE_PLUGIN_SERVICE
 from utilities.constants.hco import (
     TLS_CUSTOM_POLICY,
     TLS_OLD_POLICY,
@@ -136,7 +137,6 @@ PQC_HANDSHAKE_FAILURE_INDICATOR = "alert handshake failure"
 OPENSSL_CONNECTION_SUCCESS_INDICATOR = "Certificate chain"
 
 CONSOLE_PLUGIN_SERVICE_PORT = 9443
-CONSOLE_PLUGIN_SERVICE_NAME = "kubevirt-console-plugin-service"
 
 # Services whose backing component does not yet propagate configured TLS curves
 # (their epic stories under CNV-82576 are still open). Mapped to the tracking Jira so
@@ -160,7 +160,7 @@ CURVE_PROPAGATION_PENDING = {
     # console-plugin writes the configured curves to its nginx configmap, but HCO does
     # not roll the deployment, so the running pods keep serving stale curves until the
     # bug is fixed. Gated so it auto-asserts once CNV-99597 is resolved.
-    CONSOLE_PLUGIN_SERVICE_NAME: "CNV-99597",
+    KUBEVIRT_CONSOLE_PLUGIN_SERVICE: "CNV-99597",
 }
 
 # Services whose TLS endpoint cannot be verified with an openssl s_client handshake:
@@ -214,3 +214,13 @@ TLS_PROPAGATION_CUSTOM_PROFILE = {
 # unconditionally (GetFIPSCompliantGroups), so they are not expected to negotiate
 # on Go services under FIPS, nor on the console-plugin on any cluster.
 NON_FIPS_GROUPS = [TLS_GROUP_X25519, PQC_GROUP_X25519_MLKEM768]
+
+# Groups a Go service cannot negotiate under FIPS: every post-quantum (ML-KEM) hybrid is
+# not FIPS-certified and X25519 is not FIPS-approved, so Go rejects them all (matching the
+# PQC audit test). OpenSSL services still negotiate the NIST-paired hybrids under FIPS.
+FIPS_GO_UNSUPPORTED_GROUPS = [
+    TLS_GROUP_X25519,
+    PQC_GROUP_X25519_MLKEM768,
+    PQC_GROUP_SECP256R1_MLKEM768,
+    PQC_GROUP_SECP384R1_MLKEM1024,
+]
