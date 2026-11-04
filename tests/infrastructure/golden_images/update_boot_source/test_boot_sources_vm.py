@@ -61,11 +61,14 @@ def auto_update_boot_source_instance_type_vm(
 
 
 @pytest.mark.arm64
-@pytest.mark.polarion("CNV-11774")
 def test_instance_type_vm_from_auto_update_boot_source(
     auto_update_boot_source_instance_type_vm,
     boot_source_preference_from_data_source_dict,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-11791 # <skip-jira-utils-check>
+    Polarion: CNV-11774
+    """
     LOGGER.info(f"Verify {auto_update_boot_source_instance_type_vm.name} OS version and virtctl info")
     assert_os_version_mismatch_in_vm(
         vm=auto_update_boot_source_instance_type_vm,

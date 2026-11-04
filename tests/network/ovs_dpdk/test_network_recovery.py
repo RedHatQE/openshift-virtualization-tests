@@ -114,7 +114,7 @@ def test_connectivity_after_guest_reboot():
         - Under-test VM guest is rebooted, running and ready
 
     Steps:
-        1. Establish TCP connection from the under-test VM to the reference VM
+        1. Poll TCP connectivity from the under-test VM to the reference VM
 
     Expected:
         - The new TCP connection to the reference VM is successful
@@ -122,3 +122,33 @@ def test_connectivity_after_guest_reboot():
 
 
 test_connectivity_after_guest_reboot.__test__ = False
+
+
+@pytest.mark.manual
+def test_connectivity_after_ovs_restart():
+    """
+    Test that TCP connectivity from the under-test VM to the reference VM is successful
+    after OVS is restarted on the worker node hosting the under-test VM, for the
+    parametrized IP family.
+
+    STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-network/ovs-dpdk-tp-stp.md
+
+    Parametrize:
+        - ip_family:
+            - ipv4 [Markers: ipv4]
+            - ipv6 [Markers: ipv6]
+
+    Preconditions:
+        - Running under-test VM with a ResourceClaim-backed OVS-DPDK network device
+        - Running reference VM with a ResourceClaimTemplate-backed OVS-DPDK network device
+        - OVS on the worker node hosting the under-test VM is restarted and operational on that node
+
+    Steps:
+        1. Poll TCP connectivity from the under-test VM to the reference VM
+
+    Expected:
+        - The new TCP connection to the reference VM is successful
+    """
+
+
+test_connectivity_after_ovs_restart.__test__ = False
