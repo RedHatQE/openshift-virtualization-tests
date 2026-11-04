@@ -2,6 +2,10 @@
 
 CBT_TEST_DATA: str = "cbt-backup-test-data-content"
 CBT_BOOT_DISK_TEST_DATA_FILE: str = "/tmp/cbt-test-data.txt"
+CBT_WINDOWS_BOOT_DISK_TEST_DATA_FILE: str = "C:/cbt-test-data.txt"
+CBT_WINDOWS_INCREMENTAL_TEST_DATA_FILE: str = "C:/cbt-incremental-{index}-test-data.txt"
+CBT_WINDOWS_VERSION: str = "2022"
+CBT_WINDOWS_PERSISTENT_DEVICE_PARAMS: dict[str, bool] = {"persistent": True}
 CBT_ENABLED_LABEL: dict[str, str] = {"changedBlockTracking": "true"}
 CBT_BACKUP_TYPE_FULL: str = "Full"
 CBT_BACKUP_TYPE_INCREMENTAL: str = "Incremental"
