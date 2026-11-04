@@ -70,6 +70,11 @@ from utilities.operator import (
 
 LOGGER = logging.getLogger(__name__)
 
+# Alerts known to fire during upgrade in valid configurations and should not cause test failure.
+# VirtPlatformAutopilotDependencyMissing fires when optional operator dependencies (e.g. COO, Perses)
+# are not installed; this is expected in upgrade environments that do not include those operators.
+UPGRADE_ALERTS_ALLOWLIST: set[str] = {"VirtPlatformAutopilotDependencyMissing"}
+
 
 def wait_for_pod_replacement(client, hco_namespace, pod_name, related_images, status_dict):
     """
@@ -528,18 +533,21 @@ def get_alerts_fired_during_upgrade(
     before_upgrade_alert_names: set[str],
     upgrade_start_time: datetime,
     base_directory: str,
+    allowlist: set[str] = UPGRADE_ALERTS_ALLOWLIST,
 ) -> dict[str, list[dict[str, Any]]]:
     """Returns new alerts that fired during the upgrade, grouped by alertname.
 
     Uses an instant query with a PromQL range vector selector over the upgrade window to
     catch all alerts that reached firing state, including those that resolved before this
-    function runs. Filters out alerts that were already firing before the upgrade started.
+    function runs. Filters out alerts that were already firing before the upgrade started,
+    and alerts in the allowlist.
 
     Args:
         prometheus: Prometheus client instance.
         before_upgrade_alert_names: Alert names captured before upgrade.
         upgrade_start_time: Datetime of when the upgrade started.
         base_directory: Directory path for writing alert data files.
+        allowlist: Alert names to suppress from the results (default: UPGRADE_ALERTS_ALLOWLIST).
 
     Returns:
         Dict mapping alertname to the list of full result objects (metric + values) for that alert.
@@ -552,8 +560,12 @@ def get_alerts_fired_during_upgrade(
     alerts_by_name: dict[str, list[dict[str, Any]]] = {}
     for alert in fired_alerts:
         alert_name = alert["metric"]["alertname"]
-        if alert_name not in before_upgrade_alert_names:
-            alerts_by_name.setdefault(alert_name, []).append(alert)
+        if alert_name in before_upgrade_alert_names:
+            continue
+        if alert_name in allowlist:
+            LOGGER.info(f"Skipping allowlisted alert fired during upgrade: {alert_name}")
+            continue
+        alerts_by_name.setdefault(alert_name, []).append(alert)
 
     if alerts_by_name:
         write_to_file(
