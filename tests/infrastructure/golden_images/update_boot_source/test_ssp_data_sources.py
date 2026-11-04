@@ -156,12 +156,37 @@ def assert_missing_data_sources(opt_in, data_sources_names_from_templates, golde
     assert not missing_data_sources, f"Not all dataSources are created, missing: {missing_data_sources}"
 
 
+def log_data_source_state(data_source, when):
+    """Log compact DataSource identity, source, and DIC label for race debugging."""
+    instance = data_source.instance
+    source_spec = instance.to_dict().get("spec", {}).get("source", {})
+    if "pvc" in source_spec:
+        source_type = "pvc"
+        source_ref = source_spec.get("pvc") or {}
+    elif "snapshot" in source_spec:
+        source_type = "snapshot"
+        source_ref = source_spec.get("snapshot") or {}
+    else:
+        source_type = "unknown"
+        source_ref = source_spec
+    labels = dict(instance.metadata.labels) if instance.metadata.labels else {}
+    dic_label = labels.get(DATA_SOURCE_MANAGED_BY_CDI_LABEL)
+    LOGGER.info(
+        f"DataSource state [{when}]: name={data_source.name} "
+        f"uid={instance.metadata.uid} resourceVersion={instance.metadata.resourceVersion} "
+        f"source_type={source_type} source_name={source_ref.get('name')} "
+        f"source_namespace={source_ref.get('namespace')} "
+        f"dic_label_present={DATA_SOURCE_MANAGED_BY_CDI_LABEL in labels} "
+        f"dic_label_value={dic_label}"
+    )
+
+
 def data_source_labels_by_opt_in_status(data_source, opt_in):
     data_source_labels = data_source.instance.to_dict()["metadata"]["labels"]
     if opt_in:
         data_source_labels[DATA_SOURCE_MANAGED_BY_CDI_LABEL] = "true"
     else:
-        del data_source_labels[DATA_SOURCE_MANAGED_BY_CDI_LABEL]
+        data_source_labels[DATA_SOURCE_MANAGED_BY_CDI_LABEL] = None
     return data_source_labels
 
 
@@ -185,15 +210,18 @@ def wait_for_data_import_cron_label_in_data_source_when_opt_in(data_source, opt_
         f"{opt_in_status_str(opt_in=opt_in)}: Verify DataSource {data_source.name} {DATA_SOURCE_MANAGED_BY_CDI_LABEL} "
         f"label {'' if opt_in else 'does not'} exist."
     )
+    log_data_source_state(data_source=data_source, when="label-wait-start")
     try:
         for sample in TimeoutSampler(
             wait_timeout=TIMEOUT_5MIN,
             sleep=5,
-            func=lambda: DATA_SOURCE_MANAGED_BY_CDI_LABEL in data_source.labels,
+            func=lambda: DATA_SOURCE_MANAGED_BY_CDI_LABEL in data_source.labels.keys(),
         ):
-            if (sample and opt_in) or not (sample and opt_in):
+            if sample == opt_in:
+                log_data_source_state(data_source=data_source, when="label-wait-done")
                 return
     except TimeoutExpiredError:
+        log_data_source_state(data_source=data_source, when="label-wait-timeout")
         LOGGER.error(
             f"DataSource {data_source.name} {'does not' if opt_in else ''} have "
             f"{DATA_SOURCE_MANAGED_BY_CDI_LABEL} label."
@@ -204,6 +232,7 @@ def wait_for_data_import_cron_label_in_data_source_when_opt_in(data_source, opt_
 @contextmanager
 def update_data_source(data_source):
     source = "pvc" if data_source.instance.spec.source.get("pvc") else "snapshot"
+    log_data_source_state(data_source=data_source, when="before-dummy-patch")
     with ResourceEditor(
         patches={
             data_source: {
@@ -218,7 +247,9 @@ def update_data_source(data_source):
             }
         }
     ):
+        log_data_source_state(data_source=data_source, when="after-dummy-patch")
         yield data_source
+        log_data_source_state(data_source=data_source, when="before-resource-editor-restore")
 
 
 @pytest.fixture()
@@ -287,6 +318,7 @@ def opted_out_data_source_scope_class(
     data_source_by_name_scope_class,
     created_dv_for_data_import_cron_managed_data_source_scope_class,
 ):
+    log_data_source_state(data_source=data_source_by_name_scope_class, when="before-opt-out")
     with ResourceEditor(
         patches={
             data_source_by_name_scope_class: {
@@ -302,6 +334,7 @@ def opted_out_data_source_scope_class(
             data_source=data_source_by_name_scope_class,
             volume_name=created_dv_for_data_import_cron_managed_data_source_scope_class.name,
         )
+        log_data_source_state(data_source=data_source_by_name_scope_class, when="after-opt-out")
         yield
 
 
