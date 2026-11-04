@@ -177,15 +177,21 @@ CURVE_PROBE_EXCLUDED = {
 # field and openssl's `-groups` argument.
 TLS_GROUP_SECP256R1 = "secp256r1"
 TLS_GROUP_SECP384R1 = "secp384r1"
+TLS_GROUP_SECP521R1 = "secp521r1"
 TLS_GROUP_X25519 = "X25519"
 
 # Curve set applied by the TLS-curve propagation test. It intentionally includes
 # SecP256r1MLKEM768 - a NIST-paired PQC hybrid that is NOT in Go's default
 # CurvePreferences - so that a service negotiating it proves the configured curve
-# actually propagated, rather than merely matching a Go default.
+# actually propagated, rather than merely matching a Go default. secp521r1 serves the
+# same purpose specifically under FIPS: it is FIPS-approved (unlike the hybrids, which
+# FIPS strips), but Go excludes P-521 from its default curve preferences, so a FIPS Go
+# service negotiating it proves the profile was actually applied rather than merely
+# exhibiting its default FIPS curve behavior.
 TLS_PROPAGATION_CUSTOM_GROUPS = [
     TLS_GROUP_SECP256R1,
     TLS_GROUP_SECP384R1,
+    TLS_GROUP_SECP521R1,
     PQC_GROUP_X25519_MLKEM768,
     PQC_GROUP_SECP256R1_MLKEM768,
 ]

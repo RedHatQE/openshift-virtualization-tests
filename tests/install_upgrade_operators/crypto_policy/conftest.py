@@ -300,9 +300,15 @@ def curve_status_by_service(
     workers_utility_pods,
     worker_node1,
     cnv_services_with_template,
+    fips_enabled_cluster,
 ):
     """Per-curve negotiation status for each CNV service under the Custom curve profile."""
     probe_groups = [*TLS_PROPAGATION_CUSTOM_GROUPS, TLS_PROPAGATION_OMITTED_GROUP]
+    if fips_enabled_cluster:
+        # The FIPS crypto module blocks X25519MLKEM768 entirely, so the worker's OpenSSL
+        # cannot even offer it locally; probing it would fail before any server behavior
+        # is tested (see verified_node_pqc_support, which excludes it from FIPS as well).
+        probe_groups = [group for group in probe_groups if group != PQC_GROUP_X25519_MLKEM768]
     worker_exec = ExecCommandOnPod(utility_pods=workers_utility_pods, node=worker_node1)
     results = {
         service.name: get_service_curve_status(worker_exec=worker_exec, service=service, groups=probe_groups)

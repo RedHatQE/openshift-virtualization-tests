@@ -364,6 +364,9 @@ def compose_openssl_probe_command(
 def classify_openssl_probe_output(output: str) -> bool | None:
     """Classifies an openssl s_client probe output into a negotiation result.
 
+    Args:
+        output: Raw stdout/stderr of an openssl s_client probe command.
+
     Returns:
         bool | None: True if the handshake succeeded (group negotiated / profile accepted),
             False if the service rejected the group (reachable but refused), and None when
