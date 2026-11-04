@@ -152,9 +152,6 @@ CURVE_PROPAGATION_PENDING = {
     "kubevirt-operator-webhook": "CNV-84875",
     "virt-exportproxy": "CNV-84875",
     "kubevirt-migration-prometheus": "CNV-84877",
-    "virt-template-api-service": "CNV-85154",
-    "virt-template-controller-manager-metrics-service": "CNV-85154",
-    "virt-template-webhook-service": "CNV-85154",
     "hpp-prometheus-metrics": "CNV-84804",
     "hostpath-provisioner-operator-service": "CNV-84804",
     # console-plugin writes the configured curves to its nginx configmap, but HCO does
