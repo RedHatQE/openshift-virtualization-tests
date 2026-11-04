@@ -192,8 +192,8 @@ virt-install \
   --vcpus 2 \
   --arch $CPU_ARCH_CODE \
   --name $NAME \
-  --disk $WORK_IMAGE,device=disk \
-  --disk $CLOUD_INIT_ISO,device=cdrom \
+  --disk "${WORK_IMAGE},device=disk,boot.order=1" \
+  --disk "${CLOUD_INIT_ISO},device=cdrom" \
   --os-variant $OS_VARIANT \
   --virt-type $VIRT_TYPE \
   --graphics none \
@@ -202,6 +202,12 @@ virt-install \
   --serial file,path="${CONSOLE_LOG}" \
   "${BOOT_OPTS[@]}" \
   --import
+
+# Record the firmware, CPU model and boot ordering libvirt actually resolved.
+# Emulated-boot failures (wrong firmware, missing boot index, unexpected CPU
+# model) are otherwise invisible in CI, so surface them in the job log.
+echo "Resolved domain firmware/CPU/boot configuration:"
+virsh dumpxml "${NAME}" | grep -E "<(loader|nvram|type|cpu|model|boot)" || true
 
 # When NO_SECRETS==true:
 # Stream the guest serial console log to stdout so CI logs show what is happening inside the VM.
