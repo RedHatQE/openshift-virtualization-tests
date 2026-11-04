@@ -89,6 +89,18 @@ def wait_for_restored_dv(dv: DataVolume) -> None:
 
 
 def assert_velero_backup_hooks_not_injected(vm: VirtualMachineForTests, admin_client: DynamicClient) -> None:
+    """Assert virt-launcher has no Velero freeze/unfreeze hook annotations.
+
+    Absence of these annotations means Velero will not execute filesystem
+    freeze/unfreeze during backup.
+
+    Args:
+        vm: VirtualMachine whose virt-launcher pod is checked.
+        admin_client: Privileged client used to access the virt-launcher pod.
+
+    Raises:
+        AssertionError: If any Velero hook annotations are found on the virt-launcher pod.
+    """
     virt_launcher_pod = VirtualMachineInstance(
         client=admin_client, name=vm.name, namespace=vm.namespace
     ).virt_launcher_pod
