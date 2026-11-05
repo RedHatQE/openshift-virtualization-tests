@@ -199,6 +199,15 @@ TLS_PROPAGATION_CUSTOM_GROUPS = [
 # a service that enforces the profile must reject it.
 TLS_PROPAGATION_OMITTED_GROUP = TLS_GROUP_X25519
 
+# FIPS-specific negative probe: X25519 is not offered by the FIPS worker's OpenSSL at
+# all (not listed by `openssl list -tls-groups`; passing it to `-groups` fails
+# client-side), so it cannot be probed on FIPS. SecP384r1MLKEM1024 is never part of
+# TLS_PROPAGATION_CUSTOM_GROUPS and is supported by the FIPS worker's OpenSSL. Verified
+# on a FIPS/CNV v5.1.0 cluster: both a Go service (hco-webhook) and an OpenSSL service
+# (console-plugin) reject it before and after the custom profile is applied, since it is
+# never configured - confirming it is a valid, actually-probeable FIPS negative control.
+TLS_PROPAGATION_OMITTED_GROUP_FIPS = PQC_GROUP_SECP384R1_MLKEM1024
+
 # Custom TLS profile applied (HCO-direct) by the curve-propagation test. TLS 1.2 with
 # dual-auth ciphers (RSA + ECDSA, avoiding cert/cipher mismatch) carrying the curated
 # curve set. minTLSVersion 1.2 still permits 1.3, so the ML-KEM hybrid groups (which
