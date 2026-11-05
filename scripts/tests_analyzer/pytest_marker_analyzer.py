@@ -1591,7 +1591,7 @@ def _get_diff_content(
             file_path=str(relative_path),
             token=token,
         )
-        return diff_content if diff_content else None
+        return diff_content or None
 
     try:
         result = subprocess.run(
@@ -3923,7 +3923,7 @@ def run_github_mode(args: argparse.Namespace) -> tuple[AnalysisResult | None, in
                 workdir.mkdir(parents=True, exist_ok=True)
             else:
                 # Use custom temp base if specified, otherwise system default
-                temp_base = args.work_dir if args.work_dir else None
+                temp_base = args.work_dir or None
                 if temp_base:
                     temp_base.mkdir(parents=True, exist_ok=True)
                 temp_dir = tempfile.mkdtemp(prefix="pytest_marker_analyzer_", dir=temp_base)

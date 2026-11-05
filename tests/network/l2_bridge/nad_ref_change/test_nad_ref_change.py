@@ -32,7 +32,7 @@ from tests.network.l2_bridge.nad_ref_change.lib_helpers import (
 @pytest.mark.usefixtures("baseline_connectivity")
 @pytest.mark.incremental
 class TestRunningVMLinuxBridgeVlanChange:
-    """
+    r"""
     Tests for a running VM changing the VLAN of its secondary Linux bridge network(s) without rebooting.
     The VM should establish TCP connectivity on the new VLAN.
 
@@ -41,7 +41,7 @@ class TestRunningVMLinuxBridgeVlanChange:
         Initial (both ifaces on VLAN-A):
             Under-test VM             Reference VM
             +-----------+             +-----------+
-            |  iface-1  |\\           |           |
+            |  iface-1  |\           |           |
             |           | >--VLAN-A --|  iface-1  |
             |  iface-2  |/            |  iface-2  |
             +-----------+             +-----------+

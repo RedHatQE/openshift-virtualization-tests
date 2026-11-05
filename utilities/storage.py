@@ -478,15 +478,23 @@ def virtctl_volume(
     if bus:
         command.append(f"--bus={bus}")
 
-    yield utilities.infra.run_virtctl_command(command=command, namespace=namespace)
-    # clean up:
-    command = [
-        "removevolume",
-        "--persist",
-        f"{vm_name}",
-        f"--volume-name={volume_name}",
-    ]
-    utilities.infra.run_virtctl_command(command=command, namespace=namespace)
+    add_command_returned = False
+    try:
+        result = utilities.infra.run_virtctl_command(command=command, namespace=namespace)
+        add_command_returned = True
+        yield result
+    finally:
+        # Only remove a volume this context actually attempted to add: if addvolume raised
+        # before returning, the volume may pre-exist and must not be removed.
+        if add_command_returned:
+            # clean up:
+            command = [
+                "removevolume",
+                "--persist",
+                f"{vm_name}",
+                f"--volume-name={volume_name}",
+            ]
+            utilities.infra.run_virtctl_command(command=command, namespace=namespace)
 
 
 def virtctl_memory_dump(
@@ -580,10 +588,11 @@ def virtctl_upload_dv(
     if sc_volume_binding_mode_is_wffc(sc=storage_class, client=client) and consume_wffc and not no_create:
         command.append("--force-bind")
 
-    yield utilities.infra.run_virtctl_command(command=command, namespace=namespace)
-
-    if cleanup:
-        resource_to_cleanup.clean_up()
+    try:
+        yield utilities.infra.run_virtctl_command(command=command, namespace=namespace)
+    finally:
+        if cleanup:
+            resource_to_cleanup.clean_up()
 
 
 def check_upload_virtctl_result(
@@ -1375,9 +1384,11 @@ def remove_default_storage_classes(cluster_storage_classes):
             )
     for editor in sc_resources:
         editor.update(backup_resources=True)
-    yield
-    for editor in sc_resources:
-        editor.restore()
+    try:
+        yield
+    finally:
+        for editor in sc_resources:
+            editor.restore()
 
 
 @contextmanager

@@ -812,11 +812,11 @@ _GIT_SIMPLE_ESCAPES = {
 
 
 def _git_unquote(quoted: str) -> str:
-    """Decode a Git C-quoted path to its raw path.
+    r"""Decode a Git C-quoted path to its raw path.
 
     Git quotes paths that contain non-ASCII bytes or special characters by
     wrapping them in double quotes and encoding bytes as C escapes such as
-    ``\\303\\251``. ``shlex`` does not decode these escapes, so quoted paths
+    ``\303\251``. ``shlex`` does not decode these escapes, so quoted paths
     must be decoded explicitly. Invalid UTF-8 byte sequences are preserved
     with ``surrogateescape`` so distinct paths never collide on a replacement
     character.

@@ -65,7 +65,7 @@ def verify_cdrom_in_xml(vm, admin_client):
             if entry == ("@device", "cdrom"):
                 assert not device_dict.get("readonly"), f"readonly is not set {device_dict}"
                 return
-    raise MissingCDRomDeviceError("cdrom device is missing; VMI devices: {vmi_devices}")
+    raise MissingCDRomDeviceError(f"cdrom device is missing; VMI devices: {vmi_devices}")
 
 
 @pytest.fixture(scope="session")
