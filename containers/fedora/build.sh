@@ -50,7 +50,7 @@ cleanup_build_resources() {
         virsh undefine "${NAME}" 2>/dev/null || true
     fi
     rm -f -- "${BLS_ENTRY_TMP:-}" "${CONSOLE_LOG:-}" \
-        "${AARCH64_VARS:-}" "${WORK_IMAGE:-}" "${CLOUD_INIT_ISO:-}"
+        "${WORK_IMAGE:-}" "${CLOUD_INIT_ISO:-}"
     rm -rf -- "${RUN_TMP_DIR:?}"
     cleanup
 }
@@ -60,32 +60,21 @@ case "$CPU_ARCH" in
         CPU_ARCH_CODE="x86_64"
         VIRT_TYPE="kvm"
         BOOT_OPTS=()
+        CPU_OPTS=()
  ;;
     "arm64")
         CPU_ARCH_CODE="aarch64"
         VIRT_TYPE="qemu"
-        # aarch64 requires UEFI and a writable per-VM NVRAM vars file.
-        # Without the vars file libvirt cannot configure ACPI on aarch64.
-        AARCH64_VARS="${RUN_TMP_DIR}/aavmf-vars-${NAME}.fd"
-        for vars_path in \
-            "/usr/share/edk2/aarch64/vars-template-pflash.qcow2" \
-            "/usr/share/AAVMF/AAVMF_VARS.fd"; do
-            if [ -f "${vars_path}" ]; then
-                cp "${vars_path}" "${AARCH64_VARS}"
-                break
-            fi
-        done
-        if [ ! -f "${AARCH64_VARS}" ]; then
-            echo "ERROR: No aarch64 UEFI vars template found. Install qemu-efi-aarch64."
-            exit 1
-        fi
-        chmod 0660 "${AARCH64_VARS}"
-        BOOT_OPTS=(--boot "uefi,nvram=${AARCH64_VARS}")
+        # Disable secure-boot so firmware autoselection picks the non-Secure-Boot pair; the unsigned image is rejected under the default Secure-Boot firmware. libvirt auto-creates the per-VM NVRAM.
+        BOOT_OPTS=(--boot "firmware=efi,firmware.feature0.name=secure-boot,firmware.feature0.enabled=no")
+        # Pin the CPU model; virt-install otherwise selects `-cpu max`, which hangs the edk2 firmware under TCG on the CI runner (QEMU 10.2).
+        CPU_OPTS=(--cpu cortex-a57)
  ;;
     "s390x")
         CPU_ARCH_CODE="s390x"
         VIRT_TYPE="qemu"
         BOOT_OPTS=()
+        CPU_OPTS=()
  ;;
     *)
         echo "Use the value amd64, s390x or arm64 for CPU_ARCH env variable"
@@ -200,6 +189,7 @@ virt-install \
   --network default \
   --noautoconsole \
   --serial file,path="${CONSOLE_LOG}" \
+  "${CPU_OPTS[@]}" \
   "${BOOT_OPTS[@]}" \
   --import
 
