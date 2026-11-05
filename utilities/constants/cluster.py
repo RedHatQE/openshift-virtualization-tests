@@ -18,9 +18,11 @@ from typing import Any, Final
 from kubernetes.dynamic.exceptions import InternalServerError
 from ocp_resources.resource import Resource
 from urllib3.exceptions import (
+    ConnectTimeoutError,
     MaxRetryError,
     NewConnectionError,
     ProtocolError,
+    ReadTimeoutError,
     ResponseError,
 )
 
@@ -97,4 +99,6 @@ BASE_EXCEPTIONS_DICT: dict[type[Exception], list[str]] = {
     MaxRetryError: [],
     InternalServerError: [],
     ConnectionResetError: [],
+    ConnectTimeoutError: [],
+    ReadTimeoutError: [],
 }
