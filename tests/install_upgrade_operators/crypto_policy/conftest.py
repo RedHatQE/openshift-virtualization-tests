@@ -28,6 +28,7 @@ from tests.install_upgrade_operators.crypto_policy.constants import (
     CURVE_PROBE_EXCLUDED,
     KUBEVIRT_TLS_CONFIG_STR,
     MANAGED_CRS_LIST_WITH_AAQ,
+    NON_FIPS_GROUPS,
     PQC_GROUP_SECP256R1_MLKEM768,
     PQC_GROUP_SECP384R1_MLKEM1024,
     PQC_GROUP_X25519_MLKEM768,
@@ -305,10 +306,12 @@ def curve_status_by_service(
     """Per-curve negotiation status for each CNV service under the Custom curve profile."""
     probe_groups = [*TLS_PROPAGATION_CUSTOM_GROUPS, TLS_PROPAGATION_OMITTED_GROUP]
     if fips_enabled_cluster:
-        # The FIPS crypto module blocks X25519MLKEM768 entirely, so the worker's OpenSSL
-        # cannot even offer it locally; probing it would fail before any server behavior
-        # is tested (see verified_node_pqc_support, which excludes it from FIPS as well).
-        probe_groups = [group for group in probe_groups if group != PQC_GROUP_X25519_MLKEM768]
+        # The FIPS crypto module blocks Curve25519-based groups entirely, so the worker's
+        # OpenSSL cannot even offer X25519 or X25519MLKEM768 locally (confirmed: `openssl
+        # list -tls-groups` omits both, and passing either to `-groups` fails client-side
+        # before any server behavior is tested). verified_node_pqc_support already excludes
+        # X25519MLKEM768 from FIPS for the same reason.
+        probe_groups = [group for group in probe_groups if group not in NON_FIPS_GROUPS]
     worker_exec = ExecCommandOnPod(utility_pods=workers_utility_pods, node=worker_node1)
     results = {
         service.name: get_service_curve_status(worker_exec=worker_exec, service=service, groups=probe_groups)

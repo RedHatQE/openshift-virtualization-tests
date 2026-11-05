@@ -178,13 +178,15 @@ TLS_GROUP_SECP521R1 = "secp521r1"
 TLS_GROUP_X25519 = "X25519"
 
 # Curve set applied by the TLS-curve propagation test. It intentionally includes
-# SecP256r1MLKEM768 - a NIST-paired PQC hybrid that is NOT in Go's default
-# CurvePreferences - so that a service negotiating it proves the configured curve
-# actually propagated, rather than merely matching a Go default. secp521r1 serves the
-# same purpose specifically under FIPS: it is FIPS-approved (unlike the hybrids, which
-# FIPS strips), but Go excludes P-521 from its default curve preferences, so a FIPS Go
-# service negotiating it proves the profile was actually applied rather than merely
-# exhibiting its default FIPS curve behavior.
+# SecP256r1MLKEM768 - a NIST-paired PQC hybrid that is NOT in the default profile's
+# group list - so that a service negotiating it proves the configured curve actually
+# propagated, rather than merely matching a default. secp521r1 serves the same purpose
+# specifically under FIPS: HCO explicitly sets CurvePreferences from the effective
+# profile's groups even when no profile is configured (defaulting to Intermediate,
+# whose group list excludes secp521r1), so a FIPS Go service only starts negotiating
+# secp521r1 once it is explicitly added to a Custom profile. Verified on a FIPS/CNV
+# v5.1.0 cluster: hco-webhook rejected secp521r1 with no profile set and negotiated it
+# once this profile was applied.
 TLS_PROPAGATION_CUSTOM_GROUPS = [
     TLS_GROUP_SECP256R1,
     TLS_GROUP_SECP384R1,
