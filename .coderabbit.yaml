@@ -78,6 +78,26 @@ reviews:
 
     - path: "tests/**"
       instructions: |
+        ## Fixture architecture and independent scenario assertions
+        For every changed pytest fixture, trace its complete setup and teardown workflow,
+        including resource creation, waits, guest-data mutations, deletions, and cleanup.
+
+        Flag as HIGH when a fixture performs a multi-step workflow instead of one action.
+        Fixture names must make side effects clear; do not hide guest-data writes, backup
+        creation, deletion, or long waits behind names such as `completed_*` or `ready_*`.
+        Flag parallel lists of related resources that are matched only by position, such as
+        VM, tracker, PVC, and backup lists indexed with the same `i`. Recommend one typed
+        per-resource object or another structure that preserves relationships explicitly.
+
+        Flag a test only when its expected outcome for the documented scenario is derived
+        from the same helper used by the fixture to construct the tested resources. This
+        can create a circular assertion: an inverted mapping or wrong boundary can make
+        setup and the scenario expectation agree while the documented scenario is wrong.
+        Do not flag assertions that verify fixture inputs or resource properties are
+        preserved, such as a resource retaining a name selected by a fixture helper.
+        For scenario expectations, require independent derivation from the documented
+        scenario, including explicit checks for required counts and categories.
+
         ## STP traceability — inline comments required
         When an `STP:` link is present and linked-repo analysis finds missing or misaligned
         scenarios, you MUST post an INLINE review comment on the `STP:` line (or the module
