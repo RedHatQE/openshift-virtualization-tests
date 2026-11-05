@@ -9,10 +9,6 @@ import pytest
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.resource import Resource
 from pytest_testconfig import py_config
-from utilities.constants.images import OS_FLAVOR_FEDORA
-from utilities.constants.networking import LINUX_BRIDGE
-from utilities.constants.storage import REGISTRY_STR
-from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_50MIN
 
 from tests.storage.cdi_import.utils import wait_dv_and_get_importer, wait_for_multus_network_status
 from tests.storage.constants import (
@@ -23,7 +19,14 @@ from tests.storage.utils import (
     create_pod_for_pvc,
     get_file_url,
 )
-from utilities.constants import Images
+from utilities.constants import (
+    LINUX_BRIDGE,
+    OS_FLAVOR_FEDORA,
+    REGISTRY_STR,
+    TIMEOUT_1MIN,
+    TIMEOUT_50MIN,
+    Images,
+)
 from utilities.infra import NON_EXIST_URL
 from utilities.network import network_device, network_nad
 from utilities.storage import construct_datavolume_source_dict, create_dv, sc_volume_binding_mode_is_wffc
