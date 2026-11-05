@@ -64,9 +64,6 @@ class EvpnEndpoint:
 class EndpointTcpClient(PodTcpClient):
     """PodTcpClient that runs iperf3 inside a network namespace.
 
-    'ip netns exec' replaces itself with iperf3 via execvp,
-    so pgrep/pkill match by the bare iperf3 cmdline.
-
     Args:
         netns: Network namespace to run iperf3 in.
     """
@@ -79,17 +76,7 @@ class EndpointTcpClient(PodTcpClient):
         netns: str,
         container: str | None = None,
     ) -> None:
-        super().__init__(pod=pod, server_ip=server_ip, server_port=server_port, container=container)
-        self._netns = netns
-
-    def __enter__(self) -> EndpointTcpClient:
-        run_cmd = f"ip netns exec {self._netns} {self._cmd}"
-        self._pod.execute(
-            command=["sh", "-c", f"nohup {run_cmd} >/tmp/iperf3.log 2>&1 &"],
-            container=self._container,
-        )
-        self._ensure_is_running()
-        return self
+        super().__init__(pod=pod, server_ip=server_ip, server_port=server_port, container=container, netns=netns)
 
 
 def cudn_evpn_subnets() -> list[str]:
