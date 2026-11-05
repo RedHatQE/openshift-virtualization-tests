@@ -8,8 +8,6 @@ from ocp_resources.namespace import Namespace
 from ocp_resources.role_binding import RoleBinding
 from ocp_resources.utils.constants import TIMEOUT_1MINUTE
 from pytest_testconfig import config as py_config
-from utilities.constants.timeouts import TIMEOUT_10MIN, TIMEOUT_50MIN
-from utilities.constants.virt import WIN_2K22
 
 from utilities.artifactory import (
     cleanup_artifactory_secret_and_config_map,
@@ -17,11 +15,14 @@ from utilities.artifactory import (
     get_artifactory_secret,
     get_test_artifact_server_url,
 )
-from utilities.constants import Images
-from utilities.constants.storage import (
+from utilities.constants import (
     BIND_IMMEDIATE_ANNOTATION,
     CDI_CLONE_SOURCER_CLUSTER_ROLE,
     REGISTRY_STR,
+    TIMEOUT_10MIN,
+    TIMEOUT_50MIN,
+    WIN_2K22,
+    Images,
 )
 from utilities.os_utils import get_windows_container_disk_path
 from utilities.storage import construct_datavolume_source_dict, generate_data_source_dict
