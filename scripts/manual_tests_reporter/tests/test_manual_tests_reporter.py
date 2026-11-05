@@ -465,6 +465,8 @@ class TestFromClusterImportGuard:
                     "--batch-file",
                     str(batch_path),
                     "--from-cluster",
+                    "--owner",
+                    "tester@redhat.com",
                 ],
             )
 
@@ -517,6 +519,8 @@ class TestFromClusterImportGuard:
                     "--batch-file",
                     str(batch_path),
                     "--from-cluster",
+                    "--owner",
+                    "tester@redhat.com",
                 ],
             )
 
@@ -553,6 +557,8 @@ class TestFromClusterImportGuard:
                     "--batch-file",
                     str(batch_path),
                     "--from-cluster",
+                    "--owner",
+                    "tester@redhat.com",
                 ],
             )
 

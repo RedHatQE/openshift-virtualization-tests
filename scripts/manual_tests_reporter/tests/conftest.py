@@ -22,18 +22,26 @@ def restored_arch_env() -> Generator[None]:
 
 @pytest.fixture(autouse=True)
 def isolated_git_identity(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Point git at an empty global/system config for every test.
+    """Make owner derivation independent of any local git identity.
 
-    The reporter derives the ``owner`` tag from the tests checkout's git
+    The reporter derives the ``owner`` tag from the scanned checkout's git
     identity, so without this a developer's own ``user.email`` leaks into the
-    suite and CI (no git identity at all) fails where a laptop passes. Tests
-    that exercise owner derivation patch ``_get_git_user_email`` or pass
-    ``--owner`` explicitly.
+    suite and CI (no git identity at all) fails where a laptop passes.
+
+    All three sources are cut off, not just the global one:
+    ``GIT_CONFIG_GLOBAL``/``GIT_CONFIG_SYSTEM`` point at an empty file, and
+    ``GIT_CEILING_DIRECTORIES`` stops git from walking up out of the temporary
+    test tree into an enclosing clone's repository-local config.
+
+    Tests that exercise owner derivation patch ``_get_git_user_email`` (as
+    ``test_get_git_user_email_reads_tests_checkout`` needs the real function)
+    or pass ``--owner`` explicitly.
     """
     empty_config = tmp_path / "gitconfig"
     empty_config.write_text(data="", encoding="utf-8")
     monkeypatch.setenv(name="GIT_CONFIG_GLOBAL", value=str(empty_config))
     monkeypatch.setenv(name="GIT_CONFIG_SYSTEM", value=str(empty_config))
+    monkeypatch.setenv(name="GIT_CEILING_DIRECTORIES", value=str(tmp_path))
 
 
 @pytest.fixture(autouse=True)

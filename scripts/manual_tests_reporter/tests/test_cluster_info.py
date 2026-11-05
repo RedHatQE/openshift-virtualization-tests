@@ -6,10 +6,14 @@ See scripts/manual_tests_reporter/README.md for the tool this module belongs to.
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, _patch, patch
+from typing import TYPE_CHECKING
+from unittest.mock import MagicMock, patch
 
 from kubernetes.client.exceptions import ApiException
 from urllib3.exceptions import HTTPError
+
+if TYPE_CHECKING:
+    from unittest.mock import _patch
 
 from scripts.manual_tests_reporter.cluster_info import (
     ClusterAttributes,
