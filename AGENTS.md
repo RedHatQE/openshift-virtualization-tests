@@ -287,14 +287,13 @@ When reviewing quarantine PRs, verify the **quarantine mechanism matches the fai
 ### Scripts Directory
 
 - Internal tooling and automation scripts live in `scripts/`. Each tool has its own subdirectory with an entry point, utilities, and tests. Scripts are standalone CLI tools, separate from the standard product test suite.
-- Test suites under `scripts/` (e.g. `scripts/reportportal/*/tests/*`) cover internal tooling. Script tests are exempt from product-test coverage and STD checks. Shared Python-basics checks still apply to changed files under `scripts/`.
+- Test suites under `scripts/` (e.g. `scripts/manual_tests_reporter/tests/*`) cover internal tooling. Script tests are exempt from product-test coverage and STD checks. Shared Python-basics checks still apply to changed files under `scripts/`.
 
 **Known script behaviors (do not "fix" these):**
 - **Dockerfiles** — Bitwarden Secrets CLI (`bws`) is installed unpinned via curl and requires `unzip`; this is intentional.
 - **`tox.ini` `verify-bugs-are-open-gh`** — uses `pyutils-jira` env vars (`JIRA_TOKEN`, `JIRA_USER`); these are distinct from the `PYTEST_JIRA_*` vars used by `utilities/jira.py`. Do not conflate the two.
 - **`.coderabbit.yaml`** — empty objects `code_generation: {}` and `issue_enrichment: {}` are required for schema validation; do not remove them.
 - **`scripts/coderabbit_retry/`** — idempotently retries rate-limited CodeRabbit reviews every 20 minutes, within a 15-minute workflow timeout, for eligible PRs updated in the last 2 days; it skips stale, conflicting, draft, WIP, and already-requested reviews.
-- **`scripts/reportportal/rp_utils/rp_client.py`** — uses contains-match semantics (`filter.cnt.attributeValue`) for bundle filtering; retry-upload intentionally lacks `polarion-testcase-id` preservation.
 - **`scripts/tests_analyzer/pytest_marker_analyzer.py`** — `conftest_resolved=True` records that a conftest dependency path was analyzed, preventing the conservative file-level fallback when no matching path remains.
 
 ### Generated Documentation
@@ -397,6 +396,9 @@ uv run tox
 
 # Run utilities unit tests
 uv run tox -e utilities-unittests
+
+# Run scripts unit tests
+uv run tox -e scripts-unittests
 
 ```
 
