@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
 LOOKUP_IFACE_STATUS_TIMEOUT_SEC: Final[int] = 30
 WAIT_FOR_MISSING_IFACE_STATUS_TIMEOUT_SEC: Final[int] = 120
+WAIT_FOR_VMI_TEMPLATE_AFFINITY_TIMEOUT_SEC: Final[int] = 120
 RETRY_INTERVAL_SEC: Final[int] = 5
 IP_ADDRESS: Final[str] = "ipAddress"
 
@@ -42,6 +43,10 @@ class VMIConditionNotReachedError(Exception):
 
 
 class VMIConditionStillPresentError(Exception):
+    pass
+
+
+class VMIAffinityNotSyncedError(Exception):
     pass
 
 
@@ -336,3 +341,44 @@ def update_nad_references(vm: BaseVirtualMachine, nad_name_by_net: dict[str, str
     patch_nad_references(vm=vm, nad_name_by_net=nad_name_by_net)
     wait_for_vmi_condition_status(vm=vm, condition="MigrationRequired", resource_version=resource_version)
     wait_for_no_vmi_condition(vm=vm, condition="MigrationRequired")
+
+
+def wait_for_vmi_template_affinity(
+    vm: BaseVirtualMachine,
+    expected_vmi_affinity: dict[str, Any] | None,
+    timeout: int = WAIT_FOR_VMI_TEMPLATE_AFFINITY_TIMEOUT_SEC,
+    resource_version: str | None = None,
+) -> None:
+    """Wait until virt-controller copies VM template affinity onto the running VMI.
+
+    Args:
+        vm: The virtual machine whose VMI should be updated.
+        expected_vmi_affinity: Affinity dict applied on the VM template, or None if cleared.
+        timeout: Maximum seconds to wait.
+        resource_version: VMI resource version captured before patching the VM.
+
+    Raises:
+        VMIAffinityNotSyncedError: If the VMI spec does not match within timeout.
+    """
+    vmi = vm.vmi
+    vmi_instance = vmi.instance
+    if _vmi_spec_affinity_matches(vmi_object=vmi_instance, expected=expected_vmi_affinity):
+        return
+
+    watch_from_resource_version = resource_version or vmi_instance.metadata.resourceVersion
+    for event in vmi.watcher(timeout=timeout, resource_version=watch_from_resource_version):
+        if event["type"] != "MODIFIED":
+            continue
+        if _vmi_spec_affinity_matches(vmi_object=event["object"], expected=expected_vmi_affinity):
+            return
+
+    raise VMIAffinityNotSyncedError(
+        f"VMI {vm.name}: template affinity was not synced to the running VMI within {timeout}s."
+    )
+
+
+def _vmi_spec_affinity_matches(vmi_object: Any, expected: dict[str, Any] | None) -> bool:
+    spec_affinity = vmi_object.to_dict()["spec"].get("affinity")
+    if expected is None:
+        return not spec_affinity
+    return spec_affinity == expected
