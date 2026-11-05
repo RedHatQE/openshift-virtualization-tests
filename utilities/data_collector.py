@@ -9,6 +9,7 @@ from _pytest.nodes import Collector
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.namespace import Namespace
 from ocp_resources.virtual_machine import VirtualMachine
+from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from ocp_utilities.monitoring import Prometheus
 from pytest import Item
 from pytest_testconfig import config as py_config
@@ -16,7 +17,7 @@ from pytest_testconfig import config as py_config
 import utilities.hco
 import utilities.infra
 from utilities.cluster import cache_admin_client
-from utilities.constants.timeouts import TIMEOUT_10MIN, TIMEOUT_20MIN
+from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_10MIN, TIMEOUT_20MIN
 from utilities.must_gather import run_must_gather
 
 LOGGER = logging.getLogger(__name__)
@@ -194,6 +195,101 @@ def collect_default_cnv_must_gather_with_vm_gather(since_time, target_dir, admin
         script_name="/usr/bin/gather",
         flag_names="vms_details",
     )
+
+
+def collect_virt_launcher_debug_data(node: Item | Collector) -> None:
+    """Collect best-effort diagnostics from only the failed test's VM pod.
+
+    The collector executes diagnostic commands in the VM's virt-launcher pod
+    and writes the command output to the data collector directory. Failures
+    are logged and do not propagate to the failed test handling flow.
+
+    Args:
+        node: The pytest item or collector associated with the failed test.
+    """
+    output_dir = os.path.join(get_data_collector_dir(), "virt_launcher_debug")
+    funcargs = getattr(node, "funcargs", {})
+    vm_candidates = sorted(
+        (
+            value
+            for value in funcargs.values()
+            if isinstance(value, (VirtualMachine, VirtualMachineInstance))
+            and getattr(value, "name", None)
+            and getattr(value, "namespace", None)
+        ),
+        key=lambda resource: (resource.namespace, resource.name),
+    )
+    if len(vm_candidates) > 1:
+        LOGGER.warning(
+            "[DATA_COLLECTOR] Multiple VM/VMI resources were available; "
+            "skipping virt-launcher diagnostics to avoid selecting the wrong resource"
+        )
+        return
+    vm = vm_candidates[0] if vm_candidates else None
+    if vm is None:
+        LOGGER.warning("[DATA_COLLECTOR] Failed test VM/VMI was not available; skipping virt-launcher diagnostics")
+        return
+
+    try:
+        # A privileged client is required to resolve and exec into virt-launcher.
+        admin_client = cache_admin_client()
+        vmi = getattr(vm, "vmi", vm)
+        pod = vmi.get_virt_launcher_pod(privileged_client=admin_client)
+        pod_name = pod.name
+        pod_namespace = pod.namespace
+    except Exception as exc:
+        LOGGER.warning(f"[DATA_COLLECTOR] Failed to resolve virt-launcher for {vm.namespace}/{vm.name}: {exc}")
+        return
+
+    diagnostic_script = r"""set +e
+echo '=== collected-at ==='; date -u
+echo '=== threads ==='; ps -eLf 2>&1
+for process in /proc/[0-9]*; do
+  read -r process_name 2>/dev/null < "$process/comm" || continue
+  case "$process_name" in
+    virtqemud|libvirtd|qemu-kvm|qemu-system-*) ;;
+    *) continue ;;
+  esac
+  pid="${process##*/}"
+  echo "=== PID $pid cmdline ==="; tr '\0' ' ' < "/proc/$pid/cmdline"; echo
+  echo "=== PID $pid status ==="; cat "/proc/$pid/status"
+  echo "=== PID $pid kernel stack ==="; cat "/proc/$pid/stack"
+  for task in /proc/$pid/task/*; do
+    echo "=== $task status ==="; cat "$task/status"
+    echo "=== $task scheduler ==="; cat "$task/sched" 2>&1
+    echo "=== $task scheduler counters ==="; cat "$task/schedstat" 2>&1
+    echo "=== $task kernel stack ==="; cat "$task/stack"
+  done
+done
+echo '=== monitor sockets ==='; find /var/run/kubevirt-private -type s -o -type p 2>/dev/null
+VIRSH_URI=qemu:///session
+timeout 10 virsh -c "$VIRSH_URI" list --all >/dev/null 2>&1 || VIRSH_URI=qemu:///system
+echo "=== virsh uri === $VIRSH_URI"
+echo '=== virsh list ==='; timeout 10 virsh -c "$VIRSH_URI" list --all 2>&1
+for domain in $(timeout 10 virsh -c "$VIRSH_URI" list --name 2>/dev/null); do
+  [ -z "$domain" ] && continue
+  echo "=== $domain dumpxml ==="; timeout 10 virsh -c "$VIRSH_URI" dumpxml "$domain" 2>&1
+  echo "=== $domain query-status ==="; timeout 10 virsh -c "$VIRSH_URI" qemu-monitor-command "$domain" --pretty '{"execute":"query-status"}' 2>&1
+  echo "=== $domain query-cpus-fast ==="; timeout 10 virsh -c "$VIRSH_URI" qemu-monitor-command "$domain" --pretty '{"execute":"query-cpus-fast"}' 2>&1
+  echo "=== $domain query-chardev ==="; timeout 10 virsh -c "$VIRSH_URI" qemu-monitor-command "$domain" --pretty '{"execute":"query-chardev"}' 2>&1
+  echo "=== $domain guest-agent ping ==="; timeout 10 virsh -c "$VIRSH_URI" qemu-agent-command "$domain" '{"execute":"guest-ping"}' 2>&1
+done
+"""
+
+    try:
+        output = pod.execute(
+            command=["sh", "-c", diagnostic_script],
+            container="compute",
+            timeout=TIMEOUT_2MIN,
+            ignore_rc=True,
+        )
+        write_to_file(
+            file_name=f"{pod_namespace}_{pod_name}.txt".replace("/", "_"),
+            content=f"=== pod-namespace ===\n{pod_namespace}\n=== pod-name ===\n{pod_name}\n{output}",
+            base_directory=output_dir,
+        )
+    except Exception as exc:
+        LOGGER.warning(f"[DATA_COLLECTOR] Failed diagnostics for {pod_namespace}/{pod_name}: {exc}")
 
 
 def prepare_pytest_item_data_dir(item, output_dir):

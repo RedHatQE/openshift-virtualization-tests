@@ -42,6 +42,7 @@ from utilities.constants.pytest import (
 from utilities.constants.timeouts import TIMEOUT_5MIN
 from utilities.data_collector import (
     collect_default_cnv_must_gather_with_vm_gather,
+    collect_virt_launcher_debug_data,
     get_data_collector_dir,
     get_scope_identifier,
     set_data_collector_directory,
@@ -1042,6 +1043,13 @@ def pytest_exception_interact(node: Item | Collector, call: CallInfo[Any], repor
         else:
             db = Database(base_dir=node.config.getoption("--data-collector-output-dir"))
             test_start_time = db.get_start_time_for_collection(node=node)
+
+            try:
+                collect_virt_launcher_debug_data(node=node)
+            except Exception as current_exception:
+                LOGGER.warning(
+                    f"Failed to collect virt-launcher diagnostics: {current_exception} {traceback.format_exc()}"
+                )
 
             try:
                 collection_dir = os.path.join(get_data_collector_dir(), "pytest_exception_interact")

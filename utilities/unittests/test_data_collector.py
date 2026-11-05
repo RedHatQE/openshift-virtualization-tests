@@ -132,6 +132,7 @@ from utilities.data_collector import (
     collect_default_cnv_must_gather_with_vm_gather,
     collect_must_gather_for_vm,
     collect_ocp_must_gather,
+    collect_virt_launcher_debug_data,
     collect_vnc_screenshot_for_vms,
     get_data_collector_base,
     get_data_collector_base_directory,
@@ -525,6 +526,65 @@ class TestCollectDefaultCnvMustGatherWithVmGather:
             script_name="/usr/bin/gather",
             flag_names="vms_details",
         )
+
+
+class TestCollectVirtLauncherDebugData:
+    """Test best-effort virt-launcher diagnostic collection."""
+
+    @patch("utilities.data_collector.write_to_file")
+    @patch("utilities.data_collector.get_data_collector_dir", return_value="/tmp/collector")
+    @patch("utilities.data_collector.cache_admin_client")
+    def test_collects_thread_scheduler_state_from_migrated_pod(self, mock_client, mock_directory, mock_write):
+        """Verify diagnostics are written when pod command execution succeeds."""
+        vm = MagicMock(spec=VirtualMachine)
+        vm.name = "test-vm"
+        vm.namespace = "test-ns"
+        pod = MagicMock()
+        pod.name = "virt-launcher-target"
+        pod.namespace = "test-ns"
+        pod.execute.return_value = "thread diagnostics"
+        vm.vmi.get_virt_launcher_pod.return_value = pod
+        node = MagicMock()
+        node.funcargs = {"running_vm": vm}
+
+        collect_virt_launcher_debug_data(node=node)
+
+        vm.vmi.get_virt_launcher_pod.assert_called_once_with(privileged_client=mock_client.return_value)
+        command = pod.execute.call_args.kwargs["command"]
+        assert command[:2] == ["sh", "-c"], f"Unexpected collector command: {command[:2]}"
+        script = command[2]
+        assert 'read -r process_name 2>/dev/null < "$process/comm"' in script, (
+            "Process matching must ignore inaccessible entries and exclude the collector shell"
+        )
+        assert 'cat "$task/sched"' in script, "Missing per-thread scheduler data"
+        assert 'cat "$task/schedstat"' in script, "Missing per-thread scheduler counters"
+        assert 'cat "$task/stack"' in script, "Missing existing kernel stack capture"
+        assert pod.execute.call_args.kwargs["container"] == "compute", "Diagnostics must run in compute"
+        assert pod.execute.call_args.kwargs["ignore_rc"], "Diagnostic failures must not fail the test"
+        mock_write.assert_called_once_with(
+            file_name="test-ns_virt-launcher-target.txt",
+            content="=== pod-namespace ===\ntest-ns\n=== pod-name ===\nvirt-launcher-target\nthread diagnostics",
+            base_directory="/tmp/collector/virt_launcher_debug",
+        )
+
+    @patch("utilities.data_collector.write_to_file")
+    @patch("utilities.data_collector.get_data_collector_dir", return_value="/tmp/collector")
+    @patch("utilities.data_collector.cache_admin_client")
+    def test_exec_failure_is_best_effort(self, mock_client, mock_directory, mock_write):
+        """Verify pod execution failures do not write diagnostic output."""
+        vm = MagicMock(spec=VirtualMachine)
+        vm.name = "test-vm"
+        vm.namespace = "test-ns"
+        pod = vm.vmi.get_virt_launcher_pod.return_value
+        pod.name = "virt-launcher-target"
+        pod.namespace = "test-ns"
+        pod.execute.side_effect = RuntimeError("exec unavailable")
+        node = MagicMock()
+        node.funcargs = {"running_vm": vm}
+
+        collect_virt_launcher_debug_data(node=node)
+
+        mock_write.assert_not_called()
 
 
 class TestPrepareDataDir:
