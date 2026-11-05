@@ -64,21 +64,25 @@ class TestVMFeatures:
 
     @pytest.mark.polarion("CNV-11831")
     @pytest.mark.dependency(depends=[f"{TESTS_MODULE_IDENTIFIER}::{TEST_START_VM_TEST_NAME}"])
+    @pytest.mark.usefixtures("skip_if_secure_boot_unsupported_arch")
     def test_efi_secureboot_enabled_initial_boot(self, golden_image_fedora_vm_with_instance_type):
         assert_secure_boot_dmesg(vm=golden_image_fedora_vm_with_instance_type)
 
     @pytest.mark.dependency(depends=[f"{TESTS_MODULE_IDENTIFIER}::{TEST_START_VM_TEST_NAME}"])
     @pytest.mark.polarion("CNV-11832")
+    @pytest.mark.usefixtures("skip_if_secure_boot_unsupported_arch")
     def test_efi_secureboot_enabled_guest_os(self, golden_image_fedora_vm_with_instance_type):
         assert_secure_boot_mokutil_status(vm=golden_image_fedora_vm_with_instance_type)
 
     @pytest.mark.dependency(depends=[f"{TESTS_MODULE_IDENTIFIER}::{TEST_START_VM_TEST_NAME}"])
     @pytest.mark.polarion("CNV-11833")
+    @pytest.mark.usefixtures("skip_if_secure_boot_unsupported_arch")
     def test_efi_secureboot_enabled_lockdown_state(self, golden_image_fedora_vm_with_instance_type):
         assert_kernel_lockdown_mode(vm=golden_image_fedora_vm_with_instance_type)
 
     @pytest.mark.dependency(depends=[f"{TESTS_MODULE_IDENTIFIER}::{TEST_START_VM_TEST_NAME}"])
     @pytest.mark.polarion("CNV-11834")
+    @pytest.mark.usefixtures("skip_if_secure_boot_unsupported_arch")
     def test_efi_secureboot_disabled_and_enabled(
         self,
         golden_image_fedora_vm_with_instance_type,
