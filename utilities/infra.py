@@ -48,10 +48,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 
 import utilities.virt
 from utilities.cluster import cache_admin_client
-from utilities.constants.architecture import (
-    AMD_64,
-    X86_64,
-)
+from utilities.constants.architecture import AMD_64, ARM_64
 from utilities.constants.cluster import (
     AUDIT_LOGS_PATH,
     KUBECONFIG,
@@ -759,9 +756,20 @@ def download_file_from_cluster(
     return binary_file
 
 
-def get_machine_platform():
-    os_machine_type = platform.machine()
-    return AMD_64 if os_machine_type == X86_64 else os_machine_type
+def get_machine_platform() -> str:
+    """Return the host architecture using cluster binary artifact naming.
+
+    Returns:
+        str: ``amd64`` for ``x86_64``, ``arm64`` for ``aarch64``, otherwise the
+        lowercased ``platform.machine()`` value.
+    """
+    match machine := platform.machine().lower():
+        case "x86_64":
+            return AMD_64
+        case "aarch64":
+            return ARM_64
+        case _:
+            return machine
 
 
 def get_nodes_with_label(nodes, label):
