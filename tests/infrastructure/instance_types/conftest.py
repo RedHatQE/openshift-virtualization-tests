@@ -159,12 +159,7 @@ def latest_windows_data_source(
 
 
 @pytest.fixture()
-def windows_vm_for_dedicated_cpu(
-    request,
-    unprivileged_client,
-    namespace,
-    windows_validation_os_images_data_source_scope_session,
-):
+def windows_vm_for_dedicated_cpu(request, unprivileged_client, namespace, latest_windows_data_source):
     with VirtualMachineForTests(
         client=unprivileged_client,
         name=request.param["vm_name"],
@@ -174,7 +169,7 @@ def windows_vm_for_dedicated_cpu(
         ),
         vm_preference_infer=True,
         data_volume_template=data_volume_template_with_source_ref_dict(
-            data_source=windows_validation_os_images_data_source_scope_session,
+            data_source=latest_windows_data_source,
         ),
         os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK,
         disk_type=None,
