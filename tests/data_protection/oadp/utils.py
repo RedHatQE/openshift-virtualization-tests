@@ -10,10 +10,33 @@ from utilities.constants.timeouts import TIMEOUT_10SEC, TIMEOUT_15SEC
 
 if TYPE_CHECKING:
     from kubernetes.dynamic import DynamicClient
+    from ocp_resources.virtual_machine_template import VirtualMachineTemplate
 
     from utilities.virt import VirtualMachineForTests
 
 FILE_PATH_FOR_WINDOWS_BACKUP = "C:/oadp_file_before_backup.txt"
+
+
+def golden_image_data_volume_from_virtual_machine_template(
+    virtual_machine_template: VirtualMachineTemplate,
+) -> DataVolume:
+    """Return the golden-image DataVolume referenced by a VirtualMachineTemplate.
+
+    Captured templates point at a same-namespace golden image under
+    ``spec.virtualMachine.spec.dataVolumeTemplates[0].spec.source.pvc``.
+
+    Args:
+        virtual_machine_template: Template whose embedded VM references a golden image.
+
+    Returns:
+        DataVolume: Resource handle for the golden-image DataVolume (not created here).
+    """
+    pvc_source = virtual_machine_template.instance.spec.virtualMachine.spec.dataVolumeTemplates[0].spec.source.pvc
+    return DataVolume(
+        client=virtual_machine_template.client,
+        name=pvc_source.name,
+        namespace=pvc_source.namespace or virtual_machine_template.namespace,
+    )
 
 
 def wait_for_restored_dv(dv: DataVolume) -> None:
