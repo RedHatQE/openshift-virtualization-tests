@@ -16,7 +16,6 @@ from ocp_resources.resource import ResourceEditor
 from ocp_resources.route_advertisements import RouteAdvertisements
 from timeout_sampler import retry
 
-from libs.net.vmspec import IpNotFound
 from utilities.constants.hco import DEFAULT_RESOURCE_CONDITIONS
 from utilities.constants.namespaces import NamespacesNames
 from utilities.constants.networking import NET_UTIL_CONTAINER_IMAGE
@@ -28,6 +27,10 @@ EXTERNAL_FRR_ASN: Final[int] = 64000
 POD_SECONDARY_IFACE_NAME: Final[str] = "net1"
 NET_TOOLS_CONTAINER_NAME: Final[str] = "net-tools"
 EXTERNAL_FRR_POD_LABEL: Final[dict] = {"role": "frr-external"}
+
+
+class PodInterfaceIpNotFoundError(Exception):
+    pass
 
 
 @dataclass
@@ -313,7 +316,7 @@ def _acquire_dhcp_ipv4(pod: Pod, iface_name: str) -> str:
             if addr["family"] == "inet":
                 return addr["local"]
 
-    raise IpNotFound(f"IP address not found for interface {iface_name}")
+    raise PodInterfaceIpNotFoundError(f"IP address not found for interface {iface_name}")
 
 
 def wait_for_bgp_connection_established(node_names: list) -> None:

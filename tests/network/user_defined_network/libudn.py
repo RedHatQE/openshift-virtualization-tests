@@ -5,12 +5,14 @@ from typing import TYPE_CHECKING, Final
 
 from ocp_resources.resource import Resource
 
-from libs.net.vmspec import IpNotFound
-
 if TYPE_CHECKING:
     from ocp_resources.pod import Pod
 
 ALLOWED_POD_CONTAINER_NAME: Final[str] = "udn-container"
+
+
+class PodIpNotFoundError(Exception):
+    pass
 
 
 def lookup_default_pod_ip(pod: Pod) -> str:
@@ -26,5 +28,5 @@ def lookup_default_pod_ip(pod: Pod) -> str:
     network_status = json.loads(pod.instance.metadata.annotations[network_status_annotation])
     default_entry = next(entry for entry in network_status if entry.get("default"))
     if not default_entry["ips"]:
-        raise IpNotFound(f"No IPs assigned to default UDN entry on pod {pod.name}")
+        raise PodIpNotFoundError(f"No IPs assigned to default UDN entry on pod {pod.name}")
     return str(default_entry["ips"][0])
