@@ -39,7 +39,6 @@ from utilities.constants import (
     U1_SMALL,
     Images,
 )
-from utilities.exceptions import StorageMigrationError
 from utilities.infra import create_ns
 from utilities.jira import is_jira_open
 from utilities.storage import (
@@ -521,17 +520,7 @@ def combined_mode_mig_migration(
         client=admin_client,
         multi_namespace_virtual_machine_storage_migration_plan_ref={"name": combined_mode_mig_plan.name},
     ) as mig_migration:
-        try:
-            wait_for_storage_migration_phase(mig_migration=mig_migration, expected_phase=mig_migration.Status.COMPLETED)
-        except StorageMigrationError:
-            non_completed_phases = {
-                namespace.get("phase")
-                for namespace in (mig_migration.instance.status.namespaces or [])
-                if namespace.get("phase") != mig_migration.Status.COMPLETED
-            }
-            if non_completed_phases == {"WaitForLiveMigrationToComplete"} and is_jira_open(jira_id="CNV-98735"):
-                pytest.xfail(reason="Offline VM storage migration stuck in WaitForLiveMigrationToComplete, CNV-98735")
-            raise
+        wait_for_storage_migration_phase(mig_migration=mig_migration, expected_phase=mig_migration.Status.COMPLETED)
         yield mig_migration
 
 
@@ -621,17 +610,7 @@ def combined_policy_mig_migration(
             "name": combined_policy_and_combined_mode_mig_plan.name
         },
     ) as mig_migration:
-        try:
-            wait_for_storage_migration_phase(mig_migration=mig_migration, expected_phase=mig_migration.Status.COMPLETED)
-        except StorageMigrationError:
-            non_completed_phases = {
-                namespace.get("phase")
-                for namespace in (mig_migration.instance.status.namespaces or [])
-                if namespace.get("phase") != mig_migration.Status.COMPLETED
-            }
-            if non_completed_phases == {"WaitForLiveMigrationToComplete"} and is_jira_open(jira_id="CNV-98735"):
-                pytest.xfail(reason="Offline VM storage migration stuck in WaitForLiveMigrationToComplete, CNV-98735")
-            raise
+        wait_for_storage_migration_phase(mig_migration=mig_migration, expected_phase=mig_migration.Status.COMPLETED)
         yield mig_migration
 
 
