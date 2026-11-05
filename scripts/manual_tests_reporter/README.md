@@ -104,8 +104,9 @@ with the run attribute each one sets:
 | `ip-stack` | `ip_stack` |
 | `iib-image` | `iib_image` |
 | `hco-bundle-version` | `hco_bundle_version` |
-| `rootcoz-url` | `rootcoz.url` | The file is picked up
-automatically from `~/.config/manual_tests_reporter/config.yaml` when it
+| `rootcoz-url` | `rootcoz.url` |
+
+The file is picked up automatically from `~/.config/manual_tests_reporter/config.yaml` when it
 exists, or explicitly via `--config <path>`. A `tests-dir` starting with
 `~` is expanded; like `--tests-dir`, relative paths resolve against the
 directory the tool is launched from. Values must be non-empty strings —

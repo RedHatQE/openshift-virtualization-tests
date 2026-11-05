@@ -6,7 +6,7 @@ See scripts/manual_tests_reporter/README.md for the tool this module belongs to.
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, _patch, patch
 
 from kubernetes.client.exceptions import ApiException
 from urllib3.exceptions import HTTPError
@@ -21,7 +21,7 @@ from scripts.manual_tests_reporter.cluster_info import (
 CLUSTER_INFO_MODULE = "scripts.manual_tests_reporter.cluster_info"
 
 
-def _node_name_patch(*node_names: str):
+def _node_name_patch(*node_names: str) -> _patch:
     """Build a patch of Node.get yielding nodes with the given names."""
     node_mocks = []
     for node_name in node_names:

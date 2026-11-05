@@ -471,7 +471,7 @@ def _repo_relative_path(test_file: Path, tests_dir: Path) -> str:
     return str(test_file.relative_to(tests_dir.parent))
 
 
-def _warn_if_parametrized(*, markers: list[str], node_id: str) -> None:
+def _warn_if_parametrized(*, marker_groups: list[list[str]], node_id: str) -> None:
     """Warn when a collected manual test is parametrized.
 
     The AST collector cannot synthesise pytest's ``[param]`` id suffixes, so
@@ -479,11 +479,15 @@ def _warn_if_parametrized(*, markers: list[str], node_id: str) -> None:
     --junitxml`` reports ``test_x[1]``, ``test_x[2]``, ... — the manual
     verdict would not merge with any CI param instance.
 
+    A called marker keeps its arguments (``parametrize('x', [1, 2])``), and a
+    class-level ``parametrize`` applies to every method, so the bare name is
+    compared per marker group across module, class and test level.
+
     Args:
-        markers: Markers found on the test.
+        marker_groups: Marker lists to inspect (module, class, test level).
         node_id: Node ID of the collected test, for the message.
     """
-    if "parametrize" in markers:
+    if any(_bare_marker_name(marker=marker) == "parametrize" for markers in marker_groups for marker in markers):
         LOGGER.warning(
             f"Manual test {node_id} is parametrized: its report name has no [param] id, "
             "so the result will not merge with the parametrized CI test"
@@ -529,7 +533,7 @@ def _collect_manual_class_methods(
             continue
 
         node_id = f"{relative_path}::{class_node.name}::{method.name}"
-        _warn_if_parametrized(markers=test_markers, node_id=node_id)
+        _warn_if_parametrized(marker_groups=[module_markers, class_markers, test_markers], node_id=node_id)
         details.append(
             ManualTestDetail(
                 file_path=relative_path,
@@ -574,7 +578,7 @@ def _collect_manual_standalone_function(
         return None
 
     node_id = f"{relative_path}::{func_node.name}"
-    _warn_if_parametrized(markers=test_markers, node_id=node_id)
+    _warn_if_parametrized(marker_groups=[module_markers, test_markers], node_id=node_id)
     return ManualTestDetail(
         file_path=relative_path,
         class_name=None,

@@ -1064,7 +1064,16 @@ class TestMergeBatchMetadata:
         )
         result = CliRunner().invoke(
             cli=main,
-            args=["--tests-dir", str(tests_dir), "--batch-file", str(batch_path)],
+            args=[
+                "--tests-dir",
+                str(tests_dir),
+                "--batch-file",
+                str(batch_path),
+                # A replay re-derives owner from the current uploader, so pass it
+                # explicitly: the suite runs where no git identity exists.
+                "--owner",
+                "tester@redhat.com",
+            ],
         )
 
         assert result.exit_code == 0, result.output
@@ -2497,7 +2506,16 @@ class TestConfigFileIntegration:
         )
         result = CliRunner().invoke(
             cli=main,
-            args=["--tests-dir", str(tests_dir), "--batch-file", str(batch_path)],
+            args=[
+                "--tests-dir",
+                str(tests_dir),
+                "--batch-file",
+                str(batch_path),
+                # A replay drops the saved owner and re-derives it from the
+                # current uploader; the suite has no git identity, so pass one.
+                "--owner",
+                "tester@redhat.com",
+            ],
         )
 
         assert result.exit_code == 0, result.output

@@ -51,8 +51,10 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v10.3.3
         with:
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
+          # No cache: this pull_request_target job runs PR code, and a cache
+          # entry saved with the base-branch scope could be restored by a later
+          # run — i.e. a PR could poison the toolchain cache.
+          enable-cache: false
           python-version: "3.14"
 
       - name: Install uv-tox
