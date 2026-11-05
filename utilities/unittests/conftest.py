@@ -156,11 +156,12 @@ def mock_os_images():
     """Fixture providing mock OS image classes for testing"""
     # Mock RHEL class
     mock_rhel_class = MagicMock()
-    mock_rhel_class.LATEST_RELEASE_STR = "rhel-9.6.qcow2"
+    mock_rhel_class.LATEST_RELEASE_STR = "rhel-9.8.qcow2"
     mock_rhel_class.DEFAULT_DV_SIZE = "20Gi"
     mock_rhel_class.RHEL8_10_IMG = "rhel-8.10.qcow2"
     mock_rhel_class.RHEL9_5_IMG = "rhel-9.5.qcow2"
     mock_rhel_class.RHEL9_6_IMG = "rhel-9.6.qcow2"
+    mock_rhel_class.RHEL9_8_IMG = "rhel-9.8.qcow2"
     mock_rhel_class.DIR = "cnv-tests/rhel-images"
 
     # Mock Windows class

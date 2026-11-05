@@ -49,7 +49,7 @@ storage_class_matrix = [
 storage_class_a = StorageClassNames.IO2_CSI
 storage_class_b = StorageClassNames.IO2_CSI
 
-rhel_os_list = ["rhel-9-5", "rhel-9-6"]
+rhel_os_list = ["rhel-9-5", "rhel-9-6", "rhel-9-8"]
 fedora_os_list = ["fedora-42"]
 centos_os_list = ["centos-stream-9"]
 
