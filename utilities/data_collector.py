@@ -74,7 +74,7 @@ def set_data_collector_directory(item, directory_path):
     data_collector_dict["collector_directory"] = prepare_pytest_item_data_dir(item=item, output_dir=directory_path)
 
 
-def get_data_collector_dir():
+def get_data_collector_dir() -> str:
     data_collector_dict = py_config["data_collector"]
     return data_collector_dict.get(
         "collector_directory",
@@ -82,7 +82,7 @@ def get_data_collector_dir():
     )
 
 
-def write_to_file(file_name, content, base_directory, mode="w"):
+def write_to_file(file_name: str, content: str, base_directory: str, mode: str = "w") -> None:
     """
     Write to a file that will be available after the run execution.
 
