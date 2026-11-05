@@ -46,7 +46,17 @@ class VMIConditionStillPresentError(Exception):
 
 
 def _default_interface_predicate(interface: ResourceField) -> bool:
-    return "guest-agent" in interface["infoSource"] and interface[IP_ADDRESS]
+    if "guest-agent" not in interface["infoSource"]:
+        return False
+    ip = interface[IP_ADDRESS]
+    if not ip:
+        return False
+    try:
+        # Skip the transient IPv6 link-local address (fe80::/10) the guest agent
+        # reports before the routable (DHCP/static) IP reaches the VMI status.
+        return not ipaddress.ip_address(ip).is_link_local
+    except ValueError:
+        return False
 
 
 def lookup_iface_status(
