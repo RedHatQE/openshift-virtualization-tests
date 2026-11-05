@@ -34,6 +34,7 @@ class VMISpec:
     volumes: list[Volume] | None = None
     terminationGracePeriodSeconds: int | None = None
     affinity: Affinity | None = None
+    resourceClaims: list[ResourceClaim] | None = None
 
 
 @dataclass
@@ -86,6 +87,18 @@ class Interface:
 
 
 @dataclass
+class NetworkResourceClaim:
+    claimName: str
+    requestName: str
+
+
+@dataclass
+class ResourceClaim:
+    name: str
+    resourceClaimTemplateName: str
+
+
+@dataclass
 class NetBinding:
     name: str
 
@@ -95,6 +108,7 @@ class Network:
     name: str
     pod: dict[Any, Any] | None = None
     multus: Multus | None = None
+    resourceClaim: NetworkResourceClaim | None = None
 
 
 @dataclass
