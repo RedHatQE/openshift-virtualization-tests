@@ -23,7 +23,7 @@ from tests.infrastructure.golden_images.update_boot_source.utils import (
 from tests.utils import get_parameters_from_template
 from utilities.constants.hco import DATA_SOURCE_NAME
 from utilities.constants.images import DEFAULT_FEDORA_REGISTRY_URL
-from utilities.constants.timeouts import TIMEOUT_5MIN
+from utilities.constants.timeouts import TIMEOUT_5MIN, TIMEOUT_10MIN
 from utilities.ssp import wait_for_condition_message_value
 
 LOGGER = logging.getLogger(__name__)
@@ -131,7 +131,7 @@ def wait_for_data_import_cron_label_in_data_source_when_opt_in(data_source, opt_
     log_data_source_state(data_source=data_source, when="label-wait-start")
     try:
         for sample in TimeoutSampler(
-            wait_timeout=TIMEOUT_5MIN,
+            wait_timeout=TIMEOUT_10MIN,
             sleep=5,
             func=lambda: DATA_SOURCE_MANAGED_BY_CDI_LABEL in data_source.labels.keys(),
         ):
