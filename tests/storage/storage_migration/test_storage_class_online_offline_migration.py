@@ -21,6 +21,7 @@ from tests.storage.storage_migration.utils import (
     verify_files_in_hotplugged_disks,
     verify_source_dvs_deleted,
     verify_source_dvs_exist,
+    verify_vm_dv_names_changed,
     verify_vm_dv_names_unchanged,
     verify_vm_pending_until_storage_migration_completed,
     verify_vm_pvcs_volume_mode,
@@ -380,6 +381,75 @@ class TestOfflineVMStorageMigrationWithHotplugDisks:
         )
         verify_files_in_hotplugged_disks(
             vm=stopped_vm_with_written_files_on_hotplugged_disks,
+            file_name=FILE_BEFORE_STORAGE_MIGRATION,
+            file_content=CONTENT,
+        )
+
+
+@pytest.mark.parametrize(
+    "source_storage_class, target_storage_class, offline_vm_mig_plan",
+    [
+        pytest.param(
+            {"source_storage_class": py_config[STORAGE_CLASS_A]},
+            {"target_storage_class": py_config[STORAGE_CLASS_A]},
+            {},
+            id="source_a_target_a",
+        ),
+    ],
+    indirect=True,
+)
+class TestOfflineVMSameClassMigration:
+    """
+    Tests for offline VM storage migration between volumes of the same storage class (HPP to HPP).
+
+    Preconditions:
+        - HPP storage class available on the cluster
+        - Stopped VM with a data disk on the HPP storage class
+        - File written to the VM data disk with known content
+        - Source volume identifier recorded before migration
+    """
+
+    @pytest.mark.polarion("CNV-16801")
+    @pytest.mark.usefixtures("offline_vm_mig_migration")
+    def test_offline_vm_same_class_hpp_migration(
+        self,
+        target_storage_class,
+        stopped_vm_with_written_file_for_scmig,
+        stopped_vm_with_written_file_source_dv_names,
+    ):
+        """
+        Test that offline VM storage migration between volumes of the same storage class (HPP to HPP)
+        completes successfully, the VM references the new volume, and guest data is preserved.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_offline.md
+
+        Preconditions:
+            - Stopped VM with a data disk on the HPP storage class
+            - File written to the VM data disk with known content
+            - Source volume identifier recorded before migration
+
+        Steps:
+            1. Create a storage migration plan for the stopped VM targeting the same HPP storage class
+            2. Execute the storage migration and wait for completion
+            3. Verify the VM disk references point to the new migrated volume on the HPP storage class
+            4. Start the VM after migration completes
+            5. Read the file content from the VM data disk
+
+        Expected:
+            - Migration plan status is "Succeeded"
+            - VM disk references point to the new volume on the HPP storage class
+            - VM boots successfully after migration and file content equals the pre-migration written data
+        """
+        verify_vm_dv_names_changed(
+            vm=stopped_vm_with_written_file_for_scmig, original_dv_names=stopped_vm_with_written_file_source_dv_names
+        )
+        verify_vm_storage_class_updated(
+            vm=stopped_vm_with_written_file_for_scmig, target_storage_class=target_storage_class
+        )
+        stopped_vm_with_written_file_for_scmig.start(wait=True)
+        running_vm(vm=stopped_vm_with_written_file_for_scmig)
+        check_file_in_vm(
+            vm=stopped_vm_with_written_file_for_scmig,
             file_name=FILE_BEFORE_STORAGE_MIGRATION,
             file_content=CONTENT,
         )
