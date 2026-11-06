@@ -1,5 +1,4 @@
 import shlex
-from typing import Any
 
 import pytest
 from ocp_resources.data_source import DataSource
@@ -26,7 +25,6 @@ from utilities.exceptions import StorageMigrationError
 from utilities.jira import is_jira_open
 from utilities.storage import (
     data_volume_template_with_source_ref_dict,
-    get_dv_size_from_datasource,
     wait_for_vm_volume_ready,
 )
 from utilities.virt import VirtualMachineForTests, get_vm_boot_time, running_vm
@@ -260,38 +258,6 @@ def build_namespaces_spec_for_storage_migration(
     return [{"name": ns_name, "virtualMachines": vms} for ns_name, vms in namespaces_dict.items()]
 
 
-def data_volume_template_with_volume_mode(
-    data_source: DataSource, storage_class: str, volume_mode: str, dv_name: str
-) -> dict[str, Any]:
-    """Build a VM dataVolumeTemplate cloned from a DataSource with an explicit volume mode.
-
-    Args:
-        data_source: DataSource to clone from.
-        storage_class: Storage class for the DataVolume.
-        volume_mode: PVC volume mode ("Block" or "Filesystem").
-        dv_name: Name of the DataVolume.
-
-    Returns:
-        DataVolume template dict (metadata and spec) for VM dataVolumeTemplates.
-    """
-    dv = DataVolume(
-        name=dv_name,
-        namespace=data_source.namespace,
-        client=data_source.client,
-        size=get_dv_size_from_datasource(data_source=data_source),
-        storage_class=storage_class,
-        volume_mode=volume_mode,
-        api_name="storage",
-        source_ref={
-            "kind": data_source.kind,
-            "name": data_source.name,
-            "namespace": data_source.namespace,
-        },
-    )
-    dv.to_dict()
-    return {"metadata": {"name": dv.name}, "spec": dv.res["spec"]}
-
-
 def build_namespaces_spec_with_target_volume_mode(
     vms: list[VirtualMachineForTests], target_storage_class: str, target_volume_mode: str
 ) -> list[dict]:
@@ -401,6 +367,19 @@ def verify_vm_dv_names_unchanged(vm: VirtualMachineForTests, expected_dv_names: 
     current_dv_names = get_vm_dv_names(vm=vm)
     assert sorted(current_dv_names) == sorted(expected_dv_names), (
         f"VM {vm.name} disk references changed. Expected: {expected_dv_names}, current: {current_dv_names}"
+    )
+
+
+def verify_vm_dv_names_changed(vm: VirtualMachineForTests, original_dv_names: list[str]) -> None:
+    """Verify that the VM references new DataVolumes after migration.
+
+    Args:
+        vm: VM to check.
+        original_dv_names: DataVolume names the VM referenced before migration.
+    """
+    current_dv_names = get_vm_dv_names(vm=vm)
+    assert sorted(current_dv_names) != sorted(original_dv_names), (
+        f"VM {vm.name} disk references did not change after migration; still referencing: {current_dv_names}"
     )
 
 

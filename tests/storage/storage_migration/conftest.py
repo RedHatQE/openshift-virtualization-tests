@@ -1,14 +1,17 @@
 import contextlib
 import logging
 import shlex
+from collections.abc import Generator
 
 import pytest
+from kubernetes.dynamic import DynamicClient
 from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.multi_namespace_virtual_machine_storage_migration import MultiNamespaceVirtualMachineStorageMigration
 from ocp_resources.multi_namespace_virtual_machine_storage_migration_plan import (
     MultiNamespaceVirtualMachineStorageMigrationPlan,
 )
+from ocp_resources.namespace import Namespace
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from pyhelper_utils.shell import run_ssh_commands
@@ -27,7 +30,6 @@ from tests.storage.storage_migration.utils import (
     build_namespaces_spec_for_storage_migration,
     build_namespaces_spec_with_target_volume_mode,
     create_fedora_vm_with_instance_type,
-    data_volume_template_with_volume_mode,
     get_vm_dv_names,
     wait_for_offline_storage_migration_completed,
     wait_for_storage_migration_in_progress,
@@ -711,8 +713,12 @@ def failure_mig_migration(admin_client, failure_mig_plan, failure_source_dv_name
 
 @pytest.fixture()
 def stopped_vm_with_written_file_for_scmig(
-    unprivileged_client, namespace, fedora_data_source_scope_module, source_storage_class, cpu_for_migration
-):
+    unprivileged_client: DynamicClient,
+    namespace: Namespace,
+    fedora_data_source_scope_module: DataSource,
+    source_storage_class: str,
+    cpu_for_migration: str,
+) -> Generator[VirtualMachineForTests]:
     vm_creator = create_fedora_vm_with_instance_type(
         unprivileged_client=unprivileged_client,
         namespace_name=namespace.name,
@@ -729,19 +735,21 @@ def stopped_vm_with_written_file_for_scmig(
 
 
 @pytest.fixture()
-def stopped_vm_with_written_file_source_dv_names(stopped_vm_with_written_file_for_scmig):
+def stopped_vm_with_written_file_source_dv_names(
+    stopped_vm_with_written_file_for_scmig: VirtualMachineForTests,
+) -> Generator[list[str]]:
     yield get_vm_dv_names(vm=stopped_vm_with_written_file_for_scmig)
 
 
 @pytest.fixture()
 def stopped_vm_with_volume_mode_for_scmig(
-    unprivileged_client,
-    namespace,
-    fedora_data_source_scope_module,
-    source_storage_class,
-    source_volume_mode,
-    cpu_for_migration,
-):
+    unprivileged_client: DynamicClient,
+    namespace: Namespace,
+    fedora_data_source_scope_module: DataSource,
+    source_storage_class: str,
+    source_volume_mode: str,
+    cpu_for_migration: str,
+) -> Generator[VirtualMachineForTests]:
     with VirtualMachineForTests(
         name="offline-vm-volume-mode",
         namespace=namespace.name,
@@ -749,11 +757,11 @@ def stopped_vm_with_volume_mode_for_scmig(
         os_flavor=OS_FLAVOR_FEDORA,
         vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL, client=unprivileged_client),
         vm_preference=VirtualMachineClusterPreference(name=OS_FLAVOR_FEDORA, client=unprivileged_client),
-        data_volume_template=data_volume_template_with_volume_mode(
+        data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=fedora_data_source_scope_module,
             storage_class=source_storage_class,
+            name=unique_name(name="offline-vm-volume-mode-dv"),
             volume_mode=source_volume_mode,
-            dv_name=unique_name(name="offline-vm-volume-mode-dv"),
         ),
         cpu_model=cpu_for_migration,
     ) as vm:
@@ -764,13 +772,13 @@ def stopped_vm_with_volume_mode_for_scmig(
 
 @pytest.fixture()
 def volume_mode_offline_mig_plan(
-    admin_client,
-    migration_resources_namespace,
-    target_storage_class,
-    target_volume_mode,
-    stopped_vm_with_volume_mode_for_scmig,
-    unique_suffix_scope_function,
-):
+    admin_client: DynamicClient,
+    migration_resources_namespace: Namespace,
+    target_storage_class: str,
+    target_volume_mode: str,
+    stopped_vm_with_volume_mode_for_scmig: VirtualMachineForTests,
+    unique_suffix_scope_function: str,
+) -> Generator[MultiNamespaceVirtualMachineStorageMigrationPlan]:
     with MultiNamespaceVirtualMachineStorageMigrationPlan(
         name=f"volume-mode-plan-{unique_suffix_scope_function}",
         namespace=migration_resources_namespace.name,
@@ -785,7 +793,10 @@ def volume_mode_offline_mig_plan(
 
 
 @pytest.fixture()
-def volume_mode_offline_mig_migration(admin_client, volume_mode_offline_mig_plan):
+def volume_mode_offline_mig_migration(
+    admin_client: DynamicClient,
+    volume_mode_offline_mig_plan: MultiNamespaceVirtualMachineStorageMigrationPlan,
+) -> Generator[MultiNamespaceVirtualMachineStorageMigration]:
     with MultiNamespaceVirtualMachineStorageMigration(
         name=f"mig-{volume_mode_offline_mig_plan.name}",
         namespace=volume_mode_offline_mig_plan.namespace,
@@ -798,14 +809,14 @@ def volume_mode_offline_mig_migration(admin_client, volume_mode_offline_mig_plan
 
 @pytest.fixture()
 def offline_vm_mig_plan(
-    request,
-    admin_client,
-    migration_resources_namespace,
-    target_storage_class,
-    stopped_vm_with_written_file_for_scmig,
-    stopped_vm_with_written_file_source_dv_names,
-    unique_suffix_scope_function,
-):
+    request: pytest.FixtureRequest,
+    admin_client: DynamicClient,
+    migration_resources_namespace: Namespace,
+    target_storage_class: str,
+    stopped_vm_with_written_file_for_scmig: VirtualMachineForTests,
+    stopped_vm_with_written_file_source_dv_names: list[str],
+    unique_suffix_scope_function: str,
+) -> Generator[MultiNamespaceVirtualMachineStorageMigrationPlan]:
     retention_policy = request.param.get("retention_policy")
     LOGGER.info(f"Creating offline VM migration plan with retentionPolicy={retention_policy}")
     with MultiNamespaceVirtualMachineStorageMigrationPlan(
@@ -822,7 +833,10 @@ def offline_vm_mig_plan(
 
 
 @pytest.fixture()
-def offline_vm_mig_migration(admin_client, offline_vm_mig_plan):
+def offline_vm_mig_migration(
+    admin_client: DynamicClient,
+    offline_vm_mig_plan: MultiNamespaceVirtualMachineStorageMigrationPlan,
+) -> Generator[MultiNamespaceVirtualMachineStorageMigration]:
     with MultiNamespaceVirtualMachineStorageMigration(
         name=f"mig-{offline_vm_mig_plan.name}",
         namespace=offline_vm_mig_plan.namespace,
@@ -834,7 +848,10 @@ def offline_vm_mig_migration(admin_client, offline_vm_mig_plan):
 
 
 @pytest.fixture()
-def offline_vm_mig_migration_in_progress(admin_client, offline_vm_mig_plan):
+def offline_vm_mig_migration_in_progress(
+    admin_client: DynamicClient,
+    offline_vm_mig_plan: MultiNamespaceVirtualMachineStorageMigrationPlan,
+) -> Generator[MultiNamespaceVirtualMachineStorageMigration]:
     with MultiNamespaceVirtualMachineStorageMigration(
         name=f"mig-{offline_vm_mig_plan.name}",
         namespace=offline_vm_mig_plan.namespace,
@@ -846,7 +863,10 @@ def offline_vm_mig_migration_in_progress(admin_client, offline_vm_mig_plan):
 
 
 @pytest.fixture()
-def started_vm_during_offline_scmig(stopped_vm_with_written_file_for_scmig, offline_vm_mig_migration_in_progress):
+def started_vm_during_offline_scmig(
+    stopped_vm_with_written_file_for_scmig: VirtualMachineForTests,
+    offline_vm_mig_migration_in_progress: MultiNamespaceVirtualMachineStorageMigration,
+) -> Generator[VirtualMachineForTests]:
     LOGGER.info(
         f"Starting VM {stopped_vm_with_written_file_for_scmig.name} while storage migration "
         f"{offline_vm_mig_migration_in_progress.name} is in progress"
@@ -856,18 +876,20 @@ def started_vm_during_offline_scmig(stopped_vm_with_written_file_for_scmig, offl
 
 
 @pytest.fixture()
-def running_vm_for_scmig_test_boot_time(running_vm_for_scmig_test_first_ns):
+def running_vm_for_scmig_test_boot_time(
+    running_vm_for_scmig_test_first_ns: VirtualMachineForTests,
+) -> Generator[str]:
     yield get_vm_boot_time(vm=running_vm_for_scmig_test_first_ns)
 
 
 @pytest.fixture()
 def combined_mode_mig_migration_in_progress(
-    admin_client,
-    combined_mode_mig_plan,
-    running_vm_for_scmig_test_source_dvs,
-    stopped_vm_for_scmig_test_source_dvs,
-    running_vm_for_scmig_test_boot_time,
-):
+    admin_client: DynamicClient,
+    combined_mode_mig_plan: MultiNamespaceVirtualMachineStorageMigrationPlan,
+    running_vm_for_scmig_test_source_dvs: list[str],
+    stopped_vm_for_scmig_test_source_dvs: list[str],
+    running_vm_for_scmig_test_boot_time: str,
+) -> Generator[MultiNamespaceVirtualMachineStorageMigration]:
     with MultiNamespaceVirtualMachineStorageMigration(
         name=f"mig-{combined_mode_mig_plan.name}",
         namespace=combined_mode_mig_plan.namespace,
@@ -879,7 +901,9 @@ def combined_mode_mig_migration_in_progress(
 
 
 @pytest.fixture()
-def cancelled_combined_mode_mig_migration(combined_mode_mig_migration_in_progress):
+def cancelled_combined_mode_mig_migration(
+    combined_mode_mig_migration_in_progress: MultiNamespaceVirtualMachineStorageMigration,
+) -> Generator[MultiNamespaceVirtualMachineStorageMigration]:
     # Deleting the migration cancels it: the controller holds the resource with a finalizer while it
     # reverts the VMs to their source volumes (Canceling -> CleanupCancelledMigrations -> Canceled), then
     # removes the finalizer. The Canceled phase lasts a single reconcile, so a completed deletion is the
@@ -892,7 +916,9 @@ def cancelled_combined_mode_mig_migration(combined_mode_mig_migration_in_progres
 
 
 @pytest.fixture(scope="class")
-def stopped_vm_with_written_files_on_hotplugged_disks(written_files_to_mounted_hotplugged_disks):
+def stopped_vm_with_written_files_on_hotplugged_disks(
+    written_files_to_mounted_hotplugged_disks: VirtualMachineForTests,
+) -> Generator[VirtualMachineForTests]:
     write_file(
         vm=written_files_to_mounted_hotplugged_disks,
         filename=FILE_BEFORE_STORAGE_MIGRATION,
@@ -904,12 +930,12 @@ def stopped_vm_with_written_files_on_hotplugged_disks(written_files_to_mounted_h
 
 @pytest.fixture(scope="class")
 def hotplug_offline_mig_plan(
-    admin_client,
-    migration_resources_namespace,
-    target_storage_class,
-    stopped_vm_with_written_files_on_hotplugged_disks,
-    unique_suffix,
-):
+    admin_client: DynamicClient,
+    migration_resources_namespace: Namespace,
+    target_storage_class: str,
+    stopped_vm_with_written_files_on_hotplugged_disks: VirtualMachineForTests,
+    unique_suffix: str,
+) -> Generator[MultiNamespaceVirtualMachineStorageMigrationPlan]:
     with MultiNamespaceVirtualMachineStorageMigrationPlan(
         name=f"hotplug-offline-plan-{unique_suffix}",
         namespace=migration_resources_namespace.name,
@@ -923,7 +949,10 @@ def hotplug_offline_mig_plan(
 
 
 @pytest.fixture(scope="class")
-def hotplug_offline_mig_migration(admin_client, hotplug_offline_mig_plan):
+def hotplug_offline_mig_migration(
+    admin_client: DynamicClient,
+    hotplug_offline_mig_plan: MultiNamespaceVirtualMachineStorageMigrationPlan,
+) -> Generator[MultiNamespaceVirtualMachineStorageMigration]:
     with MultiNamespaceVirtualMachineStorageMigration(
         name=f"mig-{hotplug_offline_mig_plan.name}",
         namespace=hotplug_offline_mig_plan.namespace,
@@ -936,12 +965,12 @@ def hotplug_offline_mig_migration(admin_client, hotplug_offline_mig_plan):
 
 @pytest.fixture()
 def offline_failure_mig_plan(
-    admin_client,
-    migration_resources_namespace,
-    stopped_vm_for_scmig_test_first_ns,
-    stopped_vm_for_scmig_test_source_dvs,
-    unique_suffix_scope_function,
-):
+    admin_client: DynamicClient,
+    migration_resources_namespace: Namespace,
+    stopped_vm_for_scmig_test_first_ns: VirtualMachineForTests,
+    stopped_vm_for_scmig_test_source_dvs: list[str],
+    unique_suffix_scope_function: str,
+) -> Generator[MultiNamespaceVirtualMachineStorageMigrationPlan]:
     with MultiNamespaceVirtualMachineStorageMigrationPlan(
         name=f"offline-failure-plan-{unique_suffix_scope_function}",
         namespace=migration_resources_namespace.name,
@@ -955,7 +984,10 @@ def offline_failure_mig_plan(
 
 
 @pytest.fixture()
-def offline_failure_mig_migration(admin_client, offline_failure_mig_plan):
+def offline_failure_mig_migration(
+    admin_client: DynamicClient,
+    offline_failure_mig_plan: MultiNamespaceVirtualMachineStorageMigrationPlan,
+) -> Generator[MultiNamespaceVirtualMachineStorageMigration]:
     with MultiNamespaceVirtualMachineStorageMigration(
         name=f"mig-{offline_failure_mig_plan.name}",
         namespace=offline_failure_mig_plan.namespace,
