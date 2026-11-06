@@ -194,6 +194,23 @@ def get_vm_dv_names(vm: VirtualMachineForTests) -> list[str]:
     ]
 
 
+def get_vm_volume_node(vm: VirtualMachineForTests) -> str | None:
+    """Return the node hosting the VM's first data volume.
+
+    Reads the ``volume.kubernetes.io/selected-node`` annotation of the PVC backing the VM's
+    first DataVolume. Only node-local provisioners (e.g. HPP / hostpath-csi) set this annotation;
+    it is ``None`` for storage that is not bound to a specific node.
+
+    Args:
+        vm: VM whose first data volume's node is returned.
+
+    Returns:
+        The node name hosting the volume, or ``None`` when the PVC has no selected-node annotation.
+    """
+    pvc_name = get_vm_dv_names(vm=vm)[0]
+    return PersistentVolumeClaim(client=vm.client, namespace=vm.namespace, name=pvc_name).selected_node
+
+
 def verify_source_dvs_deleted(vm: VirtualMachineForTests, source_dv_names: list[str]) -> None:
     """Verify that source DataVolumes are deleted after migration.
 

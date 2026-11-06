@@ -12,6 +12,7 @@ from ocp_resources.multi_namespace_virtual_machine_storage_migration_plan import
     MultiNamespaceVirtualMachineStorageMigrationPlan,
 )
 from ocp_resources.namespace import Namespace
+from ocp_resources.node import Node
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from pyhelper_utils.shell import run_ssh_commands
@@ -31,6 +32,7 @@ from tests.storage.storage_migration.utils import (
     build_namespaces_spec_with_target_volume_mode,
     create_fedora_vm_with_instance_type,
     get_vm_dv_names,
+    get_vm_volume_node,
     wait_for_offline_storage_migration_completed,
     wait_for_storage_migration_in_progress,
     wait_for_storage_migration_phase,
@@ -55,6 +57,7 @@ from utilities.storage import (
 )
 from utilities.virt import (
     VirtualMachineForTests,
+    cordon_node,
     get_vm_boot_time,
     running_vm,
     vm_instance_from_template,
@@ -998,3 +1001,33 @@ def offline_failure_mig_migration(
         # terminal "Failed" phase (CNV-98407), so tests using this fixture are quarantined.
         wait_for_storage_migration_phase(mig_migration=mig_migration, expected_phase=mig_migration.Status.FAILED)
         yield mig_migration
+
+
+@pytest.fixture()
+def source_volume_node_for_scmig(
+    stopped_vm_with_written_file_for_scmig: VirtualMachineForTests,
+) -> Generator[str | None]:
+    # Record the node hosting the source (node-local HPP) volume before the migration runs.
+    yield get_vm_volume_node(vm=stopped_vm_with_written_file_for_scmig)
+
+
+@pytest.fixture()
+def hpp_node_to_node_mig_migration(
+    admin_client: DynamicClient,
+    offline_vm_mig_plan: MultiNamespaceVirtualMachineStorageMigrationPlan,
+    source_volume_node_for_scmig: str | None,
+) -> Generator[MultiNamespaceVirtualMachineStorageMigration]:
+    assert source_volume_node_for_scmig, (
+        "Source volume node could not be determined; node-local (HPP) storage is required for node-to-node migration"
+    )
+    # Cordon the source node so the migration target volume (HPP is WaitForFirstConsumer and
+    # node-local) is provisioned on a different node, exercising node-to-node migration.
+    with cordon_node(admin_client=admin_client, node=Node(client=admin_client, name=source_volume_node_for_scmig)):
+        with MultiNamespaceVirtualMachineStorageMigration(
+            name=f"mig-{offline_vm_mig_plan.name}",
+            namespace=offline_vm_mig_plan.namespace,
+            client=admin_client,
+            multi_namespace_virtual_machine_storage_migration_plan_ref={"name": offline_vm_mig_plan.name},
+        ) as mig_migration:
+            wait_for_offline_storage_migration_completed(mig_migration=mig_migration)
+            yield mig_migration

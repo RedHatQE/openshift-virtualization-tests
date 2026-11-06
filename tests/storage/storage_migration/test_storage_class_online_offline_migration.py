@@ -17,6 +17,7 @@ from tests.storage.storage_migration.constants import (
     KEEP_SOURCE,
 )
 from tests.storage.storage_migration.utils import (
+    get_vm_volume_node,
     mount_hotplugged_disks,
     verify_files_in_hotplugged_disks,
     verify_source_dvs_deleted,
@@ -398,53 +399,59 @@ class TestOfflineVMStorageMigrationWithHotplugDisks:
     ],
     indirect=True,
 )
-class TestOfflineVMSameClassMigration:
+class TestOfflineVMSameClassMigrationAcrossNodes:
     """
-    Tests for offline VM storage migration between volumes of the same storage class (HPP to HPP).
+    Tests for offline VM storage migration between nodes using the same storage class (HPP to HPP).
 
     Preconditions:
-        - HPP storage class available on the cluster
+        - Node-local (HPP) storage class available on the cluster
+        - At least two schedulable worker nodes
         - Stopped VM with a data disk on the HPP storage class
         - File written to the VM data disk with known content
-        - Source volume identifier recorded before migration
+        - Source volume node and identifier recorded before migration
     """
 
+    @pytest.mark.special_infra
+    @pytest.mark.tier3
     @pytest.mark.polarion("CNV-16801")
-    @pytest.mark.usefixtures("offline_vm_mig_migration")
-    def test_offline_vm_same_class_hpp_migration(
+    @pytest.mark.usefixtures("hpp_node_to_node_mig_migration")
+    def test_offline_vm_same_class_hpp_migration_across_nodes(
         self,
-        target_storage_class,
         stopped_vm_with_written_file_for_scmig,
         stopped_vm_with_written_file_source_dv_names,
+        source_volume_node_for_scmig,
     ):
         """
-        Test that offline VM storage migration between volumes of the same storage class (HPP to HPP)
-        completes successfully, the VM references the new volume, and guest data is preserved.
+        Test that offline VM storage migration from HPP to HPP across different nodes completes
+        successfully, the VM references the new volume on a different node, and guest data is preserved.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_offline.md
 
         Preconditions:
             - Stopped VM with a data disk on the HPP storage class
             - File written to the VM data disk with known content
-            - Source volume identifier recorded before migration
+            - Source volume node and identifier recorded before migration
 
         Steps:
             1. Create a storage migration plan for the stopped VM targeting the same HPP storage class
-            2. Execute the storage migration and wait for completion
-            3. Verify the VM disk references point to the new migrated volume on the HPP storage class
-            4. Start the VM after migration completes
-            5. Read the file content from the VM data disk
+            2. Make the source node unschedulable so the migrated volume is provisioned on a different node
+            3. Execute the storage migration and wait for completion
+            4. Verify the VM disk references point to the new migrated volume on a different node
+            5. Start the VM after migration completes
+            6. Read the file content from the VM data disk
 
         Expected:
             - Migration plan status is "Succeeded"
-            - VM disk references point to the new volume on the HPP storage class
+            - VM disk references point to the new volume located on a different node than the source
             - VM boots successfully after migration and file content equals the pre-migration written data
         """
         verify_vm_dv_names_changed(
             vm=stopped_vm_with_written_file_for_scmig, original_dv_names=stopped_vm_with_written_file_source_dv_names
         )
-        verify_vm_storage_class_updated(
-            vm=stopped_vm_with_written_file_for_scmig, target_storage_class=target_storage_class
+        target_volume_node = get_vm_volume_node(vm=stopped_vm_with_written_file_for_scmig)
+        assert target_volume_node and target_volume_node != source_volume_node_for_scmig, (
+            f"Migrated volume for VM {stopped_vm_with_written_file_for_scmig.name} did not move to a different node. "
+            f"Source node: {source_volume_node_for_scmig}, target node: {target_volume_node}"
         )
         stopped_vm_with_written_file_for_scmig.start(wait=True)
         running_vm(vm=stopped_vm_with_written_file_for_scmig)
