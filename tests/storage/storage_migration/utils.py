@@ -1,6 +1,7 @@
 import shlex
 
 import pytest
+from kubernetes.dynamic.exceptions import NotFoundError
 from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.multi_namespace_virtual_machine_storage_migration import MultiNamespaceVirtualMachineStorageMigration
@@ -206,9 +207,20 @@ def get_vm_volume_node(vm: VirtualMachineForTests) -> str | None:
 
     Returns:
         The node name hosting the volume, or ``None`` when the PVC has no selected-node annotation.
+
+    Raises:
+        StorageMigrationError: If the VM references no DataVolume, or its backing PVC does not exist.
     """
-    pvc_name = get_vm_dv_names(vm=vm)[0]
-    return PersistentVolumeClaim(client=vm.client, namespace=vm.namespace, name=pvc_name).selected_node
+    dv_names = get_vm_dv_names(vm=vm)
+    if not dv_names:
+        raise StorageMigrationError(f"VM {vm.name} references no DataVolume to resolve a volume node from")
+    pvc_name = dv_names[0]
+    try:
+        return PersistentVolumeClaim(client=vm.client, namespace=vm.namespace, name=pvc_name).selected_node
+    except NotFoundError as error:
+        raise StorageMigrationError(
+            f"PVC {pvc_name} backing VM {vm.name} was not found while resolving its volume node"
+        ) from error
 
 
 def verify_source_dvs_deleted(vm: VirtualMachineForTests, source_dv_names: list[str]) -> None:
