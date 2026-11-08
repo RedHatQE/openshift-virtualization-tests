@@ -9,8 +9,10 @@ from kubernetes.dynamic import DynamicClient
 from ocp_resources.cluster_operator import ClusterOperator
 from ocp_resources.namespace import Namespace
 from ocp_resources.node import Node
+from ocp_resources.pod import Pod
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.vtep import VTEP
+from timeout_sampler import TimeoutExpiredError
 
 from libs.net.ip import random_ipv4_address
 from libs.net.traffic_generator import TcpServer
@@ -36,7 +38,29 @@ from tests.network.bgp.evpn.libevpn import (
     teardown_evpn_l3_endpoint,
     teardown_evpn_l3_vrf,
 )
-from tests.network.bgp.evpn.utils import OPENPE_PROVIDER_NODE_LABEL, OpenPERouterInfo, deploy_stock_openperouter
+from tests.network.bgp.evpn.utils import (
+    L2VNI,
+    L3VNI,
+    OPENPE_PROVIDER_NODE_LABEL,
+    OpenPERouterAttachment,
+    OpenPERouterInfo,
+    RawFRRConfig,
+    Underlay,
+    collect_openperouter_diagnostics,
+    create_openperouter_l2_vni,
+    create_openperouter_l3_vni,
+    create_openperouter_raw_frr_config,
+    create_openperouter_underlay,
+    deploy_openperouter_helper_pod,
+    deploy_stock_openperouter,
+    openperouter_attachment_from_environment,
+    openperouter_topology_cleanup,
+    validate_openperouter_parent_interface,
+    wait_for_openperouter_l2_vni,
+    wait_for_openperouter_l3_vni,
+    wait_for_openperouter_raw_frr_config,
+    wait_for_openperouter_underlay,
+)
 from tests.network.libs import cluster_user_defined_network as libcudn
 from tests.network.libs.bgp import (
     EXTERNAL_FRR_POD_LABEL,
@@ -329,6 +353,17 @@ def vm_source_provider(
         yield vm
 
 
+EXTERNAL_L3_NET_SEED: Final[int] = EVPN_CUDN_NET_SEED + 1
+
+
+EXTERNAL_L3_SUBNET_IPV4: Final[str] = str(random_ipv4_address(net_seed=EXTERNAL_L3_NET_SEED, host_address=0))
+
+
+@pytest.fixture(scope="module")
+def openperouter_attachment() -> OpenPERouterAttachment:
+    return openperouter_attachment_from_environment()
+
+
 @pytest.fixture(scope="module")
 def openperouter_provider_nodes(worker_node1: Node) -> Generator[list[Node]]:
     yield from label_nodes(nodes=[worker_node1], labels=OPENPE_PROVIDER_NODE_LABEL)
@@ -344,7 +379,7 @@ def openperouter_namespace(admin_client: DynamicClient) -> Generator[Namespace]:
     yield from create_ns(name="test-openperouter-ns", admin_client=admin_client)
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope="module")
 def openperouter_installation(
     admin_client: DynamicClient,
     openperouter_namespace: Namespace,
@@ -356,3 +391,147 @@ def openperouter_installation(
         provider_node_name=openperouter_provider_node.name,
     ) as openperouter_info:
         yield openperouter_info
+
+
+@pytest.fixture(scope="module")
+def openperouter_diagnostics_pod(
+    admin_client: DynamicClient,
+    openperouter_installation: OpenPERouterInfo,
+) -> Generator[Pod]:
+    with deploy_openperouter_helper_pod(
+        client=admin_client,
+        namespace_name=openperouter_installation.namespace_name,
+        node_name=openperouter_installation.provider_node_name,
+        netns_read_only=True,
+    ) as diagnostics_pod:
+        yield diagnostics_pod
+
+
+@pytest.fixture(scope="module")
+def openperouter_underlay(
+    admin_client: DynamicClient,
+    openperouter_installation: OpenPERouterInfo,
+    openperouter_attachment: OpenPERouterAttachment,
+    openperouter_diagnostics_pod: Pod,
+    openperouter_provider_node: Node,
+    workers: list[Node],
+) -> Generator[Underlay]:
+    validate_openperouter_parent_interface(
+        node=openperouter_provider_node,
+        attachment=openperouter_attachment,
+    )
+    worker_ips = [
+        str(node_primary_ipv4_interface(worker).ip)
+        for worker in workers
+        if worker.name != openperouter_provider_node.name
+    ]
+    with (
+        openperouter_topology_cleanup(
+            diagnostics_pod=openperouter_diagnostics_pod,
+            vnis=[EVPN_MAC_VRF_VNI, EVPN_IP_VRF_VNI],
+        ),
+        create_openperouter_underlay(
+            client=admin_client,
+            namespace_name=openperouter_diagnostics_pod.namespace,
+            attachment=openperouter_attachment,
+            worker_ips=worker_ips,
+        ) as underlay,
+    ):
+        try:
+            wait_for_openperouter_underlay(
+                diagnostics_pod=openperouter_diagnostics_pod,
+                attachment=openperouter_attachment,
+                worker_ips=worker_ips,
+            )
+        except TimeoutExpiredError:
+            collect_openperouter_diagnostics(
+                client=admin_client,
+                namespace_name=openperouter_installation.namespace_name,
+                router_pod=openperouter_installation.router_pod,
+                diagnostics_pod=openperouter_diagnostics_pod,
+            )
+            raise
+        yield underlay
+
+
+@pytest.fixture(scope="module")
+def openperouter_l2_vni(
+    admin_client: DynamicClient,
+    openperouter_installation: OpenPERouterInfo,
+    openperouter_diagnostics_pod: Pod,
+    openperouter_underlay: Underlay,
+) -> Generator[L2VNI]:
+    with create_openperouter_l2_vni(
+        client=admin_client,
+        namespace_name=openperouter_underlay.namespace,
+        vni=EVPN_MAC_VRF_VNI,
+    ) as l2_vni:
+        try:
+            wait_for_openperouter_l2_vni(diagnostics_pod=openperouter_diagnostics_pod, vni=EVPN_MAC_VRF_VNI)
+        except TimeoutExpiredError:
+            collect_openperouter_diagnostics(
+                client=admin_client,
+                namespace_name=openperouter_installation.namespace_name,
+                router_pod=openperouter_installation.router_pod,
+                diagnostics_pod=openperouter_diagnostics_pod,
+            )
+            raise
+        yield l2_vni
+
+
+@pytest.fixture(scope="module")
+def openperouter_l3_vni(
+    admin_client: DynamicClient,
+    openperouter_installation: OpenPERouterInfo,
+    openperouter_diagnostics_pod: Pod,
+    openperouter_l2_vni: L2VNI,
+) -> Generator[L3VNI]:
+    with create_openperouter_l3_vni(
+        client=admin_client,
+        namespace_name=openperouter_l2_vni.namespace,
+        vni=EVPN_IP_VRF_VNI,
+    ) as l3_vni:
+        try:
+            wait_for_openperouter_l3_vni(diagnostics_pod=openperouter_diagnostics_pod)
+        except TimeoutExpiredError:
+            collect_openperouter_diagnostics(
+                client=admin_client,
+                namespace_name=openperouter_installation.namespace_name,
+                router_pod=openperouter_installation.router_pod,
+                diagnostics_pod=openperouter_diagnostics_pod,
+            )
+            raise
+        yield l3_vni
+
+
+@pytest.fixture(scope="module", autouse=True)
+def openperouter_raw_frr_config(
+    admin_client: DynamicClient,
+    openperouter_installation: OpenPERouterInfo,
+    openperouter_diagnostics_pod: Pod,
+    openperouter_l3_vni: L3VNI,
+    openperouter_provider_node: Node,
+    workers: list[Node],
+) -> Generator[RawFRRConfig]:
+    worker_ips = [
+        str(node_primary_ipv4_interface(worker).ip)
+        for worker in workers
+        if worker.name != openperouter_provider_node.name
+    ]
+    with create_openperouter_raw_frr_config(
+        client=admin_client,
+        namespace_name=openperouter_l3_vni.namespace,
+        worker_ips=worker_ips,
+        external_l3_subnet_ipv4=EXTERNAL_L3_SUBNET_IPV4,
+    ) as raw_frr_config:
+        try:
+            wait_for_openperouter_raw_frr_config(diagnostics_pod=openperouter_diagnostics_pod)
+        except TimeoutExpiredError:
+            collect_openperouter_diagnostics(
+                client=admin_client,
+                namespace_name=openperouter_installation.namespace_name,
+                router_pod=openperouter_installation.router_pod,
+                diagnostics_pod=openperouter_diagnostics_pod,
+            )
+            raise
+        yield raw_frr_config
