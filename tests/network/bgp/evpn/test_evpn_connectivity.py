@@ -8,7 +8,7 @@ Markers:
 Preconditions:
     - OVN-K in Local Gateway Mode.
     - Enabled route advertisements in the cluster network resource.
-    - External Source Provider: BGP router (Spine) + L2 and L3 endpoints behind the Spine (see README.md).
+    - Stock OpenPERouter provider with synthetic L2 and L3 endpoints (see README.md).
     - UDN supported namespace.
     - EVPN-enabled CUDN Layer2 (using MAC-VRF (L2) and IP-VRF (L3)) with the same subnet as the external L2 endpoint.
     - BGP EVPN sessions are established between the OCP nodes and the external router.
