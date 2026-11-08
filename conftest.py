@@ -512,24 +512,9 @@ def pytest_cmdline_main(config):
             LOGGER.warning(f"Using default storage class {conformance_storage_class}")
 
 
-def add_polarion_parameters_to_user_properties(item: Item, matrix_name: str) -> None:
-    if matrix_config := py_config.get(matrix_name):
-        values = re.findall("(#.*?#)", item.name)  # Extract all substrings enclosed in '#' from item.name
-        for value in values:
-            value = value.strip("#")
-            for param in matrix_config:
-                if isinstance(param, dict):
-                    param = [*param][0]
-
-                if value == param:
-                    item.user_properties.append((f"polarion-parameter-{matrix_name}", value))
-
-
 def add_test_id_markers(item: Item, marker_name: str) -> None:
     for marker in item.iter_markers(name=marker_name):
         test_id = marker.args[0]
-        if marker_name == "polarion":
-            marker_name = f"{marker_name}-testcase-id"
         item.user_properties.append((marker_name, test_id))
 
 
@@ -581,13 +566,12 @@ def pytest_collection_modifyitems(session, config, items):
     Modify the test items during pytest collection to include necessary test metadata.
 
     This function performs the following actions:
-    1. Adds Polarion parameters to user properties.
-    2. Adds test ID markers for Polarion and Jira.
-    3. Marks tests by team.
-    4. Adds the tier2 marker for tests without an exclusion marker.
-    5. Filters upgrade tests based on the --upgrade option.
-    6. Dynamically mark NMState-dependent tests.
-    7. Auto-adds the quarantined marker for xfail-quarantined tests.
+    1. Adds test ID markers for Jira to user properties.
+    2. Marks tests by team.
+    3. Adds the tier2 marker for tests without an exclusion marker.
+    4. Filters upgrade tests based on the --upgrade option.
+    5. Dynamically mark NMState-dependent tests.
+    6. Auto-adds the quarantined marker for xfail-quarantined tests.
 
     Args:
         session (pytest.Session): The pytest session object.
@@ -607,9 +591,6 @@ def pytest_collection_modifyitems(session, config, items):
                     skip = pytest.mark.skip(reason=f"Dynamic matrix {_matrix_name} returned empty list")
                     item.add_marker(marker=skip)
 
-            add_polarion_parameters_to_user_properties(item=item, matrix_name=matrix_name)
-
-        add_test_id_markers(item=item, marker_name="polarion")
         add_test_id_markers(item=item, marker_name="jira")
 
         # Must be called before add_tier2_marker; make sure team markers are added before tier2 tests collection
