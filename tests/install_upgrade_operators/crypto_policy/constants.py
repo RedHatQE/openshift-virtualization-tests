@@ -151,6 +151,18 @@ CURVE_PROPAGATION_PENDING = {
     "virt-api": "CNV-84875",
     "kubevirt-operator-webhook": "CNV-84875",
     "virt-exportproxy": "CNV-84875",
+    # virt-template-apiserver/-controller (managed-by=virt-operator, per CNV-85154) get
+    # their curves injected by virt-operator from the KubeVirt CR's
+    # spec.configuration.tlsConfiguration.groups - the same field CNV-84875 exposes.
+    # CNV-85154 is Closed, but gated here on CNV-84875 instead: verified on a live
+    # cluster that the Groups field is not yet populated on the KubeVirt CR (CNV-84875
+    # not yet in any tested build), and virt-template-apiserver/-controller pod args
+    # carry --tls-cipher-suites/--tls-min-version but no curve flag at all, confirming
+    # they have nothing to consume yet. virt-template-validator is unaffected (a
+    # separate, SSP-managed pod that already enforces curves correctly).
+    "virt-template-api-service": "CNV-84875",
+    "virt-template-controller-manager-metrics-service": "CNV-84875",
+    "virt-template-webhook-service": "CNV-84875",
     "kubevirt-migration-prometheus": "CNV-84877",
     "hpp-prometheus-metrics": "CNV-84804",
     "hostpath-provisioner-operator-service": "CNV-84804",
@@ -186,27 +198,28 @@ TLS_GROUP_X25519 = "X25519"
 # whose group list excludes secp521r1), so a FIPS Go service only starts negotiating
 # secp521r1 once it is explicitly added to a Custom profile. Verified on a FIPS/CNV
 # v5.1.0 cluster: hco-webhook rejected secp521r1 with no profile set and negotiated it
-# once this profile was applied.
+# once this profile was applied. secp384r1 is deliberately NOT included here - see
+# TLS_PROPAGATION_OMITTED_GROUP below.
 TLS_PROPAGATION_CUSTOM_GROUPS = [
     TLS_GROUP_SECP256R1,
-    TLS_GROUP_SECP384R1,
     TLS_GROUP_SECP521R1,
     PQC_GROUP_X25519_MLKEM768,
     PQC_GROUP_SECP256R1_MLKEM768,
 ]
 
-# Curve deliberately omitted from the applied profile. Used as the negative probe:
-# a service that enforces the profile must reject it.
-TLS_PROPAGATION_OMITTED_GROUP = TLS_GROUP_X25519
-
-# FIPS-specific negative probe: X25519 is not offered by the FIPS worker's OpenSSL at
-# all (not listed by `openssl list -tls-groups`; passing it to `-groups` fails
-# client-side), so it cannot be probed on FIPS. SecP384r1MLKEM1024 is never part of
-# TLS_PROPAGATION_CUSTOM_GROUPS and is supported by the FIPS worker's OpenSSL. Verified
-# on a FIPS/CNV v5.1.0 cluster: both a Go service (hco-webhook) and an OpenSSL service
-# (console-plugin) reject it before and after the custom profile is applied, since it is
-# never configured - confirming it is a valid, actually-probeable FIPS negative control.
-TLS_PROPAGATION_OMITTED_GROUP_FIPS = PQC_GROUP_SECP384R1_MLKEM1024
+# Curve deliberately omitted from the applied profile. Used as the negative probe: a
+# service that enforces the profile must reject it. secp384r1 (a plain NIST curve, not
+# a PQC hybrid) is used rather than X25519 because it is supported by the FIPS worker's
+# OpenSSL (X25519 is not offered at all under FIPS - not listed by `openssl
+# list -tls-groups`, and passing it to `-groups` fails client-side) and, unlike the
+# ML-KEM hybrids, Go does not reject it unconditionally under FIPS - a FIPS Go service
+# negotiates it under the default/permissive profile, so its rejection once explicitly
+# omitted from a Custom profile is genuine evidence of enforcement rather than an
+# unconditional runtime limitation. Verified on a FIPS/CNV v5.1.0 cluster: both a Go
+# service (hco-webhook) and an OpenSSL service (console-plugin) negotiate secp384r1 by
+# default and reject it once a profile omitting it is applied. One curve now serves
+# both FIPS and non-FIPS clusters.
+TLS_PROPAGATION_OMITTED_GROUP = TLS_GROUP_SECP384R1
 
 # Custom TLS profile applied (HCO-direct) by the curve-propagation test. TLS 1.2 with
 # dual-auth ciphers (RSA + ECDSA, avoiding cert/cipher mismatch) carrying the curated

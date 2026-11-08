@@ -36,7 +36,6 @@ from tests.install_upgrade_operators.crypto_policy.constants import (
     TLS_PROPAGATION_CUSTOM_GROUPS,
     TLS_PROPAGATION_CUSTOM_PROFILE,
     TLS_PROPAGATION_OMITTED_GROUP,
-    TLS_PROPAGATION_OMITTED_GROUP_FIPS,
 )
 from tests.install_upgrade_operators.crypto_policy.utils import (
     get_node_available_tls_groups,
@@ -305,19 +304,15 @@ def curve_status_by_service(
     fips_enabled_cluster,
 ):
     """Per-curve negotiation status for each CNV service under the Custom curve profile."""
+    probe_groups = [*TLS_PROPAGATION_CUSTOM_GROUPS, TLS_PROPAGATION_OMITTED_GROUP]
     if fips_enabled_cluster:
-        # The FIPS crypto module blocks Curve25519-based groups entirely, so the worker's
-        # OpenSSL cannot even offer X25519 or X25519MLKEM768 locally (confirmed: `openssl
-        # list -tls-groups` omits both, and passing either to `-groups` fails client-side
-        # before any server behavior is tested). verified_node_pqc_support already excludes
-        # X25519MLKEM768 from FIPS for the same reason. Swap in a FIPS-probeable negative
-        # probe instead of dropping negative coverage entirely.
-        custom_groups = [group for group in TLS_PROPAGATION_CUSTOM_GROUPS if group not in NON_FIPS_GROUPS]
-        omitted_group = TLS_PROPAGATION_OMITTED_GROUP_FIPS
-    else:
-        custom_groups = TLS_PROPAGATION_CUSTOM_GROUPS
-        omitted_group = TLS_PROPAGATION_OMITTED_GROUP
-    probe_groups = [*custom_groups, omitted_group]
+        # The FIPS crypto module blocks X25519MLKEM768 entirely, so the worker's OpenSSL
+        # cannot even offer it locally (confirmed: `openssl list -tls-groups` omits it,
+        # and passing it to `-groups` fails client-side before any server behavior is
+        # tested). verified_node_pqc_support already excludes it from FIPS for the same
+        # reason. TLS_PROPAGATION_OMITTED_GROUP (secp384r1) is FIPS-probeable, so it
+        # needs no special-casing here.
+        probe_groups = [group for group in probe_groups if group not in NON_FIPS_GROUPS]
     worker_exec = ExecCommandOnPod(utility_pods=workers_utility_pods, node=worker_node1)
     results = {
         service.name: get_service_curve_status(worker_exec=worker_exec, service=service, groups=probe_groups)
