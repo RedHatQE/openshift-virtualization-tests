@@ -131,6 +131,102 @@ CENTOS_OS_MAPPING: dict[str, dict[str, str | Any]] = {
 }
 
 
+def _os_images_class(*, os_name: str, arch: str | None) -> Any:
+    """Return the images class that holds the per-OS image attributes for the given architecture.
+
+    Raises:
+        ValueError: When the OS is not defined under the resolved images class.
+    """
+    images_class = getattr(ArchImages, arch.upper(), None) if arch else Images
+    os_base_class = getattr(images_class, os_name.title(), None)
+    if not os_base_class:
+        raise ValueError(
+            f"Unsupported OS: {os_name}. "
+            "Make sure it is supported under `utilities.constants.images.ArchImages` for cluster architecture."
+        )
+
+    return os_base_class
+
+
+def _os_matrix_defaults(*, os_name: str, os_base_class: Any) -> tuple[str, str]:
+    """Return the latest released image name and the default DV size of the OS images class.
+
+    Raises:
+        ValueError: When either attribute is missing from the images class.
+    """
+    latest_os_release = getattr(os_base_class, "LATEST_RELEASE_STR", None)
+    if not latest_os_release:
+        raise ValueError(f"{os_name} is missing `LATEST_RELEASE_STR` attribute")
+
+    dv_size = getattr(os_base_class, "DEFAULT_DV_SIZE", None)
+    if not dv_size:
+        raise ValueError(f"{os_name} is missing `DEFAULT_DV_SIZE` attribute")
+
+    return latest_os_release, dv_size
+
+
+def _os_image_dir(*, os_name: str, os_base_class: Any, version_config: dict[str, Any]) -> str:
+    """Return the images directory holding the OS image; UEFI images live in their own directory.
+
+    Raises:
+        ValueError: When the directory attribute is missing from the images class.
+    """
+    dir_attribute = "UEFI_WIN_DIR" if version_config.get("uefi") else "DIR"
+    image_dir = getattr(os_base_class, dir_attribute, None)
+    if not image_dir:
+        raise ValueError(f"{os_name} is missing `{dir_attribute}` attribute")
+
+    return image_dir
+
+
+def _os_matrix_entry(
+    *,
+    os_name: str,
+    version_config: dict[str, Any],
+    base_dict: dict[str, Any],
+    os_base_class: Any,
+    dv_size: str,
+    latest_os_release: str,
+    arch: str | None,
+) -> dict[str, Any]:
+    """Build the matrix entry of a single OS version.
+
+    Raises:
+        ValueError: When the image attribute of the version is missing from the images class.
+    """
+    image_name_str = version_config[IMAGE_NAME_STR]
+    image_name = getattr(os_base_class, image_name_str, None)
+    if not image_name:
+        raise ValueError(f"{os_name} is missing {image_name_str} attribute")
+
+    os_base_dict: dict[str, Any] = {
+        OS_VERSION_STR: version_config[OS_VERSION_STR],
+        IMAGE_NAME_STR: image_name,
+        IMAGE_PATH_STR: os.path.join(
+            _os_image_dir(os_name=os_name, os_base_class=os_base_class, version_config=version_config), image_name
+        ),
+        DV_SIZE_STR: dv_size,
+        TEMPLATE_LABELS_STR: {
+            OS_STR: version_config[OS_STR],
+            WORKLOAD_STR: version_config.get(WORKLOAD_STR, base_dict[WORKLOAD_STR]),
+            FLAVOR_STR: version_config.get(FLAVOR_STR, base_dict[FLAVOR_STR]),
+        },
+        DATA_SOURCE_STR: version_config.get(DATA_SOURCE_STR),
+    }
+
+    if arch:
+        os_base_dict[TEMPLATE_LABELS_STR]["architecture"] = arch
+        os_base_dict[DATA_SOURCE_STR] = f"{os_base_dict[DATA_SOURCE_STR]}-{arch}"
+
+    if CONTAINER_DISK_IMAGE_PATH_STR in version_config:
+        os_base_dict[CONTAINER_DISK_IMAGE_PATH_STR] = version_config[CONTAINER_DISK_IMAGE_PATH_STR]
+
+    if image_name == latest_os_release:
+        os_base_dict[LATEST_RELEASE_STR] = True
+
+    return os_base_dict
+
+
 def generate_os_matrix_dict(
     os_name: str, supported_operating_systems: list[str], arch: str | None = None
 ) -> list[dict[str, Any]]:
@@ -176,70 +272,29 @@ def generate_os_matrix_dict(
     if not base_dict:
         raise ValueError(f"Unsupported OS: {os_name}. Supported: rhel, windows, fedora, centos")
 
-    images_class = getattr(ArchImages, arch.upper(), None) if arch else Images
+    os_base_class = _os_images_class(os_name=os_name, arch=arch)
+    latest_os_release, dv_size = _os_matrix_defaults(os_name=os_name, os_base_class=os_base_class)
 
-    os_base_class = getattr(images_class, os_name.title(), None)
-    if not os_base_class:
-        raise ValueError(
-            f"Unsupported OS: {os_name}. "
-            "Make sure it is supported under `utilities.constants.images.ArchImages` for cluster architecture."
-        )
-
-    latest_os_release = getattr(os_base_class, "LATEST_RELEASE_STR", None)
-    if not latest_os_release:
-        raise ValueError(f"{os_name} is missing `LATEST_RELEASE_STR` attribute")
-
-    dv_size = getattr(os_base_class, "DEFAULT_DV_SIZE", None)
-    if not dv_size:
-        raise ValueError(f"{os_name} is missing `DEFAULT_DV_SIZE` attribute")
-
-    os_formatted_list: list[dict[str, dict[str, str | bool]]] = []
+    os_formatted_list: list[dict[str, Any]] = []
     unsupported_versions: list[str] = []
 
     for version in supported_operating_systems:
-        if base_version_dict := base_dict.get(version):
-            image_name_str = base_dict[version][IMAGE_NAME_STR]
-            image_name = getattr(os_base_class, image_name_str, None)
-            if not image_name:
-                raise ValueError(f"{os_name} is missing {image_name_str} attribute")
-
-            if base_version_dict.get("uefi"):
-                image_path_str = getattr(os_base_class, "UEFI_WIN_DIR", None)
-                if not image_path_str:
-                    raise ValueError(f"{os_name} is missing `UEFI_WIN_DIR` attribute")
-
-            else:
-                image_path_str = getattr(os_base_class, "DIR", None)
-                if not image_path_str:
-                    raise ValueError(f"{os_name} is missing `DIR` attribute")
-
-            os_base_dict = {
-                OS_VERSION_STR: base_version_dict[OS_VERSION_STR],
-                IMAGE_NAME_STR: image_name,
-                IMAGE_PATH_STR: os.path.join(image_path_str, image_name),
-                DV_SIZE_STR: dv_size,
-                TEMPLATE_LABELS_STR: {
-                    OS_STR: base_version_dict[OS_STR],
-                    WORKLOAD_STR: base_version_dict.get(WORKLOAD_STR, base_dict[WORKLOAD_STR]),
-                    FLAVOR_STR: base_version_dict.get(FLAVOR_STR, base_dict[FLAVOR_STR]),
-                },
-                DATA_SOURCE_STR: base_version_dict.get(DATA_SOURCE_STR),
-            }
-
-            if arch:
-                os_base_dict[TEMPLATE_LABELS_STR]["architecture"] = arch
-                os_base_dict[DATA_SOURCE_STR] = f"{os_base_dict[DATA_SOURCE_STR]}-{arch}"
-
-            if CONTAINER_DISK_IMAGE_PATH_STR in base_version_dict:
-                os_base_dict[CONTAINER_DISK_IMAGE_PATH_STR] = base_version_dict[CONTAINER_DISK_IMAGE_PATH_STR]
-
-            if image_name == latest_os_release:
-                os_base_dict[LATEST_RELEASE_STR] = True
-
-            os_formatted_list.append({version: os_base_dict})
-
-        else:
+        version_config = base_dict.get(version)
+        if not version_config:
             unsupported_versions.append(version)
+            continue
+
+        os_formatted_list.append({
+            version: _os_matrix_entry(
+                os_name=os_name,
+                version_config=version_config,
+                base_dict=base_dict,
+                os_base_class=os_base_class,
+                dv_size=dv_size,
+                latest_os_release=latest_os_release,
+                arch=arch,
+            )
+        })
 
     if unsupported_versions:
         raise ValueError(f"Unsupported OS versions: {unsupported_versions} for {os_name}")

@@ -202,6 +202,86 @@ def check_vm_creation_capability(client: DynamicClient, namespace: str) -> None:
         ) from ex
 
 
+def _check_storage_classes(*, request: FixtureRequest, cluster_storage_classes_names: list[str]) -> None:
+    """Validate that every storage class from the pytest configuration exists on the cluster.
+
+    Raises:
+        StorageSanityError: When a configured storage class is missing from the cluster.
+    """
+    skip_option = "--cluster-sanity-skip-storage-check"
+    if request.session.config.getoption(skip_option):
+        LOGGER.warning(f"Skipping storage classes check, got {skip_option}")
+        return
+
+    LOGGER.info(f"Check storage classes sanity. (To skip storage class sanity check pass {skip_option} to pytest)")
+    if not storage_sanity_check(cluster_storage_classes_names=cluster_storage_classes_names):
+        raise StorageSanityError(
+            err_str=f"Cluster is missing storage class.\n"
+            f"either run with '--storage-class-matrix' or with '{skip_option}'"
+        )
+
+
+def _check_nodes(
+    *, request: FixtureRequest, admin_client: DynamicClient, nodes: list[Node], hco_namespace: Namespace
+) -> None:
+    """Validate that all nodes are ready and schedulable and that the CNV pods are running.
+
+    Raises:
+        NodeNotReadyError: When one or more nodes are not in ready state.
+        NodeUnschedulableError: When one or more nodes are unschedulable.
+        ClusterSanityError: When the CNV pods do not reach the running state in time.
+    """
+    skip_option = "--cluster-sanity-skip-nodes-check"
+    if request.session.config.getoption(skip_option):
+        LOGGER.warning(f"Skipping nodes check, got {skip_option}")
+        return
+
+    # validate that all the nodes are ready and schedulable and CNV pods are running
+    LOGGER.info(f"Check nodes sanity. (To skip nodes sanity check pass {skip_option} to pytest)")
+    assert_nodes_in_healthy_condition(nodes=nodes, healthy_node_condition_type=KUBELET_READY_CONDITION)
+    assert_nodes_schedulable(nodes=nodes)
+
+    try:
+        wait_for_pods_running(
+            admin_client=admin_client,
+            namespace=hco_namespace,
+            filter_pods_by_name=IMAGE_CRON_STR,
+        )
+    except TimeoutExpiredError as timeout_error:
+        LOGGER.error(timeout_error)
+        raise ClusterSanityError(
+            err_str=f"Timed out waiting for all pods in namespace {hco_namespace.name} to get to running state."
+        ) from timeout_error
+
+
+def _check_webhooks(*, request: FixtureRequest, admin_client: DynamicClient, hco_namespace: Namespace) -> None:
+    """Validate that the webhook endpoints are healthy and that a VM can be created."""
+    skip_option = "--cluster-sanity-skip-webhook-check"
+    if request.session.config.getoption(skip_option):
+        LOGGER.warning(f"Skipping webhook health check, got {skip_option}")
+        return
+
+    LOGGER.info(f"Check webhook endpoints health. (To skip webhook check pass {skip_option} to pytest)")
+    check_webhook_endpoints_health(admin_client=admin_client, namespace=hco_namespace)
+    check_vm_creation_capability(client=admin_client, namespace="default")
+
+
+def _check_hco_taint(*, request: FixtureRequest, admin_client: DynamicClient, hco_namespace: Namespace) -> None:
+    """Validate that the HyperConverged CR has no TaintedConfiguration.
+
+    Raises:
+        ClusterSanityError: When tainted configuration conditions are reported.
+    """
+    skip_option = "--cluster-sanity-skip-hco-taint-check"
+    if request.session.config.getoption(skip_option):
+        LOGGER.warning(f"Skipping HCO taint check, got {skip_option}")
+        return
+
+    LOGGER.info(f"Check HCO TaintedConfiguration. (To skip HCO taint check pass {skip_option} to pytest)")
+    if taint_conditions := is_hco_tainted(admin_client=admin_client, hco_namespace=hco_namespace.name):
+        raise ClusterSanityError(err_str=f"HCO has TaintedConfiguration: {taint_conditions}.")
+
+
 def cluster_sanity(
     request: FixtureRequest,
     admin_client: DynamicClient,
@@ -255,61 +335,18 @@ def cluster_sanity(
         return
 
     skip_cluster_sanity_check = "--cluster-sanity-skip-check"
-    skip_storage_classes_check = "--cluster-sanity-skip-storage-check"
-    skip_nodes_check = "--cluster-sanity-skip-nodes-check"
-    skip_webhook_check = "--cluster-sanity-skip-webhook-check"
-    skip_hco_taint_check = "--cluster-sanity-skip-hco-taint-check"
     exceptions_filename = "cluster_sanity_failure.txt"
     try:
         if request.session.config.getoption(skip_cluster_sanity_check):
             LOGGER.warning(f"Skipping cluster sanity check, got {skip_cluster_sanity_check}")
             return
+
         LOGGER.info(
             f"Running cluster sanity. (To skip cluster sanity check pass {skip_cluster_sanity_check} to pytest)"
         )
-        # Check storage class only if --cluster-sanity-skip-storage-check not passed to pytest.
-        if request.session.config.getoption(skip_storage_classes_check):
-            LOGGER.warning(f"Skipping storage classes check, got {skip_storage_classes_check}")
-        else:
-            LOGGER.info(
-                f"Check storage classes sanity. (To skip storage class sanity check pass {skip_storage_classes_check} "
-                f"to pytest)"
-            )
-            if not storage_sanity_check(cluster_storage_classes_names=cluster_storage_classes_names):
-                raise StorageSanityError(
-                    err_str=f"Cluster is missing storage class.\n"
-                    f"either run with '--storage-class-matrix' or with '{skip_storage_classes_check}'"
-                )
-
-        # Check nodes only if --cluster-sanity-skip-nodes-check not passed to pytest.
-        if request.session.config.getoption(skip_nodes_check):
-            LOGGER.warning(f"Skipping nodes check, got {skip_nodes_check}")
-
-        else:
-            # validate that all the nodes are ready and schedulable and CNV pods are running
-            LOGGER.info(f"Check nodes sanity. (To skip nodes sanity check pass {skip_nodes_check} to pytest)")
-            assert_nodes_in_healthy_condition(nodes=nodes, healthy_node_condition_type=KUBELET_READY_CONDITION)
-            assert_nodes_schedulable(nodes=nodes)
-
-            try:
-                wait_for_pods_running(
-                    admin_client=admin_client,
-                    namespace=hco_namespace,
-                    filter_pods_by_name=IMAGE_CRON_STR,
-                )
-            except TimeoutExpiredError as timeout_error:
-                LOGGER.error(timeout_error)
-                raise ClusterSanityError(
-                    err_str=f"Timed out waiting for all pods in namespace {hco_namespace.name} to get to running state."
-                )
-
-        # Check webhook endpoints only if --cluster-sanity-skip-webhook-check not passed to pytest.
-        if request.session.config.getoption(skip_webhook_check):
-            LOGGER.warning(f"Skipping webhook health check, got {skip_webhook_check}")
-        else:
-            LOGGER.info(f"Check webhook endpoints health. (To skip webhook check pass {skip_webhook_check} to pytest)")
-            check_webhook_endpoints_health(admin_client=admin_client, namespace=hco_namespace)
-            check_vm_creation_capability(client=admin_client, namespace="default")
+        _check_storage_classes(request=request, cluster_storage_classes_names=cluster_storage_classes_names)
+        _check_nodes(request=request, admin_client=admin_client, nodes=nodes, hco_namespace=hco_namespace)
+        _check_webhooks(request=request, admin_client=admin_client, hco_namespace=hco_namespace)
 
         # Wait for hco to be healthy
         wait_for_hco_conditions(
@@ -317,14 +354,7 @@ def cluster_sanity(
             hco_namespace=hco_namespace,
         )
 
-        if request.session.config.getoption(skip_hco_taint_check):
-            LOGGER.warning(f"Skipping HCO taint check, got {skip_hco_taint_check}")
-        else:
-            LOGGER.info(
-                f"Check HCO TaintedConfiguration. (To skip HCO taint check pass {skip_hco_taint_check} to pytest)"
-            )
-            if taint_conditions := is_hco_tainted(admin_client=admin_client, hco_namespace=hco_namespace.name):
-                raise ClusterSanityError(err_str=f"HCO has TaintedConfiguration: {taint_conditions}.")
+        _check_hco_taint(request=request, admin_client=admin_client, hco_namespace=hco_namespace)
 
     except (ClusterSanityError, NodeUnschedulableError, NodeNotReadyError, StorageSanityError) as ex:
         exit_pytest_execution(
