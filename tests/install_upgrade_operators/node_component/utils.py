@@ -1,11 +1,15 @@
 import logging
 from collections import defaultdict
+from typing import TYPE_CHECKING
 
 from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import NotFoundError
 from ocp_resources.pod import Pod
 from ocp_resources.resource import ResourceEditor
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
+
+if TYPE_CHECKING:
+    from ocp_resources.namespace import Namespace
 
 from utilities.constants.cluster import (
     NODE_ROLE_KUBERNETES_IO,
@@ -339,8 +343,19 @@ def verify_components_exist_only_on_selected_node(
     )
 
 
-def _pods_per_nodes(*, admin_client, hco_namespace, filter_pods_by_name: str | None) -> dict[str, list[Pod]]:
-    """Collect the pods of the HCO namespace, grouped by the node they run on."""
+def _pods_per_nodes(
+    *, admin_client: DynamicClient, hco_namespace: Namespace, filter_pods_by_name: str | None
+) -> dict[str, list[Pod]]:
+    """Collect the pods of the HCO namespace, grouped by the node they run on.
+
+    Args:
+        admin_client: Cluster client used to list the pods.
+        hco_namespace: Namespace the pods are listed from.
+        filter_pods_by_name: Skip pods whose name contains this string, if set.
+
+    Returns:
+        Node name mapped to the pods of that node. Pods that disappear while being listed are skipped.
+    """
     pods_per_nodes = defaultdict(list)
     for pod in Pod.get(
         client=admin_client,
@@ -360,6 +375,17 @@ def _pods_per_nodes(*, admin_client, hco_namespace, filter_pods_by_name: str | N
 
 
 def _check_pod_running(pod: Pod) -> bool:
+    """Return whether the pod still exists and is running.
+
+    A pod that is deleted or times out while its status is read is reported as not running,
+    so the caller's sampler retries instead of failing on a pod that went away meanwhile.
+
+    Args:
+        pod: Pod whose status is checked.
+
+    Returns:
+        True when the pod exists and is in the Running phase, False otherwise.
+    """
     # TOCTOU: pod deleted after snapshot; return False so sampler retries (CNV-98696).
     try:
         return pod.exists and pod.status == Pod.Status.RUNNING

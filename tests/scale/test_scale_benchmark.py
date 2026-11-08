@@ -285,11 +285,13 @@ def golden_images_scale_dvs(keep_resources, admin_client, golden_images_namespac
             dv.wait_for_status(status=DataVolume.Status.SUCCEEDED, timeout=TIMEOUT_30MIN)
         yield dvs_list
     finally:
-        cleanup_artifactory_secret_and_config_map(
-            artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
-        )
-        if not keep_resources:
-            delete_resources(resources=dvs_list)
+        try:
+            cleanup_artifactory_secret_and_config_map(
+                artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
+            )
+        finally:
+            if not keep_resources:
+                delete_resources(resources=dvs_list)
 
 
 @pytest.fixture(scope="class")
