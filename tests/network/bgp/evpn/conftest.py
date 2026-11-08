@@ -36,6 +36,7 @@ from tests.network.bgp.evpn.libevpn import (
     teardown_evpn_l3_endpoint,
     teardown_evpn_l3_vrf,
 )
+from tests.network.bgp.evpn.utils import OPENPE_PROVIDER_NODE_LABEL, OpenPERouterInfo, deploy_stock_openperouter
 from tests.network.libs import cluster_user_defined_network as libcudn
 from tests.network.libs.bgp import (
     EXTERNAL_FRR_POD_LABEL,
@@ -47,7 +48,7 @@ from tests.network.libs.bgp import (
 from tests.network.libs.label_selector import LabelSelector
 from tests.network.libs.vm_factory import udn_vm
 from utilities.constants.hco import DEFAULT_RESOURCE_CONDITIONS
-from utilities.infra import wait_for_consistent_resource_conditions
+from utilities.infra import create_ns, label_nodes, wait_for_consistent_resource_conditions
 
 EVPN_ADVERTISE_LABEL: Final[dict] = {"advertise": "evpn"}
 APP_EVPN_CUDN_LABEL: Final[dict] = {**EVPN_ADVERTISE_LABEL, "app": "cudn-evpn"}
@@ -326,3 +327,32 @@ def vm_source_provider(
 
     with fedora_vm(namespace=namespace_evpn.name, name="vm-source-provider", client=admin_client, spec=spec) as vm:
         yield vm
+
+
+@pytest.fixture(scope="module")
+def openperouter_provider_nodes(worker_node1: Node) -> Generator[list[Node]]:
+    yield from label_nodes(nodes=[worker_node1], labels=OPENPE_PROVIDER_NODE_LABEL)
+
+
+@pytest.fixture(scope="module")
+def openperouter_provider_node(openperouter_provider_nodes: list[Node]) -> Node:
+    return openperouter_provider_nodes[0]
+
+
+@pytest.fixture(scope="module")
+def openperouter_namespace(admin_client: DynamicClient) -> Generator[Namespace]:
+    yield from create_ns(name="test-openperouter-ns", admin_client=admin_client)
+
+
+@pytest.fixture(scope="module", autouse=True)
+def openperouter_installation(
+    admin_client: DynamicClient,
+    openperouter_namespace: Namespace,
+    openperouter_provider_node: Node,
+) -> Generator[OpenPERouterInfo]:
+    with deploy_stock_openperouter(
+        client=admin_client,
+        namespace_name=openperouter_namespace.name,
+        provider_node_name=openperouter_provider_node.name,
+    ) as openperouter_info:
+        yield openperouter_info
