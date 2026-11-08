@@ -4,36 +4,46 @@ import pytest
 from ocp_resources.virtual_machine_instancetype import VirtualMachineInstancetype
 from ocp_resources.virtual_machine_preference import VirtualMachinePreference
 
+# Fixture parameter name to instancetype API field name, per spec section.
+INSTANCE_TYPE_CPU_PARAM_TO_FIELD = {
+    "dedicated_cpu_placement": "dedicated_cpu_placement",
+    "cpu_model": "model",
+    "cpu_numa": "numa",
+    "cpu_realtime": "realtime",
+    "cpu_max_sockets": "maxSockets",
+}
+INSTANCE_TYPE_MEMORY_PARAM_TO_FIELD = {
+    "memory_huge_pages": "hugepages",
+    "memory_max_guest": "maxGuest",
+}
+INSTANCE_TYPE_TOP_LEVEL_PARAM_TO_FIELD = {
+    "gpus_list": "gpus",
+    "host_devices_list": "host_devices",
+    "io_thread_policy": "io_threads_policy",
+}
+
+
+def _add_optional_params(*, param_dict: dict, spec: dict, param_to_field: dict[str, str]) -> None:
+    """Copy the optional fixture parameters that are set into the spec under their API field names."""
+    for param_name, field_name in param_to_field.items():
+        if param_dict.get(param_name):
+            spec[field_name] = param_dict[param_name]
+
 
 @pytest.fixture(scope="class")
 def common_instance_type_param_dict(request):
-    common_instance_dict = {
-        "name": request.param["name"],
-        "cpu": {"guest": request.param.get("preferred_cpu_topology_value", 1)},
-        "memory": {"guest": request.param["memory_requests"]},
-    }
-    if request.param.get("dedicated_cpu_placement"):
-        common_instance_dict["cpu"]["dedicated_cpu_placement"] = request.param["dedicated_cpu_placement"]
-    if request.param.get("cpu_model"):
-        common_instance_dict["cpu"]["model"] = request.param["cpu_model"]
+    cpu_spec = {"guest": request.param.get("preferred_cpu_topology_value", 1)}
     if request.param.get("cpu_isolate_emulator_thread") is not None:
-        common_instance_dict["cpu"]["isolateEmulatorThread"] = request.param["cpu_isolate_emulator_thread"]
-    if request.param.get("cpu_numa"):
-        common_instance_dict["cpu"]["numa"] = request.param["cpu_numa"]
-    if request.param.get("cpu_realtime"):
-        common_instance_dict["cpu"]["realtime"] = request.param["cpu_realtime"]
-    if request.param.get("cpu_max_sockets"):
-        common_instance_dict["cpu"]["maxSockets"] = request.param["cpu_max_sockets"]
-    if request.param.get("gpus_list"):
-        common_instance_dict["gpus"] = request.param["gpus_list"]
-    if request.param.get("host_devices_list"):
-        common_instance_dict["host_devices"] = request.param["host_devices_list"]
-    if request.param.get("io_thread_policy"):
-        common_instance_dict["io_threads_policy"] = request.param["io_thread_policy"]
-    if request.param.get("memory_huge_pages"):
-        common_instance_dict["memory"]["hugepages"] = request.param["memory_huge_pages"]
-    if request.param.get("memory_max_guest"):
-        common_instance_dict["memory"]["maxGuest"] = request.param["memory_max_guest"]
+        cpu_spec["isolateEmulatorThread"] = request.param["cpu_isolate_emulator_thread"]
+    _add_optional_params(param_dict=request.param, spec=cpu_spec, param_to_field=INSTANCE_TYPE_CPU_PARAM_TO_FIELD)
+
+    memory_spec = {"guest": request.param["memory_requests"]}
+    _add_optional_params(param_dict=request.param, spec=memory_spec, param_to_field=INSTANCE_TYPE_MEMORY_PARAM_TO_FIELD)
+
+    common_instance_dict = {"name": request.param["name"], "cpu": cpu_spec, "memory": memory_spec}
+    _add_optional_params(
+        param_dict=request.param, spec=common_instance_dict, param_to_field=INSTANCE_TYPE_TOP_LEVEL_PARAM_TO_FIELD
+    )
     return common_instance_dict
 
 

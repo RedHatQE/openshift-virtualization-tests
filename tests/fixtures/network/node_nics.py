@@ -12,6 +12,89 @@ from utilities.network import EthernetNetworkConfigurationPolicy
 
 LOGGER = logging.getLogger(__name__)
 
+SRIOV_VF_IFACE_NAME_PATTERN = re.compile(r"v\d+$")
+
+
+def _bridge_port_names(*, node_interface: dict) -> set[str]:
+    """Return the port names that a bridge or bond interface aggregates."""
+    ports = set()
+    if node_interface["type"] in (OVS_BRIDGE, LINUX_BRIDGE):
+        for bridge_port in node_interface.get("bridge", {}).get("port", []):
+            ports.add(bridge_port["name"])
+    elif node_interface["type"] == "bond":
+        for bond_port in node_interface.get("link-aggregation", {}).get("port", []):
+            ports.add(bond_port)
+    return ports
+
+
+def _occupy_bridge_ports(
+    *,
+    node_name: str,
+    node_interface: dict,
+    node_physical_nics: list[str],
+    node_nics: dict[str, list[str]],
+) -> None:
+    """Mark the physical ports of a bridge/bond interface as occupied on the node."""
+    for bridge_port in _bridge_port_names(node_interface=node_interface):
+        if bridge_port not in node_physical_nics or bridge_port in node_nics["occupied"]:
+            continue
+
+        node_iface_type = node_interface["type"]
+        LOGGER.warning(
+            f"{node_name}:{bridge_port} is a port of {node_interface['name']} {node_iface_type} - adding it "
+            f"to the node's occupied interfaces list."
+        )
+        node_nics["occupied"].append(bridge_port)
+        if bridge_port in node_nics["available"]:
+            node_nics["available"].remove(bridge_port)
+
+
+def _is_physically_connected(*, utility_pods, node, iface_name: str) -> bool:
+    """Return whether the node NIC reports a carrier (link up)."""
+    carrier_response = ExecCommandOnPod(utility_pods=utility_pods, node=node).exec(
+        command=f"nmcli -g WIRED-PROPERTIES.CARRIER device show {iface_name}"
+    )
+    if carrier_response.lower() != "on":
+        LOGGER.warning(f"{node.name} {iface_name} link is down (response: {carrier_response})")
+        return False
+
+    return True
+
+
+def _node_active_nics(*, node, interfaces: list[dict], node_physical_nics: list[str], utility_pods) -> dict:
+    """Classify the node physical NICs as available or occupied."""
+    node_nics: dict[str, list[str]] = {"available": [], "occupied": []}
+    for node_interface in interfaces:
+        iface_name = node_interface["name"]
+        #  Exclude SR-IOV (VFs) interfaces.
+        if SRIOV_VF_IFACE_NAME_PATTERN.findall(iface_name):
+            continue
+
+        # If the interface is a bridge with physical ports, then these ports should be labeled as occupied.
+        _occupy_bridge_ports(
+            node_name=node.name,
+            node_interface=node_interface,
+            node_physical_nics=node_physical_nics,
+            node_nics=node_nics,
+        )
+
+        if iface_name in node_nics["occupied"] or iface_name not in node_physical_nics:
+            continue
+
+        if not _is_physically_connected(utility_pods=utility_pods, node=node, iface_name=iface_name):
+            continue
+
+        if ipv4_addresses := node_interface.get("ipv4", {}).get("address"):
+            LOGGER.warning(
+                f"{node.name}:{iface_name} is already configured with IP addresses ({ipv4_addresses}) - "
+                f"adding it to the node's occupied interfaces list."
+            )
+            node_nics["occupied"].append(iface_name)
+        else:
+            node_nics["available"].append(iface_name)
+
+    return node_nics
+
 
 @pytest.fixture(scope="session")
 def node_physical_nics(workers_utility_pods):
@@ -35,69 +118,17 @@ def nodes_active_nics(
     workers_utility_pods,
     node_physical_nics,
 ):
+    """Get nodes active NICs. First NIC is management NIC."""
     # TODO: Add support for environments that do not have KNMstate installed. e.g: clouds
-    # TODO: Reduce cognitive complexity
-    def _bridge_ports(node_interface):
-        ports = set()
-        if node_interface["type"] in (OVS_BRIDGE, LINUX_BRIDGE):
-            for bridge_port in node_interface.get("bridge", {}).get("port", []):
-                ports.add(bridge_port["name"])
-        elif node_interface["type"] == "bond":
-            for bond_port in node_interface.get("link-aggregation", {}).get("port", []):
-                ports.add(bond_port)
-        return ports
-
-    """
-    Get nodes active NICs.
-    First NIC is management NIC
-    """
     nodes_nics = {}
     for node in workers:
-        nodes_nics[node.name] = {"available": [], "occupied": []}
         nns = NodeNetworkState(name=node.name, client=admin_client)
-
-        for node_iface in nns.interfaces:
-            iface_name = node_iface["name"]
-            #  Exclude SR-IOV (VFs) interfaces.
-            if re.findall(r"v\d+$", iface_name):
-                continue
-
-            # If the interface is a bridge with physical ports, then these ports should be labeled as occupied.
-            for bridge_port in _bridge_ports(node_interface=node_iface):
-                if (
-                    bridge_port in node_physical_nics[node.name]
-                    and bridge_port not in nodes_nics[node.name]["occupied"]
-                ):
-                    node_iface_type = node_iface["type"]
-                    LOGGER.warning(
-                        f"{node.name}:{bridge_port} is a port of {iface_name} {node_iface_type} - adding it "
-                        f"to the node's occupied interfaces list."
-                    )
-                    nodes_nics[node.name]["occupied"].append(bridge_port)
-                    if bridge_port in nodes_nics[node.name]["available"]:
-                        nodes_nics[node.name]["available"].remove(bridge_port)
-
-            if iface_name in nodes_nics[node.name]["occupied"]:
-                continue
-
-            if iface_name not in node_physical_nics[node.name]:
-                continue
-
-            carrier_response = ExecCommandOnPod(utility_pods=workers_utility_pods, node=node).exec(
-                command=f"nmcli -g WIRED-PROPERTIES.CARRIER device show {iface_name}"
-            )
-            if carrier_response.lower() != "on":
-                LOGGER.warning(f"{node.name} {iface_name} link is down (response: {carrier_response})")
-                continue
-
-            if ipv4_addresses := node_iface.get("ipv4", {}).get("address"):
-                LOGGER.warning(
-                    f"{node.name}:{iface_name} is already configured with IP addresses ({ipv4_addresses}) - "
-                    f"adding it to the node's occupied interfaces list."
-                )
-                nodes_nics[node.name]["occupied"].append(iface_name)
-            else:
-                nodes_nics[node.name]["available"].append(iface_name)
+        nodes_nics[node.name] = _node_active_nics(
+            node=node,
+            interfaces=nns.interfaces,
+            node_physical_nics=node_physical_nics[node.name],
+            utility_pods=workers_utility_pods,
+        )
 
     LOGGER.info(f"Nodes active NICs: {nodes_nics}")
     return nodes_nics

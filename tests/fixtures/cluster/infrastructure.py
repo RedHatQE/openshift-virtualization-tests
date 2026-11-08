@@ -1,11 +1,7 @@
 """Cluster infrastructure topology and platform fixtures."""
 
 import logging
-import re
 import subprocess
-from bisect import bisect_left
-from collections import defaultdict
-from datetime import datetime
 
 import pytest
 from ocp_resources.infrastructure import Infrastructure
@@ -13,6 +9,7 @@ from ocp_resources.pod import Pod
 from pytest_testconfig import config as py_config
 
 from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
+from tests.fixtures.cluster.utilities import audit_log_files_per_node, relevant_audit_logs
 from utilities.constants.architecture import S390X
 from utilities.constants.cluster import AUDIT_LOGS_PATH, NODE_TYPE_WORKER_LABEL, OC_ADM_LOGS_COMMAND
 from utilities.infra import (
@@ -132,57 +129,17 @@ def audit_logs(session_start_time):
     - Rotated files with timestamps >= session_start_time
     - The immediately previous rotated file (to catch events just before session start)
     """
-    audit_log_pattern = re.compile(r"audit-(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2}\.\d{3})\.log")
-    output = subprocess.getoutput(
+    command_output = subprocess.getoutput(
         f"{OC_ADM_LOGS_COMMAND} --role=control-plane {AUDIT_LOGS_PATH} | grep audit"
     ).splitlines()
 
-    nodes_logs = defaultdict(list)
-    for line in output:
-        parts = line.split()
-        if len(parts) != 2:
-            LOGGER.error(f"Fail to get log: {line}")
-            continue
-
-        node, log = parts
-
-        # Always include active audit.log
-        if log == "audit.log":
-            nodes_logs[node].append(log)
-            continue
-
-        # Parse timestamp from rotated file name using regex
-        match = audit_log_pattern.match(string=log)
-        if match:
-            # Rebuild ISO format: YYYY-MM-DDTHH:MM:SS.mmm
-            timestamp_str = f"{match.group(1)}T{match.group(2)}:{match.group(3)}:{match.group(4)}"
-            try:
-                log_timestamp = datetime.strptime(timestamp_str, "%Y-%m-%dT%H:%M:%S.%f")
-                nodes_logs[node].append((log, log_timestamp))
-            except ValueError as err:
-                LOGGER.warning(f"Invalid timestamp in log {log}: {err}")
-        else:
-            LOGGER.info(f"Skipping non-audit file: {log}")
-
-    # Filter rotated logs to keep only relevant ones
     filtered_nodes_logs = {}
-    for node, logs in nodes_logs.items():
-        # Separate active audit.log from rotated files with timestamps
-        active_logs = [log for log in logs if isinstance(log, str)]
-        rotated_with_ts = sorted([item for item in logs if isinstance(item, tuple)], key=lambda x: x[1])
-
-        # Find where session_start_time fits in the sorted rotated logs using binary search
-        timestamps = [ts for _, ts in rotated_with_ts]
-        idx = bisect_left(a=timestamps, x=session_start_time)
-
-        # Slice: Start one index back (if exists) to get the "immediately previous" log
-        start_idx = max(0, idx - 1)
-        relevant_rotated = [log for log, ts in rotated_with_ts[start_idx:]]
-
-        final_logs = relevant_rotated + active_logs
-
-        if final_logs:
-            filtered_nodes_logs[node] = final_logs
-            LOGGER.info(f"Node {node}: processing {len(final_logs)} audit log(s) (filtered from {len(logs)} total)")
+    for node, log_entries in audit_log_files_per_node(command_output=command_output).items():
+        node_logs = relevant_audit_logs(log_entries=log_entries, session_start_time=session_start_time)
+        if node_logs:
+            filtered_nodes_logs[node] = node_logs
+            LOGGER.info(
+                f"Node {node}: processing {len(node_logs)} audit log(s) (filtered from {len(log_entries)} total)"
+            )
 
     return filtered_nodes_logs
