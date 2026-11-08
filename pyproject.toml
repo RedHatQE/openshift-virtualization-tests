@@ -12,6 +12,10 @@ extend-select = [
   "PLC0415", # import-outside-top-level
   "N802",    # function name should be lowercase — method overrides from stdlib
   "N815",    # mixedCase variable in class scope — k8s API field names use camelCase
+  "PLR0915",  # too-many-statements
+  "PLR0912",  # too-many-branches
+  "C901",     # complex-structure
+  "PT021",    # pytest-fixture-finalizer-callback
 ]
 # TODO: Each ignored rule below should be addressed in a dedicated PR.
 ignore = [
@@ -41,7 +45,17 @@ ignore = [
   "B026",    # star-arg unpacking after keyword arg — required when wrapping TimeoutSampler
 ]
 
+[tool.ruff.lint.pylint]
+max-statements = 30
+max-branches = 12
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
 [tool.ruff.lint.per-file-ignores]
+# Complexity/size checks target product tests and utilities, not standalone tooling.
+"scripts/**/*.py" = ["C901", "PLR0912", "PLR0915"]
+"conftest.py" = ["C901", "PLR0912", "PLR0915"]
 # N815: mixedCase variable in class scope — API-mirror modules copy the Kubernetes / CNI
 # spec verbatim, so field names are camelCase by design
 "libs/vm/spec.py" = ["N815"]
