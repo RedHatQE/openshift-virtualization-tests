@@ -339,6 +339,38 @@ def verify_components_exist_only_on_selected_node(
     )
 
 
+def _pods_per_nodes(*, admin_client, hco_namespace, filter_pods_by_name: str | None) -> dict[str, list[Pod]]:
+    """Collect the pods of the HCO namespace, grouped by the node they run on."""
+    pods_per_nodes = defaultdict(list)
+    for pod in Pod.get(
+        client=admin_client,
+        namespace=hco_namespace.name,
+    ):
+        if filter_pods_by_name and filter_pods_by_name in pod.name:
+            LOGGER.warning(f"Ignoring pod: {pod.name} for placement")
+            continue
+        try:
+            # field_selector="status.phase==Running" is not always reliable
+            # to filter out terminating pods, see: https://github.com/kubernetes/kubectl/issues/450
+            if pod.instance.metadata.get("deletionTimestamp") is None:
+                pods_per_nodes[pod.node.name].append(pod)
+        except NotFoundError:
+            LOGGER.warning(f"Ignoring pods that disappeared during the query. node={pod.node.name} pod={pod.name}")
+    return pods_per_nodes
+
+
+def _check_pod_running(pod: Pod) -> bool:
+    # TOCTOU: pod deleted after snapshot; return False so sampler retries (CNV-98696).
+    try:
+        return pod.exists and pod.status == Pod.Status.RUNNING
+    except NotFoundError:
+        LOGGER.warning(f"Pod {pod.name} disappeared during status check; treating as not running.")
+        return False
+    except TimeoutExpiredError:
+        LOGGER.warning(f"Pod {pod.name} status check timed out; treating as not running (TOCTOU deletion).")
+        return False
+
+
 def get_pod_per_nodes(admin_client, hco_namespace, filter_pods_by_name=None):
     """
     This function creates a dictionary, with nodes as keys and associated list of pod apps as values
@@ -351,42 +383,14 @@ def get_pod_per_nodes(admin_client, hco_namespace, filter_pods_by_name=None):
     Returns:
         dict: a dictionary, with nodes as keys and associated list of pod apps as values
     """
-
-    def _get_pods_per_nodes(_filter_pods_by_name):
-        pods_per_nodes = defaultdict(list)
-        for pod in Pod.get(
-            client=admin_client,
-            namespace=hco_namespace.name,
-        ):
-            if _filter_pods_by_name and _filter_pods_by_name in pod.name:
-                LOGGER.warning(f"Ignoring pod: {pod.name} for placement")
-                continue
-            try:
-                # field_selector="status.phase==Running" is not always reliable
-                # to filter out terminating pods, see: https://github.com/kubernetes/kubectl/issues/450
-                if pod.instance.metadata.get("deletionTimestamp") is None:
-                    pods_per_nodes[pod.node.name].append(pod)
-            except NotFoundError:
-                LOGGER.warning(f"Ignoring pods that disappeared during the query. node={pod.node.name} pod={pod.name}")
-        return pods_per_nodes
-
-    def _check_pod_running(pod: Pod) -> bool:
-        # TOCTOU: pod deleted after snapshot; return False so sampler retries (CNV-98696).
-        try:
-            return pod.exists and pod.status == Pod.Status.RUNNING
-        except NotFoundError:
-            LOGGER.warning(f"Pod {pod.name} disappeared during status check; treating as not running.")
-            return False
-        except TimeoutExpiredError:
-            LOGGER.warning(f"Pod {pod.name} status check timed out; treating as not running (TOCTOU deletion).")
-            return False
-
     pod_names_per_nodes = {}
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_5MIN,
         sleep=TIMEOUT_30SEC,
-        func=_get_pods_per_nodes,
-        _filter_pods_by_name=filter_pods_by_name,
+        func=_pods_per_nodes,
+        admin_client=admin_client,
+        hco_namespace=hco_namespace,
+        filter_pods_by_name=filter_pods_by_name,
         exceptions_dict={NotFoundError: []},
     )
     try:

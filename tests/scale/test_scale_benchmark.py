@@ -254,72 +254,68 @@ def vms_info(scale_test_param):
 
 
 @pytest.fixture(scope="class")
-def golden_images_scale_dvs(request, keep_resources, admin_client, golden_images_namespace, dvs_info):
+def golden_images_scale_dvs(keep_resources, admin_client, golden_images_namespace, dvs_info):
     dvs_list = []
-
-    def _delete_resources():
-        delete_resources(resources=dvs_list)
-
-    if not keep_resources:
-        request.addfinalizer(_delete_resources)
-
     artifactory_secret = get_artifactory_secret(namespace=golden_images_namespace.name)
     artifactory_config_map = get_artifactory_config_map(namespace=golden_images_namespace.name)
 
-    for os_name, dv_info in dvs_info.items():
-        storage_types_used = [storage_type_key for storage_type_key in SCALE_STORAGE_TYPES if dv_info[storage_type_key]]
-        for storage_type in storage_types_used:
-            golden_images_scale_dv = DataVolume(
-                name=f"{os_name}-{storage_type}-dv",
-                namespace=golden_images_namespace.name,
-                storage_class=SCALE_STORAGE_TYPES[storage_type],
-                api_name="storage",
-                source_dict=construct_datavolume_source_dict(
-                    source="http",
-                    url=f"{get_test_artifact_server_url()}{dv_info['url']}",
-                    secret_name=artifactory_secret.name,
-                    cert_configmap_name=artifactory_config_map.name,
-                ),
-                size=dv_info["size"],
-                client=admin_client,
-            )
-            golden_images_scale_dv.deploy()
-            dvs_list.append(golden_images_scale_dv)
-    for dv in dvs_list:
-        dv.wait_for_status(status=DataVolume.Status.SUCCEEDED, timeout=TIMEOUT_30MIN)
-    yield dvs_list
-
-    cleanup_artifactory_secret_and_config_map(
-        artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
-    )
+    try:
+        for os_name, dv_info in dvs_info.items():
+            storage_types_used = [
+                storage_type_key for storage_type_key in SCALE_STORAGE_TYPES if dv_info[storage_type_key]
+            ]
+            for storage_type in storage_types_used:
+                golden_images_scale_dv = DataVolume(
+                    name=f"{os_name}-{storage_type}-dv",
+                    namespace=golden_images_namespace.name,
+                    storage_class=SCALE_STORAGE_TYPES[storage_type],
+                    api_name="storage",
+                    source_dict=construct_datavolume_source_dict(
+                        source="http",
+                        url=f"{get_test_artifact_server_url()}{dv_info['url']}",
+                        secret_name=artifactory_secret.name,
+                        cert_configmap_name=artifactory_config_map.name,
+                    ),
+                    size=dv_info["size"],
+                    client=admin_client,
+                )
+                golden_images_scale_dv.deploy()
+                dvs_list.append(golden_images_scale_dv)
+        for dv in dvs_list:
+            dv.wait_for_status(status=DataVolume.Status.SUCCEEDED, timeout=TIMEOUT_30MIN)
+        yield dvs_list
+    finally:
+        cleanup_artifactory_secret_and_config_map(
+            artifactory_secret=artifactory_secret, artifactory_config_map=artifactory_config_map
+        )
+        if not keep_resources:
+            delete_resources(resources=dvs_list)
 
 
 @pytest.fixture(scope="class")
-def data_sources(request, keep_resources, admin_client, golden_images_scale_dvs):
+def data_sources(keep_resources, admin_client, golden_images_scale_dvs):
     data_sources = {}
 
-    def _delete_resources():
-        delete_resources(resources=list(data_sources.values()))
-
-    if not keep_resources:
-        request.addfinalizer(_delete_resources)
-
-    for dv in golden_images_scale_dvs:
-        data_source_name = re.sub(r"-dv$", r"-datasource", dv.name)
-        data_source = DataSource(
-            name=data_source_name,
-            namespace=dv.namespace,
-            client=admin_client,
-            source=generate_data_source_dict(dv=dv),
-        )
-        data_source.deploy()
-        data_sources.update({data_source.name: data_source})
-    for data_source in data_sources.values():
-        data_source.wait_for_condition(
-            condition=data_source.Condition.READY,
-            status=data_source.Condition.Status.TRUE,
-        )
-    return data_sources
+    try:
+        for dv in golden_images_scale_dvs:
+            data_source_name = re.sub(r"-dv$", r"-datasource", dv.name)
+            data_source = DataSource(
+                name=data_source_name,
+                namespace=dv.namespace,
+                client=admin_client,
+                source=generate_data_source_dict(dv=dv),
+            )
+            data_source.deploy()
+            data_sources.update({data_source.name: data_source})
+        for data_source in data_sources.values():
+            data_source.wait_for_condition(
+                condition=data_source.Condition.READY,
+                status=data_source.Condition.Status.TRUE,
+            )
+        yield data_sources
+    finally:
+        if not keep_resources:
+            delete_resources(resources=list(data_sources.values()))
 
 
 @pytest.fixture(scope="class")
