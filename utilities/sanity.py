@@ -236,7 +236,6 @@ def _check_nodes(
         LOGGER.warning(f"Skipping nodes check, got {skip_option}")
         return
 
-    # validate that all the nodes are ready and schedulable and CNV pods are running
     LOGGER.info(f"Check nodes sanity. (To skip nodes sanity check pass {skip_option} to pytest)")
     assert_nodes_in_healthy_condition(nodes=nodes, healthy_node_condition_type=KUBELET_READY_CONDITION)
     assert_nodes_schedulable(nodes=nodes)

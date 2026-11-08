@@ -3391,6 +3391,35 @@ class TestInjectFailureJunit:
         content = xml_path.read_text()
         assert "pytest_exit" not in content, "Original XML should not be modified on write failure"
 
+    def test_write_failure_when_temp_file_already_gone(self, tmp_path):
+        """Test the original write error propagates when the temp file was already removed."""
+        pytest_utils_module._failure_info = {
+            "message": "Test failure",
+            "log_message": "Details",
+            "return_code": 99,
+        }
+
+        xml_path = tmp_path / "test-results.xml"
+        xml_path.write_text(
+            '<?xml version="1.0" encoding="utf-8"?>'
+            '<testsuites name="pytest tests">'
+            '<testsuite name="pytest" errors="0" failures="0" skipped="0" tests="0" '
+            'time="0.001" timestamp="2026-01-01T00:00:00" hostname="test" />'
+            "</testsuites>"
+        )
+
+        mock_session = MagicMock()
+        mock_session.config.option.xmlpath = str(xml_path)
+
+        with (
+            patch("utilities.pytest_utils.os.replace", side_effect=OSError("disk full")),
+            patch("utilities.pytest_utils.os.unlink", side_effect=FileNotFoundError("already gone")),
+            pytest.raises(OSError, match="disk full"),
+        ):
+            pytest_utils_module._inject_failure_junit(session=mock_session)
+
+        assert "pytest_exit" not in xml_path.read_text(), "The original write error must not be masked"
+
 
 class TestPatchParamikoForFips:
     def test_get_fingerprint_returns_fips_safe_md5(self, monkeypatch):

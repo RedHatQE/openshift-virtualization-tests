@@ -71,6 +71,10 @@ LOGGER = logging.getLogger(__name__)
 _failure_info: _FailureInfoDict | None = None
 
 
+# XML 1.0 illegal control characters: ElementTree passes them through and corrupts the file.
+_XML_ILLEGAL_CHARS_PATTERN = re.compile(r"[^\x09\x0A\x0D\x20-\uD7FF\uE000-\uFFFD\U00010000-\U0010FFFF]")
+
+
 def _synthetic_testcase_name(*, message: str) -> str:
     """Return a valid testcase name derived from the exit failure message."""
     sanitized_name = re.sub(r"[^a-z0-9_]", "", message.lower().replace(" ", "_"))
@@ -79,7 +83,7 @@ def _synthetic_testcase_name(*, message: str) -> str:
     return sanitized_name or "execution_failure"
 
 
-def _add_error_testcase(*, testsuite: Any, name: str, return_code: int, log_message: str) -> None:
+def _add_error_testcase(*, testsuite: ElementTree.Element, name: str, return_code: int, log_message: str) -> None:
     """Append a synthetic error testcase to the testsuite and update its counters."""
     testcase = ElementTree.SubElement(
         testsuite,
@@ -91,14 +95,13 @@ def _add_error_testcase(*, testsuite: Any, name: str, return_code: int, log_mess
         "error",
         attrib={"message": f"Pytest execution failed (exit code: {return_code})"},
     )
-    # Strip XML 1.0 illegal control characters — ElementTree passes them through, corrupting the file.
-    error_node.text = re.sub(r"[^\x09\x0A\x0D\x20-\uD7FF\uE000-\uFFFD\U00010000-\U0010FFFF]", "\ufffd", log_message)
+    error_node.text = _XML_ILLEGAL_CHARS_PATTERN.sub("\ufffd", log_message)
 
     testsuite.set("errors", str(int(testsuite.get("errors", "0")) + 1))
     testsuite.set("tests", str(int(testsuite.get("tests", "0")) + 1))
 
 
-def _write_xml_atomically(*, tree: Any, xml_path: str) -> None:
+def _write_xml_atomically(*, tree: ElementTree.ElementTree[ElementTree.Element[str]], xml_path: str) -> None:
     """Replace the JUnit XML file with the given tree, writing to a temporary file first."""
     xml_dir = os.path.dirname(os.path.abspath(xml_path))
     fd, tmp_path = tempfile.mkstemp(dir=xml_dir, suffix=".xml")
@@ -107,7 +110,10 @@ def _write_xml_atomically(*, tree: Any, xml_path: str) -> None:
             tree.write(tmp_file, encoding="unicode", xml_declaration=True)
         os.replace(tmp_path, xml_path)
     except BaseException:
-        os.unlink(tmp_path)
+        try:
+            os.unlink(tmp_path)
+        except FileNotFoundError:
+            LOGGER.warning(f"Temporary JUnit XML file {tmp_path} was already removed")
         raise
 
 

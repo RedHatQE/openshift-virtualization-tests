@@ -138,6 +138,12 @@ def _os_images_class(*, os_name: str, arch: str | None) -> Any:
         ValueError: When the OS is not defined under the resolved images class.
     """
     images_class = getattr(ArchImages, arch.upper(), None) if arch else Images
+    if not images_class:
+        raise ValueError(
+            f"Unsupported architecture: {arch}. Make sure it is supported under "
+            "`utilities.constants.images.ArchImages`."
+        )
+
     os_base_class = getattr(images_class, os_name.title(), None)
     if not os_base_class:
         raise ValueError(

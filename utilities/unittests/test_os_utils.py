@@ -273,6 +273,16 @@ class TestGenerateOsMatrixDict:
         assert rhel_config["template_labels"]["architecture"] == "amd64"
         assert rhel_config["data_source"] == "rhel9-amd64"
 
+    @patch("utilities.os_utils.ArchImages", spec=[])
+    def test_generate_os_matrix_dict_unsupported_arch(self, _mock_arch_images, mock_os_images):
+        """Test error handling when the requested architecture is not known"""
+        with pytest.raises(ValueError, match="Unsupported architecture: s390x"):
+            generate_os_matrix_dict(
+                os_name="rhel",
+                supported_operating_systems=["rhel-9-5"],
+                arch="s390x",
+            )
+
 
 class TestGenerateInstanceTypeRhelOsMatrix:
     """Test cases for generate_linux_instance_type_os_matrix function"""
