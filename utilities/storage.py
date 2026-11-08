@@ -125,6 +125,36 @@ def create_dummy_first_consumer_pod(
         )
 
 
+def _http_source_spec(*, url: str | None) -> dict[str, Any]:
+    """Return the source spec of an http DataVolume source, validating the URL first.
+
+    Raises:
+        FileNotFoundError: When the URL is not reachable and not excluded from validation.
+    """
+    if not utilities.infra.url_excluded_from_validation(url):
+        validate_file_exists_in_url(url=url)
+
+    return {"http": {"url": url}}
+
+
+def _registry_source_spec(*, url: str | None) -> dict[str, Any]:
+    """Return the source spec of a registry DataVolume source, tagged with the cluster CPU architecture."""
+    registry_spec: dict[str, Any] = {"url": url}
+    if cpu_arch := get_multiarch_cpu_arch():
+        registry_spec["platform"] = {"architecture": cpu_arch}
+
+    return {"registry": registry_spec}
+
+
+def _pvc_source_spec(*, source_pvc_name: str | None, source_pvc_namespace: str | None) -> dict[str, Any]:
+    """Return the source spec of a PVC DataVolume source."""
+    pvc_spec: dict[str, Any] = {"name": source_pvc_name}
+    if source_pvc_namespace is not None:
+        pvc_spec["namespace"] = source_pvc_namespace
+
+    return {"pvc": pvc_spec}
+
+
 def construct_datavolume_source_dict(
     source: str,
     url: str | None = None,
@@ -148,19 +178,11 @@ def construct_datavolume_source_dict(
         dict[str, Any]: The constructed source_dict for DataVolume.
     """
     if source == "http":
-        if not utilities.infra.url_excluded_from_validation(url):
-            validate_file_exists_in_url(url=url)
-        source_spec: dict[str, Any] = {"http": {"url": url}}
+        source_spec: dict[str, Any] = _http_source_spec(url=url)
     elif source == "registry":
-        registry_spec: dict[str, Any] = {"url": url}
-        if cpu_arch := get_multiarch_cpu_arch():
-            registry_spec["platform"] = {"architecture": cpu_arch}
-        source_spec = {"registry": registry_spec}
+        source_spec = _registry_source_spec(url=url)
     elif source == "pvc":
-        pvc_spec: dict[str, Any] = {"name": source_pvc_name}
-        if source_pvc_namespace is not None:
-            pvc_spec["namespace"] = source_pvc_namespace
-        source_spec = {"pvc": pvc_spec}
+        source_spec = _pvc_source_spec(source_pvc_name=source_pvc_name, source_pvc_namespace=source_pvc_namespace)
     elif source == "blank":
         source_spec = {"blank": {}}
     elif source == "upload":
@@ -301,6 +323,110 @@ def create_dv(
         )
 
 
+def _resolve_storage_class(
+    *, storage_class_matrix: dict[str, dict[str, Any]] | None, storage_class: str | None, params_dict: dict[str, Any]
+) -> str | None:
+    """Return the storage class to use, preferring the matrix over the explicit and parametrized values."""
+    if storage_class_matrix:
+        return [*storage_class_matrix][0]
+
+    return storage_class or params_dict.get("storage_class")
+
+
+def _resolve_dv_identity(
+    *, params_dict: dict[str, Any], os_matrix: dict[str, dict[str, Any]] | None
+) -> tuple[str, str, str | None]:
+    """Return the DV name, image and size, taken from the OS matrix or from the parametrized values."""
+    if os_matrix:
+        os_matrix_key = [*os_matrix][0]
+        return os_matrix_key, os_matrix[os_matrix_key]["image_path"], os_matrix[os_matrix_key].get("dv_size")
+
+    image = params_dict.get("image", "")
+    dv_name = (params_dict.get("dv_name") or "").replace(".", "-").lower()
+
+    return dv_name, image, params_dict.get("dv_size")
+
+
+def _existing_golden_image(*, client: DynamicClient, dv_name: str, dv_namespace: str) -> DataVolume | None:
+    """Return the existing golden image DataVolume, or None when it was not created yet."""
+    try:
+        return list(DataVolume.get(client=client, name=dv_name, namespace=dv_namespace))[0]
+    except NotFoundError:
+        LOGGER.warning(f"Golden image {dv_name} not found; DV will be created.")
+        return None
+
+
+def _data_volume_kwargs(
+    *,
+    params_dict: dict[str, Any],
+    dv_name: str,
+    dv_namespace: str,
+    source: str,
+    dv_size: str | None,
+    storage_class: str | None,
+    consume_wffc: bool,
+    bind_immediate: bool | None,
+    url: str | None,
+    client: DynamicClient,
+) -> dict[str, Any]:
+    """Build the create_dv arguments of the DataVolume fixture."""
+    dv_kwargs = {
+        "dv_name": dv_name,
+        "namespace": dv_namespace,
+        "source": source,
+        "size": dv_size,
+        "storage_class": storage_class,
+        "access_modes": params_dict.get("access_modes"),
+        "volume_mode": params_dict.get("volume_mode"),
+        "consume_wffc": consume_wffc,
+        "annotations": BIND_IMMEDIATE_ANNOTATION if bind_immediate else None,
+        "preallocation": params_dict.get("preallocation", None),
+        "url": url,
+        "client": client,
+        "use_artifactory": source == "http",
+    }
+    if params_dict.get("cert_configmap_name"):
+        dv_kwargs["cert_configmap_name"] = params_dict["cert_configmap_name"]
+
+    return dv_kwargs
+
+
+def _wait_for_data_volume(
+    *,
+    dv: DataVolume,
+    params_dict: dict[str, Any],
+    source: str,
+    consume_wffc: bool,
+    storage_class: str | None,
+    bind_immediate: bool | None,
+    image: str,
+    client: DynamicClient,
+) -> None:
+    """Wait for the DataVolume to reach the state the fixture parameters ask for."""
+    if not params_dict.get("wait", True):
+        return
+
+    if source == "upload":
+        dv.wait_for_status(status=DataVolume.Status.UPLOAD_READY, timeout=TIMEOUT_3MIN)
+        return
+
+    # In the case of WFFC Storage Class && caller asking to NOT consume && WFFC feature gate enabled
+    # and bind_immediate is False (i.e bind_immediate annotation will be added, import will not wait
+    # first consumer)
+    # We will hand out a DV that has nothing on it, just waiting to be further consumed by kubevirt
+    # It will be in a status 'PendingPopulation' (for csi storage)
+    if (
+        not consume_wffc
+        and storage_class
+        and sc_volume_binding_mode_is_wffc(sc=storage_class, client=client)
+        and not bind_immediate
+    ):
+        dv.wait_for_status(status=dv.Status.PENDING_POPULATION, timeout=TIMEOUT_10SEC)
+        return
+
+    dv.wait_for_dv_success(timeout=TIMEOUT_60MIN if OS_FLAVOR_WINDOWS in image else TIMEOUT_30MIN)
+
+
 def data_volume(
     namespace: Namespace,
     client: DynamicClient,
@@ -329,85 +455,53 @@ def data_volume(
         DataVolume: The created or existing DataVolume resource.
     """
     params_dict = request.param if request else {}
+    storage_class = _resolve_storage_class(
+        storage_class_matrix=storage_class_matrix, storage_class=storage_class, params_dict=params_dict
+    )
 
-    if storage_class_matrix:
-        storage_class = [*storage_class_matrix][0]
-    else:
-        storage_class = storage_class or params_dict.get("storage_class")
-
-    # Set DV attributes
-    # DV name is the only mandatory value
-    # Values can be extracted from request.param or from
-    # rhel_os_matrix or windows_os_matrix (passed as os_matrix)
+    # DV name is the only mandatory value; the rest can come from request.param
+    # or from rhel_os_matrix / windows_os_matrix (passed as os_matrix)
     source = params_dict.get("source", "http")
     consume_wffc = params_dict.get("consume_wffc", True)
     dv_namespace = namespace.name
-
-    if os_matrix:
-        os_matrix_key = [*os_matrix][0]
-        image = os_matrix[os_matrix_key]["image_path"]
-        dv_name = os_matrix_key
-        dv_size = os_matrix[os_matrix_key].get("dv_size")
-    else:
-        image = params_dict.get("image", "")
-        dv_name = (params_dict.get("dv_name") or "").replace(".", "-").lower()
-        dv_size = params_dict.get("dv_size")
+    dv_name, image, dv_size = _resolve_dv_identity(params_dict=params_dict, os_matrix=os_matrix)
 
     # Don't need URL for DVs that are not http
     url = f"{get_test_artifact_server_url()}{image}" if source == "http" else None
 
-    # For golden images; images are created once per module in
-    # golden images namepace and cloned when using common templates.
-    # If the DV exists, yield the DV else create a new one in
-    # golden images namespace
-    # If SC is HPP, cdi.kubevirt.io/storage.bind.immediate.requested annotation
-    # should be used to avoid wffc
+    # For golden images; images are created once per module in the golden images namespace and
+    # cloned when using common templates. If the DV exists, yield it, else create a new one.
+    # If the SC is HPP, cdi.kubevirt.io/storage.bind.immediate.requested annotation should be
+    # used to avoid wffc.
     if check_dv_exists:
         consume_wffc = False
         bind_immediate = True
-        try:
-            golden_image = list(DataVolume.get(client=client, name=dv_name, namespace=dv_namespace))
-            yield golden_image[0]
-        except NotFoundError:
-            LOGGER.warning(f"Golden image {dv_name} not found; DV will be created.")
+        if golden_image := _existing_golden_image(client=client, dv_name=dv_name, dv_namespace=dv_namespace):
+            yield golden_image
 
-    dv_kwargs = {
-        "dv_name": dv_name,
-        "namespace": dv_namespace,
-        "source": source,
-        "size": dv_size,
-        "storage_class": storage_class,
-        "access_modes": params_dict.get("access_modes"),
-        "volume_mode": params_dict.get("volume_mode"),
-        "consume_wffc": consume_wffc,
-        "annotations": BIND_IMMEDIATE_ANNOTATION if bind_immediate else None,
-        "preallocation": params_dict.get("preallocation", None),
-        "url": url,
-        "client": client,
-        "use_artifactory": source == "http",
-    }
-    if params_dict.get("cert_configmap_name"):
-        dv_kwargs["cert_configmap_name"] = params_dict["cert_configmap_name"]
-    # Create dv
+    dv_kwargs = _data_volume_kwargs(
+        params_dict=params_dict,
+        dv_name=dv_name,
+        dv_namespace=dv_namespace,
+        source=source,
+        dv_size=dv_size,
+        storage_class=storage_class,
+        consume_wffc=consume_wffc,
+        bind_immediate=bind_immediate,
+        url=url,
+        client=client,
+    )
     with create_dv(**{k: v for k, v in dv_kwargs.items() if v is not None}) as dv:
-        if params_dict.get("wait", True):
-            if source == "upload":
-                dv.wait_for_status(status=DataVolume.Status.UPLOAD_READY, timeout=TIMEOUT_3MIN)
-            else:
-                if (
-                    not consume_wffc
-                    and storage_class
-                    and sc_volume_binding_mode_is_wffc(sc=storage_class, client=client)
-                    and not bind_immediate
-                ):
-                    # In the case of WFFC Storage Class && caller asking to NOT consume && WFFC feature gate enabled
-                    # and bind_immediate is False (i.e bind_immediate annotation will be added, import will not wait
-                    # first consumer)
-                    # We will hand out a DV that has nothing on it, just waiting to be further consumed by kubevirt
-                    # It will be in a status 'PendingPopulation' (for csi storage)
-                    dv.wait_for_status(status=dv.Status.PENDING_POPULATION, timeout=TIMEOUT_10SEC)
-                else:
-                    dv.wait_for_dv_success(timeout=TIMEOUT_60MIN if OS_FLAVOR_WINDOWS in image else TIMEOUT_30MIN)
+        _wait_for_data_volume(
+            dv=dv,
+            params_dict=params_dict,
+            source=source,
+            consume_wffc=consume_wffc,
+            storage_class=storage_class,
+            bind_immediate=bind_immediate,
+            image=image,
+            client=client,
+        )
         yield dv
 
 
@@ -523,6 +617,79 @@ def virtctl_memory_dump(
     return utilities.infra.run_virtctl_command(command=command, namespace=namespace)
 
 
+def _resolve_upload_storage_config(
+    *, storage_class: str, volume_mode: str | None, access_mode: str | None
+) -> tuple[str, str, str]:
+    """Return the storage class, volume mode and access mode for an upload, completed from the matrix."""
+    storage_class_dict = get_storage_class_dict_from_matrix(storage_class=storage_class)
+    storage_class = [*storage_class_dict][0]
+
+    return (
+        storage_class,
+        volume_mode or storage_class_dict[storage_class]["volume_mode"],
+        access_mode or storage_class_dict[storage_class]["access_mode"],
+    )
+
+
+def _virtctl_upload_command(
+    *,
+    name: str,
+    pvc: bool,
+    image_path: str,
+    size: str,
+    client: DynamicClient,
+    storage_class: str | None,
+    volume_mode: str | None,
+    access_mode: str | None,
+    uploadproxy_url: str | None,
+    wait_secs: int | None,
+    insecure: bool,
+    no_create: bool,
+    consume_wffc: bool,
+) -> list[str]:
+    """Build the virtctl image-upload command for the requested DataVolume or PVC."""
+    command = [
+        "image-upload",
+        "pvc" if pvc else "dv",
+        f"{name}",
+        f"--image-path={image_path}",
+        f"--size={size}",
+    ]
+    if storage_class:
+        storage_class, volume_mode, access_mode = _resolve_upload_storage_config(
+            storage_class=storage_class, volume_mode=volume_mode, access_mode=access_mode
+        )
+        command.append(f"--storage-class={storage_class}")
+
+    if access_mode:
+        command.append(f"--access-mode={access_mode}")
+
+    if uploadproxy_url:
+        command.append(f"--uploadproxy-url={uploadproxy_url}")
+
+    if wait_secs:
+        command.append(f"--wait-secs={wait_secs}")
+
+    if insecure:
+        command.append("--insecure")
+
+    if volume_mode:
+        command.append(f"--volume-mode={volume_mode.lower()}")
+
+    if no_create:
+        command.append("--no-create")
+
+    if (
+        storage_class
+        and sc_volume_binding_mode_is_wffc(sc=storage_class, client=client)
+        and consume_wffc
+        and not no_create
+    ):
+        command.append("--force-bind")
+
+    return command
+
+
 @contextmanager
 def virtctl_upload_dv(
     namespace,
@@ -541,44 +708,26 @@ def virtctl_upload_dv(
     consume_wffc=True,
     cleanup=True,
 ):
-    command = [
-        "image-upload",
-        f"{'dv' if not pvc else pvc}",
-        f"{name}",
-        f"--image-path={image_path}",
-        f"--size={size}",
-    ]
     resource_to_cleanup = (
         PersistentVolumeClaim(namespace=namespace, name=name, client=client)
         if pvc
         else DataVolume(namespace=namespace, name=name, client=client)
     )
-    if pvc:
-        command[1] = "pvc"
-    if storage_class:
-        if not (
-            volume_mode and access_mode
-        ):  # In case either one of them is missing, must fetch missing mode/s from matrix
-            storage_class_dict = get_storage_class_dict_from_matrix(storage_class=storage_class)
-            storage_class = [*storage_class_dict][0]
-        # There is still an option that one mode was passed by caller, will use the passed value
-        volume_mode = volume_mode or storage_class_dict[storage_class]["volume_mode"]
-        access_mode = access_mode or storage_class_dict[storage_class]["access_mode"]
-        command.append(f"--storage-class={storage_class}")
-    if access_mode:
-        command.append(f"--access-mode={access_mode}")
-    if uploadproxy_url:
-        command.append(f"--uploadproxy-url={uploadproxy_url}")
-    if wait_secs:
-        command.append(f"--wait-secs={wait_secs}")
-    if insecure:
-        command.append("--insecure")
-    if volume_mode:
-        command.append(f"--volume-mode={volume_mode.lower()}")
-    if no_create:
-        command.append("--no-create")
-    if sc_volume_binding_mode_is_wffc(sc=storage_class, client=client) and consume_wffc and not no_create:
-        command.append("--force-bind")
+    command = _virtctl_upload_command(
+        name=name,
+        pvc=pvc,
+        image_path=image_path,
+        size=size,
+        client=client,
+        storage_class=storage_class,
+        volume_mode=volume_mode,
+        access_mode=access_mode,
+        uploadproxy_url=uploadproxy_url,
+        wait_secs=wait_secs,
+        insecure=insecure,
+        no_create=no_create,
+        consume_wffc=consume_wffc,
+    )
 
     yield utilities.infra.run_virtctl_command(command=command, namespace=namespace)
 
