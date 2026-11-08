@@ -1,6 +1,7 @@
 import logging
 import re
 import shlex
+from typing import TYPE_CHECKING
 
 import pytest
 from ocp_resources.node_network_state import NodeNetworkState
@@ -9,6 +10,10 @@ from utilities.constants.networking import LINUX_BRIDGE, OVS_BRIDGE
 from utilities.data_utils import name_prefix
 from utilities.infra import ExecCommandOnPod, get_node_selector_dict
 from utilities.network import EthernetNetworkConfigurationPolicy
+
+if TYPE_CHECKING:
+    from ocp_resources.node import Node
+    from ocp_resources.pod import Pod
 
 LOGGER = logging.getLogger(__name__)
 
@@ -49,7 +54,7 @@ def _occupy_bridge_ports(
             node_nics["available"].remove(bridge_port)
 
 
-def _is_physically_connected(*, utility_pods, node, iface_name: str) -> bool:
+def _is_physically_connected(*, utility_pods: list[Pod], node: Node, iface_name: str) -> bool:
     """Return whether the node NIC reports a carrier (link up)."""
     carrier_response = ExecCommandOnPod(utility_pods=utility_pods, node=node).exec(
         command=f"nmcli -g WIRED-PROPERTIES.CARRIER device show {iface_name}"
@@ -61,7 +66,9 @@ def _is_physically_connected(*, utility_pods, node, iface_name: str) -> bool:
     return True
 
 
-def _node_active_nics(*, node, interfaces: list[dict], node_physical_nics: list[str], utility_pods) -> dict:
+def _node_active_nics(
+    *, node: Node, interfaces: list[dict], node_physical_nics: list[str], utility_pods: list[Pod]
+) -> dict[str, list[str]]:
     """Classify the node physical NICs as available or occupied."""
     node_nics: dict[str, list[str]] = {"available": [], "occupied": []}
     for node_interface in interfaces:
@@ -118,7 +125,11 @@ def nodes_active_nics(
     workers_utility_pods,
     node_physical_nics,
 ):
-    """Get nodes active NICs. First NIC is management NIC."""
+    """Get nodes active NICs. First NIC is management NIC.
+
+    Returns:
+        Worker node name mapped to its ``available`` and ``occupied`` NIC names.
+    """
     # TODO: Add support for environments that do not have KNMstate installed. e.g: clouds
     nodes_nics = {}
     for node in workers:
