@@ -75,7 +75,6 @@ class TestVMIMetricsLinuxVms:
             values_to_compare=linux_vm_info_to_compare,
         )
 
-    @pytest.mark.polarion("CNV-XXXXX")  # TODO: replace with real Polarion ID
     @pytest.mark.manual
     def test_kubevirt_vmi_info_has_panic_device_true(self):
         """
@@ -118,7 +117,6 @@ class TestVMIMetricsWindowsVms:
             values_to_compare=windows_vm_info_to_compare,
         )
 
-    @pytest.mark.polarion("CNV-XXXXX")  # TODO: replace with real Polarion ID
     @pytest.mark.manual
     def test_kubevirt_vmi_info_has_panic_device_false_windows(self):
         """
