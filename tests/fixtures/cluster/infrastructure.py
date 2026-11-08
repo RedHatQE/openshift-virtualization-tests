@@ -9,7 +9,7 @@ from ocp_resources.pod import Pod
 from pytest_testconfig import config as py_config
 
 from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
-from tests.fixtures.cluster.utilities import audit_log_files_per_node, relevant_audit_logs
+from utilities.audit_logs import audit_log_files_per_node, relevant_audit_logs
 from utilities.constants.architecture import S390X
 from utilities.constants.cluster import AUDIT_LOGS_PATH, NODE_TYPE_WORKER_LABEL, OC_ADM_LOGS_COMMAND
 from utilities.infra import (
