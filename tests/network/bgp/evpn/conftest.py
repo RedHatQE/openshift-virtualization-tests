@@ -14,7 +14,7 @@ from ocp_resources.resource import ResourceEditor
 from ocp_resources.vtep import VTEP
 from timeout_sampler import TimeoutExpiredError
 
-from libs.net.ip import random_ipv4_address
+from libs.net.ip import random_ipv4_address, random_ipv6_address
 from libs.net.traffic_generator import TcpServer
 from libs.net.udn import UDN_BINDING_DEFAULT_PLUGIN_NAME, create_udn_namespace, udn_primary_network
 from libs.vm.affinity import new_pod_anti_affinity
@@ -24,23 +24,23 @@ from libs.vm.vm import BaseVirtualMachine
 from tests.network.bgp.evpn.libevpn import (
     CUDN_EVPN_SUBNET_IPV6,
     EVPN_CUDN_NET_SEED,
+    EVPN_IP_VRF_VNI,
+    EVPN_MAC_VRF_VNI,
     EndpointTcpClient,
     EvpnEndpoint,
     cudn_evpn_subnets,
-    deploy_evpn_bridge,
     deploy_evpn_l2_endpoint,
     deploy_evpn_l3_endpoint,
-    deploy_evpn_l3_vrf,
     evpn_workloads_active_connections,
     node_primary_ipv4_interface,
-    teardown_evpn_bridge,
     teardown_evpn_l2_endpoint,
     teardown_evpn_l3_endpoint,
-    teardown_evpn_l3_vrf,
 )
 from tests.network.bgp.evpn.utils import (
     L2VNI,
     L3VNI,
+    OPENPE_HELPER_LABEL,
+    OPENPE_L3_VRF_NAME,
     OPENPE_PROVIDER_NODE_LABEL,
     OpenPERouterAttachment,
     OpenPERouterInfo,
@@ -56,6 +56,7 @@ from tests.network.bgp.evpn.utils import (
     openperouter_attachment_from_environment,
     openperouter_topology_cleanup,
     validate_openperouter_parent_interface,
+    wait_for_openperouter_control_plane,
     wait_for_openperouter_l2_vni,
     wait_for_openperouter_l3_vni,
     wait_for_openperouter_raw_frr_config,
@@ -63,11 +64,8 @@ from tests.network.bgp.evpn.utils import (
 )
 from tests.network.libs import cluster_user_defined_network as libcudn
 from tests.network.libs.bgp import (
-    EXTERNAL_FRR_POD_LABEL,
-    ExternalFrrPodInfo,
     create_cudn_route_advertisements,
     create_evpn_frr_configuration,
-    wait_for_evpn_established,
 )
 from tests.network.libs.label_selector import LabelSelector
 from tests.network.libs.vm_factory import udn_vm
@@ -80,12 +78,12 @@ CUDN_EVPN_BGP_LABEL: Final[dict] = {"cudn-bgp": "evpn"}
 EXTERNAL_L2_ENDPOINT_IPV4: Final[str] = str(random_ipv4_address(net_seed=EVPN_CUDN_NET_SEED, host_address=250))
 EXTERNAL_L2_ENDPOINT_IPV6: Final[str] = f"{ipaddress.ip_network(CUDN_EVPN_SUBNET_IPV6, strict=False)[250]}/64"
 EXTERNAL_L2_ENDPOINT_MAC: Final[str] = "02:00:05:00:fa:00"
-EXTERNAL_L3_ENDPOINT_IPV4: Final[str] = "192.168.100.100/24"
-EXTERNAL_L3_ENDPOINT_IPV6: Final[str] = "fd01:1234:5678::64/64"
-EXTERNAL_L3_GATEWAY_IPV4: Final[str] = "192.168.100.1/24"
-EXTERNAL_L3_GATEWAY_IPV6: Final[str] = "fd01:1234:5678::1/64"
-EVPN_MAC_VRF_VNI: Final[int] = 10100
-EVPN_IP_VRF_VNI: Final[int] = 20102
+EXTERNAL_L3_NET_SEED: Final[int] = EVPN_CUDN_NET_SEED + 1
+EXTERNAL_L3_SUBNET_IPV4: Final[str] = str(random_ipv4_address(net_seed=EXTERNAL_L3_NET_SEED, host_address=0))
+EXTERNAL_L3_GATEWAY_IPV4: Final[str] = str(random_ipv4_address(net_seed=EXTERNAL_L3_NET_SEED, host_address=1))
+EXTERNAL_L3_GATEWAY_IPV6: Final[str] = str(random_ipv6_address(net_seed=EXTERNAL_L3_NET_SEED, host_address=1))
+EXTERNAL_L3_ENDPOINT_IPV4: Final[str] = str(random_ipv4_address(net_seed=EXTERNAL_L3_NET_SEED, host_address=100))
+EXTERNAL_L3_ENDPOINT_IPV6: Final[str] = str(random_ipv6_address(net_seed=EXTERNAL_L3_NET_SEED, host_address=100))
 
 
 @pytest.fixture(scope="module")
@@ -126,240 +124,6 @@ def namespace_evpn(admin_client: DynamicClient) -> Generator[Namespace]:
 
 
 @pytest.fixture(scope="module")
-def vtep(
-    admin_client: DynamicClient,
-    workers: list[Node],
-) -> Generator[VTEP]:
-    vtep_cidr = str(node_primary_ipv4_interface(workers[0]).network)
-    with VTEP(
-        name="evpn-vtep",
-        cidrs=[vtep_cidr],
-        mode=libcudn.VtepMode.UNMANAGED.value,
-        client=admin_client,
-    ) as vtep_resource:
-        yield vtep_resource
-
-
-@pytest.fixture(scope="module")
-def cudn_evpn_layer2(
-    admin_client: DynamicClient,
-    namespace_evpn: Namespace,
-    vtep: VTEP,
-) -> Generator[libcudn.ClusterUserDefinedNetwork]:
-    with libcudn.ClusterUserDefinedNetwork(
-        name="l2-network-evpn",
-        namespace_selector=LabelSelector(matchLabels=CUDN_EVPN_BGP_LABEL),
-        network=libcudn.Network(
-            topology=libcudn.Network.Topology.LAYER2.value,
-            layer2=libcudn.Layer2(
-                role=libcudn.Layer2.Role.PRIMARY.value,
-                ipam=libcudn.Ipam(mode=libcudn.Ipam.Mode.ENABLED.value, lifecycle="Persistent"),
-                subnets=cudn_evpn_subnets(),
-            ),
-            transport=libcudn.Transport.EVPN.value,
-            evpn=libcudn.EvpnConfiguration(
-                vtep=vtep.name,
-                macVRF=libcudn.MacVRF(vni=EVPN_MAC_VRF_VNI),
-                ipVRF=libcudn.IpVRF(vni=EVPN_IP_VRF_VNI),
-            ),
-        ),
-        client=admin_client,
-        label=APP_EVPN_CUDN_LABEL,
-    ) as cudn:
-        cudn.wait_for_status_success()
-        yield cudn
-
-
-@pytest.fixture(scope="module")
-def cudn_evpn_route_advertisements(
-    cudn_evpn_layer2: libcudn.ClusterUserDefinedNetwork,
-    cluster_network_resource_ra_enabled: None,
-    admin_client: DynamicClient,
-) -> Generator[None]:
-    with create_cudn_route_advertisements(
-        name="evpn-route-advertisement",
-        match_labels=APP_EVPN_CUDN_LABEL,
-        client=admin_client,
-        target_vrf="auto",
-        frr_configuration_selector={"matchLabels": EVPN_ADVERTISE_LABEL},
-    ):
-        yield
-
-
-@pytest.fixture(scope="module")
-def frr_configuration_evpn(
-    admin_client: DynamicClient,
-    frr_external_pod: ExternalFrrPodInfo,
-) -> Generator[None]:
-    with create_evpn_frr_configuration(
-        name="frr-configuration-evpn",
-        frr_pod_ipv4=frr_external_pod.ipv4,
-        client=admin_client,
-        label=EVPN_ADVERTISE_LABEL,
-    ):
-        yield
-
-
-@pytest.fixture(scope="module")
-def evpn_setup_ready(
-    ovn_local_gateway_mode: None,
-    frr_external_pod: ExternalFrrPodInfo,
-    cudn_evpn_route_advertisements: None,
-    frr_configuration_evpn: None,
-    workers: list[Node],
-) -> None:
-    node_names = [worker.name for worker in workers if worker.name != frr_external_pod.pod.instance.spec.nodeName]
-    wait_for_evpn_established(frr_pod=frr_external_pod.pod, expected_neighbors=len(node_names))
-
-
-@pytest.fixture(scope="module")
-def vm_evpn_target(
-    namespace_evpn: Namespace,
-    cudn_evpn_layer2: libcudn.ClusterUserDefinedNetwork,
-    admin_client: DynamicClient,
-    frr_external_pod: ExternalFrrPodInfo,
-) -> Generator[BaseVirtualMachine]:
-    with udn_vm(
-        namespace_name=namespace_evpn.name,
-        name="vm-evpn-target",
-        client=admin_client,
-        binding=UDN_BINDING_DEFAULT_PLUGIN_NAME,
-        template_labels=EXTERNAL_FRR_POD_LABEL,
-        anti_affinity_namespaces=[frr_external_pod.pod.namespace, namespace_evpn.name],
-    ) as vm:
-        vm.start(wait=True)
-        vm.wait_for_agent_connected()
-        yield vm
-
-
-@pytest.fixture()
-def vm_evpn_reference(
-    namespace_evpn: Namespace,
-    cudn_evpn_layer2: libcudn.ClusterUserDefinedNetwork,
-    admin_client: DynamicClient,
-    frr_external_pod: ExternalFrrPodInfo,
-) -> Generator[BaseVirtualMachine]:
-    with udn_vm(
-        namespace_name=namespace_evpn.name,
-        name="vm-evpn-reference",
-        client=admin_client,
-        binding=UDN_BINDING_DEFAULT_PLUGIN_NAME,
-        template_labels=EXTERNAL_FRR_POD_LABEL,
-        anti_affinity_namespaces=[frr_external_pod.pod.namespace, namespace_evpn.name],
-    ) as vm:
-        vm.start(wait=True)
-        vm.wait_for_agent_connected()
-        yield vm
-
-
-@pytest.fixture(scope="module")
-def evpn_bridge(
-    frr_external_pod: ExternalFrrPodInfo,
-    workers: list[Node],
-) -> Generator[None]:
-    worker_ips = [str(node_primary_ipv4_interface(worker).ip) for worker in workers]
-
-    deploy_evpn_bridge(
-        pod=frr_external_pod.pod,
-        local_vtep_ip=frr_external_pod.ipv4,
-        remote_vtep_ips=worker_ips,
-        l2_vni=EVPN_MAC_VRF_VNI,
-        l3_vni=EVPN_IP_VRF_VNI,
-    )
-    yield
-    teardown_evpn_bridge(pod=frr_external_pod.pod)
-
-
-@pytest.fixture(scope="module")
-def external_l2_endpoint(
-    evpn_bridge: None,
-    frr_external_pod: ExternalFrrPodInfo,
-) -> Generator[EvpnEndpoint]:
-    endpoint = deploy_evpn_l2_endpoint(
-        pod=frr_external_pod.pod,
-        endpoint_ips=[EXTERNAL_L2_ENDPOINT_IPV4, EXTERNAL_L2_ENDPOINT_IPV6],
-        mac_address=EXTERNAL_L2_ENDPOINT_MAC,
-    )
-    yield endpoint
-    teardown_evpn_l2_endpoint(endpoint=endpoint)
-
-
-@pytest.fixture(scope="module")
-def external_l3_vrf(
-    evpn_bridge: None,
-    frr_external_pod: ExternalFrrPodInfo,
-) -> Generator[None]:
-    deploy_evpn_l3_vrf(pod=frr_external_pod.pod, vni=EVPN_IP_VRF_VNI)
-    yield
-    teardown_evpn_l3_vrf(pod=frr_external_pod.pod)
-
-
-@pytest.fixture(scope="module")
-def external_l3_endpoint(
-    external_l3_vrf: None,
-    frr_external_pod: ExternalFrrPodInfo,
-) -> Generator[EvpnEndpoint]:
-    endpoint = deploy_evpn_l3_endpoint(
-        pod=frr_external_pod.pod,
-        endpoint_ips=[EXTERNAL_L3_ENDPOINT_IPV4, EXTERNAL_L3_ENDPOINT_IPV6],
-        gateway_ips=[EXTERNAL_L3_GATEWAY_IPV4, EXTERNAL_L3_GATEWAY_IPV6],
-    )
-    yield endpoint
-    teardown_evpn_l3_endpoint(endpoint=endpoint)
-
-
-@pytest.fixture()
-def evpn_stretched_l2_active_connections(
-    external_l2_endpoint: EvpnEndpoint,
-    vm_evpn_target: BaseVirtualMachine,
-) -> Generator[list[tuple[EndpointTcpClient, TcpServer]]]:
-    with evpn_workloads_active_connections(endpoint=external_l2_endpoint, vm=vm_evpn_target) as connections:
-        yield connections
-
-
-@pytest.fixture()
-def evpn_routed_l3_active_connections(
-    external_l3_endpoint: EvpnEndpoint,
-    vm_evpn_target: BaseVirtualMachine,
-) -> Generator[list[tuple[EndpointTcpClient, TcpServer]]]:
-    with evpn_workloads_active_connections(endpoint=external_l3_endpoint, vm=vm_evpn_target) as connections:
-        yield connections
-
-
-@pytest.fixture()
-def vm_source_provider(
-    external_l2_endpoint: EvpnEndpoint,
-    namespace_evpn: Namespace,
-    cudn_evpn_layer2: libcudn.ClusterUserDefinedNetwork,
-    admin_client: DynamicClient,
-    frr_external_pod: ExternalFrrPodInfo,
-) -> Generator[BaseVirtualMachine]:
-    spec = base_vmspec()
-    network_name = "udn-network"
-    iface, network = udn_primary_network(name=network_name, binding=UDN_BINDING_DEFAULT_PLUGIN_NAME)
-    iface.macAddress = external_l2_endpoint.mac_address
-    spec.template.spec.domain.devices = Devices(interfaces=[iface])
-    spec.template.spec.networks = [network]
-    spec.template.metadata = Metadata(
-        labels=EXTERNAL_FRR_POD_LABEL,
-        annotations={"network.kubevirt.io/addresses": json.dumps({network_name: external_l2_endpoint.ip_addresses})},
-    )
-    label, *_ = EXTERNAL_FRR_POD_LABEL.items()
-    spec.template.spec.affinity = new_pod_anti_affinity(
-        label=label, namespaces=[frr_external_pod.pod.namespace, namespace_evpn.name]
-    )
-
-    with fedora_vm(namespace=namespace_evpn.name, name="vm-source-provider", client=admin_client, spec=spec) as vm:
-        yield vm
-
-
-EXTERNAL_L3_NET_SEED: Final[int] = EVPN_CUDN_NET_SEED + 1
-
-
-EXTERNAL_L3_SUBNET_IPV4: Final[str] = str(random_ipv4_address(net_seed=EXTERNAL_L3_NET_SEED, host_address=0))
-
-
-@pytest.fixture(scope="module")
 def openperouter_attachment() -> OpenPERouterAttachment:
     return openperouter_attachment_from_environment()
 
@@ -377,6 +141,21 @@ def openperouter_provider_node(openperouter_provider_nodes: list[Node]) -> Node:
 @pytest.fixture(scope="module")
 def openperouter_namespace(admin_client: DynamicClient) -> Generator[Namespace]:
     yield from create_ns(name="test-openperouter-ns", admin_client=admin_client)
+
+
+@pytest.fixture(scope="module")
+def vtep(
+    admin_client: DynamicClient,
+    workers: list[Node],
+) -> Generator[VTEP]:
+    vtep_cidr = str(node_primary_ipv4_interface(workers[0]).network)
+    with VTEP(
+        name="evpn-vtep",
+        cidrs=[vtep_cidr],
+        mode=libcudn.VtepMode.UNMANAGED.value,
+        client=admin_client,
+    ) as vtep_resource:
+        yield vtep_resource
 
 
 @pytest.fixture(scope="module")
@@ -405,6 +184,20 @@ def openperouter_diagnostics_pod(
         netns_read_only=True,
     ) as diagnostics_pod:
         yield diagnostics_pod
+
+
+@pytest.fixture(scope="module")
+def openperouter_endpoint_helper_pod(
+    admin_client: DynamicClient,
+    openperouter_installation: OpenPERouterInfo,
+) -> Generator[Pod]:
+    with deploy_openperouter_helper_pod(
+        client=admin_client,
+        namespace_name=openperouter_installation.namespace_name,
+        node_name=openperouter_installation.provider_node_name,
+        netns_read_only=False,
+    ) as endpoint_helper_pod:
+        yield endpoint_helper_pod
 
 
 @pytest.fixture(scope="module")
@@ -504,7 +297,7 @@ def openperouter_l3_vni(
         yield l3_vni
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope="module")
 def openperouter_raw_frr_config(
     admin_client: DynamicClient,
     openperouter_installation: OpenPERouterInfo,
@@ -535,3 +328,209 @@ def openperouter_raw_frr_config(
             )
             raise
         yield raw_frr_config
+
+
+@pytest.fixture(scope="module")
+def cudn_evpn_layer2(
+    admin_client: DynamicClient,
+    namespace_evpn: Namespace,
+    vtep: VTEP,
+) -> Generator[libcudn.ClusterUserDefinedNetwork]:
+    with libcudn.ClusterUserDefinedNetwork(
+        name="l2-network-evpn",
+        namespace_selector=LabelSelector(matchLabels=CUDN_EVPN_BGP_LABEL),
+        network=libcudn.Network(
+            topology=libcudn.Network.Topology.LAYER2.value,
+            layer2=libcudn.Layer2(
+                role=libcudn.Layer2.Role.PRIMARY.value,
+                ipam=libcudn.Ipam(mode=libcudn.Ipam.Mode.ENABLED.value, lifecycle="Persistent"),
+                subnets=cudn_evpn_subnets(),
+            ),
+            transport=libcudn.Transport.EVPN.value,
+            evpn=libcudn.EvpnConfiguration(
+                vtep=vtep.name,
+                macVRF=libcudn.MacVRF(vni=EVPN_MAC_VRF_VNI),
+                ipVRF=libcudn.IpVRF(vni=EVPN_IP_VRF_VNI),
+            ),
+        ),
+        client=admin_client,
+        label=APP_EVPN_CUDN_LABEL,
+    ) as cudn:
+        cudn.wait_for_status_success()
+        yield cudn
+
+
+@pytest.fixture(scope="module")
+def cudn_evpn_route_advertisements(
+    cudn_evpn_layer2: libcudn.ClusterUserDefinedNetwork,
+    cluster_network_resource_ra_enabled: None,
+    admin_client: DynamicClient,
+) -> Generator[None]:
+    with create_cudn_route_advertisements(
+        name="evpn-route-advertisement",
+        match_labels=APP_EVPN_CUDN_LABEL,
+        client=admin_client,
+        target_vrf="auto",
+        frr_configuration_selector={"matchLabels": EVPN_ADVERTISE_LABEL},
+    ):
+        yield
+
+
+@pytest.fixture(scope="module")
+def frr_configuration_evpn(
+    admin_client: DynamicClient,
+    openperouter_attachment: OpenPERouterAttachment,
+) -> Generator[None]:
+    provider_ipv4 = str(ipaddress.ip_interface(openperouter_attachment.provider_ipv4).ip)
+    with create_evpn_frr_configuration(
+        name="frr-configuration-evpn",
+        frr_pod_ipv4=provider_ipv4,
+        client=admin_client,
+        label=EVPN_ADVERTISE_LABEL,
+    ):
+        yield
+
+
+@pytest.fixture(scope="module")
+def evpn_setup_ready(
+    ovn_local_gateway_mode: None,
+    openperouter_installation: OpenPERouterInfo,
+    openperouter_diagnostics_pod: Pod,
+    openperouter_raw_frr_config: RawFRRConfig,
+    cudn_evpn_route_advertisements: None,
+    frr_configuration_evpn: None,
+    openperouter_provider_node: Node,
+    workers: list[Node],
+) -> None:
+    worker_node_names = [worker.name for worker in workers if worker.name != openperouter_provider_node.name]
+    try:
+        wait_for_openperouter_control_plane(
+            router_pod=openperouter_installation.router_pod,
+            worker_node_names=worker_node_names,
+        )
+    except TimeoutExpiredError:
+        collect_openperouter_diagnostics(
+            client=openperouter_installation.router_pod.client,
+            namespace_name=openperouter_installation.namespace_name,
+            router_pod=openperouter_installation.router_pod,
+            diagnostics_pod=openperouter_diagnostics_pod,
+        )
+        raise
+
+
+@pytest.fixture(scope="module")
+def vm_evpn_target(
+    namespace_evpn: Namespace,
+    cudn_evpn_layer2: libcudn.ClusterUserDefinedNetwork,
+    admin_client: DynamicClient,
+    openperouter_endpoint_helper_pod: Pod,
+) -> Generator[BaseVirtualMachine]:
+    with udn_vm(
+        namespace_name=namespace_evpn.name,
+        name="vm-evpn-target",
+        client=admin_client,
+        binding=UDN_BINDING_DEFAULT_PLUGIN_NAME,
+        template_labels=OPENPE_HELPER_LABEL,
+        anti_affinity_namespaces=[openperouter_endpoint_helper_pod.namespace, namespace_evpn.name],
+    ) as vm:
+        vm.start(wait=True)
+        vm.wait_for_agent_connected()
+        yield vm
+
+
+@pytest.fixture()
+def vm_evpn_reference(
+    namespace_evpn: Namespace,
+    cudn_evpn_layer2: libcudn.ClusterUserDefinedNetwork,
+    admin_client: DynamicClient,
+    openperouter_endpoint_helper_pod: Pod,
+) -> Generator[BaseVirtualMachine]:
+    with udn_vm(
+        namespace_name=namespace_evpn.name,
+        name="vm-evpn-reference",
+        client=admin_client,
+        binding=UDN_BINDING_DEFAULT_PLUGIN_NAME,
+        template_labels=OPENPE_HELPER_LABEL,
+        anti_affinity_namespaces=[openperouter_endpoint_helper_pod.namespace, namespace_evpn.name],
+    ) as vm:
+        vm.start(wait=True)
+        vm.wait_for_agent_connected()
+        yield vm
+
+
+@pytest.fixture(scope="module")
+def external_l2_endpoint(
+    evpn_setup_ready: None,
+    openperouter_endpoint_helper_pod: Pod,
+    openperouter_l2_vni: L2VNI,
+) -> Generator[EvpnEndpoint]:
+    endpoint = deploy_evpn_l2_endpoint(
+        pod=openperouter_endpoint_helper_pod,
+        endpoint_ips=[EXTERNAL_L2_ENDPOINT_IPV4, EXTERNAL_L2_ENDPOINT_IPV6],
+        l2_vni=EVPN_MAC_VRF_VNI,
+        mac_address=EXTERNAL_L2_ENDPOINT_MAC,
+    )
+    yield endpoint
+    teardown_evpn_l2_endpoint(endpoint=endpoint)
+
+
+@pytest.fixture(scope="module")
+def external_l3_endpoint(
+    evpn_setup_ready: None,
+    openperouter_endpoint_helper_pod: Pod,
+    openperouter_l3_vni: L3VNI,
+) -> Generator[EvpnEndpoint]:
+    endpoint = deploy_evpn_l3_endpoint(
+        pod=openperouter_endpoint_helper_pod,
+        endpoint_ips=[EXTERNAL_L3_ENDPOINT_IPV4, EXTERNAL_L3_ENDPOINT_IPV6],
+        gateway_ips=[EXTERNAL_L3_GATEWAY_IPV4, EXTERNAL_L3_GATEWAY_IPV6],
+        vrf_name=OPENPE_L3_VRF_NAME,
+    )
+    yield endpoint
+    teardown_evpn_l3_endpoint(endpoint=endpoint)
+
+
+@pytest.fixture()
+def evpn_stretched_l2_active_connections(
+    external_l2_endpoint: EvpnEndpoint,
+    vm_evpn_target: BaseVirtualMachine,
+) -> Generator[list[tuple[EndpointTcpClient, TcpServer]]]:
+    with evpn_workloads_active_connections(endpoint=external_l2_endpoint, vm=vm_evpn_target) as connections:
+        yield connections
+
+
+@pytest.fixture()
+def evpn_routed_l3_active_connections(
+    external_l3_endpoint: EvpnEndpoint,
+    vm_evpn_target: BaseVirtualMachine,
+) -> Generator[list[tuple[EndpointTcpClient, TcpServer]]]:
+    with evpn_workloads_active_connections(endpoint=external_l3_endpoint, vm=vm_evpn_target) as connections:
+        yield connections
+
+
+@pytest.fixture()
+def vm_source_provider(
+    external_l2_endpoint: EvpnEndpoint,
+    namespace_evpn: Namespace,
+    cudn_evpn_layer2: libcudn.ClusterUserDefinedNetwork,
+    admin_client: DynamicClient,
+    openperouter_endpoint_helper_pod: Pod,
+) -> Generator[BaseVirtualMachine]:
+    spec = base_vmspec()
+    network_name = "udn-network"
+    iface, network = udn_primary_network(name=network_name, binding=UDN_BINDING_DEFAULT_PLUGIN_NAME)
+    iface.macAddress = external_l2_endpoint.mac_address
+    spec.template.spec.domain.devices = Devices(interfaces=[iface])
+    spec.template.spec.networks = [network]
+    spec.template.metadata = Metadata(
+        labels=OPENPE_HELPER_LABEL,
+        annotations={"network.kubevirt.io/addresses": json.dumps({network_name: external_l2_endpoint.ip_addresses})},
+    )
+    helper_label = next(iter(OPENPE_HELPER_LABEL.items()))
+    spec.template.spec.affinity = new_pod_anti_affinity(
+        label=helper_label,
+        namespaces=[openperouter_endpoint_helper_pod.namespace, namespace_evpn.name],
+    )
+
+    with fedora_vm(namespace=namespace_evpn.name, name="vm-source-provider", client=admin_client, spec=spec) as vm:
+        yield vm

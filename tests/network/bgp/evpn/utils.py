@@ -18,7 +18,13 @@ from ocp_resources.subscription import Subscription
 from ocp_resources.validating_webhook_config import ValidatingWebhookConfiguration
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 
-from tests.network.libs.bgp import CLUSTER_FRR_ASN, EXTERNAL_FRR_ASN, NET_TOOLS_CONTAINER_NAME
+from tests.network.libs.bgp import (
+    CLUSTER_FRR_ASN,
+    EXTERNAL_FRR_ASN,
+    NET_TOOLS_CONTAINER_NAME,
+    wait_for_bgp_connection_established,
+    wait_for_evpn_established,
+)
 from utilities.constants.networking import NET_UTIL_CONTAINER_IMAGE
 
 if TYPE_CHECKING:
@@ -735,6 +741,23 @@ def wait_for_openperouter_raw_frr_config(diagnostics_pod: Pod) -> None:
     )
     if "route-map evpn-to-ocp permit 10" not in output:
         raise RuntimeError(f"OpenPERouter raw FRR configuration is not rendered; got: {output}")
+
+
+def wait_for_openperouter_control_plane(
+    router_pod: Pod,
+    worker_node_names: list[str],
+) -> None:
+    """Waits for worker BGP and OpenPERouter EVPN sessions.
+
+    Args:
+        router_pod: Stock OpenPERouter pod.
+        worker_node_names: Worker nodes expected to peer with OpenPERouter.
+    """
+    wait_for_bgp_connection_established(node_names=worker_node_names)
+    wait_for_evpn_established(
+        frr_pod=router_pod,
+        expected_neighbors=len(worker_node_names),
+    )
 
 
 def collect_openperouter_diagnostics(

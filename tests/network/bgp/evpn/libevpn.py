@@ -8,9 +8,9 @@ from collections.abc import Generator
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from ocp_resources.exceptions import ExecOnPodError
 from ocp_resources.pod import Pod
 from pytest import Subtests
-from timeout_sampler import retry
 
 from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
 from libs.net.ip import filter_link_local_addresses, random_ipv4_address, random_ipv6_address
@@ -23,7 +23,8 @@ from libs.net.traffic_generator import (
 )
 from libs.net.vmspec import lookup_iface_status, lookup_primary_network
 from libs.vm.vm import BaseVirtualMachine
-from tests.network.libs.bgp import CLUSTER_FRR_ASN, EXTERNAL_FRR_ASN, NET_TOOLS_CONTAINER_NAME
+from tests.network.bgp.evpn.utils import network_interface_names
+from tests.network.libs.bgp import NET_TOOLS_CONTAINER_NAME
 
 if TYPE_CHECKING:
     from ocp_resources.node import Node
@@ -33,31 +34,23 @@ LOGGER = logging.getLogger(__name__)
 EVPN_CUDN_NET_SEED: int = 5
 CUDN_EVPN_SUBNET_IPV4: str = str(random_ipv4_address(net_seed=EVPN_CUDN_NET_SEED, host_address=0))
 CUDN_EVPN_SUBNET_IPV6: str = str(random_ipv6_address(net_seed=EVPN_CUDN_NET_SEED, host_address=0))
-
-_BRIDGE_NAME: str = "br0"
-_VXLAN_NAME: str = "vxlan0"
-_VXLAN_DEST_PORT: int = 4789
-
-_L2_VID: int = 100
-_L2_ENDPOINT_NETNS: str = "l2-ep"
-_L2_VETH_POD_SIDE: str = "veth-l2-frr"
-_L2_VETH_EP_SIDE: str = "veth-l2-ep"
-
-_L3_VID: int = 200
-_L3_VRF_NAME: str = "vrf-blue"
-_L3_SVI_NAME: str = f"{_BRIDGE_NAME}.{_L3_VID}"
-_L3_ENDPOINT_NETNS: str = "l3-ep"
-_L3_VETH_POD_SIDE: str = "veth-l3-frr"
-_L3_VETH_EP_SIDE: str = "veth-l3-ep"
+EVPN_MAC_VRF_VNI: int = 10100
+EVPN_IP_VRF_VNI: int = 20102
+OPENPE_ROUTER_NAMESPACE: str = "perouter"
+_L2_ENDPOINT_PREFIX: str = "l2-endpt-"
+_L2_ROUTER_VETH_PREFIX: str = "l2-openpe-"
+_L3_ENDPOINT_PREFIX: str = "l3-endpt-"
+_L3_ROUTER_VETH_PREFIX: str = "l3-openpe-"
 
 
 @dataclass
 class EvpnEndpoint:
-    """External EVPN endpoint in a network namespace inside the FRR pod."""
+    """External EVPN endpoint in a helper-owned network namespace."""
 
     pod: Pod
     ip_addresses: list[str]
     netns_name: str
+    router_interface_name: str
     mac_address: str | None = None
 
 
@@ -106,219 +99,135 @@ def cudn_evpn_subnets() -> list[str]:
     return subnets
 
 
-def deploy_evpn_bridge(
-    pod: Pod,
-    local_vtep_ip: str,
-    remote_vtep_ips: list[str],
-    l2_vni: int,
-    l3_vni: int,
-) -> None:
-    """Creates the shared SVD bridge inside the FRR pod.
-
-    Sets up a VLAN-filtering bridge with a single VXLAN device (SVD mode)
-    and configures VLAN/VNI mappings for both L2 (MAC-VRF) and L3 (IP-VRF).
-
-    Args:
-        pod: The FRR pod.
-        local_vtep_ip: FRR pod's IP used as local VTEP.
-        remote_vtep_ips: Cluster node IPs for BUM traffic forwarding.
-        l2_vni: MAC-VRF VNI for the L2 VLAN mapping.
-        l3_vni: IP-VRF VNI for the L3 VLAN mapping.
-    """
-    commands = _build_bridge_commands(
-        local_vtep_ip=local_vtep_ip, remote_vtep_ips=remote_vtep_ips, l2_vni=l2_vni, l3_vni=l3_vni
-    )
-    for command in commands:
-        pod.execute(command=shlex.split(command), container=NET_TOOLS_CONTAINER_NAME)
-
-    LOGGER.info(f"EVPN SVD bridge deployed: {_BRIDGE_NAME} + {_VXLAN_NAME}")
-
-
-def _build_bridge_commands(
-    local_vtep_ip: str,
-    remote_vtep_ips: list[str],
-    l2_vni: int,
-    l3_vni: int,
-) -> list[str]:
-    return [
-        f"ip link add {_BRIDGE_NAME} type bridge vlan_filtering 1 vlan_default_pvid 0",
-        f"ip link set {_BRIDGE_NAME} up",
-        (
-            f"ip link add {_VXLAN_NAME} type vxlan dstport {_VXLAN_DEST_PORT} local {local_vtep_ip}"
-            " nolearning external vnifilter"
-        ),
-        f"ip link set {_VXLAN_NAME} master {_BRIDGE_NAME}",
-        f"bridge link set dev {_VXLAN_NAME} vlan_tunnel on neigh_suppress on learning off",
-        f"ip link set {_VXLAN_NAME} up",
-        *(f"bridge fdb append 00:00:00:00:00:00 dev {_VXLAN_NAME} dst {ip}" for ip in remote_vtep_ips),
-        f"bridge vlan add dev {_BRIDGE_NAME} vid {_L2_VID} self",
-        f"bridge vlan add dev {_VXLAN_NAME} vid {_L2_VID}",
-        f"bridge vni add dev {_VXLAN_NAME} vni {l2_vni}",
-        f"bridge vlan add dev {_VXLAN_NAME} vid {_L2_VID} tunnel_info id {l2_vni}",
-        f"bridge vlan add dev {_BRIDGE_NAME} vid {_L3_VID} self",
-        f"bridge vlan add dev {_VXLAN_NAME} vid {_L3_VID}",
-        f"bridge vni add dev {_VXLAN_NAME} vni {l3_vni}",
-        f"bridge vlan add dev {_VXLAN_NAME} vid {_L3_VID} tunnel_info id {l3_vni}",
-    ]
-
-
-def teardown_evpn_bridge(pod: Pod) -> None:
-    """Removes the EVPN bridge from the FRR pod."""
-    pod.execute(command=shlex.split(f"ip link delete {_BRIDGE_NAME}"), container=NET_TOOLS_CONTAINER_NAME)
-    LOGGER.info(f"EVPN bridge removed: {_BRIDGE_NAME}")
-
-
 def deploy_evpn_l2_endpoint(
     pod: Pod,
     endpoint_ips: list[str],
+    l2_vni: int,
     mac_address: str | None = None,
 ) -> EvpnEndpoint:
-    """Creates a stretched L2 endpoint on the shared SVD bridge.
-
-    Creates a veth pair with the pod-side as an access port on the L2 VLAN,
-    and the endpoint-side in a unique netns.
-
-    Data path: VM -> OVN VXLAN (VNI) -> vxlan0 -> br0 (VLAN) -> veth -> netns.
+    """Creates a stretched-L2 endpoint on an OpenPERouter-managed bridge.
 
     Args:
-        pod: The FRR pod hosting the endpoint.
+        pod: The node-pinned endpoint helper pod.
         endpoint_ips: IPs with prefix length (e.g. ["10.0.5.250/24", "fd00::fa/64"]).
-        mac_address: Explicit MAC for the endpoint interface (locally-administered).
+        l2_vni: MAC-VRF VNI of the OpenPERouter-managed bridge.
+        mac_address: Explicit MAC for the endpoint interface.
 
     Returns:
-        EvpnEndpoint.
+        The deployed endpoint.
     """
-    commands, netns = _build_l2_endpoint_commands(endpoint_ips=endpoint_ips, mac_address=mac_address)
-    for command in commands:
-        pod.execute(command=shlex.split(command), container=NET_TOOLS_CONTAINER_NAME)
-
+    commands, netns, router_interface = _build_l2_endpoint_commands(
+        endpoint_ips=endpoint_ips,
+        l2_vni=l2_vni,
+        mac_address=mac_address,
+    )
+    _deploy_endpoint_commands(
+        pod=pod,
+        commands=commands,
+        netns_name=netns,
+        router_interface_name=router_interface,
+        endpoint_description="stretched-L2",
+    )
     bare_ips = [ip.split("/")[0] for ip in endpoint_ips]
     LOGGER.info(f"EVPN L2 endpoint deployed: {bare_ips} in namespace {netns}")
 
-    return EvpnEndpoint(pod=pod, ip_addresses=bare_ips, netns_name=netns, mac_address=mac_address)
+    return EvpnEndpoint(
+        pod=pod,
+        ip_addresses=bare_ips,
+        netns_name=netns,
+        router_interface_name=router_interface,
+        mac_address=mac_address,
+    )
 
 
 def teardown_evpn_l2_endpoint(endpoint: EvpnEndpoint) -> None:
-    """Removes the EVPN L2 endpoint (netns, veth) from the FRR pod.
+    """Removes an EVPN stretched-L2 endpoint.
 
     Args:
         endpoint: The endpoint to remove.
     """
-    endpoint.pod.execute(
-        command=shlex.split(f"ip netns delete {endpoint.netns_name}"),
-        container=NET_TOOLS_CONTAINER_NAME,
-        ignore_rc=True,
+    _delete_endpoint_links(
+        pod=endpoint.pod,
+        netns_name=endpoint.netns_name,
+        router_interface_name=endpoint.router_interface_name,
     )
     LOGGER.info(f"EVPN L2 endpoint removed: namespace={endpoint.netns_name}")
 
 
 def _build_l2_endpoint_commands(
     endpoint_ips: list[str],
+    l2_vni: int,
     mac_address: str | None = None,
-) -> tuple[list[str], str]:
+) -> tuple[list[str], str, str]:
     suffix = uuid.uuid4().hex[:3]
-    netns = f"{_L2_ENDPOINT_NETNS}-{suffix}"
-    veth_pod = f"{_L2_VETH_POD_SIDE}-{suffix}"
-    veth_ep = f"{_L2_VETH_EP_SIDE}-{suffix}"
+    netns = f"{_L2_ENDPOINT_PREFIX}{suffix}"
+    router_interface = f"{_L2_ROUTER_VETH_PREFIX}{suffix}"
+    endpoint_interface = f"{_L2_ENDPOINT_PREFIX}{suffix}"
     commands = [
-        f"ip link add {veth_pod} type veth peer name {veth_ep}",
-        f"ip link set {veth_pod} master {_BRIDGE_NAME}",
-        f"bridge vlan add dev {veth_pod} vid {_L2_VID} pvid untagged",
-        f"ip link set {veth_pod} up",
+        f"ip link add {router_interface} type veth peer name {endpoint_interface}",
+        f"ip link set {router_interface} netns {OPENPE_ROUTER_NAMESPACE}",
+        (f"ip netns exec {OPENPE_ROUTER_NAMESPACE} ip link set {router_interface} master br-pe-{l2_vni}"),
+        f"ip netns exec {OPENPE_ROUTER_NAMESPACE} ip link set {router_interface} up",
         f"ip netns add {netns}",
-        f"ip link set {veth_ep} netns {netns}",
-        *(f"ip netns exec {netns} ip addr add {ip} dev {veth_ep}" for ip in endpoint_ips),
-        *([f"ip netns exec {netns} ip link set dev {veth_ep} address {mac_address}"] if mac_address else []),
-        f"ip netns exec {netns} ip link set {veth_ep} up",
+        f"ip link set {endpoint_interface} netns {netns}",
+        *(f"ip netns exec {netns} ip addr add {ip} dev {endpoint_interface}" for ip in endpoint_ips),
+        *([f"ip netns exec {netns} ip link set dev {endpoint_interface} address {mac_address}"] if mac_address else []),
+        f"ip netns exec {netns} ip link set {endpoint_interface} up",
         f"ip netns exec {netns} ip link set lo up",
     ]
-    return commands, netns
-
-
-def deploy_evpn_l3_vrf(pod: Pod, vni: int) -> None:
-    """Creates the shared L3 VRF, SVI, and FRR BGP config on the external FRR pod.
-
-    Args:
-        pod: The external FRR pod.
-        vni: IP-VRF VNI (must match UDN's ipVRF VNI).
-    """
-    commands = _build_l3_vrf_commands(vni=vni)
-    for command in commands:
-        pod.execute(command=shlex.split(command), container=NET_TOOLS_CONTAINER_NAME)
-
-    _configure_external_frr_l3_vrf(pod=pod, vni=vni)
-
-    LOGGER.info(f"EVPN L3 VRF deployed: {_L3_VRF_NAME} VNI {vni}")
-
-
-def teardown_evpn_l3_vrf(pod: Pod) -> None:
-    """Removes the shared L3 VRF, SVI, and FRR BGP config."""
-    for cmd in [
-        f"ip link delete {_L3_SVI_NAME}",
-        f"ip link delete {_L3_VRF_NAME}",
-    ]:
-        pod.execute(command=shlex.split(cmd), container=NET_TOOLS_CONTAINER_NAME, ignore_rc=True)
-
-    pod.execute(
-        command=["vtysh", "-c", "configure terminal", "-c", f"no router bgp {EXTERNAL_FRR_ASN} vrf {_L3_VRF_NAME}"],
-        ignore_rc=True,
-    )
-
-    LOGGER.info(f"EVPN L3 VRF removed: {_L3_VRF_NAME}")
-
-
-def _build_l3_vrf_commands(vni: int) -> list[str]:
-    return [
-        "sysctl -w net.ipv4.ip_forward=1",
-        "sysctl -w net.ipv6.conf.all.forwarding=1",
-        f"ip link add {_L3_VRF_NAME} type vrf table {vni}",
-        f"ip link set {_L3_VRF_NAME} up",
-        f"ip link add {_L3_SVI_NAME} link {_BRIDGE_NAME} type vlan id {_L3_VID}",
-        f"ip link set {_L3_SVI_NAME} master {_L3_VRF_NAME}",
-        f"ip link set {_L3_SVI_NAME} up",
-    ]
+    return commands, netns, router_interface
 
 
 def deploy_evpn_l3_endpoint(
     pod: Pod,
     endpoint_ips: list[str],
     gateway_ips: list[str],
+    vrf_name: str,
 ) -> EvpnEndpoint:
-    """Creates a routed L3 endpoint on the external FRR pod.
-
-    Creates a veth pair (pod-side in VRF, endpoint-side in unique netns)
-    with gateway IPs on the pod side and endpoint IPs in the netns.
-
-    Data path: VM -> OVN L3 lookup -> VXLAN (IP-VRF VNI) -> vxlan0 -> br0 -> SVI -> VRF -> veth -> netns.
+    """Creates a routed-L3 endpoint in an OpenPERouter-managed VRF.
 
     Args:
-        pod: The external FRR pod.
-        endpoint_ips: IPs with prefix on a different subnet than CUDN (e.g. ["192.168.100.100/24"]).
-        gateway_ips: Gateway IPs with prefix for the VRF veth side (e.g. ["192.168.100.1/24"]).
+        pod: The node-pinned endpoint helper pod.
+        endpoint_ips: Endpoint IPs with prefix on a subnet distinct from the CUDN.
+        gateway_ips: Gateway IPs with prefix for the router-side veth.
+        vrf_name: OpenPERouter VRF that owns the routed-L3 interface.
 
     Returns:
-        EvpnEndpoint.
+        The deployed endpoint.
     """
-    commands, netns = _build_l3_endpoint_commands(endpoint_ips=endpoint_ips, gateway_ips=gateway_ips)
-    for command in commands:
-        pod.execute(command=shlex.split(command), container=NET_TOOLS_CONTAINER_NAME)
-
+    commands, netns, router_interface = _build_l3_endpoint_commands(
+        endpoint_ips=endpoint_ips,
+        gateway_ips=gateway_ips,
+        vrf_name=vrf_name,
+    )
+    _deploy_endpoint_commands(
+        pod=pod,
+        commands=commands,
+        netns_name=netns,
+        router_interface_name=router_interface,
+        endpoint_description="routed-L3",
+    )
     bare_ips = [ip.split("/")[0] for ip in endpoint_ips]
     LOGGER.info(f"EVPN L3 endpoint deployed: {bare_ips} in namespace {netns}")
 
-    return EvpnEndpoint(pod=pod, ip_addresses=bare_ips, netns_name=netns)
+    return EvpnEndpoint(
+        pod=pod,
+        ip_addresses=bare_ips,
+        netns_name=netns,
+        router_interface_name=router_interface,
+    )
 
 
 def teardown_evpn_l3_endpoint(endpoint: EvpnEndpoint) -> None:
-    """Removes the EVPN L3 endpoint (netns, veth) from the FRR pod.
+    """Removes an EVPN routed-L3 endpoint.
 
     Args:
         endpoint: The endpoint to remove.
     """
-    endpoint.pod.execute(
-        command=shlex.split(f"ip netns delete {endpoint.netns_name}"),
-        container=NET_TOOLS_CONTAINER_NAME,
-        ignore_rc=True,
+    _delete_endpoint_links(
+        pod=endpoint.pod,
+        netns_name=endpoint.netns_name,
+        router_interface_name=endpoint.router_interface_name,
     )
     LOGGER.info(f"EVPN L3 endpoint removed: namespace={endpoint.netns_name}")
 
@@ -326,65 +235,90 @@ def teardown_evpn_l3_endpoint(endpoint: EvpnEndpoint) -> None:
 def _build_l3_endpoint_commands(
     endpoint_ips: list[str],
     gateway_ips: list[str],
-) -> tuple[list[str], str]:
+    vrf_name: str,
+) -> tuple[list[str], str, str]:
     suffix = uuid.uuid4().hex[:3]
-    netns = f"{_L3_ENDPOINT_NETNS}-{suffix}"
-    veth_pod = f"{_L3_VETH_POD_SIDE}-{suffix}"
-    veth_ep = f"{_L3_VETH_EP_SIDE}-{suffix}"
+    netns = f"{_L3_ENDPOINT_PREFIX}{suffix}"
+    router_interface = f"{_L3_ROUTER_VETH_PREFIX}{suffix}"
+    endpoint_interface = f"{_L3_ENDPOINT_PREFIX}{suffix}"
     commands = [
-        f"ip link add {veth_pod} type veth peer name {veth_ep}",
-        f"ip link set {veth_pod} master {_L3_VRF_NAME}",
-        *(f"ip addr add {ip} dev {veth_pod}" for ip in gateway_ips),
-        f"ip link set {veth_pod} up",
+        f"ip link add {router_interface} type veth peer name {endpoint_interface}",
+        f"ip link set {router_interface} netns {OPENPE_ROUTER_NAMESPACE}",
+        f"ip netns exec {OPENPE_ROUTER_NAMESPACE} ip link set {router_interface} master {vrf_name}",
+        *(f"ip netns exec {OPENPE_ROUTER_NAMESPACE} ip addr add {ip} dev {router_interface}" for ip in gateway_ips),
+        f"ip netns exec {OPENPE_ROUTER_NAMESPACE} ip link set {router_interface} up",
         f"ip netns add {netns}",
-        f"ip link set {veth_ep} netns {netns}",
-        *(f"ip netns exec {netns} ip addr add {ip} dev {veth_ep}" for ip in endpoint_ips),
-        f"ip netns exec {netns} ip link set {veth_ep} up",
+        f"ip link set {endpoint_interface} netns {netns}",
+        *(f"ip netns exec {netns} ip addr add {ip} dev {endpoint_interface}" for ip in endpoint_ips),
+        f"ip netns exec {netns} ip link set {endpoint_interface} up",
         f"ip netns exec {netns} ip link set lo up",
         *(
             f"ip netns exec {netns} ip {'-6' if ipaddress.ip_interface(ip).version == 6 else ''}"
-            f" route add default via {ip.split('/')[0]}"
+            f" route replace default via {ip.split('/')[0]}"
             for ip in gateway_ips
         ),
     ]
-    return commands, netns
+    return commands, netns, router_interface
 
 
-def _configure_external_frr_l3_vrf(pod: Pod, vni: int) -> None:
-    config = "\n".join([
-        f"vrf {_L3_VRF_NAME}",
-        f" vni {vni}",
-        "exit-vrf",
-        f"router bgp {EXTERNAL_FRR_ASN} vrf {_L3_VRF_NAME}",
-        " address-family ipv4 unicast",
-        "  redistribute connected",
-        " exit-address-family",
-        " address-family ipv6 unicast",
-        "  redistribute connected",
-        " exit-address-family",
-        " address-family l2vpn evpn",
-        f"  rd {EXTERNAL_FRR_ASN}:{vni}",
-        f"  route-target import {CLUSTER_FRR_ASN}:{vni}",
-        f"  route-target export {CLUSTER_FRR_ASN}:{vni}",
-        "  advertise ipv4 unicast",
-        "  advertise ipv6 unicast",
-        " exit-address-family",
-    ])
-    pod.execute(command=["vtysh", "-c", "configure terminal", "-c", config])
-    _wait_for_l3_vrf_routes(pod=pod)
-
-    LOGGER.info(f"External FRR L3 VRF configured: {_L3_VRF_NAME} VNI {vni}")
+def _deploy_endpoint_commands(
+    pod: Pod,
+    commands: list[str],
+    netns_name: str,
+    router_interface_name: str,
+    endpoint_description: str,
+) -> None:
+    try:
+        for command in commands:
+            pod.execute(command=shlex.split(command), container=NET_TOOLS_CONTAINER_NAME)
+    except ExecOnPodError as error:
+        _delete_endpoint_links(
+            pod=pod,
+            netns_name=netns_name,
+            router_interface_name=router_interface_name,
+        )
+        raise RuntimeError(f"Failed to deploy EVPN {endpoint_description} endpoint") from error
 
 
-@retry(wait_timeout=60, sleep=5, exceptions_dict={RuntimeError: []})
-def _wait_for_l3_vrf_routes(pod: Pod) -> bool:
-    output = pod.execute(
-        command=shlex.split(f"ip route show vrf {_L3_VRF_NAME} proto bgp"),
-        container=NET_TOOLS_CONTAINER_NAME,
+def _delete_endpoint_links(pod: Pod, netns_name: str, router_interface_name: str) -> None:
+    namespaces = {
+        namespace["name"]
+        for namespace in json.loads(
+            pod.execute(command=["ip", "-j", "netns", "list"], container=NET_TOOLS_CONTAINER_NAME)
+        )
+    }
+    errors: list[ExecOnPodError] = []
+    for namespace_name in (OPENPE_ROUTER_NAMESPACE, None):
+        if namespace_name and namespace_name not in namespaces:
+            continue
+        if router_interface_name in network_interface_names(pod=pod, netns_name=namespace_name):
+            prefix = ["ip", "netns", "exec", namespace_name] if namespace_name else []
+            try:
+                pod.execute(
+                    command=[*prefix, "ip", "link", "delete", router_interface_name],
+                    container=NET_TOOLS_CONTAINER_NAME,
+                )
+            except ExecOnPodError as error:
+                LOGGER.error(f"Failed to remove EVPN interface {router_interface_name}: {error}")
+                errors.append(error)
+    if netns_name in namespaces:
+        try:
+            pod.execute(command=["ip", "netns", "delete", netns_name], container=NET_TOOLS_CONTAINER_NAME)
+        except ExecOnPodError as error:
+            LOGGER.error(f"Failed to remove EVPN traffic namespace {netns_name}: {error}")
+            errors.append(error)
+    if errors:
+        raise RuntimeError(f"Failed to clean up EVPN traffic namespace {netns_name}: {errors}") from errors[0]
+    remaining_namespaces = json.loads(
+        pod.execute(command=["ip", "-j", "netns", "list"], container=NET_TOOLS_CONTAINER_NAME)
     )
-    if not output.strip():
-        raise RuntimeError(f"VRF {_L3_VRF_NAME} has no BGP routes")
-    return True
+    if any(namespace["name"] == netns_name for namespace in remaining_namespaces):
+        raise RuntimeError(f"EVPN traffic namespace {netns_name} still exists after cleanup")
+    for namespace_name in (OPENPE_ROUTER_NAMESPACE, None):
+        if namespace_name and namespace_name not in namespaces:
+            continue
+        if router_interface_name in network_interface_names(pod=pod, netns_name=namespace_name):
+            raise RuntimeError(f"EVPN interface {router_interface_name} still exists after cleanup")
 
 
 @contextlib.contextmanager
@@ -395,8 +329,8 @@ def evpn_workloads_active_connections(
     """Opens TCP connections for all IP families between an EVPN endpoint and a VM.
 
     Args:
-        endpoint: EVPN endpoint (L2 or L3) running the TCP client (sends traffic).
-        vm: VM running the TCP server (receives traffic).
+        endpoint: EVPN endpoint (L2 or L3) running the TCP client.
+        vm: VM running the TCP server.
 
     Yields:
         List of (EndpointTcpClient, TcpServer) tuples, one per IP family.
@@ -414,7 +348,7 @@ def evpn_workloads_active_connections(
                         endpoint=endpoint,
                         vm=vm,
                         server_ip=str(server_ip),
-                    ),
+                    )
                 )
             )
         yield active_conns
@@ -449,8 +383,8 @@ def assert_evpn_workloads_connectivity(
     Args:
         target_vm: The under-test VM (server).
         ref_vm: The reference VM (client for VM-to-VM check).
-        l2_endpoint: External L2 endpoint (client for stretched L2 check).
-        l3_endpoint: External L3 endpoint (client for routed L3 check).
+        l2_endpoint: External L2 endpoint (client for stretched-L2 check).
+        l3_endpoint: External L3 endpoint (client for routed-L3 check).
         subtests: pytest-subtests fixture for per-check reporting.
     """
     iface_name = lookup_primary_network(vm=target_vm).name
@@ -482,7 +416,7 @@ def node_primary_ipv4_interface(node: Node) -> ipaddress.IPv4Interface:
         node: The node to get the primary IPv4 interface of.
 
     Returns:
-        The primary IPv4 interface of the node as an ipaddress.IPv4Interface object.
+        The primary IPv4 interface of the node.
     """
     primary_ifaddr = json.loads(node.instance.metadata.annotations["k8s.ovn.org/node-primary-ifaddr"])
     return ipaddress.IPv4Interface(address=primary_ifaddr["ipv4"])

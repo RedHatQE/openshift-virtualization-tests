@@ -16,8 +16,6 @@ Preconditions:
     - Running connectivity reference VM with a primary EVPN-enabled CUDN.
 """
 
-from __future__ import annotations
-
 import ipaddress
 from typing import TYPE_CHECKING
 
@@ -28,6 +26,7 @@ from libs.net.traffic_generator import active_tcp_connections, is_tcp_connection
 from libs.net.vmspec import lookup_primary_network
 from tests.network.bgp.evpn.libevpn import (
     EVPN_CUDN_NET_SEED,
+    EVPN_MAC_VRF_VNI,
     assert_evpn_workloads_connectivity,
     deploy_evpn_l2_endpoint,
     evpn_workloads_active_connections,
@@ -205,7 +204,7 @@ def test_source_provider_migration(
     external_l3_endpoint,
     vm_source_provider,
     vm_evpn_target,
-    frr_external_pod,
+    openperouter_endpoint_helper_pod,
     subtests,
 ):
     """
@@ -232,14 +231,18 @@ def test_source_provider_migration(
     vm_source_provider.wait_for_agent_connected()
 
     new_l2_endpoint = deploy_evpn_l2_endpoint(
-        pod=frr_external_pod.pod,
+        pod=openperouter_endpoint_helper_pod,
         endpoint_ips=[_L2_ENDPOINT_IPV4, _L2_ENDPOINT_IPV6],
+        l2_vni=EVPN_MAC_VRF_VNI,
     )
 
-    assert_evpn_workloads_connectivity(
-        target_vm=vm_evpn_target,
-        ref_vm=vm_source_provider,
-        l2_endpoint=new_l2_endpoint,
-        l3_endpoint=external_l3_endpoint,
-        subtests=subtests,
-    )
+    try:
+        assert_evpn_workloads_connectivity(
+            target_vm=vm_evpn_target,
+            ref_vm=vm_source_provider,
+            l2_endpoint=new_l2_endpoint,
+            l3_endpoint=external_l3_endpoint,
+            subtests=subtests,
+        )
+    finally:
+        teardown_evpn_l2_endpoint(endpoint=new_l2_endpoint)
