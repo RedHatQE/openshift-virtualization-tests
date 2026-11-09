@@ -12,14 +12,17 @@ from typing import TYPE_CHECKING, Any
 
 from pyhelper_utils.shell import run_ssh_commands
 
-from utilities.constants.timeouts import TCP_TIMEOUT_30SEC
+from utilities.constants.timeouts import TCP_TIMEOUT_30SEC, TIMEOUT_1MIN
 from utilities.guest_agent import guest_agent_version_parser
 
 if TYPE_CHECKING:
     from rrmngmnt import Host
 
 
-def get_cim_instance_json(ssh_exec: Host) -> dict[str, Any]:
+LOGGER = getLogger(name=__name__)
+
+
+def get_windows_os_properties(ssh_exec: Host) -> dict[str, Any]:
     """Read selected Windows operating system properties through SSH.
 
     Args:
@@ -52,9 +55,8 @@ def get_windows_timezone(ssh_exec: Host, get_standard_name: bool = False) -> str
     Returns:
         PowerShell timezone output, optionally filtered to StandardName.
     """
-    standard_name_cmd = '| findstr "StandardName"' if get_standard_name else ""
-    timezone_cmd = split(f'powershell -command "Get-TimeZone {standard_name_cmd}"')
-    return run_ssh_commands(host=ssh_exec, commands=[timezone_cmd], tcp_timeout=TCP_TIMEOUT_30SEC)[0]
+    script = 'Get-TimeZone | findstr "StandardName"' if get_standard_name else "Get-TimeZone"
+    return run_ssh_commands(host=ssh_exec, commands=powershell_command(script=script), tcp_timeout=TCP_TIMEOUT_30SEC)[0]
 
 
 def get_ga_version(ssh_exec: Host) -> str:
@@ -68,12 +70,9 @@ def get_ga_version(ssh_exec: Host) -> str:
     """
     return run_ssh_commands(
         host=ssh_exec,
-        commands=[
-            "powershell",
-            "-Command",
-            "(Get-Item",
-            "'C:\\Program Files\\Qemu-ga\\qemu-ga.exe').VersionInfo.FileVersion",
-        ],
+        commands=powershell_command(
+            script="(Get-Item 'C:\\Program Files\\Qemu-ga\\qemu-ga.exe').VersionInfo.FileVersion"
+        ),
         tcp_timeout=TCP_TIMEOUT_30SEC,
     )[0].strip()
 
@@ -106,15 +105,15 @@ def get_windows_os_info(ssh_exec: Host) -> dict[str, Any]:
         Guest agent version, hostname, OS properties and timezone.
 
     Raises:
-        AttributeError: OS version or registry product name has an unsupported format.
+        ValueError: OS version or registry product name has an unsupported format.
     """
-    cim_instance_json = get_cim_instance_json(ssh_exec=ssh_exec)
+    cim_instance_json = get_windows_os_properties(ssh_exec=ssh_exec)
     version_match = search(pattern=r"(.+\d+)", string=cim_instance_json["Caption"])
     product_name_match = search(pattern=r"REG_SZ\s+(.+)\r\n", string=get_reg_product_name(ssh_exec=ssh_exec))
     version_id_match = search(pattern=r"\D+(\d+)", string=cim_instance_json["Caption"])
     kernel_version_match = search(pattern=r"(\d+\.\d+)\.", string=cim_instance_json["Version"])
     if version_match is None or product_name_match is None or version_id_match is None or kernel_version_match is None:
-        raise AttributeError("Unsupported Windows OS version or registry product name format")
+        raise ValueError("Unsupported Windows OS version or registry product name format")
     return {
         "guestAgentVersion": guest_agent_version_parser(version_string=get_ga_version(ssh_exec=ssh_exec)),
         "hostname": cim_instance_json["CSName"],
@@ -151,11 +150,10 @@ def powershell_command(script: str) -> list[str]:
 
 
 def run_powershell_commands(
-    *,
     ssh_exec: Host,
     script: str,
     input_data: str | None = None,
-    timeout: int = 60,
+    timeout: int = TIMEOUT_1MIN,
 ) -> str:
     """Run PowerShell over SSH and include stderr in failure exceptions.
 
@@ -188,6 +186,7 @@ def run_powershell_commands(
         throwing on failure before leaving the block.
     """
     executor = ssh_exec.executor()
+    LOGGER.info(f"Running PowerShell on guest {executor.address}, command timeout {timeout} seconds")
     # rrmngmnt's default logger adapter includes the authentication password.
     # Replace it on this executor only; leave shared logger configuration alone.
     executor.set_logger(logger=LoggerAdapter(logger=getLogger(name=__name__), extra={}))
@@ -205,7 +204,7 @@ try {
 }
 exit $global:LASTEXITCODE
 """
-    with executor.session(timeout=30) as session:
+    with executor.session(timeout=TCP_TIMEOUT_30SEC) as session:
         command = session.command(cmd=powershell_command(script=bootstrap))
         # Read streams directly: Command.run stores stdout/stderr in attributes
         # that rrmngmnt logs, whereas execute leaves those attributes empty.
@@ -220,7 +219,7 @@ exit $global:LASTEXITCODE
         if command.rc:
             if input_data:
                 error_details = error_details.replace(input_data, "[REDACTED]")
-            message = f"PowerShell operation failed (exit status {command.rc})"
+            message = f"PowerShell operation failed on guest {executor.address} (exit status {command.rc})"
             if error_details:
                 message += f": {error_details}"
             raise RuntimeError(message)

@@ -12,11 +12,13 @@ from pytest import mark, raises
 from rrmngmnt.ssh import RemoteExecutor
 from rrmngmnt.user import User
 
+from utilities.constants.timeouts import TCP_TIMEOUT_30SEC, TIMEOUT_1MIN
+from utilities.windows import LOGGER as WINDOWS_LOGGER
 from utilities.windows import (
-    get_cim_instance_json,
     get_ga_version,
     get_reg_product_name,
     get_windows_os_info,
+    get_windows_os_properties,
     get_windows_timezone,
     powershell_command,
     run_powershell_commands,
@@ -27,7 +29,7 @@ if TYPE_CHECKING:
 
 
 @mark.unit
-class TestGetCimInstanceJson:
+class TestGetWindowsOsProperties:
     @mark.parametrize("version", ["2019", "2022", "2025"])
     def test_reads_operating_system_properties(self, mock_vm: MagicMock, version: str) -> None:
         expected = {
@@ -36,7 +38,7 @@ class TestGetCimInstanceJson:
         }
         output = json.dumps(expected)
         with patch("utilities.windows.run_ssh_commands", return_value=[output]) as remote_command:
-            result = get_cim_instance_json(ssh_exec=mock_vm.ssh_exec)
+            result = get_windows_os_properties(ssh_exec=mock_vm.ssh_exec)
 
         assert result == expected, "CIM properties were not preserved"
         remote_command.assert_called_once_with(
@@ -52,12 +54,12 @@ class TestGetCimInstanceJson:
     def test_rejects_invalid_json(self, mock_vm: MagicMock) -> None:
         with patch("utilities.windows.run_ssh_commands", return_value=["invalid JSON"]):
             with raises(json.JSONDecodeError):
-                get_cim_instance_json(ssh_exec=mock_vm.ssh_exec)
+                get_windows_os_properties(ssh_exec=mock_vm.ssh_exec)
 
     def test_propagates_transport_failure(self, mock_vm: MagicMock) -> None:
         with patch("utilities.windows.run_ssh_commands", side_effect=OSError("Connection reset")):
             with raises(OSError, match="Connection reset"):
-                get_cim_instance_json(ssh_exec=mock_vm.ssh_exec)
+                get_windows_os_properties(ssh_exec=mock_vm.ssh_exec)
 
 
 @mark.unit
@@ -86,8 +88,12 @@ class TestPowerShellTransport:
         client = MagicMock()
         client.exec_command.return_value = stdin, stdout, stderr
         script = "Write-Output 'x'\n" * 1000 + f"cmd /c exit {exit_status}"
-        with patch("rrmngmnt.ssh.paramiko.SSHClient", return_value=client):
-            caplog.set_level(DEBUG)
+        caplog.set_level(DEBUG, logger="utilities.windows")
+        # The shared fixture replaces logger handlers; capture the guest logger directly.
+        with (
+            patch("rrmngmnt.ssh.paramiko.SSHClient", return_value=client),
+            patch.object(target=WINDOWS_LOGGER, attribute="handlers", new=[caplog.handler]),
+        ):
             if exit_status:
                 with raises(RuntimeError, match=f"exit status {exit_status}") as error:
                     run_powershell_commands(ssh_exec=host, script=script, input_data=secret)
@@ -112,6 +118,11 @@ class TestPowerShellTransport:
             "PowerShell execution logged sensitive input or the authentication password"
         )
         assert "OFFLINE-SENSITIVE-OUTPUT" not in caplog.text, "PowerShell execution logged sensitive guest output"
+        assert "127.0.0.1" in caplog.text and str(TIMEOUT_1MIN) in caplog.text, (
+            "PowerShell operation context was not logged"
+        )
+        if exit_status:
+            assert "127.0.0.1" in str(error.value), "PowerShell failure omitted the guest identifier"
         client.close.assert_called_once()
 
     @mark.parametrize(
@@ -133,6 +144,7 @@ class TestPowerShellTransport:
         self, mock_vm: MagicMock, error_output: bytes, expected_details: str, input_data: str | None
     ) -> None:
         executor = mock_vm.ssh_exec.executor.return_value
+        executor.address = "test-guest"
         command = executor.session.return_value.__enter__.return_value.command.return_value
         stdin, stdout, stderr = MagicMock(), MagicMock(), MagicMock()
         stdout.read.return_value = b""
@@ -143,7 +155,7 @@ class TestPowerShellTransport:
         with raises(RuntimeError) as error:
             run_powershell_commands(ssh_exec=mock_vm.ssh_exec, script="Get-Date", input_data=input_data)
 
-        expected_message = "PowerShell operation failed (exit status 1)"
+        expected_message = "PowerShell operation failed on guest test-guest (exit status 1)"
         if expected_details:
             expected_message += f": {expected_details}"
         assert str(error.value) == expected_message, "PowerShell failure details were not reported"
@@ -162,27 +174,24 @@ class TestPowerShellTransport:
 class TestGetWindowsTimezone:
     """Test cases for get_windows_timezone function"""
 
+    @mark.parametrize(
+        "get_standard_name,expected,script",
+        [
+            (False, "UTC", "Get-TimeZone"),
+            (True, "StandardName: UTC", 'Get-TimeZone | findstr "StandardName"'),
+        ],
+    )
     @patch("utilities.windows.run_ssh_commands")
-    def test_get_windows_timezone_success(self, mock_run_ssh):
-        """Test successful extraction of Windows timezone"""
+    def test_get_windows_timezone(
+        self, mock_run_ssh: MagicMock, get_standard_name: bool, expected: str, script: str
+    ) -> None:
         mock_ssh_exec = MagicMock()
-        mock_run_ssh.return_value = ["UTC"]
-
-        result = get_windows_timezone(mock_ssh_exec)
-
-        assert result == "UTC", "Windows timezone should match the SSH command output"
-        mock_run_ssh.assert_called_once()
-
-    @patch("utilities.windows.run_ssh_commands")
-    def test_get_windows_timezone_with_standard_name(self, mock_run_ssh):
-        """Test timezone extraction with standard name only"""
-        mock_ssh_exec = MagicMock()
-        mock_run_ssh.return_value = ["StandardName: UTC"]
-
-        result = get_windows_timezone(ssh_exec=mock_ssh_exec, get_standard_name=True)
-
-        assert result == "StandardName: UTC", "Windows timezone standard name should match the SSH command output"
-        mock_run_ssh.assert_called_once()
+        mock_run_ssh.return_value = [expected]
+        result = get_windows_timezone(ssh_exec=mock_ssh_exec, get_standard_name=get_standard_name)
+        assert result == expected, "Windows timezone should match the SSH command output"
+        mock_run_ssh.assert_called_once_with(
+            host=mock_ssh_exec, commands=powershell_command(script=script), tcp_timeout=TCP_TIMEOUT_30SEC
+        )
 
 
 @mark.unit
@@ -198,7 +207,13 @@ class TestGetGaVersion:
         result = get_ga_version(mock_ssh_exec)
 
         assert result == "7.4.0", "Guest agent version should have trailing whitespace removed"
-        mock_run_ssh.assert_called_once()
+        mock_run_ssh.assert_called_once_with(
+            host=mock_ssh_exec,
+            commands=powershell_command(
+                script="(Get-Item 'C:\\Program Files\\Qemu-ga\\qemu-ga.exe').VersionInfo.FileVersion"
+            ),
+            tcp_timeout=TCP_TIMEOUT_30SEC,
+        )
 
 
 @mark.unit
@@ -236,16 +251,16 @@ class TestGetWindowsOsInfo:
         self, mock_vm: MagicMock, caption: str, product_name: str, version: str
     ) -> None:
         with (
-            patch("utilities.windows.get_cim_instance_json", return_value={"Caption": caption, "Version": version}),
+            patch("utilities.windows.get_windows_os_properties", return_value={"Caption": caption, "Version": version}),
             patch("utilities.windows.get_reg_product_name", return_value=product_name),
         ):
-            with raises(AttributeError, match="Unsupported Windows OS version or registry product name format"):
+            with raises(ValueError, match="Unsupported Windows OS version or registry product name format"):
                 get_windows_os_info(ssh_exec=mock_vm.ssh_exec)
 
     @patch("utilities.windows.get_windows_timezone")
     @patch("utilities.windows.get_reg_product_name")
     @patch("utilities.windows.get_ga_version")
-    @patch("utilities.windows.get_cim_instance_json")
+    @patch("utilities.windows.get_windows_os_properties")
     @patch("utilities.windows.guest_agent_version_parser")
     def test_get_windows_os_info_success(self, mock_parser, mock_cim, mock_ga, mock_reg, mock_tz):
         """Test successful extraction of Windows OS info"""

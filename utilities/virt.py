@@ -42,7 +42,8 @@ from ocp_resources.virtual_machine_instance_migration import (
     VirtualMachineInstanceMigration,
 )
 from ocp_utilities.exceptions import CommandExecFailed
-from paramiko import ProxyCommandFailure
+from paramiko import ProxyCommandFailure, SSHException
+from pyhelper_utils.exceptions import CommandExecFailed as SSHCommandExecFailed
 from pyhelper_utils.shell import run_command, run_ssh_commands
 from pytest_testconfig import config as py_config
 from rrmngmnt import Host, ssh, user
@@ -127,7 +128,7 @@ from utilities.storage import (
     get_default_storage_class,
     get_storage_class_dict_from_matrix,
 )
-from utilities.windows import get_cim_instance_json
+from utilities.windows import get_windows_os_properties
 
 if TYPE_CHECKING:
     from libs.vm.vm import BaseVirtualMachine
@@ -1768,9 +1769,20 @@ class MissingTemplateVariables(Exception):
         return f"Missing variables {self.var} for template {self.template}"
 
 
-def wait_for_windows_vm(vm, version, timeout=TIMEOUT_25MIN):
-    """
-    Samples Windows VM; wait for it to complete the boot process.
+def wait_for_windows_vm(vm: VirtualMachineForTests, version: str, timeout: int = TIMEOUT_25MIN) -> bool:
+    """Wait until the Windows guest reports the expected OS Caption.
+
+    Args:
+        vm: Windows VM to query through its existing SSH connection.
+        version: Substring to match only against Win32_OperatingSystem.Caption.
+        timeout: Maximum readiness wait in seconds.
+
+    Returns:
+        True once the expected Caption is reported.
+
+    Raises:
+        TimeoutExpiredError: The guest never reported the expected Caption or
+            the sampled query failed with an unexpected exception.
     """
 
     LOGGER.info(f"Windows VM {vm.name} booting up, will attempt to access it up to {round(timeout / 60)} minutes.")
@@ -1778,12 +1790,14 @@ def wait_for_windows_vm(vm, version, timeout=TIMEOUT_25MIN):
     sampler = TimeoutSampler(
         wait_timeout=timeout,
         sleep=15,
-        func=get_cim_instance_json,
+        func=get_windows_os_properties,
+        exceptions_dict={SSHCommandExecFailed: [], SSHException: [], OSError: [], JSONDecodeError: []},
         ssh_exec=vm.ssh_exec,
     )
     for sample in sampler:
-        if version in (sample.get("Caption") or ""):
+        if version in (sample["Caption"] or ""):
             return True
+    raise TimeoutExpiredError(value=f"Windows VM {vm.name} did not report Caption containing {version!r}")
 
 
 # TODO: Remove once bug 1945703 is fixed

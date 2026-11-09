@@ -13,9 +13,9 @@ def guest_agent_version_parser(version_string: str) -> str:
         Three-part version with an optional dot- or hyphen-separated build number.
 
     Raises:
-        AttributeError: No supported version pattern is found in the input.
+        ValueError: No supported version pattern is found in the input.
     """
-    version_match = search(pattern=r"[0-9]+\.[0-9]+\.[0-9]+(?:[.|-][0-9]+)?", string=version_string)
+    version_match = search(pattern=r"[0-9]+\.[0-9]+\.[0-9]+(?:[.-][0-9]+)?", string=version_string)
     if version_match is None:
-        raise AttributeError("No supported QEMU guest-agent version found in the input")
+        raise ValueError("No supported QEMU guest-agent version found in the input")
     return version_match.group(0)
