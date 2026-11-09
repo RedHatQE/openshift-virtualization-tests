@@ -26,15 +26,20 @@ if [ -z $IMAGE_BUILD_CMD ]; then
 fi
 
 RUN_TMP_DIR=$(mktemp -d)
+chmod 0711 "${RUN_TMP_DIR}"
 
-# Determine once, before the cleanup trap is set, whether the serial console log
-# must be read with sudo. Under qemu:///system (CI) QEMU runs privileged and owns
-# the log, so it is read with sudo; -n keeps sudo non-interactive so it never
-# blocks on a password prompt. Under qemu:///session (typical local runs) QEMU runs
-# as the invoking user and the log is directly readable, so no sudo is used. The
-# array stays empty in that case and expands to nothing at every use site.
+# Pin the URI virsh resolves so virt-install, the sudo probe, and every virsh
+# call share one connection (virt-install honours only LIBVIRT_DEFAULT_URI).
+LIBVIRT_URI=$(virsh uri 2>/dev/null || true)
+if [ -n "${LIBVIRT_URI}" ]; then
+    export LIBVIRT_DEFAULT_URI="${LIBVIRT_URI}"
+    unset VIRSH_DEFAULT_CONNECT_URI
+fi
+
+# Under qemu:///system (CI) QEMU owns the serial log as root, so read it with
+# sudo (-n keeps it non-interactive); qemu:///session logs are directly readable.
 sudo_if_qemu_system=()
-if [ "$(virsh uri 2>/dev/null)" = "qemu:///system" ]; then
+if [ "${LIBVIRT_URI}" = "qemu:///system" ]; then
     sudo_if_qemu_system=(sudo -n)
 fi
 
