@@ -140,14 +140,20 @@ class TestPowerShellTransport:
             (b"Access is denied", "Access is denied", ""),
         ],
     )
+    @mark.parametrize("stdout_output", [b"", b"\xff"])
     def test_includes_error_details(
-        self, mock_vm: MagicMock, error_output: bytes, expected_details: str, input_data: str | None
+        self,
+        mock_vm: MagicMock,
+        error_output: bytes,
+        expected_details: str,
+        input_data: str | None,
+        stdout_output: bytes,
     ) -> None:
         executor = mock_vm.ssh_exec.executor.return_value
         executor.address = "test-guest"
         command = executor.session.return_value.__enter__.return_value.command.return_value
         stdin, stdout, stderr = MagicMock(), MagicMock(), MagicMock()
-        stdout.read.return_value = b""
+        stdout.read.return_value = stdout_output
         stderr.read.return_value = error_output
         command.execute.return_value.__enter__.return_value = stdin, stdout, stderr
         command.rc = 1
@@ -159,6 +165,33 @@ class TestPowerShellTransport:
         if expected_details:
             expected_message += f": {expected_details}"
         assert str(error.value) == expected_message, "PowerShell failure details were not reported"
+
+    @mark.parametrize(
+        "stdout_output,expected_output,error_type",
+        [
+            (b'{"result":"ok"}', '{"result":"ok"}', None),
+            (b'\xef\xbb\xbf{"result":"ok"}', '{"result":"ok"}', None),
+            (b"\xff", None, UnicodeDecodeError),
+        ],
+    )
+    def test_decodes_successful_output(
+        self, mock_vm: MagicMock, stdout_output: bytes, expected_output: str | None, error_type: type[Exception] | None
+    ) -> None:
+        command = (
+            mock_vm.ssh_exec.executor.return_value.session.return_value.__enter__.return_value.command.return_value
+        )
+        stdin, stdout, stderr = MagicMock(), MagicMock(), MagicMock()
+        stdout.read.return_value = stdout_output
+        stderr.read.return_value = b""
+        command.execute.return_value.__enter__.return_value = stdin, stdout, stderr
+        command.rc = 0
+
+        if error_type:
+            with raises(error_type):
+                run_powershell_commands(ssh_exec=mock_vm.ssh_exec, script="Get-Date")
+        else:
+            result = run_powershell_commands(ssh_exec=mock_vm.ssh_exec, script="Get-Date")
+            assert result == expected_output, "Successful PowerShell output was not decoded with UTF-8 BOM handling"
 
     def test_transport_error_propagates_and_closes_session(self) -> None:
         host = MagicMock()
@@ -199,10 +232,10 @@ class TestGetGaVersion:
     """Test cases for get_ga_version function"""
 
     @patch("utilities.windows.run_ssh_commands")
-    def test_get_ga_version_success(self, mock_run_ssh):
+    def test_get_ga_version_success(self, mock_run_ssh: MagicMock) -> None:
         """Test successful extraction of GA version"""
         mock_ssh_exec = MagicMock()
-        mock_run_ssh.return_value = ["7.4.0  "]  # With trailing space to test strip()
+        mock_run_ssh.return_value = ["7.4.0  "]
 
         result = get_ga_version(mock_ssh_exec)
 
@@ -221,7 +254,7 @@ class TestGetRegProductName:
     """Test cases for get_reg_product_name function"""
 
     @patch("utilities.windows.run_ssh_commands")
-    def test_get_reg_product_name_success(self, mock_run_ssh):
+    def test_get_reg_product_name_success(self, mock_run_ssh: MagicMock) -> None:
         """Test successful extraction of registry product name"""
         mock_ssh_exec = MagicMock()
         mock_run_ssh.return_value = ["REG_SZ    Microsoft Windows Server 2019\r\n"]
@@ -262,7 +295,9 @@ class TestGetWindowsOsInfo:
     @patch("utilities.windows.get_ga_version")
     @patch("utilities.windows.get_windows_os_properties")
     @patch("utilities.windows.guest_agent_version_parser")
-    def test_get_windows_os_info_success(self, mock_parser, mock_cim, mock_ga, mock_reg, mock_tz):
+    def test_get_windows_os_info_success(
+        self, mock_parser: MagicMock, mock_cim: MagicMock, mock_ga: MagicMock, mock_reg: MagicMock, mock_tz: MagicMock
+    ) -> None:
         """Test successful extraction of Windows OS info"""
         mock_ssh_exec = MagicMock()
 
@@ -279,6 +314,7 @@ class TestGetWindowsOsInfo:
         mock_tz.return_value = "UTC"
 
         result = get_windows_os_info(mock_ssh_exec)
+        mock_parser.assert_called_once_with(version_string="7.4.0")
 
         expected = {
             "guestAgentVersion": "7.4.0",

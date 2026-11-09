@@ -214,7 +214,7 @@ exit $global:LASTEXITCODE
             stdin.channel.shutdown_write()
             with ThreadPoolExecutor(max_workers=1) as reader:
                 stderr_result = reader.submit(stderr.read)
-                output = stdout.read().decode("utf-8-sig")
+                output = stdout.read()
                 error_details = stderr_result.result().decode(encoding="utf-8-sig", errors="replace").strip()
         if command.rc:
             if input_data:
@@ -223,4 +223,4 @@ exit $global:LASTEXITCODE
             if error_details:
                 message += f": {error_details}"
             raise RuntimeError(message)
-        return output
+        return output.decode("utf-8-sig")
