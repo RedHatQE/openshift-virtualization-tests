@@ -49,6 +49,8 @@ class TestGetWindowsOsProperties:
                     "Select-Object CSName, BuildNumber, Caption, Version, OSArchitecture | ConvertTo-Json"
                 ),
             ),
+            timeout=TIMEOUT_1MIN,
+            tcp_timeout=TCP_TIMEOUT_30SEC,
         )
 
     def test_rejects_invalid_json(self, mock_vm: MagicMock) -> None:

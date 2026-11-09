@@ -179,9 +179,23 @@ class TestWaitForWindowsVm:
             with raises(error_type):
                 virt.wait_for_windows_vm(vm=mock_vm, version="2025", timeout=1)
 
-    def test_propagates_readiness_timeout(self, mock_vm: MagicMock) -> None:
+    @mark.parametrize("last_exception", [None, OSError("Guest SSH unavailable")])
+    def test_propagates_readiness_timeout(self, mock_vm: MagicMock, last_exception: Exception | None) -> None:
         samples = MagicMock()
-        samples.__iter__.side_effect = TimeoutExpiredError(value="Windows OS unavailable")
+        original_error = TimeoutExpiredError(value="Windows OS unavailable", last_exp=last_exception, elapsed_time=30)
+        samples.__iter__.side_effect = original_error
         with patch.object(target=virt, attribute="TimeoutSampler", return_value=samples):
-            with raises(TimeoutExpiredError):
+            with raises(TimeoutExpiredError) as failure:
+                virt.wait_for_windows_vm(vm=mock_vm, version="2025", timeout=30)
+        assert mock_vm.name in failure.value.value and "2025" in failure.value.value, (
+            "Windows readiness context was lost"
+        )
+        assert original_error.value in failure.value.value, "Sampler diagnostics were lost"
+        assert failure.value.__cause__ is original_error, "Original sampler failure was not chained"
+        assert failure.value.last_exp is last_exception, "Last query exception was lost"
+        assert failure.value.elapsed_time == 30, "Elapsed readiness wait was lost"
+
+    def test_reports_exhausted_iterator(self, mock_vm: MagicMock) -> None:
+        with patch.object(target=virt, attribute="TimeoutSampler", return_value=iter([])):
+            with raises(TimeoutExpiredError, match="did not report Caption containing '2025'"):
                 virt.wait_for_windows_vm(vm=mock_vm, version="2025", timeout=30)

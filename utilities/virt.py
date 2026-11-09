@@ -43,7 +43,7 @@ from ocp_resources.virtual_machine_instance_migration import (
 )
 from ocp_utilities.exceptions import CommandExecFailed
 from paramiko import ProxyCommandFailure, SSHException
-from pyhelper_utils.exceptions import CommandExecFailed as SSHCommandExecFailed
+from pyhelper_utils.exceptions import CommandExecFailed as RemoteCommandExecFailed
 from pyhelper_utils.shell import run_command, run_ssh_commands
 from pytest_testconfig import config as py_config
 from rrmngmnt import Host, ssh, user
@@ -1775,7 +1775,9 @@ def wait_for_windows_vm(vm: VirtualMachineForTests, version: str, timeout: int =
     Args:
         vm: Windows VM to query through its existing SSH connection.
         version: Substring to match only against Win32_OperatingSystem.Caption.
-        timeout: Maximum readiness wait in seconds.
+        timeout: Readiness polling budget in seconds. An SSH attempt already in
+            progress may finish after this interval; each query has a one-minute
+            command timeout and a 30-second connection timeout.
 
     Returns:
         True once the expected Caption is reported.
@@ -1787,17 +1789,27 @@ def wait_for_windows_vm(vm: VirtualMachineForTests, version: str, timeout: int =
 
     LOGGER.info(f"Windows VM {vm.name} booting up, will attempt to access it up to {round(timeout / 60)} minutes.")
 
+    # Retry guest commands that fail during boot, SSH/connection failures and incomplete JSON.
     sampler = TimeoutSampler(
         wait_timeout=timeout,
         sleep=15,
         func=get_windows_os_properties,
-        exceptions_dict={SSHCommandExecFailed: [], SSHException: [], OSError: [], JSONDecodeError: []},
+        exceptions_dict={RemoteCommandExecFailed: [], SSHException: [], OSError: [], JSONDecodeError: []},
         ssh_exec=vm.ssh_exec,
     )
-    for sample in sampler:
-        if version in (sample["Caption"] or ""):
-            return True
-    raise TimeoutExpiredError(value=f"Windows VM {vm.name} did not report Caption containing {version!r}")
+    timeout_message = f"Windows VM {vm.name} did not report Caption containing {version!r}"
+    try:
+        for sample in sampler:
+            if version in (sample["Caption"] or ""):
+                return True
+    except TimeoutExpiredError as timeout_error:
+        raise TimeoutExpiredError(
+            value=f"{timeout_message}. {timeout_error.value}",
+            last_exp=timeout_error.last_exp,
+            elapsed_time=timeout_error.elapsed_time,
+        ) from timeout_error
+    # TimeoutSampler raises on exhaustion; guard iterators that end without a match.
+    raise TimeoutExpiredError(value=timeout_message)
 
 
 # TODO: Remove once bug 1945703 is fixed

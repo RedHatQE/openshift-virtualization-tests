@@ -41,6 +41,8 @@ def get_windows_os_properties(ssh_exec: Host) -> dict[str, Any]:
                     "Select-Object CSName, BuildNumber, Caption, Version, OSArchitecture | ConvertTo-Json"
                 )
             ),
+            timeout=TIMEOUT_1MIN,
+            tcp_timeout=TCP_TIMEOUT_30SEC,
         )[0]
     )
 
@@ -105,7 +107,9 @@ def get_windows_os_info(ssh_exec: Host) -> dict[str, Any]:
         Guest agent version, hostname, OS properties and timezone.
 
     Raises:
-        ValueError: OS version or registry product name has an unsupported format.
+        ValueError: Caption, Version or the ProductName registry output has an
+            unsupported format, or the QEMU guest-agent executable version
+            cannot be parsed.
     """
     cim_instance_json = get_windows_os_properties(ssh_exec=ssh_exec)
     version_match = search(pattern=r"(.+\d+)", string=cim_instance_json["Caption"])
