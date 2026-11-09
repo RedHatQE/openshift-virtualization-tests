@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from contextlib import ExitStack
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.resource import Resource
@@ -36,7 +36,7 @@ def wait_for_upload_response_code(
         client: Kubernetes dynamic client.
         asynchronous: Whether to use the async upload endpoint.
     """
-    kwargs: dict[str, object] = {
+    kwargs: dict[str, Any] = {
         "wait_timeout": TIMEOUT_1MIN,
         "sleep": 5,
         "func": upload_image,
