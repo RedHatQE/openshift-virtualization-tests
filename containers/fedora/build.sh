@@ -30,11 +30,13 @@ chmod 0711 "${RUN_TMP_DIR}"
 
 # Pin the URI virsh resolves so virt-install, the sudo probe, and every virsh
 # call share one connection (virt-install honours only LIBVIRT_DEFAULT_URI).
-LIBVIRT_URI=$(virsh uri 2>/dev/null || true)
-if [ -n "${LIBVIRT_URI}" ]; then
-    export LIBVIRT_DEFAULT_URI="${LIBVIRT_URI}"
-    unset VIRSH_DEFAULT_CONNECT_URI
+if ! LIBVIRT_URI=$(virsh uri 2>/dev/null) || [ -z "${LIBVIRT_URI}" ]; then
+    echo "ERROR: Unable to resolve the libvirt URI with 'virsh uri'" >&2
+    rm -rf -- "${RUN_TMP_DIR:?}"
+    exit 1
 fi
+export LIBVIRT_DEFAULT_URI="${LIBVIRT_URI}"
+unset VIRSH_DEFAULT_CONNECT_URI
 
 # Under qemu:///system (CI) QEMU owns the serial log as root, so read it with
 # sudo (-n keeps it non-interactive); qemu:///session logs are directly readable.
