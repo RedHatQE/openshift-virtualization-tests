@@ -289,6 +289,17 @@ def terminate_process(process):
 
 @contextmanager
 def resource_log_level_error(resource):
+    """Lower the resource logger to ERROR for the duration of the context.
+
+    The previous logger level is restored on exit, including when the body
+    raises.
+
+    Args:
+        resource: Resource whose logger level is changed.
+
+    Yields:
+        Resource: The resource passed in, unchanged.
+    """
     previous_level = resource.logger.level
     resource.logger.setLevel(level=logging.ERROR)
     try:

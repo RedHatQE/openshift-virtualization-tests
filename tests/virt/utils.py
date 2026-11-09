@@ -80,6 +80,19 @@ def append_feature_gate_to_hco(feature_gate, resource, client, namespace):
 
 @contextmanager
 def running_sleep_in_linux(vm):
+    """Run a guest sleep process in a Linux VM and verify its PID is retained.
+
+    Processes left over from an earlier run are killed before the sleep process
+    starts, and the sleep process is killed again on exit, including when the
+    body raises. The PID fetched after the body must match the one fetched at
+    start.
+
+    Args:
+        vm: Linux VM in which the sleep process runs.
+
+    Yields:
+        None: The body runs while the sleep process is alive.
+    """
     process = "sleep"
     kill_processes_by_name_linux(vm=vm, process_name=process, check_rc=False)
     pid_orig = start_and_fetch_processid_on_linux_vm(vm=vm, process_name=process, args="1000", use_nohup=True)
