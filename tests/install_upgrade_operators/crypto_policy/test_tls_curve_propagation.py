@@ -4,26 +4,12 @@ TLS curve (group) propagation tests for CNV endpoints.
 Epic: https://redhat.atlassian.net/browse/CNV-74453 # <skip-jira-utils-check>
 """
 
-import logging
-
 import pytest
 
-from tests.install_upgrade_operators.crypto_policy.constants import (
-    CURVE_PROPAGATION_PENDING,
-    FIPS_GO_UNSUPPORTED_GROUPS,
-    NON_FIPS_GROUPS,
-    TLS_PROPAGATION_CUSTOM_GROUPS,
-)
-from utilities.constants.components import KUBEVIRT_CONSOLE_PLUGIN_SERVICE
-from utilities.jira import is_jira_open
-
-LOGGER = logging.getLogger(__name__)
 pytestmark = pytest.mark.post_upgrade
 
 
-def test_custom_profile_curves_propagate_to_cnv_services(
-    subtests, curve_status_by_service, fips_enabled_cluster, services_tls_runtime
-):
+def test_custom_profile_curves_propagate_to_cnv_services(subtests, curve_propagation_expectations):
     """
     Test that configured TLS curves propagate from HCO to all CNV services.
 
@@ -37,6 +23,7 @@ def test_custom_profile_curves_propagate_to_cnv_services(
           post-quantum hybrid) and one deliberately omitted curve is applied and
           propagated to all managed components
         - All CNV services with a clusterIP discovered
+        - Per-service expected negotiation outcome and pending-Jira gate computed
 
     Steps:
         1. For each CNV service, probe every configured curve and the omitted curve
@@ -45,37 +32,19 @@ def test_custom_profile_curves_propagate_to_cnv_services(
     Expected:
         - Every configured curve is negotiated and the omitted curve is rejected,
           except where the cluster FIPS mode or the component strips non-FIPS curves.
+        - Services whose curve propagation is tracked by an open Jira are reported as
+          an expected failure (xfail) referencing that Jira, instead of a hard failure.
     """
-    for service_name, group_status in curve_status_by_service.items():
-        pending_jira = CURVE_PROPAGATION_PENDING.get(service_name)
-        pending = bool(pending_jira) and is_jira_open(pending_jira)
-        if pending:
-            LOGGER.warning(
-                f"Service {service_name} curve propagation pending {pending_jira}; checking reachability only"
-            )
-
-        expected_negotiable = set(TLS_PROPAGATION_CUSTOM_GROUPS)
-        if fips_enabled_cluster:
-            assert service_name in services_tls_runtime, f"TLS runtime not detected for service {service_name}"
-            # Under FIPS, Go services reject every ML-KEM hybrid and X25519 (matching the
-            # PQC audit test), while OpenSSL services still negotiate the NIST-paired hybrids
-            # but not the Curve25519-based groups.
-            if services_tls_runtime[service_name] == "go":
-                expected_negotiable.difference_update(FIPS_GO_UNSUPPORTED_GROUPS)
-            else:
-                expected_negotiable.difference_update(NON_FIPS_GROUPS)
-        # The console-plugin handler strips Curve25519-based groups unconditionally
-        # (GetFIPSCompliantGroups), so it never negotiates them on any cluster.
-        if service_name == KUBEVIRT_CONSOLE_PLUGIN_SERVICE:
-            expected_negotiable.difference_update(NON_FIPS_GROUPS)
-
-        for group, negotiated in group_status.items():
+    for service_name, expectation in curve_propagation_expectations.items():
+        pending_jira = expectation["pending_jira"]
+        expected_negotiable = expectation["expected_negotiable"]
+        for group, negotiated in expectation["group_status"].items():
             with subtests.test(msg=f"{service_name}-{group}"):
                 # Reachability is asserted for every service, including pending ones:
                 # None means the probe saw neither a successful handshake nor a rejection.
                 assert negotiated is not None, f"Service {service_name} is unreachable for curve {group}"
-                if pending:
-                    continue
+                if pending_jira:
+                    pytest.xfail(reason=f"Service {service_name} curve propagation pending {pending_jira}")
                 if group in expected_negotiable:
                     assert negotiated, f"Service {service_name} must negotiate configured curve {group}"
                 else:

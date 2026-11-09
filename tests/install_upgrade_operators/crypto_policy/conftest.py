@@ -26,6 +26,8 @@ from tests.install_upgrade_operators.crypto_policy.constants import (
     CONSOLE_PLUGIN_SERVICE_PORT,
     CRYPTO_POLICY_SPEC_DICT,
     CURVE_PROBE_EXCLUDED,
+    CURVE_PROPAGATION_PENDING,
+    FIPS_GO_UNSUPPORTED_GROUPS,
     KUBEVIRT_TLS_CONFIG_STR,
     MANAGED_CRS_LIST_WITH_AAQ,
     NON_FIPS_GROUPS,
@@ -48,6 +50,7 @@ from utilities.constants.components import (
     CDI_KUBEVIRT_HYPERCONVERGED,
     CLUSTER,
     HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD,
+    KUBEVIRT_CONSOLE_PLUGIN_SERVICE,
     KUBEVIRT_HCO_NAME,
     MIGCONTROLLER_KUBEVIRT_HYPERCONVERGED,
     SSP_KUBEVIRT_HYPERCONVERGED,
@@ -61,6 +64,7 @@ from utilities.hco import (
     wait_for_hco_conditions,
 )
 from utilities.infra import ExecCommandOnPod
+from utilities.jira import is_jira_open
 from utilities.operator import wait_for_cluster_operator_stabilize
 
 LOGGER = logging.getLogger(__name__)
@@ -322,3 +326,40 @@ def curve_status_by_service(
     for service_name, group_status in results.items():
         LOGGER.info(f"Curve probe {service_name}: {group_status}")
     return results
+
+
+@pytest.fixture()
+def curve_propagation_expectations(curve_status_by_service, fips_enabled_cluster, services_tls_runtime):
+    """Per-service expected curve negotiation outcome and pending-Jira gate.
+
+    Computed once as test setup so the test itself only runs the subtests, without
+    deciding per-service business rules inline.
+    """
+    LOGGER.info(f"Curve propagation test running on a {'FIPS' if fips_enabled_cluster else 'non-FIPS'} cluster")
+    expectations = {}
+    for service_name, group_status in curve_status_by_service.items():
+        pending_jira = CURVE_PROPAGATION_PENDING.get(service_name)
+        if pending_jira and not is_jira_open(pending_jira):
+            pending_jira = None
+
+        expected_negotiable = set(TLS_PROPAGATION_CUSTOM_GROUPS)
+        if fips_enabled_cluster:
+            assert service_name in services_tls_runtime, f"TLS runtime not detected for service {service_name}"
+            # Under FIPS, Go services reject every ML-KEM hybrid and X25519 (matching the
+            # PQC audit test), while OpenSSL services still negotiate the NIST-paired hybrids
+            # but not the Curve25519-based groups.
+            if services_tls_runtime[service_name] == "go":
+                expected_negotiable.difference_update(FIPS_GO_UNSUPPORTED_GROUPS)
+            else:
+                expected_negotiable.difference_update(NON_FIPS_GROUPS)
+        # The console-plugin handler strips Curve25519-based groups unconditionally
+        # (GetFIPSCompliantGroups), so it never negotiates them on any cluster.
+        if service_name == KUBEVIRT_CONSOLE_PLUGIN_SERVICE:
+            expected_negotiable.difference_update(NON_FIPS_GROUPS)
+
+        expectations[service_name] = {
+            "group_status": group_status,
+            "expected_negotiable": expected_negotiable,
+            "pending_jira": pending_jira,
+        }
+    return expectations
