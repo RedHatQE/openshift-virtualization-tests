@@ -5,12 +5,14 @@ from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClust
 from pytest_testconfig import config as py_config
 
 from tests.infrastructure.instance_types.supported_os.utils import golden_image_vm_with_instance_type
+from utilities.architecture import get_cluster_architecture
 from utilities.artifactory import (
     cleanup_artifactory_secret_and_config_map,
     get_artifactory_config_map,
     get_artifactory_secret,
 )
 from utilities.constants import Images
+from utilities.constants.architecture import ARM_64, S390X
 from utilities.constants.hco import DATA_SOURCE_NAME
 from utilities.constants.images import OS_FLAVOR_WIN_CONTAINER_DISK
 from utilities.constants.instance_types import RHEL8_PREFERENCE
@@ -22,10 +24,24 @@ from utilities.storage import construct_datavolume_source_dict, get_test_artifac
 from utilities.virt import VirtualMachineForTests
 
 
+SECURE_BOOT_UNSUPPORTED_ARCHES = frozenset({ARM_64, S390X})
+
+
 @pytest.fixture(scope="class")
 def xfail_if_rhel8(instance_type_rhel_os_matrix__module__):
     if [*instance_type_rhel_os_matrix__module__][0] == RHEL8_PREFERENCE:
         pytest.xfail("EFI is not enabled by default before RHEL9")
+
+
+@pytest.fixture(scope="class")
+def skip_if_secure_boot_unsupported_arch():
+    # KubeVirt enables Secure Boot via SMM (domain.features.smm), which is x86_64-only.
+    # There is no SMM on arm64/s390x, so Secure Boot cannot be enabled for guests on those arches.
+    unsupported_arches = get_cluster_architecture() & SECURE_BOOT_UNSUPPORTED_ARCHES
+    if unsupported_arches:
+        pytest.skip(
+            f"Secure Boot requires SMM, which is x86_64-only; unsupported on {sorted(unsupported_arches)}"
+        )
 
 
 @pytest.fixture(scope="module")
