@@ -11,6 +11,7 @@ from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_utilities.infra import assert_nodes_in_healthy_condition, assert_nodes_schedulable
 from timeout_sampler import TimeoutSampler
 
+from utilities.constants.architecture import ARM_64
 from utilities.constants.monitoring import KUBELET_READY_CONDITION
 from utilities.constants.timeouts import (
     TIMEOUT_1MIN,
@@ -185,8 +186,15 @@ def test_csv_health(admin_client, hco_namespace):
 
 
 @pytest.mark.cluster_health_check
-def test_common_node_cpu_model(cluster_node_cpus, cluster_common_node_cpu, cluster_common_modern_node_cpu):
+def test_common_node_cpu_model(
+    nodes_cpu_architecture,
+    cluster_node_cpus,
+    cluster_common_node_cpu,
+    cluster_common_modern_node_cpu,
+):
     """Test that the cluster has a common CPU model across all nodes."""
+    if nodes_cpu_architecture == ARM_64:
+        pytest.skip("No common CPU model is expected on arm64 clusters")
     assert cluster_common_node_cpu and cluster_common_modern_node_cpu, (
         f"This is a heterogeneous cluster with no common cpus: {cluster_node_cpus}"
     )
