@@ -297,9 +297,28 @@ def custom_curve_profile_applied(admin_client, enabled_aaq, hyperconverged_resou
         yield
 
 
+@pytest.fixture(scope="module")
+def verified_node_curve_propagation_support(workers_utility_pods, worker_node1, fips_enabled_cluster):
+    """Verifies that worker node OpenSSL supports every TLS group probed by the curve propagation test."""
+    available_groups = get_node_available_tls_groups(
+        utility_pods=workers_utility_pods,
+        node=worker_node1,
+    )
+    required_groups = [*TLS_PROPAGATION_CUSTOM_GROUPS, TLS_PROPAGATION_OMITTED_GROUP]
+    if fips_enabled_cluster:
+        # The FIPS crypto module blocks X25519MLKEM768 entirely, so the worker's OpenSSL
+        # cannot even offer it locally (confirmed: `openssl list -tls-groups` omits it,
+        # and passing it to `-groups` fails client-side before any server behavior is
+        # tested). TLS_PROPAGATION_OMITTED_GROUP (secp384r1) is FIPS-probeable, so it
+        # needs no special-casing here.
+        required_groups = [group for group in required_groups if group not in NON_FIPS_GROUPS]
+    missing_groups = [group for group in required_groups if group not in available_groups]
+    assert not missing_groups, f"TLS groups not found on node: {missing_groups}. Available: {available_groups}"
+
+
 @pytest.fixture()
 def curve_status_by_service(
-    verified_node_pqc_support,
+    verified_node_curve_propagation_support,
     custom_curve_profile_applied,
     console_plugin_test_network_policy,
     workers_utility_pods,
@@ -310,12 +329,6 @@ def curve_status_by_service(
     """Per-curve negotiation status for each CNV service under the Custom curve profile."""
     probe_groups = [*TLS_PROPAGATION_CUSTOM_GROUPS, TLS_PROPAGATION_OMITTED_GROUP]
     if fips_enabled_cluster:
-        # The FIPS crypto module blocks X25519MLKEM768 entirely, so the worker's OpenSSL
-        # cannot even offer it locally (confirmed: `openssl list -tls-groups` omits it,
-        # and passing it to `-groups` fails client-side before any server behavior is
-        # tested). verified_node_pqc_support already excludes it from FIPS for the same
-        # reason. TLS_PROPAGATION_OMITTED_GROUP (secp384r1) is FIPS-probeable, so it
-        # needs no special-casing here.
         probe_groups = [group for group in probe_groups if group not in NON_FIPS_GROUPS]
     worker_exec = ExecCommandOnPod(utility_pods=workers_utility_pods, node=worker_node1)
     results = {
