@@ -3231,18 +3231,30 @@ class TestFilterDeprecatedApiTests:
         config.getoption.side_effect = lambda name: option_values[name]
         return config
 
-    def test_removes_deprecated_api_tests_when_upgrade_set(self):
-        """Deprecated-api tests are deselected when --upgrade is set."""
+    @pytest.mark.parametrize(
+        argnames="option",
+        argvalues=(
+            "--upgrade",
+            "--skip-deprecated-api-test",
+            "--install",
+            "--upgrade_custom",
+        ),
+        ids=("upgrade", "skip-deprecated-api-test", "install", "upgrade-custom"),
+    )
+    def test_removes_deprecated_api_tests_when_trigger_option_set(self, option: str):
+        """Deprecated-api tests are deselected when any trigger option is set."""
         item_deprecated = MagicMock()
         item_deprecated.keywords = {"deprecated_api": True}
         item_other = MagicMock()
         item_other.keywords = {"virt": True}
 
-        config = self._config(**{"--upgrade": True})
+        config = self._config(**{option: True})
 
         result = filter_deprecated_api_tests(items=[item_deprecated, item_other], config=config)
 
-        assert result == [item_other], f"Expected only non-deprecated item to remain, got: {result}"
+        assert result == [item_other], (
+            f"Expected only non-deprecated item to remain when {option} is set, got: {result}"
+        )
         config.hook.pytest_deselected.assert_called_once_with(items=[item_deprecated])
 
     def test_keeps_all_tests_when_no_trigger_option_set(self):
@@ -3258,19 +3270,6 @@ class TestFilterDeprecatedApiTests:
             f"Expected deprecated item to be kept when no trigger option set, got: {result}"
         )
         config.hook.pytest_deselected.assert_not_called()
-
-    def test_removes_deprecated_api_tests_when_skip_option_set(self):
-        """Deprecated-api tests are deselected when --skip-deprecated-api-test is set."""
-        item_deprecated = MagicMock()
-        item_deprecated.keywords = {"deprecated_api": True}
-        config = self._config(**{"--skip-deprecated-api-test": True})
-
-        result = filter_deprecated_api_tests(items=[item_deprecated], config=config)
-
-        assert result == [], (
-            f"Expected all deprecated items to be removed when --skip-deprecated-api-test set, got: {result}"
-        )
-        config.hook.pytest_deselected.assert_called_once_with(items=[item_deprecated])
 
 
 class TestFilterSnoOnlyTests:
