@@ -25,6 +25,7 @@ from utilities.virt import (
 
 LOGGER = logging.getLogger(__name__)
 
+
 @pytest.fixture()
 def vm_to_restart(unprivileged_client, namespace):
     name = "vm-to-restart"
@@ -36,6 +37,7 @@ def vm_to_restart(unprivileged_client, namespace):
     ) as vm:
         running_vm(vm=vm)
         yield vm
+
 
 @pytest.mark.polarion("EXAMPLE-1497")
 def test_vm_restart(vm_to_restart):
@@ -113,15 +115,12 @@ Hardcoded `time.sleep()` delays cause flaky and slow tests. Whenever you wait fo
 ```python
 from timeout_sampler import TimeoutSampler
 
+
 def _check_condition(resource):
     return resource.status == "Ready"
 
-for sample in TimeoutSampler(
-    wait_timeout=60,
-    sleep=5,
-    func=_check_condition,
-    resource=my_resource
-):
+
+for sample in TimeoutSampler(wait_timeout=60, sleep=5, func=_check_condition, resource=my_resource):
     if sample:
         break
 ```
