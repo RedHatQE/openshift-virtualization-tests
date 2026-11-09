@@ -140,6 +140,15 @@ def openperouter_provider_node(openperouter_provider_nodes: list[Node]) -> Node:
 
 
 @pytest.fixture(scope="module")
+def openperouter_worker_ips(workers: list[Node], openperouter_provider_node: Node) -> list[str]:
+    return [
+        str(node_primary_ipv4_interface(worker).ip)
+        for worker in workers
+        if worker.name != openperouter_provider_node.name
+    ]
+
+
+@pytest.fixture(scope="module")
 def openperouter_namespace(admin_client: DynamicClient) -> Generator[Namespace]:
     yield from create_ns(name="test-openperouter-ns", admin_client=admin_client)
 
@@ -207,18 +216,12 @@ def openperouter_underlay(
     openperouter_installation: OpenPERouterInfo,
     openperouter_attachment: OpenPERouterAttachment,
     openperouter_diagnostics_pod: Pod,
-    openperouter_provider_node: Node,
-    workers: list[Node],
+    openperouter_worker_ips: list[str],
 ) -> Generator[Underlay]:
     validate_openperouter_parent_interface(
-        node=openperouter_provider_node,
+        diagnostics_pod=openperouter_diagnostics_pod,
         attachment=openperouter_attachment,
     )
-    worker_ips = [
-        str(node_primary_ipv4_interface(worker).ip)
-        for worker in workers
-        if worker.name != openperouter_provider_node.name
-    ]
     with (
         openperouter_topology_cleanup(
             diagnostics_pod=openperouter_diagnostics_pod,
@@ -228,14 +231,14 @@ def openperouter_underlay(
             client=admin_client,
             namespace_name=openperouter_diagnostics_pod.namespace,
             attachment=openperouter_attachment,
-            worker_ips=worker_ips,
+            worker_ips=openperouter_worker_ips,
         ) as underlay,
     ):
         try:
             wait_for_openperouter_underlay(
                 diagnostics_pod=openperouter_diagnostics_pod,
                 attachment=openperouter_attachment,
-                worker_ips=worker_ips,
+                worker_ips=openperouter_worker_ips,
             )
         except TimeoutExpiredError:
             collect_openperouter_diagnostics(
@@ -304,18 +307,12 @@ def openperouter_raw_frr_config(
     openperouter_installation: OpenPERouterInfo,
     openperouter_diagnostics_pod: Pod,
     openperouter_l3_vni: L3VNI,
-    openperouter_provider_node: Node,
-    workers: list[Node],
+    openperouter_worker_ips: list[str],
 ) -> Generator[RawFRRConfig]:
-    worker_ips = [
-        str(node_primary_ipv4_interface(worker).ip)
-        for worker in workers
-        if worker.name != openperouter_provider_node.name
-    ]
     with create_openperouter_raw_frr_config(
         client=admin_client,
         namespace_name=openperouter_l3_vni.namespace,
-        worker_ips=worker_ips,
+        worker_ips=openperouter_worker_ips,
         external_l3_subnet_ipv4=EXTERNAL_L3_SUBNET_IPV4,
     ) as raw_frr_config:
         try:

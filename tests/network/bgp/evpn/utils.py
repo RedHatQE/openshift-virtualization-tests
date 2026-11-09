@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Any, Final
 from ocp_resources.cluster_service_version import ClusterServiceVersion
 from ocp_resources.exceptions import ExecOnPodError
 from ocp_resources.node import Node
-from ocp_resources.node_network_state import NodeNetworkState
 from ocp_resources.operator_group import OperatorGroup
 from ocp_resources.package_manifest import PackageManifest
 from ocp_resources.pod import Pod
@@ -149,24 +148,23 @@ def openperouter_attachment_from_environment() -> OpenPERouterAttachment:
     )
 
 
-def validate_openperouter_parent_interface(node: Node, attachment: OpenPERouterAttachment) -> None:
+def validate_openperouter_parent_interface(diagnostics_pod: Pod, attachment: OpenPERouterAttachment) -> None:
     """Validates that the configured parent interface exists on the provider node.
 
     Args:
-        node: The node that will host OpenPERouter.
+        diagnostics_pod: Host-network diagnostic helper on the provider node.
         attachment: The validated underlay attachment.
 
     Raises:
         ValueError: If the configured parent interface is not present in the
-            node's reported network state.
+            provider node's host network namespace.
     """
-    interface_names = [
-        interface["name"] for interface in NodeNetworkState(name=node.name, client=node.client).interfaces
-    ]
+    interface_names = network_interface_names(pod=diagnostics_pod)
     if attachment.parent_interface not in interface_names:
         raise ValueError(
-            f"OpenPERouter parent interface {attachment.parent_interface} does not exist on node {node.name}. "
-            f"Existing interfaces: {interface_names}"
+            f"OpenPERouter parent interface {attachment.parent_interface} does not exist on node "
+            f"{diagnostics_pod.node_name}. "
+            f"Existing interfaces: {sorted(interface_names)}"
         )
 
 
@@ -684,12 +682,15 @@ def wait_for_openperouter_underlay(
 
 
 @retry(wait_timeout=300, sleep=5, exceptions_dict={ExecOnPodError: []})
-def wait_for_openperouter_l2_vni(diagnostics_pod: Pod, vni: int) -> None:
+def wait_for_openperouter_l2_vni(diagnostics_pod: Pod, vni: int) -> bool:
     """Waits for OpenPERouter to create the Linux bridge for an L2VNI.
 
     Args:
         diagnostics_pod: Node-pinned diagnostic helper pod.
         vni: MAC-VRF VNI.
+
+    Returns:
+        True when the bridge exists.
     """
     diagnostics_pod.execute(
         command=[
@@ -704,14 +705,18 @@ def wait_for_openperouter_l2_vni(diagnostics_pod: Pod, vni: int) -> None:
         ],
         container=NET_TOOLS_CONTAINER_NAME,
     )
+    return True
 
 
 @retry(wait_timeout=300, sleep=5, exceptions_dict={ExecOnPodError: []})
-def wait_for_openperouter_l3_vni(diagnostics_pod: Pod) -> None:
+def wait_for_openperouter_l3_vni(diagnostics_pod: Pod) -> bool:
     """Waits for OpenPERouter to create the routed-L3 VRF.
 
     Args:
         diagnostics_pod: Node-pinned diagnostic helper pod.
+
+    Returns:
+        True when the VRF exists.
     """
     diagnostics_pod.execute(
         command=[
@@ -726,14 +731,18 @@ def wait_for_openperouter_l3_vni(diagnostics_pod: Pod) -> None:
         ],
         container=NET_TOOLS_CONTAINER_NAME,
     )
+    return True
 
 
 @retry(wait_timeout=300, sleep=5, exceptions_dict={ExecOnPodError: [], RuntimeError: []})
-def wait_for_openperouter_raw_frr_config(diagnostics_pod: Pod) -> None:
+def wait_for_openperouter_raw_frr_config(diagnostics_pod: Pod) -> bool:
     """Waits for OpenPERouter to render the raw EVPN FRR configuration.
 
     Args:
         diagnostics_pod: Node-pinned diagnostic helper pod.
+
+    Returns:
+        True when the raw EVPN configuration is rendered.
     """
     output = diagnostics_pod.execute(
         command=["cat", "/etc/perouter/frr/frr.conf"],
@@ -741,6 +750,7 @@ def wait_for_openperouter_raw_frr_config(diagnostics_pod: Pod) -> None:
     )
     if "route-map evpn-to-ocp permit 10" not in output:
         raise RuntimeError(f"OpenPERouter raw FRR configuration is not rendered; got: {output}")
+    return True
 
 
 def wait_for_openperouter_control_plane(

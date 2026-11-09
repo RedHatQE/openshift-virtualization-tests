@@ -23,7 +23,7 @@ from libs.net.traffic_generator import (
 )
 from libs.net.vmspec import lookup_iface_status, lookup_primary_network
 from libs.vm.vm import BaseVirtualMachine
-from tests.network.bgp.evpn.utils import network_interface_names
+from tests.network.bgp.evpn.utils import OPENPE_ROUTER_NAMESPACE, network_interface_names
 from tests.network.libs.bgp import NET_TOOLS_CONTAINER_NAME
 from utilities.constants.timeouts import TIMEOUT_30SEC
 
@@ -37,7 +37,6 @@ CUDN_EVPN_SUBNET_IPV4: str = str(random_ipv4_address(net_seed=EVPN_CUDN_NET_SEED
 CUDN_EVPN_SUBNET_IPV6: str = str(random_ipv6_address(net_seed=EVPN_CUDN_NET_SEED, host_address=0))
 EVPN_MAC_VRF_VNI: int = 10100
 EVPN_IP_VRF_VNI: int = 20102
-OPENPE_ROUTER_NAMESPACE: str = "perouter"
 _L2_ENDPOINT_PREFIX: str = "l2-endpt-"
 _L2_ROUTER_VETH_PREFIX: str = "l2-openpe-"
 _L3_ENDPOINT_PREFIX: str = "l3-endpt-"

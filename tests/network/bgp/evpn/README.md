@@ -134,6 +134,8 @@ export OPENPE_VTEP_CIDR=<routable-ipv4-address>/32
 
 `OPENPE_UNDERLAY_PARENT` must name a host interface on the selected provider
 worker that can reach the worker FRR addresses on the real underlay.
+The host-network diagnostics pod checks that the interface exists directly
+on that worker; this check does not require NMState or NodeNetworkState.
 
 `OPENPE_PROVIDER_IPV4` must include its prefix, for example `192.0.2.50/24`,
 and must be a usable host address. It cannot be a network or broadcast address.
