@@ -133,12 +133,8 @@ class TestCPUHotPlug:
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu"])
     @pytest.mark.polarion("CNV-10699")
     def test_hotplug_cpu_above_max_value(self, vm_with_hotplug_support):
-        try:
+        with pytest.raises(UnprocessibleEntityError):
             hotplug_spec_vm(vm=vm_with_hotplug_support, sockets=TEN_CPU_SOCKETS)
-        except UnprocessibleEntityError:
-            pass
-        else:
-            pytest.fail("Socket value set higher than max value!")
 
 
 @pytest.mark.parametrize(
@@ -197,12 +193,8 @@ class TestMemoryHotPlug:
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_memory"])
     @pytest.mark.polarion("CNV-10681")
     def test_hotplug_memory_above_max_value(self, vm_with_hotplug_support):
-        try:
+        with pytest.raises(UnprocessibleEntityError):
             hotplug_spec_vm(vm=vm_with_hotplug_support, memory_guest=TWELVE_GI_MEMORY)
-        except UnprocessibleEntityError:
-            pass
-        else:
-            pytest.fail("Memory value set higher than max value!")
 
     @pytest.mark.parametrize(
         "hotplugged_sockets_memory_guest",

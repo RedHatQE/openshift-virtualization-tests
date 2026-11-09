@@ -8,9 +8,8 @@ import pytest
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 from ocp_resources.datavolume import DataVolume
 from pytest_testconfig import config as py_config
-from timeout_sampler import TimeoutExpiredError
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
-from tests.storage.cdi_import.utils import sample_dv_import_not_scheduled
 from tests.storage.constants import (
     ALPINE_QCOW2_IMG,
     HTTP,
@@ -27,7 +26,7 @@ from tests.storage.utils import (
 )
 from utilities.constants import Images
 from utilities.constants.pytest import QUARANTINED
-from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5MIN
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_2MIN, TIMEOUT_5MIN
 from utilities.ssp import validate_os_info_vmi_vs_windows_os
 from utilities.storage import (
     ErrorMsg,
@@ -282,7 +281,18 @@ def test_certconfigmap_incorrect_cert(
 @pytest.mark.s390x
 def test_certconfigmap_missing_or_wrong_cm(data_volume_multi_storage_scope_function):
     with pytest.raises(TimeoutExpiredError):
-        sample_dv_import_not_scheduled(dv=data_volume_multi_storage_scope_function)
+        samples = TimeoutSampler(
+            wait_timeout=TIMEOUT_1MIN,
+            sleep=10,
+            func=lambda: data_volume_multi_storage_scope_function.status != DataVolume.Status.IMPORT_SCHEDULED,
+        )
+        for sample in samples:
+            if sample:
+                LOGGER.error(
+                    f"DV status is not as expected."
+                    f"Expected: {DataVolume.Status.IMPORT_SCHEDULED}. "
+                    f"Found: {data_volume_multi_storage_scope_function.status}"
+                )
 
 
 @pytest.mark.sno

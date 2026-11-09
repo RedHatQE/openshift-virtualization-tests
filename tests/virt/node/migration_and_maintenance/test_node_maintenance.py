@@ -205,12 +205,8 @@ class TestNodeCordonAndDrain:
     ):
         vm = vm_for_test_from_template_scope_class
         with cordon_node(admin_client=admin_client, node=vm.vmi.get_node(privileged_client=admin_client)):
-            try:
+            with pytest.raises(TimeoutExpiredError):
                 migration_job_sampler(
                     client=admin_client,
                     namespace=vm.namespace,
                 )
-            except TimeoutExpiredError:
-                pass
-            else:
-                pytest.fail("Cordon of a Node should not trigger VMI migration.")
