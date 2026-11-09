@@ -11,7 +11,7 @@ import socket
 import sys
 import tempfile
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import paramiko.pkey
 
@@ -940,6 +940,18 @@ def filter_post_test_alerts_tests(items: list[pytest.Item], config: pytest.Confi
     return items
 
 
+def _fips_safe_get_fingerprint(self: paramiko.pkey.PKey) -> bytes:
+    """Return the key fingerprint from an MD5 digest FIPS-enabled systems accept.
+
+    Args:
+        self: Key whose public part is fingerprinted.
+
+    Returns:
+        bytes: The 16-byte MD5 digest of the public key blob.
+    """
+    return hashlib.md5(self.asbytes(), usedforsecurity=False).digest()
+
+
 def patch_paramiko_for_fips() -> None:
     """Patch paramiko's PKey.get_fingerprint to use usedforsecurity=False for FIPS compatibility.
 
@@ -947,11 +959,6 @@ def patch_paramiko_for_fips() -> None:
     calls hashlib.md5() without usedforsecurity=False, raising UnsupportedDigestmodError on
     FIPS-enabled systems. MD5 here is used only for display/logging purposes, not security.
     """
-    # Monkey-patch of paramiko PKey.get_fingerprint (FIPS workaround): type.__setattr__ is the
-    # only form satisfying all checkers — direct assignment fails mypy (method-assign) and plain
-    # setattr trips B010 (in ruff 0.17 defaults).
-    type.__setattr__(  # noqa: PLC2801
-        paramiko.pkey.PKey,
-        "get_fingerprint",
-        lambda self: hashlib.md5(self.asbytes(), usedforsecurity=False).digest(),
-    )
+    # The cast keeps the monkey-patch mypy-clean: its stubs declare get_fingerprint as a method,
+    # so assigning to it directly is reported as method-assign.
+    cast(Any, paramiko.pkey.PKey).get_fingerprint = _fips_safe_get_fingerprint

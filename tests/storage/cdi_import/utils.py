@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 from typing import TYPE_CHECKING
 
 from ocp_resources.datavolume import DataVolume
@@ -16,8 +15,6 @@ if TYPE_CHECKING:
     from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
     from ocp_resources.pod import Pod
     from ocp_resources.resource import DynamicClient
-
-LOGGER = logging.getLogger(__name__)
 
 
 def get_importer_pod_node(importer_pod: Pod) -> str:
