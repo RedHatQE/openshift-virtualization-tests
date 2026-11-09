@@ -31,6 +31,7 @@ from tests.network.bgp.evpn.libevpn import (
     cudn_evpn_subnets,
     deploy_evpn_l2_endpoint,
     deploy_evpn_l3_endpoint,
+    disable_vm_serial_getty_start_limit,
     evpn_workloads_active_connections,
     node_primary_ipv4_interface,
     teardown_evpn_l2_endpoint,
@@ -435,6 +436,7 @@ def vm_evpn_target(
     ) as vm:
         vm.start(wait=True)
         vm.wait_for_agent_connected()
+        disable_vm_serial_getty_start_limit(vm=vm)
         yield vm
 
 
@@ -455,6 +457,7 @@ def vm_evpn_reference(
     ) as vm:
         vm.start(wait=True)
         vm.wait_for_agent_connected()
+        disable_vm_serial_getty_start_limit(vm=vm)
         yield vm
 
 

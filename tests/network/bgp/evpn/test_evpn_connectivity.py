@@ -29,6 +29,7 @@ from tests.network.bgp.evpn.libevpn import (
     EVPN_MAC_VRF_VNI,
     assert_evpn_workloads_connectivity,
     deploy_evpn_l2_endpoint,
+    disable_vm_serial_getty_start_limit,
     evpn_workloads_active_connections,
     teardown_evpn_l2_endpoint,
 )
@@ -187,6 +188,7 @@ def test_connectivity_after_udn_vm_cold_reboot(
     """
     vm_evpn_target.restart(wait=True)
     vm_evpn_target.wait_for_agent_connected()
+    disable_vm_serial_getty_start_limit(vm=vm_evpn_target)
 
     assert_evpn_workloads_connectivity(
         target_vm=vm_evpn_target,
@@ -229,6 +231,7 @@ def test_source_provider_migration(
 
     vm_source_provider.start(wait=True)
     vm_source_provider.wait_for_agent_connected()
+    disable_vm_serial_getty_start_limit(vm=vm_source_provider)
 
     new_l2_endpoint = deploy_evpn_l2_endpoint(
         pod=openperouter_endpoint_helper_pod,

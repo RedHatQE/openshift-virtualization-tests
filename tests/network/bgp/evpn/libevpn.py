@@ -25,6 +25,7 @@ from libs.net.vmspec import lookup_iface_status, lookup_primary_network
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.bgp.evpn.utils import network_interface_names
 from tests.network.libs.bgp import NET_TOOLS_CONTAINER_NAME
+from utilities.constants.timeouts import TIMEOUT_30SEC
 
 if TYPE_CHECKING:
     from ocp_resources.node import Node
@@ -41,6 +42,8 @@ _L2_ENDPOINT_PREFIX: str = "l2-endpt-"
 _L2_ROUTER_VETH_PREFIX: str = "l2-openpe-"
 _L3_ENDPOINT_PREFIX: str = "l3-endpt-"
 _L3_ROUTER_VETH_PREFIX: str = "l3-openpe-"
+_SERIAL_GETTY_DROP_IN_DIRECTORY: str = "/etc/systemd/system/serial-getty@ttyS0.service.d"
+_SERIAL_GETTY_DROP_IN_FILE: str = f"{_SERIAL_GETTY_DROP_IN_DIRECTORY}/no-start-limit.conf"
 
 
 @dataclass
@@ -83,6 +86,29 @@ class EndpointTcpClient(PodTcpClient):
         )
         self._ensure_is_running()
         return self
+
+
+def disable_vm_serial_getty_start_limit(vm: BaseVirtualMachine) -> None:
+    """Disable serial-console restart throttling in an EVPN test VM.
+
+    Repeated short-lived console sessions during dual-stack traffic checks
+    can exhaust Fedora's serial-getty start limit. Reapply after a cold
+    restart because container-disk guest changes do not persist.
+
+    Args:
+        vm: Fedora test VM whose serial console is used for traffic checks.
+    """
+    LOGGER.info(f"Disabling serial-getty start limiting in EVPN VM {vm.name}")
+    configure_command = (
+        f"sudo mkdir -p {_SERIAL_GETTY_DROP_IN_DIRECTORY} && "
+        f"printf '%s\\n' '[Unit]' 'StartLimitIntervalSec=0' | "
+        f"sudo tee {_SERIAL_GETTY_DROP_IN_FILE} >/dev/null && "
+        "sudo systemctl daemon-reload"
+    )
+    verify_command = (
+        "systemctl show serial-getty@ttyS0.service --property=StartLimitIntervalUSec --value | grep -Eq '^0(us)?$'"
+    )
+    vm.console(commands=[configure_command, verify_command], timeout=TIMEOUT_30SEC)
 
 
 def cudn_evpn_subnets() -> list[str]:

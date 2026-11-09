@@ -155,6 +155,15 @@ Choose a parent that reaches the worker FRR peer addresses. Reserve a static,
 non-conflicting provider address and VTEP on that network. DHCP is not used by
 these tests because a reproducible static attachment is required.
 
+### Serial Console Stability
+
+Repeated console sessions during dual-stack traffic checks can hit Fedora's
+serial-getty start limit. The tests disable that limit only for
+`serial-getty@ttyS0.service` inside their VMs and verify the effective setting.
+The setting is reapplied after cold restart because container-disk guest changes
+do not persist. Deleting the test VMs removes the guest-only configuration;
+no cluster nodes or OpenPERouter workloads are changed.
+
 ### Validation
 
 The module waits for the underlay address, worker reachability, OpenPERouter
