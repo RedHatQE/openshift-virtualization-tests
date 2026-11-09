@@ -73,10 +73,6 @@ ignore = [
 "scripts/tests_analyzer/pytest_marker_analyzer.py" = ["N802"]
 # N802: logging.Formatter.formatTime override
 "utilities/logger.py" = ["N802"]
-# PT012: raises block holds a TimeoutSampler plus the loop that consumes it — a lazy
-# assignment the sampler cannot fail on, followed by the single statement that does
-# raise. Splitting it would need a helper for one test, so the rule reports nothing real
-"tests/storage/cdi_import/test_import_http.py" = ["PT012"]
 
 [tool.ruff.lint.isort]
 order-by-type = true
