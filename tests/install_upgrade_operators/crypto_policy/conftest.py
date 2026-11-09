@@ -337,10 +337,14 @@ def curve_propagation_expectations(curve_status_by_service, fips_enabled_cluster
     """
     LOGGER.info(f"Curve propagation test running on a {'FIPS' if fips_enabled_cluster else 'non-FIPS'} cluster")
     expectations = {}
+    jira_open_by_id: dict[str, bool] = {}
     for service_name, group_status in curve_status_by_service.items():
         pending_jira = CURVE_PROPAGATION_PENDING.get(service_name)
-        if pending_jira and not is_jira_open(pending_jira):
-            pending_jira = None
+        if pending_jira:
+            if pending_jira not in jira_open_by_id:
+                jira_open_by_id[pending_jira] = is_jira_open(jira_id=pending_jira)
+            if not jira_open_by_id[pending_jira]:
+                pending_jira = None
 
         expected_negotiable = set(TLS_PROPAGATION_CUSTOM_GROUPS)
         if fips_enabled_cluster:

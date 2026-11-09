@@ -1,7 +1,7 @@
 """
 TLS curve (group) propagation tests for CNV endpoints.
 
-Epic: https://redhat.atlassian.net/browse/CNV-74453 # <skip-jira-utils-check>
+Epic: https://redhat.atlassian.net/browse/CNV-82576 # <skip-jira-utils-check>
 """
 
 import pytest
