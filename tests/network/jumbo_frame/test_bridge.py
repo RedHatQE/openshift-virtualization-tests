@@ -140,7 +140,6 @@ def bridge_attached_vmb(worker_node2, namespace, unprivileged_client, br1test_br
 
 class TestJumboFrameBridge:
     @pytest.mark.ipv4
-    @pytest.mark.polarion("CNV-2685")
     def test_connectivity_over_linux_bridge_large_mtu(
         self,
         namespace,
@@ -149,6 +148,9 @@ class TestJumboFrameBridge:
         bridge_attached_vmb,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-2292 # <skip-jira-utils-check>
+        Polarion: CNV-2685
+
         Check connectivity over linux bridge with custom MTU
         """
         icmp_header = 8
@@ -160,7 +162,6 @@ class TestJumboFrameBridge:
         )
 
     @pytest.mark.ipv4
-    @pytest.mark.polarion("CNV-3788")
     def test_negative_mtu_linux_bridge(
         self,
         namespace,
@@ -169,6 +170,9 @@ class TestJumboFrameBridge:
         bridge_attached_vmb,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-2292 # <skip-jira-utils-check>
+        Polarion: CNV-3788
+
         Check connectivity failed when packet size is higher than custom MTU
         """
         assert_no_ping(

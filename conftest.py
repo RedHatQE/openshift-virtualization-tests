@@ -116,6 +116,9 @@ pytest_plugins = [
     "tests.fixtures.virt.templates",
     "tests.fixtures.virt.virtual_machines",
     "tests.fixtures.virt.vm_actions",
+    "tests.fixtures.upgrade.config",
+    "tests.fixtures.upgrade.resources",
+    "tests.fixtures.pytest_config",
 ]
 
 LOGGER = logging.getLogger(__name__)

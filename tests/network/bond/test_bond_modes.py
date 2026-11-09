@@ -206,20 +206,27 @@ def bond_resource(
         yield bond
 
 
-@pytest.mark.polarion("CNV-4382")
 @pytest.mark.s390x
 def test_bond_created(workers_utility_pods, matrix_bond_modes_bond):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-770 # <skip-jira-utils-check>
+    Jira: https://redhat.atlassian.net/browse/CNV-5245 # <skip-jira-utils-check>
+    Polarion: CNV-4382
+    """
     assert_bond_validation(utility_pods=workers_utility_pods, bond=matrix_bond_modes_bond)
 
 
-@pytest.mark.polarion("CNV-4383")
 @pytest.mark.s390x
 def test_vm_started(bond_modes_vm):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-770 # <skip-jira-utils-check>
+    Jira: https://redhat.atlassian.net/browse/CNV-5245 # <skip-jira-utils-check>
+    Polarion: CNV-4383
+    """
     bond_modes_vm.start(wait=True)
     bond_modes_vm.wait_for_agent_connected()
 
 
-@pytest.mark.polarion("CNV-6583")
 @pytest.mark.s390x
 def test_active_backup_bond_with_fail_over_mac(
     admin_client,
@@ -228,6 +235,10 @@ def test_active_backup_bond_with_fail_over_mac(
     hosts_common_available_ports,
     workers_utility_pods,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-770 # <skip-jira-utils-check>
+    Polarion: CNV-6583
+    """
     bond_index = next(index_number)
     with BondNodeNetworkConfigurationPolicy(
         name=f"test-active-bond{bond_index}-nncp",
@@ -240,16 +251,22 @@ def test_active_backup_bond_with_fail_over_mac(
         assert_bond_validation(utility_pods=workers_utility_pods, bond=bond)
 
 
-@pytest.mark.polarion("CNV-6584")
 @pytest.mark.s390x
 def test_vm_bond_with_fail_over_mac_started(
     vm_with_fail_over_mac_bond,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-770 # <skip-jira-utils-check>
+    Polarion: CNV-6584
+    """
     vm_with_fail_over_mac_bond.start(wait=True)
     vm_with_fail_over_mac_bond.wait_for_agent_connected()
 
 
-@pytest.mark.polarion("CNV-7263")
 @pytest.mark.s390x
 def test_bond_with_bond_port(workers_utility_pods, bond_resource):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-770 # <skip-jira-utils-check>
+    Polarion: CNV-7263
+    """
     assert_bond_validation(utility_pods=workers_utility_pods, bond=bond_resource)

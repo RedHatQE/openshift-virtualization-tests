@@ -1,7 +1,7 @@
 root-approvers: False
 approvers:
   - EdDev
-  - rnetser
+  - servolkov
 reviewers:
   - yossisegev
   - Anatw
@@ -11,7 +11,6 @@ reviewers:
   - nirdothan
   - orelmisan
   - frenzyfriday
-  - rnetser
   - maiqueb
   - RamLavi
   - qinqon
