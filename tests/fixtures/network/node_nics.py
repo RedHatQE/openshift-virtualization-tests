@@ -73,11 +73,9 @@ def _node_active_nics(
     node_nics: dict[str, list[str]] = {"available": [], "occupied": []}
     for node_interface in interfaces:
         iface_name = node_interface["name"]
-        #  Exclude SR-IOV (VFs) interfaces.
-        if SRIOV_VF_IFACE_NAME_PATTERN.findall(iface_name):
+        if SRIOV_VF_IFACE_NAME_PATTERN.search(iface_name):
             continue
 
-        # If the interface is a bridge with physical ports, then these ports should be labeled as occupied.
         _occupy_bridge_ports(
             node_name=node.name,
             node_interface=node_interface,

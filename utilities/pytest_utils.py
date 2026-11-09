@@ -112,8 +112,8 @@ def _write_xml_atomically(*, tree: ElementTree.ElementTree[ElementTree.Element[s
     except BaseException:
         try:
             os.unlink(tmp_path)
-        except FileNotFoundError:
-            LOGGER.warning(f"Temporary JUnit XML file {tmp_path} was already removed")
+        except OSError as unlink_error:
+            LOGGER.warning(f"Could not remove the temporary JUnit XML file {tmp_path}: {unlink_error}")
         raise
 
 

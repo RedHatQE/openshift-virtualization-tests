@@ -383,10 +383,12 @@ def _check_pod_running(pod: Pod) -> bool:
     Args:
         pod: Pod whose status is checked.
 
+    A pod is a TOCTOU hazard here: it can be deleted after the sampler snapshot, so a missing
+    pod is reported as not running and the sampler retries instead of failing (CNV-98696).
+
     Returns:
         True when the pod exists and is in the Running phase, False otherwise.
     """
-    # TOCTOU: pod deleted after snapshot; return False so sampler retries (CNV-98696).
     try:
         return pod.exists and pod.status == Pod.Status.RUNNING
     except NotFoundError:

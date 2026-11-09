@@ -1212,7 +1212,7 @@ class VirtualMachineForTests(VirtualMachine):
     def _set_cpu_topology(self, template_spec: dict) -> None:
         """Set the CPU cores, threads and sockets of the template spec."""
         if self.cpu_cores:
-            self._spec_cpu(template_spec)["cores"] = self.cpu_cores
+            self._spec_cpu(template_spec=template_spec)["cores"] = self.cpu_cores
 
         # Faster VMI start time
         if (
@@ -1224,26 +1224,26 @@ class VirtualMachineForTests(VirtualMachine):
             self.cpu_threads = Images.Windows.DEFAULT_CPU_THREADS
 
         if self.cpu_threads:
-            self._spec_cpu(template_spec)["threads"] = self.cpu_threads
+            self._spec_cpu(template_spec=template_spec)["threads"] = self.cpu_threads
 
         if self.cpu_sockets:
-            self._spec_cpu(template_spec)["sockets"] = self.cpu_sockets
+            self._spec_cpu(template_spec=template_spec)["sockets"] = self.cpu_sockets
 
     def _set_cpu_placement_and_model(self, template_spec: dict) -> None:
         """Set the CPU placement, emulator thread isolation, model and max sockets of the template spec."""
         if self.cpu_placement:
-            self._spec_cpu(template_spec)["dedicatedCpuPlacement"] = True
+            self._spec_cpu(template_spec=template_spec)["dedicatedCpuPlacement"] = True
 
         if self.isolate_emulator_thread:
             # This setting has to be specified in a combination with
             # cpu_placement = True. Only valid if dedicatedCpuPlacement is True.
-            self._spec_cpu(template_spec)["isolateEmulatorThread"] = True
+            self._spec_cpu(template_spec=template_spec)["isolateEmulatorThread"] = True
 
         if self.cpu_model:
-            self._spec_cpu(template_spec)["model"] = self.cpu_model
+            self._spec_cpu(template_spec=template_spec)["model"] = self.cpu_model
 
         if self.cpu_max_sockets:
-            self._spec_cpu(template_spec)["maxSockets"] = self.cpu_max_sockets
+            self._spec_cpu(template_spec=template_spec)["maxSockets"] = self.cpu_max_sockets
 
     def update_vm_cpu_configuration(self, template_spec):
         # cpu settings
@@ -1659,11 +1659,11 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
             ) or self.data_volume_template["spec"].get("storage", {}).get("accessModes", [])
         # Otherwise clone volume referenced in self.data_source
         else:
-            spec = self._clone_data_source_storage(spec=spec)
+            self._clone_data_source_storage(spec=spec)
 
         return spec
 
-    def _clone_data_source_storage(self, spec: dict) -> dict:
+    def _clone_data_source_storage(self, spec: dict) -> None:
         """Clone the volume referenced in the data source and size the dataVolumeTemplates accordingly."""
         # If storage params are not in source.spec (for e.g. source is VolumeSnapshot),
         # params will be taken from cluster configured default storage
@@ -1681,8 +1681,6 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
         )
         if not self.use_full_storage_api:
             storage_spec["storageClassName"] = volume_source_spec.storageClassName
-
-        return spec
 
     def _set_eviction_strategy_for_access_modes(self, spec: dict) -> None:
         """Set evictionStrategy to None for storage classes that are not ReadWriteMany."""

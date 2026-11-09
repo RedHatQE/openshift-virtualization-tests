@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import datetime
 
 import pytest
 
@@ -8,13 +8,7 @@ from utilities.audit_logs import (
     relevant_audit_logs,
 )
 
-
-def _naive_utc(*, year: int, month: int, day: int, hour: int = 0, minute: int = 0, second: int = 0) -> datetime:
-    """Build a timezone-naive UTC datetime, matching the session fixture and the audit log file names."""
-    return datetime(year, month, day, hour, minute, second, tzinfo=UTC).replace(tzinfo=None)
-
-
-SESSION_START_TIME = _naive_utc(year=2026, month=1, day=2, hour=10)
+SESSION_START_TIME = datetime.fromisoformat("2026-01-02T10:00:00")
 
 
 class TestAuditLogFilesPerNode:
@@ -32,7 +26,7 @@ class TestAuditLogFilesPerNode:
                     "node-1": [
                         (
                             "audit-2026-01-02T09-59-59.000.log",
-                            _naive_utc(year=2026, month=1, day=2, hour=9, minute=59, second=59),
+                            datetime.fromisoformat("2026-01-02T09:59:59"),
                         )
                     ]
                 },
@@ -45,7 +39,7 @@ class TestAuditLogFilesPerNode:
                         ACTIVE_AUDIT_LOG_NAME,
                         (
                             "audit-2026-01-02T09-00-00.000.log",
-                            _naive_utc(year=2026, month=1, day=2, hour=9),
+                            datetime.fromisoformat("2026-01-02T09:00:00"),
                         ),
                     ],
                     "node-2": [ACTIVE_AUDIT_LOG_NAME],
@@ -94,15 +88,15 @@ class TestRelevantAuditLogs:
                 [
                     (
                         "audit-2026-01-02T09-00-00.000.log",
-                        _naive_utc(year=2026, month=1, day=2, hour=9),
+                        datetime.fromisoformat("2026-01-02T09:00:00"),
                     ),
                     (
                         "audit-2026-01-02T10-00-00.000.log",
-                        _naive_utc(year=2026, month=1, day=2, hour=10),
+                        datetime.fromisoformat("2026-01-02T10:00:00"),
                     ),
                     (
                         "audit-2026-01-02T11-00-00.000.log",
-                        _naive_utc(year=2026, month=1, day=2, hour=11),
+                        datetime.fromisoformat("2026-01-02T11:00:00"),
                     ),
                 ],
                 [
@@ -116,15 +110,15 @@ class TestRelevantAuditLogs:
                 [
                     (
                         "audit-2026-01-02T08-00-00.000.log",
-                        _naive_utc(year=2026, month=1, day=2, hour=8),
+                        datetime.fromisoformat("2026-01-02T08:00:00"),
                     ),
                     (
                         "audit-2026-01-02T09-00-00.000.log",
-                        _naive_utc(year=2026, month=1, day=2, hour=9),
+                        datetime.fromisoformat("2026-01-02T09:00:00"),
                     ),
                     (
                         "audit-2026-01-02T10-00-00.000.log",
-                        _naive_utc(year=2026, month=1, day=2, hour=10),
+                        datetime.fromisoformat("2026-01-02T10:00:00"),
                     ),
                 ],
                 ["audit-2026-01-02T09-00-00.000.log", "audit-2026-01-02T10-00-00.000.log"],
@@ -134,11 +128,11 @@ class TestRelevantAuditLogs:
                 [
                     (
                         "audit-2026-01-02T10-00-00.000.log",
-                        _naive_utc(year=2026, month=1, day=2, hour=10),
+                        datetime.fromisoformat("2026-01-02T10:00:00"),
                     ),
                     (
                         "audit-2026-01-02T11-00-00.000.log",
-                        _naive_utc(year=2026, month=1, day=2, hour=11),
+                        datetime.fromisoformat("2026-01-02T11:00:00"),
                     ),
                 ],
                 ["audit-2026-01-02T10-00-00.000.log", "audit-2026-01-02T11-00-00.000.log"],
@@ -155,16 +149,16 @@ class TestRelevantAuditLogs:
         log_entries = [
             (
                 "audit-2026-01-02T10-00-00.000.log",
-                _naive_utc(year=2026, month=1, day=2, hour=10),
+                datetime.fromisoformat("2026-01-02T10:00:00"),
             ),
             ACTIVE_AUDIT_LOG_NAME,
             (
                 "audit-2026-01-02T09-00-00.000.log",
-                _naive_utc(year=2026, month=1, day=2, hour=9),
+                datetime.fromisoformat("2026-01-02T09:00:00"),
             ),
             (
                 "audit-2026-01-02T11-00-00.000.log",
-                _naive_utc(year=2026, month=1, day=2, hour=11),
+                datetime.fromisoformat("2026-01-02T11:00:00"),
             ),
         ]
 

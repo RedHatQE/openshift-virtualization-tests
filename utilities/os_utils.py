@@ -135,7 +135,9 @@ def _os_images_class(*, os_name: str, arch: str | None) -> Any:
     """Return the images class that holds the per-OS image attributes for the given architecture.
 
     Raises:
-        ValueError: When the OS is not defined under the resolved images class.
+        ValueError: When the architecture is not defined under ``ArchImages``, or when the OS is
+            not defined under the resolved images class. The architecture is checked first, because
+            an unknown architecture would otherwise be reported as an unsupported OS.
     """
     images_class = getattr(ArchImages, arch.upper(), None) if arch else Images
     if not images_class:

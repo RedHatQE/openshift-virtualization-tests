@@ -477,7 +477,10 @@ def data_volume(
         consume_wffc = False
         bind_immediate = True
         if golden_image := _existing_golden_image(client=client, dv_name=dv_name, dv_namespace=dv_namespace):
+            # The fixture ends here: falling through would create the DV and yield a second time,
+            # which pytest reports as a teardown error.
             yield golden_image
+            return
 
     dv_kwargs = _data_volume_kwargs(
         params_dict=params_dict,

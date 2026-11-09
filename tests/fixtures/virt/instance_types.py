@@ -4,7 +4,6 @@ import pytest
 from ocp_resources.virtual_machine_instancetype import VirtualMachineInstancetype
 from ocp_resources.virtual_machine_preference import VirtualMachinePreference
 
-# Fixture parameter name to instancetype API field name, per spec section.
 INSTANCE_TYPE_CPU_PARAM_TO_FIELD = {
     "dedicated_cpu_placement": "dedicated_cpu_placement",
     "cpu_model": "model",
@@ -24,7 +23,11 @@ INSTANCE_TYPE_TOP_LEVEL_PARAM_TO_FIELD = {
 
 
 def _add_optional_params(*, param_dict: dict, spec: dict, param_to_field: dict[str, str]) -> None:
-    """Copy the optional fixture parameters that are set into the spec under their API field names."""
+    """Copy the optional fixture parameters into the spec under their API field names.
+
+    Only truthy parameters are copied, which is the rule the template matrix has always used:
+    a parameter set to ``False`` or to an empty value is left out of the spec.
+    """
     for param_name, field_name in param_to_field.items():
         if param_dict.get(param_name):
             spec[field_name] = param_dict[param_name]
