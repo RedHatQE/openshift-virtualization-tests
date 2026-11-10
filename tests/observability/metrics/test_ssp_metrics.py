@@ -9,6 +9,7 @@ from tests.observability.metrics.utils import (
 )
 from tests.observability.utils import validate_metrics_value
 from utilities.constants import (
+    QUARANTINED,
     SSP_OPERATOR,
     VIRT_TEMPLATE_VALIDATOR,
 )
@@ -60,6 +61,13 @@ def created_multiple_failed_vms(
 
 
 class TestSSPTemplate:
+    @pytest.mark.xfail(
+        reason=(
+            f"{QUARANTINED}: SSP operator's InstanceChanged flag permanently stuck true so "
+            f"kubevirt_ssp_common_templates_restored_total metric never increments, Tracked in CNV-100826"
+        ),
+        run=False,
+    )
     @pytest.mark.polarion("CNV-11356")
     def test_metric_kubevirt_ssp_common_templates_restored_increase(self, prometheus, template_modified):
         validate_metric_value_within_range(
