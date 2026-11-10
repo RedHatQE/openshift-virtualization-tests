@@ -1,4 +1,4 @@
-"""CBT backup fixtures (backup success only)."""
+"""CBT backup fixtures."""
 
 import secrets
 from contextlib import ExitStack
@@ -17,8 +17,12 @@ from tests.storage.cbt.constants import (
     CBT_BOOT_DISK_TEST_DATA_FILE,
     CBT_DATA_DISK_TEST_DATA,
     CBT_ENABLED_LABEL,
+    CBT_INSTANCE_TYPE_NAME,
+    CBT_OS_FLAVOR,
+    CBT_PREFERENCE_NAME,
     CBT_TEST_DATA,
 )
+from tests.storage.cbt.restore import restored_cbt_vm_from_push_backup
 from tests.storage.cbt.utils import (
     CbtVmWithDataDisks,
     cbt_pvc_size_for_vm,
@@ -32,8 +36,6 @@ from tests.storage.cbt.utils import (
     wait_for_push_backup_complete,
     wait_for_vm_cbt_enabled,
 )
-from utilities.constants.images import OS_FLAVOR_RHEL
-from utilities.constants.instance_types import RHEL9_PREFERENCE, U1_SMALL
 from utilities.hco import ResourceEditorValidateHCOReconcile, hco_feature_gates_patch
 from utilities.storage import (
     data_volume_template_with_source_ref_dict,
@@ -101,13 +103,13 @@ def vm_with_cbt_label(
         name=f"{request.param['name']}-{unique_suffix}",
         namespace=namespace.name,
         client=unprivileged_client,
-        vm_instance_type=VirtualMachineClusterInstancetype(client=unprivileged_client, name=U1_SMALL),
-        vm_preference=VirtualMachineClusterPreference(client=unprivileged_client, name=RHEL9_PREFERENCE),
+        vm_instance_type=VirtualMachineClusterInstancetype(client=unprivileged_client, name=CBT_INSTANCE_TYPE_NAME),
+        vm_preference=VirtualMachineClusterPreference(client=unprivileged_client, name=CBT_PREFERENCE_NAME),
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=rhel9_data_source_scope_session,
             storage_class=storage_class_name_scope_module,
         ),
-        os_flavor=OS_FLAVOR_RHEL,
+        os_flavor=CBT_OS_FLAVOR,
         label=CBT_ENABLED_LABEL,
         data_disk_storage_class_name=storage_class_name_scope_module,
         data_disk_count=data_disk_count,
@@ -378,3 +380,30 @@ def ready_pull_backup_chain(
             namespace=namespace.name,
             client=unprivileged_client,
         )
+
+
+@pytest.fixture()
+def restored_vm_from_push_chain(
+    unprivileged_client,
+    namespace,
+    vm_with_cbt_label,
+    completed_push_backup_chain,
+    push_backup_pvc,
+):
+    """Running VM restored from the completed push-mode full backup.
+
+    Deletes the source VM, then rebuilds the boot disk from the backup PVC and
+    starts a VM with the name recorded by the backup.
+
+    Returns:
+        VirtualMachineForTests: Restored VM.
+    """
+    vm_with_cbt_label.clean_up(wait=True)
+    vm_with_cbt_label.teardown = False
+    with restored_cbt_vm_from_push_backup(
+        backups=completed_push_backup_chain,
+        backup_pvc_name=push_backup_pvc.name,
+        namespace=namespace.name,
+        client=unprivileged_client,
+    ) as restored_vm:
+        yield restored_vm

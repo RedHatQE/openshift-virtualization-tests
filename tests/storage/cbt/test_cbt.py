@@ -1,5 +1,8 @@
 """
-CBT (Changed Block Tracking) backup validation (backup success only)
+CBT (Changed Block Tracking) backup validation.
+
+The push-mode full backup test restores the VM and checks guest data.
+The other tests check backup success only.
 
 STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
@@ -17,6 +20,7 @@ from tests.storage.cbt.constants import (
     CBT_BACKUP_TYPE_INCREMENTAL,
     CBT_MULTI_DISK_DATA_DISK_COUNT,
 )
+from tests.storage.cbt.restore import assert_restored_cbt_vm_data
 from tests.storage.cbt.utils import (
     assert_backup_status_includes_volumes,
     attached_data_disk_names,
@@ -31,7 +35,10 @@ from utilities.constants.virt import DV_DISK
 )
 class TestFullBackup:
     """
-    Full backup validation for push and pull modes (backup success only).
+    Full backup validation for push and pull modes.
+
+    Push mode restores the VM from the backup and checks guest data.
+    Pull mode checks that the backup export becomes ready.
 
     Preconditions:
         - Running VM with CBT enabled
@@ -47,9 +54,12 @@ class TestFullBackup:
     def test_full_backup_push_mode(
         self,
         completed_push_backup_chain,
+        restored_vm_from_push_chain,
     ):
         """
-        Test that a full backup in push mode completes successfully.
+        Test that a full backup in push mode completes and the VM can be restored from it.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Preconditions:
             - Backup PVC available
@@ -58,9 +68,12 @@ class TestFullBackup:
             1. Create a backup tracker for the VM
             2. Perform a full backup in push mode
             3. Wait for the backup to complete
+            4. Delete the original VM
+            5. Restore the VM disk from the backup
+            6. Start the restored VM
 
         Expected:
-            - Full backup completes and includes the boot disk
+            - Full backup includes the boot disk, and the restored VM boots with the original test data
         """
         full_backup = completed_push_backup_chain[0]
         assert_backup_status_includes_volumes(
@@ -69,6 +82,7 @@ class TestFullBackup:
             expected_volume_names=[DV_DISK],
             expected_backup_type=CBT_BACKUP_TYPE_FULL,
         )
+        assert_restored_cbt_vm_data(vm=restored_vm_from_push_chain)
 
     @pytest.mark.polarion("CNV-15996")
     @pytest.mark.parametrize(
