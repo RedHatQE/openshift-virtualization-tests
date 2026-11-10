@@ -38,35 +38,56 @@ BLOCK = DataVolume.VolumeMode.BLOCK
 FILESYSTEM = DataVolume.VolumeMode.FILE
 
 
+# Volume mode is constrained by each storage class's StorageProfile: STORAGE_CLASS_A (HPP) only
+# supports Filesystem, while STORAGE_CLASS_B (Ceph RBD) supports both Block and Filesystem. A DV or
+# migration target that requests Block on the Filesystem-only class fails with ErrClaimNotValid, so
+# the matrix only enumerates combinations where the STORAGE_CLASS_A side stays Filesystem. This
+# excludes Block-to-Block entirely (it would require Block on both sides).
 @pytest.mark.parametrize(
-    "source_storage_class, target_storage_class",
+    "source_storage_class, target_storage_class, source_volume_mode, target_volume_mode",
     [
         pytest.param(
             {"source_storage_class": py_config[STORAGE_CLASS_A]},
             {"target_storage_class": py_config[STORAGE_CLASS_B]},
-            id="source_a_target_b",
+            FILESYSTEM,
+            FILESYSTEM,
+            id="source_a_target_b_file_to_file",
+        ),
+        pytest.param(
+            {"source_storage_class": py_config[STORAGE_CLASS_A]},
+            {"target_storage_class": py_config[STORAGE_CLASS_B]},
+            FILESYSTEM,
+            BLOCK,
+            id="source_a_target_b_file_to_block",
         ),
         pytest.param(
             {"source_storage_class": py_config[STORAGE_CLASS_B]},
             {"target_storage_class": py_config[STORAGE_CLASS_A]},
-            id="source_b_target_a",
+            FILESYSTEM,
+            FILESYSTEM,
+            id="source_b_target_a_file_to_file",
+        ),
+        pytest.param(
+            {"source_storage_class": py_config[STORAGE_CLASS_B]},
+            {"target_storage_class": py_config[STORAGE_CLASS_A]},
+            BLOCK,
+            FILESYSTEM,
+            id="source_b_target_a_block_to_file",
         ),
     ],
-    indirect=True,
+    indirect=["source_storage_class", "target_storage_class"],
 )
 class TestOfflineVMStorageMigrationVolumeModes:
     """
     Tests for offline VM storage migration across volume mode combinations.
 
     Parametrize:
-        - storage_class_direction:
-            - Storage class A to storage class B
-            - Storage class B to storage class A
-        - volume_mode:
-            - Block-to-Block
+        - Storage class A (Filesystem-only) to storage class B:
+            - File-to-File
+            - File-to-Block
+        - Storage class B to storage class A (Filesystem-only):
             - File-to-File
             - Block-to-File
-            - File-to-Block
 
     Preconditions:
         - Source and target storage classes available on the cluster
@@ -74,15 +95,6 @@ class TestOfflineVMStorageMigrationVolumeModes:
         - File written to the VM data disk with known content
     """
 
-    @pytest.mark.parametrize(
-        "source_volume_mode, target_volume_mode",
-        [
-            pytest.param(BLOCK, BLOCK, id="block_to_block"),
-            pytest.param(FILESYSTEM, FILESYSTEM, id="file_to_file"),
-            pytest.param(BLOCK, FILESYSTEM, id="block_to_file"),
-            pytest.param(FILESYSTEM, BLOCK, id="file_to_block"),
-        ],
-    )
     @pytest.mark.polarion("CNV-16796")
     @pytest.mark.usefixtures("volume_mode_offline_mig_migration")
     def test_offline_vm_storage_migration_across_volume_modes(
