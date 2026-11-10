@@ -136,3 +136,26 @@ class TestVMIMetricsWindowsVms:
         """
 
     test_kubevirt_vmi_info_has_panic_device_false_windows.__test__ = False
+
+
+@pytest.mark.manual
+def test_vmi_panic_device_invalid_model_rejected():
+    """
+    [NEGATIVE] Test that creating a virtual machine with an unsupported panic device model is rejected.
+
+    Jira: https://redhat.atlassian.net/browse/CNV-95849  # <skip-jira-utils-check>
+
+    Preconditions:
+        - A namespace is available for virtual machine creation
+
+    Steps:
+        1. Attempt to create a virtual machine with a panic device whose model is not one of the
+           supported values (isa, hyperv, pvpanic)
+
+    Expected:
+        - Virtual machine creation fails with a validation error referencing the unsupported panic
+          device model
+    """
+
+
+test_vmi_panic_device_invalid_model_rejected.__test__ = False
