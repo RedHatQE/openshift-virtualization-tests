@@ -42,7 +42,6 @@ from tests.install_upgrade_operators.crypto_policy.constants import (
 from tests.install_upgrade_operators.crypto_policy.utils import (
     get_node_available_tls_groups,
     get_resource_crypto_policy,
-    get_service_curve_status,
     get_services_pqc_status,
     update_apiserver_crypto_policy,
 )
@@ -298,60 +297,43 @@ def custom_curve_profile_applied(admin_client, enabled_aaq, hyperconverged_resou
 
 
 @pytest.fixture(scope="module")
-def verified_node_curve_propagation_support(workers_utility_pods, worker_node1, fips_enabled_cluster):
+def probe_groups(fips_enabled_cluster):
+    """TLS groups probed by the curve propagation test.
+    On FIPS clusters, groups in `NON_FIPS_GROUPS` are removed because the worker OpenSSL cannot offer them.
+    """
+    groups = [*TLS_PROPAGATION_CUSTOM_GROUPS, TLS_PROPAGATION_OMITTED_GROUP]
+    if fips_enabled_cluster:
+        groups = [group for group in groups if group not in NON_FIPS_GROUPS]
+    return groups
+
+
+@pytest.fixture(scope="module")
+def verified_node_curve_propagation_support(workers_utility_pods, worker_node1, probe_groups):
     """Verifies that worker node OpenSSL supports every TLS group probed by the curve propagation test."""
     available_groups = get_node_available_tls_groups(
         utility_pods=workers_utility_pods,
         node=worker_node1,
     )
-    required_groups = [*TLS_PROPAGATION_CUSTOM_GROUPS, TLS_PROPAGATION_OMITTED_GROUP]
-    if fips_enabled_cluster:
-        # The FIPS crypto module blocks X25519MLKEM768 entirely, so the worker's OpenSSL
-        # cannot even offer it locally (confirmed: `openssl list -tls-groups` omits it,
-        # and passing it to `-groups` fails client-side before any server behavior is
-        # tested). TLS_PROPAGATION_OMITTED_GROUP (secp384r1) is FIPS-probeable, so it
-        # needs no special-casing here.
-        required_groups = [group for group in required_groups if group not in NON_FIPS_GROUPS]
-    missing_groups = [group for group in required_groups if group not in available_groups]
+    missing_groups = [group for group in probe_groups if group not in available_groups]
     assert not missing_groups, f"TLS groups not found on node: {missing_groups}. Available: {available_groups}"
 
 
 @pytest.fixture()
-def curve_status_by_service(
-    verified_node_curve_propagation_support,
-    custom_curve_profile_applied,
-    console_plugin_test_network_policy,
-    workers_utility_pods,
-    worker_node1,
-    cnv_services_with_template,
-    fips_enabled_cluster,
-):
-    """Per-curve negotiation status for each CNV service under the Custom curve profile."""
-    probe_groups = [*TLS_PROPAGATION_CUSTOM_GROUPS, TLS_PROPAGATION_OMITTED_GROUP]
-    if fips_enabled_cluster:
-        probe_groups = [group for group in probe_groups if group not in NON_FIPS_GROUPS]
-    worker_exec = ExecCommandOnPod(utility_pods=workers_utility_pods, node=worker_node1)
-    results = {
-        service.name: get_service_curve_status(worker_exec=worker_exec, service=service, groups=probe_groups)
-        for service in cnv_services_with_template
-        if service.name not in CURVE_PROBE_EXCLUDED
-    }
-    for service_name, group_status in results.items():
-        LOGGER.info(f"Curve probe {service_name}: {group_status}")
-    return results
-
-
-@pytest.fixture()
-def curve_propagation_expectations(curve_status_by_service, fips_enabled_cluster, services_tls_runtime):
+def curve_propagation_expectations(cnv_services_with_template, fips_enabled_cluster, services_tls_runtime):
     """Per-service expected curve negotiation outcome and pending-Jira gate.
 
-    Computed once as test setup so the test itself only runs the subtests, without
-    deciding per-service business rules inline.
+    Computed once as test setup so the test itself only decides which services need to
+    run, without deciding per-service business rules inline. The actual TLS probing
+    happens inside each subtest, so a single probe failure does not hide the results of
+    the others.
     """
     LOGGER.info(f"Curve propagation test running on a {'FIPS' if fips_enabled_cluster else 'non-FIPS'} cluster")
     expectations = {}
     jira_open_by_id: dict[str, bool] = {}
-    for service_name, group_status in curve_status_by_service.items():
+    for service in cnv_services_with_template:
+        service_name = service.name
+        if service_name in CURVE_PROBE_EXCLUDED:
+            continue
         pending_jira = CURVE_PROPAGATION_PENDING.get(service_name)
         if pending_jira:
             if pending_jira not in jira_open_by_id:
@@ -375,7 +357,7 @@ def curve_propagation_expectations(curve_status_by_service, fips_enabled_cluster
             expected_negotiable.difference_update(NON_FIPS_GROUPS)
 
         expectations[service_name] = {
-            "group_status": group_status,
+            "service": service,
             "expected_negotiable": expected_negotiable,
             "pending_jira": pending_jira,
         }

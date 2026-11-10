@@ -425,29 +425,26 @@ def get_services_pqc_status(
     return results
 
 
-def get_service_curve_status(
+def probe_service_curve_negotiated(
     worker_exec: ExecCommandOnPod,
     service: Service,
-    groups: list[str],
-) -> dict[str, bool | None]:
-    """Probes a single service for each TLS group independently (with SNI).
+    group: str,
+) -> bool | None:
+    """Probes a single service for a single TLS group (with SNI).
 
     Args:
         worker_exec: ExecCommandOnPod instance for running commands on a worker node.
         service: Service resource to probe.
-        groups: TLS group names to probe one at a time.
+        group: TLS group name to probe.
 
     Returns:
-        dict[str, bool | None]: Mapping of group name to negotiation status:
-            True = group negotiated, False = group rejected (service reachable),
-            None = neither indicator seen (service/group unreachable).
+        bool | None: True if the group negotiated, False if the service rejected it
+            (reachable), None if neither indicator was seen (service/group unreachable).
     """
-    status: dict[str, bool | None] = {}
-    for group in groups:
-        output = worker_exec.exec(
-            command=compose_openssl_probe_command(service=service, groups=group, use_sni=True),
-            ignore_rc=True,
-        )
-        status[group] = classify_openssl_probe_output(output=output)
-        LOGGER.info(f"Service {service.name} TLS group {group}: negotiated={status[group]}")
-    return status
+    output = worker_exec.exec(
+        command=compose_openssl_probe_command(service=service, groups=group, use_sni=True),
+        ignore_rc=True,
+    )
+    negotiated = classify_openssl_probe_output(output=output)
+    LOGGER.info(f"Service {service.name} TLS group {group}: negotiated={negotiated}")
+    return negotiated
