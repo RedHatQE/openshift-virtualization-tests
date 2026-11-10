@@ -9,16 +9,22 @@ output-format = "grouped"
 # force-exclude makes the exclusions apply to explicitly passed files too (the
 # ruff-pre-commit hooks already pass --force-exclude, this covers direct invocations)
 force-exclude = true
-# utilities/unittests is out of scope for linters (matches the flake8 hook exclusion)
-extend-exclude = ["docs/site", "utilities/unittests"]
+extend-exclude = ["docs/site"]
 
 [tool.ruff.format]
-exclude = [".git", ".venv", ".mypy_cache", ".tox", "__pycache__", "utilities/unittests"]
+exclude = [".git", ".venv", ".mypy_cache", ".tox", "__pycache__"]
 
 [tool.ruff.lint]
 # FCN codes come from the RedHatQE flake8 fork (function-names plugin); ruff does not
 # know them, so without this RUF100 strips their noqa directives on every --fix run
 external = ["FCN"]
+# lint-only exclusion (ruff format is a no-op there — all files are already formatted).
+# The trailing /** is required: section-level exclude patterns are matched against files,
+# so a bare directory name would be silently ignored (verified with ruff 0.17.3).
+# Parity with the flake8 hook exclusion: these unit tests drive mock context managers'
+# __enter__ directly (PLC2801) and use deliberately loose pytest patterns (RUF043,
+# PLR0133, PT012). Fixing them is a dedicated follow-up, not part of a linter bump.
+exclude = ["utilities/unittests/**"]
 extend-select = [
   "PLC0415", # import-outside-top-level
   "N802",    # function name should be lowercase — method overrides from stdlib

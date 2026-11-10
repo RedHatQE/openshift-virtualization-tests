@@ -200,5 +200,12 @@ class TestCustomNamespace:
         custom_vm_template_namespace,
         edited_custom_namespace_template,
     ):
-        with pytest.raises(TimeoutExpiredError):
+        try:
             wait_for_edited_label_reconciliation(template=edited_custom_namespace_template)
+        except TimeoutExpiredError:
+            pass
+        else:
+            pytest.fail(
+                f"Template {edited_custom_namespace_template.name} in custom namespace "
+                f"{custom_vm_template_namespace.name} reconciled after label edit post-revert."
+            )
