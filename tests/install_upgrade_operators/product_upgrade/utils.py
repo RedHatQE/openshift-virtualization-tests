@@ -561,9 +561,10 @@ def get_alerts_fired_during_upgrade(
     for alert in fired_alerts:
         alert_name = alert["metric"]["alertname"]
         if alert_name in before_upgrade_alert_names:
+            LOGGER.warning(f"Skipping pre-upgrade alert fired during upgrade: {alert_name}")
             continue
-        if alert_name in allowlist:
-            LOGGER.info(f"Skipping allowlisted alert fired during upgrade: {alert_name}")
+        elif alert_name in allowlist:
+            LOGGER.warning(f"Skipping allowlisted alert fired during upgrade: {alert_name} (metric: {alert['metric']})")
             continue
         alerts_by_name.setdefault(alert_name, []).append(alert)
 
