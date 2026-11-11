@@ -333,6 +333,9 @@ class TestCreateRhelVm:
         mock_get_config_map.assert_called_once_with(namespace="test-namespace")
         mock_get_url.assert_called_once()
         mock_dv.to_dict.assert_called_once()
+        assert mock_dv_class.call_args.kwargs["client"] is mock_client, (
+            "create_rhel_vm must forward client to DataVolume, otherwise it falls back to a kubeconfig client"
+        )
         mock_running_vm.assert_called_once_with(vm=mock_vm)
         mock_cleanup.assert_called_once_with(artifactory_secret=mock_secret, artifactory_config_map=mock_config_map)
 

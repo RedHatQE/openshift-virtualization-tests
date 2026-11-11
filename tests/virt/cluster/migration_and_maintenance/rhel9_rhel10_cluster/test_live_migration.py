@@ -59,6 +59,8 @@ def test_vm_migrates_from_rhcos10_to_rhcos9_node(
     Test that live migration from an RHCOS 10 worker node to an RHCOS 9 worker node
     completes successfully without restarting the VM.
 
+    STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/dual-stream-cluster-rhcos9-rhcos10/stp.md
+
     Preconditions:
         - Under-test VM running on an RHCOS 10 worker node
 
@@ -114,6 +116,8 @@ def test_vm_migrates_from_rhcos9_to_rhcos10_node(
     """
     Test that live migration from an RHCOS 9 worker node to an RHCOS 10 worker node
     completes successfully without restarting the VM.
+
+    STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/dual-stream-cluster-rhcos9-rhcos10/stp.md
 
     Preconditions:
         - Under-test VM running on an RHCOS 9 worker node

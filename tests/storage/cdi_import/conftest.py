@@ -15,6 +15,7 @@ from tests.storage.constants import (
     HTTP,
     QUAY_FEDORA_CONTAINER_IMAGE,
 )
+from tests.storage.stop_status_utils import dv_stop_status_restart_threshold
 from tests.storage.utils import (
     create_pod_for_pvc,
     get_file_url,
@@ -106,7 +107,7 @@ def running_pod_with_dv_pvc(
     dv_from_http_import,
 ):
     """Create a running pod with DV's PVC."""
-    dv_from_http_import.wait_for_dv_success()
+    dv_from_http_import.wait_for_dv_success(stop_status_func=dv_stop_status_restart_threshold, dv=dv_from_http_import)
     with create_pod_for_pvc(
         pvc=dv_from_http_import.pvc,
         volume_mode=dv_from_http_import.pvc.instance.spec.volumeMode,
@@ -146,7 +147,7 @@ def created_vm_list(unprivileged_client, created_blank_dv_list, storage_class_na
             if sc_volume_binding_mode_is_wffc(sc=storage_class_name_scope_module, client=unprivileged_client):
                 dv.wait_for_status(status=DataVolume.Status.PENDING_POPULATION, timeout=TIMEOUT_1MIN)
             else:
-                dv.wait_for_dv_success(timeout=TIMEOUT_1MIN)
+                dv.wait_for_dv_success(timeout=TIMEOUT_1MIN, stop_status_func=dv_stop_status_restart_threshold, dv=dv)
             vm = VirtualMachineForTests(
                 client=unprivileged_client,
                 name=f"vm-{dv.name}",

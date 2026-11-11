@@ -2,6 +2,7 @@
 Pytest conftest file for CNV tests
 """
 
+import bdb
 import datetime
 import logging
 import os
@@ -15,7 +16,6 @@ from typing import Any
 
 import pytest
 import shortuuid
-from _pytest.config import Config
 from _pytest.nodes import Collector, Node
 from _pytest.reports import CollectReport, TestReport
 from _pytest.runner import CallInfo
@@ -47,6 +47,7 @@ from utilities.data_collector import (
     set_data_collector_values,
 )
 from utilities.database import Database
+from utilities.debug import remote_debugger_enabled, remote_post_mortem
 from utilities.exceptions import MissingEnvironmentVariableError, StorageSanityError
 from utilities.junit_ai_utils import enrich_junit_xml, setup_ai_analysis
 from utilities.logger import setup_logging
@@ -56,17 +57,20 @@ from utilities.pytest_utils import (
     config_default_storage_class,
     deploy_run_in_progress_config_map,
     deploy_run_in_progress_namespace,
+    filter_deprecated_api_tests,
     filter_hpp_tests,
     filter_multiarch_tests,
     filter_ocs_tests,
     filter_post_test_alerts_tests,
+    filter_sno_only_tests,
+    filter_upgrade_tests,
     get_artifactory_server_url,
     get_base_matrix_name,
     get_cnv_version_explorer_url,
     get_matrix_params,
     get_tests_cluster_markers,
     mark_nmstate_dependent_tests,
-    remove_tests_from_list,
+    patch_paramiko_for_fips,
     reorder_early_fixtures,
     run_in_progress_config_map,
     separator,
@@ -113,6 +117,9 @@ pytest_plugins = [
     "tests.fixtures.virt.templates",
     "tests.fixtures.virt.virtual_machines",
     "tests.fixtures.virt.vm_actions",
+    "tests.fixtures.upgrade.config",
+    "tests.fixtures.upgrade.resources",
+    "tests.fixtures.pytest_config",
 ]
 
 LOGGER = logging.getLogger(__name__)
@@ -538,89 +545,9 @@ def mark_tests_by_team(item: Item) -> None:
             item.add_marker(marker=team)
 
 
-def filter_upgrade_tests(
-    items: list[Item],
-    config: Config,
-) -> tuple[list[Item], list[Item]]:
-    upgrade_tests, non_upgrade_tests, always_keep = [], [], []
-    upgrade_markers = {"upgrade", "upgrade_custom"}
-    chosen_upgrade_markers = {marker for marker in upgrade_markers if config.getoption(f"--{marker}")}
-    upgrade_markers_to_collect = chosen_upgrade_markers or upgrade_markers
-
-    for item in items:
-        if "post_test_alerts" in item.keywords:
-            always_keep.append(item)
-        elif upgrade_markers_to_collect.intersection(set(item.keywords)):
-            upgrade_tests.append(item)
-        else:
-            non_upgrade_tests.append(item)
-
-    # If upgrade marker configured, select specific upgrade tests by marker, and discard the others.
-    if chosen_upgrade_markers:
-        upgrade_tests, discard = remove_upgrade_tests_based_on_config(
-            cnv_source=config.getoption("--cnv-source"),
-            upgrade_tests=upgrade_tests,
-        )
-        return [*upgrade_tests, *always_keep], [*non_upgrade_tests, *discard]
-
-    # If no upgrade marker in config, discard all upgrade tests.
-    return [*non_upgrade_tests, *always_keep], upgrade_tests
-
-
-def remove_upgrade_tests_based_on_config(
-    cnv_source: str,
-    upgrade_tests: list[Item],
-) -> tuple[list[Item], list[Item]]:
-    """
-    Filter the correct upgrade tests to execute based on config, since only one lane can be chosen.
-    If performing OCP upgrade, keep only the tests with pytest.mark.ocp_upgrade.
-    If performing EUS upgrade, keep only the tests with pytest.mark.eus_upgrade.
-    If performing CNV upgrade, keep only the tests with pytest.mark.cnv_upgrade.
-    In addition, determine if we are running the cnv upgrade test for production source or for stage/osbs.
-
-    Args:
-        cnv_source(str): cnv source option.
-        upgrade_tests(list): list of upgrade tests.
-    """
-    keep: list[Item] = []
-    marker_str = f"{py_config['upgraded_product']}_upgrade"
-
-    for test in upgrade_tests:
-        if marker_str == "cnv_upgrade" and "cnv_upgrade_process" in test.name:
-            # choose the right cnv_upgrade test according to cnv_source.
-            # production cnv_upgrade_test if prod source, otherwise the stage/osbs one
-            if (cnv_source == "production") == ("production_source" in test.name):
-                keep.append(test)
-        elif marker_str in test.keywords:
-            keep.append(test)
-
-    discard = [test for test in upgrade_tests if test not in keep]
-    return keep, discard
-
-
-def filter_deprecated_api_tests(items: list[Item], config: Config) -> list[Item]:
-    # filter out deprecated api tests, if explicitly asked or if running upgrade/install tests
-    if (
-        config.getoption("--skip-deprecated-api-test")
-        or config.getoption("--install")
-        or config.getoption("--upgrade")
-        or config.getoption("--upgrade_custom")
-    ):
-        discard_tests, items_to_return = remove_tests_from_list(items=items, filter_str="deprecated_api")
-        config.hook.pytest_deselected(items=discard_tests)
-        return items_to_return
-    return items
-
-
-def filter_sno_only_tests(items: list[Item], config: Config) -> list[Item]:
-    if config.getoption("-m") and "sno" not in config.getoption("-m"):
-        discard_tests, items_to_return = remove_tests_from_list(items=items, filter_str="single_node_tests")
-        config.hook.pytest_deselected(items=discard_tests)
-        return items_to_return
-    return items
-
-
 def pytest_configure(config):
+    patch_paramiko_for_fips()
+
     # test_deprecation_audit_logs should always run regardless the path that passed to pytest.
     deprecation_tests_dir_path = "tests/deprecated_api"
     file_or_dir = config.option.file_or_dir
@@ -1057,6 +984,25 @@ def pytest_exception_interact(node: Item | Collector, call: CallInfo[Any], repor
                     )
             except Exception as current_exception:
                 LOGGER.warning(f"Failed to collect logs: {test_name}: {current_exception} {traceback.format_exc()}")
+
+    # Remote post-mortem debugger (CNV_REMOTE_PDB). Ported from RedHatQE/mtv-api-tests PR #733
+    # (by myakove — source: https://github.com/RedHatQE/mtv-api-tests/blob/main/conftest.py),
+    # adapted to this repository. Runs after must-gather collection so
+    # diagnostics are gathered before the session blocks waiting for a debugger connection. Skipped
+    # when --pdb is active so the local terminal debugger takes precedence, and skipped
+    # for BdbQuit so quitting a code breakpoint fails that test without opening another
+    # listener. A debugger quit ends the test session, matching pytest's native --pdb
+    # behavior. usepdb has a default because -p no:pdb removes the option.
+    if (
+        remote_debugger_enabled()
+        and not node.config.getoption("usepdb", default=False)
+        and call.excinfo is not None
+        and not isinstance(call.excinfo.value, bdb.BdbQuit)
+    ):
+        try:
+            remote_post_mortem(exception=call.excinfo.value)
+        except bdb.BdbQuit:
+            pytest.exit("Quitting remote debugger")
 
 
 @pytest.hookimpl(optionalhook=True)

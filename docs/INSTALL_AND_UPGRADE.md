@@ -11,7 +11,7 @@ Note:
 In this case, installation of openshift virtualization would take place using redhat-operator catalogsource.
 
 ```bash
-pytest tests/install_upgrade_operators/product_install/test_install_openshift_virtualization.py --install --cnv-source production
+uv run pytest tests/install_upgrade_operators/product_install/test_install_openshift_virtualization.py --install --cnv-source production
 ```
 
 ##### Install from osbs catalogsource
@@ -19,7 +19,7 @@ pytest tests/install_upgrade_operators/product_install/test_install_openshift_vi
 In this case, installation would take place using a custom catalogsource using specified IIB image. Currently only installation using brew url is supported.
 
 ```bash
-pytest tests/install_upgrade_operators/product_install/test_install_openshift_virtualization.py --install --cnv-source osbs --cnv-image brew.registry.redhat.io/rh-osbs/iib:<image>
+uv run pytest tests/install_upgrade_operators/product_install/test_install_openshift_virtualization.py --install --cnv-source osbs --cnv-image brew.registry.redhat.io/rh-osbs/iib:<image>
 ```
 
 ## Upgrade tests

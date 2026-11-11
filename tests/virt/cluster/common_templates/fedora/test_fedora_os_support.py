@@ -19,6 +19,7 @@ from tests.virt.cluster.common_templates.utils import (
 )
 from utilities import console
 from utilities.constants.instance_types import LINUX_STR
+from utilities.constants.virt import FEDORA_EXPECTED_HYPERV_FEATURES
 from utilities.guest_support import check_vm_xml_hyperv
 from utilities.infra import assert_secure_boot_mokutil_status, validate_os_info_vmi_vs_linux_os
 from utilities.virt import (
@@ -60,20 +61,7 @@ HYPERV_DICT = {
                     "features": {
                         "acpi": {},
                         "apic": {},
-                        "hyperv": {
-                            "relaxed": {},
-                            "vapic": {},
-                            "synictimer": {"direct": {}},
-                            "vpindex": {},
-                            "synic": {},
-                            "spinlocks": {"spinlocks": 8191},
-                            "frequencies": {},
-                            "ipi": {},
-                            "reenlightenment": {},
-                            "reset": {},
-                            "runtime": {},
-                            "tlbflush": {},
-                        },
+                        "hyperv": FEDORA_EXPECTED_HYPERV_FEATURES,
                     },
                 }
             }
@@ -114,7 +102,11 @@ class TestCommonTemplatesFedora:
     @pytest.mark.polarion("CNV-2651")
     def test_vm_hyperv(self, admin_client, matrix_fedora_os_vm_from_template):
         LOGGER.info("Verify VMI HyperV values.")
-        check_vm_xml_hyperv(vm=matrix_fedora_os_vm_from_template, admin_client=admin_client)
+        check_vm_xml_hyperv(
+            vm=matrix_fedora_os_vm_from_template,
+            admin_client=admin_client,
+            expected_hyperv_features=FEDORA_EXPECTED_HYPERV_FEATURES,
+        )
         check_vm_xml_clock(vm=matrix_fedora_os_vm_from_template, admin_client=admin_client)
 
     @pytest.mark.sno
@@ -182,7 +174,7 @@ class TestCommonTemplatesFedora:
     @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::vm_expose_ssh"])
     @pytest.mark.polarion("CNV-3574")
-    @pytest.mark.jira("CNV-76696", run=False)
+    @pytest.mark.jira("CNV-98657", run=False)
     def test_virtctl_guest_agent_fs_info(self, admin_client, matrix_fedora_os_vm_from_template):
         validate_fs_info_virtctl_vs_linux_os(vm=matrix_fedora_os_vm_from_template, admin_client=admin_client)
 

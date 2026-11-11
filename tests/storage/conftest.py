@@ -8,6 +8,7 @@ import ipaddress
 import logging
 import os
 import ssl
+from uuid import uuid4
 
 import pytest
 import shortuuid
@@ -503,8 +504,8 @@ def storage_class_name_scope_class(storage_class_matrix__class__):
 
 
 @pytest.fixture(scope="session")
-def cluster_csi_drivers_names():
-    yield [csi_driver.name for csi_driver in list(CSIDriver.get())]
+def cluster_csi_drivers_names(admin_client):
+    yield [csi_driver.name for csi_driver in list(CSIDriver.get(client=admin_client))]
 
 
 @pytest.fixture(scope="module")
@@ -532,6 +533,26 @@ def unique_suffix():
     return shortuuid.ShortUUID().random(length=4).lower()
 
 
+@pytest.fixture()
+def unique_suffix_scope_function():
+    """Provide a function-scoped unique suffix for per-test resource names.
+
+    Use this instead of the class-scoped `unique_suffix` when each test method needs a
+    distinct suffix - e.g. to keep names unique when a class- or module-scoped namespace
+    is shared, so a controller cannot match a previous test's stale resource by name.
+
+    Returns:
+        A collision-resistant hexadecimal random suffix.
+    """
+    return uuid4().hex
+
+
 @pytest.fixture(scope="class")
 def dv_wait_timeout(request):
     return request.param.get("dv_wait_timeout") if hasattr(request, "param") else TIMEOUT_30MIN
+
+
+@pytest.fixture(scope="module")
+def rwx_storage_class_name_scope_module(storage_class_matrix_rwx_matrix__module__):
+    """Storage class name from the RWX-only storage class matrix."""
+    return [*storage_class_matrix_rwx_matrix__module__][0]

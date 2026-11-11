@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING
 
 import pytest
 import requests
-from kubernetes.dynamic import DynamicClient
 from ocp_resources.cluster_role import ClusterRole
 from ocp_resources.config_map import ConfigMap
 from ocp_resources.daemonset import DaemonSet
@@ -51,6 +50,8 @@ from utilities.virt import (
 
 if TYPE_CHECKING:
     from typing import Any
+
+    from kubernetes.dynamic import DynamicClient
 
 LOGGER = logging.getLogger(__name__)
 
@@ -509,13 +510,14 @@ def get_storage_class_for_storage_migration(storage_class: str, cluster_storage_
     )
 
 
-def blank_dv_template(name: str, namespace: str, storage_class_name: str) -> dict[str, Any]:
+def blank_dv_template(name: str, namespace: str, storage_class_name: str, client: DynamicClient) -> dict[str, Any]:
     """Build a blank DataVolume template dict suitable for VM dataVolumeTemplates.
 
     Args:
         name: DataVolume name.
         namespace: Target namespace (stripped from the returned dict for template use).
         storage_class_name: Storage class for the blank PVC.
+        client: DynamicClient used to render the DataVolume resource.
 
     Returns:
         Mutable DataVolume resource dict with namespace removed, ready for use in
@@ -524,6 +526,7 @@ def blank_dv_template(name: str, namespace: str, storage_class_name: str) -> dic
     data_volume = DataVolume(
         name=name,
         namespace=namespace,
+        client=client,
         source_dict=construct_datavolume_source_dict(source="blank"),
         size=BLANK_DV_SIZE,
         storage_class=storage_class_name,
@@ -561,7 +564,32 @@ class VMWithSeveralBlankDisks(VirtualMachineForTests):
                 name=dv_name,
                 namespace=self.namespace,
                 storage_class_name=self.blank_disk_storage_class_name,
+                client=self.client,
             )
             dv_templates.append(template)
             disks.append({"disk": {"bus": self.disk_type}, "name": dv_name})
             volumes.append({"name": dv_name, "dataVolume": {"name": dv_name}})
+
+
+def mount_hotplug_volume(vm: VirtualMachineForTests, device: str, mount_path: str) -> None:
+    """Format and mount a hotplugged disk device in the guest.
+
+    Args:
+        vm: VM in which to mount the device.
+        device: Full device path in the guest (e.g. '/dev/sda').
+        mount_path: Directory path to mount the device to.
+    """
+    run_ssh_commands(
+        host=vm.ssh_exec,
+        commands=[
+            shlex.split(cmd)
+            for cmd in [
+                f"sudo mkfs.ext4 {device}",
+                f"sudo mkdir -p {mount_path}",
+                f"sudo mount {device} {mount_path}",
+                f"sudo chmod 777 {mount_path}",
+            ]
+        ],
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
+    )

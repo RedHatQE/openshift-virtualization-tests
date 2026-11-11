@@ -95,7 +95,7 @@ Please:
 Tests verification and coverage and done via `tox`
 
 ```bash
-tox -e utilities-unittests
+uv run tox -e utilities-unittests
 ```
 
 ## Testing Conventions

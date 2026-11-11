@@ -48,6 +48,8 @@ class TestConcurrentVMBoot:
         """
         Test that 20 VMs boot simultaneously with five disk devices each and all reach Running state.
 
+        Jira: https://redhat.atlassian.net/browse/CNV-88906  # <skip-jira-utils-check>
+
         Preconditions:
             - 20 running VMs, each with one golden image boot volume (PVC clone via DataSource),
               one cloud-init disk, and three blank data volumes

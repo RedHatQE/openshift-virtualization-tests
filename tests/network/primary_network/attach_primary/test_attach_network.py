@@ -10,12 +10,16 @@ from libs.vm.vm import BaseVirtualMachine
 from tests.network.primary_network.attach_primary import libattach
 
 
-@pytest.mark.polarion("CNV-16026")
 @pytest.mark.single_nic
 def test_restart_required_when_pod_network_attached(vm_without_pod_interface: BaseVirtualMachine) -> None:
     """
     Test that adding a pod interface to a running VM sets RestartRequired condition.
     Verifies the scenario exposed by a bug.
+
+    Jira: https://redhat.atlassian.net/browse/CNV-87822  # <skip-jira-utils-check>
+    Jira: https://redhat.atlassian.net/browse/CNV-4761 # <skip-jira-utils-check>
+    Polarion: CNV-16026
+
 
     Preconditions:
         - Running VM with no interfaces/networks and `autoattachPodInterface: false`

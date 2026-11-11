@@ -231,13 +231,15 @@ class TestLinuxVMAndVMIInfoUidLifecycle:
             6. Start the virtual machine
             7. Wait for kubevirt_vmi_info for the virtual machine to be reported again and record
                its uid label value
+            8. Query kubevirt_vm_info for the virtual machine and record its uid label value
 
         Expected:
             - After the virtual machine is stopped, kubevirt_vmi_info for the virtual machine is
               absent, and the kubevirt_vm_info uid label value from step 5 equals the value from
               step 1
             - After the virtual machine is started, the kubevirt_vmi_info uid label value from
-              step 7 does not equal the value from step 2
+              step 7 does not equal the value from step 2, and the kubevirt_vm_info uid label
+              value from step 8 equals the value from step 1
         """
 
     @pytest.mark.manual
@@ -291,14 +293,14 @@ class TestLinuxVMAndVMIInfoUidLifecycle:
         """
 
 
-@pytest.mark.tier3
-@pytest.mark.windows
 class TestWindowsVMAndVMIInfoUidLifecycle:
     """
     kubevirt_vm_info / kubevirt_vmi_info uid behavior across virtual machine stop/start and
     delete/recreate lifecycle transitions.
 
     Jira: https://redhat.atlassian.net/browse/CNV-95594  # <skip-jira-utils-check>
+
+    Markers: tier3, windows
 
     Preconditions:
         - Running Windows virtual machine, not shared with other tests in this module
@@ -326,13 +328,15 @@ class TestWindowsVMAndVMIInfoUidLifecycle:
             6. Start the virtual machine
             7. Wait for kubevirt_vmi_info for the virtual machine to be reported again and record
                its uid label value
+            8. Query kubevirt_vm_info for the virtual machine and record its uid label value
 
         Expected:
             - After the virtual machine is stopped, kubevirt_vmi_info for the virtual machine is
               absent, and the kubevirt_vm_info uid label value from step 5 equals the value from
               step 1
             - After the virtual machine is started, the kubevirt_vmi_info uid label value from
-              step 7 does not equal the value from step 2
+              step 7 does not equal the value from step 2, and the kubevirt_vm_info uid label
+              value from step 8 equals the value from step 1
         """
 
     @pytest.mark.manual

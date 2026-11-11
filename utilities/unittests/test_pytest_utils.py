@@ -5,6 +5,7 @@
 from unittest.mock import MagicMock, mock_open, patch
 from xml.etree import ElementTree
 
+import paramiko
 import pytest
 
 import utilities.constants
@@ -30,10 +31,13 @@ from utilities.pytest_utils import (
     deploy_run_in_progress_config_map,
     deploy_run_in_progress_namespace,
     exit_pytest_execution,
+    filter_deprecated_api_tests,
     filter_hpp_tests,
     filter_multiarch_tests,
     filter_ocs_tests,
     filter_post_test_alerts_tests,
+    filter_sno_only_tests,
+    filter_upgrade_tests,
     generate_common_template_matrix_dicts,
     generate_instance_type_matrix_dicts,
     get_artifactory_server_url,
@@ -45,6 +49,7 @@ from utilities.pytest_utils import (
     mark_nmstate_dependent_tests,
     ocs_storage_class_in_matrix,
     remove_tests_from_list,
+    remove_upgrade_tests_based_on_config,
     reorder_early_fixtures,
     run_in_progress_config_map,
     separator,
@@ -1239,6 +1244,16 @@ class TestGetCnvVersionExplorerUrl:
         mock_config.getoption.side_effect = lambda option: option == "install"
 
         result = get_cnv_version_explorer_url(mock_config)
+        assert result == "https://version-explorer.com"
+
+    @patch("utilities.pytest_utils.os.environ", {"CNV_VERSION_EXPLORER_URL": "https://version-explorer.com"})
+    @patch("utilities.pytest_utils.LOGGER")
+    def test_get_cnv_version_explorer_url_cnv_upgrade(self, mock_logger):
+        """Test getting CNV version explorer URL with CNV upgrade"""
+        mock_config = MagicMock()
+        mock_config.getoption.side_effect = lambda option: {"install": False, "upgrade": "cnv"}.get(option, False)
+
+        result = get_cnv_version_explorer_url(mock_config)
 
         assert result == "https://version-explorer.com"
 
@@ -1248,6 +1263,36 @@ class TestGetCnvVersionExplorerUrl:
         """Test getting CNV version explorer URL with EUS upgrade"""
         mock_config = MagicMock()
         mock_config.getoption.side_effect = lambda option: {"install": False, "upgrade": "eus"}.get(option, False)
+
+        result = get_cnv_version_explorer_url(mock_config)
+
+        assert result == "https://version-explorer.com"
+
+    @patch("utilities.pytest_utils.os.environ", {"CNV_VERSION_EXPLORER_URL": "https://version-explorer.com"})
+    @patch("utilities.pytest_utils.LOGGER")
+    def test_get_cnv_version_explorer_url_upgrade_custom_cnv(self, mock_logger):
+        """Test getting CNV version explorer URL with upgrade_custom=cnv"""
+        mock_config = MagicMock()
+        mock_config.getoption.side_effect = lambda option: {
+            "install": False,
+            "upgrade": None,
+            "upgrade_custom": "cnv",
+        }.get(option, False)
+
+        result = get_cnv_version_explorer_url(mock_config)
+
+        assert result == "https://version-explorer.com"
+
+    @patch("utilities.pytest_utils.os.environ", {"CNV_VERSION_EXPLORER_URL": "https://version-explorer.com"})
+    @patch("utilities.pytest_utils.LOGGER")
+    def test_get_cnv_version_explorer_url_upgrade_custom_eus(self, mock_logger):
+        """Test getting CNV version explorer URL with upgrade_custom=eus"""
+        mock_config = MagicMock()
+        mock_config.getoption.side_effect = lambda option: {
+            "install": False,
+            "upgrade": None,
+            "upgrade_custom": "eus",
+        }.get(option, False)
 
         result = get_cnv_version_explorer_url(mock_config)
 
@@ -1737,15 +1782,15 @@ class TestGenerateCommonTemplateMatrixDicts:
         mock_generate_latest,
     ):
         """Test generating Windows OS matrix from windows_os_list"""
-        sample_windows_matrix = [{"win-10": {"os_version": "10", "latest_released": True}}]
+        sample_windows_matrix = [{"win-11": {"os_version": "11", "latest_released": True}}]
         mock_generate_os_matrix.return_value = sample_windows_matrix
-        mock_generate_latest.return_value = sample_windows_matrix[0]["win-10"]
+        mock_generate_latest.return_value = sample_windows_matrix[0]["win-11"]
 
-        os_dict = {"windows_os_list": ["win-10"]}
+        os_dict = {"windows_os_list": ["win-11"]}
         generate_common_template_matrix_dicts(os_dict=os_dict)
 
         mock_generate_os_matrix.assert_called_once_with(
-            os_name="windows", supported_operating_systems=["win-10"], arch=None
+            os_name="windows", supported_operating_systems=["win-11"], arch=None
         )
         assert mock_py_config["windows_os_matrix"] == sample_windows_matrix
 
@@ -2065,7 +2110,7 @@ class TestUpdateLatestOsConfig:
         """Test that windows_os_matrix is saved to system_windows_os_matrix"""
         mock_session_config = MagicMock()
         mock_session_config.getoption.return_value = False
-        windows_matrix = [{"win-10": {"os_version": "10"}}]
+        windows_matrix = [{"win-11": {"os_version": "11"}}]
         mock_py_config["windows_os_matrix"] = windows_matrix
 
         update_latest_os_config(session_config=mock_session_config)
@@ -2109,7 +2154,7 @@ class TestUpdateLatestOsConfig:
         mock_session_config = MagicMock()
         mock_session_config.getoption.side_effect = lambda opt: opt == "latest_windows"
         mock_py_config["windows_os_matrix"] = [
-            {"win-10": {"os_version": "10"}},
+            {"win-11": {"os_version": "11"}},
             {"win-2025": {"os_version": "2025", "latest_released": True}},
         ]
         mock_py_config["latest_windows_os_dict"] = {"os_version": "2025", "latest_released": True}
@@ -2173,7 +2218,7 @@ class TestUpdateLatestOsConfig:
         """Test fallback to default values when latest_windows_os_dict is missing"""
         mock_session_config = MagicMock()
         mock_session_config.getoption.side_effect = lambda opt: opt == "latest_windows"
-        mock_py_config["windows_os_matrix"] = [{"win-10": {"os_version": "10"}}]
+        mock_py_config["windows_os_matrix"] = [{"win-11": {"os_version": "11"}}]
 
         update_latest_os_config(session_config=mock_session_config)
 
@@ -2996,6 +3041,285 @@ class TestFilterMultiarchTests:
         config.hook.pytest_deselected.assert_not_called()
 
 
+class TestFilterUpgradeTests:
+    """Test cases for filter_upgrade_tests function."""
+
+    def _config(
+        self,
+        upgrade: bool = False,
+        upgrade_custom: bool = False,
+        cnv_source: str = "production",
+    ) -> MagicMock:
+        config = MagicMock()
+        config.getoption.side_effect = lambda name: {
+            "--upgrade": upgrade,
+            "--upgrade_custom": upgrade_custom,
+            "--cnv-source": cnv_source,
+        }[name]
+        return config
+
+    def test_no_upgrade_marker_discards_all_upgrade_tests(self):
+        """Without upgrade options, upgrade tests are discarded and the rest kept."""
+        item_upgrade = MagicMock()
+        item_upgrade.keywords = {"upgrade": True}
+        item_other = MagicMock()
+        item_other.keywords = {"storage": True}
+
+        keep, discard = filter_upgrade_tests(items=[item_upgrade, item_other], config=self._config())
+
+        assert keep == [item_other], f"Expected only non-upgrade item to be kept, got: {keep}"
+        assert discard == [item_upgrade], f"Expected only upgrade item to be discarded, got: {discard}"
+
+    def test_post_test_alerts_always_kept(self):
+        """post_test_alerts tests are kept even without upgrade options."""
+        item_alerts = MagicMock()
+        item_alerts.keywords = {"post_test_alerts": True, "upgrade": True}
+
+        keep, discard = filter_upgrade_tests(items=[item_alerts], config=self._config())
+
+        assert keep == [item_alerts], f"Expected post_test_alerts item to be kept, got: {keep}"
+        assert discard == [], f"Expected nothing to be discarded, got: {discard}"
+
+    @patch(target="utilities.pytest_utils.py_config", new={"upgraded_product": "ocp"})
+    def test_upgrade_marker_keeps_matching_upgrade_tests(self):
+        """With --upgrade set, only tests matching the upgraded product marker are kept."""
+        item_ocp_upgrade = MagicMock()
+        item_ocp_upgrade.keywords = {"upgrade": True, "ocp_upgrade": True}
+        item_other_upgrade = MagicMock()
+        item_other_upgrade.keywords = {"upgrade": True, "cnv_upgrade": True}
+
+        keep, discard = filter_upgrade_tests(
+            items=[item_ocp_upgrade, item_other_upgrade], config=self._config(upgrade=True)
+        )
+
+        assert keep == [item_ocp_upgrade], f"Expected only ocp_upgrade item to be kept, got: {keep}"
+        assert discard == [item_other_upgrade], (
+            f"Expected non-matching upgrade item to be discarded, got discard: {discard}"
+        )
+
+    @pytest.mark.parametrize(
+        argnames="cnv_source",
+        argvalues=("production", "stage"),
+        ids=("production", "stage"),
+    )
+    @patch(target="utilities.pytest_utils.py_config", new={"upgraded_product": "cnv"})
+    def test_cnv_source_is_forwarded_and_applied(self, cnv_source: str):
+        """With --upgrade set, --cnv-source selects the matching CNV upgrade test."""
+        item_prod = MagicMock()
+        item_prod.name = "test_cnv_upgrade_process_production_source"
+        item_prod.keywords = {"upgrade": True, "cnv_upgrade": True}
+        item_stage = MagicMock()
+        item_stage.name = "test_cnv_upgrade_process_stage_source"
+        item_stage.keywords = {"upgrade": True, "cnv_upgrade": True}
+        expected_keep, expected_discard = (
+            (item_prod, item_stage) if cnv_source == "production" else (item_stage, item_prod)
+        )
+
+        keep, discard = filter_upgrade_tests(
+            items=[item_prod, item_stage],
+            config=self._config(upgrade=True, cnv_source=cnv_source),
+        )
+
+        assert keep == [expected_keep], f"Expected the {cnv_source} CNV upgrade item to be kept, got: {keep}"
+        assert discard == [expected_discard], (
+            f"Expected the other CNV source item to be discarded for {cnv_source}, got: {discard}"
+        )
+
+    @patch(target="utilities.pytest_utils.py_config", new={"upgraded_product": "ocp"})
+    def test_upgrade_custom_keeps_only_upgrade_custom_tests(self):
+        """With --upgrade_custom set, only upgrade_custom tests enter the upgrade lane."""
+        item_custom = MagicMock()
+        item_custom.keywords = {"upgrade_custom": True, "ocp_upgrade": True}
+        item_upgrade = MagicMock()
+        item_upgrade.keywords = {"upgrade": True, "ocp_upgrade": True}
+
+        keep, discard = filter_upgrade_tests(
+            items=[item_custom, item_upgrade],
+            config=self._config(upgrade_custom=True),
+        )
+
+        assert keep == [item_custom], f"Expected only upgrade_custom item to be kept, got: {keep}"
+        assert discard == [item_upgrade], f"Expected plain upgrade item to be discarded, got: {discard}"
+
+    @patch(target="utilities.pytest_utils.py_config", new={"upgraded_product": "ocp"})
+    def test_post_test_alerts_kept_when_upgrade_marker_set(self):
+        """post_test_alerts tests stay selected when an upgrade lane is active."""
+        item_alerts = MagicMock()
+        item_alerts.keywords = {"post_test_alerts": True, "upgrade": True}
+        item_upgrade = MagicMock()
+        item_upgrade.keywords = {"upgrade": True, "ocp_upgrade": True}
+
+        keep, discard = filter_upgrade_tests(
+            items=[item_upgrade, item_alerts],
+            config=self._config(upgrade=True),
+        )
+
+        assert keep == [item_upgrade, item_alerts], f"Expected upgrade and post_test_alerts items kept, got: {keep}"
+        assert discard == [], f"Expected nothing to be discarded, got: {discard}"
+
+
+class TestRemoveUpgradeTestsBasedOnConfig:
+    """Test cases for remove_upgrade_tests_based_on_config function."""
+
+    @patch(target="utilities.pytest_utils.py_config", new={"upgraded_product": "ocp"})
+    def test_non_cnv_product_keeps_matching_marker(self):
+        """For a non-CNV product, only tests whose keywords contain the product marker are kept."""
+        item_ocp = MagicMock()
+        item_ocp.name = "test_ocp_something"
+        item_ocp.keywords = {"ocp_upgrade": True}
+        item_cnv = MagicMock()
+        item_cnv.name = "test_cnv_upgrade_process"
+        item_cnv.keywords = {"cnv_upgrade": True}
+
+        keep, discard = remove_upgrade_tests_based_on_config(
+            cnv_source="production",
+            upgrade_tests=[item_ocp, item_cnv],
+        )
+
+        assert keep == [item_ocp], f"Expected only ocp_upgrade test to be kept, got: {keep}"
+        assert discard == [item_cnv], f"Expected cnv test to be discarded, got: {discard}"
+
+    @patch(target="utilities.pytest_utils.py_config", new={"upgraded_product": "cnv"})
+    def test_cnv_production_source_keeps_production_source_test(self):
+        """For CNV upgrade with production source, only the production_source variant is kept."""
+        item_prod = MagicMock()
+        item_prod.name = "test_cnv_upgrade_process_production_source"
+        item_prod.keywords = {"cnv_upgrade": True}
+        item_stage = MagicMock()
+        item_stage.name = "test_cnv_upgrade_process_stage_source"
+        item_stage.keywords = {"cnv_upgrade": True}
+
+        keep, discard = remove_upgrade_tests_based_on_config(
+            cnv_source="production",
+            upgrade_tests=[item_prod, item_stage],
+        )
+
+        assert keep == [item_prod], f"Expected production_source test to be kept, got: {keep}"
+        assert discard == [item_stage], f"Expected stage test to be discarded, got: {discard}"
+
+    @patch(target="utilities.pytest_utils.py_config", new={"upgraded_product": "cnv"})
+    def test_cnv_stage_source_keeps_non_production_source_test(self):
+        """For CNV upgrade with stage source, only the non-production_source variant is kept."""
+        item_prod = MagicMock()
+        item_prod.name = "test_cnv_upgrade_process_production_source"
+        item_prod.keywords = {"cnv_upgrade": True}
+        item_stage = MagicMock()
+        item_stage.name = "test_cnv_upgrade_process_stage_source"
+        item_stage.keywords = {"cnv_upgrade": True}
+
+        keep, discard = remove_upgrade_tests_based_on_config(
+            cnv_source="stage",
+            upgrade_tests=[item_prod, item_stage],
+        )
+
+        assert keep == [item_stage], f"Expected stage test to be kept, got: {keep}"
+        assert discard == [item_prod], f"Expected production_source test to be discarded, got: {discard}"
+
+
+class TestFilterDeprecatedApiTests:
+    """Test cases for filter_deprecated_api_tests function."""
+
+    def _config(self, **options: bool) -> MagicMock:
+        config = MagicMock()
+        option_values = {
+            "--skip-deprecated-api-test": False,
+            "--install": False,
+            "--upgrade": False,
+            "--upgrade_custom": False,
+            **options,
+        }
+        config.getoption.side_effect = lambda name: option_values[name]
+        return config
+
+    @pytest.mark.parametrize(
+        argnames="option",
+        argvalues=(
+            "--upgrade",
+            "--skip-deprecated-api-test",
+            "--install",
+            "--upgrade_custom",
+        ),
+        ids=("upgrade", "skip-deprecated-api-test", "install", "upgrade-custom"),
+    )
+    def test_removes_deprecated_api_tests_when_trigger_option_set(self, option: str):
+        """Deprecated-api tests are deselected when any trigger option is set."""
+        item_deprecated = MagicMock()
+        item_deprecated.keywords = {"deprecated_api": True}
+        item_other = MagicMock()
+        item_other.keywords = {"virt": True}
+
+        config = self._config(**{option: True})
+
+        result = filter_deprecated_api_tests(items=[item_deprecated, item_other], config=config)
+
+        assert result == [item_other], (
+            f"Expected only non-deprecated item to remain when {option} is set, got: {result}"
+        )
+        config.hook.pytest_deselected.assert_called_once_with(items=[item_deprecated])
+
+    def test_keeps_all_tests_when_no_trigger_option_set(self):
+        """No filtering happens when no trigger option is set."""
+        item_deprecated = MagicMock()
+        item_deprecated.keywords = {"deprecated_api": True}
+
+        config = self._config()
+
+        result = filter_deprecated_api_tests(items=[item_deprecated], config=config)
+
+        assert result == [item_deprecated], (
+            f"Expected deprecated item to be kept when no trigger option set, got: {result}"
+        )
+        config.hook.pytest_deselected.assert_not_called()
+
+
+class TestFilterSnoOnlyTests:
+    """Test cases for filter_sno_only_tests function."""
+
+    def test_removes_single_node_tests_when_marker_excludes_sno(self):
+        """Single-node-only tests are deselected when -m does not contain 'sno'."""
+        item_sno = MagicMock()
+        item_sno.keywords = {"single_node_tests": True}
+        item_other = MagicMock()
+        item_other.keywords = {"virt": True}
+        config = MagicMock()
+        config.getoption.return_value = "smoke"
+
+        result = filter_sno_only_tests(items=[item_sno, item_other], config=config)
+
+        assert result == [item_other], (
+            f"Expected single-node-only item to be removed when marker excludes sno, got: {result}"
+        )
+        config.hook.pytest_deselected.assert_called_once_with(items=[item_sno])
+
+    def test_keeps_single_node_tests_when_marker_contains_sno(self):
+        """Single-node-only tests are kept when -m contains 'sno'."""
+        item_sno = MagicMock()
+        item_sno.keywords = {"single_node_tests": True}
+        config = MagicMock()
+        config.getoption.return_value = "sno"
+
+        result = filter_sno_only_tests(items=[item_sno], config=config)
+
+        assert result == [item_sno], (
+            f"Expected single-node-only item to be kept when marker contains sno, got: {result}"
+        )
+        config.hook.pytest_deselected.assert_not_called()
+
+    def test_keeps_all_tests_when_no_marker_expression(self):
+        """No filtering happens when -m is not set."""
+        item_sno = MagicMock()
+        item_sno.keywords = {"single_node_tests": True}
+        config = MagicMock()
+        config.getoption.return_value = None
+
+        result = filter_sno_only_tests(items=[item_sno], config=config)
+
+        assert result == [item_sno], (
+            f"Expected single-node-only item to be kept when no marker expression set, got: {result}"
+        )
+        config.hook.pytest_deselected.assert_not_called()
+
+
 class TestInjectFailureJunit:
     """Test cases for _inject_failure_junit (private) and _failure_info mechanism"""
 
@@ -3349,3 +3673,16 @@ class TestInjectFailureJunit:
         assert xml_path.exists()
         content = xml_path.read_text()
         assert "pytest_exit" not in content, "Original XML should not be modified on write failure"
+
+
+class TestPatchParamikoForFips:
+    def test_get_fingerprint_returns_fips_safe_md5(self, monkeypatch):
+        """patch_paramiko_for_fips patches get_fingerprint to call hashlib.md5 with usedforsecurity=False."""
+        monkeypatch.setattr(paramiko.pkey.PKey, "get_fingerprint", paramiko.pkey.PKey.get_fingerprint)
+        pytest_utils_module.patch_paramiko_for_fips()
+        key = paramiko.RSAKey.generate(bits=2048)
+
+        with patch("utilities.pytest_utils.hashlib.md5") as mock_md5:
+            mock_md5.return_value.digest.return_value = b"\x00" * 16
+            key.get_fingerprint()
+            mock_md5.assert_called_once_with(key.asbytes(), usedforsecurity=False)

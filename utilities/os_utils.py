@@ -28,7 +28,6 @@ from utilities.constants.virt import (
     WIN_2K19,
     WIN_2K22,
     WIN_2K25,
-    WIN_10,
     WIN_11,
 )
 from utilities.exceptions import OsDictNotFoundError
@@ -69,16 +68,6 @@ RHEL_OS_MAPPING: dict[str, dict[str, Any]] = {
 WINDOWS_OS_MAPPING: dict[str, dict[str, str | Any]] = {
     WORKLOAD_STR: Template.Workload.SERVER,
     FLAVOR_STR: Template.Flavor.MEDIUM,
-    "win-10": {
-        IMAGE_NAME_STR: "WIN10_IMG",
-        OS_VERSION_STR: "10",
-        OS_STR: WIN_10,
-        WORKLOAD_STR: Template.Workload.DESKTOP,
-        FLAVOR_STR: Template.Flavor.MEDIUM,
-        "uefi": True,
-        DATA_SOURCE_STR: WIN_10,
-        CONTAINER_DISK_IMAGE_PATH_STR: get_windows_container_disk_path(os_value=WIN_10),
-    },
     "win-2019": {
         IMAGE_NAME_STR: "WIN2k19_IMG",
         OS_VERSION_STR: "2019",

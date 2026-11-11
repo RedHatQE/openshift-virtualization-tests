@@ -148,12 +148,15 @@ def imported_fedora_dv(admin_client, golden_images_namespace, fedora_boot_source
 
 
 @pytest.mark.arm64
-@pytest.mark.polarion("CNV-7586")
 def test_vm_from_auto_update_boot_source(
     auto_update_boot_source_vm,
     boot_source_os_from_data_source_dict,
     latest_fedora_release_version,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-11791 # <skip-jira-utils-check>
+    Polarion: CNV-7586
+    """
     LOGGER.info(f"Verify {auto_update_boot_source_vm.name} OS version and virtctl info")
     if OS_FLAVOR_FEDORA in boot_source_os_from_data_source_dict and latest_fedora_release_version:
         boot_source_os_from_data_source_dict = f"fedora{latest_fedora_release_version}"
@@ -164,9 +167,12 @@ def test_vm_from_auto_update_boot_source(
     validate_os_info_vmi_vs_linux_os(vm=auto_update_boot_source_vm)
 
 
-@pytest.mark.polarion("CNV-7565")
 @pytest.mark.s390x
 def test_common_templates_boot_source_reference(base_templates):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-11791 # <skip-jira-utils-check>
+    Polarion: CNV-7565
+    """
     source_ref_str = "sourceRef"
     LOGGER.info(f"Verify all common templates use {source_ref_str} in dataVolumeTemplates")
     failed_templates = [
@@ -178,7 +184,6 @@ def test_common_templates_boot_source_reference(base_templates):
 
 
 @pytest.mark.arm64
-@pytest.mark.polarion("CNV-7535")
 def test_vm_with_uploaded_golden_image_opt_out(
     admin_client,
     golden_images_namespace,
@@ -187,5 +192,9 @@ def test_vm_with_uploaded_golden_image_opt_out(
     vm_without_boot_source,
     imported_fedora_dv,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-11791 # <skip-jira-utils-check>
+    Polarion: CNV-7535
+    """
     LOGGER.info(f"Test VM with manually uploaded {imported_fedora_dv.name} golden image DV")
     running_vm(vm=vm_without_boot_source)

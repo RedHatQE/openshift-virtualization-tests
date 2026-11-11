@@ -35,6 +35,8 @@ def test_running_vm_vlan_change(
     Test that a running VM can change the VLAN of its secondary localnet network, without rebooting.
     The VM should establish TCP connectivity on the new VLAN.
 
+    STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-network/hotpluggable-nad-ref.md
+
     Preconditions:
         - Running under-test VM with a secondary localnet network connected to NAD-VLAN-A
         - TCP connectivity established between the under-test VM and the reference VM on NAD-VLAN-A

@@ -39,6 +39,11 @@ if "utilities.hco" in sys.modules:
     del sys.modules["utilities.hco"]
 
 # Import after setting up mocks to avoid circular dependency
+from utilities.constants.cluster import CPU_MANAGER_LABEL
+from utilities.constants.hco import (
+    DEFAULT_HCO_CONDITIONS,
+    VIRT_NETWORK_RESOURCES_INJECTOR_READY,
+)
 from utilities.hco import (
     CDI,
     DEFAULT_HCO_PROGRESSING_CONDITIONS,
@@ -51,6 +56,7 @@ from utilities.hco import (
     disable_common_boot_image_import_hco_spec,
     enable_common_boot_image_import_spec_wait_for_data_import_cron,
     enabled_aaq_in_hco,
+    get_hco_expected_conditions,
     get_hco_feature_gates,
     get_hco_namespace,
     get_hco_spec,
@@ -380,13 +386,13 @@ class TestAddLabelsToNodes:
         mock_editor = MagicMock()
         mock_resource_editor_class.return_value = mock_editor
 
-        node_labels = {"cpumanager": "true"}
+        node_labels = {CPU_MANAGER_LABEL: "true"}
         result = add_labels_to_nodes([mock_node], node_labels)
 
         assert len(result) == 1
         assert mock_editor in result
         assert result[mock_editor]["node"] == "worker-0"
-        assert result[mock_editor]["labels"] == {"cpumanager": "true1"}
+        assert result[mock_editor]["labels"] == {CPU_MANAGER_LABEL: "true1"}
         mock_editor.update.assert_called_once_with(backup_resources=True)
 
     @patch("utilities.hco.ResourceEditor")
@@ -402,14 +408,14 @@ class TestAddLabelsToNodes:
         mock_editors = [MagicMock(), MagicMock(), MagicMock()]
         mock_resource_editor_class.side_effect = mock_editors
 
-        node_labels = {"cpumanager": "true", "numa": "enabled"}
+        node_labels = {CPU_MANAGER_LABEL: "true", "numa": "enabled"}
         result = add_labels_to_nodes([mock_node1, mock_node2, mock_node3], node_labels)
 
         assert len(result) == 3
         # Verify incrementing label values
-        assert result[mock_editors[0]]["labels"] == {"cpumanager": "true1", "numa": "enabled1"}
-        assert result[mock_editors[1]]["labels"] == {"cpumanager": "true2", "numa": "enabled2"}
-        assert result[mock_editors[2]]["labels"] == {"cpumanager": "true3", "numa": "enabled3"}
+        assert result[mock_editors[0]]["labels"] == {CPU_MANAGER_LABEL: "true1", "numa": "enabled1"}
+        assert result[mock_editors[1]]["labels"] == {CPU_MANAGER_LABEL: "true2", "numa": "enabled2"}
+        assert result[mock_editors[2]]["labels"] == {CPU_MANAGER_LABEL: "true3", "numa": "enabled3"}
 
 
 class TestWaitForDs:
@@ -1506,3 +1512,48 @@ class TestHcoFeatureGatesPatch:
         mock_hco = self._hco_with_gates(gates=[])
         with pytest.raises(ValueError, match="At least one gate"):
             hco_feature_gates_patch(hco_resource=mock_hco)
+
+
+class TestGetHcoExpectedConditions:
+    """Test cases for get_hco_expected_conditions."""
+
+    def _mock_hco_instance(self, spec: dict) -> MagicMock:
+        mock_instance = MagicMock()
+        mock_instance.to_dict.return_value = {"spec": spec}
+        return mock_instance
+
+    def test_includes_injector_condition_when_enabled(self):
+        """Test that VirtNetworkResourcesInjectorReady is included when deployNetworkResourcesInjector is True."""
+        hco_instance = self._mock_hco_instance(spec={"deployment": {"deployNetworkResourcesInjector": True}})
+        result = get_hco_expected_conditions(hco_instance=hco_instance)
+        assert VIRT_NETWORK_RESOURCES_INJECTOR_READY in result
+        assert result[VIRT_NETWORK_RESOURCES_INJECTOR_READY] == Resource.Condition.Status.TRUE
+
+    def test_excludes_injector_condition_when_disabled(self):
+        """Test that VirtNetworkResourcesInjectorReady is excluded when deployNetworkResourcesInjector is False."""
+        hco_instance = self._mock_hco_instance(spec={"deployment": {"deployNetworkResourcesInjector": False}})
+        result = get_hco_expected_conditions(hco_instance=hco_instance)
+        assert VIRT_NETWORK_RESOURCES_INJECTOR_READY not in result
+
+    def test_excludes_injector_condition_when_deployment_key_absent(self):
+        """Test that VirtNetworkResourcesInjectorReady is excluded when deployment key is absent."""
+        hco_instance = self._mock_hco_instance(spec={})
+        result = get_hco_expected_conditions(hco_instance=hco_instance)
+        assert VIRT_NETWORK_RESOURCES_INJECTOR_READY not in result
+
+    def test_always_includes_base_conditions(self):
+        """Test that base DEFAULT_HCO_CONDITIONS are always present regardless of injector setting."""
+        hco_enabled = self._mock_hco_instance(spec={"deployment": {"deployNetworkResourcesInjector": True}})
+        hco_disabled = self._mock_hco_instance(spec={"deployment": {"deployNetworkResourcesInjector": False}})
+
+        for condition_type, condition_status in DEFAULT_HCO_CONDITIONS.items():
+            assert get_hco_expected_conditions(hco_instance=hco_enabled)[condition_type] == condition_status
+            assert get_hco_expected_conditions(hco_instance=hco_disabled)[condition_type] == condition_status
+
+    def test_does_not_mutate_default_conditions(self):
+        """Test that calling get_hco_expected_conditions does not modify DEFAULT_HCO_CONDITIONS."""
+        original_keys = set(DEFAULT_HCO_CONDITIONS.keys())
+        hco_instance = self._mock_hco_instance(spec={"deployment": {"deployNetworkResourcesInjector": True}})
+        get_hco_expected_conditions(hco_instance=hco_instance)
+        assert set(DEFAULT_HCO_CONDITIONS.keys()) == original_keys
+        assert VIRT_NETWORK_RESOURCES_INJECTOR_READY not in DEFAULT_HCO_CONDITIONS

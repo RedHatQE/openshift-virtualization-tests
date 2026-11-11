@@ -111,13 +111,14 @@ def assert_cluster_memory(nodes: list[Node], required_gi: int) -> None:
         )
 
 
-def blank_dv_template(name: str, namespace: str, storage_class_name: str) -> dict[str, Any]:
+def blank_dv_template(name: str, namespace: str, storage_class_name: str, client: DynamicClient) -> dict[str, Any]:
     """Build a blank DataVolume template dict suitable for VM dataVolumeTemplates.
 
     Args:
         name: DataVolume name.
         namespace: Target namespace (stripped from the returned dict for template use).
         storage_class_name: Storage class for the blank PVC.
+        client: DynamicClient used to render the DataVolume resource.
 
     Returns:
         Mutable DataVolume resource dict with namespace removed, ready for use in
@@ -126,6 +127,7 @@ def blank_dv_template(name: str, namespace: str, storage_class_name: str) -> dic
     dv = DataVolume(
         name=name,
         namespace=namespace,
+        client=client,
         source_dict=construct_datavolume_source_dict(source="blank"),
         size=BLANK_DV_SIZE,
         storage_class=storage_class_name,
@@ -163,6 +165,7 @@ class VMWithSeveralBlankDisks(VirtualMachineForTests):
                 name=dv_name,
                 namespace=self.namespace,
                 storage_class_name=self.blank_disk_storage_class_name,
+                client=self.client,
             )
             dv_templates.append(template)
             disks.append({"disk": {"bus": "virtio"}, "name": dv_name})

@@ -15,11 +15,13 @@ from tests.storage.cbt.constants import (
     CBT_BACKUP_CHAIN_INCREMENTAL_COUNT,
     CBT_BACKUP_TYPE_FULL,
     CBT_BACKUP_TYPE_INCREMENTAL,
+    CBT_CONCURRENT_VM_COUNT,
     CBT_MULTI_DISK_DATA_DISK_COUNT,
 )
 from tests.storage.cbt.utils import (
     assert_backup_status_includes_volumes,
     attached_data_disk_names,
+    concurrent_backup_type,
 )
 from utilities.constants.virt import DV_DISK
 
@@ -53,6 +55,8 @@ class TestFullBackup:
         """
         Test that a full backup in push mode completes successfully.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
+
         Preconditions:
             - Backup PVC available
 
@@ -84,6 +88,8 @@ class TestFullBackup:
     ):
         """
         Test that a full backup in pull mode becomes ready for export.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Preconditions:
             - Scratch PVC available for pull mode
@@ -135,6 +141,8 @@ class TestIncrementalBackup:
         """
         Test that an incremental backup in push mode completes successfully.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
+
         Preconditions:
             - Backup PVC available
             - Full backup completed in push mode
@@ -167,6 +175,8 @@ class TestIncrementalBackup:
     ):
         """
         Test that an incremental backup in pull mode becomes ready for export.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Preconditions:
             - Scratch PVC available for pull mode
@@ -220,6 +230,8 @@ class TestMultipleIncrementalBackups:
         Test that a full backup followed by multiple sequential incremental backups all complete
         successfully in push mode.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
+
         Preconditions:
             - Backup PVC available
 
@@ -260,6 +272,8 @@ class TestMultipleIncrementalBackups:
         """
         Test that a full backup followed by multiple sequential incremental backups all become
         ready for export in pull mode.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Preconditions:
             - Scratch PVC available for pull mode
@@ -320,6 +334,8 @@ class TestMultipleDiskBackup:
         """
         Test that a full backup in push mode completes successfully for a VM with multiple disks.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
+
         Preconditions:
             - Running CBT-enabled VM with a boot disk and two data disks
             - Test data written to all disks
@@ -358,6 +374,8 @@ class TestMultipleDiskBackup:
     ):
         """
         Test that a full backup in pull mode becomes ready for export for a VM with multiple disks.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Preconditions:
             - Running CBT-enabled VM with a boot disk and two data disks
@@ -414,6 +432,8 @@ class TestBackupAfterLiveMigration:
         """
         Test that an incremental backup in push mode completes successfully after live migration.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
+
         Preconditions:
             - Running CBT-enabled VM with disks on RWX storage
             - Test data written to the VM
@@ -445,6 +465,8 @@ class TestBackupAfterLiveMigration:
     ):
         """
         Test that an incremental backup in pull mode becomes ready for export after live migration.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Preconditions:
             - Running CBT-enabled VM with disks on RWX storage
@@ -487,9 +509,12 @@ class TestHotplugBackup:
     __test__ = False  # STD placeholder - not yet implemented
 
     @pytest.mark.polarion("CNV-16009")
+    @pytest.mark.manual
     def test_backup_with_hotplugged_disk_push_mode_restore(self):
         """
         Test that a VM with hotplugged disk can be backed up (push mode) and restored with hotplugged disk data accessible.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Preconditions:
             - Backup PVC available
@@ -510,9 +535,12 @@ class TestHotplugBackup:
         """
 
     @pytest.mark.polarion("CNV-16010")
+    @pytest.mark.manual
     def test_backup_with_hotplugged_disk_pull_mode_restore(self):
         """
         Test that a VM with hotplugged disk can be backed up (pull mode) and restored with hotplugged disk data accessible.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Preconditions:
             - Scratch PVC available for pull mode
@@ -545,9 +573,12 @@ class TestBackupErrorHandling:
     __test__ = False  # STD placeholder - not yet implemented
 
     @pytest.mark.polarion("CNV-16023")
+    @pytest.mark.manual
     def test_backup_fails_when_storage_full_push_mode(self):
         """
         [NEGATIVE] Test that backup fails gracefully when backup PVC is full.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Preconditions:
             - Backup PVC with insufficient capacity for the VM's data
@@ -563,9 +594,12 @@ class TestBackupErrorHandling:
         """
 
     @pytest.mark.polarion("CNV-16024")
+    @pytest.mark.manual
     def test_backup_fails_when_storage_full_pull_mode(self):
         """
         [NEGATIVE] Test that backup fails gracefully when scratch PVC is full in pull mode.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Preconditions:
             - Scratch PVC with insufficient capacity for the VM's data
@@ -581,162 +615,291 @@ class TestBackupErrorHandling:
         """
 
 
+# Required at collection for storage_class_matrix__module__.
+@pytest.mark.tier3
+@pytest.mark.usefixtures("storage_class_name_scope_module")
 class TestConcurrentBackups:
     """
-    Concurrent backup operations on multiple VMs.
+    Concurrent full and incremental backups on multiple VMs (backup success only).
 
     Preconditions:
-        - 5 running VMs with CBT enabled
+        - Five running VMs with CBT enabled
         - Test data written to each VM
+        - A completed full backup on the three VMs that take an incremental backup
     """
-
-    __test__ = False  # STD placeholder - not yet implemented
 
     @pytest.mark.polarion("CNV-16011")
-    def test_concurrent_backups_push_mode_restore(self):
+    def test_concurrent_backups_push_mode(
+        self,
+        completed_concurrent_push_backups,
+    ):
         """
-        Test that concurrent backups (push mode) on multiple VMs complete successfully and all VMs can be restored.
+        Test that simultaneous push-mode full and incremental backups all complete.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Preconditions:
-            - Backup PVCs available for each VM
+            - Five running CBT-enabled VMs with test data written to each VM
+            - A completed full backup on the three VMs that take an incremental backup
+            - Backup PVC available for each VM
 
         Steps:
-            1. Create backup trackers for all VMs
-            2. Start simultaneous backups in push mode on all VMs
-            3. Wait for all backups to complete
-            4. Delete all original VMs
-            5. Restore all VMs from their respective backups
-            6. Start all restored VMs
+            1. Create a backup tracker and a backup PVC for each VM
+            2. Complete a full backup on three of the VMs and write new test data to those VMs
+            3. After step 2 finishes, start these backups together:
+               - An incremental backup on the three VMs from step 2
+               - A full backup on the other two
+            4. Wait until every backup in that simultaneous set completes
 
         Expected:
-            - All restored VMs boot successfully and test data is present in each VM
+            - All five simultaneous backups complete and include the boot disk, three typed
+              Incremental and two typed Full
         """
+        assert len(completed_concurrent_push_backups) == CBT_CONCURRENT_VM_COUNT, (
+            f"Expected {CBT_CONCURRENT_VM_COUNT} simultaneous push backups, "
+            f"got {len(completed_concurrent_push_backups)}"
+        )
+        for backup_index, backup in enumerate(completed_concurrent_push_backups):
+            assert_backup_status_includes_volumes(
+                backup_name=backup.name,
+                backup_status=backup.instance.to_dict()["status"],
+                expected_volume_names=[DV_DISK],
+                expected_backup_type=concurrent_backup_type(backup_index=backup_index),
+            )
 
     @pytest.mark.polarion("CNV-16012")
-    def test_concurrent_backups_pull_mode_restore(self):
+    def test_concurrent_backups_pull_mode(
+        self,
+        ready_concurrent_pull_backups,
+    ):
         """
-        Test that concurrent backups (pull mode) on multiple VMs complete successfully and all VMs can be restored.
+        Test that simultaneous pull-mode full and incremental backups all become ready for export.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Preconditions:
-            - Scratch PVCs available for each VM (pull mode)
+            - Five running CBT-enabled VMs with test data written to each VM
+            - A completed full backup on the three VMs that take an incremental backup
+            - Scratch PVC available for each VM
 
         Steps:
-            1. Create backup trackers for all VMs
-            2. Start simultaneous backups in pull mode on all VMs
-            3. Wait for all backups to complete
-            4. Delete all original VMs
-            5. Restore all VMs from their respective backups
-            6. Start all restored VMs
+            1. Create a backup tracker and a scratch PVC for each VM
+            2. Complete a full backup on three of the VMs, delete those exports, and write new
+               test data to those VMs
+            3. After step 2 finishes, start these backups together:
+               - An incremental backup on the three VMs from step 2
+               - A full backup on the other two
+            4. Wait until every backup in that simultaneous set is ready for export
 
         Expected:
-            - All restored VMs boot successfully and test data is present in each VM
+            - All five simultaneous backups are ready for export and include the boot disk,
+              three typed Incremental and two typed Full
         """
+        assert len(ready_concurrent_pull_backups) == CBT_CONCURRENT_VM_COUNT, (
+            f"Expected {CBT_CONCURRENT_VM_COUNT} simultaneous pull backups, got {len(ready_concurrent_pull_backups)}"
+        )
+        for backup_index, backup in enumerate(ready_concurrent_pull_backups):
+            assert_backup_status_includes_volumes(
+                backup_name=backup.name,
+                backup_status=backup.instance.to_dict()["status"],
+                expected_volume_names=[DV_DISK],
+                expected_backup_type=concurrent_backup_type(backup_index=backup_index),
+            )
 
 
+# Required at collection for storage_class_matrix__module__.
 @pytest.mark.tier3
 @pytest.mark.windows
+@pytest.mark.high_resource_vm
+@pytest.mark.special_infra
+@pytest.mark.usefixtures("storage_class_name_scope_module")
+@pytest.mark.parametrize(
+    "vm_with_cbt_label",
+    [{"name": "cbt-win-full", "windows": True}],
+    indirect=True,
+)
 class TestWindowsVMFullBackup:
     """
-    Full backup and restore validation for Windows VMs.
+    Full backup validation for Windows VMs with persistent vTPM and EFI (backup success only).
 
     Preconditions:
-        - Running Windows VM with CBT enabled
+        - Running Windows VM with CBT enabled and persistent vTPM
         - Test data written to Windows VM
     """
 
-    __test__ = False  # STD placeholder - not yet implemented
-
     @pytest.mark.polarion("CNV-16013")
-    def test_windows_vm_full_backup_push_mode_restore(self):
+    @pytest.mark.parametrize(
+        "completed_push_backup_chain",
+        [{"incremental_count": 0}],
+        indirect=True,
+    )
+    def test_windows_vm_full_backup_push_mode(
+        self,
+        completed_push_backup_chain,
+    ):
         """
-        Test that a Windows VM can be backed up (push mode) and restored from a full backup.
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
+
+        Test that a Windows VM full backup in push mode completes successfully.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Preconditions:
+            - Running Windows VM with CBT enabled and persistent vTPM
             - Backup PVC available
 
         Steps:
             1. Create a backup tracker for the Windows VM
             2. Perform a full backup in push mode
-            3. Wait for backup to complete
-            4. Delete the original Windows VM
-            5. Restore Windows VM from the backup
-            6. Start the restored VM
+            3. Wait for the backup to complete
 
         Expected:
-            - Restored Windows VM boots successfully and test data is present
+            - Full backup completes and includes the boot disk
         """
+        full_backup = completed_push_backup_chain[0]
+        assert_backup_status_includes_volumes(
+            backup_name=full_backup.name,
+            backup_status=full_backup.instance.to_dict()["status"],
+            expected_volume_names=[DV_DISK],
+            expected_backup_type=CBT_BACKUP_TYPE_FULL,
+            allow_extra_volumes=True,
+        )
 
     @pytest.mark.polarion("CNV-16014")
-    def test_windows_vm_full_backup_pull_mode_restore(self):
+    @pytest.mark.parametrize(
+        "ready_pull_backup_chain",
+        [{"incremental_count": 0}],
+        indirect=True,
+    )
+    def test_windows_vm_full_backup_pull_mode(
+        self,
+        ready_pull_backup_chain,
+    ):
         """
-        Test that a Windows VM can be backed up (pull mode) and restored from a full backup.
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
+
+        Test that a Windows VM full backup in pull mode becomes ready for export.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Preconditions:
+            - Running Windows VM with CBT enabled and persistent vTPM
             - Scratch PVC available for pull mode
 
         Steps:
             1. Create a backup tracker for the Windows VM
             2. Perform a full backup in pull mode
-            3. Wait for backup to complete
-            4. Delete the original Windows VM
-            5. Restore Windows VM from the backup
-            6. Start the restored VM
+            3. Wait for the backup export to become ready
 
         Expected:
-            - Restored Windows VM boots successfully and test data is present
+            - Backup export is ready and includes the boot disk
         """
+        backup_name, backup_status = ready_pull_backup_chain[0]
+        assert_backup_status_includes_volumes(
+            backup_name=backup_name,
+            backup_status=backup_status,
+            expected_volume_names=[DV_DISK],
+            expected_backup_type=CBT_BACKUP_TYPE_FULL,
+            allow_extra_volumes=True,
+        )
 
 
+# Required at collection for storage_class_matrix__module__.
 @pytest.mark.tier3
 @pytest.mark.windows
+@pytest.mark.high_resource_vm
+@pytest.mark.special_infra
+@pytest.mark.usefixtures("storage_class_name_scope_module")
+@pytest.mark.parametrize(
+    "vm_with_cbt_label",
+    [{"name": "cbt-win-incr", "windows": True}],
+    indirect=True,
+)
 class TestWindowsVMIncrementalBackup:
     """
-    Incremental backup and restore validation for Windows VMs.
+    Incremental backup validation for Windows VMs with persistent vTPM and EFI (backup success only).
 
     Preconditions:
-        - Running Windows VM with CBT enabled
+        - Running Windows VM with CBT enabled and persistent vTPM
         - Full backup completed
         - Test data written to Windows VM
     """
 
-    __test__ = False  # STD placeholder - not yet implemented
-
     @pytest.mark.polarion("CNV-16015")
-    def test_windows_vm_incremental_backup_push_mode_restore(self):
+    @pytest.mark.parametrize(
+        "completed_push_backup_chain",
+        [{"incremental_count": 1}],
+        indirect=True,
+    )
+    def test_windows_vm_incremental_backup_push_mode(
+        self,
+        completed_push_backup_chain,
+    ):
         """
-        Test that a Windows VM can be backed up (push mode) and restored from an incremental backup.
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
+
+        Test that a Windows VM incremental backup in push mode completes successfully.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Preconditions:
+            - Running Windows VM with CBT enabled and persistent vTPM
             - Backup PVC available
+            - Full backup completed in push mode
 
         Steps:
-            1. Write new test data to Windows VM
+            1. Write new test data to the Windows VM
             2. Perform an incremental backup in push mode
-            3. Wait for backup to complete
-            4. Delete the original Windows VM
-            5. Restore Windows VM from the incremental backup
-            6. Start the restored VM
+            3. Wait for the backup to complete
 
         Expected:
-            - Restored Windows VM boots successfully and all test data is present
+            - Incremental backup completes and includes the boot disk
         """
+        incremental_backup = completed_push_backup_chain[-1]
+        assert_backup_status_includes_volumes(
+            backup_name=incremental_backup.name,
+            backup_status=incremental_backup.instance.to_dict()["status"],
+            expected_volume_names=[DV_DISK],
+            expected_backup_type=CBT_BACKUP_TYPE_INCREMENTAL,
+            allow_extra_volumes=True,
+        )
 
     @pytest.mark.polarion("CNV-16016")
-    def test_windows_vm_incremental_backup_pull_mode_restore(self):
+    @pytest.mark.parametrize(
+        "ready_pull_backup_chain",
+        [{"incremental_count": 1}],
+        indirect=True,
+    )
+    def test_windows_vm_incremental_backup_pull_mode(
+        self,
+        ready_pull_backup_chain,
+    ):
         """
-        Test that a Windows VM can be backed up (pull mode) and restored from an incremental backup.
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
+
+        Test that a Windows VM incremental backup in pull mode becomes ready for export.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Preconditions:
+            - Running Windows VM with CBT enabled and persistent vTPM
             - Scratch PVC available for pull mode
 
         Steps:
-            1. Write new test data to Windows VM
-            2. Perform an incremental backup in pull mode
-            3. Wait for backup to complete
-            4. Delete the original Windows VM
-            5. Restore Windows VM from the incremental backup
-            6. Start the restored VM
+            1. Perform a full backup in pull mode and wait until export is ready
+            2. Delete the full pull-mode backup
+            3. Write new test data to the Windows VM
+            4. Perform an incremental backup in pull mode
+            5. Wait for the backup export to become ready
 
         Expected:
-            - Restored Windows VM boots successfully and all test data is present
+            - Incremental backup export is ready and includes the boot disk
         """
+        backup_name, backup_status = ready_pull_backup_chain[-1]
+        assert_backup_status_includes_volumes(
+            backup_name=backup_name,
+            backup_status=backup_status,
+            expected_volume_names=[DV_DISK],
+            expected_backup_type=CBT_BACKUP_TYPE_INCREMENTAL,
+            allow_extra_volumes=True,
+        )

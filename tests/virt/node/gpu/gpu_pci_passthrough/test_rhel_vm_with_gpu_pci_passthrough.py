@@ -33,7 +33,6 @@ pytestmark = [
     pytest.mark.usefixtures("fail_if_device_unbound_to_vfiopci_driver", "hco_cr_with_permitted_hostdevices"),
 ]
 
-ALLOCATABLE = "allocatable"
 TESTS_CLASS_RHEL_HOSTDEVICES_NAME = "TestPCIPassthroughRHELHostDevicesSpec"
 TESTS_CLASS_RHEL_GPUS_NAME = "TestPCIPassthroughRHELGPUSSpec"
 

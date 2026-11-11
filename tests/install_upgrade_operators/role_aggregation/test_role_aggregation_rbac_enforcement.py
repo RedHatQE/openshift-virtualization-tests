@@ -6,6 +6,7 @@ STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob
 Markers:
     - post_upgrade
     - arm64
+    - s390x
 
 Preconditions:
     - Unprivileged user created via HTPasswd identity provider
@@ -17,7 +18,7 @@ import pytest
 from tests.install_upgrade_operators.role_aggregation.utils import wait_for_vm_list_permission
 from utilities.sanity import check_vm_creation_capability
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.arm64]
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.arm64, pytest.mark.s390x]
 
 
 @pytest.mark.usefixtures("admin_role_binding")
@@ -41,6 +42,8 @@ class TestRoleAggregationAdmin:
         """
         [NEGATIVE] Test that an unprivileged user with the admin role is forbidden
         from listing virtual machines when role aggregation is disabled.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-iuo/CNV-63822-role-aggregation-opt-out.md
 
         Preconditions:
             - RoleBinding granting the unprivileged user the admin ClusterRole
@@ -67,6 +70,8 @@ class TestRoleAggregationAdmin:
         """
         Test that an unprivileged user with the admin role can perform a delete-collection
         call on VirtualMachine resources when role aggregation is re-enabled.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-iuo/CNV-63822-role-aggregation-opt-out.md
 
         Preconditions:
             - RoleBinding granting the unprivileged user the admin ClusterRole
@@ -108,6 +113,8 @@ class TestRoleAggregationEdit:
         [NEGATIVE] Test that an unprivileged user with the edit role is forbidden
         from listing virtual machines when role aggregation is disabled.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-iuo/CNV-63822-role-aggregation-opt-out.md
+
         Preconditions:
             - RoleBinding granting the unprivileged user the edit ClusterRole
               in the namespace
@@ -131,6 +138,8 @@ class TestRoleAggregationEdit:
         """
         Test that an unprivileged user with the edit role can create a VirtualMachine
         using a server-side dry-run when role aggregation is re-enabled.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-iuo/CNV-63822-role-aggregation-opt-out.md
 
         Preconditions:
             - RoleBinding granting the unprivileged user the edit ClusterRole
@@ -170,6 +179,8 @@ class TestRoleAggregationView:
         [NEGATIVE] Test that an unprivileged user with the view role is forbidden
         from listing virtual machines when role aggregation is disabled.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-iuo/CNV-63822-role-aggregation-opt-out.md
+
         Preconditions:
             - RoleBinding granting the unprivileged user the view ClusterRole
               in the namespace
@@ -193,6 +204,8 @@ class TestRoleAggregationView:
         """
         Test that an unprivileged user with the view role can list VirtualMachine
         resources when role aggregation is re-enabled.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-iuo/CNV-63822-role-aggregation-opt-out.md
 
         Preconditions:
             - RoleBinding granting the unprivileged user the view ClusterRole

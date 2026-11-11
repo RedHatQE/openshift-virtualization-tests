@@ -160,6 +160,7 @@ def create_rhel_vm(
         dv = DataVolume(
             name=dv_name,
             namespace=namespace,
+            client=client,
             source_dict=construct_datavolume_source_dict(
                 source="http",
                 url=get_http_image_url(

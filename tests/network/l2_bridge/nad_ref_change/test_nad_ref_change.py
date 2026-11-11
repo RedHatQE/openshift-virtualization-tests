@@ -78,6 +78,8 @@ class TestRunningVMLinuxBridgeVlanChange:
         Test that the under-test VM remains running and its secondary network metadata is unchanged
         after the NAD reference change.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-network/hotpluggable-nad-ref.md
+
         Preconditions:
             - Running under-test VM with two secondary Linux bridge networks:
               both networks connected to NAD-VLAN-A
@@ -116,6 +118,8 @@ class TestRunningVMLinuxBridgeVlanChange:
         """
         Test that the under-test VM has TCP connectivity to the reference VM on the new NAD-VLAN-B and no TCP
         connectivity on the old NAD-VLAN-A after the NAD reference change.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-network/hotpluggable-nad-ref.md
 
         Preconditions:
             - Running under-test VM with first secondary Linux bridge network connected to NAD-VLAN-B
@@ -164,6 +168,8 @@ class TestRunningVMLinuxBridgeVlanChange:
         """
         Test that both secondary Linux bridge networks on a running VM can have their VLANs
         changed in a single patch, with each network switching to a different VLAN.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-network/hotpluggable-nad-ref.md
 
         Preconditions:
             - Running under-test VM with two secondary Linux bridge networks:
@@ -229,6 +235,8 @@ def test_non_migratable_vm_nad_change_not_applied(
     """
     [NEGATIVE] Test that changing the NAD reference on a non-migratable VM does not
     silently succeed — the VM remains connected to the original network.
+
+    STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-network/hotpluggable-nad-ref.md
 
     Preconditions:
         - Non-migratable under-test VM backed by a ReadWriteOnce DataVolume (LiveMigratable: False)

@@ -49,6 +49,8 @@ class TestConnectivity:
         Test that an active TCP connection over a secondary Linux bridge network
         is preserved when the server VM migrates from an RHCOS 9 node to an RHCOS 10 node.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/dual-stream-cluster-rhcos9-rhcos10/network.md
+
         Preconditions:
             - Server VM with a secondary Linux bridge network, running on an RHCOS 9 worker node
             - Client VM with a secondary Linux bridge network, running on an RHCOS 9 worker node
@@ -80,6 +82,8 @@ class TestConnectivity:
         """
         Test that an active TCP connection over a secondary Linux bridge network
         is preserved when the server VM migrates from an RHCOS 10 node to an RHCOS 9 node.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/dual-stream-cluster-rhcos9-rhcos10/network.md
 
         Preconditions:
             - Server VM with a secondary Linux bridge network, running on an RHCOS 10 worker node

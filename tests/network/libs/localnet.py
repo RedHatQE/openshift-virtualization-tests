@@ -12,7 +12,7 @@ from libs.net import nodenetworkconfigurationpolicy as libnncp
 from libs.net.cluster import ipv4_supported_cluster, ipv6_supported_cluster
 from libs.vm.affinity import new_pod_anti_affinity
 from libs.vm.factory import base_vmspec, fedora_vm
-from libs.vm.spec import Affinity, CloudInitNoCloud, Devices, Interface, Metadata, Network
+from libs.vm.spec import Affinity, CloudInitNoCloud, Devices, Interface, Metadata, Multus, Network
 from libs.vm.vm import BaseVirtualMachine, add_volume_disk, cloudinitdisk_storage
 from tests.network.libs import cloudinit
 from tests.network.libs import cluster_user_defined_network as libcudn
@@ -95,6 +95,7 @@ def localnet_vm(
     cloud_init: CloudInitNoCloud | None = None,
     affinity: Affinity | None = None,
     vm_labels: dict[str, str] | None = None,
+    hostname: str | None = None,
 ) -> BaseVirtualMachine:
     """
     Create a Fedora-based Virtual Machine connected to localnet network(s).
@@ -117,6 +118,7 @@ def localnet_vm(
         vm_labels: Optional labels to apply to the VM template metadata.
             These labels are set on the VMI pod and can be used for affinity/anti-affinity matching.
             If None, no additional labels are applied beyond LOCALNET_TEST_LABEL.
+        hostname: Optional hostname to set on the VMI spec (spec.template.spec.hostname).
 
     Returns:
         BaseVirtualMachine: The configured VM object ready for creation.
@@ -139,6 +141,9 @@ def localnet_vm(
 
     if affinity is not None:
         vmi_spec.affinity = copy.deepcopy(affinity)
+
+    if hostname is not None:
+        vmi_spec.hostname = hostname
 
     return fedora_vm(namespace=namespace, name=name, client=client, spec=spec)
 
@@ -264,3 +269,67 @@ def create_nncp_localnet_on_secondary_node_nic(
     ) as nncp:
         nncp.wait_for_status_success()
         yield nncp
+
+
+@contextlib.contextmanager
+def localnet_vms_with_shared_hostname(
+    count: int,
+    namespace: str,
+    client: DynamicClient,
+    network_name: str,
+    ipv4_pool: Generator[IPv4Interface],
+    ipv6_pool: Generator[IPv6Interface],
+) -> Generator[list[BaseVirtualMachine]]:
+    """Create ``count`` localnet VMs that all share the same hostname.
+
+    Each VM gets a unique name and a unique IP address drawn from the pools, but every
+    VM sets the same spec.template.spec.hostname. This reproduces the ambiguous
+    launcher-pod label condition behind OCPBUGS-99277.
+
+    The shared hostname gets a unique per-call suffix so concurrent invocations (e.g.
+    parallel pytest-xdist workers sharing a cluster) do not collide on the same value.
+
+    The VMs are created on context entry and deleted on context exit.
+
+    Args:
+        count: Number of VMs to create.
+        namespace: Namespace to create the VMs in.
+        client: The Kubernetes dynamic client for resource creation.
+        network_name: Name of the localnet ClusterUserDefinedNetwork to attach to.
+        ipv4_pool: Generator yielding IPv4Interface addresses.
+        ipv6_pool: Generator yielding IPv6Interface addresses.
+
+    Yields:
+        The list of created VMs.
+    """
+    shared_hostname = f"shared-{uuid.uuid4().hex[:4]}"
+    with contextlib.ExitStack() as stack:
+        vms = [
+            stack.enter_context(
+                localnet_vm(
+                    namespace=namespace,
+                    name=f"shared-hostname-vm-{index}",
+                    client=client,
+                    networks=[Network(name=LOCALNET_BR_EX_INTERFACE, multus=Multus(networkName=network_name))],
+                    interfaces=[Interface(name=LOCALNET_BR_EX_INTERFACE, bridge={})],
+                    cloud_init=localnet_cloudinit(
+                        network_data=cloudinit.NetworkData(
+                            ethernets={
+                                GUEST_1ST_IFACE_NAME: cloudinit.EthernetDevice(
+                                    addresses=[
+                                        str(address)
+                                        for address in ip_addresses_from_pool(
+                                            ipv4_pool=ipv4_pool,
+                                            ipv6_pool=ipv6_pool,
+                                        )
+                                    ],
+                                )
+                            }
+                        )
+                    ),
+                    hostname=shared_hostname,
+                )
+            )
+            for index in range(1, count + 1)
+        ]
+        yield vms
