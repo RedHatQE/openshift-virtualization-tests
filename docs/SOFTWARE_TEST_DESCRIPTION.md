@@ -138,6 +138,7 @@ import pytest
 
 __test__ = False
 
+
 @pytest.mark.manual
 def test_abc():
     """
@@ -160,6 +161,7 @@ For a class of STD methods, set `__test__ = False` on the class and put the dire
 
 ```python
 import pytest
+
 
 class TestClass:
     __test__ = False
@@ -189,6 +191,7 @@ Mark tests that verify failure scenarios with `[NEGATIVE]` in the description:
 ```python
 import pytest
 
+
 @pytest.mark.manual
 def test_isolated_vms_cannot_communicate():
     """
@@ -205,6 +208,7 @@ def test_isolated_vms_cannot_communicate():
     Expected:
         - Ping fails
     """
+
 
 test_isolated_vms_cannot_communicate.__test__ = False
 ```
@@ -376,11 +380,13 @@ test_<specific_behavior>.__test__ = False
     ```python
     import pytest
 
+
     class TestVMSomeFeature:
         """
         Markers:
             - incremental
         """
+
         __test__ = False
 
         @pytest.mark.manual
@@ -416,7 +422,6 @@ test_<specific_behavior>.__test__ = False
             Expected:
                 - The VM remains running after migration
             """
-
     ```
 
 ### Common Patterns in This Project
@@ -463,6 +468,7 @@ Shared preconditions for this class are documented here; each test retains its o
 
 import pytest
 
+
 class TestSnapshotRestore:
     """
     Tests for VM snapshot restore functionality.
@@ -477,6 +483,7 @@ class TestSnapshotRestore:
         - File path="/data/after.txt", content="post-snapshot" (written after snapshot)
         - VM Restored from snapshot, running and SSH accessible
     """
+
     __test__ = False
 
     @pytest.mark.manual
@@ -525,6 +532,7 @@ class TestSnapshotRestore:
 ```python
 import pytest
 
+
 class TestVMLifecycle:
     """
     Tests for VM lifecycle operations.
@@ -532,6 +540,7 @@ class TestVMLifecycle:
     Preconditions:
         - VM running the latest Fedora image
     """
+
     __test__ = False
 
     @pytest.mark.manual
@@ -595,6 +604,7 @@ When a new test has no STP, use the Jira or RFE issue URL directly in the test d
 ```python
 import pytest
 
+
 @pytest.mark.manual
 def test_feature_behavior_without_stp():
     """
@@ -612,6 +622,7 @@ def test_feature_behavior_without_stp():
         - The feature behaves as described by the issue
     """
 
+
 test_feature_behavior_without_stp.__test__ = False
 ```
 
@@ -623,6 +634,7 @@ When a test stands alone without related tests, a class is not required:
 
 ```python
 import pytest
+
 
 @pytest.mark.manual
 def test_flat_overlay_ping_between_vms():
@@ -648,6 +660,7 @@ def test_flat_overlay_ping_between_vms():
         - Ping succeeds with 0% packet loss
     """
 
+
 test_flat_overlay_ping_between_vms.__test__ = False
 ```
 
@@ -659,6 +672,7 @@ Tests that verify failure scenarios use the `[NEGATIVE]` indicator:
 
 ```python
 import pytest
+
 
 @pytest.mark.manual
 def test_isolated_vms_cannot_communicate():
@@ -684,6 +698,7 @@ def test_isolated_vms_cannot_communicate():
         - Ping fails with 100% packet loss
     """
 
+
 test_isolated_vms_cannot_communicate.__test__ = False
 ```
 
@@ -695,6 +710,7 @@ Tests that should run with multiple parameter combinations include a `Parametriz
 
 ```python
 import pytest
+
 
 @pytest.mark.manual
 def test_online_disk_resize():
@@ -722,6 +738,7 @@ def test_online_disk_resize():
         - Disk size inside VM is greater than original size
     """
 
+
 test_online_disk_resize.__test__ = False
 ```
 
@@ -748,6 +765,7 @@ import pytest
 
 __test__ = False
 
+
 @pytest.mark.manual
 def test_ssh_connectivity_after_migration():
     """
@@ -768,6 +786,7 @@ def test_ssh_connectivity_after_migration():
         - SSH connection succeeds
     """
 
+
 @pytest.mark.manual
 def test_data_disk_accessible_after_migration():
     """
@@ -787,7 +806,6 @@ def test_data_disk_accessible_after_migration():
     Expected:
         - Data disk content equals the written test data
     """
-
 ```
 
 ---

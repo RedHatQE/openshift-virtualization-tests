@@ -45,8 +45,11 @@ def unprivileged_user_vm(unprivileged_client, namespace):
 @pytest.mark.polarion("CNV-11968")
 def test_unprivileged_client_migrate_vm_negative(unprivileged_client, unprivileged_user_vm):
     """Test that namespace admin can't migrate a VM."""
-    with pytest.raises(ForbiddenError):
+    try:
         migrate_vm_and_verify(vm=unprivileged_user_vm, client=unprivileged_client, wait_for_migration_success=False)
+    except ForbiddenError:
+        pass
+    else:
         pytest.fail("Namespace admin shouldn't be able to migrate VM without kubevirt.io:migrate RoleBinding!")
 
 
