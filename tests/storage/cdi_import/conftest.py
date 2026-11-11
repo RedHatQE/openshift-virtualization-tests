@@ -15,6 +15,7 @@ from tests.storage.constants import (
     HTTP,
     QUAY_FEDORA_CONTAINER_IMAGE,
 )
+from tests.storage.stop_status_utils import dv_stop_status_restart_threshold
 from tests.storage.utils import (
     create_pod_for_pvc,
     get_file_url,
@@ -23,11 +24,11 @@ from utilities.constants import Images
 from utilities.constants.images import OS_FLAVOR_FEDORA
 from utilities.constants.networking import LINUX_BRIDGE
 from utilities.constants.storage import REGISTRY_STR
-from utilities.constants.timeouts import TIMEOUT_1MIN
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_50MIN
 from utilities.infra import NON_EXIST_URL
 from utilities.network import network_device, network_nad
 from utilities.storage import construct_datavolume_source_dict, create_dv, sc_volume_binding_mode_is_wffc
-from utilities.virt import VirtualMachineForTests
+from utilities.virt import VirtualMachineForTests, running_vm, vm_instance_from_template, wait_for_windows_vm
 
 LOGGER = logging.getLogger(__name__)
 BRIDGE_NAME = "br1-dv"
@@ -106,7 +107,7 @@ def running_pod_with_dv_pvc(
     dv_from_http_import,
 ):
     """Create a running pod with DV's PVC."""
-    dv_from_http_import.wait_for_dv_success()
+    dv_from_http_import.wait_for_dv_success(stop_status_func=dv_stop_status_restart_threshold, dv=dv_from_http_import)
     with create_pod_for_pvc(
         pvc=dv_from_http_import.pvc,
         volume_mode=dv_from_http_import.pvc.instance.spec.volumeMode,
@@ -146,7 +147,7 @@ def created_vm_list(unprivileged_client, created_blank_dv_list, storage_class_na
             if sc_volume_binding_mode_is_wffc(sc=storage_class_name_scope_module, client=unprivileged_client):
                 dv.wait_for_status(status=DataVolume.Status.PENDING_POPULATION, timeout=TIMEOUT_1MIN)
             else:
-                dv.wait_for_dv_success(timeout=TIMEOUT_1MIN)
+                dv.wait_for_dv_success(timeout=TIMEOUT_1MIN, stop_status_func=dv_stop_status_restart_threshold, dv=dv)
             vm = VirtualMachineForTests(
                 client=unprivileged_client,
                 name=f"vm-{dv.name}",
@@ -224,3 +225,49 @@ def importer_pod_annotations(admin_client, namespace, linux_nad):
         importer_pod = wait_dv_and_get_importer(dv=dv, admin_client=admin_client)
         wait_for_multus_network_status(importer_pod=importer_pod)
         yield importer_pod.instance.metadata.annotations
+
+
+@pytest.fixture()
+def vm_instance_from_template_multi_storage_scope_function(
+    request,
+    unprivileged_client,
+    namespace,
+    data_volume_multi_storage_scope_function,
+    cpu_for_migration,
+):
+    """Creates a VM from a common template using an existing DataVolume.
+
+    Args:
+        data_volume_multi_storage_scope_function: Existing DataVolume the VM's template will consume directly
+            (no clone).
+        cpu_for_migration: CPU model applied to the VM when request.param["set_vm_common_cpu"] is True.
+
+    Yields:
+        VirtualMachine: The created VM, started unless request.param["start_vm"] is False.
+    """
+
+    with vm_instance_from_template(
+        request=request,
+        unprivileged_client=unprivileged_client,
+        namespace=namespace,
+        existing_data_volume=data_volume_multi_storage_scope_function,
+        vm_cpu_model=(cpu_for_migration if request.param.get("set_vm_common_cpu") else None),
+    ) as vm:
+        yield vm
+
+
+@pytest.fixture()
+def started_windows_vm(
+    request,
+    vm_instance_from_template_multi_storage_scope_function,
+):
+    """Starts the VM and waits for the Windows guest to finish booting.
+
+    Waits up to 50 minutes for the VM's DataVolume(s) to succeed, then waits for the Windows OS
+    (request.param["os_version"]) to report ready.
+    """
+    running_vm(vm=vm_instance_from_template_multi_storage_scope_function, dv_wait_timeout=TIMEOUT_50MIN)
+    wait_for_windows_vm(
+        vm=vm_instance_from_template_multi_storage_scope_function,
+        version=request.param["os_version"],
+    )

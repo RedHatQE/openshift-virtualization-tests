@@ -18,14 +18,12 @@ from utilities.constants.hco import (
     DATA_IMPORT_CRON_ENABLE,
     SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
 )
-from utilities.constants.pytest import QUARANTINED
 from utilities.constants.storage import WILDCARD_CRON_EXPRESSION
 from utilities.hco import ResourceEditorValidateHCOReconcile
 
 pytestmark = [pytest.mark.gating, pytest.mark.arm64, pytest.mark.s390x]
 
 COMMON_TEMPLATE_DISABLE = {DATA_IMPORT_CRON_ENABLE: "false"}
-COMMON_TEMPLATE_ENABLE = {DATA_IMPORT_CRON_ENABLE: "true"}
 UPDATE_TEMPLATE_SCHEDULE = {"spec->schedule": WILDCARD_CRON_EXPRESSION}
 UPDATE_ONE_VALUE_IN_SPEC = {
     "spec->garbageCollect": "Never",
@@ -163,16 +161,7 @@ class TestModifyCommonTemplateSpec:
             pytest.param(
                 {"num_templates": 1, "update_dict": UPDATE_STORAGE_CLASS_IN_SPEC},
                 UPDATE_STORAGE_CLASS_IN_SPEC,
-                marks=(
-                    pytest.mark.polarion("CNV-8740"),
-                    pytest.mark.xfail(
-                        reason=(
-                            f"{QUARANTINED}: VolumeSnapshot source causes DV leftover when applying "
-                            f"non-existent storage class. DV is in pending not cleaned up; Tracked in CNV-80607"
-                        ),
-                        run=False,
-                    ),
-                ),
+                marks=(pytest.mark.polarion("CNV-8740"),),
             ),
         ],
         indirect=["updated_common_template"],

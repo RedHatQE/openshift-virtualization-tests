@@ -1,14 +1,55 @@
 import logging
 
 import pytest
+from packaging.version import parse
 from pytest_testconfig import config as py_config
 
 import utilities.hco
 from utilities.constants.hco import HCO_SUBSCRIPTION
-from utilities.infra import get_subscription
-from utilities.operator import disable_default_sources_in_operatorhub
+from utilities.infra import get_clusterversion, get_subscription
+from utilities.operator import disable_default_sources_in_operatorhub, get_hco_csv_name_by_version
 
 LOGGER = logging.getLogger(__name__)
+
+
+@pytest.fixture(scope="session")
+def installing_cnv(pytestconfig):
+    return pytestconfig.option.install
+
+
+@pytest.fixture(scope="session")
+def openshift_current_version(admin_client):
+    return get_clusterversion(client=admin_client).instance.status.history[0].version
+
+
+@pytest.fixture(scope="session")
+def ocp_current_version(openshift_current_version):
+    return parse(version=openshift_current_version.split("-")[0])
+
+
+@pytest.fixture(scope="session")
+def cnv_target_version(pytestconfig):
+    return pytestconfig.option.cnv_version
+
+
+@pytest.fixture(scope="session")
+def cnv_channel(pytestconfig):
+    return pytestconfig.option.cnv_channel
+
+
+@pytest.fixture(scope="session")
+def hco_target_csv_name(cnv_target_version):
+    return get_hco_csv_name_by_version(cnv_target_version=cnv_target_version) if cnv_target_version else None
+
+
+@pytest.fixture(scope="session")
+def cnv_source(pytestconfig):
+    return pytestconfig.option.cnv_source or "osbs"
+
+
+@pytest.fixture(scope="session")
+def is_production_source(cnv_source):
+    return cnv_source == "production"
 
 
 @pytest.fixture(scope="session")

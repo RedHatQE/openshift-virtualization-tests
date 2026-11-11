@@ -5,7 +5,6 @@ HCO_CR_CERT_CONFIG_KEY = "certConfig"
 HCO_CR_CERT_CONFIG_SERVER_KEY = "server"
 HCO_CR_CERT_CONFIG_DURATION_KEY = "duration"
 HCO_CR_CERT_CONFIG_RENEW_BEFORE_KEY = "renewBefore"
-SIDECAR_FEATURE_GATE_KEY = "Sidecar"
 WORKLOADUPDATEMETHODS = "workloadUpdateMethods"
 KEY_PATH_SEPARATOR = "->"
 TEMPLATE_VALIDATOR = "templateValidator"
@@ -28,6 +27,7 @@ EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES = {
     "HostDevices",
     "HypervStrictCheck",
     "KubevirtSeccompProfile",
+    "RebootPolicy",
     "Snapshot",
     "Template",
 }

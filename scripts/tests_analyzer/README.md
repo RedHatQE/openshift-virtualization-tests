@@ -262,7 +262,7 @@ SHOULD_RUN=$(echo "$RESULT" | jq -r '.should_run_tests')
 
 if [ "$SHOULD_RUN" = "true" ]; then
   echo "Running smoke tests..."
-  pytest -m smoke
+  uv run pytest -m smoke
 else
   echo "Skipping smoke tests (no dependencies affected)"
 fi

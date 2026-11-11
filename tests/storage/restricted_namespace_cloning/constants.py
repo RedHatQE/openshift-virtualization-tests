@@ -7,7 +7,6 @@ DATAVOLUMES_AND_DVS_SRC = ["datavolumes", "datavolumes/source"]
 PERSISTENT_VOLUME_CLAIMS = ["persistentvolumeclaims"]
 
 CREATE = ["create"]
-CREATE_DELETE = ["create", "delete"]
 LIST_GET = ["list", "get"]
 CREATE_DELETE_LIST_GET = ["create", "delete", "list", "get"]
 ALL = ["*"]

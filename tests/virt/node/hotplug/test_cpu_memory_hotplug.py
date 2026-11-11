@@ -14,11 +14,10 @@ from tests.utils import (
     hotplug_spec_vm,
     wait_for_guest_os_cpu_count,
 )
+from utilities.constants.images import OS_FLAVOR_WINDOWS
 from utilities.constants.virt import (
     FIVE_GI_MEMORY,
-    FOUR_CPU_SOCKETS,
     FOUR_GI_MEMORY,
-    SIX_CPU_SOCKETS,
     SIX_GI_MEMORY,
     TEN_CPU_SOCKETS,
     TWELVE_GI_MEMORY,
@@ -33,6 +32,15 @@ if TYPE_CHECKING:
 
     from utilities.virt import VirtualMachineForTests
 
+
+INITIAL_CPU_SOCKETS = 2
+INITIAL_CPU_CORES = 2
+INITIAL_CPU_THREADS = 1
+
+TARGET_CPU_SOCKETS = INITIAL_CPU_SOCKETS + 1
+
+EXPECTED_GUEST_VCPUS = INITIAL_CPU_CORES * TARGET_CPU_SOCKETS * INITIAL_CPU_THREADS
+
 pytestmark = [pytest.mark.rwx_default_storage, pytest.mark.data_collector_scope(scope="module")]
 
 
@@ -41,35 +49,47 @@ TESTS_CLASS_NAME = "TestCPUHotPlug"
 
 
 @pytest.fixture()
-def xfail_windows_memory_hotunplug(hotplugged_vm):
-    if "windows" in hotplugged_vm.name:
+def xfail_windows_memory_hotunplug(vm_with_hotplug_support):
+    if vm_with_hotplug_support.os_flavor == OS_FLAVOR_WINDOWS:
         pytest.xfail(reason="Windows OS doesn't officially support memory hot unplug!")
 
 
 @pytest.fixture(scope="class")
-def hotplug_vm_snapshot(hotplugged_vm):
+def hotplug_vm_snapshot(vm_with_hotplug_support):
     with VirtualMachineSnapshot(
-        client=hotplugged_vm.client,
-        name=f"{hotplugged_vm.name}-snapshot",
-        namespace=hotplugged_vm.namespace,
-        vm_name=hotplugged_vm.name,
+        client=vm_with_hotplug_support.client,
+        name=f"{vm_with_hotplug_support.name}-snapshot",
+        namespace=vm_with_hotplug_support.namespace,
+        vm_name=vm_with_hotplug_support.name,
     ) as snapshot:
         snapshot.wait_snapshot_done()
         yield snapshot
 
 
 @pytest.mark.parametrize(
-    "golden_image_data_source_for_test_scope_class, hotplugged_vm",
+    "golden_image_data_source_for_test_scope_class, vm_with_hotplug_support",
     [
         pytest.param(
             {"os_dict": RHEL_LATEST},
-            {"template_labels": RHEL_LATEST_LABELS, "vm_name": "rhel-latest-cpu-hotplug-vm"},
+            {
+                "template_labels": RHEL_LATEST_LABELS,
+                "vm_name": "rhel-latest-cpu-hotplug-vm",
+                "cpu_cores": INITIAL_CPU_CORES,
+                "cpu_sockets": INITIAL_CPU_SOCKETS,
+                "cpu_threads": INITIAL_CPU_THREADS,
+            },
             id="RHEL-VM",
             marks=pytest.mark.s390x,
         ),
         pytest.param(
             {"os_dict": WINDOWS_LATEST},
-            {"template_labels": WINDOWS_LATEST_LABELS, "vm_name": "windows-latest-cpu-hotplug-vm"},
+            {
+                "template_labels": WINDOWS_LATEST_LABELS,
+                "vm_name": "windows-latest-cpu-hotplug-vm",
+                "cpu_cores": INITIAL_CPU_CORES,
+                "cpu_sockets": INITIAL_CPU_SOCKETS,
+                "cpu_threads": INITIAL_CPU_THREADS,
+            },
             id="WIN-VM",
             marks=[pytest.mark.special_infra, pytest.mark.high_resource_vm, pytest.mark.windows],
         ),
@@ -78,46 +98,48 @@ def hotplug_vm_snapshot(hotplugged_vm):
 )
 class TestCPUHotPlug:
     @pytest.mark.parametrize(
-        "hotplugged_sockets_memory_guest", [pytest.param({"sockets": SIX_CPU_SOCKETS})], indirect=True
+        "hotplugged_sockets_memory_guest", [pytest.param({"sockets": TARGET_CPU_SOCKETS})], indirect=True
     )
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::hotplug_cpu")
     @pytest.mark.polarion("CNV-10695")
-    def test_hotplug_cpu(self, hotplugged_sockets_memory_guest, hotplugged_vm):
-        wait_for_guest_os_cpu_count(vm=hotplugged_vm, spec_cpu_amount=SIX_CPU_SOCKETS)
+    def test_hotplug_cpu(self, hotplugged_sockets_memory_guest, vm_with_hotplug_support):
+        wait_for_guest_os_cpu_count(vm=vm_with_hotplug_support, spec_cpu_amount=EXPECTED_GUEST_VCPUS)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu"])
     @pytest.mark.polarion("CNV-10696")
     @pytest.mark.usefixtures("hotplug_vm_snapshot")
-    def test_migrate_snapshot_hotplugged_vm(self, admin_client: DynamicClient, hotplugged_vm: VirtualMachineForTests):
-        migrate_vm_and_verify(vm=hotplugged_vm, client=admin_client, check_ssh_connectivity=True)
+    def test_migrate_snapshot_hotplugged_vm(
+        self, admin_client: DynamicClient, vm_with_hotplug_support: VirtualMachineForTests
+    ):
+        migrate_vm_and_verify(vm=vm_with_hotplug_support, client=admin_client, check_ssh_connectivity=True)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu"])
     @pytest.mark.polarion("CNV-10697")
-    def test_restart_hotplugged_vm(self, hotplugged_vm):
-        restart_vm_wait_for_running_vm(vm=hotplugged_vm)
+    def test_restart_hotplug_vm(self, vm_with_hotplug_support):
+        restart_vm_wait_for_running_vm(vm=vm_with_hotplug_support)
 
     @pytest.mark.parametrize(
         "hotplugged_sockets_memory_guest",
-        [pytest.param({"sockets": FOUR_CPU_SOCKETS, "skip_migration": True})],
+        [pytest.param({"sockets": INITIAL_CPU_SOCKETS, "skip_migration": True})],
         indirect=True,
     )
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu"])
     @pytest.mark.polarion("CNV-10698")
-    def test_decrease_cpu_value(self, hotplugged_sockets_memory_guest, hotplugged_vm):
+    def test_decrease_cpu_value(self, hotplugged_sockets_memory_guest, vm_with_hotplug_support):
         assert_restart_required_condition(
-            vm=hotplugged_vm, expected_message="Reduction of CPU socket count requires a restart"
+            vm=vm_with_hotplug_support, expected_message="Reduction of CPU socket count requires a restart"
         )
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu"])
     @pytest.mark.polarion("CNV-10699")
-    def test_hotplug_cpu_above_max_value(self, hotplugged_vm):
+    def test_hotplug_cpu_above_max_value(self, vm_with_hotplug_support):
         with pytest.raises(UnprocessibleEntityError):
-            hotplug_spec_vm(vm=hotplugged_vm, sockets=TEN_CPU_SOCKETS)
+            hotplug_spec_vm(vm=vm_with_hotplug_support, sockets=TEN_CPU_SOCKETS)
             pytest.fail("Socket value set higher than max value!")
 
 
 @pytest.mark.parametrize(
-    "golden_image_data_source_for_test_scope_class, hotplugged_vm",
+    "golden_image_data_source_for_test_scope_class, vm_with_hotplug_support",
     [
         pytest.param(
             {"os_dict": RHEL_LATEST},
@@ -126,7 +148,11 @@ class TestCPUHotPlug:
         ),
         pytest.param(
             {"os_dict": WINDOWS_LATEST},
-            {"template_labels": WINDOWS_LATEST_LABELS, "vm_name": "windows-latest-memory-hotplug-vm"},
+            {
+                "template_labels": WINDOWS_LATEST_LABELS,
+                "vm_name": "windows-latest-memory-hotplug-vm",
+                "cpu_cores": INITIAL_CPU_CORES,
+            },
             id="WIN-VM",
             marks=[pytest.mark.special_infra, pytest.mark.high_resource_vm, pytest.mark.windows],
         ),
@@ -139,14 +165,16 @@ class TestMemoryHotPlug:
     )
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::hotplug_memory")
     @pytest.mark.polarion("CNV-10676")
-    def test_hotplug_memory(self, hotplugged_sockets_memory_guest, hotplugged_vm):
-        assert_guest_os_memory_amount(vm=hotplugged_vm, spec_memory_amount=SIX_GI_MEMORY)
+    def test_hotplug_memory(self, hotplugged_sockets_memory_guest, vm_with_hotplug_support):
+        assert_guest_os_memory_amount(vm=vm_with_hotplug_support, spec_memory_amount=SIX_GI_MEMORY)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_memory"])
     @pytest.mark.polarion("CNV-10677")
     @pytest.mark.usefixtures("hotplug_vm_snapshot")
-    def test_migrate_snapshot_hotplugged_vm(self, admin_client: DynamicClient, hotplugged_vm: VirtualMachineForTests):
-        migrate_vm_and_verify(vm=hotplugged_vm, client=admin_client, check_ssh_connectivity=True)
+    def test_migrate_snapshot_hotplugged_vm(
+        self, admin_client: DynamicClient, vm_with_hotplug_support: VirtualMachineForTests
+    ):
+        migrate_vm_and_verify(vm=vm_with_hotplug_support, client=admin_client, check_ssh_connectivity=True)
 
     @pytest.mark.parametrize(
         "hotplugged_sockets_memory_guest", [pytest.param({"memory_guest": FIVE_GI_MEMORY})], indirect=True
@@ -154,20 +182,20 @@ class TestMemoryHotPlug:
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_memory"])
     @pytest.mark.polarion("CNV-10679")
     def test_decrease_memory_value(
-        self, xfail_windows_memory_hotunplug, hotplugged_sockets_memory_guest, hotplugged_vm
+        self, xfail_windows_memory_hotunplug, hotplugged_sockets_memory_guest, vm_with_hotplug_support
     ):
-        assert_guest_os_memory_amount(vm=hotplugged_vm, spec_memory_amount=FIVE_GI_MEMORY)
+        assert_guest_os_memory_amount(vm=vm_with_hotplug_support, spec_memory_amount=FIVE_GI_MEMORY)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_memory"])
     @pytest.mark.polarion("CNV-10678")
-    def test_restart_hotplugged_vm(self, hotplugged_vm):
-        restart_vm_wait_for_running_vm(vm=hotplugged_vm)
+    def test_restart_hotplug_vm(self, vm_with_hotplug_support):
+        restart_vm_wait_for_running_vm(vm=vm_with_hotplug_support)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_memory"])
     @pytest.mark.polarion("CNV-10681")
-    def test_hotplug_memory_above_max_value(self, hotplugged_vm):
+    def test_hotplug_memory_above_max_value(self, vm_with_hotplug_support):
         with pytest.raises(UnprocessibleEntityError):
-            hotplug_spec_vm(vm=hotplugged_vm, memory_guest=TWELVE_GI_MEMORY)
+            hotplug_spec_vm(vm=vm_with_hotplug_support, memory_guest=TWELVE_GI_MEMORY)
             pytest.fail("Memory value set higher than max value!")
 
     @pytest.mark.parametrize(
@@ -177,8 +205,8 @@ class TestMemoryHotPlug:
     )
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_memory"])
     @pytest.mark.polarion("CNV-10682")
-    def test_reduce_memory_below_start_value(self, hotplugged_sockets_memory_guest, hotplugged_vm):
+    def test_reduce_memory_below_start_value(self, hotplugged_sockets_memory_guest, vm_with_hotplug_support):
         assert_restart_required_condition(
-            vm=hotplugged_vm,
+            vm=vm_with_hotplug_support,
             expected_message="memory updated in template spec to a value lower than what the VM started with",
         )

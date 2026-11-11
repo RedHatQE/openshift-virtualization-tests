@@ -15,6 +15,7 @@ from pytest_testconfig import config as py_config
 from libs.net.cluster import is_ipv6_single_stack_cluster
 from tests.os_params import RHEL_LATEST
 from tests.storage.cdi_upload.utils import get_storage_profile_minimum_supported_pvc_size
+from tests.storage.stop_status_utils import dv_stop_status_restart_threshold
 from tests.storage.utils import assert_use_populator, create_windows_vm_validate_guest_agent_info
 from utilities.constants import Images
 from utilities.constants.components import CDI_UPLOADPROXY
@@ -267,7 +268,9 @@ def test_virtctl_image_upload_pvc(download_image, namespace, storage_class_name_
 class TestVirtctlUploadExistingDV:
     @pytest.mark.polarion("CNV-3725")
     def test_virtctl_image_upload_to_existing_dv_and_create_vm(self, unprivileged_client, uploaded_dv_scope_class):
-        uploaded_dv_scope_class.wait_for_dv_success()
+        uploaded_dv_scope_class.wait_for_dv_success(
+            stop_status_func=dv_stop_status_restart_threshold, dv=uploaded_dv_scope_class
+        )
         with create_vm_from_dv(dv=uploaded_dv_scope_class, client=unprivileged_client, start=True):
             pass
 
@@ -512,7 +515,6 @@ def test_successful_vm_from_uploaded_dv_windows(
     indirect=True,
 )
 @pytest.mark.s390x
-@pytest.mark.jira("CNV-76657", run=False)
 def test_print_response_body_on_error_upload_virtctl(
     namespace, download_specified_image, storage_class_name_scope_module
 ):

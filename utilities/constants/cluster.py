@@ -1,7 +1,7 @@
 """Cluster infrastructure constants.
 
-Covers Kubernetes node labels (architecture, worker role, CPU model prefix, TSC
-frequency, version), generic node dict keys (NODE_STR), pod security namespace labels, Kubernetes API verb strings,
+Covers Kubernetes node labels (architecture, worker role, CPU model prefix, CPU
+manager, TSC frequency, version), generic node dict keys (NODE_STR), pod security namespace labels, Kubernetes API verb strings,
 environment variables (KUBECONFIG, WORKERS_TYPE), CNV test run markers, service
 account names, the base network-exception dictionary, and audit-log command strings.
 
@@ -13,7 +13,7 @@ Not here:
 - Pytest/test-runner strings → ``pytest.py``
 """
 
-from typing import Final
+from typing import Any, Final
 
 from kubernetes.dynamic.exceptions import InternalServerError
 from ocp_resources.resource import Resource
@@ -31,8 +31,23 @@ NODE_TYPE_WORKER_LABEL = {"node-type": "worker"}
 NODE_ROLE_KUBERNETES_IO = "node-role.kubernetes.io"
 WORKER_NODE_LABEL_KEY = f"{NODE_ROLE_KUBERNETES_IO}/worker"
 RHCOS9_WORKER_LABEL: Final[str] = f"{NODE_ROLE_KUBERNETES_IO}/worker-rhcos9"
+RHCOS9_AFFINITY: Final[dict[str, Any]] = {
+    "nodeAffinity": {
+        "requiredDuringSchedulingIgnoredDuringExecution": {
+            "nodeSelectorTerms": [{"matchExpressions": [{"key": RHCOS9_WORKER_LABEL, "operator": "Exists"}]}]
+        }
+    }
+}
+RHCOS10_AFFINITY: Final[dict[str, Any]] = {
+    "nodeAffinity": {
+        "requiredDuringSchedulingIgnoredDuringExecution": {
+            "nodeSelectorTerms": [{"matchExpressions": [{"key": RHCOS9_WORKER_LABEL, "operator": "DoesNotExist"}]}]
+        }
+    }
+}
 VERSION_LABEL_KEY = f"{Resource.ApiGroup.APP_KUBERNETES_IO}/version"
 CPU_MODEL_LABEL_PREFIX = f"cpu-model.node.{Resource.ApiGroup.KUBEVIRT_IO}"
+CPU_MANAGER_LABEL = f"{Resource.ApiGroup.KUBEVIRT_IO}/cpumanager"
 TSC_FREQUENCY = "tsc-frequency"
 
 POD_SECURITY_NAMESPACE_LABELS = {
@@ -69,6 +84,10 @@ OC_ADM_LOGS_COMMAND = "oc adm node-logs"
 AUDIT_LOGS_PATH = "--path=kube-apiserver"
 
 COUNT_FIVE = 5
+
+# RHCOS versions for dual-stream cluster testing
+RHCOS9_VERSION = "CoreOS 9"
+RHCOS10_VERSION = "CoreOS 10"
 
 BASE_EXCEPTIONS_DICT: dict[type[Exception], list[str]] = {
     NewConnectionError: [],

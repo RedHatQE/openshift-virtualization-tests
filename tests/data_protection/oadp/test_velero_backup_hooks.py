@@ -38,6 +38,8 @@ class TestVeleroBackupHookOptOut:
         """
         Test that backup of paused VM completes with hooks disabled.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/remove-velero-hooks-stp.md
+
         Preconditions:
             - Under-test VM with ``kubevirt.io/skip-backup-hooks`` set to ``"true"``, paused
 
@@ -66,6 +68,8 @@ class TestVeleroBackupHookOptOut:
     ):
         """
         Test that backup of a running VM completes with hooks disabled.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/remove-velero-hooks-stp.md
 
         Preconditions:
             - Under-test VM with ``kubevirt.io/skip-backup-hooks`` set to ``"true"``, running

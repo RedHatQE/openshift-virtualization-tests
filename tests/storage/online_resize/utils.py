@@ -11,6 +11,7 @@ from ocp_resources.virtual_machine_restore import VirtualMachineRestore
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
+from tests.storage.stop_status_utils import dv_stop_status_restart_threshold
 from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_4MIN, TIMEOUT_5SEC
 from utilities.storage import create_dv
 from utilities.virt import running_vm
@@ -37,7 +38,7 @@ def create_rhel_dv_from_data_source(unprivileged_client, namespace, name, storag
             "namespace": rhel_data_source.namespace,
         },
     ) as dv:
-        dv.wait_for_dv_success()
+        dv.wait_for_dv_success(stop_status_func=dv_stop_status_restart_threshold, dv=dv)
         yield dv
 
 

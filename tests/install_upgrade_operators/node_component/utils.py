@@ -59,12 +59,12 @@ SELECTORS = [
     ("op-comp", "op3"),
 ]
 
-INFRA_LABEL_1 = {"nodePlacement": {"nodeSelector": {"infra-comp": "infra1"}}}
-INFRA_LABEL_2 = {"nodePlacement": {"nodeSelector": {"infra-comp": "infra2"}}}
-INFRA_LABEL_3 = {"nodePlacement": {"nodeSelector": {"infra-comp": "infra3"}}}
-WORK_LABEL_1 = {"nodePlacement": {"nodeSelector": {"work-comp": "work1"}}}
-WORK_LABEL_2 = {"nodePlacement": {"nodeSelector": {"work-comp": "work2"}}}
-WORK_LABEL_3 = {"nodePlacement": {"nodeSelector": {"work-comp": "work3"}}}
+INFRA_LABEL_1 = {"nodeSelector": {"infra-comp": "infra1"}}
+INFRA_LABEL_2 = {"nodeSelector": {"infra-comp": "infra2"}}
+INFRA_LABEL_3 = {"nodeSelector": {"infra-comp": "infra3"}}
+WORK_LABEL_1 = {"nodeSelector": {"work-comp": "work1"}}
+WORK_LABEL_2 = {"nodeSelector": {"work-comp": "work2"}}
+WORK_LABEL_3 = {"nodeSelector": {"work-comp": "work3"}}
 
 SUBSCRIPTION_NODE_SELCTOR_1 = {"op-comp": "op1"}
 SUBSCRIPTION_NODE_SELCTOR_2 = {"op-comp": "op2"}
@@ -79,77 +79,73 @@ SUBSCRIPTION_TOLERATIONS = [
 
 
 NODE_PLACEMENT_INFRA = {
-    "nodePlacement": {
-        "affinity": {
-            "nodeAffinity": {
-                "requiredDuringSchedulingIgnoredDuringExecution": {
-                    "nodeSelectorTerms": [
-                        {
-                            "matchExpressions": [
-                                {
-                                    "key": "infra-comp",
-                                    "operator": "In",
-                                    "values": ["infra1", "infra2"],
-                                }
-                            ]
-                        }
-                    ]
-                }
+    "affinity": {
+        "nodeAffinity": {
+            "requiredDuringSchedulingIgnoredDuringExecution": {
+                "nodeSelectorTerms": [
+                    {
+                        "matchExpressions": [
+                            {
+                                "key": "infra-comp",
+                                "operator": "In",
+                                "values": ["infra1", "infra2"],
+                            }
+                        ]
+                    }
+                ]
             }
-        },
-        "nodeSelector": {"infra-comp": "infra1"},
-        "tolerations": [
-            {
-                "effect": "NoSchedule",
-                "key": WORKER_NODE_LABEL_KEY,
-                "operator": "Exists",
-            }
-        ],
-    }
+        }
+    },
+    "nodeSelector": {"infra-comp": "infra1"},
+    "tolerations": [
+        {
+            "effect": "NoSchedule",
+            "key": WORKER_NODE_LABEL_KEY,
+            "operator": "Exists",
+        }
+    ],
 }
 
 NODE_PLACEMENT_WORKLOADS = {
-    "nodePlacement": {
-        "affinity": {
-            "nodeAffinity": {
-                "preferredDuringSchedulingIgnoredDuringExecution": [
+    "affinity": {
+        "nodeAffinity": {
+            "preferredDuringSchedulingIgnoredDuringExecution": [
+                {
+                    "preference": {
+                        "matchExpressions": [
+                            {
+                                "key": "work-comp",
+                                "operator": "In",
+                                "values": ["work1", "work2"],
+                            }
+                        ]
+                    },
+                    "weight": 1,
+                }
+            ],
+            "requiredDuringSchedulingIgnoredDuringExecution": {
+                "nodeSelectorTerms": [
                     {
-                        "preference": {
-                            "matchExpressions": [
-                                {
-                                    "key": "work-comp",
-                                    "operator": "In",
-                                    "values": ["work1", "work2"],
-                                }
-                            ]
-                        },
-                        "weight": 1,
+                        "matchExpressions": [
+                            {
+                                "key": "work-comp",
+                                "operator": "In",
+                                "values": ["work1", "work2"],
+                            }
+                        ]
                     }
-                ],
-                "requiredDuringSchedulingIgnoredDuringExecution": {
-                    "nodeSelectorTerms": [
-                        {
-                            "matchExpressions": [
-                                {
-                                    "key": "work-comp",
-                                    "operator": "In",
-                                    "values": ["work1", "work2"],
-                                }
-                            ]
-                        }
-                    ]
-                },
-            }
-        },
-        "nodeSelector": {"work-comp": "work2"},
-        "tolerations": [
-            {
-                "effect": "NoSchedule",
-                "key": WORKER_NODE_LABEL_KEY,
-                "operator": "Exists",
-            }
-        ],
-    }
+                ]
+            },
+        }
+    },
+    "nodeSelector": {"work-comp": "work2"},
+    "tolerations": [
+        {
+            "effect": "NoSchedule",
+            "key": WORKER_NODE_LABEL_KEY,
+            "operator": "Exists",
+        }
+    ],
 }
 
 # Below list consists of Infrastructure and Workloads pods based on Daemonset and Deployments.
@@ -374,6 +370,17 @@ def get_pod_per_nodes(admin_client, hco_namespace, filter_pods_by_name=None):
                 LOGGER.warning(f"Ignoring pods that disappeared during the query. node={pod.node.name} pod={pod.name}")
         return pods_per_nodes
 
+    def _check_pod_running(pod: Pod) -> bool:
+        # TOCTOU: pod deleted after snapshot; return False so sampler retries (CNV-98696).
+        try:
+            return pod.exists and pod.status == Pod.Status.RUNNING
+        except NotFoundError:
+            LOGGER.warning(f"Pod {pod.name} disappeared during status check; treating as not running.")
+            return False
+        except TimeoutExpiredError:
+            LOGGER.warning(f"Pod {pod.name} status check timed out; treating as not running (TOCTOU deletion).")
+            return False
+
     pod_names_per_nodes = {}
     samples = TimeoutSampler(
         wait_timeout=TIMEOUT_5MIN,
@@ -384,7 +391,7 @@ def get_pod_per_nodes(admin_client, hco_namespace, filter_pods_by_name=None):
     )
     try:
         for sample in samples:
-            if all(pod.exists and pod.status == Pod.Status.RUNNING for pods in sample.values() for pod in pods):
+            if all(_check_pod_running(pod) for pods in sample.values() for pod in pods):
                 pod_names_per_nodes = {node: [pod.name for pod in pods] for node, pods in sample.items()}
                 return pod_names_per_nodes
     except TimeoutExpiredError:

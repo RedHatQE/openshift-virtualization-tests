@@ -22,9 +22,7 @@ from tests.virt.node.gpu.constants import (
 )
 from tests.virt.utils import (
     get_allocatable_memory_per_node,
-    get_data_volume_template_dict_with_default_storage_class,
     get_non_terminated_pods,
-    get_or_create_golden_image_data_source,
     get_pod_memory_requests,
     patch_hco_cr_with_mdev_permitted_hostdevices,
     update_hco_memory_overcommit,
@@ -37,7 +35,12 @@ from utilities.constants.namespaces import NamespacesNames
 from utilities.exceptions import ResourceValueError, UnsupportedGPUDeviceError
 from utilities.infra import get_nodes_with_label, get_resources_by_name_prefix
 from utilities.pytest_utils import exit_pytest_execution
-from utilities.virt import get_nodes_gpu_info, vm_instance_from_template
+from utilities.virt import (
+    get_data_volume_template_dict_with_default_storage_class,
+    get_nodes_gpu_info,
+    get_or_create_golden_image_data_source,
+    vm_instance_from_template,
+)
 
 LOGGER = logging.getLogger(__name__)
 

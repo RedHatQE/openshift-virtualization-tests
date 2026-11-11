@@ -11,6 +11,7 @@ import pytest
 from ocp_resources.pod import Pod
 from pytest_testconfig import config as py_config
 
+from tests.storage.stop_status_utils import dv_stop_status_restart_threshold
 from utilities.constants.pytest import UNPRIVILEGED_PASSWORD, UNPRIVILEGED_USER
 from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_10MIN
 from utilities.infra import login_with_user_password
@@ -63,7 +64,7 @@ def dv_created_by_specific_user(
         },
         size=get_dv_size_from_datasource(data_source=fedora_data_source_scope_module),
     ) as dv:
-        dv.wait_for_dv_success()
+        dv.wait_for_dv_success(stop_status_func=dv_stop_status_restart_threshold, dv=dv)
         yield dv
 
 
@@ -108,5 +109,21 @@ def client_for_test(request, admin_client, unprivileged_client):
 def test_virtctl_libguestfs_with_specific_user(
     virtctl_libguestfs_by_user,
 ):
+    """
+    Test that virtctl guestfs runs libguestfs-test-tool successfully as the selected user.
+
+    Jira: https://redhat.atlassian.net/browse/CNV-7487  # <skip-jira-utils-check>
+
+    Preconditions:
+        - Fedora data volume successfully imported in the test namespace
+        - Data volume accessible to the user under test, with an fsGroup set for an unprivileged user
+        - libguestfs-tools pod running and its shell ready
+
+    Steps:
+        1. Run the libguestfs-test-tool command inside the libguestfs-tools pod shell
+
+    Expected:
+        - The libguestfs-test-tool run finishes successfully
+    """
     virtctl_libguestfs_by_user.sendline("libguestfs-test-tool")
     virtctl_libguestfs_by_user.expect("===== TEST FINISHED OK =====", timeout=TIMEOUT_1MIN)

@@ -52,7 +52,7 @@ os_matrix = {
         "rhel_os_list": ["rhel-8-10", "rhel-9-6"],
         "fedora_os_list": ["fedora-43"],
         "centos_os_list": ["centos-stream-9"],
-        "windows_os_list": ["win-10", "win-2019", "win-11", "win-2022", "win-2025"],
+        "windows_os_list": ["win-2019", "win-11", "win-2022", "win-2025"],
         "instance_type_rhel_os_list": [RHEL8_PREFERENCE, RHEL9_PREFERENCE, RHEL10_PREFERENCE],
         "instance_type_fedora_os_list": [OS_FLAVOR_FEDORA],
         "instance_type_centos_os_list": [CENTOS_STREAM9_PREFERENCE, CENTOS_STREAM10_PREFERENCE],

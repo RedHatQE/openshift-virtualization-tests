@@ -9,12 +9,18 @@ Coding standards, conventions, and review guidelines for openshift-virtualizatio
 
 ## Strict Rules (MANDATORY)
 
-### Linter Suppressions PROHIBITED
+### Linter Suppressions
 
-- ❌ **NEVER** add `# noqa`, `# type: ignore`, `# pylint: disable`
-- ❌ **NEVER** disable linter/mypy rules to work around issues
-- ✅ **FIX THE CODE** - If linter complains, the code is wrong
-- If you think a rule is wrong: **ASK** the user for explicit approval
+- New linter suppression directives (`noqa`, `type-ignore`, and `pylint-disable`) are prohibited unless they have an exact, reviewed record in `scripts/pre_commit_hooks/exceptions.toml`.
+- The exception manifest starts as `exceptions = []`; each record must contain exactly `rule`, `path`, `directive`, `source_fingerprint`, `reason`, and `approval_url`.
+- `rule` is one of `noqa`, `type-ignore`, or `pylint-disable`. `approval_url` must be an HTTP(S) review URL, but its syntax is not proof of approval. Reviewers must verify the actual approval and reason; never fabricate approval records.
+- A manifest exception identity is the rule, repository-relative path, normalized directive text, and a SHA-256 fingerprint of the directive plus its smallest enclosing statement's attribute-free AST. The fingerprint is stable across line shifts when the statement and directive are unchanged. When semicolons place multiple simple statements on one line, a trailing directive fingerprints the rightmost statement on that line.
+- The HEAD-versus-index linter ratchet compares directive identities by rule, normalized directive text, and source fingerprint; manifest records additionally bind the exception to the path. Existing directives with an unchanged identity are consumed one occurrence at a time; newly introduced or modified directives require an exact exception record for each remaining occurrence. One exact record authorizes one matching occurrence only. Duplicate manifest records are rejected, and there is no occurrence field. Distinct contexts may share a fingerprint, but fingerprint equality does not authorize duplicate copied suppressions automatically; a copied suppression with the same full identity is not granted another allowance by the existing record.
+- Never disable linter or mypy rules to work around issues. **FIX THE CODE** when a rule reports a real defect; ask for explicit approval when a rule itself is wrong.
+
+**Known project-wide suppression exceptions (do NOT re-add inline directives for these — global config already covers them):**
+- **`N802` in `utilities/logger.py` and `scripts/tests_analyzer/pytest_marker_analyzer.py`** — method names are stdlib-mandated and cannot be renamed: `formatTime` is called by `logging.Formatter` internally, and `visit_ImportFrom` / `visit_FunctionDef` / etc. are dispatched dynamically by `ast.NodeVisitor`. Renaming them would silently break the override.
+- **`fcn_exclude_functions` in `.flake8`** (e.g., `Path`, `relative_to`) — standard repository configuration; do not modify.
 
 ### Code Reuse (Search-First Development)
 
@@ -33,6 +39,24 @@ Before writing ANY new code:
 - **Shell commands** — use `pyhelper_utils.shell.run_command`, NEVER use `subprocess.run` directly in test/utility code
 - **OpenShift resources** — use `ocp-resources` classes, NEVER construct raw YAML dicts
 
+### Resource clients
+
+- Resource constructors and `Resource` class `.get()` calls MUST include an explicit `client=` keyword whose value is syntactically non-`None`. This covers installed `ocp_resources` classes and the legacy local subclasses the hook still recognises; it excludes specs, dictionaries, dictionary lookups, and instance `.get()` calls.
+- Do not construct `DynamicClient` directly. Reuse the client already passed through the call path; do not insert a new factory solely to satisfy this policy.
+- **Never build a resource handle from the dynamic client.** All of the following are prohibited in test, utility, and library code:
+  - `client.resources.get(api_version=..., kind=...)`
+  - chaining `.get(...)`, `.items`, or `.to_dict()` onto such a handle
+- A fixed `apiVersion`/`kind` MUST be fetched through an installed `ocp_resources` class. When `openshift-python-wrapper` has no class for that kind, the ONLY acceptable remedy is contributing the class upstream to `openshift-python-wrapper` and using it. Hand-rolled `Resource`/`NamespacedResource` subclasses created in this repo are NOT an acceptable substitute; the existing ones (`libs/net/netattachdef.py`, `tests/storage/file_level_restore/utils.py`) are legacy, must not be extended, copied, or cited as precedent.
+- There is no exception and no fallback. If `openshift-python-wrapper` has no class for the kind, contribute it upstream and use it — a dynamic-client lookup is never the answer, and neither is a repo-local subclass nor any helper that hides one.
+- Two legacy lookups remain in `main` (`test_must_gather.py`, `role_aggregation/conftest.py`); they are outstanding migration debt to wrapper classes and must not be extended, copied, or cited as precedent.
+- **One absence contract per resource lookup.** Each helper that reads a resource MUST expose exactly one documented, contextual absence signal that names the resource, and MUST map the wrapper's raw signal onto it rather than passing the raw signal through:
+  - Wrapper signals are inputs to that contract, not the contract itself: `.instance` raises `kubernetes.dynamic.exceptions.NotFoundError`, `.exists` catches it and returns `None` without raising, and the wrapper's own existence check raises `ResourceNotFoundError` when `ensure_exists=True` was passed — evaluated at construction time, so a resource can still disappear later. `ResourceNotFoundError` is not exclusive to that path: kubernetes API discovery raises it for an unknown kind, and helpers such as `VirtualMachineInstance.get_virt_launcher_pod()` raise it for a missing dependent object. Map whichever signal the helper uses onto its documented contract at the helper boundary.
+  - A helper for which absence is a normal outcome returns an optional value and documents it; it MUST NOT both raise and return `None` for absence.
+  - Missing fields the helper depends on follow the same rule: validate the field and raise the same contextual exception type, never an undocumented `KeyError` or `IndexError`, and never a `ValueError` in one branch of the same lookup.
+  - Never list implementation-detail exceptions under a docstring `Raises:` section — name the contextual exception the helper raises.
+- `cache_admin_client()` is allowed only when correctness requires it. Its call site must have a nonempty comment-only line immediately before the enclosing statement or an inline comment within that statement's header, including multiline calls, decorators, and defaults. Empty comments, trailing comments on prior code, and comments in the statement body do not qualify. The hook checks only comment presence; reviewers are responsible for verifying that the explanation is correct and states the actual reason.
+- Resource discovery parses the installed `ocp_resources` source and the staged/index snapshot of local source. It lazily follows imported local modules and transitive resource bases, never imports cluster-facing modules, and must not let worktree-only source affect staged-source classification. That local-source discovery exists only so the `client=` check keeps covering the legacy local subclasses listed above — it does not sanction creating new ones.
+
 ### Python Requirements
 
 - **Type hints MANDATORY** - mypy strict mode in `libs/`, all new public functions under utilities MUST be typed
@@ -42,12 +66,12 @@ Before writing ANY new code:
 - **ALWAYS use `uv run`** - NEVER execute `python`, `pip`, `pytest`, `tox`, or `pre-commit` directly. Use `uv run python`, `uv run pytest`, `uv run tox`, `uv run pre-commit`, `uv add` for package installation.
 - **ALWAYS use absolute imports** - NEVER use relative imports
 - **Prefer specific imports** - use `from module import func` for functions and constants. Use `from package import module` (then `module.Name`) when retaining the module name at the call site meaningfully improves readability (e.g. `libstuntime.ContinuousPing` vs a bare `ContinuousPing` that loses its origin). Never use bare `import module` without a `from` clause.
-- **ALWAYS use named arguments** - for function calls with more than one argument
+- **ALWAYS use named arguments** - for function calls with more than one argument. Do NOT add bare `*` to function signatures solely to force keyword-only arguments — named-argument usage is enforced by convention, not by signature enforcement.
 - **NEVER use single-letter variable names** - ALWAYS use descriptive, meaningful names
 - **No dead code** - every function, variable, fixture MUST be used or removed. Code marked with `# skip-unused-code` is excluded from dead code analysis (enforced via custom ruff plugin).
 - **Prefer direct attribute access** - use `foo.attr` directly. Save to variables only when: reusing the same attribute multiple times improves readability, or extracting clarifies intent.
 - **Imports always at the top of the module** - do not import inside functions
-- **`conftest.py` is for fixtures only** - helper functions, utility functions, and classes must NOT be defined in conftest.py or test_*.py; place them in dedicated utility modules instead
+- **`tests/conftest.py` and feature-level `conftest.py` files are for fixtures only** - helper functions, utility functions, and non-test classes must NOT be defined in these conftest.py files or in test_*.py; place them in dedicated utility modules instead (test classes used to group pytest tests are allowed in test_*.py). The root `conftest.py` is exempt — it holds only pytest hooks and plugin registration (see "conftest.py Architecture" below).
 
 ### HCO CR (v1)
 
@@ -83,27 +107,40 @@ The "no defensive programming" rule has these five exceptions:
 - ❌ **Defensive checks on data guaranteed by architecture** - Do NOT validate that `namespace.client` is not None when the Namespace class always sets client in `__init__`. If the constructor guarantees it, trust it.
 - ❌ **Using `hasattr()` for type discrimination** - Do NOT use `if hasattr(obj, 'some_method')` to detect type. Use `isinstance(obj, ExpectedType)` for explicit type checking.
 - ❌ **Version checking for pinned dependencies** - Do NOT check `if kubernetes_version >= X` when pyproject.toml pins the exact version. The lock file guarantees the version.
+- ❌ **Defensive `.get()` on guaranteed config keys** - Do NOT use `py_config.get('key')` when the key is always present in the config schema. Use direct access `py_config['key']` so a missing key raises an immediate `KeyError`. (Applies to new and modified code; pre-existing legacy usages are addressed only when the surrounding code is already being changed.)
+- ❌ **Routine `try/except AttributeError` on guaranteed `ocp_resources` fields** - Do NOT use `try/except AttributeError` as routine control flow for fields guaranteed by the resource schema. For optional or conditionally populated fields, handle the documented missing-field behavior explicitly; nested `ocp_resources` access can raise `AttributeError` when a field is absent.
 
 ### Test Design Workflow (MANDATORY)
 
 New feature tests MUST follow the STD-first workflow:
 
 1. **STP (Software Test Plan)** — required for new features. Must be reviewed and approved before writing STDs.
-2. **STD (Software Test Description)** — placeholder tests with docstrings (`__test__ = False`) must be reviewed before implementation.
-3. **Implementation** — only after STD review is approved.
+2. **STD (Software Test Description)** — placeholder tests with docstrings, direct `@pytest.mark.manual`, and effective `__test__ = False` must be reviewed before implementation.
+3. **Implementation** — only after STD review is approved; remove the placeholder controls when automation is added.
 
 - ❌ **NEVER** submit test implementation without prior STD review
 - ❌ **NEVER** skip the STD phase by submitting implementation directly
 - ✅ STD and implementation MAY be in the same PR if STD is clearly separated and reviewed first
 
+The `check-test-std` pre-commit hook mechanically enforces the STD docstring
+and placeholder rules above for staged tests; its exact detection semantics
+(scope resolution, `HEAD` baselines, rename handling) are documented in
+[`scripts/pre_commit_hooks/README.md`](scripts/pre_commit_hooks/README.md).
+
 ### Coverage Tracking
 
-- **STP link REQUIRED** — every new feature test file MUST include an STP link in the module, class, or test docstring
-- **STP scenario coverage REQUIRED** — when an STD or test references an STP, every test scenario defined in that STP MUST have a corresponding STD/test declaration in the same file or PR, unless the scenario is intentionally excluded. Intentional exclusions MUST be documented in the PR description with justification and a follow-up Jira link per excluded scenario. Partial STP coverage without documented exclusions blocks merge.
+**Scope:** All traceability and STD lifecycle/format rules below, including the `__test__ = False` Usage Rules, apply only to product tests under `tests/`. Utilities unit tests under `utilities/unittests/` and tooling tests under `scripts/` are exempt; they require no STP/Jira traceability or STD docstring/lifecycle controls.
+
+- **Per-test STP link REQUIRED** — every new product test function/method under `tests/` MUST include the exact `STP: <URL>` line in its own docstring when an STP exists. A module- or class-level link may provide shared context but does not replace per-test traceability
+- **STP scenario coverage REQUIRED** — when an STD or test references an STP, every scenario in that STP which is in scope for this repo MUST have a corresponding STD/test declaration, either in the same file/PR or tracked per the incremental-delivery rule below. Partial coverage without one of the documented exclusions below blocks merge.
+  - **Out-of-repo scenarios are not required here** — if the STP's own Test Strategy / Testing Tools & Frameworks section assigns a scenario to a different repository or test tier (e.g., Tier 1 scenarios owned by a dedicated feature repo while this repo covers Tier 2/Tier 3), that scenario is out of scope for this repo's coverage check. Cite the STP section that assigns ownership in the PR description (`Special notes for reviewer:`); no follow-up Jira link is required since coverage lives elsewhere.
+  - **Incremental delivery across multiple PRs is allowed** — in-repo STP scenarios MAY be delivered a few at a time across a series of PRs rather than all in one PR. The PR description MUST list which scenarios this PR covers and link the tracking Jira (epic or umbrella ticket) under which the remaining in-repo scenarios will be delivered.
+  - **Other intentional exclusions** — for any in-repo scenario excluded for a reason other than the two cases above (e.g., regression scenarios excluded from STP tables or scenarios inherited through child-STP extensions from parent STPs), document the justification in the PR description AND add a follow-up Jira link per excluded scenario.
 - **STD alignment with STP** — STD docstring `Preconditions:`, `Steps:`, and `Expected:` sections MUST align with the STP scenario description for the scenario being covered.
-- **RFE/Jira link REQUIRED when no STP exists** — if there is no STP, the module, class, or test docstring MUST include a link to the RFE or Jira epic (not support cases) for coverage tracking
-- **Traceability preservation on modification REQUIRED** — when a PR modifies a test that references an STP, Jira, or RFE link, the modified test MUST retain a valid traceability link in its module, class, or test docstring. Removal or invalidation of the only traceability reference blocks merge. For STP-linked tests, reviewers MUST additionally verify that `Preconditions:`, `Steps:`, and `Expected:` docstring sections remain consistent with the STP, and that changes to the test body (assertions, fixture usage, helper calls) do not alter what the test validates in a way that diverges from the STP scenario. Misalignment between the modified test and its STP scenario blocks merge.
+- **Jira fallback REQUIRED when no STP exists** — if there is no STP, every new product test function/method under `tests/` MUST include the exact `Jira: <issue URL>` line in its own docstring. Use RFE/Jira issue links, never support-case links; include `# <skip-jira-utils-check>` on the same line. Module- or class-level links do not replace per-test traceability
+- **Traceability preservation on modification REQUIRED** — when a PR modifies a test that references an STP, Jira, or RFE link, the modified test MUST retain its valid traceability link. New-format tests retain the direct link in their own docstring; legacy tests may retain historical labels and inherited module/class links. Removal or invalidation of the only traceability reference blocks merge. For STP-linked tests, reviewers MUST additionally verify that `Preconditions:`, `Steps:`, and `Expected:` docstring sections remain consistent with the STP, and that changes to the test body (assertions, fixture usage, helper calls) do not alter what the test validates in a way that diverges from the STP scenario. Misalignment between the modified test and its STP scenario blocks merge. New tests MUST NOT rely only on inherited module- or class-level links.
 - **Traceability on deletion REQUIRED** — when a PR deletes a test (or test class/module) that references an STP, Jira, or RFE link, the PR description MUST document the justification (e.g., scenario removed from STP, consolidated into another test, feature deprecated). If the covered issue, feature, or scenario is still valid, a follow-up Jira link for re-coverage MUST be included. Deletion of traceability-linked tests without documented justification blocks merge.
+- **False-positive violations from base-branch divergence** — ignore an STP Link or Docstring Coverage violation only after reproducing it against the merge base and confirming that the changed commit does not introduce the missing coverage; otherwise treat it as a real violation.
 
 ### Test Requirements
 
@@ -128,9 +165,11 @@ New feature tests MUST follow the STD-first workflow:
 - ✅ **ALLOWED for STD placeholder tests** - tests that contain ONLY:
   - Docstrings describing expected behavior
   - No actual implementation code (no assertions, no test logic)
-- ❌ **FORBIDDEN for implemented tests** - if a test has actual implementation code (assertions, test logic, setup/teardown), do NOT use `__test__ = False`
+  - A direct `@pytest.mark.manual` decorator
+- ❌ **FORBIDDEN for implemented tests** - if a test has actual implementation code (assertions, test logic, setup/teardown), remove both `@pytest.mark.manual` and `__test__ = False`
+- **Collection rule** - `@pytest.mark.manual` classifies a test but does not prevent pytest collection. Every docstring-only test must also have effective `__test__ = False` at module, class, or test-function scope. When partially automating a class/module, move suppression onto each remaining placeholder before removing the shared assignment.
 
-**Rationale:** STD (Standard Test Design) placeholder tests document what will be tested before implementation. These can use `__test__ = False` to prevent collection errors. Once a test has implementation code, `__test__ = False` must be removed.
+**Rationale:** STD (Standard Test Design) placeholder tests document what will be tested before implementation. These can use `__test__ = False` to prevent collection errors. Every unautomated or docstring-only test also requires a direct `@pytest.mark.manual` decorator; the marker classifies the test but does not suppress collection. Once a test has implementation code, remove both `@pytest.mark.manual` and `__test__ = False` while retaining its direct traceability line.
 
 **STD Docstring Format (MANDATORY):**
 
@@ -139,8 +178,10 @@ When writing or reviewing STD (Software Test Description) test docstrings, follo
 - ❌ **NEVER** use alternative section names.
 - Each test verifies ONE thing with ONE `Expected:` assertion (rare exceptions allowed when multiple assertions verify a single behavior — see STD doc)
 - **No implementation details in STD docstrings** — no fixture names, no code references, no variable names; describe behavior in natural language
-- **STP link REQUIRED** — must appear directly in the module, class, or test docstring (not a reference to a README or other file); place it at the level that applies
-- **Markers can be at any level** — module, class, or test docstring; place them at the level they apply to
+- **Per-test STP link REQUIRED** — when an STP exists, the exact `STP: <URL>` line must appear in every new product test function/method under `tests/` (not as a reference to a README or other file). Module- or class-level links may document shared context but do not replace the direct link
+- **Jira fallback REQUIRED** — when no STP exists, every new product test function/method under `tests/` must contain the exact `Jira: <issue URL>  # <skip-jira-utils-check>` line; use an RFE/Jira issue, not a support case
+- **Manual placeholder controls REQUIRED** — every unautomated or docstring-only test must have direct `@pytest.mark.manual` and effective `__test__ = False`; remove both when automation is added
+- **Markers can be at any level** — module, class, or test docstring; place them at the level they apply. Keep planned non-manual markers in the Phase 1 docstring. `manual` is the exception: use the direct decorator on each placeholder test. Convert planned `Markers:` entries to `pytestmark` or `@pytest.mark` decorators only during Phase 2 automation.
 - **Parametrized markers** — parameter values may have inline markers using `[Markers: ...]` syntax (e.g., `- ipv4 [Markers: ipv4]`) to differentiate common markers from parameter-specific ones
 - **Name resources by function** — in Preconditions, name objects by their role (e.g., "client VM", "server VM", "under-test VM"), not generic labels (e.g., "VM-A", "VM-B")
 - **Shared vs. test-specific preconditions** — class/module docstring holds shared `Preconditions:`, individual tests add only their own. When a shared resource (e.g., a VM) is directly used by a test, it must appear in both the shared and test-level preconditions.
@@ -183,7 +224,7 @@ When reviewing quarantine PRs, verify the **quarantine mechanism matches the fai
 ### Logging Guidelines
 
 - **INFO level REQUIRED for** - test phase transitions, resource creation/deletion, configuration changes, API responses, intermediate state
-- **WARNING level REQUIRED for** - skipped operations due to known issues, unusual configurations that may cause problems, missing optional configuration, deprecation notices
+- **WARNING level REQUIRED for** - unexpected skipped operations due to known issues, unusual configurations that may cause problems, missing optional configuration, deprecation notices. Log expected, routine filtering (e.g., skipping architecture-incompatible features) at INFO level instead.
 - **ERROR level REQUIRED for** - exceptions with full context: what failed, expected vs actual values, resource state
 - **NEVER use DEBUG level** - if a log is needed, use INFO.
 - **NEVER log** - secrets, tokens, passwords, or PII
@@ -195,7 +236,7 @@ When reviewing quarantine PRs, verify the **quarantine mechanism matches the fai
 
 **Exception Handling:**
 - **ALWAYS re-raise with context** - use `raise NewError("message") from original_error` to preserve stack trace
-- **Do not catch bare `Exception`** - catch specific exception types only
+- **Do not catch bare `Exception`** - catch specific exception types only. **Exception:** broad `Exception` is allowed ONLY when intentionally aggregating failures across multiple targets for comprehensive reporting (e.g., verifying VM creation across all data sources); add a comment at the `except` site documenting the aggregation intent.
 - **NEVER silently swallow exceptions** - at minimum, log the error before continuing
 - **Error messages must be specific** - include what failed, expected vs actual, and resource context. Do NOT wrap multiple calls in a single generic try/except — each function should raise its own descriptive error.
 
@@ -215,17 +256,24 @@ When reviewing quarantine PRs, verify the **quarantine mechanism matches the fai
       if sample:
           break
   ```
-- **NEVER use `time.sleep()` in loops** - use `timeout_sampler` with appropriate wait time
+- **NEVER use `time.sleep()`** - use `timeout_sampler` with appropriate wait time
 - **Do NOT duplicate TimeoutSampler logs** - the sampler already logs timeout duration and exceptions. Only log additional context (e.g., resource state, what was being waited for).
 
 **Assertions:**
 - **Use pytest assertions** - `assert actual == expected`, NEVER `self.assertEqual()`
 - **Include failure messages** - `assert condition, "descriptive message explaining failure"`
+- **NEVER place `pytest.fail()` inside a `pytest.raises()` block** — it is redundant and unreachable; the `raises` context already fails the test if the expected exception is not raised.
 
 **Boolean Checks:**
 - **Use implicit boolean** - `if items:` NOT `if len(items) > 0:` or `if items != []:`
 - **Use identity for None** - `if x is None:` NOT `if x == None:`
 - **NEVER compare to True/False** - `if flag:` NOT `if flag == True:`
+
+**OS Detection:**
+- **Use substring containment for OS flavor matching** — use `OS_FLAVOR_WINDOWS in os_flavor` instead of exact equality to support variations like `win-container-disk`.
+
+**SSL / Network Security:**
+- **`verify=False` / `verify_ssl=False` / curl's `-k` are allowed ONLY for requests to intended internal-cluster endpoints.** Review credential-bearing requests and requests to any other destination individually; do not disable SSL verification broadly just because a request targets an internal host.
 
 ### Tests Directory Organization
 
@@ -238,7 +286,16 @@ When reviewing quarantine PRs, verify the **quarantine mechanism matches the fai
 
 ### Scripts Directory
 
-Internal tooling and automation scripts live in `scripts/`. Each tool has its own subdirectory with an entry point, utilities, and tests. Scripts are NOT part of the test suite — they are standalone CLI tools for CI/CD integration and reporting.
+- Internal tooling and automation scripts live in `scripts/`. Each tool has its own subdirectory with an entry point, utilities, and tests. Scripts are standalone CLI tools, separate from the standard product test suite.
+- Test suites under `scripts/` (e.g. `scripts/reportportal/*/tests/*`) cover internal tooling. Script tests are exempt from product-test coverage and STD checks. Shared Python-basics checks still apply to changed files under `scripts/`.
+
+**Known script behaviors (do not "fix" these):**
+- **Dockerfiles** — Bitwarden Secrets CLI (`bws`) is installed unpinned via curl and requires `unzip`; this is intentional.
+- **`tox.ini` `verify-bugs-are-open-gh`** — uses `pyutils-jira` env vars (`JIRA_TOKEN`, `JIRA_USER`); these are distinct from the `PYTEST_JIRA_*` vars used by `utilities/jira.py`. Do not conflate the two.
+- **`.coderabbit.yaml`** — empty objects `code_generation: {}` and `issue_enrichment: {}` are required for schema validation; do not remove them.
+- **`scripts/coderabbit_retry/`** — idempotently retries rate-limited CodeRabbit reviews every 20 minutes, within a 15-minute workflow timeout, for eligible PRs updated in the last 2 days; it skips stale, conflicting, draft, WIP, and already-requested reviews.
+- **`scripts/reportportal/rp_utils/rp_client.py`** — uses contains-match semantics (`filter.cnt.attributeValue`) for bundle filtering; retry-upload intentionally lacks `polarion-testcase-id` preservation.
+- **`scripts/tests_analyzer/pytest_marker_analyzer.py`** — `conftest_resolved=True` records that a conftest dependency path was analyzed, preventing the conservative file-level fallback when no matching path remains.
 
 ### Generated Documentation
 
@@ -246,7 +303,6 @@ Internal tooling and automation scripts live in `scripts/`. Each tool has its ow
 
 - ❌ **NEVER modify files under `docs/site/`** — they are auto-generated and overwritten on each regeneration
 - ❌ **NEVER include `docs/site/` changes in PRs** — reject any PR that modifies generated docs
-- ✅ To update, generate docs manually with docsfy and commit directly to `main` (not via PR)
 
 ### Constants Module Placement
 
@@ -261,6 +317,7 @@ Each module groups constants by domain (e.g., `cluster.py`, `virt.py`, `storage.
 
 **Root `conftest.py`** (project root):
 - Contains pytest hooks (`pytest_collection_modifyitems`, `pytest_runtest_makereport`, etc.) and global configuration
+- AI-analysis code sections calling `setup_ai_analysis()` and `enrich_junit_xml()` are vendored from upstream and should be kept as-is
 - **Do NOT add new hooks or complex logic directly** — extract into pytest plugins (registered via `pyproject.toml` entry points)
 - **No fixtures** — root conftest is for hooks and plugin registration only
 
@@ -272,6 +329,7 @@ Each module groups constants by domain (e.g., `cluster.py`, `virt.py`, `storage.
 **Feature-level `conftest.py`** (e.g., `tests/network/l2_bridge/conftest.py`):
 - Contains fixtures specific to that feature directory
 - Move to `tests/conftest.py` or `tests/fixtures/` only when used across team directories
+- Module-level imports in feature-level `conftest.py` are acceptable only when their side effects are not security-sensitive; do not globally suppress urllib3/TLS warnings or use this exception to justify `verify=False`.
 
 ### Internal API Stability
 
@@ -283,13 +341,14 @@ This is a test suite - internal APIs have NO backward compatibility requirements
 
 ### PR Discipline
 
-- **Keep PRs focused** — each PR addresses ONE topic. Out-of-scope improvements go in a separate PR.
+- **Keep PRs focused** — each PR addresses ONE topic. Out-of-scope improvements go in a separate PR. Lint cleanup PRs (e.g. pre-commit hook bumps) should NOT be asked to fix pre-existing code patterns outside the diff; address those in dedicated follow-up PRs.
 - **PR title must reflect the actual change** — not a side effect. If the title says "skip artifactory" but the change is "switch to DataSource", fix the title.
 - **PR description must include motivation** — explain WHY the change is needed, not just what changed.
 - **Mark PR as draft** when there are unresolved blockers, failing CI, or open design questions.
 - **NEVER** merge a PR with known unresolved issues — fix or document them first.
-- **DCO (Signed-off-by) REQUIRED** — all commits must include `Signed-off-by` trailer (enforced by CI).
-- **PR template sections REQUIRED** — the PR description MUST preserve these sections from `.github/pull_request_template.md` (even if left empty):
+- **Re-evaluate pre-merge checks after each commit push** — always report the current check status after every new push, not just once at PR open time.
+- **DCO (Signed-off-by) REQUIRED** — all commits must include `Signed-off-by` trailer (enforced by CI) in the format `Signed-off-by: username <email@example.com>`. For AI disclosure trailer requirements, see [`docs/AI_CONTRIBUTION_POLICY.md`](docs/AI_CONTRIBUTION_POLICY.md).
+- **PR template sections REQUIRED** — the PR description MUST preserve these sections from `.github/pull_request_template.md` (evaluated on GitHub's rendered view, not raw diff alone; Jira tickets are not required for small infra fixes or enablement changes):
   - `##### What this PR does / why we need it:` — MUST be present **and have meaningful content** (not blank, whitespace-only, HTML comment only, or a placeholder such as `TBD`, `TBA`, `N/A`, `-`, `none`, or `.`)
   - `##### Which issue(s) this PR fixes:` — must be present (may be empty)
   - `##### Special notes for reviewer:` — must be present (may be empty)
@@ -315,6 +374,12 @@ Add or update tests in `utilities/unittests/test_<module>.py`. New public functi
 When unit tests are not added, state why in the PR (`##### Special notes for reviewer:`) — e.g. "coverage-omitted `virt.py` helper; behavior covered by `test_migrate_snapshot_hotplugged_vm`".
 
 ## Essential Commands
+
+Pre-commit runs project policy hooks (`scripts/pre_commit_hooks/`) that
+mechanically enforce the rules above — forbidden constructs, marker policy,
+STD traceability, linter-directive exceptions, and STP link verification.
+They check the staged Git index (not the worktree), so stage intended changes
+before relying on them. See [`scripts/pre_commit_hooks/README.md`](scripts/pre_commit_hooks/README.md).
 
 ### Before Committing Verification (MANDATORY)
 

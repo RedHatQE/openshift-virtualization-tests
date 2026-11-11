@@ -2,6 +2,7 @@
 Pytest conftest file for CNV tests
 """
 
+import bdb
 import datetime
 import logging
 import os
@@ -47,6 +48,7 @@ from utilities.data_collector import (
     set_data_collector_values,
 )
 from utilities.database import Database
+from utilities.debug import remote_debugger_enabled, remote_post_mortem
 from utilities.exceptions import MissingEnvironmentVariableError, StorageSanityError
 from utilities.junit_ai_utils import enrich_junit_xml, setup_ai_analysis
 from utilities.logger import setup_logging
@@ -66,6 +68,7 @@ from utilities.pytest_utils import (
     get_matrix_params,
     get_tests_cluster_markers,
     mark_nmstate_dependent_tests,
+    patch_paramiko_for_fips,
     remove_tests_from_list,
     reorder_early_fixtures,
     run_in_progress_config_map,
@@ -106,6 +109,16 @@ pytest_plugins = [
     "tests.fixtures.images.golden_images",
     "tests.fixtures.storage.data_volumes",
     "tests.fixtures.observability.monitoring",
+    "tests.fixtures.virt.instance_types",
+    "tests.fixtures.virt.migration",
+    "tests.fixtures.virt.osinfo",
+    "tests.fixtures.virt.ssh",
+    "tests.fixtures.virt.templates",
+    "tests.fixtures.virt.virtual_machines",
+    "tests.fixtures.virt.vm_actions",
+    "tests.fixtures.upgrade.config",
+    "tests.fixtures.upgrade.resources",
+    "tests.fixtures.pytest_config",
 ]
 
 LOGGER = logging.getLogger(__name__)
@@ -614,6 +627,8 @@ def filter_sno_only_tests(items: list[Item], config: Config) -> list[Item]:
 
 
 def pytest_configure(config):
+    patch_paramiko_for_fips()
+
     # test_deprecation_audit_logs should always run regardless the path that passed to pytest.
     deprecation_tests_dir_path = "tests/deprecated_api"
     file_or_dir = config.option.file_or_dir
@@ -1050,6 +1065,25 @@ def pytest_exception_interact(node: Item | Collector, call: CallInfo[Any], repor
                     )
             except Exception as current_exception:
                 LOGGER.warning(f"Failed to collect logs: {test_name}: {current_exception} {traceback.format_exc()}")
+
+    # Remote post-mortem debugger (CNV_REMOTE_PDB). Ported from RedHatQE/mtv-api-tests PR #733
+    # (by myakove — source: https://github.com/RedHatQE/mtv-api-tests/blob/main/conftest.py),
+    # adapted to this repository. Runs after must-gather collection so
+    # diagnostics are gathered before the session blocks waiting for a debugger connection. Skipped
+    # when --pdb is active so the local terminal debugger takes precedence, and skipped
+    # for BdbQuit so quitting a code breakpoint fails that test without opening another
+    # listener. A debugger quit ends the test session, matching pytest's native --pdb
+    # behavior. usepdb has a default because -p no:pdb removes the option.
+    if (
+        remote_debugger_enabled()
+        and not node.config.getoption("usepdb", default=False)
+        and call.excinfo is not None
+        and not isinstance(call.excinfo.value, bdb.BdbQuit)
+    ):
+        try:
+            remote_post_mortem(exception=call.excinfo.value)
+        except bdb.BdbQuit:
+            pytest.exit("Quitting remote debugger")
 
 
 @pytest.hookimpl(optionalhook=True)

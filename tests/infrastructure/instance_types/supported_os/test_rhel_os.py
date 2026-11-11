@@ -47,7 +47,6 @@ TESTS_MODULE_IDENTIFIER = "TestCommonInstancetypeRhel"
 @pytest.mark.smoke
 @pytest.mark.gating
 @pytest.mark.sno
-@pytest.mark.rwx_default_storage
 class TestVMCreationAndValidation:
     @pytest.mark.dependency(name=f"{TESTS_MODULE_IDENTIFIER}::{TEST_CREATE_VM_TEST_NAME}")
     @pytest.mark.polarion("CNV-11710")

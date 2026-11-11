@@ -76,10 +76,10 @@ class CbtVolumeRestoreSpec:
 
 @dataclass(frozen=True)
 class _RestoredDiskStorage:
-    """Storage class from the backup PVC, and the volume mode and access mode of that class.
+    """Storage class of the backup PVC, and the volume mode and access mode of that class.
 
     The backup PVC is a filesystem volume so it can hold qcow2 files. The restored disk uses
-    the storage class profile, which is how the source disk was provisioned.
+    that storage class's profile.
     """
 
     storage_class: str

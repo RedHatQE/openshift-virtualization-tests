@@ -119,7 +119,7 @@ class TestDefaultCommonTemplates:
                 DataSource.Condition.READY,
                 marks=(
                     pytest.mark.polarion("CNV-11476"),
-                    *((pytest.mark.jira("CNV-94362", run=False),) if py_config["cluster_type"] == MULTIARCH else ()),
+                    *((pytest.mark.jira("CNV-98662", run=False),) if py_config["cluster_type"] == MULTIARCH else ()),
                 ),
             ),
         ],

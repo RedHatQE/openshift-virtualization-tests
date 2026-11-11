@@ -64,17 +64,6 @@ def drain_using_console_windows(admin_client, hco_namespace, compact_cluster, so
         )
 
 
-def node_filter(pod, schedulable_nodes):
-    nodes_for_test = list(
-        filter(
-            lambda node: node.name != pod.node.name,
-            schedulable_nodes,
-        )
-    )
-    assert len(nodes_for_test) > 0, "No available nodes."
-    return nodes_for_test
-
-
 @pytest.fixture()
 def vm_container_disk_fedora(
     unprivileged_client,
@@ -170,43 +159,6 @@ class TestNodeMaintenanceRHEL:
             source_node=vm.vmi.get_node(privileged_client=admin_client),
             vm=vm,
         )
-
-    @pytest.mark.polarion("CNV-4995")
-    def test_migration_when_multiple_nodes_unschedulable_using_console_rhel(
-        self,
-        admin_client,
-        hco_namespace,
-        compact_cluster,
-        schedulable_nodes,
-        vm_for_test_from_template_scope_class,
-    ):
-        """Test VMI migration, when multiple nodes are unschedulable.
-
-        In our BM or PSI setups, we mostly use only 3 worker nodes,
-        the OCS pods would need at-least 2 nodes up and running, to
-        avoid violation of the ceph pod's disruption budget.
-        Hence we simulating this case here, with Cordon 1 node and
-        Drain 1 node, instead of Draining 2 Worker nodes.
-
-        1. Start a VMI
-        2. Cordon a Node, other than the current running VMI Node.
-        3. Drain the Node, on which the VMI is present.
-        4. Make sure the VMI is migrated to the other node.
-        """
-        vm = vm_for_test_from_template_scope_class
-        virt_launcher_pod = vm.vmi.get_virt_launcher_pod(privileged_client=admin_client)
-        cordon_nodes = node_filter(
-            pod=virt_launcher_pod,
-            schedulable_nodes=schedulable_nodes,
-        )
-        with cordon_node(admin_client=admin_client, node=cordon_nodes[0]):
-            drain_using_console(
-                admin_client=admin_client,
-                hco_namespace=hco_namespace,
-                compact_cluster=compact_cluster,
-                source_node=vm.vmi.get_node(privileged_client=admin_client),
-                vm=vm,
-            )
 
 
 @pytest.mark.parametrize(

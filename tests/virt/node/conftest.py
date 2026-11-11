@@ -70,7 +70,7 @@ def vmx_disabled_flag(nodes_cpu_architecture):
 
 
 @pytest.fixture(scope="class")
-def hotplugged_vm(
+def vm_with_hotplug_support(
     request,
     namespace,
     unprivileged_client,
@@ -89,9 +89,9 @@ def hotplugged_vm(
         cpu_max_sockets=EIGHT_CPU_SOCKETS,
         # s390x doesn't support maxGuest as it doesn't support hotplug memory
         memory_max_guest=None if is_s390x_cluster else TEN_GI_MEMORY,
-        cpu_sockets=FOUR_CPU_SOCKETS,
-        cpu_threads=ONE_CPU_THREAD,
-        cpu_cores=ONE_CPU_CORE,
+        cpu_sockets=request.param.get("cpu_sockets", FOUR_CPU_SOCKETS),
+        cpu_threads=request.param.get("cpu_threads", ONE_CPU_THREAD),
+        cpu_cores=request.param.get("cpu_cores", ONE_CPU_CORE),
         memory_guest=FOUR_GI_MEMORY,
         cpu_model=modern_cpu_for_migration,
         cpu_flags=vmx_disabled_flag,
@@ -101,19 +101,22 @@ def hotplugged_vm(
 
 
 @pytest.fixture()
-def hotplugged_sockets_memory_guest(request, admin_client, hotplugged_vm, unprivileged_client):
+def hotplugged_sockets_memory_guest(request, admin_client, vm_with_hotplug_support, unprivileged_client):
     param = request.param
+    clean_up_migration_jobs(client=admin_client, vm=vm_with_hotplug_support)
     if param.get("skip_migration"):
-        hotplug_spec_vm(vm=hotplugged_vm, sockets=param.get("sockets"), memory_guest=param.get("memory_guest"))
+        hotplug_spec_vm(
+            vm=vm_with_hotplug_support, sockets=param.get("sockets"), memory_guest=param.get("memory_guest")
+        )
     else:
         hotplug_spec_vm_and_verify_hotplug(
-            vm=hotplugged_vm,
+            vm=vm_with_hotplug_support,
             client=unprivileged_client,
             sockets=param.get("sockets"),
             memory_guest=param.get("memory_guest"),
         )
     yield
-    clean_up_migration_jobs(client=admin_client, vm=hotplugged_vm)
+    clean_up_migration_jobs(client=admin_client, vm=vm_with_hotplug_support)
 
 
 @pytest.fixture()

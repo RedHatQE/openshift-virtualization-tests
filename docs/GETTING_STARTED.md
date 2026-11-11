@@ -3,6 +3,16 @@
 
 Install [uv](https://github.com/astral-sh/uv)
 
+Install the development tools used by the project with uv:
+
+```bash
+uv tool install pre-commit
+uv tool install tox
+uv tool update-shell
+```
+
+Restart your shell, or source the startup file updated by `uv tool update-shell` (for example, `source ~/.bashrc`), so the tool executables are available in `PATH` to `uv run`.
+
 To update one package:
 ```bash
 uv lock --upgrade-package openshift-python-wrapper

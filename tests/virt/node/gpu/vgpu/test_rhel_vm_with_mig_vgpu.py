@@ -26,9 +26,12 @@ class TestMIGVGPURHELGPUSSpec:
     """
 
     @pytest.mark.polarion("CNV-12572")
+    @pytest.mark.manual
     def test_permitted_hostdevices_mig_vgpu_visible(self):
         """
         Test that the GPU node advertises the MIG vGPU resource after MIG vGPU configuration.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/mig-vgpu-stp.md
 
         Steps:
             1. Read the Capacity and Allocatable sections of the GPU node
@@ -40,10 +43,13 @@ class TestMIGVGPURHELGPUSSpec:
         """
 
     @pytest.mark.polarion("CNV-12573")
+    @pytest.mark.manual
     def test_access_mig_vgpus_rhel_vm(self):
         """
         Test that a VM requesting a MIG vGPU device reaches Running state and the guest OS
         detects the GPU.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/mig-vgpu-stp.md
 
         Preconditions:
             - VM configured to request one MIG vGPU device, scheduled on the MIG-configured GPU node
@@ -58,10 +64,13 @@ class TestMIGVGPURHELGPUSSpec:
         """
 
     @pytest.mark.polarion("CNV-12574")
+    @pytest.mark.manual
     def test_access_vgpus_in_both_rhel_vm_using_same_mig_gpu(self):
         """
         Test that two VMs, each using a MIG vGPU slice from the same physical GPU, run
         concurrently.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/mig-vgpu-stp.md
 
         Preconditions:
             - Two VMs, each configured to request one MIG vGPU device from the same physical
@@ -77,10 +86,13 @@ class TestMIGVGPURHELGPUSSpec:
         """
 
     @pytest.mark.polarion("CNV-16809")
+    @pytest.mark.manual
     def test_vm_pending_no_mig_vgpu_capacity_available(self):
         """
         [NEGATIVE] Test that a VM requesting a MIG vGPU device remains unschedulable when no
         MIG vGPU capacity remains on the GPU node.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/mig-vgpu-stp.md
 
         Preconditions:
             - All MIG vGPU instances on the GPU node already consumed by running VMs

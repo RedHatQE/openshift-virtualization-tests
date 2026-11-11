@@ -182,11 +182,6 @@ def get_pods(client: DynamicClient, namespace: Namespace, label: str = "") -> li
     )
 
 
-def wait_for_pods_deletion(pods):
-    for pod in pods:
-        pod.wait_deleted()
-
-
 def get_pod_container_error_status(pod: Pod) -> str | None:
     try:
         pod_instance_status = pod.instance.status
@@ -607,7 +602,7 @@ def get_hco_mismatch_statuses(hco_status_conditions, expected_hco_status):
     mismatch_statuses = []
 
     for condition_type, condition_status in expected_hco_status.items():
-        if current_status[condition_type] != condition_status:
+        if current_status.get(condition_type) != condition_status:
             mismatch_statuses.append(
                 f"Current condition type {condition_type} does not match expected status {condition_status}"
             )

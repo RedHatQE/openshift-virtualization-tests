@@ -9,14 +9,17 @@ import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 from kubernetes.dynamic.exceptions import NotFoundError
 from ocp_resources.config_map import ConfigMap
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
+from ocp_resources.pod import Pod
 from ocp_resources.resource import NamespacedResource
 from ocp_resources.storage_class import StorageClass
+from ocp_resources.virtual_machine_file_restore import VirtualMachineFileRestore
+from ocp_resources.virtual_machine_snapshot import VirtualMachineSnapshot
 from ocp_resources.volume_snapshot import VolumeSnapshot
 from ocp_resources.volume_snapshot_class import VolumeSnapshotClass
 from pyhelper_utils.shell import run_ssh_commands
@@ -41,8 +44,11 @@ from tests.storage.file_level_restore.constants import (
     WINDOWS_HELPER_STAGE_DIRECTORY,
     WINDOWS_SETUP_SCRIPT,
 )
-from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5MIN, TIMEOUT_5SEC
-from utilities.storage import wait_for_volume_snapshot_ready_to_use
+from tests.storage.utils import check_snapshot_indication
+from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5MIN, TIMEOUT_5SEC, TIMEOUT_10MIN
+from utilities.constants.virt import DV_DISK
+from utilities.infra import get_not_running_pods, get_pod_by_name_prefix
+from utilities.storage import run_command_on_vm_and_check_output, wait_for_volume_snapshot_ready_to_use
 
 if TYPE_CHECKING:
     from kubernetes.dynamic import DynamicClient
@@ -52,85 +58,18 @@ if TYPE_CHECKING:
 LOGGER = logging.getLogger(__name__)
 
 
-class VirtualMachineFileRestore(NamespacedResource):
-    """KubeVirt VirtualMachineFileRestore custom resource."""
+class VirtualMachineSnapshotContent(NamespacedResource):
+    """KubeVirt VirtualMachineSnapshotContent custom resource."""
 
-    api_group: str = "filerestore.kubevirt.io"
+    api_group: str = "snapshot.kubevirt.io"
+    kind: str = "VirtualMachineSnapshotContent"
 
-    class Phase:
-        NEW = "New"
-        INIT = "Init"
-        HOTPLUGGING = "Hotplugging"
-        WAITING_FOR_ATTACHMENT = "WaitingForAttachment"
-        SSH_CONNECTING = "SSHConnecting"
-        RESTORING = "Restoring"
-        VOLUME_READY = "VolumeReady"
-        CLEANUP = "Cleanup"
-        SUCCEEDED = "Succeeded"
-        FAILED = "Failed"
 
-    def __init__(
-        self,
-        target_vm_name: str,
-        source_snapshot_name: str | None = None,
-        source_pvc_name: str | None = None,
-        source_path: str | None = None,
-        source_partition: int | None = None,
-        **kwargs: Any,
-    ) -> None:
-        """Create a VirtualMachineFileRestore resource.
+class LinuxRootDiskVirtualMachineSnapshotInfo(NamedTuple):
+    """Online VirtualMachineSnapshot metadata for root-disk FLR experiments."""
 
-        Args:
-            target_vm_name: Name of the target VirtualMachine.
-            source_snapshot_name: VolumeSnapshot name to restore from.
-            source_pvc_name: PVC name to restore from.
-            source_path: Path on the source volume to restore. Restored to the same
-                path on the guest root filesystem (operator does not support targetPath).
-            source_partition: Partition number on the source volume.
-            **kwargs: Additional arguments passed to NamespacedResource.
-        """
-        super().__init__(**kwargs)
-        self._target_vm_name = target_vm_name
-        self._source_snapshot_name = source_snapshot_name
-        self._source_pvc_name = source_pvc_name
-        self._source_path = source_path
-        self._source_partition = source_partition
-
-    def to_dict(self) -> None:
-        """Build the VirtualMachineFileRestore manifest in ``self.res``.
-
-        Calls the base ``to_dict()`` first, then populates ``spec`` when this
-        resource was constructed programmatically (no ``kind_dict`` or
-        ``yaml_file``). The guard prevents duplicate spec injection if
-        ``to_dict()`` is invoked more than once.
-
-        Side effects:
-            Mutates ``self.res`` in place by updating ``spec``.
-        """
-        super().to_dict()
-        if not self.kind_dict and not self.yaml_file:
-            spec: dict[str, Any] = {
-                "target": {
-                    "apiGroup": "kubevirt.io",
-                    "kind": "VirtualMachine",
-                    "name": self._target_vm_name,
-                },
-                "source": {},
-            }
-
-            if self._source_snapshot_name:
-                spec["source"]["snapshot"] = {"name": self._source_snapshot_name}
-            elif self._source_pvc_name:
-                spec["source"]["pvc"] = {"name": self._source_pvc_name}
-            else:
-                raise ValueError("VirtualMachineFileRestore requires either source_snapshot_name or source_pvc_name")
-
-            if self._source_path is not None:
-                spec["sourcePath"] = self._source_path
-            if self._source_partition is not None:
-                spec["sourcePartition"] = self._source_partition
-
-            self.res.setdefault("spec", {}).update(spec)
+    vm_snapshot: VirtualMachineSnapshot
+    root_volume_snapshot_name: str
 
 
 def volume_snapshot_class_for_storage_class(storage_class_name: str, admin_client: DynamicClient) -> str:
@@ -183,12 +122,9 @@ def windows_data_disk_volume_snapshot(
     LOGGER.info("Flushing Windows filesystem cache before snapshot")
     run_ssh_commands(
         host=vm.ssh_exec,
-        commands=[
-            "powershell",
-            "-NoProfile",
-            "-Command",
-            f"Write-VolumeCache -DriveLetter {WINDOWS_DATA_DISK_LETTER}",
-        ],
+        commands=shlex.split(
+            f'powershell -NoProfile -Command "Write-VolumeCache -DriveLetter {WINDOWS_DATA_DISK_LETTER}"'
+        ),
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
     )
@@ -229,6 +165,217 @@ def wait_for_file_restore_operator_ready(admin_client: DynamicClient) -> None:
     deployment.wait_for_replicas(timeout=TIMEOUT_5MIN)
     get_file_restore_operator_configmap(admin_client=admin_client)
     LOGGER.info("File-restore operator is ready")
+
+
+def assert_file_restore_operator_pod_running(admin_client: DynamicClient) -> None:
+    """Assert at least one file-restore operator pod is in Running phase.
+
+    Args:
+        admin_client: Kubernetes admin client.
+
+    Raises:
+        ResourceNotFoundError: If no operator pod exists.
+        TimeoutExpiredError: If no operator pod reaches Running phase in time.
+    """
+    LOGGER.info(f"Verifying file-restore operator pod is Running in namespace '{FILE_RESTORE_OPERATOR_NAMESPACE}'")
+
+    def operator_pods() -> list[Pod]:
+        return get_pod_by_name_prefix(
+            client=admin_client,
+            pod_prefix=FILE_RESTORE_OPERATOR_DEPLOYMENT_NAME,
+            namespace=FILE_RESTORE_OPERATOR_NAMESPACE,
+            get_all=True,
+        )
+
+    for operator_pod_list in TimeoutSampler(
+        wait_timeout=TIMEOUT_5MIN,
+        sleep=TIMEOUT_5SEC,
+        func=operator_pods,
+    ):
+        if not operator_pod_list:
+            LOGGER.info("No file-restore operator pods found yet")
+            continue
+        not_running_pods = get_not_running_pods(pods=operator_pod_list)
+        if not_running_pods:
+            LOGGER.info(f"File-restore operator pods not yet all Running: {not_running_pods}")
+            continue
+        running_pod = operator_pod_list[0]
+        LOGGER.info(f"File-restore operator pod '{running_pod.name}' is Running")
+        return
+
+    raise TimeoutExpiredError(
+        f"No file-restore operator pod reached Running phase in namespace '{FILE_RESTORE_OPERATOR_NAMESPACE}' "
+        f"within {TIMEOUT_5MIN} seconds"
+    )
+
+
+def root_disk_volume_snapshot_name_from_virtual_machine_snapshot(
+    *,
+    vm_snapshot: VirtualMachineSnapshot,
+    root_volume_name: str = DV_DISK,
+) -> str:
+    """Return the root-disk VolumeSnapshot name created by a VirtualMachineSnapshot.
+
+    Args:
+        vm_snapshot: Completed VirtualMachineSnapshot resource.
+        root_volume_name: VM volume name for the root DataVolume (default ``dv-disk``).
+
+    Returns:
+        Name of the VolumeSnapshot CR for the root disk PVC.
+
+    Raises:
+        ValueError: If snapshot content or root volume backup is missing.
+    """
+    content_name = vm_snapshot.instance.get("status", {}).get("virtualMachineSnapshotContentName")
+    if not content_name:
+        raise ValueError(f"VirtualMachineSnapshot '{vm_snapshot.name}' has no status.virtualMachineSnapshotContentName")
+    snapshot_content = VirtualMachineSnapshotContent(
+        name=content_name,
+        namespace=vm_snapshot.namespace,
+        client=vm_snapshot.client,
+    )
+    volume_backups = snapshot_content.instance.get("spec", {}).get("volumeBackups", [])
+    for volume_backup in volume_backups:
+        if volume_backup.get("volumeName") != root_volume_name:
+            continue
+        volume_snapshot_name = volume_backup.get("volumeSnapshotName")
+        if volume_snapshot_name:
+            LOGGER.info(
+                f"VirtualMachineSnapshot '{vm_snapshot.name}' root volume '{root_volume_name}' "
+                f"VolumeSnapshot: '{volume_snapshot_name}'"
+            )
+            return volume_snapshot_name
+        raise ValueError(
+            f"VirtualMachineSnapshotContent '{content_name}' has no volumeSnapshotName "
+            f"for root volume '{root_volume_name}'"
+        )
+    volume_names = [volume_backup.get("volumeName") for volume_backup in volume_backups]
+    raise ValueError(
+        f"VirtualMachineSnapshotContent '{content_name}' has no volume backup for "
+        f"root volume '{root_volume_name}' (volumeBackups volumeNames: {volume_names})"
+    )
+
+
+@contextmanager
+def linux_root_disk_online_virtual_machine_snapshot(
+    *,
+    vm: VirtualMachineForTests,
+    vm_snapshot_name: str,
+    namespace_name: str,
+    admin_client: DynamicClient,
+    root_volume_name: str = DV_DISK,
+    restore_path: str | None = None,
+    expected_content: str | None = None,
+) -> Iterator[LinuxRootDiskVirtualMachineSnapshotInfo]:
+    """Create an online VirtualMachineSnapshot and yield root-disk snapshot metadata.
+
+    KubeVirt creates one VolumeSnapshot per snapshottable VM volume. This helper selects the
+    root disk backup from VirtualMachineSnapshotContent for use as a VMFileRestore source.
+
+    Args:
+        vm: Running Linux VM to snapshot (must stay running for an online snapshot).
+        vm_snapshot_name: Name for the VirtualMachineSnapshot resource.
+        namespace_name: Namespace for snapshot resources.
+        admin_client: Kubernetes admin client.
+        root_volume_name: VM volume name for the root DataVolume.
+        restore_path: When set, assert this guest path exists before snapshot.
+        expected_content: When set with ``restore_path``, assert file content before snapshot.
+
+    Yields:
+        ``LinuxRootDiskVirtualMachineSnapshotInfo`` with the ``VirtualMachineSnapshot`` handle
+        and the root-disk ``VolumeSnapshot`` name it created.
+    """
+    if restore_path is not None:
+        run_command_on_vm_and_check_output(
+            vm=vm,
+            command=f"test -f {restore_path}",
+            expected_result="",
+        )
+    if restore_path is not None and expected_content is not None:
+        run_command_on_vm_and_check_output(
+            vm=vm,
+            command=f"cat {restore_path}",
+            expected_result=expected_content,
+        )
+    LOGGER.info(
+        f"Creating online VirtualMachineSnapshot '{vm_snapshot_name}' of VM '{vm.name}' "
+        f"for root-disk file-level restore"
+    )
+    with VirtualMachineSnapshot(
+        name=vm_snapshot_name,
+        namespace=namespace_name,
+        vm_name=vm.name,
+        client=admin_client,
+    ) as vm_snapshot:
+        vm_snapshot.wait_snapshot_done(timeout=TIMEOUT_10MIN)
+        check_snapshot_indication(snapshot=vm_snapshot, is_online=True)
+        snapshot_indications = vm_snapshot.instance.get("status", {}).get("indications", [])
+        LOGGER.info(f"VirtualMachineSnapshot '{vm_snapshot.name}' completed with indications: {snapshot_indications!r}")
+        root_volume_snapshot_name = root_disk_volume_snapshot_name_from_virtual_machine_snapshot(
+            vm_snapshot=vm_snapshot,
+            root_volume_name=root_volume_name,
+        )
+        wait_for_volume_snapshot_ready_to_use(
+            namespace=namespace_name,
+            name=root_volume_snapshot_name,
+            client=admin_client,
+        )
+        yield LinuxRootDiskVirtualMachineSnapshotInfo(
+            vm_snapshot=vm_snapshot,
+            root_volume_snapshot_name=root_volume_snapshot_name,
+        )
+
+
+@contextmanager
+def linux_volume_snapshot(
+    vm: VirtualMachineForTests,
+    pvc_name: str,
+    snapshot_name: str,
+    namespace_name: str,
+    storage_class_name: str,
+    admin_client: DynamicClient,
+    *,
+    flush_guest: bool = True,
+) -> Iterator[VolumeSnapshot]:
+    """Create a ready VolumeSnapshot of a Linux VM disk PVC.
+
+    Flushes the guest filesystem cache, resolves the VolumeSnapshotClass, creates the
+    snapshot, and waits until it is ready to use.
+
+    Args:
+        vm: Running Linux VM whose disk will be snapshotted.
+        pvc_name: Name of the disk PVC to snapshot.
+        snapshot_name: Name for the VolumeSnapshot resource.
+        namespace_name: Namespace for the VolumeSnapshot.
+        storage_class_name: StorageClass used to resolve the VolumeSnapshotClass.
+        admin_client: Kubernetes admin client.
+        flush_guest: When True, run ``sync`` on the guest before creating the snapshot.
+
+    Yields:
+        Ready VolumeSnapshot of the Linux disk PVC.
+    """
+    if flush_guest:
+        LOGGER.info("Flushing Linux filesystem cache before snapshot")
+        run_ssh_commands(
+            host=vm.ssh_exec,
+            commands=shlex.split("sync"),
+            wait_timeout=TIMEOUT_2MIN,
+            sleep=TIMEOUT_5SEC,
+        )
+    volume_snapshot_class_name = volume_snapshot_class_for_storage_class(
+        storage_class_name=storage_class_name,
+        admin_client=admin_client,
+    )
+    LOGGER.info(f"Creating VolumeSnapshot '{snapshot_name}' of Linux disk PVC '{pvc_name}'")
+    with VolumeSnapshot(
+        name=snapshot_name,
+        namespace=namespace_name,
+        source={"persistentVolumeClaimName": pvc_name},
+        volume_snapshot_class_name=volume_snapshot_class_name,
+        client=admin_client,
+    ) as snapshot:
+        wait_for_volume_snapshot_ready_to_use(namespace=namespace_name, name=snapshot.name, client=admin_client)
+        yield snapshot
 
 
 def get_file_restore_operator_configmap(admin_client: DynamicClient) -> ConfigMap:
@@ -346,54 +493,47 @@ def install_linux_guest_helper(vm: VirtualMachineForTests, admin_client: Dynamic
     LOGGER.info(f"Staging Linux guest helpers on VM '{vm.name}' in {stage_directory}")
     run_ssh_commands(
         host=vm.ssh_exec,
-        commands=["mkdir", "-m", "0700", "-p", stage_directory],
+        commands=shlex.split(f"mkdir -m 0700 -p {shlex.quote(s=stage_directory)}"),
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
     )
-    for script_name in (LINUX_SETUP_SCRIPT, LINUX_FILERESTORE_SCRIPT):
-        script_path = f"{stage_directory}/{script_name}"
-        encoded_script = base64.b64encode(scripts[script_name].encode()).decode()
-        run_ssh_commands(
-            host=vm.ssh_exec,
-            commands=[
-                "sudo",
-                "bash",
-                "-c",
-                (
-                    f"echo {encoded_script} | base64 -d > {script_path} "
-                    f"&& chown root:root {script_path} && chmod 0644 {script_path}"
-                ),
-            ],
-            wait_timeout=TIMEOUT_2MIN,
-            sleep=TIMEOUT_5SEC,
-        )
+    # Upload scripts over SFTP so pyhelper-utils does not log their full contents as SSH commands polluting the logs
+    with tempfile.TemporaryDirectory() as temp_directory:
+        for script_name in (LINUX_SETUP_SCRIPT, LINUX_FILERESTORE_SCRIPT):
+            script_path = f"{stage_directory}/{script_name}"
+            local_path = Path(temp_directory) / script_name
+            local_path.write_text(data=scripts[script_name], encoding="utf-8")
+            vm.ssh_exec.fs.put(path_src=str(local_path), path_dst=script_path)
+            run_ssh_commands(
+                host=vm.ssh_exec,
+                commands=[
+                    shlex.split(f"sudo chown root:root {shlex.quote(s=script_path)}"),
+                    shlex.split(f"sudo chmod 0644 {shlex.quote(s=script_path)}"),
+                ],
+                wait_timeout=TIMEOUT_2MIN,
+                sleep=TIMEOUT_5SEC,
+            )
 
     key_file_path = f"{stage_directory}/{OPERATOR_SSH_PUBLIC_KEY_FILE_NAME}"
     encoded_public_key = base64.b64encode(operator_public_key.encode()).decode()
+    key_command = f"echo {encoded_public_key} | base64 -d > {key_file_path} && chmod 0600 {key_file_path}"
     run_ssh_commands(
         host=vm.ssh_exec,
-        commands=[
-            "bash",
-            "-c",
-            f"echo {encoded_public_key} | base64 -d > {key_file_path} && chmod 0600 {key_file_path}",
-        ],
+        commands=shlex.split(f"bash -c {shlex.quote(s=key_command)}"),
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
     )
     setup_script_path = f"{stage_directory}/{LINUX_SETUP_SCRIPT}"
+    setup_command = f'sudo bash {setup_script_path} "$(cat {key_file_path})"'
     run_ssh_commands(
         host=vm.ssh_exec,
-        commands=[
-            "bash",
-            "-c",
-            f'sudo bash {setup_script_path} "$(cat {key_file_path})"',
-        ],
+        commands=shlex.split(f"bash -c {shlex.quote(s=setup_command)}"),
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
     )
     run_ssh_commands(
         host=vm.ssh_exec,
-        commands=["sudo", "rm", "-rf", stage_directory],
+        commands=shlex.split(f"sudo rm -rf {shlex.quote(s=stage_directory)}"),
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
     )
@@ -416,14 +556,10 @@ def stage_windows_helper_scripts(
         scripts: Mapping of script file name to script body from the ConfigMap tarball.
     """
     LOGGER.info(f"Staging Windows helper scripts on VM '{vm.name}' in {remote_directory}")
+    command = f"New-Item -ItemType Directory -Path '{remote_directory}' -Force | Out-Null"
     run_ssh_commands(
         host=vm.ssh_exec,
-        commands=[
-            "powershell",
-            "-NoProfile",
-            "-Command",
-            f"New-Item -ItemType Directory -Path '{remote_directory}' -Force | Out-Null",
-        ],
+        commands=shlex.split(f"powershell -NoProfile -Command {shlex.quote(s=command)}"),
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
     )
@@ -474,78 +610,23 @@ def install_windows_guest_helper(vm: VirtualMachineForTests, admin_client: Dynam
     setup_script_path = windows_guest_path(
         guest_path=f"{WINDOWS_HELPER_STAGE_DIRECTORY}/{WINDOWS_SETUP_SCRIPT}",
     )
-    run_ssh_commands(
-        host=vm.ssh_exec,
-        commands=[
-            "powershell",
-            "-NoProfile",
-            "-Command",
-            (f"$pubKey = (Get-Content -LiteralPath '{windows_key_path}' -Raw).Trim(); & '{setup_script_path}' $pubKey"),
-        ],
-        wait_timeout=TIMEOUT_2MIN,
-        sleep=TIMEOUT_5SEC,
+    setup_command = (
+        f"$pubKey = (Get-Content -LiteralPath '{windows_key_path}' -Raw).Trim(); & '{setup_script_path}' $pubKey"
     )
     run_ssh_commands(
         host=vm.ssh_exec,
-        commands=[
-            "powershell",
-            "-NoProfile",
-            "-Command",
-            f"Remove-Item -LiteralPath '{WINDOWS_HELPER_STAGE_DIRECTORY}' -Recurse -Force",
-        ],
+        commands=shlex.split(f"powershell -NoProfile -Command {shlex.quote(s=setup_command)}"),
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
+    )
+    cleanup_command = f"Remove-Item -LiteralPath '{WINDOWS_HELPER_STAGE_DIRECTORY}' -Recurse -Force"
+    run_ssh_commands(
+        host=vm.ssh_exec,
+        commands=shlex.split(f"powershell -NoProfile -Command {shlex.quote(s=cleanup_command)}"),
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
     )
     LOGGER.info(f"Windows guest helper installed on VM '{vm.name}'")
-
-
-def wait_for_file_restore_phase(
-    file_restore: VirtualMachineFileRestore,
-    target_phase: str,
-    timeout: int = TIMEOUT_5MIN,
-) -> None:
-    """Wait for VirtualMachineFileRestore to reach a target phase.
-
-    Args:
-        file_restore: The VirtualMachineFileRestore resource to monitor.
-        target_phase: The phase to wait for.
-        timeout: Maximum wait time in seconds.
-
-    Raises:
-        AssertionError: If the restore reaches Failed phase.
-    """
-    LOGGER.info(f"Waiting for VirtualMachineFileRestore '{file_restore.name}' to reach phase '{target_phase}'")
-    for sample in TimeoutSampler(
-        wait_timeout=timeout,
-        sleep=TIMEOUT_5SEC,
-        func=lambda: file_restore.instance.get("status", {}),
-    ):
-        phase = sample.get("phase")
-        LOGGER.info(f"VirtualMachineFileRestore '{file_restore.name}' phase: {phase}")
-        if phase == target_phase:
-            return
-        if phase == VirtualMachineFileRestore.Phase.FAILED:
-            error_message = sample.get("errorMessage", "Unknown error")
-            raise AssertionError(f"VirtualMachineFileRestore '{file_restore.name}' failed: {error_message}")
-
-
-def get_restored_files_count(file_restore: VirtualMachineFileRestore) -> int:
-    """Return restoredFilesCount from the VirtualMachineFileRestore status.
-
-    Args:
-        file_restore: The VirtualMachineFileRestore resource.
-
-    Returns:
-        Number of files reported as restored.
-
-    Raises:
-        AssertionError: If restoredFilesCount is not set.
-    """
-    restored_files_count = file_restore.instance.get("status", {}).get("restoredFilesCount")
-    assert restored_files_count is not None, (
-        f"VirtualMachineFileRestore '{file_restore.name}' status.restoredFilesCount is not set"
-    )
-    return int(restored_files_count)
 
 
 def restore_volume_name(restore_cr_name: str) -> str:
@@ -636,6 +717,51 @@ def assert_successful_restore_cleanup(
         )
 
 
+@contextmanager
+def manual_browsing_file_restore(
+    vm: VirtualMachineForTests,
+    source: DataVolume | VolumeSnapshot,
+    restore_cr_name: str,
+    namespace_name: str,
+    admin_client: DynamicClient,
+) -> Iterator[VirtualMachineFileRestore]:
+    """Create a manual restore request and wait for cleanup after deleting it.
+
+    Args:
+        vm: Target virtual machine.
+        source: Backup DataVolume providing a PVC, or a VolumeSnapshot.
+        restore_cr_name: Name of the manual restore request.
+        namespace_name: Namespace for the restore request.
+        admin_client: Kubernetes admin client.
+
+    Yields:
+        Manual restore request available for browsing.
+    """
+    snapshot_source = isinstance(source, VolumeSnapshot)
+    restore_factory = VirtualMachineFileRestore.from_snapshot if snapshot_source else VirtualMachineFileRestore.from_pvc
+    source_kwargs = {"source_snapshot_name": source.name} if snapshot_source else {"source_pvc_name": source.name}
+    with restore_factory(
+        name=restore_cr_name,
+        namespace=namespace_name,
+        target_vm_name=vm.name,
+        **source_kwargs,
+        client=admin_client,
+    ) as file_restore:
+        yield file_restore
+    for _ in TimeoutSampler(
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
+        func=assert_successful_restore_cleanup,
+        exceptions_dict={AssertionError: []},
+        vm=vm,
+        restore_cr_name=file_restore.name,
+        namespace_name=namespace_name,
+        admin_client=admin_client,
+        snapshot_source=snapshot_source,
+    ):
+        break
+
+
 def linux_restore_test_file_path(username: str) -> str:
     """Return the Linux restore path for the standard test file.
 
@@ -662,6 +788,81 @@ def windows_guest_path(guest_path: str) -> str:
     return guest_path.replace("/", "\\")
 
 
+def linux_backup_file_path(vm: VirtualMachineForTests, mount_path: str, guest_path: str) -> str:
+    """Find a guest file in a mounted backup, including backups with multiple LVs.
+
+    Args:
+        vm: Linux VM with the backup mounted.
+        mount_path: Backup mount reported by the restore operation.
+        guest_path: Original absolute path of the file in the guest.
+
+    Returns:
+        Absolute path of the unique matching file inside the backup mount.
+    """
+    matches = run_ssh_commands(
+        host=vm.ssh_exec,
+        commands=shlex.split(f"sudo find {shlex.quote(s=mount_path)} -type f -path {shlex.quote(s=f'*{guest_path}')}"),
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
+    )[0].splitlines()
+    assert len(matches) == 1, f"Expected one backup of '{guest_path}' below '{mount_path}', found {matches}"
+    return matches[0]
+
+
+def windows_backup_file_path(vm: VirtualMachineForTests, restore_cr_name: str, relative_path: str) -> str:
+    """Find a file through the drive letter on the hotplugged backup disk.
+
+    Args:
+        vm: Windows VM with the backup attached.
+        restore_cr_name: Restore request identifying the backup disk serial.
+        relative_path: File path relative to the backup volume root.
+
+    Returns:
+        File path using the backup volume's drive letter.
+    """
+    volume_name = restore_volume_name(restore_cr_name=restore_cr_name)
+    # Find the backup disk by serial, get its partition's drive letter, and append the relative file path.
+    command = (
+        "$ErrorActionPreference = 'Stop';"
+        f" $disk = Get-Disk | Where-Object {{ $_.SerialNumber -and $_.SerialNumber.Trim() -eq '{volume_name}' }};"
+        " $partition = Get-Partition -DiskNumber $disk.Number | Where-Object DriveLetter;"
+        f" Join-Path ([string]$partition.DriveLetter + ':\\') '{relative_path}'"
+    )
+    return run_ssh_commands(
+        host=vm.ssh_exec,
+        commands=shlex.split(f"powershell -NoProfile -Command {shlex.quote(s=command)}"),
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
+    )[0].strip()
+
+
+def assert_windows_backup_read_only(vm: VirtualMachineForTests, backup_file_path: str) -> None:
+    """Check backup file content stays unchanged after a write attempt.
+
+    Args:
+        vm: Windows VM with the backup mounted.
+        backup_file_path: Existing file addressed through the backup volume's drive letter.
+    """
+    # Read the full file, attempt an append, then read it again in separate PowerShell processes.
+    read_command = f"Get-Content -LiteralPath '{backup_file_path}' -Raw -ErrorAction Stop"
+    write_command = (
+        f"try {{ Add-Content -LiteralPath '{backup_file_path}' -Value 'unexpected-backup-write' -ErrorAction Stop }}"
+        " catch { Write-Output $_.Exception.Message }"
+    )
+    before, _, after = [
+        run_ssh_commands(
+            host=vm.ssh_exec,
+            commands=shlex.split(f"powershell -NoProfile -Command {shlex.quote(s=command)}"),
+            wait_timeout=TIMEOUT_2MIN,
+            sleep=TIMEOUT_5SEC,
+        )[0]
+        for command in (read_command, write_command, read_command)
+    ]
+    assert before == after, (
+        f"Backup file '{backup_file_path}' changed after the write attempt: before={before!r}, after={after!r}"
+    )
+
+
 def delete_windows_guest_file(vm: VirtualMachineForTests, guest_path: str) -> None:
     """Delete a file from a Windows VM guest filesystem.
 
@@ -671,14 +872,10 @@ def delete_windows_guest_file(vm: VirtualMachineForTests, guest_path: str) -> No
     """
     powershell_path = windows_guest_path(guest_path=guest_path)
     LOGGER.info(f"Deleting Windows test file '{powershell_path}'")
+    command = f"Remove-Item -LiteralPath '{powershell_path}' -Force -ErrorAction Stop"
     run_ssh_commands(
         host=vm.ssh_exec,
-        commands=[
-            "powershell",
-            "-NoProfile",
-            "-Command",
-            f"Remove-Item -LiteralPath '{powershell_path}' -Force -ErrorAction Stop",
-        ],
+        commands=shlex.split(f"powershell -NoProfile -Command {shlex.quote(s=command)}"),
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
     )
@@ -695,6 +892,37 @@ def windows_data_disk_path(relative_path: str) -> str:
     """
     normalized_path = relative_path.replace("\\", "/").lstrip("/")
     return f"{WINDOWS_DATA_DISK_LETTER}:/{normalized_path}"
+
+
+def delete_linux_guest_file(vm: VirtualMachineForTests, guest_path: str) -> None:
+    """Delete a file from a Linux VM guest filesystem.
+
+    Args:
+        vm: Running Linux VM with SSH connectivity.
+        guest_path: Absolute guest path to the file.
+    """
+    quoted_guest_path = shlex.quote(s=guest_path)
+    LOGGER.info(f"Deleting Linux test file '{guest_path}' from guest")
+    command = f"rm -f {quoted_guest_path} && sync"
+    run_ssh_commands(
+        host=vm.ssh_exec,
+        commands=shlex.split(f"bash -c {shlex.quote(s=command)}"),
+        wait_timeout=TIMEOUT_2MIN,
+        sleep=TIMEOUT_5SEC,
+    )
+
+
+def delete_linux_data_disk_file(vm: VirtualMachineForTests, restore_path: str) -> None:
+    """Delete a file from the Linux VM data disk at the guest-root restore path.
+
+    Args:
+        vm: Running Linux VM with the data disk mounted.
+        restore_path: Path relative to the backup volume root and guest root after restore.
+    """
+    delete_linux_guest_file(
+        vm=vm,
+        guest_path=linux_data_disk_file_path(relative_path=restore_path),
+    )
 
 
 def linux_data_disk_file_path(relative_path: str) -> str:
@@ -722,7 +950,7 @@ def ensure_linux_data_disk_directory(vm: VirtualMachineForTests, relative_direct
     directory_path = linux_data_disk_file_path(relative_path=relative_directory)
     run_ssh_commands(
         host=vm.ssh_exec,
-        commands=["mkdir", "-p", directory_path],
+        commands=shlex.split(f"mkdir -p {shlex.quote(s=directory_path)}"),
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
     )
@@ -797,7 +1025,7 @@ def initialize_and_format_windows_data_disk(vm: VirtualMachineForTests, drive_le
     )
     disk_number_output = run_ssh_commands(
         host=vm.ssh_exec,
-        commands=["powershell", "-NoProfile", "-Command", disk_number_command],
+        commands=shlex.split(f"powershell -NoProfile -Command {shlex.quote(s=disk_number_command)}"),
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
     )[0].strip()
@@ -813,7 +1041,7 @@ def initialize_and_format_windows_data_disk(vm: VirtualMachineForTests, drive_le
     )
     run_ssh_commands(
         host=vm.ssh_exec,
-        commands=["powershell", "-NoProfile", "-Command", format_command],
+        commands=shlex.split(f"powershell -NoProfile -Command {shlex.quote(s=format_command)}"),
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
     )
@@ -841,7 +1069,7 @@ def get_windows_file_acl_baseline(vm: VirtualMachineForTests, file_path: str) ->
     )
     output = run_ssh_commands(
         host=vm.ssh_exec,
-        commands=["powershell", "-NoProfile", "-Command", acl_command],
+        commands=shlex.split(f"powershell -NoProfile -Command {shlex.quote(s=acl_command)}"),
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
     )[0]
@@ -894,7 +1122,7 @@ def count_files_in_windows_directory(vm: VirtualMachineForTests, directory_path:
     count_command = f"(Get-ChildItem -LiteralPath '{directory_path}' -File | Measure-Object).Count"
     count_output = run_ssh_commands(
         host=vm.ssh_exec,
-        commands=["powershell", "-NoProfile", "-Command", count_command],
+        commands=shlex.split(f"powershell -NoProfile -Command {shlex.quote(s=count_command)}"),
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_5SEC,
     )[0].strip()

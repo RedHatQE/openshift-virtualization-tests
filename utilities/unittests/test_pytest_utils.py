@@ -5,6 +5,7 @@
 from unittest.mock import MagicMock, mock_open, patch
 from xml.etree import ElementTree
 
+import paramiko
 import pytest
 
 import utilities.constants
@@ -1239,6 +1240,16 @@ class TestGetCnvVersionExplorerUrl:
         mock_config.getoption.side_effect = lambda option: option == "install"
 
         result = get_cnv_version_explorer_url(mock_config)
+        assert result == "https://version-explorer.com"
+
+    @patch("utilities.pytest_utils.os.environ", {"CNV_VERSION_EXPLORER_URL": "https://version-explorer.com"})
+    @patch("utilities.pytest_utils.LOGGER")
+    def test_get_cnv_version_explorer_url_cnv_upgrade(self, mock_logger):
+        """Test getting CNV version explorer URL with CNV upgrade"""
+        mock_config = MagicMock()
+        mock_config.getoption.side_effect = lambda option: {"install": False, "upgrade": "cnv"}.get(option, False)
+
+        result = get_cnv_version_explorer_url(mock_config)
 
         assert result == "https://version-explorer.com"
 
@@ -1248,6 +1259,36 @@ class TestGetCnvVersionExplorerUrl:
         """Test getting CNV version explorer URL with EUS upgrade"""
         mock_config = MagicMock()
         mock_config.getoption.side_effect = lambda option: {"install": False, "upgrade": "eus"}.get(option, False)
+
+        result = get_cnv_version_explorer_url(mock_config)
+
+        assert result == "https://version-explorer.com"
+
+    @patch("utilities.pytest_utils.os.environ", {"CNV_VERSION_EXPLORER_URL": "https://version-explorer.com"})
+    @patch("utilities.pytest_utils.LOGGER")
+    def test_get_cnv_version_explorer_url_upgrade_custom_cnv(self, mock_logger):
+        """Test getting CNV version explorer URL with upgrade_custom=cnv"""
+        mock_config = MagicMock()
+        mock_config.getoption.side_effect = lambda option: {
+            "install": False,
+            "upgrade": None,
+            "upgrade_custom": "cnv",
+        }.get(option, False)
+
+        result = get_cnv_version_explorer_url(mock_config)
+
+        assert result == "https://version-explorer.com"
+
+    @patch("utilities.pytest_utils.os.environ", {"CNV_VERSION_EXPLORER_URL": "https://version-explorer.com"})
+    @patch("utilities.pytest_utils.LOGGER")
+    def test_get_cnv_version_explorer_url_upgrade_custom_eus(self, mock_logger):
+        """Test getting CNV version explorer URL with upgrade_custom=eus"""
+        mock_config = MagicMock()
+        mock_config.getoption.side_effect = lambda option: {
+            "install": False,
+            "upgrade": None,
+            "upgrade_custom": "eus",
+        }.get(option, False)
 
         result = get_cnv_version_explorer_url(mock_config)
 
@@ -1737,15 +1778,15 @@ class TestGenerateCommonTemplateMatrixDicts:
         mock_generate_latest,
     ):
         """Test generating Windows OS matrix from windows_os_list"""
-        sample_windows_matrix = [{"win-10": {"os_version": "10", "latest_released": True}}]
+        sample_windows_matrix = [{"win-11": {"os_version": "11", "latest_released": True}}]
         mock_generate_os_matrix.return_value = sample_windows_matrix
-        mock_generate_latest.return_value = sample_windows_matrix[0]["win-10"]
+        mock_generate_latest.return_value = sample_windows_matrix[0]["win-11"]
 
-        os_dict = {"windows_os_list": ["win-10"]}
+        os_dict = {"windows_os_list": ["win-11"]}
         generate_common_template_matrix_dicts(os_dict=os_dict)
 
         mock_generate_os_matrix.assert_called_once_with(
-            os_name="windows", supported_operating_systems=["win-10"], arch=None
+            os_name="windows", supported_operating_systems=["win-11"], arch=None
         )
         assert mock_py_config["windows_os_matrix"] == sample_windows_matrix
 
@@ -2065,7 +2106,7 @@ class TestUpdateLatestOsConfig:
         """Test that windows_os_matrix is saved to system_windows_os_matrix"""
         mock_session_config = MagicMock()
         mock_session_config.getoption.return_value = False
-        windows_matrix = [{"win-10": {"os_version": "10"}}]
+        windows_matrix = [{"win-11": {"os_version": "11"}}]
         mock_py_config["windows_os_matrix"] = windows_matrix
 
         update_latest_os_config(session_config=mock_session_config)
@@ -2109,7 +2150,7 @@ class TestUpdateLatestOsConfig:
         mock_session_config = MagicMock()
         mock_session_config.getoption.side_effect = lambda opt: opt == "latest_windows"
         mock_py_config["windows_os_matrix"] = [
-            {"win-10": {"os_version": "10"}},
+            {"win-11": {"os_version": "11"}},
             {"win-2025": {"os_version": "2025", "latest_released": True}},
         ]
         mock_py_config["latest_windows_os_dict"] = {"os_version": "2025", "latest_released": True}
@@ -2173,7 +2214,7 @@ class TestUpdateLatestOsConfig:
         """Test fallback to default values when latest_windows_os_dict is missing"""
         mock_session_config = MagicMock()
         mock_session_config.getoption.side_effect = lambda opt: opt == "latest_windows"
-        mock_py_config["windows_os_matrix"] = [{"win-10": {"os_version": "10"}}]
+        mock_py_config["windows_os_matrix"] = [{"win-11": {"os_version": "11"}}]
 
         update_latest_os_config(session_config=mock_session_config)
 
@@ -3349,3 +3390,16 @@ class TestInjectFailureJunit:
         assert xml_path.exists()
         content = xml_path.read_text()
         assert "pytest_exit" not in content, "Original XML should not be modified on write failure"
+
+
+class TestPatchParamikoForFips:
+    def test_get_fingerprint_returns_fips_safe_md5(self, monkeypatch):
+        """patch_paramiko_for_fips patches get_fingerprint to call hashlib.md5 with usedforsecurity=False."""
+        monkeypatch.setattr(paramiko.pkey.PKey, "get_fingerprint", paramiko.pkey.PKey.get_fingerprint)
+        pytest_utils_module.patch_paramiko_for_fips()
+        key = paramiko.RSAKey.generate(bits=2048)
+
+        with patch("utilities.pytest_utils.hashlib.md5") as mock_md5:
+            mock_md5.return_value.digest.return_value = b"\x00" * 16
+            key.get_fingerprint()
+            mock_md5.assert_called_once_with(key.asbytes(), usedforsecurity=False)

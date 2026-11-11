@@ -45,7 +45,7 @@ class TestDisabledMultiarchGoldenImagesSupport:
         "resource_type",
         [
             pytest.param(DataImportCron),
-            pytest.param(DataSource, marks=pytest.mark.jira("CNV-68996", run=False)),
+            pytest.param(DataSource, marks=pytest.mark.jira("CNV-98665", run=False)),
         ],
     )
     def test_only_base_golden_image_resources_exist(
@@ -60,10 +60,12 @@ class TestDisabledMultiarchGoldenImagesSupport:
         Test that only base golden image resources exist
         after disabling multi-architecture golden images support.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-iuo/multiarch_arm_support.md
+
         Parametrize:
             - resource_type:
                 - DataImportCron
-                - DataSource [Markers: jira(CNV-68996)]
+                - DataSource [Markers: jira(CNV-98665)]
 
         Steps:
             1. Verify expected base resources exist in the golden images namespace.
@@ -101,6 +103,8 @@ class TestDisabledMultiarchGoldenImagesSupport:
         Test that architecture-agnostic DataSources remain available after
         disabling multi-architecture golden images support, and point to a pvc/snapshot source.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-iuo/multiarch_arm_support.md
+
         Steps:
             1. Get architecture-agnostic DataSources from golden images namespace.
             2. Wait for them to be in ready condition.
@@ -134,6 +138,8 @@ class TestDisabledMultiarchGoldenImagesSupport:
         Test that the metric is indicating that multi-arch
         golden images support is disabled on a multiarch cluster.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-iuo/multiarch_arm_support.md
+
         Steps:
             1. Query the metric.
 
@@ -156,6 +162,8 @@ class TestDisabledMultiarchGoldenImagesSupport:
         """
         Test that the metric is not emitted when nodePlacement restricts
         workloads to a single architecture.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-iuo/multiarch_arm_support.md
 
         Preconditions:
             - nodePlacement restricts workloads to a single architecture in HCO CR.
@@ -203,6 +211,8 @@ class TestEnabledMultiarchGoldenImagesSupport:
         Test that architecture-specific golden image resources are created
         for each common DataImportCronTemplate and each supported cluster architecture.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-iuo/multiarch_arm_support.md
+
         Parametrize:
             - resource_type, expected_condition:
                 - DataImportCron, UpToDate
@@ -232,19 +242,21 @@ class TestEnabledMultiarchGoldenImagesSupport:
         admin_client,
         golden_images_namespace,
         base_common_templates_related_resources,
-        kubevirt_default_architecture,
+        hco_status_default_architecture,
         subtests,
     ):
         """
         Test that architecture-agnostic (pointer) DataSources are referencing
         the default architecture-specific DataSource.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-iuo/multiarch_arm_support.md
+
         Steps:
             1. Get architecture-agnostic DataSources from golden images namespace.
-            2. Get Kubevirt default architecture.
+            2. Get HCO default architecture.
 
         Expected:
-            - DataSource is referencing architecture-specific DataSource matching the Kubevirt default architecture.
+            - DataSource is referencing architecture-specific DataSource matching the HCO default architecture.
         """
         verify_resource_in_ns(
             expected_resource_names=base_common_templates_related_resources[DataSource.kind],
@@ -254,7 +266,7 @@ class TestEnabledMultiarchGoldenImagesSupport:
             ready_condition=DataSource.Condition.READY,
         )
         for ds_name in base_common_templates_related_resources[DataSource.kind]:
-            expected_arch_ds = f"{ds_name}-{kubevirt_default_architecture}"
+            expected_arch_ds = f"{ds_name}-{hco_status_default_architecture}"
             with subtests.test(msg=ds_name):
                 data_source = DataSource(
                     name=ds_name,
@@ -265,7 +277,7 @@ class TestEnabledMultiarchGoldenImagesSupport:
                     f"DataSource {ds_name} does not reference an architecture-specific DataSource."
                 )
                 assert source.name == expected_arch_ds, (
-                    f"DataSource {ds_name} does not reference a Kubevirt default "
+                    f"DataSource {ds_name} does not reference a HCO default "
                     f"architecture-specific DataSource (expected: {expected_arch_ds}). "
                     f"Actual source: {source.name}"
                 )
@@ -295,6 +307,8 @@ class TestMultiarchGoldenImageAnnotationMetrics:
         """
         [NEGATIVE] Test that a misconfiguration metric indicates an unsupported
         architecture annotation on a golden image.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-iuo/multiarch_arm_support.md
 
         Preconditions:
             - HCO CR is patched with a custom DataImportCronTemplate annotated
@@ -330,6 +344,8 @@ class TestMultiarchGoldenImageAnnotationMetrics:
         """
         [NEGATIVE] Test that a misconfiguration metric indicates a missing
         architecture annotation on a golden image.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-iuo/multiarch_arm_support.md
 
         Preconditions:
             - HCO CR is patched with a custom DataImportCronTemplate without

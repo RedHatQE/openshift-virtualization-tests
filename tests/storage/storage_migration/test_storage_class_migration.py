@@ -28,7 +28,6 @@ if TYPE_CHECKING:
     from utilities.virt import VirtualMachineForTests
 
 TESTS_CLASS_NAME_A_TO_B = "TestStorageClassMigrationAtoB"
-TESTS_CLASS_NAME_B_TO_A = "TestStorageClassMigrationBtoA"
 TESTS_CLASS_NAME_VOLUME_HOTPLUG = "TestStorageClassMigrationWithVolumeHotplug"
 TESTS_CLASS_NAME_WINDOWS = "TestStorageClassMigrationWindowsWithVTPM"
 
@@ -179,12 +178,12 @@ class TestStorageClassMigrationWithVolumeHotplug:
         ],
         indirect=True,
     )
-    @pytest.mark.usefixtures("written_files_to_mounted_hotplugged_disks")
     def test_vm_storage_class_migration_with_hotplugged_volume(
         self,
         source_storage_class,
         target_storage_class,
         written_file_to_vms_before_migration,
+        written_files_to_mounted_hotplugged_disks,
         online_vms_for_storage_class_migration,
         vms_boot_time_before_storage_migration,
         storage_mig_plan,
