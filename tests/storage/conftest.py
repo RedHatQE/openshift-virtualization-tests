@@ -550,3 +550,9 @@ def unique_suffix_scope_function():
 @pytest.fixture(scope="class")
 def dv_wait_timeout(request):
     return request.param.get("dv_wait_timeout") if hasattr(request, "param") else TIMEOUT_30MIN
+
+
+@pytest.fixture(scope="module")
+def rwx_storage_class_name_scope_module(storage_class_matrix_rwx_matrix__module__):
+    """Storage class name from the RWX-only storage class matrix."""
+    return [*storage_class_matrix_rwx_matrix__module__][0]
