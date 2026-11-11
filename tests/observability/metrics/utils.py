@@ -872,8 +872,8 @@ def validate_dual_stream_migration_metrics(
     """
     for metric in MIGRATION_METRICS:
         with subtests.test(msg=metric):
-            if metric in METRICS_WITH_CNV_97013_BUG and is_jira_open(jira_id="CNV-97013"):
-                pytest.xfail(reason=f"CNV-97013: {metric} returns no data during migration")
+            if metric in METRICS_WITH_CNV_97013_BUG and is_jira_open(jira_id="CNV-98667"):
+                pytest.xfail(reason=f"CNV-98667: {metric} returns no data during migration")
             if metric == KUBEVIRT_VMI_MIGRATION_START_TIME_SECONDS:
                 validate_metrics_value(
                     prometheus=prometheus,

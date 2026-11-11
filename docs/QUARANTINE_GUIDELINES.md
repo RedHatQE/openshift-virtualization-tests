@@ -179,13 +179,13 @@ receive a `quarantined` pytest marker during collection. This enables:
 
 ```bash
 # Run only quarantined tests (e.g., to verify fixes)
-pytest -m quarantined
+uv run pytest -m quarantined
 
 # Exclude quarantined tests
-pytest -m "not quarantined"
+uv run pytest -m "not quarantined"
 
 # Combine with other markers
-pytest -m "quarantined and storage"
+uv run pytest -m "quarantined and storage"
 ```
 
 ### Pull Request Requirements
@@ -212,7 +212,7 @@ Tests can **ONLY** be re-included after demonstrating stability:
 
 **Local Verification Command:**
 ```bash
-pytest --repeat-scope=session --count=25 <path to test module>
+uv run pytest --repeat-scope=session --count=25 <path to test module>
 ```
 
 ### De-Quarantine Checklist

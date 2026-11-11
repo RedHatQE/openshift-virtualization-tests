@@ -55,6 +55,8 @@ class TestMigrationStuntime:
         Test that measured stuntime does not exceed the global threshold when the client
         VM migrates from the node hosting the server VM into a different node.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-network/stuntime_measurement.md
+
         Preconditions:
             - Under-test server VM on Linux bridge secondary network, for the parametrized IP family.
             - Under-test client VM on Linux bridge secondary network, for that same IP family,
@@ -85,6 +87,8 @@ class TestMigrationStuntime:
         Test that measured stuntime does not exceed the global threshold when the client VM migrates between nodes
         while the client and server VMs remain on different nodes.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-network/stuntime_measurement.md
+
         Preconditions:
             - Under-test server VM on Linux bridge secondary network, for the parametrized IP family.
             - Under-test client VM on Linux bridge secondary network, for that same IP family,
@@ -113,6 +117,8 @@ class TestMigrationStuntime:
         """
         Test that measured stuntime does not exceed the global threshold when the client VM migrates
         from a node other than the node hosting the server VM onto the node hosting the server VM.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-network/stuntime_measurement.md
 
         Preconditions:
             - Under-test server VM on Linux bridge secondary network, for the parametrized IP family.
@@ -144,6 +150,8 @@ class TestMigrationStuntime:
         Test that measured stuntime does not exceed the global threshold when the server
         VM migrates from the node hosting the client VM into a different node.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-network/stuntime_measurement.md
+
         Preconditions:
             - Under-test server VM on Linux bridge secondary network, for the parametrized IP family.
             - Under-test client VM on Linux bridge secondary network, for that same IP family,
@@ -174,6 +182,8 @@ class TestMigrationStuntime:
         Test that measured stuntime does not exceed the global threshold when the server VM migrates between nodes
         while the client and server VMs remain on different nodes.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-network/stuntime_measurement.md
+
         Preconditions:
             - Under-test server VM on Linux bridge secondary network, for the parametrized IP family.
             - Under-test client VM on Linux bridge secondary network, for that same IP family,
@@ -203,6 +213,8 @@ class TestMigrationStuntime:
         """
         Test that measured stuntime does not exceed the global threshold when the server VM migrates from a node
         other than the node hosting the client VM onto the node hosting the client VM.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-network/stuntime_measurement.md
 
         Preconditions:
             - Under-test server VM on Linux bridge secondary network, for the parametrized IP family.

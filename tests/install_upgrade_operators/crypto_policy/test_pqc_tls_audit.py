@@ -6,13 +6,15 @@ Epic: https://redhat.atlassian.net/browse/CNV-74453 # <skip-jira-utils-check>
 
 import pytest
 
-pytestmark = pytest.mark.post_upgrade
+pytestmark = [pytest.mark.post_upgrade, pytest.mark.s390x]
 
 
 @pytest.mark.polarion("CNV-15222")
 def test_cnv_services_pqc_key_exchange(subtests, fips_enabled_cluster, pqc_status_by_service, services_tls_runtime):
     """
     Test that every CNV service negotiates PQC key exchange.
+
+    Jira: https://redhat.atlassian.net/browse/CNV-74453  # <skip-jira-utils-check>
 
     Preconditions:
         - AAQ enabled

@@ -1729,7 +1729,8 @@ def wait_for_ssh_connectivity(
 
 
 def wait_for_console(vm):
-    with Console(vm=vm, timeout=TIMEOUT_25MIN):
+    # The VM is already running. Login uses the 2-minute default; logout uses the 30-second command timeout.
+    with Console(vm=vm):
         LOGGER.info(f"Successfully connected to {vm.name} console")
 
 
@@ -2572,7 +2573,7 @@ def wait_for_updated_kv_value(admin_client, hco_namespace, path, value, timeout=
 
 
 # function waits when VMIM resource created by cluster automatically (e.g. after node drain OR hotplug)
-def get_created_migration_job(vm, timeout=TIMEOUT_1MIN, client=None):
+def get_created_migration_job(vm, client: DynamicClient, timeout=TIMEOUT_1MIN):
     """Poll for a VirtualMachineInstanceMigration created automatically by the cluster.
 
     Waits until a VMIM resource appears for the given VM's VMI (e.g. after a node
@@ -2580,9 +2581,8 @@ def get_created_migration_job(vm, timeout=TIMEOUT_1MIN, client=None):
 
     Args:
         vm: VirtualMachine whose VMI migration job is expected.
+        client: DynamicClient to use for API queries. Required; there is no fallback client.
         timeout: Maximum time in seconds to wait for the migration job to appear.
-        client: Optional DynamicClient to use for API queries. Falls back to default
-            client when not provided.
 
     Returns:
         VirtualMachineInstanceMigration: The first migration job found for the VM's VMI.

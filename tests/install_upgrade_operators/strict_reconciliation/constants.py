@@ -16,7 +16,6 @@ from tests.install_upgrade_operators.constants import (
     HCO_CR_CERT_CONFIG_SERVER_KEY,
 )
 
-DEPLOY_KUBE_SECONDARY_DNS = "deployKubeSecondaryDNS"
 CERTC_DEFAULT_48H = "48h0m0s"
 CERTC_DEFAULT_24H = "24h0m0s"
 CERTC_DEFAULT_12H = "12h0m0s"
@@ -36,7 +35,6 @@ LIVE_MIGRATION_CONFIG_KEY = "liveMigrationConfig"
 ALLOW_AUTO_CONVERGE = "allowAutoConverge"
 ALLOW_POST_COPY = "allowPostCopy"
 ALLOW_WORKLOAD_DISRUPTION = "allowWorkloadDisruption"
-LIVE_MIGRATION_CONFIG_BANDWIDTH_PER_MIGRATION_KEY = "bandwidthPerMigration"
 COMPLETION_TIMEOUT_PER_GIB_KEY = "completionTimeoutPerGiB"
 COMPLETION_TIMEOUT_PER_GIB_VALUE = 777
 PROGRESS_TIMEOUT_KEY = "progressTimeout"

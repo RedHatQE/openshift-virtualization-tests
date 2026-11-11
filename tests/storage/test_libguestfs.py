@@ -109,5 +109,21 @@ def client_for_test(request, admin_client, unprivileged_client):
 def test_virtctl_libguestfs_with_specific_user(
     virtctl_libguestfs_by_user,
 ):
+    """
+    Test that virtctl guestfs runs libguestfs-test-tool successfully as the selected user.
+
+    Jira: https://redhat.atlassian.net/browse/CNV-7487  # <skip-jira-utils-check>
+
+    Preconditions:
+        - Fedora data volume successfully imported in the test namespace
+        - Data volume accessible to the user under test, with an fsGroup set for an unprivileged user
+        - libguestfs-tools pod running and its shell ready
+
+    Steps:
+        1. Run the libguestfs-test-tool command inside the libguestfs-tools pod shell
+
+    Expected:
+        - The libguestfs-test-tool run finishes successfully
+    """
     virtctl_libguestfs_by_user.sendline("libguestfs-test-tool")
     virtctl_libguestfs_by_user.expect("===== TEST FINISHED OK =====", timeout=TIMEOUT_1MIN)

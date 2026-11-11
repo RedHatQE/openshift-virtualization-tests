@@ -54,6 +54,8 @@ class TestDeschedulerLoadAwareRebalancing:
         """
         Test that the descheduler marks an overloaded node with the overutilized soft taint.
 
+        Jira: https://redhat.atlassian.net/browse/CNV-80073  # <skip-jira-utils-check>
+
         Steps:
             1. Select the node running the most under-test VMs
             2. Generate CPU stress on all under-test VMs located on that node
@@ -71,6 +73,8 @@ class TestDeschedulerLoadAwareRebalancing:
     ):
         """
         Test that the descheduler rebalances VMs away from an overloaded node.
+
+        Jira: https://redhat.atlassian.net/browse/CNV-80073  # <skip-jira-utils-check>
 
         Preconditions:
             - Under-test VMs on the selected node are under CPU stress
@@ -93,6 +97,8 @@ class TestDeschedulerLoadAwareRebalancing:
         """
         Test that the descheduler clears the overutilized soft taint once a node is no longer overloaded.
 
+        Jira: https://redhat.atlassian.net/browse/CNV-80073  # <skip-jira-utils-check>
+
         Preconditions:
             - The node was previously overloaded and rebalancing migrations have completed
 
@@ -111,6 +117,8 @@ class TestDeschedulerLoadAwareRebalancing:
     ):
         """
         Test that worker node PSI values stay within the descheduler deviation threshold.
+
+        Jira: https://redhat.atlassian.net/browse/CNV-80073  # <skip-jira-utils-check>
 
         Steps:
             1. Query the combined utilization and pressure PSI metric for the worker nodes
@@ -142,6 +150,8 @@ class TestDeschedulerMemoryRebalancing:
     ):
         """
         Test that the descheduler rebalances VMs away from a node overloaded on memory.
+
+        Jira: https://redhat.atlassian.net/browse/CNV-80073  # <skip-jira-utils-check>
 
         Preconditions:
             - Under-test VMs on the selected node are consuming most of their guest memory

@@ -56,6 +56,8 @@ class TestVMTemplatePreUpgrade:
         Test that a VirtualMachineTemplate can be created before the cluster upgrade
         begins, and reaches a completed/Ready state.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-infra/virtual-machine-template.md
+
         Steps:
             1. Create a VirtualMachineTemplate resource
             2. Wait for the VirtualMachineTemplate to become completed/Ready
@@ -82,6 +84,8 @@ class TestVMTemplatePreUpgrade:
         Test that a VM can be created from a VirtualMachineTemplate before the cluster
         upgrade begins. The VM is kept alive until the end of this test class, since it
         is reused as the source VM captured by a VirtualMachineTemplateRequest.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-infra/virtual-machine-template.md
 
         Preconditions:
             - A VirtualMachineTemplate created before the upgrade
@@ -112,6 +116,8 @@ class TestVMTemplatePreUpgrade:
         upgrade begins, and that it captures an existing VM into a new
         VirtualMachineTemplate. The source VM is removed once this test class's tests
         finish.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-infra/virtual-machine-template.md
 
         Preconditions:
             - A VM created from the pre-existing VirtualMachineTemplate, to be captured
@@ -164,6 +170,8 @@ class TestVMTemplatePostUpgrade:
         and the VirtualMachineTemplate it captured all remain present on the cluster, in
         their completed/Ready state, after the upgrade.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-infra/virtual-machine-template.md
+
         Preconditions:
             - A VirtualMachineTemplate created directly before the upgrade, in a completed/Ready
               state
@@ -205,6 +213,8 @@ class TestVMTemplatePostUpgrade:
         Test that a new VM can be created from each pre-existing VirtualMachineTemplate
         (the one created directly, and the one captured by the request) after the
         cluster upgrade.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-infra/virtual-machine-template.md
 
         Preconditions:
             - A VirtualMachineTemplate created before the upgrade

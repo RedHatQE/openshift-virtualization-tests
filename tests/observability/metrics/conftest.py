@@ -1,5 +1,4 @@
 import logging
-import shlex
 
 import bitmath
 import pytest
@@ -53,14 +52,6 @@ from utilities.constants.components import (
 )
 from utilities.constants.images import OS_FLAVOR_FEDORA
 from utilities.constants.instance_types import U1_SMALL
-from utilities.constants.monitoring import (
-    KUBEVIRT_VMI_MEMORY_PGMAJFAULT_TOTAL,
-    KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL,
-    KUBEVIRT_VMI_MEMORY_SWAP_IN_TRAFFIC_BYTES,
-    KUBEVIRT_VMI_MEMORY_SWAP_OUT_TRAFFIC_BYTES,
-    KUBEVIRT_VMI_MEMORY_UNUSED_BYTES,
-    KUBEVIRT_VMI_MEMORY_USABLE_BYTES,
-)
 from utilities.constants.networking import IPV4_STR
 from utilities.constants.timeouts import (
     TIMEOUT_2MIN,
@@ -100,18 +91,7 @@ from utilities.virt import (
 )
 from utilities.vnc_utils import VNCConnection
 
-CDI_UPLOAD_PRIME = "cdi-upload-prime"
-IP_RE_PATTERN_FROM_INTERFACE = r"eth0.*?inet (\d+\.\d+\.\d+\.\d+)/\d+"
-IP_ADDR_SHOW_COMMAND = shlex.split("ip addr show")
 LOGGER = logging.getLogger(__name__)
-METRICS_WITH_WINDOWS_VM_BUGS = [
-    KUBEVIRT_VMI_MEMORY_UNUSED_BYTES,
-    KUBEVIRT_VMI_MEMORY_SWAP_OUT_TRAFFIC_BYTES,
-    KUBEVIRT_VMI_MEMORY_SWAP_IN_TRAFFIC_BYTES,
-    KUBEVIRT_VMI_MEMORY_PGMAJFAULT_TOTAL,
-    KUBEVIRT_VMI_MEMORY_USABLE_BYTES,
-    KUBEVIRT_VMI_MEMORY_PGMINFAULT_TOTAL,
-]
 MINIMUM_QEMU_GUEST_AGENT_VERSION_FOR_GUEST_LOAD_METRICS = "9.6"
 _NAD_SWAP_SECONDARY_IFACE = "secondary"
 

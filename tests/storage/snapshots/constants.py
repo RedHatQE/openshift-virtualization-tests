@@ -1,7 +1,5 @@
 NUM_MULTI_DISK_VMS = 4
 
-ERROR_MSG_VM_IS_RUNNING = r".*virtualmachinerestore-validator.snapshot.kubevirt.io.*" r"denied the request*"
-
 VIRTUAL_MACHINES_SNAPSHOT_FORBIDDEN = r".*virtualmachinesnapshots.snapshot.kubevirt.io is forbidden: User"
 VIRTUAL_MACHINE_RESTORE_FORBIDDEN = r".*virtualmachinerestores.snapshot.kubevirt.io is forbidden: User"
 CANNOT_CREATE_RESOURCE = r"cannot create resource"

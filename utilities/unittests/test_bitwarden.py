@@ -25,8 +25,25 @@ _original_timeout_sampler_init = TimeoutSampler.__init__
 
 
 def _short_timeout_init(self: TimeoutSampler, *args: object, **kwargs: object) -> None:
-    """Override TimeoutSampler.__init__ to use short timeout for tests."""
+    """Override TimeoutSampler.__init__ to expire almost immediately.
+
+    Used by tests that assert the retry budget is exhausted; they must not
+    depend on how many attempts fit before the deadline, so they assert only
+    the raised TimeoutExpiredError and never the attempt count.
+    """
     kwargs["wait_timeout"] = 0.05
+    kwargs["sleep"] = 0.01
+    _original_timeout_sampler_init(self, *args, **kwargs)
+
+
+def _retry_timeout_init(self: TimeoutSampler, *args: object, **kwargs: object) -> None:
+    """Override TimeoutSampler.__init__ to leave room for a retry.
+
+    Retry tests drive the second attempt to succeed, so the budget only has to
+    outlast one attempt. A budget tied to one iteration made them flaky on
+    loaded CI runners, where a single attempt can outlive the deadline.
+    """
+    kwargs["wait_timeout"] = 5
     kwargs["sleep"] = 0.01
     _original_timeout_sampler_init(self, *args, **kwargs)
 
@@ -62,35 +79,56 @@ class TestGetAllCnvTestsSecrets:
 
     @patch("bitwarden.run_command")
     def test_get_all_cnv_tests_secrets_command_error(self, mock_run_command):
-        """Test bws command error handling for get_all_cnv_tests_secrets"""
+        """Test a transient bws command failure is retried until it succeeds"""
         with patch.dict(os.environ, {"ACCESS_TOKEN": "test-token"}):
             # Clear cache before test
             get_all_cnv_tests_secrets.cache_clear()
 
-            # Mock bws command failure; run_command returns failure tuple
+            # First call fails transiently, the retry returns valid secrets
+            mock_run_command.side_effect = [
+                (False, "", "503 Service Unavailable"),
+                (True, json.dumps([{"key": "test-secret-1", "id": "uuid-1"}]), ""),
+            ]
+
+            with patch.object(TimeoutSampler, "__init__", new=_retry_timeout_init):
+                result = get_all_cnv_tests_secrets()
+
+            # Exactly one retry: the transient failure did not abort the call
+            assert mock_run_command.call_count == 2
+            assert result == {"test-secret-1": "uuid-1"}
+
+    @patch("bitwarden.run_command")
+    def test_get_all_cnv_tests_secrets_persistent_error(self, mock_run_command):
+        """Test a persistent bws failure exhausts the retry budget"""
+        with patch.dict(os.environ, {"ACCESS_TOKEN": "test-token"}):
+            # Clear cache before test
+            get_all_cnv_tests_secrets.cache_clear()
+
+            # bws keeps failing, so the retry budget runs out
             mock_run_command.return_value = (False, "", "503 Service Unavailable")
 
             with pytest.raises(TimeoutExpiredError), patch.object(TimeoutSampler, "__init__", new=_short_timeout_init):
                 get_all_cnv_tests_secrets()
 
-            # Verify retry happened (called more than once)
-            assert mock_run_command.call_count > 1
-
     @patch("bitwarden.run_command")
     def test_get_all_cnv_tests_secrets_invalid_json(self, mock_run_command):
-        """Test invalid JSON handling for get_all_cnv_tests_secrets"""
+        """Test an empty bws response is retried until valid JSON is returned"""
         with patch.dict(os.environ, {"ACCESS_TOKEN": "test-token"}):
             # Clear cache before test
             get_all_cnv_tests_secrets.cache_clear()
 
-            # Mock run_command returning success but empty stdout (causes JSONDecodeError)
-            mock_run_command.return_value = (True, "", "")
+            # First call returns an empty (falsy) payload, the retry returns valid JSON
+            mock_run_command.side_effect = [
+                (True, "", ""),
+                (True, json.dumps([{"key": "test-secret-1", "id": "uuid-1"}]), ""),
+            ]
 
-            with pytest.raises(TimeoutExpiredError), patch.object(TimeoutSampler, "__init__", new=_short_timeout_init):
-                get_all_cnv_tests_secrets()
+            with patch.object(TimeoutSampler, "__init__", new=_retry_timeout_init):
+                result = get_all_cnv_tests_secrets()
 
-            # Verify retry happened
-            assert mock_run_command.call_count > 1
+            # Exactly one retry: the empty payload did not abort the call
+            assert mock_run_command.call_count == 2
+            assert result == {"test-secret-1": "uuid-1"}
 
     def test_get_all_cnv_tests_secrets_missing_access_token(self):
         """Test error when ACCESS_TOKEN is not set"""
@@ -191,14 +229,22 @@ class TestGetCnvTestsSecretByName:
                 "secret1": "uuid-1",
             }
 
-            # Mock bws command failure; run_command returns failure tuple
-            mock_run_command.return_value = (False, "", "Secret not accessible")
+            # First call fails transiently, the retry returns the secret payload
+            mock_run_command.side_effect = [
+                (False, "", "Secret not accessible"),
+                (
+                    True,
+                    json.dumps({"value": json.dumps({"key": "value-1"})}),
+                    "",
+                ),
+            ]
 
-            with pytest.raises(TimeoutExpiredError), patch.object(TimeoutSampler, "__init__", new=_short_timeout_init):
-                get_cnv_tests_secret_by_name("secret1")
+            with patch.object(TimeoutSampler, "__init__", new=_retry_timeout_init):
+                result = get_cnv_tests_secret_by_name("secret1")
 
-            # Verify retry happened
-            assert mock_run_command.call_count > 1
+            # Exactly one retry: the transient failure did not abort the call
+            assert mock_run_command.call_count == 2
+            assert result == {"key": "value-1"}
 
     @patch("bitwarden.get_all_cnv_tests_secrets")
     def test_get_cnv_tests_secret_by_name_disabled_bitwarden(self, mock_get_all):

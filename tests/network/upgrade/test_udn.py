@@ -32,6 +32,7 @@ pytestmark = [
 
 
 @pytest.mark.polarion("CNV-13118")
+@pytest.mark.manual
 def test_udn_vm_state_before_upgrade():
     """
     Test that a VM with:
@@ -93,6 +94,7 @@ def test_connectivity_between_udn_vms_before_upgrade(running_udn_vms_upgrade):
 
 
 @pytest.mark.polarion("CNV-13119")
+@pytest.mark.manual
 def test_udn_vm_state_after_upgrade():
     """
     Test that a VM with:

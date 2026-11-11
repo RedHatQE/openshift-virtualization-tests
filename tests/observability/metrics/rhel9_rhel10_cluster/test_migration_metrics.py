@@ -91,6 +91,8 @@ class TestDualStreamMigrationRhcos9ToRhcos10:
         Test that migration metrics are reported when a VM is live migrated from an RHCOS 9 worker node
         to an RHCOS 10 worker node.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/dual-stream-cluster-rhcos9-rhcos10/iuo.md
+
         Steps:
         1. For each migration metric (data processed, data remaining, memory transfer rate, dirty
            memory rate, data total, start time, and end time):
@@ -102,11 +104,11 @@ class TestDualStreamMigrationRhcos9ToRhcos10:
         - Migration start time matches the VM's recorded start timestamp
         - Migration end time matches the VM's recorded end timestamp (after completion)
         - Data processed, data remaining, and data total metrics are non-zero
-        - Memory transfer rate and dirty memory rate metrics xfail while CNV-97013 is open
+        - Memory transfer rate and dirty memory rate metrics xfail while CNV-98667 is open
           (they return no data during migration)
 
         Note:
-            The memory transfer rate (bandwidth) and dirty memory rate metrics xfail while CNV-97013
+            The memory transfer rate (bandwidth) and dirty memory rate metrics xfail while CNV-98667
             is open (they return no data during migration).
         """
         validate_dual_stream_migration_metrics(
@@ -175,6 +177,8 @@ class TestDualStreamMigrationRhcos10ToRhcos9:
         Test that migration metrics are reported when a VM is live migrated from an RHCOS 10 worker node
         to an RHCOS 9 worker node.
 
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/dual-stream-cluster-rhcos9-rhcos10/iuo.md
+
         Steps:
         1. For each migration metric (data processed, data remaining, memory transfer rate, dirty
            memory rate, data total, start time, and end time):
@@ -186,11 +190,11 @@ class TestDualStreamMigrationRhcos10ToRhcos9:
         - Migration start time matches the VM's recorded start timestamp
         - Migration end time matches the VM's recorded end timestamp (after completion)
         - Data processed, data remaining, and data total metrics are non-zero
-        - Memory transfer rate and dirty memory rate metrics xfail while CNV-97013 is open
+        - Memory transfer rate and dirty memory rate metrics xfail while CNV-98667 is open
           (they return no data during migration)
 
         Note:
-            The memory transfer rate (bandwidth) and dirty memory rate metrics xfail while CNV-97013
+            The memory transfer rate (bandwidth) and dirty memory rate metrics xfail while CNV-98667
             is open (they return no data during migration).
         """
         validate_dual_stream_migration_metrics(

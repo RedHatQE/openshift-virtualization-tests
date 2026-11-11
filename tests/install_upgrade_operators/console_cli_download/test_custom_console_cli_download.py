@@ -6,6 +6,8 @@ from tests.install_upgrade_operators.console_cli_download.utils import (
 )
 from utilities.infra import download_and_extract_file_from_cluster
 
+pytestmark = pytest.mark.s390x
+
 
 @pytest.mark.parametrize(
     "updated_cluster_ingress_downloads_spec_links",

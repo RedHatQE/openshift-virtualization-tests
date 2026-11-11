@@ -21,7 +21,6 @@ from utilities.constants.timeouts import TIMEOUT_1MIN
 from utilities.hco import ResourceEditorValidateHCOReconcile, hco_feature_gates_patch
 
 LOGGER = logging.getLogger(__name__)
-DISABLED_KUBEVIRT_FEATUREGATES_IN_SNO = ["LiveMigration", "SRIOVLiveMigration"]
 
 
 @pytest.fixture()

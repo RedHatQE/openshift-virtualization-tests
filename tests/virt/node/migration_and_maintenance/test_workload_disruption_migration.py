@@ -118,6 +118,23 @@ class TestRhelWorkloadMigration:
         migration_mode,
         migrated_vm_with_hotplug_support,
     ):
+        """
+        Test that an AllowWorkloadDisruption RHEL migration completes in the requested migration mode.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/pull/82
+
+        Preconditions:
+            - Running RHEL virtual machine under memory pressure, labeled for the AllowWorkloadDisruption migration policy
+            - Guest OS background process running on the under-test VM
+
+        Steps:
+            1. Migrate the under-test VM with the AllowWorkloadDisruption migration policy
+            2. Verify the migration completed in the requested migration mode
+            3. Verify the guest OS background process kept the same process ID
+
+        Expected:
+            - The VM is migrated in the requested migration mode and the background process survives the migration
+        """
         assert_expected_migration_mode(vm=vm_with_hotplug_support, expected_mode=migration_mode)
         assert_same_pid_after_migration(orig_pid=vm_background_process_id, vm=vm_with_hotplug_support)
 
@@ -134,6 +151,23 @@ class TestRhelWorkloadMigration:
         migration_mode,
         hotplugged_sockets_memory_guest,
     ):
+        """
+        Test that CPU hotplug succeeds after an AllowWorkloadDisruption migration of a RHEL VM.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/pull/82
+
+        Preconditions:
+            - RHEL virtual machine migrated by the AllowWorkloadDisruption migration policy in the requested migration mode
+            - Guest OS background process running on the under-test VM
+
+        Steps:
+            1. Hotplug CPU sockets to the under-test VM
+            2. Verify the guest OS reports the hotplugged CPU socket count
+            3. Verify the guest OS background process kept the same process ID
+
+        Expected:
+            - The guest OS reports the hotplugged CPU sockets and the background process survives the hotplug
+        """
         assert_expected_migration_mode(vm=vm_with_hotplug_support, expected_mode=migration_mode)
         wait_for_guest_os_cpu_count(vm=vm_with_hotplug_support, spec_cpu_amount=SIX_CPU_SOCKETS)
         assert_same_pid_after_migration(orig_pid=vm_background_process_id, vm=vm_with_hotplug_support)
@@ -151,6 +185,23 @@ class TestRhelWorkloadMigration:
         migration_mode,
         hotplugged_sockets_memory_guest,
     ):
+        """
+        Test that memory hotplug succeeds after an AllowWorkloadDisruption migration and CPU hotplug of a RHEL VM.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/pull/82
+
+        Preconditions:
+            - RHEL virtual machine migrated by the AllowWorkloadDisruption migration policy with hotplugged CPU sockets
+            - Guest OS background process running on the under-test VM
+
+        Steps:
+            1. Hotplug guest memory to the under-test VM
+            2. Verify the guest OS reports the hotplugged memory amount
+            3. Verify the guest OS background process kept the same process ID
+
+        Expected:
+            - The guest OS reports the hotplugged memory and the background process survives the hotplug
+        """
         assert_expected_migration_mode(vm=vm_with_hotplug_support, expected_mode=migration_mode)
         assert_guest_os_memory_amount(vm=vm_with_hotplug_support, spec_memory_amount=SIX_GI_MEMORY)
         assert_same_pid_after_migration(orig_pid=vm_background_process_id, vm=vm_with_hotplug_support)
@@ -187,6 +238,23 @@ class TestWindowsWorkloadMigration:
         migration_mode,
         migrated_vm_with_hotplug_support,
     ):
+        """
+        Test that an AllowWorkloadDisruption Windows migration completes in the requested migration mode.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/pull/82
+
+        Preconditions:
+            - Running Windows virtual machine under memory pressure, labeled for the AllowWorkloadDisruption migration policy
+            - Guest OS background process running on the under-test VM
+
+        Steps:
+            1. Migrate the under-test VM with the AllowWorkloadDisruption migration policy
+            2. Verify the migration completed in the requested migration mode
+            3. Verify the guest OS background process kept the same process ID
+
+        Expected:
+            - The VM is migrated in the requested migration mode and the background process survives the migration
+        """
         assert_expected_migration_mode(vm=vm_with_hotplug_support, expected_mode=migration_mode)
         assert_same_pid_after_migration(orig_pid=vm_background_process_id, vm=vm_with_hotplug_support)
 
@@ -203,6 +271,23 @@ class TestWindowsWorkloadMigration:
         migration_mode,
         hotplugged_sockets_memory_guest,
     ):
+        """
+        Test that memory hotplug succeeds after an AllowWorkloadDisruption migration of a Windows VM.
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/pull/82
+
+        Preconditions:
+            - Windows virtual machine migrated by the AllowWorkloadDisruption migration policy in the requested migration mode
+            - Guest OS background process running on the under-test VM
+
+        Steps:
+            1. Hotplug guest memory to the under-test VM
+            2. Verify the guest OS reports the hotplugged memory amount
+            3. Verify the guest OS background process kept the same process ID
+
+        Expected:
+            - The guest OS reports the hotplugged memory and the background process survives the hotplug
+        """
         assert_expected_migration_mode(vm=vm_with_hotplug_support, expected_mode=migration_mode)
         assert_guest_os_memory_amount(vm=vm_with_hotplug_support, spec_memory_amount=SIX_GI_MEMORY)
         assert_same_pid_after_migration(orig_pid=vm_background_process_id, vm=vm_with_hotplug_support)
