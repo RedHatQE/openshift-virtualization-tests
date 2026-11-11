@@ -15,12 +15,13 @@ Test that a Prometheus metric increments after an action. This requires the sess
 import pytest
 from utilities.monitoring import validate_metrics_value
 
+
 def test_vmi_creation_metric(prometheus, running_vm):
     validate_metrics_value(
         prometheus=prometheus,
         metric_name=f"kubevirt_vmi_phase_count{{phase='running', name='{running_vm.name}'}}",
         expected_value="1",
-        timeout=120
+        timeout=120,
     )
 ```
 
@@ -36,6 +37,7 @@ Instead of writing manual loops to poll Prometheus, use the functions in `utilit
 
 ```python
 from utilities.monitoring import validate_metrics_value
+
 
 def test_vm_network_metric(prometheus, running_vm):
     # Trigger an action that should emit a metric
@@ -55,14 +57,11 @@ To test that a critical condition triggers a notification in the OpenShift alert
 ```python
 from utilities.monitoring import wait_for_alert
 
+
 def test_vm_crash_alert(prometheus, crashing_vm):
     # Wait up to the timeout for the specific alert to appear in the firing list
     alert = wait_for_alert(
-        prometheus=prometheus,
-        alert={
-            "alertname": "KubeVirtVMHighMemoryUsage",
-            "namespace": crashing_vm.namespace
-        }
+        prometheus=prometheus, alert={"alertname": "KubeVirtVMHighMemoryUsage", "namespace": crashing_vm.namespace}
     )
     assert alert, f"Expected memory alert for VM {crashing_vm.name} did not fire"
 ```
@@ -81,6 +80,7 @@ from tests.utils import assert_numa_cpu_allocation, get_vm_cpu_list, get_numa_no
 
 # Ensure this test only runs on clusters with NUMA and HugePages
 pytestmark = [pytest.mark.special_infra, pytest.mark.hugepages, pytest.mark.numa]
+
 
 @pytest.mark.polarion("EXAMPLE-12367")
 def test_numa_cpu_allocation(admin_client, created_vm_cx1_instancetype):
