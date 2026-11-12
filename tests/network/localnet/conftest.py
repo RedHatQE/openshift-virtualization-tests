@@ -37,6 +37,7 @@ from tests.network.libs.localnet import (
     localnet_cloudinit,
     localnet_cudn,
     localnet_vm,
+    localnet_vms_with_shared_hostname,
 )
 from utilities.constants.cluster import WORKER_NODE_LABEL_KEY
 from utilities.infra import create_ns
@@ -574,3 +575,42 @@ def ovs_bridge_localnet_running_jumbo_frame_vms(
 ) -> Generator[tuple[BaseVirtualMachine, BaseVirtualMachine]]:
     vm1, vm2 = run_vms(vms=(vm1_ovs_bridge_localnet_jumbo_frame, vm2_ovs_bridge_localnet_jumbo_frame))
     yield vm1, vm2
+
+
+@pytest.fixture(scope="class")
+def shared_hostname_vms(
+    unprivileged_client: DynamicClient,
+    ipv4_localnet_address_pool: Generator[IPv4Interface],
+    ipv6_localnet_address_pool: Generator[IPv6Interface],
+    namespace_localnet_1: Namespace,
+    cudn_localnet: libcudn.ClusterUserDefinedNetwork,
+) -> Generator[tuple[BaseVirtualMachine, ...]]:
+    with localnet_vms_with_shared_hostname(
+        count=3,
+        namespace=namespace_localnet_1.name,
+        client=unprivileged_client,
+        network_name=cudn_localnet.name,
+        ipv4_pool=ipv4_localnet_address_pool,
+        ipv6_pool=ipv6_localnet_address_pool,
+    ) as vms:
+        running_vms = run_vms(vms=tuple(vms))
+        # Fail fast if the VMs do not actually share one non-empty hostname; otherwise the
+        # regression could silently pass against VMs that never reproduced the ambiguous-pod-label condition.
+        vmi_hostnames = {vm.vmi.instance.spec.hostname for vm in running_vms}
+        if len(vmi_hostnames) != 1 or not next(iter(vmi_hostnames)):
+            raise RuntimeError(f"Expected all VMs to share one non-empty hostname, got: {vmi_hostnames}")
+        ip_families = supported_cluster_ip_versions()
+        for vm in running_vms:
+            lookup_iface_status(
+                vm=vm,
+                iface_name=LOCALNET_BR_EX_INTERFACE,
+                predicate=lambda interface: (
+                    len(
+                        filter_cluster_unsupported_addresses(
+                            ip_addresses=filter_link_local_addresses(ip_addresses=interface.get("ipAddresses", []))
+                        )
+                    )
+                    == len(ip_families)
+                ),
+            )
+        yield running_vms
