@@ -105,7 +105,6 @@ def assert_restored_cbt_vm_data(vm: VirtualMachineForTests) -> None:
 
 @contextmanager
 def restored_cbt_vm_from_push_backup(
-    *,
     backups: list[VirtualMachineBackup],
     backup_pvc_name: str,
     namespace: str,
@@ -185,7 +184,7 @@ def restored_cbt_vm_from_push_backup(
             target_pvc.clean_up(wait=True)
 
 
-def _single_full_backup(*, backups: list[VirtualMachineBackup]) -> VirtualMachineBackup:
+def _single_full_backup(backups: list[VirtualMachineBackup]) -> VirtualMachineBackup:
     """Return the one backup a full restore can apply."""
     if len(backups) != 1:
         backup_names = [backup.name for backup in backups]
@@ -193,7 +192,7 @@ def _single_full_backup(*, backups: list[VirtualMachineBackup]) -> VirtualMachin
     return backups[0]
 
 
-def _backed_up_vm_name(*, backup: VirtualMachineBackup, namespace: str, client: DynamicClient) -> str:
+def _backed_up_vm_name(backup: VirtualMachineBackup, namespace: str, client: DynamicClient) -> str:
     """Return the VM name recorded on the backup or its tracker.
 
     Raises:
@@ -218,7 +217,7 @@ def _backed_up_vm_name(*, backup: VirtualMachineBackup, namespace: str, client: 
         raise RuntimeError(f"Backup tracker {source_name} has no source VM ({missing_field})") from missing_field
 
 
-def _full_backup_volume_name(*, backup: VirtualMachineBackup) -> str:
+def _full_backup_volume_name(backup: VirtualMachineBackup) -> str:
     """Return the single volume recorded on a full backup.
 
     Backup type is ``status.type``. ``includedVolumes`` entries carry only ``volumeName``.
@@ -246,7 +245,7 @@ def _full_backup_volume_name(*, backup: VirtualMachineBackup) -> str:
     return volume_names[0]
 
 
-def _restored_disk_storage(*, backup_pvc_name: str, namespace: str, client: DynamicClient) -> _RestoredDiskStorage:
+def _restored_disk_storage(backup_pvc_name: str, namespace: str, client: DynamicClient) -> _RestoredDiskStorage:
     """Return the storage class of the backup PVC and that class's disk claim shape.
 
     Raises:
@@ -284,7 +283,6 @@ def _target_file(volume_mode: str) -> str:
 
 
 def _target_pod_volumes(
-    *,
     pvc_name: str,
     volume_mode: str,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
@@ -296,7 +294,6 @@ def _target_pod_volumes(
 
 
 def _inspect_backup_qcow2(
-    *,
     vm_name: str,
     volume_name: str,
     backup_pvc_name: str,
@@ -327,7 +324,6 @@ def _inspect_backup_qcow2(
 
 
 def _restore_push_volume(
-    *,
     vm_name: str,
     volume_spec: CbtVolumeRestoreSpec,
     target_pvc: PersistentVolumeClaim,
@@ -364,7 +360,7 @@ def _restore_push_volume(
         )
 
 
-def _backup_pod_volumes(*, backup_pvc_name: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+def _backup_pod_volumes(backup_pvc_name: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Return the mount and volume for the backup PVC."""
     return (
         [{"name": CBT_BACKUP_PVC_VOLUME_NAME, "mountPath": CBT_BACKUP_DIR, "readOnly": True}],
@@ -373,7 +369,6 @@ def _backup_pod_volumes(*, backup_pvc_name: str) -> tuple[list[dict[str, Any]], 
 
 
 def _deploy_target_pvc(
-    *,
     vm_name: str,
     volume_spec: CbtVolumeRestoreSpec,
     namespace: str,
@@ -395,7 +390,6 @@ def _deploy_target_pvc(
 
 
 def _deploy_restored_vm(
-    *,
     vm_name: str,
     target_pvc: PersistentVolumeClaim,
     namespace: str,
@@ -450,7 +444,6 @@ def _files_for_backup(
 
 
 def _select_volume_qcow2(
-    *,
     qcow2_files: list[str],
     vm_name: str,
     backup_name: str,
@@ -486,7 +479,7 @@ def _select_volume_qcow2(
     )
 
 
-def _qcow2_virtual_size_bytes(*, pod: Pod, qcow2_file: str) -> int:
+def _qcow2_virtual_size_bytes(pod: Pod, qcow2_file: str) -> int:
     """Return the guest-visible size of a qcow2 file."""
     output = pod.execute(
         command=["qemu-img", "info", "--output=json", "--force-share", qcow2_file],
@@ -495,7 +488,7 @@ def _qcow2_virtual_size_bytes(*, pod: Pod, qcow2_file: str) -> int:
     return int(json.loads(output)["virtual-size"])
 
 
-def _target_pvc_size(*, virtual_size_bytes: int, volume_mode: str) -> str:
+def _target_pvc_size(virtual_size_bytes: int, volume_mode: str) -> str:
     """Return the target PVC capacity for the backup image.
 
     A Filesystem PVC needs extra capacity so the raw disk.img fits beside filesystem metadata.
@@ -523,7 +516,6 @@ def _list_qcow2_files(pod: Pod) -> list[str]:
 
 @contextmanager
 def _push_restore_pod(
-    *,
     pod_name: str,
     namespace: str,
     client: DynamicClient,
