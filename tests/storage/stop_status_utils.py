@@ -44,20 +44,18 @@ def dv_stop_status_no_progress(
     progress_state: dict[str, Any],
     no_progress_timeout: int = TIMEOUT_10MIN,
 ) -> bool:
-    """Abort wait_for_dv_success when status.progress stops changing.
+    """Stop waiting when DataVolume import progress has not changed.
 
-    Returns False while the DataVolume is absent so polling can continue.
-    Mutates ``progress_state`` across polls for a single DataVolume wait.
+    Pass a fresh ``progress_state={}`` for each DataVolume. The function updates
+    that dict between polls. If the DataVolume does not exist yet, keep waiting.
 
     Args:
-        dv: The DataVolume to check.
-        progress_state: Mutable dict for one DataVolume wait. Pass a fresh ``{}``;
-            this function stores ``progress`` and ``updated_at`` between polls.
-        no_progress_timeout: Seconds without a progress change before aborting.
+        dv: DataVolume to check.
+        progress_state: Per-DataVolume tracker. Pass ``{}``; reused across polls.
+        no_progress_timeout: Seconds with no progress change before stopping.
 
     Returns:
-        True when progress is unchanged for ``no_progress_timeout`` seconds;
-        False to keep waiting.
+        True to stop waiting; False to keep waiting.
 
     Example::
         dv.wait_for_dv_success(
