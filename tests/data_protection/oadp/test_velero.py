@@ -25,23 +25,55 @@ def test_backup_while_dv_create(imported_dv_in_progress_second_namespace, velero
 
 @pytest.mark.parametrize(
     "rhel_vm_with_data_volume_template",
-    [pytest.param({"dv_name": "dv-8695", "vm_name": "vm-8695", "volume_mode": DataVolume.VolumeMode.BLOCK, "rhel_image": Images.Rhel.RHEL9_3_IMG}, marks=pytest.mark.polarion("CNV-8695"))],
+    [
+        pytest.param(
+            {
+                "dv_name": "dv-8695",
+                "vm_name": "vm-8695",
+                "volume_mode": DataVolume.VolumeMode.BLOCK,
+                "rhel_image": Images.Rhel.RHEL9_3_IMG,
+            },
+            marks=pytest.mark.polarion("CNV-8695"),
+        )
+    ],
     indirect=True,
 )
-def test_restore_multiple_namespaces(imported_dv_second_namespace, rhel_vm_with_data_volume_template, velero_restore_multiple_namespaces):
-    imported_dv_second_namespace.wait_for_status(status=DataVolume.Status.SUCCEEDED, timeout=TIMEOUT_10SEC, stop_status=DataVolume.Status.IMPORT_IN_PROGRESS)
+def test_restore_multiple_namespaces(
+    imported_dv_second_namespace, rhel_vm_with_data_volume_template, velero_restore_multiple_namespaces
+):
+    imported_dv_second_namespace.wait_for_status(
+        status=DataVolume.Status.SUCCEEDED, timeout=TIMEOUT_10SEC, stop_status=DataVolume.Status.IMPORT_IN_PROGRESS
+    )
     check_file_in_vm(vm=rhel_vm_with_data_volume_template)
 
 
 @pytest.mark.parametrize(
     "rhel_vm_with_data_volume_template",
     [
-        pytest.param({"dv_name": "block-dv", "vm_name": "block-vm", "volume_mode": DataVolume.VolumeMode.BLOCK, "rhel_image": Images.Rhel.RHEL9_3_IMG}, marks=pytest.mark.polarion("CNV-10564")),
-        pytest.param({"dv_name": "filesystem-dv", "vm_name": "filesystem-vm", "volume_mode": DataVolume.VolumeMode.FILE, "rhel_image": Images.Rhel.RHEL9_3_IMG}, marks=pytest.mark.polarion("CNV-10565")),
+        pytest.param(
+            {
+                "dv_name": "block-dv",
+                "vm_name": "block-vm",
+                "volume_mode": DataVolume.VolumeMode.BLOCK,
+                "rhel_image": Images.Rhel.RHEL9_3_IMG,
+            },
+            marks=pytest.mark.polarion("CNV-10564"),
+        ),
+        pytest.param(
+            {
+                "dv_name": "filesystem-dv",
+                "vm_name": "filesystem-vm",
+                "volume_mode": DataVolume.VolumeMode.FILE,
+                "rhel_image": Images.Rhel.RHEL9_3_IMG,
+            },
+            marks=pytest.mark.polarion("CNV-10565"),
+        ),
     ],
     indirect=True,
 )
-def test_backup_vm_data_volume_template_with_datamover(rhel_vm_with_data_volume_template, velero_restore_first_namespace_with_datamover):
+def test_backup_vm_data_volume_template_with_datamover(
+    rhel_vm_with_data_volume_template, velero_restore_first_namespace_with_datamover
+):
     check_file_in_vm(vm=rhel_vm_with_data_volume_template)
 
 
@@ -50,7 +82,11 @@ def test_backup_vm_data_volume_template_with_datamover(rhel_vm_with_data_volume_
 @pytest.mark.usefixtures("velero_restore_first_namespace_without_datamover")
 def test_backup_and_restore_windows_vm(windows_vm_with_data_volume_template):
     wait_for_running_vm(vm=windows_vm_with_data_volume_template, wait_until_running_timeout=TIMEOUT_15MIN)
-    verify_file_in_windows_vm(windows_vm=windows_vm_with_data_volume_template, file_name_with_path=FILE_PATH_FOR_WINDOWS_BACKUP, file_content=TEXT_TO_TEST)
+    verify_file_in_windows_vm(
+        windows_vm=windows_vm_with_data_volume_template,
+        file_name_with_path=FILE_PATH_FOR_WINDOWS_BACKUP,
+        file_content=TEXT_TO_TEST,
+    )
 
 
 @pytest.mark.s390x

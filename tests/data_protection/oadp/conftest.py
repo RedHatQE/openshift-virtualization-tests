@@ -4,17 +4,17 @@ from ocp_resources.namespace import Namespace
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from pytest_testconfig import config as py_config
-
-from tests.data_protection.oadp.utils import (
-    FILE_PATH_FOR_WINDOWS_BACKUP,
-    VeleroRestore,
-    is_storage_class_support_volume_mode,
-)
 from utilities.artifactory import (
     cleanup_artifactory_secret_and_config_map,
     get_artifactory_config_map,
     get_artifactory_secret,
     get_test_artifact_server_url,
+)
+
+from tests.data_protection.oadp.utils import (
+    FILE_PATH_FOR_WINDOWS_BACKUP,
+    VeleroRestore,
+    is_storage_class_support_volume_mode,
 )
 from utilities.constants import (
     BACKUP_STORAGE_LOCATION,
