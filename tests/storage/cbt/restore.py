@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 import logging
 import shlex
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -178,10 +178,11 @@ def restored_cbt_vm_from_push_backup(
         running_vm(vm=restored_vm, ssh_timeout=TIMEOUT_5MIN)
         yield restored_vm
     finally:
-        if restored_vm is not None and restored_vm.exists:
-            restored_vm.clean_up(wait=True)
-        if target_pvc is not None and target_pvc.exists:
-            target_pvc.clean_up(wait=True)
+        with ExitStack() as stack:
+            if target_pvc is not None:
+                stack.callback(target_pvc.clean_up, wait=True)
+            if restored_vm is not None:
+                stack.callback(restored_vm.clean_up, wait=True)
 
 
 def _single_full_backup(backups: list[VirtualMachineBackup]) -> VirtualMachineBackup:
