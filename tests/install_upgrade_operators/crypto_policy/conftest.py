@@ -1,4 +1,5 @@
 import logging
+from typing import TYPE_CHECKING
 
 import pytest
 from kubernetes.client.exceptions import ApiException
@@ -13,6 +14,13 @@ from ocp_resources.network_policy import NetworkPolicy
 from ocp_resources.pod import Pod
 from ocp_resources.service import Service
 from ocp_resources.ssp import SSP
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from kubernetes.dynamic import DynamicClient
+    from ocp_resources.hyperconverged import HyperConverged
+    from ocp_resources.node import Node
 
 from tests.install_upgrade_operators.constants import (
     KEY_NAME_STR,
@@ -181,14 +189,19 @@ def services_tls_runtime(cnv_services_with_template, admin_client, hco_namespace
     runtime_map: dict[str, str] = {}
     for service in cnv_services_with_template:
         service_name = service.name
+        if service_name in CURVE_PROBE_EXCLUDED:
+            continue
         label_selector = ",".join(f"{key}={value}" for key, value in service.instance.spec.selector.items())
         pods = list(Pod.get(client=admin_client, namespace=hco_namespace.name, label_selector=label_selector))
         try:
             output = pods[0].execute(command=["sh", "-c", "grep -q libssl /proc/1/maps && echo openssl || echo go"])
-            runtime_map[service_name] = output.strip()
         except ExecOnPodError, ApiException:
-            LOGGER.warning(f"Failed to detect runtime for {service_name}, defaulting to Go")
-            runtime_map[service_name] = "go"
+            # Leave service_name out of runtime_map rather than guessing a runtime:
+            # curve_propagation_expectations already asserts every probed service is
+            # present here and raises a clear, service-scoped error when it is not.
+            LOGGER.exception(f"Failed to detect TLS runtime for service {service_name}")
+            continue
+        runtime_map[service_name] = output.strip()
     LOGGER.info(f"TLS runtime detection: {runtime_map}")
     return runtime_map
 
@@ -281,7 +294,9 @@ def pqc_status_by_service(
 
 
 @pytest.fixture(scope="class")
-def custom_curve_profile_applied(admin_client, enabled_aaq, hyperconverged_resource_scope_class):
+def custom_curve_profile_applied(
+    admin_client: DynamicClient, enabled_aaq: None, hyperconverged_resource_scope_class: HyperConverged
+) -> Generator[None]:
     """Applies a Custom TLS curve profile directly to HCO, reconciles, and reverts on exit."""
     with set_hco_crypto_policy(
         admin_client=admin_client,
@@ -315,7 +330,7 @@ def verified_node_curve_propagation_support(workers_utility_pods, worker_node1, 
 
 
 @pytest.fixture(scope="module")
-def worker_exec(workers_utility_pods, worker_node1):
+def worker_exec(workers_utility_pods: list[Pod], worker_node1: Node) -> ExecCommandOnPod:
     """ExecCommandOnPod instance shared by the curve propagation test's subtests."""
     return ExecCommandOnPod(utility_pods=workers_utility_pods, node=worker_node1)
 
