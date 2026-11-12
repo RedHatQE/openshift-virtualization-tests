@@ -64,13 +64,17 @@ def delete_cdi_configmap_and_secret(hco_namespace_name):
 
 
 def assert_mismatch_related_objects(actual, expected):
-    actual_set = {(obj["kind"], obj.get("namespace", ""), obj["name"]) for obj in actual}
-    missing_objects = [
-        obj for obj in expected if (obj["kind"], obj.get("namespace", ""), obj["name"]) not in actual_set
-    ]
+    mismatch_objects = []
+    for idx, obj_record in enumerate(expected):
+        if (
+            obj_record["name"] != actual[idx]["name"]
+            or obj_record["kind"] != actual[idx]["kind"]
+            or (obj_record.get("namespace") and obj_record["namespace"] != actual[idx]["namespace"])
+        ):
+            mismatch_objects.append(obj_record)
 
-    assert not missing_objects, (
-        f"Related Objects missing after hco recreation (expected {len(expected)}, got {len(actual)}): {missing_objects}"
+    assert not mismatch_objects, (
+        f"Related Objects missing after hco recreationList of missing related objects are: {mismatch_objects}"
     )
 
 
