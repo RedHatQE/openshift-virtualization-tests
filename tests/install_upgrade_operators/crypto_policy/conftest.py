@@ -43,6 +43,7 @@ from tests.install_upgrade_operators.crypto_policy.utils import (
     get_node_available_tls_groups,
     get_resource_crypto_policy,
     get_services_pqc_status,
+    set_hco_crypto_policy,
     update_apiserver_crypto_policy,
 )
 from utilities.constants.components import (
@@ -58,7 +59,6 @@ from utilities.constants.hco import TLS_SECURITY_PROFILE
 from utilities.constants.timeouts import TIMEOUT_60MIN
 from utilities.exceptions import MissingResourceException
 from utilities.hco import (
-    ResourceEditorValidateHCOReconcile,
     enabled_aaq_in_hco,
     wait_for_hco_conditions,
 )
@@ -280,18 +280,14 @@ def pqc_status_by_service(
     return results
 
 
-@pytest.fixture()
-def custom_curve_profile_applied(admin_client, enabled_aaq, hyperconverged_resource_scope_function):
+@pytest.fixture(scope="class")
+def custom_curve_profile_applied(admin_client, enabled_aaq, hyperconverged_resource_scope_class):
     """Applies a Custom TLS curve profile directly to HCO, reconciles, and reverts on exit."""
-    with ResourceEditorValidateHCOReconcile(
+    with set_hco_crypto_policy(
         admin_client=admin_client,
-        patches={
-            hyperconverged_resource_scope_function: {
-                "spec": {"security": {TLS_SECURITY_PROFILE: TLS_PROPAGATION_CUSTOM_PROFILE}}
-            }
-        },
+        hco_resource=hyperconverged_resource_scope_class,
+        tls_spec=TLS_PROPAGATION_CUSTOM_PROFILE,
         list_resource_reconcile=MANAGED_CRS_LIST_WITH_AAQ,
-        wait_for_reconcile_post_update=True,
     ):
         yield
 
@@ -318,7 +314,13 @@ def verified_node_curve_propagation_support(workers_utility_pods, worker_node1, 
     assert not missing_groups, f"TLS groups not found on node: {missing_groups}. Available: {available_groups}"
 
 
-@pytest.fixture()
+@pytest.fixture(scope="module")
+def worker_exec(workers_utility_pods, worker_node1):
+    """ExecCommandOnPod instance shared by the curve propagation test's subtests."""
+    return ExecCommandOnPod(utility_pods=workers_utility_pods, node=worker_node1)
+
+
+@pytest.fixture(scope="class")
 def curve_propagation_expectations(cnv_services_with_template, fips_enabled_cluster, services_tls_runtime):
     """Per-service expected curve negotiation outcome and pending-Jira gate.
 

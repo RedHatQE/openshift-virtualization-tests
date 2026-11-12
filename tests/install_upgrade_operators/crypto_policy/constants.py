@@ -164,8 +164,12 @@ CURVE_PROPAGATION_PENDING = {
     "virt-template-controller-manager-metrics-service": "CNV-84875",
     "virt-template-webhook-service": "CNV-84875",
     "kubevirt-migration-prometheus": "CNV-84877",
-    "hpp-prometheus-metrics": "CNV-84804",
-    "hostpath-provisioner-operator-service": "CNV-84804",
+    # Unlike the other components under CNV-84804, HPP has no story of its own: its CRD
+    # has no TLS/security field, and its operator pod has no curve/cipher-related flags
+    # or env vars at all. Filed CNV-101104 to track this and gate on it instead of the
+    # epic.
+    "hpp-prometheus-metrics": "CNV-101104",
+    "hostpath-provisioner-operator-service": "CNV-101104",
     # console-plugin writes the configured curves to its nginx configmap, but HCO does
     # not roll the deployment, so the running pods keep serving stale curves until the
     # bug is fixed. Gated so it auto-asserts once CNV-99597 is resolved.
@@ -173,12 +177,9 @@ CURVE_PROPAGATION_PENDING = {
 }
 
 # Services whose TLS endpoint cannot be verified with an openssl s_client handshake:
-# - kubevirt-apiserver-proxy-service: Go proxy that requires ALPN / a real proxied
-#   request; a bare s_client handshake never completes (returns no cipher).
 # - virt-observability-controller-metrics: controller-runtime mTLS metrics endpoint;
 #   a client certificate is required to complete the handshake.
 CURVE_PROBE_EXCLUDED = {
-    "kubevirt-apiserver-proxy-service",
     "virt-observability-controller-metrics",
 }
 

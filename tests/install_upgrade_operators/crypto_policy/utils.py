@@ -2,6 +2,7 @@ import logging
 from contextlib import contextmanager
 
 import deepdiff
+import pytest
 from benedict import benedict
 from kubernetes.client.exceptions import ApiException
 from kubernetes.dynamic import DynamicClient
@@ -260,12 +261,17 @@ def assert_tls_ciphers_blocked(utility_pods, node, services, tls_version, allowe
 
 
 @contextmanager
-def set_hco_crypto_policy(admin_client, hco_resource, tls_spec):
+def set_hco_crypto_policy(
+    admin_client: DynamicClient,
+    hco_resource: HyperConverged,
+    tls_spec: dict,
+    list_resource_reconcile: list[Resource] = MANAGED_CRS_LIST,
+):
     with ResourceEditorValidateHCOReconcile(
         admin_client=admin_client,
         patches={hco_resource: {"spec": {"security": {TLS_SECURITY_PROFILE: tls_spec}}}},
         wait_for_reconcile_post_update=True,
-        list_resource_reconcile=MANAGED_CRS_LIST,
+        list_resource_reconcile=list_resource_reconcile,
     ):
         yield
 
@@ -448,3 +454,30 @@ def probe_service_curve_negotiated(
     negotiated = classify_openssl_probe_output(output=output)
     LOGGER.info(f"Service {service.name} TLS group {group}: negotiated={negotiated}")
     return negotiated
+
+
+def assert_curve_reachable_or_xfail_pending(
+    negotiated: bool | None,
+    service_name: str,
+    group: str,
+    pending_jira: str | None,
+) -> None:
+    """Asserts a probed service/group was reachable, then xfails if its propagation is pending.
+
+    Args:
+        negotiated: Result of probe_service_curve_negotiated for this service/group.
+        service_name: Name of the probed service, for the assertion/xfail message.
+        group: TLS group name that was probed, for the assertion/xfail message.
+        pending_jira: Jira issue tracking this service's curve propagation, if still open.
+
+    Raises:
+        AssertionError: If the service/group combination was unreachable.
+        _pytest.outcomes.XFailed: If pending_jira is set, via pytest.xfail().
+    """
+    # Reachability is asserted for every service, including pending ones: None means
+    # the probe saw neither a successful handshake nor a rejection.
+    assert negotiated is not None, f"Service {service_name} is unreachable for curve {group}"
+    if pending_jira:
+        xfail_reason = f"Service {service_name} curve propagation pending {pending_jira}"
+        LOGGER.warning(xfail_reason)
+        pytest.xfail(reason=xfail_reason)
