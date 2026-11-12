@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import logging
-import time
-from typing import TYPE_CHECKING, Any
+from time import monotonic
+from typing import TYPE_CHECKING
 
 from utilities.constants.timeouts import TIMEOUT_10MIN
 
 if TYPE_CHECKING:
+    from typing import Any
+
     from ocp_resources.datavolume import DataVolume
 
 LOGGER = logging.getLogger(__name__)
@@ -45,6 +47,17 @@ def dv_stop_status_no_progress(
     """Abort wait_for_dv_success when status.progress stops changing.
 
     Returns False while the DataVolume is absent so polling can continue.
+    Mutates ``progress_state`` across polls for a single DataVolume wait.
+
+    Args:
+        dv: The DataVolume to check.
+        progress_state: Mutable dict for one DataVolume wait. Pass a fresh ``{}``;
+            this function stores ``progress`` and ``updated_at`` between polls.
+        no_progress_timeout: Seconds without a progress change before aborting.
+
+    Returns:
+        True when progress is unchanged for ``no_progress_timeout`` seconds;
+        False to keep waiting.
 
     Example::
         dv.wait_for_dv_success(
@@ -62,10 +75,10 @@ def dv_stop_status_no_progress(
     if progress != progress_state.get("progress"):
         LOGGER.info(f"DV {dv.name} import progress: {progress!r}")
         progress_state["progress"] = progress
-        progress_state["updated_at"] = time.monotonic()
+        progress_state["updated_at"] = monotonic()
         return False
 
-    no_progress_for = time.monotonic() - progress_state["updated_at"]
+    no_progress_for = monotonic() - progress_state["updated_at"]
     if no_progress_for < no_progress_timeout:
         return False
 
