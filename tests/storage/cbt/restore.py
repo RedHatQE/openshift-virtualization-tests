@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from kubernetes.dynamic.exceptions import NotFoundError
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.pod import Pod
 from ocp_resources.storage_profile import StorageProfile
@@ -193,39 +194,85 @@ def _single_full_backup(*, backups: list[VirtualMachineBackup]) -> VirtualMachin
 
 
 def _backed_up_vm_name(*, backup: VirtualMachineBackup, namespace: str, client: DynamicClient) -> str:
-    """Return the VM name recorded on the backup or its tracker."""
-    source = backup.instance.to_dict()["spec"]["source"]
-    source_name = str(source["name"])
-    if source["kind"] != VirtualMachineBackupTracker.kind:
+    """Return the VM name recorded on the backup or its tracker.
+
+    Raises:
+        RuntimeError: When the backup or its tracker has no source VM. The original lookup error is chained.
+    """
+    try:
+        source = backup.instance.to_dict()["spec"]["source"]
+        source_name = str(source["name"])
+        source_kind = source["kind"]
+    except NotFoundError as missing_backup:
+        raise RuntimeError(f"Backup {backup.name} not found") from missing_backup
+    except KeyError as missing_field:
+        raise RuntimeError(f"Backup {backup.name} has no source VM ({missing_field})") from missing_field
+    if source_kind != VirtualMachineBackupTracker.kind:
         return source_name
     tracker = VirtualMachineBackupTracker(name=source_name, namespace=namespace, client=client)
-    return str(tracker.instance.to_dict()["spec"]["source"]["name"])
+    try:
+        return str(tracker.instance.to_dict()["spec"]["source"]["name"])
+    except NotFoundError as missing_tracker:
+        raise RuntimeError(f"Backup tracker {source_name} not found in namespace {namespace}") from missing_tracker
+    except KeyError as missing_field:
+        raise RuntimeError(f"Backup tracker {source_name} has no source VM ({missing_field})") from missing_field
 
 
 def _full_backup_volume_name(*, backup: VirtualMachineBackup) -> str:
     """Return the single volume recorded on a full backup.
 
     Backup type is ``status.type``. ``includedVolumes`` entries carry only ``volumeName``.
+
+    Raises:
+        RuntimeError: When the backup is missing, is not full, or does not record exactly one volume.
+            The original lookup error is chained.
     """
-    status = backup.instance.to_dict()["status"]
-    backup_type = status["type"]
+    try:
+        status = backup.instance.to_dict()["status"]
+        backup_type = status["type"]
+        included_volumes = status["includedVolumes"]
+    except NotFoundError as missing_backup:
+        raise RuntimeError(f"Backup {backup.name} not found") from missing_backup
+    except KeyError as missing_field:
+        raise RuntimeError(f"Backup {backup.name} is missing {missing_field}") from missing_field
     if backup_type != CBT_BACKUP_TYPE_FULL:
         raise RuntimeError(f"Backup {backup.name} type is {backup_type!r}, expected {CBT_BACKUP_TYPE_FULL!r}")
-    volume_names = [str(volume["volumeName"]) for volume in status["includedVolumes"]]
+    try:
+        volume_names = [str(volume["volumeName"]) for volume in included_volumes]
+    except KeyError as missing_field:
+        raise RuntimeError(f"Backup {backup.name} volume is missing {missing_field}") from missing_field
     if len(volume_names) != 1:
         raise RuntimeError(f"Backup {backup.name} full restore expects one volume, got {volume_names}")
     return volume_names[0]
 
 
 def _restored_disk_storage(*, backup_pvc_name: str, namespace: str, client: DynamicClient) -> _RestoredDiskStorage:
-    """Return the storage class of the backup PVC and that class's disk claim shape."""
+    """Return the storage class of the backup PVC and that class's disk claim shape.
+
+    Raises:
+        RuntimeError: When the backup PVC or the StorageProfile of its class does not exist,
+            or the profile has no claim property set. The original lookup error is chained.
+    """
     pvc = PersistentVolumeClaim(name=backup_pvc_name, namespace=namespace, client=client)
-    storage_class = pvc.instance.to_dict()["spec"]["storageClassName"]
-    claim = StorageProfile(name=storage_class, client=client).instance.to_dict()["status"]["claimPropertySets"][0]
+    try:
+        storage_class = pvc.instance.to_dict()["spec"]["storageClassName"]
+    except NotFoundError as missing_pvc:
+        raise RuntimeError(f"Backup PVC {backup_pvc_name} not found in namespace {namespace}") from missing_pvc
+    except KeyError as missing_field:
+        raise RuntimeError(f"Backup PVC {backup_pvc_name} has no storage class ({missing_field})") from missing_field
+    profile = StorageProfile(name=storage_class, client=client)
+    try:
+        claim = profile.instance.to_dict()["status"]["claimPropertySets"][0]
+        volume_mode = claim["volumeMode"]
+        access_mode = claim["accessModes"][0]
+    except NotFoundError as missing_profile:
+        raise RuntimeError(f"StorageProfile {storage_class} not found") from missing_profile
+    except (KeyError, IndexError) as missing_claim:
+        raise RuntimeError(f"StorageProfile {storage_class} has no claim property set") from missing_claim
     return _RestoredDiskStorage(
         storage_class=storage_class,
-        volume_mode=claim["volumeMode"],
-        access_mode=claim["accessModes"][0],
+        volume_mode=volume_mode,
+        access_mode=access_mode,
     )
 
 
