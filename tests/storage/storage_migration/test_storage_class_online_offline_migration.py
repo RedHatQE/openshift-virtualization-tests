@@ -32,17 +32,47 @@ from tests.storage.storage_migration.utils import (
 )
 from tests.storage.utils import check_file_in_vm
 from utilities.constants.pytest import QUARANTINED
+from utilities.constants.storage import VOLUME_MODE
 from utilities.virt import running_vm
 
 BLOCK = DataVolume.VolumeMode.BLOCK
 FILESYSTEM = DataVolume.VolumeMode.FILE
 
 
-# Volume mode is constrained by each storage class's StorageProfile: STORAGE_CLASS_A (HPP) only
-# supports Filesystem, while STORAGE_CLASS_B (Ceph RBD) supports both Block and Filesystem. A DV or
-# migration target that requests Block on the Filesystem-only class fails with ErrClaimNotValid, so
-# the matrix only enumerates combinations where the STORAGE_CLASS_A side stays Filesystem. This
-# excludes Block-to-Block entirely (it would require Block on both sides).
+# Volume mode is constrained by each storage class's StorageProfile, and STORAGE_CLASS_A /
+# STORAGE_CLASS_B resolve to different classes per environment (storage_class_a / storage_class_b in
+# tests/global_config*.py). A DV or migration target that requests Block on a Filesystem-only class
+# fails with ErrClaimNotValid, so the Block-to-Block pairing is only enumerated where the configured
+# storage class matrix declares both classes as Block.
+CONFIGURED_STORAGE_CLASS_VOLUME_MODES = {
+    storage_class_name: storage_class_config[VOLUME_MODE]
+    for storage_class_entry in py_config["storage_class_matrix"]
+    for storage_class_name, storage_class_config in storage_class_entry.items()
+}
+
+# On Filesystem-only environments - for example the default HPP one, where STORAGE_CLASS_A is
+# hostpath-csi-basic - Block-to-Block cannot be enumerated and is omitted rather than failing the
+# migration with ErrClaimNotValid.
+BLOCK_TO_BLOCK_SUPPORTED = {
+    CONFIGURED_STORAGE_CLASS_VOLUME_MODES[py_config[storage_class_key]]
+    for storage_class_key in (STORAGE_CLASS_A, STORAGE_CLASS_B)
+} == {BLOCK}
+
+BLOCK_TO_BLOCK_PARAMS = (
+    [
+        pytest.param(
+            {"source_storage_class": py_config[STORAGE_CLASS_A]},
+            {"target_storage_class": py_config[STORAGE_CLASS_B]},
+            BLOCK,
+            BLOCK,
+            id="source_a_target_b_block_to_block",
+        )
+    ]
+    if BLOCK_TO_BLOCK_SUPPORTED
+    else []
+)
+
+
 @pytest.mark.parametrize(
     "source_storage_class, target_storage_class, source_volume_mode, target_volume_mode",
     [
@@ -60,16 +90,13 @@ FILESYSTEM = DataVolume.VolumeMode.FILE
             BLOCK,
             id="source_a_target_b_file_to_block",
         ),
+        *BLOCK_TO_BLOCK_PARAMS,
         pytest.param(
             {"source_storage_class": py_config[STORAGE_CLASS_B]},
             {"target_storage_class": py_config[STORAGE_CLASS_A]},
             FILESYSTEM,
             FILESYSTEM,
-            marks=pytest.mark.xfail(
-                reason=f"{QUARANTINED}: Offline VM storage migration to a WFFC target does not "
-                "complete while the VM is stopped, CNV-75975",
-                run=False,
-            ),
+            marks=pytest.mark.jira("CNV-75975", run=False),
             id="source_b_target_a_file_to_file",
         ),
         pytest.param(
@@ -77,11 +104,7 @@ FILESYSTEM = DataVolume.VolumeMode.FILE
             {"target_storage_class": py_config[STORAGE_CLASS_A]},
             BLOCK,
             FILESYSTEM,
-            marks=pytest.mark.xfail(
-                reason=f"{QUARANTINED}: Offline VM storage migration to a WFFC target does not "
-                "complete while the VM is stopped, CNV-75975",
-                run=False,
-            ),
+            marks=pytest.mark.jira("CNV-75975", run=False),
             id="source_b_target_a_block_to_file",
         ),
     ],
@@ -92,9 +115,10 @@ class TestOfflineVMStorageMigrationVolumeModes:
     Tests for offline VM storage migration across volume mode combinations.
 
     Parametrize:
-        - Storage class A (Filesystem-only) to storage class B:
+        - Storage class A to storage class B:
             - File-to-File
             - File-to-Block
+            - Block-to-Block (only where storage class A is Block-capable)
         - Storage class B to storage class A (Filesystem-only):
             - File-to-File
             - Block-to-File
@@ -416,11 +440,7 @@ class TestOfflineVMStorageMigrationWithHotplugDisks:
             {"source_storage_class": py_config[STORAGE_CLASS_A]},
             {"target_storage_class": py_config[STORAGE_CLASS_A]},
             {},
-            marks=pytest.mark.xfail(
-                reason=f"{QUARANTINED}: Offline VM storage migration to a WFFC target does not "
-                "complete while the VM is stopped, CNV-75975",
-                run=False,
-            ),
+            marks=pytest.mark.jira("CNV-75975", run=False),
             id="source_a_target_a",
         ),
     ],
