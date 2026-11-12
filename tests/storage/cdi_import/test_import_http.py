@@ -2,8 +2,6 @@
 Import from HTTP server
 """
 
-import logging
-
 import pytest
 from kubernetes.dynamic.exceptions import UnprocessibleEntityError
 from ocp_resources.datavolume import DataVolume
@@ -37,8 +35,6 @@ from utilities.virt import running_vm
 pytestmark = [
     pytest.mark.post_upgrade,
 ]
-
-LOGGER = logging.getLogger(__name__)
 
 ISO_IMG = "Core-current.iso"
 TAR_IMG = "archive.tar"
@@ -280,19 +276,15 @@ def test_certconfigmap_incorrect_cert(
 @pytest.mark.polarion("CNV-2815")
 @pytest.mark.s390x
 def test_certconfigmap_missing_or_wrong_cm(data_volume_multi_storage_scope_function):
+    # The import must never reach IMPORT_SCHEDULED: sampling for the whole window and asserting
+    # the timeout is the point of the test, so the loop body is intentionally empty.
     with pytest.raises(TimeoutExpiredError):
-        samples = TimeoutSampler(
+        for _sample in TimeoutSampler(
             wait_timeout=TIMEOUT_1MIN,
             sleep=10,
             func=lambda: data_volume_multi_storage_scope_function.status != DataVolume.Status.IMPORT_SCHEDULED,
-        )
-        for sample in samples:
-            if sample:
-                LOGGER.error(
-                    f"DV status is not as expected."
-                    f"Expected: {DataVolume.Status.IMPORT_SCHEDULED}. "
-                    f"Found: {data_volume_multi_storage_scope_function.status}"
-                )
+        ):
+            pass
 
 
 @pytest.mark.sno

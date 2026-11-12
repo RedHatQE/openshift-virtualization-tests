@@ -24,7 +24,7 @@ def validate_virtctl_versions(virtctl_bin):
     )
 
     assert len(client_and_server_versions) == 2, (
-        "regex did not produced the expected number of matches: {virtctl_output}"
+        f"regex did not produced the expected number of matches: {virtctl_output}"
     )
     assert len(set(client_and_server_versions)) == 1, (
         f"Compare error: virtctl client and server versions are not identical: versions={client_and_server_versions}"

@@ -35,7 +35,7 @@ class Console:
         prompt: str | list[str] | None = None,
         kubeconfig: str | None = None,
     ) -> None:
-        """
+        r"""
         Connect to VM console
 
         Args:
@@ -44,7 +44,7 @@ class Console:
             password: VM password
             timeout: Command timeout in seconds.
             login_timeout: Seconds to wait for the login or an existing shell prompt. Defaults to 2 minutes.
-            prompt: Shell prompt regex or regex patterns to expect. Defaults to ``r"# "`` and ``r"\\$ "``.
+            prompt: Shell prompt regex or regex patterns to expect. Defaults to ``r"# "`` and ``r"\$ "``.
                 A trailing space avoids matching kernel banners such as ``#1 SMP``.
             kubeconfig: Path to kubeconfig file for remote cluster access
 
@@ -73,7 +73,7 @@ class Console:
         self.child: pexpect.fdpexpect.fdspawn | None = None
         self._proc: subprocess.Popen[bytes] | None = None
         self.login_prompt = "login:"
-        self.prompt = prompt if prompt else list(DEFAULT_SHELL_PROMPT)
+        self.prompt = prompt or list(DEFAULT_SHELL_PROMPT)
         self.kubeconfig = kubeconfig
         self.cmd = self._generate_cmd()
         self.base_dir = get_data_collector_base_directory()

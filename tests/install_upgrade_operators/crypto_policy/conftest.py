@@ -1,4 +1,5 @@
 import logging
+from typing import TYPE_CHECKING
 
 import pytest
 from kubernetes.client.exceptions import ApiException
@@ -13,6 +14,13 @@ from ocp_resources.network_policy import NetworkPolicy
 from ocp_resources.pod import Pod
 from ocp_resources.service import Service
 from ocp_resources.ssp import SSP
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from kubernetes.dynamic import DynamicClient
+    from ocp_resources.hyperconverged import HyperConverged
+    from ocp_resources.node import Node
 
 from tests.install_upgrade_operators.constants import (
     KEY_NAME_STR,
@@ -281,7 +289,9 @@ def pqc_status_by_service(
 
 
 @pytest.fixture(scope="class")
-def custom_curve_profile_applied(admin_client, enabled_aaq, hyperconverged_resource_scope_class):
+def custom_curve_profile_applied(
+    admin_client: DynamicClient, enabled_aaq: None, hyperconverged_resource_scope_class: HyperConverged
+) -> Generator[None]:
     """Applies a Custom TLS curve profile directly to HCO, reconciles, and reverts on exit."""
     with set_hco_crypto_policy(
         admin_client=admin_client,
@@ -315,7 +325,7 @@ def verified_node_curve_propagation_support(workers_utility_pods, worker_node1, 
 
 
 @pytest.fixture(scope="module")
-def worker_exec(workers_utility_pods, worker_node1):
+def worker_exec(workers_utility_pods: list[Pod], worker_node1: Node) -> ExecCommandOnPod:
     """ExecCommandOnPod instance shared by the curve propagation test's subtests."""
     return ExecCommandOnPod(utility_pods=workers_utility_pods, node=worker_node1)
 
