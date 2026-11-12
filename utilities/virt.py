@@ -9,7 +9,7 @@ import re
 import secrets
 import shlex
 from collections import defaultdict
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from copy import deepcopy
 from functools import cache
@@ -1894,6 +1894,8 @@ def running_vm(
     ssh_timeout=TIMEOUT_2MIN,
     wait_for_cloud_init=False,
     dv_wait_timeout=TIMEOUT_30MIN,
+    dv_stop_status_func: Callable[..., bool] | None = None,
+    dv_stop_status_kwargs: dict[str, Any] | None = None,
 ):
     """
     Wait for the VMI to be in Running state.
@@ -1905,6 +1907,8 @@ def running_vm(
         ssh_timeout (int): how much time to wait for SSH connectivity
         wait_for_cloud_init (bool): Is waiting for cloud-init required.
         dv_wait_timeout (int): dv success timeout.
+        dv_stop_status_func: Optional ``stop_status_func`` for ``DataVolume.wait_for_dv_success``.
+        dv_stop_status_kwargs: Extra kwargs for ``dv_stop_status_func``.
 
     Returns:
         VirtualMachine: VM object.
@@ -1919,8 +1923,16 @@ def running_vm(
         LOGGER.info(f"VM {_vm.name} status before dv check: {_vm.printable_status}")
         LOGGER.info(f"Volume(s) in VM spec: {_vm_dv_volumes_names_list} ")
         for dv_name in _vm_dv_volumes_names_list:
-            DataVolume(name=dv_name, namespace=_vm.namespace, client=_vm.client).wait_for_dv_success(
-                timeout=_dv_wait_timeout
+            data_volume = DataVolume(name=dv_name, namespace=_vm.namespace, client=_vm.client)
+            stop_kwargs = dict(dv_stop_status_kwargs or {})
+            # Fresh progress tracker per DV so volumes do not share no-progress timing.
+            if "progress_state" in stop_kwargs:
+                stop_kwargs["progress_state"] = {}
+            data_volume.wait_for_dv_success(
+                timeout=_dv_wait_timeout,
+                stop_status_func=dv_stop_status_func,
+                dv=data_volume,
+                **stop_kwargs,
             )
 
     # To support all use cases of: 'runStrategy', container/VM from template, VM started outside this function
