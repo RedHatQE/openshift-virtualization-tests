@@ -65,6 +65,11 @@ FILESYSTEM = DataVolume.VolumeMode.FILE
             {"target_storage_class": py_config[STORAGE_CLASS_A]},
             FILESYSTEM,
             FILESYSTEM,
+            marks=pytest.mark.xfail(
+                reason=f"{QUARANTINED}: Offline VM storage migration to a WFFC target does not "
+                "complete while the VM is stopped, CNV-75975",
+                run=False,
+            ),
             id="source_b_target_a_file_to_file",
         ),
         pytest.param(
@@ -72,6 +77,11 @@ FILESYSTEM = DataVolume.VolumeMode.FILE
             {"target_storage_class": py_config[STORAGE_CLASS_A]},
             BLOCK,
             FILESYSTEM,
+            marks=pytest.mark.xfail(
+                reason=f"{QUARANTINED}: Offline VM storage migration to a WFFC target does not "
+                "complete while the VM is stopped, CNV-75975",
+                run=False,
+            ),
             id="source_b_target_a_block_to_file",
         ),
     ],
@@ -406,6 +416,11 @@ class TestOfflineVMStorageMigrationWithHotplugDisks:
             {"source_storage_class": py_config[STORAGE_CLASS_A]},
             {"target_storage_class": py_config[STORAGE_CLASS_A]},
             {},
+            marks=pytest.mark.xfail(
+                reason=f"{QUARANTINED}: Offline VM storage migration to a WFFC target does not "
+                "complete while the VM is stopped, CNV-75975",
+                run=False,
+            ),
             id="source_a_target_a",
         ),
     ],
