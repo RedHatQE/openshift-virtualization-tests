@@ -3,13 +3,6 @@ from ocp_resources.datavolume import DataVolume
 from ocp_resources.namespace import Namespace
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
-from pytest_testconfig import config as py_config
-from utilities.artifactory import (
-    cleanup_artifactory_secret_and_config_map,
-    get_artifactory_config_map,
-    get_artifactory_secret,
-    get_test_artifact_server_url,
-)
 
 from tests.data_protection.oadp.utils import (
     FILE_PATH_FOR_WINDOWS_BACKUP,
@@ -18,30 +11,36 @@ from tests.data_protection.oadp.utils import (
 )
 from utilities.constants import (
     BACKUP_STORAGE_LOCATION,
-    CONTAINER_DISK_IMAGE_PATH_STR,
     FILE_NAME_FOR_BACKUP,
     OS_FLAVOR_RHEL,
-    OS_FLAVOR_WIN_CONTAINER_DISK,
+    OS_FLAVOR_WINDOWS,
     RHEL10_PREFERENCE,
     SKIP_BACKUP_HOOKS_ANNOTATION,
     TEXT_TO_TEST,
     TIMEOUT_8MIN,
     TIMEOUT_15MIN,
-    U1_LARGE,
     U1_SMALL,
+    WIN_2K22,
     Images,
 )
-from utilities.infra import create_ns
+from utilities.infra import (
+    cleanup_artifactory_secret_and_config_map,
+    create_ns,
+    get_artifactory_config_map,
+    get_artifactory_secret,
+)
 from utilities.oadp import (
     VeleroBackup,
     create_rhel_vm,
 )
+from utilities.os_utils import get_windows_container_disk_path
 from utilities.storage import (
     check_upload_virtctl_result,
     create_dv,
     create_vm_from_dv,
     data_volume_template_with_source_ref_dict,
     get_downloaded_artifact,
+    get_test_artifact_server_url,
     virtctl_upload_dv,
     write_file,
     write_file_windows_vm,
@@ -173,9 +172,9 @@ def windows_vm_with_data_volume_template(
             source="registry",
             url=(
                 f"{get_test_artifact_server_url(schema='registry')}/"
-                f"{py_config['latest_windows_os_dict'][CONTAINER_DISK_IMAGE_PATH_STR]}"
+                f"{get_windows_container_disk_path(os_value=WIN_2K22)}"
             ),
-            size=Images.Windows.CONTAINER_DISK_DV_SIZE,
+            size=Images.Windows.DEFAULT_DV_SIZE,
             client=admin_client,
             api_name="storage",
             secret=artifactory_secret,
@@ -187,10 +186,10 @@ def windows_vm_with_data_volume_template(
             name="oadp-windows-vm",
             namespace=namespace_for_backup.name,
             client=admin_client,
-            vm_instance_type=VirtualMachineClusterInstancetype(client=admin_client, name=U1_LARGE),
+            vm_instance_type=VirtualMachineClusterInstancetype(client=admin_client, name="u1.large"),
             vm_preference=VirtualMachineClusterPreference(client=admin_client, name="windows.2k22"),
             data_volume_template=dv.res,
-            os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK,
+            os_flavor=OS_FLAVOR_WINDOWS,
         ) as vm:
             running_vm(vm=vm)
             write_file_windows_vm(vm=vm, file_path=FILE_PATH_FOR_WINDOWS_BACKUP, content=TEXT_TO_TEST)
