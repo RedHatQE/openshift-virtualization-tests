@@ -44,15 +44,16 @@ def dv_stop_status_no_progress(
     progress_state: dict[str, Any],
     no_progress_timeout: int = TIMEOUT_10MIN,
 ) -> bool:
-    """Stop waiting when DataVolume import progress has not changed.
+    """Stop waiting when DataVolume phase and progress both stop changing.
 
-    Pass a fresh ``progress_state={}`` for each DataVolume. The function updates
-    that dict between polls. If the DataVolume does not exist yet, keep waiting.
+    Tracks ``status.phase`` and ``status.progress``. Either change resets the
+    timer. Pass a fresh ``progress_state={}`` for each DataVolume. If the
+    DataVolume does not exist yet, keep waiting.
 
     Args:
         dv: DataVolume to check.
         progress_state: Per-DataVolume tracker. Pass ``{}``; reused across polls.
-        no_progress_timeout: Seconds with no progress change before stopping.
+        no_progress_timeout: Seconds with no phase or progress change before stopping.
 
     Returns:
         True to stop waiting; False to keep waiting.
@@ -69,9 +70,11 @@ def dv_stop_status_no_progress(
         return False
 
     dv_status = getattr(dv_instance, "status", None)
+    phase = str(getattr(dv_status, "phase", None) or "")
     progress = str(getattr(dv_status, "progress", None) or "")
-    if progress != progress_state.get("progress"):
-        LOGGER.info(f"DV {dv.name} import progress: {progress!r}")
+    if phase != progress_state.get("phase") or progress != progress_state.get("progress"):
+        LOGGER.info(f"DV {dv.name} phase={phase!r} progress={progress!r}")
+        progress_state["phase"] = phase
         progress_state["progress"] = progress
         progress_state["updated_at"] = monotonic()
         return False
@@ -80,5 +83,8 @@ def dv_stop_status_no_progress(
     if no_progress_for < no_progress_timeout:
         return False
 
-    LOGGER.error(f"DV {dv.name} import has no progress at {progress!r} for {no_progress_for:.0f}s; failing fast")
+    LOGGER.error(
+        f"DV {dv.name} has no phase/progress change at phase={phase!r} progress={progress!r} "
+        f"for {no_progress_for:.0f}s; failing fast"
+    )
     return True
