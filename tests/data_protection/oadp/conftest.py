@@ -20,6 +20,7 @@ from utilities.constants import (
     TIMEOUT_8MIN,
     TIMEOUT_15MIN,
     U1_SMALL,
+    WIN_2K22,
     Images,
 )
 from utilities.infra import (
@@ -27,18 +28,19 @@ from utilities.infra import (
     create_ns,
     get_artifactory_config_map,
     get_artifactory_secret,
-    get_http_image_url,
 )
 from utilities.oadp import (
     VeleroBackup,
     create_rhel_vm,
 )
+from utilities.os_utils import get_windows_container_disk_path
 from utilities.storage import (
     check_upload_virtctl_result,
     create_dv,
     create_vm_from_dv,
     data_volume_template_with_source_ref_dict,
     get_downloaded_artifact,
+    get_test_artifact_server_url,
     virtctl_upload_dv,
     write_file,
     write_file_windows_vm,
@@ -167,10 +169,10 @@ def windows_vm_with_data_volume_template(
             name="oadp-windows-dv",
             namespace=namespace_for_backup.name,
             storage_class=snapshot_storage_class_name_scope_module,
-            source="http",
-            url=get_http_image_url(
-                image_directory=Images.Windows.DIR,
-                image_name=Images.Windows.WIN2022_IMG,
+            source="registry",
+            url=(
+                f"{get_test_artifact_server_url(schema='registry')}/"
+                f"{get_windows_container_disk_path(os_value=WIN_2K22)}"
             ),
             size=Images.Windows.DEFAULT_DV_SIZE,
             client=admin_client,
