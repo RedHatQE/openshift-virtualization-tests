@@ -46,8 +46,8 @@ def dv_stop_status_no_progress(
 ) -> bool:
     """Stop waiting when DataVolume phase and progress both stop changing.
 
-    Tracks ``status.phase`` and ``status.progress``. Either change resets the
-    timer. Pass a fresh ``progress_state={}`` for each DataVolume. If the
+    Watches ``status.phase`` and ``status.progress``. A change in either resets
+    the timer. Pass a fresh ``progress_state={}`` for each DataVolume. If the
     DataVolume does not exist yet, keep waiting.
 
     Args:
@@ -72,7 +72,7 @@ def dv_stop_status_no_progress(
     dv_status = getattr(dv_instance, "status", None)
     phase = str(getattr(dv_status, "phase", None) or "")
     progress = str(getattr(dv_status, "progress", None) or "")
-    if phase != progress_state.get("phase") or progress != progress_state.get("progress"):
+    if (phase, progress) != (progress_state.get("phase"), progress_state.get("progress")):
         LOGGER.info(f"DV {dv.name} phase={phase!r} progress={progress!r}")
         progress_state["phase"] = phase
         progress_state["progress"] = progress
@@ -84,7 +84,6 @@ def dv_stop_status_no_progress(
         return False
 
     LOGGER.error(
-        f"DV {dv.name} has no phase/progress change at phase={phase!r} progress={progress!r} "
-        f"for {no_progress_for:.0f}s; failing fast"
+        f"DV {dv.name} unchanged at phase={phase!r} progress={progress!r} for {no_progress_for:.0f}s; failing fast"
     )
     return True
