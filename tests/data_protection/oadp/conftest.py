@@ -13,7 +13,7 @@ from utilities.constants import (
     BACKUP_STORAGE_LOCATION,
     FILE_NAME_FOR_BACKUP,
     OS_FLAVOR_RHEL,
-    OS_FLAVOR_WINDOWS,
+    OS_FLAVOR_WIN_CONTAINER_DISK,
     RHEL10_PREFERENCE,
     SKIP_BACKUP_HOOKS_ANNOTATION,
     TEXT_TO_TEST,
@@ -189,7 +189,7 @@ def windows_vm_with_data_volume_template(
             vm_instance_type=VirtualMachineClusterInstancetype(client=admin_client, name="u1.large"),
             vm_preference=VirtualMachineClusterPreference(client=admin_client, name="windows.2k22"),
             data_volume_template=dv.res,
-            os_flavor=OS_FLAVOR_WINDOWS,
+            os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK,
         ) as vm:
             running_vm(vm=vm)
             write_file_windows_vm(vm=vm, file_path=FILE_PATH_FOR_WINDOWS_BACKUP, content=TEXT_TO_TEST)
