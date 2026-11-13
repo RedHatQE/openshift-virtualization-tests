@@ -1925,7 +1925,7 @@ def running_vm(
         for dv_name in _vm_dv_volumes_names_list:
             data_volume = DataVolume(name=dv_name, namespace=_vm.namespace, client=_vm.client)
             stop_kwargs = dict(dv_stop_status_kwargs or {})
-            # Fresh progress tracker per DV so volumes do not share no-progress timing.
+            # Fresh phase/progress tracker per DV so volumes do not share timing.
             if "progress_state" in stop_kwargs:
                 stop_kwargs["progress_state"] = {}
             data_volume.wait_for_dv_success(
