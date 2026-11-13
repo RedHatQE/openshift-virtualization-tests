@@ -89,7 +89,7 @@ class Console(object):
 
         try:
             self._connect()
-        except (pexpect.exceptions.ExceptionPexpect, OSError):
+        except pexpect.exceptions.ExceptionPexpect, OSError:
             LOGGER.exception(f"Failed to connect to {self.vm.name} console.")
             if self.child is not None:
                 self.child.close()
@@ -175,7 +175,7 @@ class Console(object):
         """
         try:
             self.disconnect()
-        except (pexpect.exceptions.ExceptionPexpect, OSError):
+        except pexpect.exceptions.ExceptionPexpect, OSError:
             if exc_type is None:
                 raise
             LOGGER.warning(f"Failed to disconnect from {self.vm.name} console.", exc_info=True)
