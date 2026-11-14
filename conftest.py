@@ -106,6 +106,7 @@ pytest_plugins = [
     "tests.fixtures.network.mac_pool",
     "tests.fixtures.network.nmstate",
     "tests.fixtures.network.sriov",
+    "tests.fixtures.network.ovs_dpdk",
     "tests.fixtures.storage.storage_classes",
     "tests.fixtures.images.golden_images",
     "tests.fixtures.storage.data_volumes",
@@ -142,6 +143,7 @@ EXCLUDE_MARKER_FROM_TIER2_MARKER = [
     "mtv",
     "multiarch",
     "mixed_os_nodes",
+    "ovs_dpdk",
 ]
 
 TEAM_MARKERS = {
