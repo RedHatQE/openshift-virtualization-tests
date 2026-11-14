@@ -45,6 +45,7 @@ X86_64 = "x86_64"
 #  OS constants
 OS_FLAVOR_CIRROS = "cirros"
 OS_FLAVOR_WINDOWS = "win"
+OS_FLAVOR_WIN_CONTAINER_DISK = "win-container-disk"
 OS_FLAVOR_RHEL = "rhel"
 OS_FLAVOR_FEDORA = "fedora"
 
