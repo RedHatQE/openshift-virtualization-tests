@@ -1,13 +1,18 @@
 import pytest
 from ocp_resources.datavolume import DataVolume
 
-from tests.data_protection.oadp.utils import FILE_PATH_FOR_WINDOWS_BACKUP, wait_for_restored_dv
+from tests.data_protection.oadp.utils import (
+    FILE_PATH_FOR_WINDOWS_BACKUP,
+    create_vm_from_virtual_machine_template,
+    golden_image_data_volume_from_virtual_machine_template,
+    wait_for_restored_dv,
+)
 from utilities.constants import Images
 from utilities.constants.oadp import FILE_NAME_FOR_BACKUP, TEXT_TO_TEST
-from utilities.constants.timeouts import TIMEOUT_10SEC, TIMEOUT_15MIN
+from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_10SEC, TIMEOUT_15MIN
 from utilities.oadp import check_file_in_running_vm
 from utilities.storage import verify_file_in_windows_vm
-from utilities.virt import wait_for_running_vm
+from utilities.virt import running_vm, wait_for_running_vm
 
 pytestmark = pytest.mark.usefixtures("skip_if_no_storage_class_for_snapshot")
 
@@ -151,3 +156,62 @@ def test_restore_uploaded_dv(
     velero_restore_second_namespace_with_datamover,
 ):
     wait_for_restored_dv(dv=uploaded_rhel_dv)
+
+
+@pytest.mark.usefixtures("velero_restore_rhel_virtual_machine_template")
+def test_vm_backup_and_restore_rhel_vm_template(
+    rhel_virtual_machine_template,
+    rhel_virtual_machine_instancetype,
+    rhel_virtual_machine_preference,
+):
+    """Backup and restore a VirtualMachineTemplate captured from a running RHEL VM.
+
+    Jira: https://redhat.atlassian.net/browse/CNV-96763 # <skip-jira-utils-check>
+
+    Preconditions:
+        - Running RHEL VM in the backup namespace with namespaced instance type and preference
+        - VirtualMachineTemplateRequest that captured that VM into a VirtualMachineTemplate
+        - Velero backup, namespace delete, and restore completed
+
+    Steps:
+        1. Wait for the restored VirtualMachineTemplate to become Ready
+        2. Verify the restored template, preference, and instance type exist
+        3. Verify the golden-image DataVolume referenced by the template is restored
+        4. Create a VirtualMachine from the restored template and start it
+
+    Expected:
+        - Restored VirtualMachineTemplate is Ready
+        - Restored preference and instance type exist
+        - Golden-image DataVolume referenced by the template exists and succeeds
+        - VirtualMachine created from the restored template reaches Running
+    """
+    rhel_virtual_machine_template.wait_for_condition(
+        condition=rhel_virtual_machine_template.Condition.READY,
+        status=rhel_virtual_machine_template.Condition.Status.TRUE,
+        timeout=TIMEOUT_1MIN,
+    )
+    assert rhel_virtual_machine_template.exists, (
+        f"Expected restored template {rhel_virtual_machine_template.name} to exist"
+    )
+    assert rhel_virtual_machine_preference.exists, (
+        f"Expected restored preference {rhel_virtual_machine_preference.name} to exist"
+    )
+    assert rhel_virtual_machine_instancetype.exists, (
+        f"Expected restored instance type {rhel_virtual_machine_instancetype.name} to exist"
+    )
+
+    golden_image_data_volume = golden_image_data_volume_from_virtual_machine_template(
+        virtual_machine_template=rhel_virtual_machine_template,
+    )
+    wait_for_restored_dv(dv=golden_image_data_volume)
+    assert golden_image_data_volume.exists, (
+        f"Expected restored golden-image DataVolume {golden_image_data_volume.name} to exist"
+    )
+
+    virtual_machine = create_vm_from_virtual_machine_template(
+        virtual_machine_template=rhel_virtual_machine_template,
+    )
+    try:
+        running_vm(vm=virtual_machine)
+    finally:
+        virtual_machine.clean_up()
