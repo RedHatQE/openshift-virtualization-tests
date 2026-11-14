@@ -39,6 +39,7 @@ class Rhel:
     RHEL9_4_IMG: str | None = None
     RHEL9_5_IMG: str | None = None
     RHEL9_6_IMG: str | None = None
+    RHEL9_8_IMG: str | None = None
     RHEL8_REGISTRY_GUEST_IMG: str = f"{Resource.ApiGroup.IMAGE_REGISTRY}/rhel8/rhel-guest-image"
     RHEL9_REGISTRY_GUEST_IMG: str = f"{Resource.ApiGroup.IMAGE_REGISTRY}/rhel9/rhel-guest-image"
     RHEL10_REGISTRY_GUEST_IMG: str = f"{Resource.ApiGroup.IMAGE_REGISTRY}/rhel10/rhel-guest-image"

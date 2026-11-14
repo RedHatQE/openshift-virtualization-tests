@@ -62,8 +62,9 @@ class ArchImages:
             RHEL9_3_IMG="rhel-93.qcow2",
             RHEL9_4_IMG="rhel-94.qcow2",
             RHEL9_6_IMG="rhel-96.qcow2",
+            RHEL9_8_IMG="rhel-98.qcow2",
         )
-        Rhel.LATEST_RELEASE_STR = Rhel.RHEL9_6_IMG
+        Rhel.LATEST_RELEASE_STR = Rhel.RHEL9_8_IMG
 
         Windows = Windows(
             WIN10_ISO_IMG="Win10_22H2_English_x64.iso",
@@ -116,8 +117,9 @@ class ArchImages:
         Rhel = Rhel(
             RHEL9_5_IMG="rhel-95-aarch64.qcow2",
             RHEL9_6_IMG="rhel-96-aarch64.qcow2",
+            RHEL9_8_IMG="rhel-98-aarch64.qcow2",
         )
-        Rhel.LATEST_RELEASE_STR = Rhel.RHEL9_6_IMG
+        Rhel.LATEST_RELEASE_STR = Rhel.RHEL9_8_IMG
 
         Windows = Windows()
         Fedora = Fedora(
@@ -164,8 +166,9 @@ class ArchImages:
             RHEL9_4_IMG="rhel-94-s390x.qcow2",
             RHEL9_5_IMG="rhel-95-s390x.qcow2",
             RHEL9_6_IMG="rhel-96-s390x.qcow2",
+            RHEL9_8_IMG="rhel-98-s390x.qcow2",
         )
-        Rhel.LATEST_RELEASE_STR = Rhel.RHEL9_6_IMG
+        Rhel.LATEST_RELEASE_STR = Rhel.RHEL9_8_IMG
 
         Fedora = Fedora(
             FEDORA42_IMG="Fedora-Cloud-Base-Generic-42-1.1.s390x.qcow2",

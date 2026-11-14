@@ -11,7 +11,7 @@ from utilities.constants.instance_types import (
 
 global config
 
-rhel_os_list = ["rhel-8-10", "rhel-9-6"]
+rhel_os_list = ["rhel-9-6", "rhel-9-8"]
 windows_os_list = ["win-2019", "win-11", "win-2022", "win-2025"]
 fedora_os_list = ["fedora-43"]
 centos_os_list = ["centos-stream-9"]

@@ -49,7 +49,7 @@ storage_class_b = StorageClassNames.IO2_CSI
 
 os_matrix = {
     AMD_64: {
-        "rhel_os_list": ["rhel-8-10", "rhel-9-6"],
+        "rhel_os_list": ["rhel-9-6", "rhel-9-8"],
         "fedora_os_list": ["fedora-43"],
         "centos_os_list": ["centos-stream-9"],
         "windows_os_list": ["win-2019", "win-11", "win-2022", "win-2025"],
@@ -72,7 +72,7 @@ os_matrix = {
         ],
     },
     ARM_64: {
-        "rhel_os_list": ["rhel-9-6"],
+        "rhel_os_list": ["rhel-9-6", "rhel-9-8"],
         "fedora_os_list": ["fedora-42"],
         "centos_os_list": ["centos-stream-9"],
         "instance_type_rhel_os_list": [RHEL10_PREFERENCE],
