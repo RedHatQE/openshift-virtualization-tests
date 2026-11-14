@@ -30,7 +30,6 @@ exclude =
     utilities/unittests/*,
     utilities/junit_ai_utils.py,
     scripts/tests_analyzer/tests/*,
-    scripts/reportportal/*/tests/*,
 
 fcn_exclude_functions =
     Path,

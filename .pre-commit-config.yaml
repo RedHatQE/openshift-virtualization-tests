@@ -62,7 +62,7 @@ repos:
         language_version: python3.14
         args: [--config=.flake8]
         # Hook unit tests embed intentionally non-compliant source fixtures.
-        exclude: "(utilities/unittests/|utilities/junit_ai_utils\\.py|scripts/std_placeholder_stats/tests/|scripts/coderabbit_retry/tests/test_coderabbit_retry\\.py|scripts/pre_commit_hooks/tests/)"
+        exclude: "(utilities/unittests/|utilities/junit_ai_utils\\.py|scripts/coderabbit_retry/tests/test_coderabbit_retry\\.py|scripts/pre_commit_hooks/tests/)"
         additional_dependencies:
           [
             "git+https://github.com/RedHatQE/flake8-plugins.git@v1.0.0",
