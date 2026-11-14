@@ -34,6 +34,7 @@ from utilities.constants import (
     FIRING_STATE,
     HCO_CATALOG_SOURCE,
     IMAGE_CRON_STR,
+    TIMEOUT_1MIN,
     TIMEOUT_5SEC,
     TIMEOUT_10MIN,
     TIMEOUT_10SEC,
@@ -383,20 +384,28 @@ def wait_for_cluster_version_stable_conditions(admin_client):
 
 def wait_for_cluster_version_state_and_version(cluster_version, target_ocp_version):
     def _cluster_version_state_and_version(_cluster_version, _target_ocp_version):
-        cluster_version_status_history = _cluster_version.instance.status.history[0]
+        cluster_version_status_history = _cluster_version.api.get(
+            name=_cluster_version.name,
+            _request_timeout=(TIMEOUT_10SEC, TIMEOUT_10SEC),
+        ).status.history[0]
         LOGGER.info(f"clusterversion status.histroy: {cluster_version_status_history}")
         return (
             cluster_version_status_history.state == _cluster_version.Status.COMPLETED
-            and cluster_version_status_history.version == target_ocp_version
+            and cluster_version_status_history.version == _target_ocp_version
         )
 
     try:
         for sample in TimeoutSampler(
             wait_timeout=TIMEOUT_180MIN,
-            sleep=10,
+            sleep=TIMEOUT_1MIN,
             func=_cluster_version_state_and_version,
             _cluster_version=cluster_version,
             _target_ocp_version=target_ocp_version,
+            exceptions_dict={
+                **BASE_EXCEPTIONS_DICT,
+                NotFoundError: [],
+                ResourceNotFoundError: [],
+            },
         ):
             if sample:
                 return
