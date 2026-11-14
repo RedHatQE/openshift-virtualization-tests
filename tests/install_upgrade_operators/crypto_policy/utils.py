@@ -1,8 +1,8 @@
 import logging
 from contextlib import contextmanager
-from typing import TYPE_CHECKING
 
 import deepdiff
+import pytest
 from benedict import benedict
 from kubernetes.client.exceptions import ApiException
 from kubernetes.dynamic import DynamicClient
@@ -40,8 +40,6 @@ from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_condi
 from utilities.infra import ExecCommandOnPod
 from utilities.operator import wait_for_cluster_operator_stabilize
 
-if TYPE_CHECKING:
-    from kubernetes.dynamic.resource import ResourceField
 LOGGER = logging.getLogger(__name__)
 
 
@@ -263,12 +261,17 @@ def assert_tls_ciphers_blocked(utility_pods, node, services, tls_version, allowe
 
 
 @contextmanager
-def set_hco_crypto_policy(admin_client, hco_resource, tls_spec):
+def set_hco_crypto_policy(
+    admin_client: DynamicClient,
+    hco_resource: HyperConverged,
+    tls_spec: dict,
+    list_resource_reconcile: list[Resource] = MANAGED_CRS_LIST,
+):
     with ResourceEditorValidateHCOReconcile(
         admin_client=admin_client,
         patches={hco_resource: {"spec": {"security": {TLS_SECURITY_PROFILE: tls_spec}}}},
         wait_for_reconcile_post_update=True,
-        list_resource_reconcile=MANAGED_CRS_LIST,
+        list_resource_reconcile=list_resource_reconcile,
     ):
         yield
 
@@ -340,21 +343,44 @@ def get_node_available_tls_groups(utility_pods: list, node: Node) -> list[str]:
     return [group.strip() for group in output.strip().split(":") if group.strip()]
 
 
-def compose_openssl_pqc_command(service_spec: ResourceField, groups: str, connect_timeout: int = 10) -> str:
-    """Builds an openssl s_client command with PQC group negotiation.
+def compose_openssl_probe_command(
+    service: Service, groups: str, connect_timeout: int = 10, use_sni: bool = False
+) -> str:
+    """Builds an openssl s_client command probing the given TLS group(s).
 
     Args:
-        service_spec: Service spec object with clusterIP and ports.
+        service: Service resource to probe (provides clusterIP, port and SNI name).
         groups: Colon-separated TLS group names to offer (e.g. "SecP256r1MLKEM768:secp256r1").
         connect_timeout: Timeout in seconds for the TLS connection attempt.
+        use_sni: When True, send ``-servername <service>.<namespace>.svc`` so that
+            name-based virtual hosts (e.g. the nginx console-plugin and apiserver-proxy)
+            present their certificate instead of rejecting with ``unrecognized name``.
 
     Returns:
         str: The openssl command string.
     """
+    service_spec = service.instance.spec
+    sni = f" -servername {service.name}.{service.namespace}.svc" if use_sni else ""
     return (
         f"echo | timeout {connect_timeout}"
-        f" openssl s_client -connect {service_spec.clusterIP}:{service_spec.ports[0].port} -groups {groups} 2>&1"
+        f" openssl s_client -connect {service_spec.clusterIP}:{service_spec.ports[0].port}{sni} -groups {groups} 2>&1"
     )
+
+
+def classify_openssl_probe_output(output: str) -> bool | None:
+    """Classifies an openssl s_client probe output into a negotiation result.
+
+    Args:
+        output: Raw stdout/stderr of an openssl s_client probe command.
+
+    Returns:
+        bool | None: True if the handshake succeeded (group negotiated / profile accepted),
+            False if the service rejected the group (reachable but refused), and None when
+            neither indicator is present (service/group unreachable or ambiguous).
+    """
+    if OPENSSL_CONNECTION_SUCCESS_INDICATOR not in output and PQC_HANDSHAKE_FAILURE_INDICATOR not in output:
+        return None
+    return PQC_HANDSHAKE_FAILURE_INDICATOR not in output
 
 
 def get_services_pqc_status(
@@ -382,15 +408,15 @@ def get_services_pqc_status(
         accepted = False
         unreachable = True
         for group in pqc_groups:
-            command = compose_openssl_pqc_command(
-                service_spec=service.instance.spec,
-                groups=group,
+            output = worker_exec.exec(
+                command=compose_openssl_probe_command(service=service, groups=group),
+                ignore_rc=True,
             )
-            output = worker_exec.exec(command=command, ignore_rc=True)
-            if OPENSSL_CONNECTION_SUCCESS_INDICATOR not in output and PQC_HANDSHAKE_FAILURE_INDICATOR not in output:
+            negotiated = classify_openssl_probe_output(output=output)
+            if negotiated is None:
                 continue
             unreachable = False
-            if PQC_HANDSHAKE_FAILURE_INDICATOR not in output:
+            if negotiated:
                 LOGGER.info(f"Service {service_name} accepts PQC ({group})")
                 accepted = True
                 break
@@ -403,3 +429,55 @@ def get_services_pqc_status(
             LOGGER.warning(f"Service {service_name} rejected all PQC groups: {pqc_groups}")
             results[service_name] = False
     return results
+
+
+def probe_service_curve_negotiated(
+    worker_exec: ExecCommandOnPod,
+    service: Service,
+    group: str,
+) -> bool | None:
+    """Probes a single service for a single TLS group (with SNI).
+
+    Args:
+        worker_exec: ExecCommandOnPod instance for running commands on a worker node.
+        service: Service resource to probe.
+        group: TLS group name to probe.
+
+    Returns:
+        bool | None: True if the group negotiated, False if the service rejected it
+            (reachable), None if neither indicator was seen (service/group unreachable).
+    """
+    output = worker_exec.exec(
+        command=compose_openssl_probe_command(service=service, groups=group, use_sni=True),
+        ignore_rc=True,
+    )
+    negotiated = classify_openssl_probe_output(output=output)
+    LOGGER.info(f"Service {service.name} TLS group {group}: negotiated={negotiated}")
+    return negotiated
+
+
+def assert_curve_reachable_or_xfail_pending(
+    negotiated: bool | None,
+    service_name: str,
+    group: str,
+    pending_jira: str | None,
+) -> None:
+    """Asserts a probed service/group was reachable, then xfails if its propagation is pending.
+
+    Args:
+        negotiated: Result of probe_service_curve_negotiated for this service/group.
+        service_name: Name of the probed service, for the assertion/xfail message.
+        group: TLS group name that was probed, for the assertion/xfail message.
+        pending_jira: Jira issue tracking this service's curve propagation, if still open.
+
+    Raises:
+        AssertionError: If the service/group combination was unreachable.
+        _pytest.outcomes.XFailed: If pending_jira is set, via pytest.xfail().
+    """
+    # Reachability is asserted for every service, including pending ones: None means
+    # the probe saw neither a successful handshake nor a rejection.
+    assert negotiated is not None, f"Service {service_name} is unreachable for curve {group}"
+    if pending_jira:
+        xfail_reason = f"Service {service_name} curve propagation pending {pending_jira}"
+        LOGGER.warning(xfail_reason)
+        pytest.xfail(reason=xfail_reason)
