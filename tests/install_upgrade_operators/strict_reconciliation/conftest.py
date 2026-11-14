@@ -16,7 +16,7 @@ from tests.install_upgrade_operators.strict_reconciliation.utils import (
     wait_for_resource_version_update,
 )
 from tests.utils import wait_for_cr_labels_change
-from utilities.constants import HCO_BEARER_AUTH, TIMEOUT_1MIN, VERSION_LABEL_KEY
+from utilities.constants import TIMEOUT_1MIN, VERSION_LABEL_KEY
 from utilities.hco import ResourceEditorValidateHCOReconcile
 
 LOGGER = logging.getLogger(__name__)
@@ -190,9 +190,3 @@ def updated_resource_labels(ocp_resource_by_name):
     ):
         wait_for_cr_labels_change(expected_value=expected_labels, component=ocp_resource_by_name, timeout=TIMEOUT_1MIN)
         yield expected_labels
-
-
-@pytest.fixture()
-def xfail_hco_bearer_token_bug(ocp_resource_by_name):
-    if ocp_resource_by_name.name == HCO_BEARER_AUTH:
-        pytest.xfail(f"{HCO_BEARER_AUTH} resource labels doesn't reconcile due to 59519 bug")
