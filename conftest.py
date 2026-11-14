@@ -145,7 +145,7 @@ EXCLUDE_MARKER_FROM_TIER2_MARKER = [
 ]
 
 TEAM_MARKERS = {
-    "chaos": ["chaos", "deprecated_api"],
+    "chaos": ["chaos"],
     "virt": ["virt", "deprecated_api", "post_test_alerts"],
     "network": ["network", "deprecated_api", "post_test_alerts"],
     "storage": ["storage", "deprecated_api", "post_test_alerts"],
