@@ -2,7 +2,7 @@
 
 import importlib
 import sys
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -15,7 +15,7 @@ import utilities.storage
 
 importlib.reload(utilities.storage)
 
-from utilities.storage import construct_datavolume_source_dict
+from utilities.storage import construct_datavolume_source_dict, data_volume
 
 
 class TestConstructDatavolumeSourceDictHttp:
@@ -163,3 +163,28 @@ class TestConstructDatavolumeSourceDictUnsupported:
     def test_unsupported_source_raises_value_error(self):
         with pytest.raises(ValueError, match="Unsupported source type: ftp"):
             construct_datavolume_source_dict(source="ftp")
+
+
+class TestDataVolumeGoldenImageReuse:
+    @patch("utilities.storage.create_dv")
+    @patch("utilities.storage.get_test_artifact_server_url", return_value="https://artifactory.example.com/")
+    @patch("utilities.storage.DataVolume")
+    def test_existing_golden_image_is_yielded_once(self, mock_data_volume_class, _mock_artifact_url, mock_create_dv):
+        """An existing golden image is yielded once; the fixture must not create a DV afterwards."""
+        existing_data_volume = MagicMock()
+
+        namespace = MagicMock()
+        namespace.name = "openshift-virtualization-os-images"
+        mock_data_volume_class.get.return_value = [existing_data_volume]
+
+        data_volume_generator = data_volume(
+            namespace=namespace,
+            client=MagicMock(),
+            check_dv_exists=True,
+        )
+
+        assert next(data_volume_generator) is existing_data_volume, "the existing golden image must be yielded"
+        with pytest.raises(StopIteration):
+            next(data_volume_generator)
+
+        assert mock_create_dv.call_count == 0, "a reused golden image must not be re-created"

@@ -185,12 +185,25 @@ class TestCheckVmXmlHyperv:
         }
         mock_vm = _make_hyperv_mock_vm(actual_xml=actual_xml)
 
-        with pytest.raises(AssertionError, match="hyperV flags are not set correctly"):
+        with pytest.raises(AssertionError) as exc_info:
             check_vm_xml_hyperv(
                 mock_vm,
                 admin_client=MagicMock(),
                 expected_hyperv_features=FEDORA_EXPECTED_HYPERV_FEATURES,
             )
+
+        failure_message = str(exc_info.value)
+        relaxed_failure = "Feature 'relaxed' state is 'off', expected 'on'"
+        spinlocks_failure = f"Spinlocks retries is 1024, expected {SPINLOCKS_EXPECTED_RETRIES}"
+        sub_feature_failure = "Sub-feature 'stimer.direct' state is 'off', expected 'on'"
+        assert relaxed_failure in failure_message, failure_message
+        assert spinlocks_failure in failure_message, failure_message
+        assert sub_feature_failure in failure_message, failure_message
+        assert (
+            failure_message.index(relaxed_failure)
+            < failure_message.index(sub_feature_failure)
+            < failure_message.index(spinlocks_failure)
+        ), failure_message
 
     def test_check_vm_xml_hyperv_missing_feature(self):
         """Test assertion failure when expected feature is missing from XML"""

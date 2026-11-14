@@ -412,11 +412,106 @@ class VirtualMachineForTests(VirtualMachine):
             label=label,
         )
         self.body = body
-        self.interfaces = interfaces or []
-        self.service_accounts = service_accounts or []
-        self.networks = networks or {}
-        self.node_selector = node_selector
         self.eviction_strategy = eviction_strategy
+        self.is_vm_from_template = False
+        self._set_compute_params(
+            cpu_flags=cpu_flags,
+            cpu_limits=cpu_limits,
+            cpu_requests=cpu_requests,
+            cpu_sockets=cpu_sockets,
+            cpu_cores=cpu_cores,
+            cpu_threads=cpu_threads,
+            cpu_model=cpu_model,
+            cpu_max_sockets=cpu_max_sockets,
+            memory_requests=memory_requests,
+            memory_limits=memory_limits,
+            memory_guest=memory_guest,
+            memory_max_guest=memory_max_guest,
+            cpu_placement=cpu_placement,
+            isolate_emulator_thread=isolate_emulator_thread,
+            hugepages_page_size=hugepages_page_size,
+        )
+        self._set_storage_params(
+            image=image,
+            machine_type=machine_type,
+            pvc=pvc,
+            data_volume=data_volume,
+            data_volume_template=data_volume_template,
+            smm_enabled=smm_enabled,
+            pvspinlock_enabled=pvspinlock_enabled,
+            efi_params=efi_params,
+            diskless_vm=diskless_vm,
+            disk_io_options=disk_io_options,
+            disk_type=disk_type,
+            tpm_params=tpm_params,
+        )
+        self._set_network_params(
+            interfaces=interfaces,
+            service_accounts=service_accounts,
+            networks=networks,
+            node_selector=node_selector,
+            network_model=network_model,
+            network_multiqueue=network_multiqueue,
+            macs=macs,
+            interfaces_types=interfaces_types,
+        )
+        self._set_guest_access_params(
+            cloud_init_data=cloud_init_data,
+            cloud_init_type=cloud_init_type,
+            ssh=ssh,
+            ssh_secret=ssh_secret,
+            attached_secret=attached_secret,
+            username=username,
+            password=password,
+            os_flavor=os_flavor,
+        )
+        self._set_instance_type_params(
+            vm_instance_type=vm_instance_type,
+            vm_instance_type_infer=vm_instance_type_infer,
+            vm_preference=vm_preference,
+            vm_preference_infer=vm_preference_infer,
+            vm_validation_rule=vm_validation_rule,
+            vm_affinity=vm_affinity,
+        )
+        self._set_vm_settings_params(
+            run_strategy=run_strategy,
+            iothreads_policy=iothreads_policy,
+            dedicated_iothread=dedicated_iothread,
+            host_device_name=host_device_name,
+            gpu_name=gpu_name,
+            vhostmd=vhostmd,
+            vm_debug_logs=vm_debug_logs,
+            priority_class_name=priority_class_name,
+            additional_labels=additional_labels,
+            node_selector_labels=node_selector_labels,
+            annotations=annotations,
+            exclude_from_descheduler=exclude_from_descheduler,
+            termination_grace_period=termination_grace_period,
+        )
+
+        # Must be here to apply on existing VMs
+        self.set_login_params()
+
+    def _set_compute_params(
+        self,
+        *,
+        cpu_flags,
+        cpu_limits,
+        cpu_requests,
+        cpu_sockets,
+        cpu_cores,
+        cpu_threads,
+        cpu_model,
+        cpu_max_sockets,
+        memory_requests,
+        memory_limits,
+        memory_guest,
+        memory_max_guest,
+        cpu_placement,
+        isolate_emulator_thread,
+        hugepages_page_size,
+    ) -> None:
+        """Set the CPU, memory and hugepages attributes of the VM."""
         self.cpu_flags = cpu_flags
         self.cpu_limits = cpu_limits
         self.cpu_requests = cpu_requests
@@ -425,39 +520,128 @@ class VirtualMachineForTests(VirtualMachine):
         self.cpu_threads = cpu_threads
         self.cpu_model = cpu_model
         self.cpu_max_sockets = cpu_max_sockets
+        self.cpu_placement = cpu_placement
+        self.isolate_emulator_thread = isolate_emulator_thread
         self.memory_requests = memory_requests
         self.memory_limits = memory_limits
         self.memory_guest = memory_guest
         self.memory_max_guest = memory_max_guest
-        self.cloud_init_data = cloud_init_data
-        self.machine_type = machine_type
+        self.hugepages_page_size = hugepages_page_size
+
+    def _set_storage_params(
+        self,
+        *,
+        image,
+        machine_type,
+        pvc,
+        data_volume,
+        data_volume_template,
+        smm_enabled,
+        pvspinlock_enabled,
+        efi_params,
+        diskless_vm,
+        disk_io_options,
+        disk_type,
+        tpm_params,
+    ) -> None:
+        """Set the storage, firmware and disk attributes of the VM."""
         self.image = image
-        self.ssh = ssh
-        self.ssh_secret = ssh_secret
-        self.custom_service = None
-        self.network_model = network_model
-        self.network_multiqueue = network_multiqueue
-        self.data_volume_template = data_volume_template
-        self.cloud_init_type = cloud_init_type
+        self.machine_type = machine_type
         self.pvc = pvc
-        self.attached_secret = attached_secret
-        self.cpu_placement = cpu_placement
-        self.isolate_emulator_thread = isolate_emulator_thread
-        self.iothreads_policy = iothreads_policy
-        self.dedicated_iothread = dedicated_iothread
         self.data_volume = data_volume
+        self.data_volume_template = data_volume_template
         self.smm_enabled = smm_enabled
         self.pvspinlock_enabled = pvspinlock_enabled
         self.efi_params = efi_params
         self.diskless_vm = diskless_vm
-        self.is_vm_from_template = False
-        self.run_strategy = run_strategy
         self.disk_io_options = disk_io_options
-        self.username = username
-        self.password = password
+        self.disk_type = disk_type
+        self.tpm_params = tpm_params
+
+    def _set_network_params(
+        self,
+        *,
+        interfaces,
+        service_accounts,
+        networks,
+        node_selector,
+        network_model,
+        network_multiqueue,
+        macs,
+        interfaces_types,
+    ) -> None:
+        """Set the network, MAC and node placement attributes of the VM."""
+        self.interfaces = interfaces or []
+        self.service_accounts = service_accounts or []
+        self.networks = networks or {}
+        self.node_selector = node_selector
+        self.custom_service = None
+        self.network_model = network_model
+        self.network_multiqueue = network_multiqueue
         self.macs = macs
         self.interfaces_types = interfaces_types or {}
+
+    def _set_guest_access_params(
+        self,
+        *,
+        cloud_init_data,
+        cloud_init_type,
+        ssh,
+        ssh_secret,
+        attached_secret,
+        username,
+        password,
+        os_flavor,
+    ) -> None:
+        """Set the cloud-init, SSH and guest credential attributes of the VM."""
+        self.cloud_init_data = cloud_init_data
+        self.cloud_init_type = cloud_init_type
+        self.ssh = ssh
+        self.ssh_secret = ssh_secret
+        self.attached_secret = attached_secret
+        self.username = username
+        self.password = password
         self.os_flavor = os_flavor
+
+    def _set_instance_type_params(
+        self,
+        *,
+        vm_instance_type,
+        vm_instance_type_infer,
+        vm_preference,
+        vm_preference_infer,
+        vm_validation_rule,
+        vm_affinity,
+    ) -> None:
+        """Set the instance type, preference and validation rule attributes of the VM."""
+        self.vm_instance_type = vm_instance_type
+        self.vm_instance_type_infer = vm_instance_type_infer
+        self.vm_preference = vm_preference
+        self.vm_preference_infer = vm_preference_infer
+        self.vm_validation_rule = vm_validation_rule
+        self.vm_affinity = vm_affinity
+
+    def _set_vm_settings_params(
+        self,
+        *,
+        run_strategy,
+        iothreads_policy,
+        dedicated_iothread,
+        host_device_name,
+        gpu_name,
+        vhostmd,
+        vm_debug_logs,
+        priority_class_name,
+        additional_labels,
+        node_selector_labels,
+        annotations,
+        exclude_from_descheduler,
+        termination_grace_period,
+    ) -> None:
+        """Set the remaining VM settings: run strategy, devices, labels and metrics attributes."""
+        self.run_strategy = run_strategy
+        self.iothreads_policy = iothreads_policy
+        self.dedicated_iothread = dedicated_iothread
         self.host_device_name = host_device_name
         self.gpu_name = gpu_name
         self.vhostmd = vhostmd
@@ -465,21 +649,9 @@ class VirtualMachineForTests(VirtualMachine):
         self.priority_class_name = priority_class_name
         self.additional_labels = additional_labels
         self.node_selector_labels = node_selector_labels
-        self.vm_instance_type = vm_instance_type
-        self.vm_instance_type_infer = vm_instance_type_infer
-        self.vm_preference = vm_preference
-        self.vm_preference_infer = vm_preference_infer
-        self.vm_validation_rule = vm_validation_rule
-        self.termination_grace_period = termination_grace_period
-        self.disk_type = disk_type
-        self.tpm_params = tpm_params
-        self.hugepages_page_size = hugepages_page_size
-        self.vm_affinity = vm_affinity
         self.annotations = annotations
         self.exclude_from_descheduler = exclude_from_descheduler
-
-        # Must be here to apply on existing VMs
-        self.set_login_params()
+        self.termination_grace_period = termination_grace_period
 
     def deploy(self, wait=False):
         super().deploy(wait=wait)
@@ -507,11 +679,26 @@ class VirtualMachineForTests(VirtualMachine):
         template_spec = self.res["spec"]["template"]["spec"]
         if self.eviction_strategy:
             template_spec[EVICTIONSTRATEGY] = self.eviction_strategy
+
+        template_spec = self._set_spec_compute_configuration(template_spec=template_spec)
+        template_spec = self._set_spec_device_configuration(template_spec=template_spec)
+        template_spec = self._set_spec_scheduling_configuration(template_spec=template_spec)
+        # Either update storage and cloud-init configuration or remove disks from spec
+        template_spec = self._set_storage_and_cloud_init_configuration(template_spec=template_spec)
+
+        self._set_descheduler_exclusion()
+
+    def _set_spec_compute_configuration(self, template_spec: dict) -> dict:
+        """Set hugepages, node selector, network, CPU and memory configuration of the template spec."""
         template_spec = self.set_hugepages_page_size(template_spec=template_spec)
         template_spec = self.update_node_selector(template_spec=template_spec)
         template_spec = self.update_vm_network_configuration(template_spec=template_spec)
         template_spec = self.update_vm_cpu_configuration(template_spec=template_spec)
-        template_spec = self.update_vm_memory_configuration(template_spec=template_spec)
+
+        return self.update_vm_memory_configuration(template_spec=template_spec)
+
+    def _set_spec_device_configuration(self, template_spec: dict) -> dict:
+        """Set firmware, device and IO configuration of the template spec."""
         template_spec = self.set_smm(template_spec=template_spec)
         template_spec = self.set_pvspinlock(template_spec=template_spec)
         template_spec = self.set_efi_params(template_spec=template_spec)
@@ -520,32 +707,37 @@ class VirtualMachineForTests(VirtualMachine):
         template_spec = self.set_iothreads_policy(template_spec=template_spec)
         template_spec = self.set_hostdevice(template_spec=template_spec)
         template_spec = self.set_gpu(template_spec=template_spec)
-        template_spec = self.set_disk_io_configuration(template_spec=template_spec)
+
+        return self.set_disk_io_configuration(template_spec=template_spec)
+
+    def _set_spec_scheduling_configuration(self, template_spec: dict) -> dict:
+        """Set priority class, termination grace period and affinity of the template spec."""
         template_spec = self.set_priority_class(template_spec=template_spec)
         template_spec = self.set_termination_grace_period(template_spec=template_spec)
-        template_spec = self.set_vm_affinity_rule(template_spec=template_spec)
 
-        # Either update storage and cloud-init configuration or remove disks from spec
+        return self.set_vm_affinity_rule(template_spec=template_spec)
+
+    def _set_storage_and_cloud_init_configuration(self, template_spec: dict) -> dict:
+        """Set storage, service accounts, cloud-init and secret configuration of the template spec."""
         if self.diskless_vm:
-            template_spec = self.set_diskless_vm(template_spec=template_spec)
-        else:
-            template_spec = self.update_vm_storage_configuration(template_spec=template_spec)
-            template_spec = self.set_service_accounts(template_spec=template_spec)
-            # cloud-init disks must be set after DV disks in order to boot from DV.
-            template_spec = self.update_vm_cloud_init_data(template_spec=template_spec)
-            template_spec = self.set_vhostmd(template_spec=template_spec)
+            return self.set_diskless_vm(template_spec=template_spec)
 
-            template_spec = self.update_vm_secret_configuration(template_spec=template_spec)
+        template_spec = self.update_vm_storage_configuration(template_spec=template_spec)
+        template_spec = self.set_service_accounts(template_spec=template_spec)
+        # cloud-init disks must be set after DV disks in order to boot from DV.
+        template_spec = self.update_vm_cloud_init_data(template_spec=template_spec)
+        template_spec = self.set_vhostmd(template_spec=template_spec)
+        template_spec = self.update_vm_secret_configuration(template_spec=template_spec)
 
-            # VMs do not necessarily have self.cloud_init_data
-            # cloud-init will not be set for OS in FLAVORS_EXCLUDED_FROM_CLOUD_INIT
-            if self.ssh and not any(flavor in self.os_flavor for flavor in FLAVORS_EXCLUDED_FROM_CLOUD_INIT):
-                if self.ssh_secret is None:
-                    template_spec = self.enable_ssh_in_cloud_init_data(template_spec=template_spec)
-                if self.ssh_secret:
-                    template_spec = self.update_vm_ssh_secret_configuration(template_spec=template_spec)
+        # VMs do not necessarily have self.cloud_init_data
+        # cloud-init will not be set for OS in FLAVORS_EXCLUDED_FROM_CLOUD_INIT
+        if self.ssh and not any(flavor in self.os_flavor for flavor in FLAVORS_EXCLUDED_FROM_CLOUD_INIT):
+            if self.ssh_secret is None:
+                template_spec = self.enable_ssh_in_cloud_init_data(template_spec=template_spec)
+            if self.ssh_secret:
+                template_spec = self.update_vm_ssh_secret_configuration(template_spec=template_spec)
 
-        self._set_descheduler_exclusion()
+        return template_spec
 
     def _set_descheduler_exclusion(self) -> None:
         effective_eviction_strategy = self.res["spec"]["template"]["spec"].get(EVICTIONSTRATEGY)
@@ -1002,11 +1194,13 @@ class VirtualMachineForTests(VirtualMachine):
 
         return template_spec
 
-    def update_vm_cpu_configuration(self, template_spec):
-        # cpu settings
-        if self.cpu_flags:
-            template_spec.setdefault("domain", {})["cpu"] = deepcopy(self.cpu_flags)
+    @staticmethod
+    def _spec_cpu(template_spec: dict) -> dict:
+        """Return the CPU section of the template spec, creating it when missing."""
+        return template_spec.setdefault("domain", {}).setdefault("cpu", {})
 
+    def _set_cpu_resources(self, template_spec: dict) -> None:
+        """Set the CPU limits and requests of the template spec."""
         if self.cpu_limits:
             template_spec.setdefault("domain", {}).setdefault("resources", {}).setdefault("limits", {})
             template_spec["domain"]["resources"]["limits"].update({"cpu": self.cpu_limits})
@@ -1015,8 +1209,10 @@ class VirtualMachineForTests(VirtualMachine):
             template_spec.setdefault("domain", {}).setdefault("resources", {}).setdefault("requests", {})
             template_spec["domain"]["resources"]["requests"].update({"cpu": self.cpu_requests})
 
+    def _set_cpu_topology(self, template_spec: dict) -> None:
+        """Set the CPU cores, threads and sockets of the template spec."""
         if self.cpu_cores:
-            template_spec.setdefault("domain", {}).setdefault("cpu", {})["cores"] = self.cpu_cores
+            self._spec_cpu(template_spec=template_spec)["cores"] = self.cpu_cores
 
         # Faster VMI start time
         if (
@@ -1028,24 +1224,35 @@ class VirtualMachineForTests(VirtualMachine):
             self.cpu_threads = Images.Windows.DEFAULT_CPU_THREADS
 
         if self.cpu_threads:
-            template_spec.setdefault("domain", {}).setdefault("cpu", {})["threads"] = self.cpu_threads
+            self._spec_cpu(template_spec=template_spec)["threads"] = self.cpu_threads
 
         if self.cpu_sockets:
-            template_spec.setdefault("domain", {}).setdefault("cpu", {})["sockets"] = self.cpu_sockets
+            self._spec_cpu(template_spec=template_spec)["sockets"] = self.cpu_sockets
 
+    def _set_cpu_placement_and_model(self, template_spec: dict) -> None:
+        """Set the CPU placement, emulator thread isolation, model and max sockets of the template spec."""
         if self.cpu_placement:
-            template_spec.setdefault("domain", {}).setdefault("cpu", {})["dedicatedCpuPlacement"] = True
+            self._spec_cpu(template_spec=template_spec)["dedicatedCpuPlacement"] = True
 
         if self.isolate_emulator_thread:
             # This setting has to be specified in a combination with
             # cpu_placement = True. Only valid if dedicatedCpuPlacement is True.
-            template_spec.setdefault("domain", {}).setdefault("cpu", {})["isolateEmulatorThread"] = True
+            self._spec_cpu(template_spec=template_spec)["isolateEmulatorThread"] = True
 
         if self.cpu_model:
-            template_spec.setdefault("domain", {}).setdefault("cpu", {})["model"] = self.cpu_model
+            self._spec_cpu(template_spec=template_spec)["model"] = self.cpu_model
 
         if self.cpu_max_sockets:
-            template_spec.setdefault("domain", {}).setdefault("cpu", {})["maxSockets"] = self.cpu_max_sockets
+            self._spec_cpu(template_spec=template_spec)["maxSockets"] = self.cpu_max_sockets
+
+    def update_vm_cpu_configuration(self, template_spec):
+        # cpu settings
+        if self.cpu_flags:
+            template_spec.setdefault("domain", {})["cpu"] = deepcopy(self.cpu_flags)
+
+        self._set_cpu_resources(template_spec=template_spec)
+        self._set_cpu_topology(template_spec=template_spec)
+        self._set_cpu_placement_and_model(template_spec=template_spec)
 
         return template_spec
 
@@ -1422,6 +1629,12 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
         # If termination_grace_period is not provided, terminationGracePeriodSeconds will be set to 180
         spec["terminationGracePeriodSeconds"] = self.termination_grace_period
 
+        spec = self._set_data_volume_template_spec(spec=spec)
+        self._set_eviction_strategy_for_access_modes(spec=spec)
+        self._set_descheduler_exclusion()
+
+    def _set_data_volume_template_spec(self, spec: dict) -> dict:
+        """Set the dataVolumeTemplates and access modes of the VM spec according to the VM source."""
         # Nothing to do if source PVC (referenced in DataSource) does not exist
         if self.non_existing_pvc:
             LOGGER.info("Referenced PVC does not exist")
@@ -1446,35 +1659,46 @@ class VirtualMachineForTestsFromTemplate(VirtualMachineForTests):
             ) or self.data_volume_template["spec"].get("storage", {}).get("accessModes", [])
         # Otherwise clone volume referenced in self.data_source
         else:
-            # If storage params are not in source.spec (for e.g. source is VolumeSnapshot),
-            # params will be taken from cluster configured default storage
-            volume_source_spec = self.data_source.source.instance.spec
-            data_source_status = self.data_source.instance.status
-            storage_spec = self.res["spec"]["dataVolumeTemplates"][0]["spec"]["storage"]
-            self.access_modes = volume_source_spec.accessModes
-            # dataVolumeTemplates needs to be updated with the needed storage size,
-            # if the size of the golden_image is more than the Template's default storage size.
-            # else use the source DV storage size.
-            storage_spec.setdefault("resources", {}).setdefault("requests", {})["storage"] = (
-                self.cloned_dv_size
-                or volume_source_spec.get("resources", {}).get("requests", {}).get("storage")
-                or data_source_status.get("restoreSize")
-            )
-            if not self.use_full_storage_api:
-                storage_spec["storageClassName"] = volume_source_spec.storageClassName
+            self._clone_data_source_storage(spec=spec)
 
+        return spec
+
+    def _clone_data_source_storage(self, spec: dict) -> None:
+        """Clone the volume referenced in the data source and size the dataVolumeTemplates accordingly."""
+        # If storage params are not in source.spec (for e.g. source is VolumeSnapshot),
+        # params will be taken from cluster configured default storage
+        volume_source_spec = self.data_source.source.instance.spec
+        data_source_status = self.data_source.instance.status
+        storage_spec = self.res["spec"]["dataVolumeTemplates"][0]["spec"]["storage"]
+        self.access_modes = volume_source_spec.accessModes
+        # dataVolumeTemplates needs to be updated with the needed storage size,
+        # if the size of the golden_image is more than the Template's default storage size.
+        # else use the source DV storage size.
+        storage_spec.setdefault("resources", {}).setdefault("requests", {})["storage"] = (
+            self.cloned_dv_size
+            or volume_source_spec.get("resources", {}).get("requests", {}).get("storage")
+            or data_source_status.get("restoreSize")
+        )
+        if not self.use_full_storage_api:
+            storage_spec["storageClassName"] = volume_source_spec.storageClassName
+
+    def _set_eviction_strategy_for_access_modes(self, spec: dict) -> None:
+        """Set evictionStrategy to None for storage classes that are not ReadWriteMany."""
         # For storage class that is not ReadWriteMany- evictionStrategy should be set as "None" in the VM
         # (Except when evictionStrategy is explicitly set)
         # To apply this logic, self.access_modes should be available.
-        if not self.sno_cluster and (not self.eviction_strategy and not (self.diskless_vm or self.non_existing_pvc)):
-            if not self.access_modes:
-                self.access_modes = get_default_storage_class(
-                    client=self.client
-                ).storage_profile.first_claim_property_set_access_modes()
-            if DataVolume.AccessMode.RWX not in self.access_modes:
-                spec[EVICTIONSTRATEGY] = "None"
+        if self.sno_cluster or self.eviction_strategy or self.diskless_vm or self.non_existing_pvc:
+            return
 
-        self._set_descheduler_exclusion()
+        access_modes = self.access_modes
+        if not access_modes:
+            access_modes = get_default_storage_class(
+                client=self.client
+            ).storage_profile.first_claim_property_set_access_modes()
+            self.access_modes = access_modes
+
+        if DataVolume.AccessMode.RWX not in access_modes:
+            spec[EVICTIONSTRATEGY] = "None"
 
     def _update_vm_storage_config(self, spec, name):
         # volume name should be updated

@@ -50,6 +50,40 @@ def assert_windows_efi(vm: VirtualMachineForTests) -> None:
     assert "\\EFI\\Microsoft\\Boot\\bootmgfw.efi" in out, f"EFI boot not found in path. bcdedit output:\n{out}"
 
 
+def _spinlocks_failures(*, expected_value: Any, actual_feature: dict[str, Any]) -> list[str]:
+    """Return the spinlocks retries mismatch descriptions for a hyperv spinlocks feature."""
+    expected_retries = (
+        expected_value.get("spinlocks", SPINLOCKS_EXPECTED_RETRIES)
+        if isinstance(expected_value, dict)
+        else SPINLOCKS_EXPECTED_RETRIES
+    )
+    actual_retries = int(actual_feature.get("@retries", 0))
+    if actual_retries != expected_retries:
+        return [f"Spinlocks retries is {actual_retries}, expected {expected_retries}"]
+
+    return []
+
+
+def _sub_feature_failures(*, xml_name: str, expected_value: Any, actual_feature: dict[str, Any]) -> list[str]:
+    """Return the failure descriptions of the sub-features of an expected hyperv feature."""
+    failures: list[str] = []
+    for sub_name, sub_value in expected_value.items():
+        if not isinstance(sub_value, dict):
+            continue
+
+        if sub_name not in actual_feature:
+            failures.append(f"Sub-feature '{xml_name}.{sub_name}' not found in VM XML")
+            continue
+
+        if actual_feature[sub_name].get("@state") != "on":
+            failures.append(
+                f"Sub-feature '{xml_name}.{sub_name}' state is"
+                f" '{actual_feature[sub_name].get('@state')}', expected 'on'"
+            )
+
+    return failures
+
+
 def _collect_hyperv_feature_failures(
     expected_features: dict[str, Any],
     actual_features: dict[str, Any],
@@ -84,29 +118,12 @@ def _collect_hyperv_feature_failures(
             failures.append(f"Feature '{xml_name}' state is '{actual_feature.get('@state')}', expected 'on'")
 
         if xml_name == "spinlocks":
-            expected_retries = (
-                expected_value.get("spinlocks", SPINLOCKS_EXPECTED_RETRIES)
-                if isinstance(expected_value, dict)
-                else SPINLOCKS_EXPECTED_RETRIES
-            )
-            actual_retries = int(actual_feature.get("@retries", 0))
-            if actual_retries != expected_retries:
-                failures.append(f"Spinlocks retries is {actual_retries}, expected {expected_retries}")
+            failures.extend(_spinlocks_failures(expected_value=expected_value, actual_feature=actual_feature))
 
         if isinstance(expected_value, dict):
-            for sub_name, sub_value in expected_value.items():
-                if not isinstance(sub_value, dict):
-                    continue
-
-                if sub_name not in actual_feature:
-                    failures.append(f"Sub-feature '{xml_name}.{sub_name}' not found in VM XML")
-                    continue
-
-                if actual_feature[sub_name].get("@state") != "on":
-                    failures.append(
-                        f"Sub-feature '{xml_name}.{sub_name}' state is"
-                        f" '{actual_feature[sub_name].get('@state')}', expected 'on'"
-                    )
+            failures.extend(
+                _sub_feature_failures(xml_name=xml_name, expected_value=expected_value, actual_feature=actual_feature)
+            )
 
     return failures
 
