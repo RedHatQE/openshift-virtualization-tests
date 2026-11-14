@@ -27,14 +27,17 @@ from tests.storage.cbt.constants import (
     CBT_DATA_DISK_SIZE,
     CBT_DATA_DISK_TEST_DATA,
     CBT_ENABLED_LABEL,
+    CBT_INSTANCE_TYPE_NAME,
+    CBT_OS_FLAVOR,
+    CBT_PREFERENCE_NAME,
     CBT_TEST_DATA,
     CBT_WINDOWS_BOOT_DISK_TEST_DATA_FILE,
     CBT_WINDOWS_INCREMENTAL_TEST_DATA_FILE,
     CBT_WINDOWS_PERSISTENT_DEVICE_PARAMS,
     CBT_WINDOWS_VERSION,
 )
-from utilities.constants.images import OS_FLAVOR_RHEL, OS_FLAVOR_WIN_CONTAINER_DISK, OS_FLAVOR_WINDOWS
-from utilities.constants.instance_types import RHEL9_PREFERENCE, U1_LARGE, U1_SMALL, WINDOWS_2K22_PREFERENCE
+from utilities.constants.images import OS_FLAVOR_WIN_CONTAINER_DISK, OS_FLAVOR_WINDOWS
+from utilities.constants.instance_types import U1_LARGE, WINDOWS_2K22_PREFERENCE
 from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5SEC, TIMEOUT_10MIN, TIMEOUT_30MIN, TIMEOUT_60MIN
 from utilities.constants.virt import CLOUD_INIT_DISK_NAME, DV_DISK
 from utilities.storage import (
@@ -201,17 +204,17 @@ def cbt_enabled_vm(
         client=client,
         vm_instance_type=VirtualMachineClusterInstancetype(
             client=client,
-            name=U1_LARGE if windows else U1_SMALL,
+            name=U1_LARGE if windows else CBT_INSTANCE_TYPE_NAME,
         ),
         vm_preference=VirtualMachineClusterPreference(
             client=client,
-            name=WINDOWS_2K22_PREFERENCE if windows else RHEL9_PREFERENCE,
+            name=WINDOWS_2K22_PREFERENCE if windows else CBT_PREFERENCE_NAME,
         ),
         data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=data_source,
             storage_class=storage_class,
         ),
-        os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK if windows else OS_FLAVOR_RHEL,
+        os_flavor=OS_FLAVOR_WIN_CONTAINER_DISK if windows else CBT_OS_FLAVOR,
         label=CBT_ENABLED_LABEL,
         tpm_params=CBT_WINDOWS_PERSISTENT_DEVICE_PARAMS if windows else None,
         efi_params=CBT_WINDOWS_PERSISTENT_DEVICE_PARAMS if windows else None,
