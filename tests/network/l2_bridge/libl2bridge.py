@@ -15,7 +15,6 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler, retry
 
 from libs.net.ip import random_ipv4_address
 from libs.net.vmspec import (
-    IpNotFound,
     VMInterfaceStatusNotFoundError,
     lookup_iface_status,
     lookup_iface_status_ip,
@@ -48,6 +47,10 @@ LOGGER = logging.getLogger(__name__)
 
 
 class GuestInterfaceNotFoundError(Exception):
+    pass
+
+
+class InterfaceIpMismatchError(Exception):
     pass
 
 
@@ -238,7 +241,7 @@ def set_secondary_static_ip_address(
             IPv4Address, lookup_iface_status_ip(vm=vm, iface_name=vmi_interface.name, ip_family=4)
         )
     if hot_plugged_interface_ip != expected_ipv4_address:
-        raise IpNotFound(
+        raise InterfaceIpMismatchError(
             f"Expected IPv4 address {expected_ipv4_address} was not found on "
             f"{vmi_interface.interfaceName} in VM {vm.name} (interface's "
             f"actual IP is {hot_plugged_interface_ip})."
@@ -300,7 +303,7 @@ def _lookup_hotplugged_iface_via_console(
     """
     vmi_iface = _lookup_vmi_interface(vmi=vm.vmi, interface_name=spec_interface_name)
     if not vmi_iface:
-        raise VMInterfaceStatusNotFoundError(f"Interface {spec_interface_name} not in VMI spec of {vm.name}")
+        raise VMInterfaceStatusNotFoundError(vm_name=vm.name, interface_name=spec_interface_name)
 
     LOGGER.warning(
         f"CNV-98660: Guest agent did not report interface {spec_interface_name} on VM {vm.name}, "
@@ -364,7 +367,7 @@ def search_hot_plugged_interface_in_vmi(vm, interface_name):
     try:
         return wait_for_interface_hot_plug_completion(vmi=vm.vmi, interface_name=interface_name)
     except TimeoutExpiredError:
-        raise VMInterfaceStatusNotFoundError(f"Interface {interface_name} not found in VM {vm.name} status")
+        raise VMInterfaceStatusNotFoundError(vm_name=vm.name, interface_name=interface_name)
 
 
 def get_kubemacpool_controller_log(
