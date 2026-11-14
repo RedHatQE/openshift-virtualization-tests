@@ -8,15 +8,13 @@ Markers:
 Preconditions:
     - OVN-K in Local Gateway Mode.
     - Enabled route advertisements in the cluster network resource.
-    - External Source Provider: BGP router (Spine) + L2 and L3 endpoints behind the Spine (see README.md).
+    - Stock OpenPERouter provider with synthetic L2 and L3 endpoints (see README.md).
     - UDN supported namespace.
     - EVPN-enabled CUDN Layer2 (using MAC-VRF (L2) and IP-VRF (L3)) with the same subnet as the external L2 endpoint.
     - BGP EVPN sessions are established between the OCP nodes and the external router.
     - Running target under-test VM with a primary EVPN-enabled CUDN.
     - Running connectivity reference VM with a primary EVPN-enabled CUDN.
 """
-
-from __future__ import annotations
 
 import ipaddress
 from typing import TYPE_CHECKING
@@ -28,8 +26,10 @@ from libs.net.traffic_generator import active_tcp_connections, is_tcp_connection
 from libs.net.vmspec import lookup_primary_network
 from tests.network.bgp.evpn.libevpn import (
     EVPN_CUDN_NET_SEED,
+    EVPN_MAC_VRF_VNI,
     assert_evpn_workloads_connectivity,
     deploy_evpn_l2_endpoint,
+    disable_vm_serial_getty_start_limit,
     evpn_workloads_active_connections,
     teardown_evpn_l2_endpoint,
 )
@@ -200,6 +200,7 @@ def test_connectivity_after_udn_vm_cold_reboot(
     """
     vm_evpn_target.restart(wait=True)
     vm_evpn_target.wait_for_agent_connected()
+    disable_vm_serial_getty_start_limit(vm=vm_evpn_target)
 
     assert_evpn_workloads_connectivity(
         target_vm=vm_evpn_target,
@@ -217,7 +218,7 @@ def test_source_provider_migration(
     external_l3_endpoint,
     vm_source_provider,
     vm_evpn_target,
-    frr_external_pod,
+    openperouter_endpoint_helper_pod,
     subtests,
 ):
     """
@@ -244,16 +245,21 @@ def test_source_provider_migration(
 
     vm_source_provider.start(wait=True)
     vm_source_provider.wait_for_agent_connected()
+    disable_vm_serial_getty_start_limit(vm=vm_source_provider)
 
     new_l2_endpoint = deploy_evpn_l2_endpoint(
-        pod=frr_external_pod.pod,
+        pod=openperouter_endpoint_helper_pod,
         endpoint_ips=[_L2_ENDPOINT_IPV4, _L2_ENDPOINT_IPV6],
+        l2_vni=EVPN_MAC_VRF_VNI,
     )
 
-    assert_evpn_workloads_connectivity(
-        target_vm=vm_evpn_target,
-        ref_vm=vm_source_provider,
-        l2_endpoint=new_l2_endpoint,
-        l3_endpoint=external_l3_endpoint,
-        subtests=subtests,
-    )
+    try:
+        assert_evpn_workloads_connectivity(
+            target_vm=vm_evpn_target,
+            ref_vm=vm_source_provider,
+            l2_endpoint=new_l2_endpoint,
+            l3_endpoint=external_l3_endpoint,
+            subtests=subtests,
+        )
+    finally:
+        teardown_evpn_l2_endpoint(endpoint=new_l2_endpoint)
