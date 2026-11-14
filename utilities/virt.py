@@ -42,7 +42,8 @@ from ocp_resources.virtual_machine_instance_migration import (
     VirtualMachineInstanceMigration,
 )
 from ocp_utilities.exceptions import CommandExecFailed
-from paramiko import ProxyCommandFailure
+from paramiko import ProxyCommandFailure, SSHException
+from pyhelper_utils.exceptions import CommandExecFailed as RemoteCommandExecFailed
 from pyhelper_utils.shell import run_command, run_ssh_commands
 from pytest_testconfig import config as py_config
 from rrmngmnt import Host, ssh, user
@@ -127,6 +128,7 @@ from utilities.storage import (
     get_default_storage_class,
     get_storage_class_dict_from_matrix,
 )
+from utilities.windows import get_windows_os_properties
 
 if TYPE_CHECKING:
     from libs.vm.vm import BaseVirtualMachine
@@ -1767,22 +1769,47 @@ class MissingTemplateVariables(Exception):
         return f"Missing variables {self.var} for template {self.template}"
 
 
-def wait_for_windows_vm(vm, version, timeout=TIMEOUT_25MIN):
-    """
-    Samples Windows VM; wait for it to complete the boot process.
+def wait_for_windows_vm(vm: VirtualMachineForTests, version: str, timeout: int = TIMEOUT_25MIN) -> bool:
+    """Wait until the Windows guest reports the expected OS Caption.
+
+    Args:
+        vm: Windows VM to query through its existing SSH connection.
+        version: Substring to match only against Win32_OperatingSystem.Caption.
+        timeout: Readiness polling budget in seconds. An SSH attempt already in
+            progress may finish after this interval; each query has a one-minute
+            command timeout and a 30-second connection timeout.
+
+    Returns:
+        True once the expected Caption is reported.
+
+    Raises:
+        TimeoutExpiredError: The guest never reported the expected Caption or
+            the sampled query failed with an unexpected exception.
     """
 
     LOGGER.info(f"Windows VM {vm.name} booting up, will attempt to access it up to {round(timeout / 60)} minutes.")
 
+    # Retry guest commands that fail during boot, SSH/connection failures and incomplete JSON.
     sampler = TimeoutSampler(
         wait_timeout=timeout,
         sleep=15,
-        func=vm.ssh_exec.run_command,
-        command=shlex.split("wmic os get Caption /value"),
+        func=get_windows_os_properties,
+        exceptions_dict={RemoteCommandExecFailed: [], SSHException: [], OSError: [], JSONDecodeError: []},
+        ssh_exec=vm.ssh_exec,
     )
-    for sample in sampler:
-        if version in str(sample):
-            return True
+    timeout_message = f"Windows VM {vm.name} did not report Caption containing {version!r}"
+    try:
+        for sample in sampler:
+            if version in (sample["Caption"] or ""):
+                return True
+    except TimeoutExpiredError as timeout_error:
+        raise TimeoutExpiredError(
+            value=f"{timeout_message}. {timeout_error.value}",
+            last_exp=timeout_error.last_exp,
+            elapsed_time=timeout_error.elapsed_time,
+        ) from timeout_error
+    # TimeoutSampler raises on exhaustion; guard iterators that end without a match.
+    raise TimeoutExpiredError(value=timeout_message)
 
 
 # TODO: Remove once bug 1945703 is fixed

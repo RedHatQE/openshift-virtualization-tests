@@ -2,15 +2,19 @@
 
 import importlib
 import sys
+from json import JSONDecodeError
+from unittest.mock import MagicMock, patch
+
+from paramiko import SSHException
+from pyhelper_utils.exceptions import CommandExecFailed
+from pytest import mark, raises
+from timeout_sampler import TimeoutExpiredError
 
 # conftest.py mocks utilities.virt; clear and reload the real module for these tests.
 if "utilities.virt" in sys.modules:
     del sys.modules["utilities.virt"]
 
-import utilities.virt
-
-importlib.reload(utilities.virt)
-
+virt = importlib.import_module("utilities.virt")
 from utilities.constants.virt import (
     DESCHEDULER_PREFER_NO_EVICTION_ANNOTATION,
     ES_LIVE_MIGRATE_IF_POSSIBLE,
@@ -106,3 +110,92 @@ class TestVirtualMachineForTestsLabel:
         assert vm.body["metadata"]["labels"] == {"existing": "true"}
         assert "name" not in vm.body["metadata"]
         assert vm.res["metadata"]["name"] == "test-vm"
+
+
+@mark.unit
+class TestWaitForWindowsVm:
+    @mark.parametrize("version", ["2019", "2025"])
+    def test_waits_for_expected_caption(self, mock_vm: MagicMock, version: str) -> None:
+        samples = iter([
+            {"Caption": None},
+            {"Caption": ""},
+            {"Caption": "Microsoft Windows Server 2016 Standard", "CSName": f"server-{version}"},
+            {"Caption": f"Microsoft Windows Server {version} Standard"},
+        ])
+        with patch.object(target=virt, attribute="get_windows_os_properties") as cim_query:
+            with patch.object(target=virt, attribute="TimeoutSampler", return_value=samples) as sampler:
+                result = virt.wait_for_windows_vm(vm=mock_vm, version=version, timeout=30)
+
+        assert result is True, "Expected Windows version was not recognized"
+        with raises(StopIteration):
+            next(samples)
+        sampler.assert_called_once_with(
+            wait_timeout=30,
+            sleep=15,
+            func=cim_query,
+            exceptions_dict={CommandExecFailed: [], SSHException: [], OSError: [], JSONDecodeError: []},
+            ssh_exec=mock_vm.ssh_exec,
+        )
+
+    @mark.parametrize(
+        "error",
+        [
+            SSHException("Guest SSH is starting"),
+            OSError("Connection refused"),
+            CommandExecFailed(name="CIM query", err="Guest is starting"),
+            JSONDecodeError(msg="Incomplete output", doc="", pos=0),
+        ],
+    )
+    def test_retries_transient_query_failures(self, mock_vm: MagicMock, error: Exception) -> None:
+        with (
+            patch.object(
+                target=virt,
+                attribute="get_windows_os_properties",
+                autospec=True,
+                side_effect=[error, {"Caption": "Microsoft Windows Server 2025"}],
+            ) as query,
+            patch("time.sleep"),
+        ):
+            assert virt.wait_for_windows_vm(vm=mock_vm, version="2025", timeout=1) is True, (
+                "Transient failure was not retried"
+            )
+        assert query.call_count == 2, "Expected a single retry before the guest became ready"
+
+    @mark.parametrize("error", [ValueError("Unexpected format"), TypeError("Invalid query implementation")])
+    def test_stops_on_unexpected_query_failure(self, mock_vm: MagicMock, error: Exception) -> None:
+        with patch.object(
+            target=virt, attribute="get_windows_os_properties", autospec=True, side_effect=error
+        ) as query:
+            with raises(TimeoutExpiredError) as failure:
+                virt.wait_for_windows_vm(vm=mock_vm, version="2025", timeout=1)
+        assert failure.value.last_exp is error, "Readiness failure lost the original exception"
+        query.assert_called_once()
+
+    @mark.parametrize("sample,error_type", [({}, KeyError), (None, TypeError), ([], TypeError)])
+    def test_rejects_malformed_os_properties(
+        self, mock_vm: MagicMock, sample: object, error_type: type[Exception]
+    ) -> None:
+        with patch.object(target=virt, attribute="TimeoutSampler", return_value=iter([sample])):
+            with raises(error_type):
+                virt.wait_for_windows_vm(vm=mock_vm, version="2025", timeout=1)
+
+    @mark.parametrize("last_exception", [None, OSError("Guest SSH unavailable")])
+    def test_propagates_readiness_timeout(self, mock_vm: MagicMock, last_exception: Exception | None) -> None:
+        samples = MagicMock()
+        original_error = TimeoutExpiredError(value="Windows OS unavailable", last_exp=last_exception, elapsed_time=30)
+        samples.__iter__.side_effect = original_error
+        with patch.object(target=virt, attribute="TimeoutSampler", return_value=samples):
+            with raises(TimeoutExpiredError) as failure:
+                virt.wait_for_windows_vm(vm=mock_vm, version="2025", timeout=30)
+        assert mock_vm.name in failure.value.value and "2025" in failure.value.value, (
+            "Windows readiness context was lost"
+        )
+        assert original_error.value in failure.value.value, "Sampler diagnostics were lost"
+        assert failure.value.__cause__ is original_error, "Original sampler failure was not chained"
+        assert failure.value.last_exp is last_exception, "Last query exception was lost"
+        assert failure.value.elapsed_time == 30, "Elapsed readiness wait was lost"
+
+    def test_reports_exhausted_iterator(self, mock_vm: MagicMock) -> None:
+        with patch.object(target=virt, attribute="TimeoutSampler", return_value=iter([])):
+            with raises(TimeoutExpiredError, match="did not report Caption containing '2025'"):
+                virt.wait_for_windows_vm(vm=mock_vm, version="2025", timeout=30)
