@@ -149,14 +149,18 @@ To see which layers a target picks up, resolve it directly. This prints `tests/s
 directories:
 
 ```python
-import os, sys; sys.path.insert(0, "config")
+import os, sys
+
+sys.path.insert(0, "config")
 import layers, validate
+
 repo = "/path/to/openshift-virtualization-tests"
 repos = validate.load_yaml("config/projects/cnv/repositories.yaml")
 schema = validate.load_yaml("config/_schema.yaml")
 targets = ["primary_repo:tests/storage/test_probe.py"]
-found = layers.discover(repos, targets, {**os.environ, "SOURCE_REPO_PATH": repo},
-                        schema["config_layers"]["default_order"])
+found = layers.discover(
+    repos, targets, {**os.environ, "SOURCE_REPO_PATH": repo}, schema["config_layers"]["default_order"]
+)
 print([d.relative_to(repo) for _, _, _, d in found])
 ```
 
