@@ -1,0 +1,9 @@
+# Tier 3 for the Observability team.
+#
+# Shared shape in tests/.qualityflow/tier3.yaml; this file adds only what
+# differs.
+description: >-
+  Observability scopes outside standard CI: recording rules and runbook
+  coverage across operators, metric collection over long windows.
+reference_tests:
+  - "https://github.com/RedHatQE/openshift-virtualization-tests/blob/main/tests/observability/metrics/test_general_metrics.py"

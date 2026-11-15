@@ -1,0 +1,10 @@
+# Tier 2 for the Install and upgrade (IUO) team.
+#
+# Shared shape in tests/.qualityflow/tier2.yaml; this file adds only what
+# differs.
+description: >-
+  Install and upgrade workflows end to end: upgrade the operator with
+  workloads running, and see the certificate or TLS profile change the way a
+  user would.
+reference_tests:
+  - "https://github.com/RedHatQE/openshift-virtualization-tests/blob/main/tests/install_upgrade_operators/cert_renewal/test_cert_renewal.py"

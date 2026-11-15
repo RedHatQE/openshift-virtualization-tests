@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/redhat-community-ai-tools/qualityflow/main/schemas/qualityflow.schema.json
+# Network team. Only what this directory adds to tests/.qualityflow/.
+#
+# decorator_mappings, where a team has one, is keyed by the SIG a scenario in
+# this directory carries (its owning_sig) and names the decorator the upstream
+# Go test carries: QualityFlow derives that lookup by dropping the "sig-" prefix
+# from the keys.
+version: 1
+project_id: "cnv"
+# Recorded for reviewers: nothing reads sig_mappings today. What routes
+# generated code is package_name_rules in this directory's
+# code_generation_config.yaml; keep the two in step.
+sig_mappings:
+  sig-network: "network"
+
+decorator_mappings:
+  sig-network: "SigNetwork"

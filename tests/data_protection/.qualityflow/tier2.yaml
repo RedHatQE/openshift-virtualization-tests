@@ -1,0 +1,9 @@
+# Tier 2 for the Data protection team.
+#
+# Shared shape in tests/.qualityflow/tier2.yaml; this file adds only what
+# differs.
+description: >-
+  Backup and restore of a VM workload end to end with OADP: take the backup,
+  remove the workload, restore it, and check the guest's data.
+reference_tests:
+  - "https://github.com/RedHatQE/openshift-virtualization-tests/blob/main/tests/data_protection/oadp/test_velero_backup_hooks.py"

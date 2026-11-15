@@ -1,0 +1,9 @@
+# Tier 3 for the Virtualization team.
+#
+# Shared shape in tests/.qualityflow/tier3.yaml; this file adds only what
+# differs.
+description: >-
+  VM scopes outside standard CI: Windows guests, NUMA and hugepages, OOM and
+  descheduler behaviour, long upgrade paths.
+reference_tests:
+  - "https://github.com/RedHatQE/openshift-virtualization-tests/blob/main/tests/virt/node/general/test_oom.py"

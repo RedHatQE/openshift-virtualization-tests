@@ -1,0 +1,13 @@
+# Tier 1 for the Infrastructure team.
+#
+# Shared shape in tests/.qualityflow/tier1.yaml; this file adds only what
+# differs.
+description: >-
+  One infrastructure feature in isolation: a golden image, a common template or
+  an instance type, used to boot a VM.
+# kubevirt/kubevirt has a tests/infrastructure package, but it covers operator
+# certificates, CRDs and node-labeller rather than the golden images, templates
+# and instance types this team's scenarios are about, so no Go home is recorded.
+# Both keys are unset explicitly rather than inherited from a lower layer.
+default_package: null
+reference_tests: null

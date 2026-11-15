@@ -1,0 +1,9 @@
+# Tier 3 for the Data protection team.
+#
+# Shared shape in tests/.qualityflow/tier3.yaml; this file adds only what
+# differs.
+description: >-
+  Data protection scopes with special infrastructure: Windows guests, object
+  storage backends, backup windows too long for a CI lane.
+reference_tests:
+  - "https://github.com/RedHatQE/openshift-virtualization-tests/blob/main/tests/data_protection/oadp/test_velero.py"

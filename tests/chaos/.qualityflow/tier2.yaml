@@ -1,0 +1,11 @@
+# Tier 2 for the Chaos team.
+#
+# Shared shape in tests/.qualityflow/tier2.yaml; this file adds only what
+# differs.
+description: >-
+  Failure injection with a workload running: the user's VM survives the injected
+  fault, or comes back, and the cluster reports the state it should.
+# Unset explicitly: every chaos test carries pytest.mark.chaos, which
+# conftest.py lists in EXCLUDE_MARKER_FROM_TIER2_MARKER, so no chaos module
+# collects as tier2.
+reference_tests: null

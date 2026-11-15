@@ -1,0 +1,9 @@
+# Tier 2 for the Virtualization team.
+#
+# Shared shape in tests/.qualityflow/tier2.yaml; this file adds only what
+# differs.
+description: >-
+  Complete VM workflows: the scenario's template or instance type, guest
+  agent behaviour, a migration, and the workload still running afterwards.
+reference_tests:
+  - "https://github.com/RedHatQE/openshift-virtualization-tests/blob/main/tests/virt/cluster/aaq/test_arq.py"

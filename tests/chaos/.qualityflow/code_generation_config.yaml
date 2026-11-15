@@ -1,0 +1,6 @@
+# SIG -> the package this directory's generated tests go in. Read in tier mode
+# (the mode tests/.qualityflow/ sets), which is what routes them into
+# tests/chaos/.
+package_name_rules:
+  sig-chaos: "chaos"
+  sig-virt: "chaos"

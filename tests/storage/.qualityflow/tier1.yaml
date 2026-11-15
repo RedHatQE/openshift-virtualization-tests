@@ -1,0 +1,10 @@
+# Tier 1 for the Storage team.
+#
+# Shared shape in tests/.qualityflow/tier1.yaml; this file adds only what
+# differs.
+description: >-
+  Go/Ginkgo tests for one storage feature in kubevirt/kubevirt, run against
+  a cluster with OpenShift Virtualization installed.
+default_package: "storage"
+reference_tests:
+  - "https://github.com/kubevirt/kubevirt/blob/main/tests/storage/snapshot.go"

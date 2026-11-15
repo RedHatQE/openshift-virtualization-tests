@@ -1,0 +1,7 @@
+# SIG -> the package this directory's generated tests would go in, read in
+# tier mode.
+# Dormant: every tier here is disabled, so nothing is generated or routed.
+# Kept so that enabling a tier later needs no new mapping.
+package_name_rules:
+  sig-scale: "scale"
+  sig-virt: "scale"

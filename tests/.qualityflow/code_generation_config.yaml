@@ -1,0 +1,12 @@
+# Language and framework shared by every team directory. In tier mode
+# std-generator reads these from here instead of detecting them from the
+# checkout.
+#
+# Deliberately absent: package_name_rules (per team), filename_prefix (its
+# per-language default already lives in config/_defaults.yaml and is not a layer
+# key), and any per-tier block (those belong in tier*.yaml).
+language: "python"
+framework: "pytest"
+imports:
+  framework:
+    - "pytest"

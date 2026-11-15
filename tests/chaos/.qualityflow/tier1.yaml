@@ -1,0 +1,12 @@
+# Tier 1 for the Chaos team.
+#
+# Shared shape in tests/.qualityflow/tier1.yaml; this file adds only what
+# differs.
+description: >-
+  One chaos scenario in isolation: an injected fault against a running workload,
+  on a single failure domain.
+# kubevirt/kubevirt has no chaos test package, so no Go home is recorded. Both
+# keys are unset explicitly rather than inherited from whatever a lower layer
+# carries: today none does, and null keeps it that way if one ever does.
+default_package: null
+reference_tests: null

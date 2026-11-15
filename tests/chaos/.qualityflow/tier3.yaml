@@ -1,0 +1,9 @@
+# Tier 3 for the Chaos team.
+#
+# Shared shape in tests/.qualityflow/tier3.yaml; this file adds only what
+# differs.
+description: >-
+  Chaos scopes outside standard CI: long fault windows, OADP under injected
+  failures, multi-node fault matrices.
+reference_tests:
+  - "https://github.com/RedHatQE/openshift-virtualization-tests/blob/main/tests/chaos/oadp/test_oadp.py"

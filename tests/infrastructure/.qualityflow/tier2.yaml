@@ -1,0 +1,9 @@
+# Tier 2 for the Infrastructure team.
+#
+# Shared shape in tests/.qualityflow/tier2.yaml; this file adds only what
+# differs.
+description: >-
+  The cluster facilities a user consumes: golden images, common templates
+  and instance types actually usable to boot a VM.
+reference_tests:
+  - "https://github.com/RedHatQE/openshift-virtualization-tests/blob/main/tests/infrastructure/golden_images/test_common_templates_data_volumes.py"

@@ -1,0 +1,10 @@
+# Tier 3 for the Network team.
+#
+# Shared shape in tests/.qualityflow/tier3.yaml; this file adds only what
+# differs.
+description: >-
+  Network scopes whose cost keeps them out of standard CI: SR-IOV and
+  DPDK/OVS binding plugins, L2 bridge and localnet with traffic measurement,
+  multi-NIC matrices.
+reference_tests:
+  - "https://github.com/RedHatQE/openshift-virtualization-tests/blob/main/tests/network/sriov/test_sriov.py"

@@ -1,0 +1,28 @@
+# Tier 2: the Python tests this repository hosts, and the only tier that
+# generates.
+#
+# conftest.py adds the team marker and the tier2 marker from the test's
+# directory (TEAM_MARKERS, add_tier2_marker), so a generated test must not
+# repeat them. tests/scale/ is the exception: it has no TEAM_MARKERS entry and
+# `scale` is in EXCLUDE_MARKER_FROM_TIER2_MARKER, so a test there carries its
+# own marker.
+#
+# A team adds `description` and, where a genuine Tier 2 exemplar exists in its
+# directory, `reference_tests`. An exemplar has to be able to collect as tier2:
+# a module carrying a marker conftest.py excludes from tier2 is not one, and the
+# team then sets `reference_tests: null` to say "none" explicitly. Omitting the
+# key would instead defer to whatever the central Tier 2 config carries, now or
+# later.
+enabled: true
+tier: "Tier 2"
+display_name: "End-to-End"
+language: "python"
+framework: "pytest"
+reference_guide: "https://github.com/RedHatQE/openshift-virtualization-tests/blob/main/docs/SOFTWARE_TEST_DESCRIPTION.md"
+imports:
+  framework:
+    - "pytest"
+test_patterns:
+  function_prefix: "test_"
+  class_prefix: "Test"
+  assertion_style: "assert"

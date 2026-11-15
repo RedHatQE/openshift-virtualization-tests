@@ -1,0 +1,9 @@
+# Tier 2 for the Network team.
+#
+# Shared shape in tests/.qualityflow/tier2.yaml; this file adds only what
+# differs.
+description: >-
+  A VM with the scenario's network binding and CNI together: connectivity,
+  the interface the guest sees, and live migration with traffic on it.
+reference_tests:
+  - "https://github.com/RedHatQE/openshift-virtualization-tests/blob/main/tests/network/bond/test_bond_modes.py"

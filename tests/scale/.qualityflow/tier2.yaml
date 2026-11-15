@@ -1,0 +1,18 @@
+# Tier 2 for the Scale team: a label only, like this team's Tier 1 and Tier 3.
+#
+# enabled: false because a generated test here cannot be given the marker it
+# needs. `scale` is in conftest.py's EXCLUDE_MARKER_FROM_TIER2_MARKER, so a test
+# without @pytest.mark.scale is stamped tier2, and a density benchmark would
+# then run in the standard tier2 lane. Nothing that reaches generated code can
+# add that marker: tier*.yaml `markers` has no consumer, and stub_marks marks
+# the docstring-only stub rather than the implemented test.
+#
+# project.yaml sets tier1_tests and tier2_tests false, so /generate-tests stops
+# with "No test generation targets configured". stub-generator reads no
+# generation toggle, so /std-builder would still report "No enabled language
+# configs found" for a target here.
+enabled: false
+description: >-
+  Scale behaviour a user sees: the benchmark run at the cluster's own size,
+  reporting density and the limits it hit.
+reference_tests: null

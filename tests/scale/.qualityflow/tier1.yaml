@@ -1,0 +1,11 @@
+# Tier 1 for the Scale team.
+#
+# Shared shape in tests/.qualityflow/tier1.yaml; this file adds only what
+# differs.
+enabled: false
+description: >-
+  Go/Ginkgo tests for one scale feature in kubevirt/kubevirt, run against a
+  cluster with OpenShift Virtualization installed.
+default_package: "performance"
+reference_tests:
+  - "https://github.com/kubevirt/kubevirt/blob/main/tests/performance/density.go"

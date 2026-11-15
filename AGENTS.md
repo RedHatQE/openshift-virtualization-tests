@@ -148,6 +148,7 @@ and placeholder rules above for staged tests; its exact detection semantics
   - **Tier marker semantics**: tier2 = customer use case tests (default), tier3 = complex/hardware/platform-specific/time-consuming tests. Assign the correct tier based on what the test validates, not its complexity.
   - **`tier2` is implicit** — added automatically to all tests that don't have an exclusion marker (see `EXCLUDE_MARKER_FROM_TIER2_MARKER` in `conftest.py` for the full list). Do NOT add `@pytest.mark.tier2` explicitly.
   - **Team markers are implicit** — `network`, `storage`, `virt`, `iuo`, `observability`, `infrastructure`, `data_protection`, and `chaos` are added automatically based on the test's directory location. Do NOT add them explicitly.
+  - **`scale` is NOT implicit** — `tests/scale/` has no entry in `conftest.py`'s `TEAM_MARKERS`, and `scale` is itself a tier2-exclusion marker. A test under `tests/scale/` MUST carry `@pytest.mark.scale` explicitly.
   - **`gating` marker** — marks tier2 tests that are part of the gating job. Apply when a test should block release promotion.
   - **`special_infra` marker REQUIRED for special hardware/configuration** — new tests that require non-standard cluster capabilities MUST include `@pytest.mark.special_infra` at module (`pytestmark`), class, or test level, in addition to the specific requirement marker. See `pytest.ini` marker definitions. This applies when the test uses any of:
     - **Hardware requirements** (`pytest.ini`): `gpu`, `sriov`, `bgp`, `ibm_bare_metal`
@@ -422,6 +423,7 @@ Per-domain documentation may also live under the relevant `tests/<domain>/` dire
 - [`docs/CODING_AND_STYLE_GUIDE.md`](docs/CODING_AND_STYLE_GUIDE.md) — Detailed coding and style conventions
 - [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) — Contribution guidelines
 - [`tests/network/README.md`](tests/network/README.md) — Network domain knowledge: terminology, naming conventions and functionality.
+- [`tests/.qualityflow/README.md`](tests/.qualityflow/README.md) — QualityFlow per-team generation config: precedence, trust boundary, tiers, how to add a team
 - [`docs/AI_CONTRIBUTION_POLICY.md`](docs/AI_CONTRIBUTION_POLICY.md) — AI contribution disclosure requirements
 - [`docs/MAINTAINER_GUIDELINES.md`](docs/MAINTAINER_GUIDELINES.md) — Maintainer/approver progression guidelines
 - [`docs/ARCHITECTURE_SUPPORT.md`](docs/ARCHITECTURE_SUPPORT.md) — Multi-architecture support documentation

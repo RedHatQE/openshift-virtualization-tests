@@ -1,0 +1,14 @@
+# The central components.yaml maps the eight directories conftest.py's
+# TEAM_MARKERS covers. tests/scale/ is not one of them: it has a folder and an
+# OWNERS file but no team marker, and `scale` is a test-type marker instead.
+# Tier mode resolves a scenario's target directory from component_package_map
+# first, so without this entry nothing maps this directory.
+#
+# Stopgap: this belongs in the central cnv component_package_map, where the
+# other eight teams' entries live. It is here because that file is not part of
+# this change set; see this directory's README.md.
+component_package_map:
+  scale:
+    package_path: "tests/scale/"
+path_to_feature:
+  "tests/scale/": "Scale"

@@ -1,0 +1,10 @@
+# Tier 3 for the Scale team.
+#
+# Shared shape in tests/.qualityflow/tier3.yaml; this file adds only what
+# differs.
+enabled: false
+description: >-
+  The same benchmark at larger N or over a longer window than a CI lane allows.
+# Unset explicitly: nothing in this directory is an exemplar for this tier, and
+# null removes the key instead of replacing it with an empty list.
+reference_tests: null

@@ -1,0 +1,15 @@
+# Tier 2 for the Storage team.
+#
+# Shared shape in tests/.qualityflow/tier2.yaml; this file adds only what
+# differs.
+description: >-
+  A VM whose disk comes from the scenario's source, plus hotplug, resize and
+  snapshot in one workflow, ending in data the guest can read.
+# tests/storage/snapshots/test_snapshots.py: eleven of its fifteen tests are
+# snapshot/restore workflows that collect as tier2, which is the shape this tier
+# wants. The other four carry @pytest.mark.tier3 (Windows guests and the
+# multi-disk performance cases), are excluded from tier2 by conftest.py, and are
+# not the shape to imitate. Chosen over tests/storage/test_cdi_certificate.py,
+# which shells out via subprocess, against this repository's AGENTS.md rule.
+reference_tests:
+  - "https://github.com/RedHatQE/openshift-virtualization-tests/blob/main/tests/storage/snapshots/test_snapshots.py"

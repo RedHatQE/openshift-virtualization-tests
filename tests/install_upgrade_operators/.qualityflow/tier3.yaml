@@ -1,0 +1,9 @@
+# Tier 3 for the Install and upgrade (IUO) team.
+#
+# Shared shape in tests/.qualityflow/tier3.yaml; this file adds only what
+# differs.
+description: >-
+  Install/upgrade scopes needing dedicated cycles: multi-operator upgrades,
+  disconnected installs, upgrade windows longer than a CI lane.
+reference_tests:
+  - "https://github.com/RedHatQE/openshift-virtualization-tests/blob/main/tests/install_upgrade_operators/crypto_policy/test_tls_profile_propagation.py"

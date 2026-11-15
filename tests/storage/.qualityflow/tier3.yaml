@@ -1,0 +1,9 @@
+# Tier 3 for the Storage team.
+#
+# Shared shape in tests/.qualityflow/tier3.yaml; this file adds only what
+# differs.
+description: >-
+  Storage scopes outside standard CI: non-default backends (LVMS, HPP, OCI),
+  RWX and multi-node configurations, long-running volume operations.
+reference_tests:
+  - "https://github.com/RedHatQE/openshift-virtualization-tests/blob/main/tests/storage/cdi_clone/test_clone.py"

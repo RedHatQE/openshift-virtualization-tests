@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/redhat-community-ai-tools/qualityflow/main/schemas/qualityflow.schema.json
+# QualityFlow config shared by every CNV team directory under tests/.
+#
+# QualityFlow reads the .qualityflow/ of each directory between a run's target
+# and the checkout root (redhat-community-ai-tools/qualityflow#199) and merges
+# them deepest last: central config/projects/cnv, then this directory, then the
+# team's own under tests/<team>/.
+#
+# What a layer cannot say: display_name, review_sla, model_policy, stakeholders,
+# repositories.yaml, jira.yaml, github.yaml, pr_autofix. Only the files in
+# config/_schema.yaml `config_layers`, and in each the keys its own validation
+# spec allows, are accepted; anything else fails the run instead of being
+# ignored.
+#
+# Note the reach: this layer applies to everything under tests/, including
+# directories that are not one of the nine teams (tests/deprecated_api/,
+# tests/post_test_alerts/ and anything added later).
+version: 1
+project_id: "cnv"
+
+feature_toggles:
+  # Tier mode, so each team's package_name_rules decide where its generated
+  # tests land. That key is read in tier mode only, and per-team routing is the
+  # reason these layers exist.
+  test_strategy: "tier"

@@ -1,0 +1,39 @@
+# Tier 1: the Go/Ginkgo functional tests. A label only in this repository.
+#
+# enabled: false is not a temporary state. /generate-tests resolves a Go
+# generation target to primary_repo, which is this Python checkout, so writing
+# kubevirt-importing Go here would be wrong.
+#
+# The file still earns its place: tier-classifier is given every tier*.yaml to
+# build the list of available tiers, not only the enabled ones (that is how its
+# rules read), so this file is what keeps [Tier 1] a possible label on an STP
+# scenario for these directories. If that ever changes upstream, [Tier 1] stops
+# being offered here and this file can go.
+#
+# Consequence, by design: a Tier 1 scenario produces no stub and no test.
+# stub-generator reports "N scenarios have no matching language config (tier:
+# Tier 1)" and drops them. Expected output, not a bug to chase.
+#
+# A team adds `description` and, where an upstream Go home exists,
+# `default_package` and `reference_tests`. Where none exists, it sets both keys
+# to null so the file records "none" rather than deferring to the central Tier 1
+# config.
+enabled: false
+tier: "Tier 1"
+display_name: "Functional"
+language: "go"
+framework: "ginkgo-v2"
+build_tags:
+  - "functional"
+reference_guide: "https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/docs/testing-tiers.md"
+imports:
+  dot_imports:
+    - "github.com/onsi/ginkgo/v2"
+    - "github.com/onsi/gomega"
+  project:
+    - "kubevirt.io/kubevirt/tests/decorators"
+    - "kubevirt.io/kubevirt/tests/framework/kubevirt"
+    - "kubevirt.io/kubevirt/tests/testsuite"
+test_patterns:
+  function_prefix: "It"
+  assertion_style: "gomega"

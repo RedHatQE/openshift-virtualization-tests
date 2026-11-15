@@ -1,0 +1,9 @@
+# Tier 2 for the Observability team.
+#
+# Shared shape in tests/.qualityflow/tier2.yaml; this file adds only what
+# differs.
+description: >-
+  The metrics and alerts a user acts on: the value a documented metric
+  reports for a running VM, and the alert that should fire for it.
+reference_tests:
+  - "https://github.com/RedHatQE/openshift-virtualization-tests/blob/main/tests/observability/runbook_url/test_runbook_url.py"
