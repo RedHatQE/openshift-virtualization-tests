@@ -671,6 +671,21 @@ def write_file(vm, filename, content, stop_vm=True):
         vm.stop(wait=True)
 
 
+def write_file_windows_vm(vm: "VirtualMachineForTests", file_path: str, content: str) -> None:
+    cmd = shlex.split(f'powershell -command "\\"{content}\\" | Out-File -FilePath {file_path} -Append"')
+    run_ssh_commands(host=vm.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC)
+
+
+def verify_file_in_windows_vm(
+    windows_vm: "VirtualMachineForTests", file_name_with_path: str, file_content: str
+) -> None:
+    cmd = shlex.split(f'powershell -command "Get-Content {file_name_with_path}"')
+    out = run_ssh_commands(host=windows_vm.ssh_exec, commands=cmd, wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC)[
+        0
+    ].strip()
+    assert out.strip() == file_content, f"'{out}' does not equal '{file_content}'"
+
+
 def write_file_via_ssh(vm: "VirtualMachineForTests", filename: str, content: str) -> None:
     """
     Write content to a file in VM using SSH connection with retry.
