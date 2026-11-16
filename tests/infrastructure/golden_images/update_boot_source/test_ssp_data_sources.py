@@ -166,8 +166,10 @@ def update_data_source(data_source):
         }
     ):
         log_data_source_state(data_source=data_source, when="after-dummy-patch")
-        yield data_source
-        log_data_source_state(data_source=data_source, when="before-resource-editor-restore")
+        try:
+            yield data_source
+        finally:
+            log_data_source_state(data_source=data_source, when="before-resource-editor-restore")
 
 
 @pytest.fixture()
