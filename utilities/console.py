@@ -1,19 +1,19 @@
 import logging
 import os
+from typing import Any
 
 import pexpect
 from ocp_resources.virtual_machine import VirtualMachine
 from timeout_sampler import TimeoutSampler, retry
 
-from utilities.constants import (
-    TIMEOUT_5MIN,
-    TIMEOUT_10SEC,
-    TIMEOUT_30SEC,
-    VIRTCTL,
-)
+from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5MIN, TIMEOUT_10SEC, TIMEOUT_30SEC
+from utilities.constants.virt import VIRTCTL
 from utilities.data_collector import get_data_collector_base_directory
 
 LOGGER = logging.getLogger(__name__)
+
+# A trailing space is required. A bare "#" also matches kernel banners such as "#1 SMP".
+DEFAULT_SHELL_PROMPT = [r"# ", r"\$ "]
 
 
 class Console(object):
@@ -23,6 +23,7 @@ class Console(object):
         username: str | None = None,
         password: str | None = None,
         timeout: int = TIMEOUT_30SEC,
+        login_timeout: int = TIMEOUT_2MIN,
         prompt: str | list[str] | None = None,
         kubeconfig: str | None = None,
     ) -> None:
@@ -33,8 +34,10 @@ class Console(object):
             vm: VM resource
             username: VM username
             password: VM password
-            timeout: Connection timeout in seconds
-            prompt: Shell prompt pattern(s) to expect
+            timeout: Command timeout in seconds.
+            login_timeout: Seconds to wait for the login or an existing shell prompt. Defaults to 2 minutes.
+            prompt: Shell prompt regex or regex patterns to expect. Defaults to ``r"# "`` and ``r"\\$ "``.
+                A trailing space avoids matching kernel banners such as ``#1 SMP``.
             kubeconfig: Path to kubeconfig file for remote cluster access
 
         Examples:
@@ -58,23 +61,38 @@ class Console(object):
             password or getattr(self.vm, "login_params", {}).get("password") or self.vm.password  # type: ignore[attr-defined]
         )
         self.timeout = timeout
+        self.login_timeout = login_timeout
         self.child = None
         self.login_prompt = "login:"
-        self.prompt = prompt if prompt else [r"#", r"\$"]
+        self.prompt = prompt if prompt else list(DEFAULT_SHELL_PROMPT)
         self.kubeconfig = kubeconfig
         self.cmd = self._generate_cmd()
         self.base_dir = get_data_collector_base_directory()
 
-    @retry(wait_timeout=TIMEOUT_5MIN, sleep=TIMEOUT_10SEC)
+    @retry(
+        wait_timeout=TIMEOUT_5MIN,
+        sleep=TIMEOUT_10SEC,
+        exceptions_dict={
+            pexpect.exceptions.EOF: [],
+            OSError: [],
+        },
+    )
     def connect(self):
+        """
+        Open the virtctl console and log in.
+
+        A missing login prompt fails once. Retrying it used to hide a normal boot behind an error.
+        EOF and OSError still retry while virtctl console is not up yet.
+        """
         LOGGER.info(f"Connect to {self.vm.name} console")
         self.console_eof_sampler(func=pexpect.spawn, command=self.cmd, timeout=self.timeout)
 
         try:
             self._connect()
-        except Exception:
+        except pexpect.exceptions.ExceptionPexpect, OSError:
             LOGGER.exception(f"Failed to connect to {self.vm.name} console.")
-            self.child.close()
+            if self.child is not None:
+                self.child.close()
             raise
 
         return self.child
@@ -82,9 +100,9 @@ class Console(object):
     def _connect(self):
         self.child.send("\n\n")
         if self.username:
-            # Wait for either "login:" or a shell prompt (e.g., "$" or "#")
+            # Wait for either "login:" or a shell prompt (e.g., "$ " or "# ").
             patterns = [self.login_prompt] + (self.prompt if isinstance(self.prompt, list) else [self.prompt])
-            matched_index = self.child.expect(patterns)
+            matched_index = self.child.expect(patterns, timeout=self.login_timeout)
 
             # Index 0 = login prompt, other indices = shell prompt
             if matched_index == 0:
@@ -101,7 +119,7 @@ class Console(object):
                 return
 
         LOGGER.info(f"{self.vm.name}: waiting for terminal prompt '{self.prompt}'")
-        self.child.expect(self.prompt)
+        self.child.expect(self.prompt, timeout=self.login_timeout)
         LOGGER.info(f"{self.vm.name}: Got prompt {self.prompt}")
 
     def disconnect(self):
@@ -118,7 +136,7 @@ class Console(object):
         finally:
             self.child.close()
 
-    def console_eof_sampler(self, func, command, timeout):
+    def console_eof_sampler(self, func: Any, command: str, timeout: int) -> None:
         sampler = TimeoutSampler(
             wait_timeout=TIMEOUT_5MIN,
             sleep=5,
@@ -134,7 +152,7 @@ class Console(object):
                 self.child.logfile = open(f"{self.base_dir}/{self.vm.name}.pexpect.log", "a")
                 break
 
-    def _generate_cmd(self):
+    def _generate_cmd(self) -> str:
         virtctl_str = os.environ.get(VIRTCTL.upper(), VIRTCTL)
         cmd = f"{virtctl_str} console {self.vm.name}"
         if self.vm.namespace:
@@ -149,8 +167,15 @@ class Console(object):
         """
         return self.connect()
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """
-        Logout from shell
+        Logout from shell.
+
+        A disconnect failure must not replace an exception raised in the with-block.
         """
-        self.disconnect()
+        try:
+            self.disconnect()
+        except pexpect.exceptions.ExceptionPexpect, OSError:
+            if exc_type is None:
+                raise
+            LOGGER.warning(f"Failed to disconnect from {self.vm.name} console.", exc_info=True)
