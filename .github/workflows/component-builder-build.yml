@@ -66,6 +66,7 @@ jobs:
       CPU_ARCH: ${{ matrix.arch }}
       FULL_EMULATION: "true"
       DEBIAN_FRONTEND: noninteractive
+      BUILD_RUN_ID: ${{ github.run_id }}
     steps:
       - name: Check out code
         uses: actions/checkout@v7
@@ -252,8 +253,9 @@ jobs:
         if: ${{ inputs.push_image }}
         env:
           local_repository: "localhost/fedora"
-          arch_tag: "${{ env.FEDORA_VERSION }}-${{ env.CPU_ARCH }}"
+          local_tag: "${{ env.FEDORA_VERSION }}-${{ env.CPU_ARCH }}"
+          remote_tag: "${{ env.FEDORA_VERSION }}-${{ env.CPU_ARCH }}-run-${{ env.BUILD_RUN_ID }}"
           REMOTE_REPOSITORY: ${{ inputs.remote_repository }}
         run: |
-          podman tag "${local_repository}":"${arch_tag}" "${REMOTE_REPOSITORY}":"${arch_tag}"
-          podman push "${REMOTE_REPOSITORY}":"${arch_tag}"
+          podman tag "${local_repository}":"${local_tag}" "${REMOTE_REPOSITORY}":"${remote_tag}"
+          podman push "${REMOTE_REPOSITORY}":"${remote_tag}"

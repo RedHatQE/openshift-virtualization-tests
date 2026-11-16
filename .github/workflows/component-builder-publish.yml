@@ -55,6 +55,7 @@ jobs:
     env:
       # Derived from prepare job output — stays in sync with the matrix automatically
       ARCHITECTURES: ${{ needs.prepare.outputs.architectures }}
+      BUILD_RUN_ID: ${{ github.run_id }}
     steps:
       - name: Logging to quay.io
         env:
@@ -73,11 +74,13 @@ jobs:
             exit 1
           fi
           remote_tag="${FEDORA_VERSION}-dev"
-          # Build the list of arch-specific image references
+          # Build the list of arch-specific image references. Each reference uses
+          # the run-scoped tag written by the build job, so the manifest cannot
+          # mix images from a different workflow run.
           read -r -a architectures <<< "${ARCHITECTURES}"
           arch_images=()
           for arch in "${architectures[@]}"; do
-            arch_images+=("${REMOTE_REPOSITORY}:${FEDORA_VERSION}-${arch}")
+            arch_images+=("${REMOTE_REPOSITORY}:${FEDORA_VERSION}-${arch}-run-${BUILD_RUN_ID}")
           done
           # Create and push the multi-arch manifest
           podman manifest create "${REMOTE_REPOSITORY}":"${remote_tag}" "${arch_images[@]}"

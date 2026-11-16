@@ -175,10 +175,12 @@ The automated pipeline performs the following steps in sequence:
    - Downloads and SHA-256 verifies the upstream Fedora cloud image.
    - Builds the VM and packages it into a container image.
    - Pushes the per-arch image as
-     `quay.io/openshift-cnv/qe-cnv-tests-fedora-staging:${FEDORA_VERSION}-${arch}`
-     (e.g. `…:43-amd64`).
-3. **Create and push multi-arch manifest** — assembles all per-arch images into a
-   single multi-arch manifest and pushes it as
+     `quay.io/openshift-cnv/qe-cnv-tests-fedora-staging:${FEDORA_VERSION}-${arch}-run-${RUN_ID}`
+     (e.g. `…:43-amd64-run-1234567890`). The `run-<id>` suffix ties the image to
+     the workflow run that built it (`github.run_id`, which is stable across
+     retries), so a manifest can never mix images from different runs.
+3. **Create and push multi-arch manifest** — assembles the per-arch images from
+   this same run into a single multi-arch manifest and pushes it as
    `quay.io/openshift-cnv/qe-cnv-tests-fedora-staging:${FEDORA_VERSION}-dev`
    (e.g. `…:43-dev`).
 
