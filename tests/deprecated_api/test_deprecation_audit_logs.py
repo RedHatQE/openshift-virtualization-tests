@@ -8,6 +8,8 @@ from utilities.infra import get_node_audit_log_line_dict
 
 LOGGER = logging.getLogger(__name__)
 
+pytestmark = [pytest.mark.deprecated_api]
+
 DEPRECATED_API_MAX_VERSION = "1.35"
 DEPRECATED_API_LOG_ENTRY = '"k8s.io/deprecated":"true"'
 

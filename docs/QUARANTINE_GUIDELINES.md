@@ -71,6 +71,7 @@ Conditional skip for product bug:
 ```python
 import pytest
 
+
 @pytest.mark.jira("CNV-12345", run=False)  # Skips if the bug is open
 def test_feature_a():
     pass
@@ -99,8 +100,7 @@ from utilities.constants.pytest import QUARANTINED
     reason=f"{QUARANTINED}: VM is going into running state which it shouldn't, CNV-123",
     run=False,
 )
-def test_my_failing_test():
-    ...
+def test_my_failing_test(): ...
 ```
 
 **Benefit**: Provides pytest summary insights:
