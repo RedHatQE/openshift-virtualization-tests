@@ -96,14 +96,8 @@ def created_nodehealthcheck_far_object(admin_client, far_remediation_template):
 @pytest.mark.parametrize(
     "node_operation",
     [
-        pytest.param(
-            NODE_KUBELET_STOP,
-            marks=pytest.mark.polarion("CNV-10608"),
-        ),
-        pytest.param(
-            NODE_SHUTDOWN,
-            marks=pytest.mark.polarion("CNV-10607"),
-        ),
+        NODE_KUBELET_STOP,
+        NODE_SHUTDOWN,
     ],
     indirect=True,
 )
@@ -114,4 +108,9 @@ def test_far_based_vm_and_node_recovery_after_node_failure(
     vm_node_before_failure,
     performed_node_operation,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-43056 # <skip-jira-utils-check>
+    Polarion: CNV-10608
+    Polarion: CNV-10607
+    """
     verify_vm_and_node_recovery_after_node_failure(node=vm_node_before_failure, vm=nhc_vm_with_run_strategy_always)

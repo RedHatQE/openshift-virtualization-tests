@@ -112,17 +112,14 @@ def wait_node_restored(node):
     [
         pytest.param(
             {"run_strategy": "Always"},
-            marks=pytest.mark.polarion("CNV-4152"),
             id="case: Always",
         ),
         pytest.param(
             {"run_strategy": "RerunOnFailure"},
-            marks=pytest.mark.polarion("CNV-4154"),
             id="case: RerunOnFailure",
         ),
         pytest.param(
             {"run_strategy": "Manual"},
-            marks=pytest.mark.polarion("CNV-4155"),
             id="case: Manual",
         ),
     ],
@@ -134,6 +131,12 @@ def test_ha_vm_container_disk_reboot(
     workers_utility_pods,
     ha_vm_container_disk,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-1160 # <skip-jira-utils-check>
+    Polarion: CNV-4152
+    Polarion: CNV-4154
+    Polarion: CNV-4155
+    """
     orig_node = ha_vm_container_disk.vmi.get_node(privileged_client=admin_client)
     stop_kubelet_on_node(utility_pods=workers_utility_pods, node=orig_node)
     wait_and_verify_vmi_failover(vm=ha_vm_container_disk, admin_client=admin_client)
@@ -146,19 +149,16 @@ def test_ha_vm_container_disk_reboot(
         pytest.param(
             DV_DICT,
             {"run_strategy": "Always"},
-            marks=pytest.mark.polarion("CNV-5212"),
             id="case: Always",
         ),
         pytest.param(
             DV_DICT,
             {"run_strategy": "RerunOnFailure"},
-            marks=pytest.mark.polarion("CNV-5213"),
             id="case: RerunOnFailure",
         ),
         pytest.param(
             DV_DICT,
             {"run_strategy": "Manual"},
-            marks=pytest.mark.polarion("CNV-5214"),
             id="case: Manual",
         ),
     ],
@@ -170,6 +170,12 @@ def test_ha_vm_dv_disk_reboot(
     workers_utility_pods,
     ha_vm_dv_disk,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-1160 # <skip-jira-utils-check>
+    Polarion: CNV-5212
+    Polarion: CNV-5213
+    Polarion: CNV-5214
+    """
     orig_node = ha_vm_dv_disk.vmi.get_node(privileged_client=admin_client)
     ha_vm_dv_disk.ssh_exec.run_command(command=["echo", "test", ">>", "ha-test", "&&", "sync"])
     stop_kubelet_on_node(utility_pods=workers_utility_pods, node=orig_node)
