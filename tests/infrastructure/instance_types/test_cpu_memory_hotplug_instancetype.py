@@ -133,35 +133,50 @@ def hotplug_vm_snapshot_instance_type(instance_type_hotplug_vm, unprivileged_cli
 
 class TestCPUHotPlugInstanceType:
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::hotplug_cpu_instance_type")
-    @pytest.mark.polarion("CNV-11401")
     def test_hotplug_cpu_instance_type(self, instance_type_hotplug_vm, hotplugged_six_sockets_instance_type):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-28174 # <skip-jira-utils-check>
+        Polarion: CNV-11401
+        """
         wait_for_guest_os_cpu_count(vm=instance_type_hotplug_vm, spec_cpu_amount=SIX_CPU_SOCKETS)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu_instance_type"])
-    @pytest.mark.polarion("CNV-11402")
     @pytest.mark.usefixtures("hotplug_vm_snapshot_instance_type")
     def test_migrate_snapshot_hotplugged_vm(
         self, admin_client: DynamicClient, instance_type_hotplug_vm: VirtualMachineForTests
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-28174 # <skip-jira-utils-check>
+        Polarion: CNV-11402
+        """
         migrate_vm_and_verify(vm=instance_type_hotplug_vm, client=admin_client, check_ssh_connectivity=True)
 
     @pytest.mark.dependency(
         name=f"{TESTS_CLASS_NAME}::decrease_cpu_value", depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu_instance_type"]
     )
-    @pytest.mark.polarion("CNV-11404")
     def test_decrease_cpu_value(self, instance_type_hotplug_vm, four_sockets_instance_type):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-28174 # <skip-jira-utils-check>
+        Polarion: CNV-11404
+        """
         update_vm_instancetype_name(vm=instance_type_hotplug_vm, instance_type_name=four_sockets_instance_type.name)
         assert_restart_required_condition(
             vm=instance_type_hotplug_vm, expected_message="Reduction of CPU socket count requires a restart"
         )
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::decrease_cpu_value"])
-    @pytest.mark.polarion("CNV-11403")
     def test_restart_hotplugged_vm(self, instance_type_hotplug_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-28174 # <skip-jira-utils-check>
+        Polarion: CNV-11403
+        """
         restart_vm_wait_for_running_vm(vm=instance_type_hotplug_vm)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu_instance_type"])
-    @pytest.mark.polarion("CNV-11405")
     def test_hotplug_cpu_above_max_value(self, instance_type_hotplug_vm, ten_sockets_instance_type):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-28174 # <skip-jira-utils-check>
+        Polarion: CNV-11405
+        """
         with pytest.raises(UnprocessibleEntityError):
             update_vm_instancetype_name(vm=instance_type_hotplug_vm, instance_type_name=ten_sockets_instance_type.name)

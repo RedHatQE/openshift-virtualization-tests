@@ -169,11 +169,14 @@ def vm_ready_for_tests(vm_parameters_for_virtio_downward_metrics):
         yield vm
 
 
-@pytest.mark.polarion("CNV-10937")
 @pytest.mark.s390x
 def test_downward_metrics_virtio_serial_port_default(
     vm_parameters_for_virtio_downward_metrics,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-27865 # <skip-jira-utils-check>
+    Polarion: CNV-10937
+    """
     with pytest.raises(
         UnprocessibleEntityError,
         match=r".*DownwardMetrics feature gate is not enabled*",
@@ -182,10 +185,13 @@ def test_downward_metrics_virtio_serial_port_default(
             pytest.fail("Expected Failure due to UnprocessibleEntityError")
 
 
-@pytest.mark.polarion("CNV-10808")
 def test_downward_metrics_virtio_serial_port(
     enabled_feature_gate_for_downward_metrics_scope_function, vm_ready_for_tests
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-27865 # <skip-jira-utils-check>
+    Polarion: CNV-10808
+    """
     metrics_collected = parsed_metrics_command_data(vm=vm_ready_for_tests)
     assert EXPECTED_METRICS == metrics_collected, (
         "Both metrics are not equal. Here are the details:\n"

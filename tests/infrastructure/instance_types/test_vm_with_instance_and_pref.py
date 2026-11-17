@@ -89,10 +89,13 @@ def recreated_vm(rhel_vm_with_instance_type_and_preference):
     indirect=True,
 )
 class TestNegativeVmWithInstanceTypeAndPref:
-    @pytest.mark.polarion("CNV-11525")
     def test_vm_start_fails_with_insufficient_cpu_for_spread_option(
         self, unprivileged_client, namespace, instance_type_for_test_scope_class, vm_preference_for_test
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-10827 # <skip-jira-utils-check>
+        Polarion: CNV-11525
+        """
         with pytest.raises(
             UnprocessibleEntityError,
             match=r".*vCPUs provided by the instance type are not divisible by the "
@@ -136,13 +139,15 @@ class TestNegativeVmWithInstanceTypeAndPref:
 )
 class TestVmWithInstanceTypeAndPref:
     @pytest.mark.dependency(name="start_vm_with_instance_type_and_preference")
-    @pytest.mark.polarion("CNV-9087")
     @pytest.mark.s390x
     def test_start_vm_with_instance_type_and_preference(self, rhel_vm_with_instance_type_and_preference):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-10827 # <skip-jira-utils-check>
+        Polarion: CNV-9087
+        """
         running_vm(vm=rhel_vm_with_instance_type_and_preference)
 
     @pytest.mark.dependency(depends=["start_vm_with_instance_type_and_preference"])
-    @pytest.mark.polarion("CNV-9545")
     @pytest.mark.s390x
     def test_instance_pref_controller_revision(
         self,
@@ -150,6 +155,10 @@ class TestVmWithInstanceTypeAndPref:
         instance_controller_revision,
         pref_controller_revision,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-10827 # <skip-jira-utils-check>
+        Polarion: CNV-9545
+        """
         vm_name = rhel_vm_with_instance_type_and_preference.name
         assert instance_controller_revision.exists, "instance type controller revision was not created"
         assert pref_controller_revision.exists, "preference controller revision was not created"
@@ -157,8 +166,11 @@ class TestVmWithInstanceTypeAndPref:
         assert pref_controller_revision.instance["metadata"]["ownerReferences"][0]["name"] == vm_name
 
     @pytest.mark.dependency(depends=["start_vm_with_instance_type_and_preference"])
-    @pytest.mark.polarion("CNV-9821")
     def test_validate_clock_values(self, rhel_vm_with_instance_type_and_preference):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-10827 # <skip-jira-utils-check>
+        Polarion: CNV-9821
+        """
         clock_dict = rhel_vm_with_instance_type_and_preference.vmi.instance.to_dict()["spec"]["domain"]["clock"]
         vmi_clock_values = [
             clock_dict["timezone"],
@@ -176,7 +188,6 @@ class TestVmWithInstanceTypeAndPref:
         [
             pytest.param(
                 {"updated_memory": "3Gi"},
-                marks=pytest.mark.polarion("CNV-9911"),
             )
         ],
         indirect=True,
@@ -188,6 +199,10 @@ class TestVmWithInstanceTypeAndPref:
         updated_instance_type,
         recreated_vm,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-10827 # <skip-jira-utils-check>
+        Polarion: CNV-9911
+        """
         assert_instance_revision_and_memory_update(
             vm_for_test=recreated_vm,
             old_revision_name=old_revision_name,

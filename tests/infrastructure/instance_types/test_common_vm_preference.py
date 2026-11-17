@@ -82,8 +82,11 @@ def vm_cluster_preferences_expected_list():
     return [os for os_list in VM_PREFERENCES_LIST.values() for os in os_list]
 
 
-@pytest.mark.polarion("CNV-9981")
 def test_base_preferences_common_annotation(base_vm_cluster_preferences, vm_cluster_preferences_expected_list):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-10833 # <skip-jira-utils-check>
+    Polarion: CNV-9981
+    """
     assert {preference.name for preference in base_vm_cluster_preferences} == set(
         vm_cluster_preferences_expected_list
     ), "Not all base CNV cluster preferences exist"
@@ -91,17 +94,23 @@ def test_base_preferences_common_annotation(base_vm_cluster_preferences, vm_clus
 
 @pytest.mark.gating
 @pytest.mark.conformance
-@pytest.mark.polarion("CNV-10798")
 @pytest.mark.s390x
 def test_common_preferences_vendor_labels(base_vm_cluster_preferences):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-21976 # <skip-jira-utils-check>
+    Polarion: CNV-10798
+    """
     assert_mismatch_vendor_label(resources_list=base_vm_cluster_preferences)
 
 
 # all VMs use same image, we are testing the preferences so the image is irrelevant
 @pytest.mark.tier3
 class TestCommonVmPreference:
-    @pytest.mark.polarion("CNV-9894")
     def test_common_vm_preference_windows(self, unprivileged_client, namespace):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-10833 # <skip-jira-utils-check>
+        Polarion: CNV-9894
+        """
         run_general_vm_preferences(
             client=unprivileged_client,
             namespace=namespace,
@@ -112,38 +121,41 @@ class TestCommonVmPreference:
     @pytest.mark.parametrize(
         "cluster_preferences",
         [
-            pytest.param(
-                "rhel",
-                marks=pytest.mark.polarion("CNV-9895"),
-            ),
-            pytest.param(
-                "centos",
-                marks=pytest.mark.polarion("CNV-9896"),
-            ),
-            pytest.param(
-                "unique",
-                marks=pytest.mark.polarion("CNV-9897"),
-            ),
+            "rhel",
+            "centos",
+            "unique",
         ],
     )
     @pytest.mark.s390x
     def test_common_vm_preference_linux(self, cluster_preferences, unprivileged_client, namespace):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-10833 # <skip-jira-utils-check>
+        Polarion: CNV-9895
+        Polarion: CNV-9896
+        Polarion: CNV-9897
+        """
         run_general_vm_preferences(
             client=unprivileged_client, namespace=namespace, preferences=VM_PREFERENCES_LIST[cluster_preferences]
         )
 
     @pytest.mark.special_infra
-    @pytest.mark.polarion("CNV-10806")
     def test_common_vm_preference_dpdk(self, unprivileged_client, namespace):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-30013 # <skip-jira-utils-check>
+        Polarion: CNV-10806
+        """
         run_general_vm_preferences(
             client=unprivileged_client, namespace=namespace, preferences=VM_PREFERENCES_LIST["network"]
         )
 
 
 @pytest.mark.post_upgrade
-@pytest.mark.polarion("CNV-11289")
 @pytest.mark.s390x
 def test_common_preference_owner(base_vm_cluster_preferences):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-26638 # <skip-jira-utils-check>
+    Polarion: CNV-11289
+    """
     failed_preferences = []
     for vm_cluster_preference in base_vm_cluster_preferences:
         if (

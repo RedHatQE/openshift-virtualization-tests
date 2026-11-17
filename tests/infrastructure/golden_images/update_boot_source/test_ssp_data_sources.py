@@ -277,11 +277,14 @@ def updated_data_source_with_existing_pvc_scope_function(
         yield data_source
 
 
-@pytest.mark.polarion("CNV-7578")
 def test_opt_in_all_referenced_data_sources_in_templates_exist(
     data_sources_names_from_templates_scope_function,
     golden_images_data_sources_scope_function,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-11791 # <skip-jira-utils-check>
+    Polarion: CNV-7578
+    """
     assert_missing_data_sources(
         opt_in=True,
         data_sources_names_from_templates=data_sources_names_from_templates_scope_function,
@@ -289,12 +292,15 @@ def test_opt_in_all_referenced_data_sources_in_templates_exist(
     )
 
 
-@pytest.mark.polarion("CNV-8234")
 def test_opt_out_all_referenced_data_sources_in_templates_exist(
     disabled_common_boot_image_import_hco_spec_scope_function,
     data_sources_names_from_templates_scope_function,
     golden_images_data_sources_scope_function,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-11791 # <skip-jira-utils-check>
+    Polarion: CNV-8234
+    """
     assert_missing_data_sources(
         opt_in=False,
         data_sources_names_from_templates=data_sources_names_from_templates_scope_function,
@@ -302,19 +308,25 @@ def test_opt_out_all_referenced_data_sources_in_templates_exist(
     )
 
 
-@pytest.mark.polarion("CNV-7667")
 def test_opt_in_data_source_reconciles_after_deletion(
     golden_images_data_sources_scope_function,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-11791 # <skip-jira-utils-check>
+    Polarion: CNV-7667
+    """
     delete_data_source_and_wait_for_reconciliation(
         data_source=golden_images_data_sources_scope_function[0], opt_in=True
     )
 
 
-@pytest.mark.polarion("CNV-8030")
 def test_opt_in_data_source_reconciles_after_update(
     updated_opted_in_data_source_scope_function,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-11791 # <skip-jira-utils-check>
+    Polarion: CNV-8030
+    """
     wait_for_data_source_updated_referenced_volume(
         data_source=updated_opted_in_data_source_scope_function,
         match_volume_name=False,
@@ -329,13 +341,11 @@ def test_opt_in_data_source_reconciles_after_update(
             "win2k19",
             False,
             DATA_SOURCE_READY_FOR_CONSUMPTION_MESSAGE,
-            marks=(pytest.mark.polarion("CNV-7755")),
         ),
         pytest.param(
             "win2k19",
             True,
             PVC_NOT_FOUND_ERROR,
-            marks=(pytest.mark.polarion("CNV-8099")),
         ),
     ],
     indirect=["data_source_by_name_scope_function"],
@@ -346,6 +356,11 @@ def test_upload_dv_for_auto_update_dangling_data_sources(
     delete_dv,
     expected_condition_message,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-11791 # <skip-jira-utils-check>
+    Polarion: CNV-7755
+    Polarion: CNV-8099
+    """
     LOGGER.info("Verify DataSource condition is updated when referenced PVC is ready.")
     if delete_dv:
         uploaded_dv_for_dangling_data_source_scope_function.delete(wait=True)
@@ -355,21 +370,27 @@ def test_upload_dv_for_auto_update_dangling_data_sources(
     )
 
 
-@pytest.mark.polarion("CNV-7668")
 def test_opt_out_data_source_reconciles_after_deletion(
     disabled_common_boot_image_import_hco_spec_scope_function,
     data_sources_from_templates_scope_function,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-11791 # <skip-jira-utils-check>
+    Polarion: CNV-7668
+    """
     delete_data_source_and_wait_for_reconciliation(
         data_source=data_sources_from_templates_scope_function[0], opt_in=False
     )
 
 
-@pytest.mark.polarion("CNV-8095")
 def test_opt_out_data_source_reconciles_after_update(
     disabled_common_boot_image_import_hco_spec_scope_function,
     updated_opted_out_data_source_scope_function,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-11791 # <skip-jira-utils-check>
+    Polarion: CNV-8095
+    """
     wait_for_data_source_updated_referenced_volume(
         data_source=updated_opted_out_data_source_scope_function,
         match_volume_name=False,
@@ -377,12 +398,15 @@ def test_opt_out_data_source_reconciles_after_update(
     )
 
 
-@pytest.mark.polarion("CNV-8100")
 @pytest.mark.s390x
 def test_opt_out_data_source_update(
     disabled_common_boot_image_import_hco_spec_scope_function,
     data_sources_from_templates_scope_function,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-11791 # <skip-jira-utils-check>
+    Polarion: CNV-8100
+    """
     LOGGER.info("Verify DataSources are updated to not reference auto-update PVCs")
     for data_source in data_sources_from_templates_scope_function:
         wait_for_condition_message_value(
@@ -400,7 +424,6 @@ def test_opt_out_data_source_update(
                 "data_import_cron_source_url": DEFAULT_FEDORA_REGISTRY_URL,
                 "managed_data_source_name": CUSTOM_DATA_SOURCE_NAME,
             },
-            marks=(pytest.mark.polarion("CNV-8048")),
         ),
     ],
     indirect=True,
@@ -411,6 +434,10 @@ def test_opt_out_custom_data_sources_not_deleted(
     updated_hco_with_custom_data_import_cron_scope_function,
     disabled_common_boot_image_import_hco_spec_scope_function,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-11791 # <skip-jira-utils-check>
+    Polarion: CNV-8048
+    """
     custom_data_source_name = updated_hco_with_custom_data_import_cron_scope_function["spec"]["managedDataSource"]
     LOGGER.info(f"Verify custom DataSource {custom_data_source_name} is not deleted after opt-out")
     if not DataSource(
@@ -424,10 +451,7 @@ def test_opt_out_custom_data_sources_not_deleted(
 @pytest.mark.parametrize(
     "data_source_by_name_scope_function",
     [
-        pytest.param(
-            TESTS_AUTO_UPDATE_BOOT_SOURCE_NAME,
-            marks=(pytest.mark.polarion("CNV-7757")),
-        ),
+        TESTS_AUTO_UPDATE_BOOT_SOURCE_NAME,
     ],
     indirect=True,
 )
@@ -437,6 +461,10 @@ def test_data_source_with_existing_golden_image_pvc(
     created_dv_for_data_import_cron_managed_data_source_scope_function,
     enabled_common_boot_image_import_feature_gate_scope_function,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-11791 # <skip-jira-utils-check>
+    Polarion: CNV-7757
+    """
     LOGGER.info(f"Verify DataSource {data_source_by_name_scope_function.name} consumes an existing DV")
     wait_for_condition_message_value(
         resource=data_source_by_name_scope_function,
@@ -468,11 +496,14 @@ def test_data_source_with_existing_golden_image_pvc(
     "opted_in_data_source_scope_class",
 )
 class TestDataSourcesOptInLabel:
-    @pytest.mark.polarion("CNV-8029")
     @pytest.mark.dependency(name="TestDataSourcesOptInLabel::test_opt_in_label_data_source_when_pvc_exists")
     def test_opt_in_label_data_source_when_pvc_exists(
         self, data_source_by_name_scope_class, data_source_referenced_volume_scope_class
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-11791 # <skip-jira-utils-check>
+        Polarion: CNV-8029
+        """
         LOGGER.info("Verify DataSource is managed by DataImportCron after labelled and a PVC exists.")
         wait_for_data_source_updated_referenced_volume(
             data_source=data_source_by_name_scope_class,
@@ -480,11 +511,14 @@ class TestDataSourcesOptInLabel:
             volume_name=data_source_referenced_volume_scope_class,
         )
 
-    @pytest.mark.polarion("CNV-8253")
     @pytest.mark.dependency(depends=["TestDataSourcesOptInLabel::test_opt_in_label_data_source_when_pvc_exists"])
     def test_opt_in_label_data_source_reconciles_after_update_with_existing_pvc(
         self, updated_data_source_with_existing_pvc_scope_function
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-11791 # <skip-jira-utils-check>
+        Polarion: CNV-8253
+        """
         wait_for_data_source_updated_referenced_volume(
             data_source=updated_data_source_with_existing_pvc_scope_function,
             match_volume_name=False,
@@ -495,11 +529,14 @@ class TestDataSourcesOptInLabel:
             opt_in=True,
         )
 
-    @pytest.mark.polarion("CNV-8245")
     @pytest.mark.dependency(depends=["TestDataSourcesOptInLabel::test_opt_in_label_data_source_when_pvc_exists"])
     def test_opt_in_label_data_source_reconciles_after_deletion_with_existing_pvc(
         self, data_source_by_name_scope_class
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-11791 # <skip-jira-utils-check>
+        Polarion: CNV-8245
+        """
         delete_data_source_and_wait_for_reconciliation(data_source=data_source_by_name_scope_class, opt_in=True)
         wait_for_data_import_cron_label_in_data_source_when_opt_in(
             data_source=data_source_by_name_scope_class, opt_in=True
@@ -526,19 +563,25 @@ class TestDataSourcesOptInLabel:
     "opted_out_data_source_scope_class",
 )
 class TestDataSourcesOptOutLabel:
-    @pytest.mark.polarion("CNV-8244")
     @pytest.mark.dependency(name="TestDataSourcesOptOutLabel::test_remove_data_source_dic_label_when_pvc_exists")
     def test_remove_data_source_dic_label_when_pvc_exists(
         self, data_source_by_name_managing_data_import_cron_scope_class
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-11791 # <skip-jira-utils-check>
+        Polarion: CNV-8244
+        """
         LOGGER.info("Verify DataSource is not managed by DataImportCron when label is removed and a PVC exists.")
         data_source_by_name_managing_data_import_cron_scope_class.wait_deleted()
 
-    @pytest.mark.polarion("CNV-8254")
     @pytest.mark.dependency(depends=["TestDataSourcesOptOutLabel::test_remove_data_source_dic_label_when_pvc_exists"])
     def test_opt_out_label_data_source_reconciles_after_update_with_existing_pvc(
         self, updated_data_source_with_existing_pvc_scope_function
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-11791 # <skip-jira-utils-check>
+        Polarion: CNV-8254
+        """
         wait_for_data_source_updated_referenced_volume(
             data_source=updated_data_source_with_existing_pvc_scope_function,
             match_volume_name=False,
@@ -549,23 +592,29 @@ class TestDataSourcesOptOutLabel:
             opt_in=False,
         )
 
-    @pytest.mark.polarion("CNV-8252")
     @pytest.mark.dependency(depends=["TestDataSourcesOptOutLabel::test_remove_data_source_dic_label_when_pvc_exists"])
     def test_opt_out_label_data_source_reconciles_after_deletion_with_existing_pvc(
         self, data_source_by_name_scope_class
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-11791 # <skip-jira-utils-check>
+        Polarion: CNV-8252
+        """
         delete_data_source_and_wait_for_reconciliation(data_source=data_source_by_name_scope_class, opt_in=False)
         wait_for_data_import_cron_label_in_data_source_when_opt_in(
             data_source=data_source_by_name_scope_class, opt_in=False
         )
 
-    @pytest.mark.polarion("CNV-8258")
     @pytest.mark.dependency(depends=["TestDataSourcesOptOutLabel::test_remove_data_source_dic_label_when_pvc_exists"])
     def test_opt_out_label_data_source_delete_existing_dv(
         self,
         data_source_by_name_scope_class,
         created_dv_for_data_import_cron_managed_data_source_scope_class,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-11791 # <skip-jira-utils-check>
+        Polarion: CNV-8258
+        """
         created_dv_for_data_import_cron_managed_data_source_scope_class.delete(wait=True)
         wait_for_data_import_cron_label_in_data_source_when_opt_in(
             data_source=data_source_by_name_scope_class, opt_in=True

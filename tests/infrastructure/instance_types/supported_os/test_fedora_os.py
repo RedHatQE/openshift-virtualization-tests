@@ -27,8 +27,11 @@ TESTS_MODULE_IDENTIFIER = "TestCommonInstancetypeFedora"
 @pytest.mark.s390x
 class TestVMCreationAndValidation:
     @pytest.mark.dependency(name=f"{TESTS_MODULE_IDENTIFIER}::{TEST_CREATE_VM_TEST_NAME}")
-    @pytest.mark.polarion("CNV-12068")
     def test_create_vm(self, golden_image_fedora_vm_with_instance_type, instance_type_fedora_os_matrix__module__):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-33839 # <skip-jira-utils-check>
+        Polarion: CNV-12068
+        """
         golden_image_fedora_vm_with_instance_type.create(wait=True)
         os_param_dict = instance_type_fedora_os_matrix__module__[[*instance_type_fedora_os_matrix__module__][0]]
         assert golden_image_fedora_vm_with_instance_type.instance.spec.instancetype.name == U1_MEDIUM_STR
@@ -38,18 +41,27 @@ class TestVMCreationAndValidation:
         name=f"{TESTS_MODULE_IDENTIFIER}::{TEST_START_VM_TEST_NAME}",
         depends=[f"{TESTS_MODULE_IDENTIFIER}::{TEST_CREATE_VM_TEST_NAME}"],
     )
-    @pytest.mark.polarion("CNV-12069")
     def test_start_vm(self, golden_image_fedora_vm_with_instance_type):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-33839 # <skip-jira-utils-check>
+        Polarion: CNV-12069
+        """
         running_vm(vm=golden_image_fedora_vm_with_instance_type)
 
     @pytest.mark.dependency(depends=[f"{TESTS_MODULE_IDENTIFIER}::{TEST_START_VM_TEST_NAME}"])
-    @pytest.mark.polarion("CNV-12070")
     def test_vm_console(self, golden_image_fedora_vm_with_instance_type):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-33839 # <skip-jira-utils-check>
+        Polarion: CNV-12070
+        """
         wait_for_console(vm=golden_image_fedora_vm_with_instance_type)
 
     @pytest.mark.dependency(depends=[f"{TESTS_MODULE_IDENTIFIER}::{TEST_START_VM_TEST_NAME}"])
-    @pytest.mark.polarion("CNV-12071")
     def test_vmi_guest_agent_exists(self, golden_image_fedora_vm_with_instance_type):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-33839 # <skip-jira-utils-check>
+        Polarion: CNV-12071
+        """
         assert check_qemu_guest_agent_installed(ssh_exec=golden_image_fedora_vm_with_instance_type.ssh_exec), (
             "qemu guest agent package is not installed"
         )
@@ -58,31 +70,46 @@ class TestVMCreationAndValidation:
 @pytest.mark.sno
 class TestVMFeatures:
     @pytest.mark.dependency(depends=[f"{TESTS_MODULE_IDENTIFIER}::{TEST_START_VM_TEST_NAME}"])
-    @pytest.mark.polarion("CNV-11830")
     def test_system_boot_mode(self, golden_image_fedora_vm_with_instance_type):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-41856 # <skip-jira-utils-check>
+        Polarion: CNV-11830
+        """
         assert_linux_efi(vm=golden_image_fedora_vm_with_instance_type)
 
-    @pytest.mark.polarion("CNV-11831")
     @pytest.mark.dependency(depends=[f"{TESTS_MODULE_IDENTIFIER}::{TEST_START_VM_TEST_NAME}"])
     def test_efi_secureboot_enabled_initial_boot(self, golden_image_fedora_vm_with_instance_type):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-41856 # <skip-jira-utils-check>
+        Polarion: CNV-11831
+        """
         assert_secure_boot_dmesg(vm=golden_image_fedora_vm_with_instance_type)
 
     @pytest.mark.dependency(depends=[f"{TESTS_MODULE_IDENTIFIER}::{TEST_START_VM_TEST_NAME}"])
-    @pytest.mark.polarion("CNV-11832")
     def test_efi_secureboot_enabled_guest_os(self, golden_image_fedora_vm_with_instance_type):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-41856 # <skip-jira-utils-check>
+        Polarion: CNV-11832
+        """
         assert_secure_boot_mokutil_status(vm=golden_image_fedora_vm_with_instance_type)
 
     @pytest.mark.dependency(depends=[f"{TESTS_MODULE_IDENTIFIER}::{TEST_START_VM_TEST_NAME}"])
-    @pytest.mark.polarion("CNV-11833")
     def test_efi_secureboot_enabled_lockdown_state(self, golden_image_fedora_vm_with_instance_type):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-41856 # <skip-jira-utils-check>
+        Polarion: CNV-11833
+        """
         assert_kernel_lockdown_mode(vm=golden_image_fedora_vm_with_instance_type)
 
     @pytest.mark.dependency(depends=[f"{TESTS_MODULE_IDENTIFIER}::{TEST_START_VM_TEST_NAME}"])
-    @pytest.mark.polarion("CNV-11834")
     def test_efi_secureboot_disabled_and_enabled(
         self,
         golden_image_fedora_vm_with_instance_type,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-41856 # <skip-jira-utils-check>
+        Polarion: CNV-11834
+        """
         vm = golden_image_fedora_vm_with_instance_type
 
         def _update_and_verify_secure_boot(vm, secure_boot_value):
@@ -96,10 +123,13 @@ class TestVMFeatures:
         _update_and_verify_secure_boot(vm=vm, secure_boot_value=True)
 
     @pytest.mark.dependency(depends=[f"{TESTS_MODULE_IDENTIFIER}::{TEST_START_VM_TEST_NAME}"])
-    @pytest.mark.polarion("CNV-11835")
     def test_vm_smbios_default(
         self, admin_client, smbios_from_kubevirt_config, golden_image_fedora_vm_with_instance_type
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-41856 # <skip-jira-utils-check>
+        Polarion: CNV-11835
+        """
         check_vm_xml_smbios(
             vm=golden_image_fedora_vm_with_instance_type,
             cm_values=smbios_from_kubevirt_config,
@@ -113,6 +143,9 @@ class TestVMFeatures:
 @pytest.mark.order(-1)
 class TestVMDeletion:
     @pytest.mark.dependency(depends=[f"{TESTS_MODULE_IDENTIFIER}::{TEST_CREATE_VM_TEST_NAME}"])
-    @pytest.mark.polarion("CNV-12078")
     def test_vm_deletion(self, golden_image_fedora_vm_with_instance_type):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-33839 # <skip-jira-utils-check>
+        Polarion: CNV-12078
+        """
         golden_image_fedora_vm_with_instance_type.delete(wait=True)

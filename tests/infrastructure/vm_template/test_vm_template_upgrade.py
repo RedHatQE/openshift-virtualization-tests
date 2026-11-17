@@ -47,12 +47,14 @@ class TestVMTemplatePreUpgrade:
         - Run before cluster upgrade.
     """
 
-    @pytest.mark.polarion("CNV-16822")
     @pytest.mark.order(before=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
     # Post-upgrade tests depend on this to verify the template existed before the upgrade.
     @pytest.mark.dependency(name=f"{VM_TEMPLATE_PRE_UPGRADE_NODE_ID_PREFIX}::test_template_creation_before_upgrade")
     def test_template_creation_before_upgrade(self, vm_template_before_upgrade):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-73392 # <skip-jira-utils-check>
+        Polarion: CNV-16822
+
         Test that a VirtualMachineTemplate can be created before the cluster upgrade
         begins, and reaches a completed/Ready state.
 
@@ -71,7 +73,6 @@ class TestVMTemplatePreUpgrade:
             timeout=TIMEOUT_1MIN,
         )
 
-    @pytest.mark.polarion("CNV-16821")
     @pytest.mark.order(before=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
     # test_template_request_before_upgrade depends on this to ensure the source VM exists.
     @pytest.mark.dependency(
@@ -81,6 +82,9 @@ class TestVMTemplatePreUpgrade:
         self, vm_template_before_upgrade, vm_created_from_template_before_upgrade
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-73392 # <skip-jira-utils-check>
+        Polarion: CNV-16821
+
         Test that a VM can be created from a VirtualMachineTemplate before the cluster
         upgrade begins. The VM is kept alive until the end of this test class, since it
         is reused as the source VM captured by a VirtualMachineTemplateRequest.
@@ -101,7 +105,6 @@ class TestVMTemplatePreUpgrade:
             f"from template {vm_template_before_upgrade.name}"
         )
 
-    @pytest.mark.polarion("CNV-16817")
     @pytest.mark.order(before=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
     @pytest.mark.usefixtures("vm_template_request_before_upgrade")
     # Post-upgrade tests depend on this to verify the template request existed before the upgrade.
@@ -112,6 +115,9 @@ class TestVMTemplatePreUpgrade:
     )
     def test_template_request_before_upgrade(self, captured_template):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-73392 # <skip-jira-utils-check>
+        Polarion: CNV-16817
+
         Test that a VirtualMachineTemplateRequest can be created before the cluster
         upgrade begins, and that it captures an existing VM into a new
         VirtualMachineTemplate. The source VM is removed once this test class's tests
@@ -151,7 +157,6 @@ class TestVMTemplatePostUpgrade:
         - Run after cluster upgrade.
     """
 
-    @pytest.mark.polarion("CNV-16818")
     @pytest.mark.order(after=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
     # Requires upgrade completion and pre-upgrade template and template request to have been created.
     @pytest.mark.dependency(
@@ -166,6 +171,9 @@ class TestVMTemplatePostUpgrade:
         self, vm_template_before_upgrade, vm_template_request_before_upgrade, captured_template
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-73392 # <skip-jira-utils-check>
+        Polarion: CNV-16818
+
         Test that a directly-created VirtualMachineTemplate, a VirtualMachineTemplateRequest,
         and the VirtualMachineTemplate it captured all remain present on the cluster, in
         their completed/Ready state, after the upgrade.
@@ -195,7 +203,6 @@ class TestVMTemplatePostUpgrade:
                 timeout=TIMEOUT_1MIN,
             )
 
-    @pytest.mark.polarion("CNV-16819")
     @pytest.mark.order(after=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
     # Requires upgrade completion and pre-upgrade template to have been created.
     @pytest.mark.dependency(
@@ -210,6 +217,9 @@ class TestVMTemplatePostUpgrade:
         self, vm_template_before_upgrade, captured_template
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-73392 # <skip-jira-utils-check>
+        Polarion: CNV-16819
+
         Test that a new VM can be created from each pre-existing VirtualMachineTemplate
         (the one created directly, and the one captured by the request) after the
         cluster upgrade.

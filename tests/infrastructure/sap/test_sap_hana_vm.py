@@ -602,30 +602,42 @@ def crio_cpuset(workers_utility_pods, sap_hana_node, vm_crio_id_path):
 
 
 class TestSAPHANATemplate:
-    @pytest.mark.polarion("CNV-7623")
     def test_sap_hana_template_validation_rules(self, sap_hana_template):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-12831 # <skip-jira-utils-check>
+        Polarion: CNV-7623
+        """
         assert sap_hana_template.instance.objects[0].metadata.annotations[
             f"{sap_hana_template.ApiGroup.VM_KUBEVIRT_IO}/validations"
         ], "HANA template does not have validation rules."
 
-    @pytest.mark.polarion("CNV-7759")
     def test_sap_hana_template_machine_type(self, sap_hana_template, machine_type_from_kubevirt_config):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-12831 # <skip-jira-utils-check>
+        Polarion: CNV-7759
+        """
         sap_hana_template_machine_type = sap_hana_template.instance.objects[0].spec.template.spec.domain.machine.type
         assert sap_hana_template_machine_type == machine_type_from_kubevirt_config, (
             f"Hana template machine type '{sap_hana_template_machine_type or None}' does not match expected type "
             f"{machine_type_from_kubevirt_config}"
         )
 
-    @pytest.mark.polarion("CNV-7852")
     def test_sap_hana_template_no_evict_strategy(self, sap_hana_template):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-12831 # <skip-jira-utils-check>
+        Polarion: CNV-7852
+        """
         sap_hana_template_evict_strategy = sap_hana_template.instance.objects[0].spec.template.spec.evictionStrategy
         assert not sap_hana_template_evict_strategy, (
             "HANA template should not have evictionStrategy, current value in template: "
             f"{sap_hana_template_evict_strategy}"
         )
 
-    @pytest.mark.polarion("CNV-7758")
     def test_sap_hana_template_provider_support_annotations(self, sap_hana_template):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-12831 # <skip-jira-utils-check>
+        Polarion: CNV-7758
+        """
         template_failed_annotations = []
         template_annotations = sap_hana_template.instance.metadata.annotations
         template_api_group = sap_hana_template.ApiGroup.TEMPLATE_KUBEVIRT_IO
@@ -655,14 +667,16 @@ class TestSAPHANATemplate:
 )
 class TestSAPHANAVirtualMachine:
     @pytest.mark.dependency(name=SAP_HANA_VM_TEST_NAME)
-    @pytest.mark.polarion("CNV-7622")
     def test_sap_hana_console(self, sap_hana_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-12831 # <skip-jira-utils-check>
+        Polarion: CNV-7622
+        """
         wait_for_console(
             vm=sap_hana_vm,
         )
 
     @pytest.mark.dependency(depends=[SAP_HANA_VM_TEST_NAME])
-    @pytest.mark.polarion("CNV-7760")
     def test_sap_hana_vm_cpu_configuration(
         self,
         sap_hana_vm,
@@ -671,6 +685,10 @@ class TestSAPHANAVirtualMachine:
         sap_hana_template,
         workers_utility_pods,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-12831 # <skip-jira-utils-check>
+        Polarion: CNV-7760
+        """
         verify_vm_cpu_topology(
             vm=sap_hana_vm,
             vmi_xml_dict=vmi_domxml,
@@ -679,7 +697,6 @@ class TestSAPHANAVirtualMachine:
         )
 
     @pytest.mark.dependency(depends=[SAP_HANA_VM_TEST_NAME])
-    @pytest.mark.polarion("CNV-7870")
     def test_sap_hana_vm_cpu_host_passthrough(
         self,
         sap_hana_vm,
@@ -687,6 +704,10 @@ class TestSAPHANAVirtualMachine:
         guest_lscpu_configuration,
         sap_hana_node_lscpu_configuration,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-12831 # <skip-jira-utils-check>
+        Polarion: CNV-7870
+        """
         assert_libvirt_cpu_host_passthrough(
             vm=sap_hana_vm,
             vmi_xml_dict=vmi_domxml,
@@ -697,7 +718,6 @@ class TestSAPHANAVirtualMachine:
         )
 
     @pytest.mark.dependency(depends=[SAP_HANA_VM_TEST_NAME])
-    @pytest.mark.polarion("CNV-7763")
     def test_sap_hana_vm_invtsc_feature(
         self,
         hana_node_invtsc_labels,
@@ -706,6 +726,10 @@ class TestSAPHANAVirtualMachine:
         hana_node_nonstop_tsc_cpu_flag,
         vmi_domxml,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-12831 # <skip-jira-utils-check>
+        Polarion: CNV-7763
+        """
         invtsc_libvirt_name = vmi_domxml["cpu"]["feature"]["@name"]
         invtsc_libvirt_policy = vmi_domxml["cpu"]["feature"]["@policy"]
         expected_policy = "require"
@@ -715,8 +739,11 @@ class TestSAPHANAVirtualMachine:
         )
 
     @pytest.mark.dependency(depends=[SAP_HANA_VM_TEST_NAME])
-    @pytest.mark.polarion("CNV-7773")
     def test_sap_hana_vm_virt_launcher_qos(self, sap_hana_vm, vm_virt_launcher_pod_instance):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-12831 # <skip-jira-utils-check>
+        Polarion: CNV-7773
+        """
         guaranteed = "Guaranteed"
         LOGGER.info(f"Verify {sap_hana_vm.name} virt-launcher pod QoS is {guaranteed}")
         virt_launcher_pod_qos = vm_virt_launcher_pod_instance.status.qosClass
@@ -725,8 +752,11 @@ class TestSAPHANAVirtualMachine:
         )
 
     @pytest.mark.dependency(depends=[SAP_HANA_VM_TEST_NAME])
-    @pytest.mark.polarion("CNV-7761")
     def test_sap_hana_vm_isolate_emulator_thread(self, admin_client, sap_hana_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-12831 # <skip-jira-utils-check>
+        Polarion: CNV-7761
+        """
         vm_isolated_emulator_thread = sap_hana_vm.instance.spec.template.spec.domain.cpu.isolateEmulatorThread
         assert vm_isolated_emulator_thread, (
             f"VM isolateEmulatorThread is not enabled, value: {vm_isolated_emulator_thread}"
@@ -734,21 +764,26 @@ class TestSAPHANAVirtualMachine:
         validate_iothreads_emulatorthread_on_same_pcpu(vm=sap_hana_vm, admin_client=admin_client)
 
     @pytest.mark.dependency(depends=[SAP_HANA_VM_TEST_NAME])
-    @pytest.mark.polarion("CNV-7762")
     def test_sap_hana_vm_dedicated_cpu_placement(self, admin_client, sap_hana_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-12831 # <skip-jira-utils-check>
+        Polarion: CNV-7762
+        """
         vm_dedicate_cpu_placement = sap_hana_vm.instance.spec.template.spec.domain.cpu.dedicatedCpuPlacement
         assert vm_dedicate_cpu_placement, f"VM isolateEmulatorThread is not enabled, value: {vm_dedicate_cpu_placement}"
         validate_dedicated_emulatorthread(vm=sap_hana_vm, admin_client=admin_client)
 
     @pytest.mark.dependency(depends=[SAP_HANA_VM_TEST_NAME])
-    @pytest.mark.polarion("CNV-7765")
     def test_sap_hana_vm_block_multiqueue(self, sap_hana_vm, vmi_domxml, libvirt_disks):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-12831 # <skip-jira-utils-check>
+        Polarion: CNV-7765
+        """
         vm_block_multiqueue = sap_hana_vm.instance.spec.template.spec.domain.devices.blockMultiQueue
         assert vm_block_multiqueue, f"VM blockMultiQueue is not enabled, value: {vm_block_multiqueue}"
         assert_vm_devices_queues(vm=sap_hana_vm, vmi_xml_dict=vmi_domxml, libvirt_disks=libvirt_disks)
 
     @pytest.mark.dependency(depends=[SAP_HANA_VM_TEST_NAME])
-    @pytest.mark.polarion("CNV-7874")
     def test_sap_hana_vm_huge_pages(
         self,
         sap_hana_vm,
@@ -757,6 +792,10 @@ class TestSAPHANAVirtualMachine:
         workers_utility_pods,
         sap_hana_node,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-12831 # <skip-jira-utils-check>
+        Polarion: CNV-7874
+        """
         verify_libvirt_huge_pages_configuration(template=sap_hana_template, vmi_xml_dict=vmi_domxml)
         assert_node_huge_pages_size(
             utility_pods=workers_utility_pods,
@@ -765,15 +804,21 @@ class TestSAPHANAVirtualMachine:
         )
 
     @pytest.mark.dependency(depends=[SAP_HANA_VM_TEST_NAME])
-    @pytest.mark.polarion("CNV-7771")
     def test_sap_hana_vm_io_thread_policy(self, sap_hana_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-12831 # <skip-jira-utils-check>
+        Polarion: CNV-7771
+        """
         LOGGER.info(f"Verify {sap_hana_vm.name} VM ioThreadsPolicy is enabled.")
         vm_io_thread_policy = sap_hana_vm.instance.spec.template.spec.domain.ioThreadsPolicy
         assert vm_io_thread_policy == "auto", f"VM ioThreadsPolicy is not enabled; current value: {vm_io_thread_policy}"
 
     @pytest.mark.dependency(depends=[SAP_HANA_VM_TEST_NAME])
-    @pytest.mark.polarion("CNV-7768")
     def test_sap_hana_vm_memory(self, sap_hana_vm, sap_hana_template, vmi_domxml):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-12831 # <skip-jira-utils-check>
+        Polarion: CNV-7768
+        """
         template_memory_param_subset_str = "MEMORY"
         template_memory_params = get_parameters_from_template(
             template=sap_hana_template,
@@ -786,14 +831,16 @@ class TestSAPHANAVirtualMachine:
         )
 
     @pytest.mark.dependency(depends=[SAP_HANA_VM_TEST_NAME])
-    @pytest.mark.polarion("CNV-7770")
     def test_sap_hana_vm_downwards_metrics(self, sap_hana_vm, installed_vm_dump_metrics, vm_dump_metrics, vmi_domxml):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-12831 # <skip-jira-utils-check>
+        Polarion: CNV-7770
+        """
         metrics_dict = xmltodict.parse(xml_input=vm_dump_metrics[0], process_namespaces=True)["metrics"]["metric"]
         assert_vm_memory_dump_metrics(metrics_dict=metrics_dict, vmi_xml_dict=vmi_domxml)
         assert_vm_cpu_dump_metrics(metrics_dict=metrics_dict, vmi_xml_dict=vmi_domxml)
 
     @pytest.mark.dependency(depends=[SAP_HANA_VM_TEST_NAME])
-    @pytest.mark.polarion("CNV-7764")
     def test_sap_hana_vm_numa_topology(
         self,
         admin_client,
@@ -803,6 +850,10 @@ class TestSAPHANAVirtualMachine:
         vm_cpu_list,
         numa_node_dict,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-12831 # <skip-jira-utils-check>
+        Polarion: CNV-7764
+        """
         LOGGER.info(f"Verify {sap_hana_vm.name} NUMA configuration")
         assert_virt_launcher_pod_cpu_manager_node_selector(virt_launcher_pod=vm_virt_launcher_pod_instance)
         assert_numa_cpu_allocation(vm_cpus=vm_cpu_list, numa_nodes=numa_node_dict)
@@ -810,15 +861,21 @@ class TestSAPHANAVirtualMachine:
         assert_cpus_and_sriov_on_same_node(vm=sap_hana_vm, utility_pods=workers_utility_pods, admin_client=admin_client)
 
     @pytest.mark.dependency(depends=[SAP_HANA_VM_TEST_NAME])
-    @pytest.mark.polarion("CNV-7766")
     def test_sap_hana_vm_disks(self, sap_hana_vm, vmi_domxml, libvirt_disks):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-12831 # <skip-jira-utils-check>
+        Polarion: CNV-7766
+        """
         LOGGER.info(f"Verify {sap_hana_vm.name} disks configuration")
         assert_vm_disks_virtio_bus(libvirt_disks=libvirt_disks)
         assert_vm_downwardapi_disk(libvirt_disks=libvirt_disks)
 
     @pytest.mark.dependency(depends=[SAP_HANA_VM_TEST_NAME])
-    @pytest.mark.polarion("CNV-7767")
     def test_sap_hana_vm_interfaces(self, sap_hana_vm, vm_interfaces_names):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-12831 # <skip-jira-utils-check>
+        Polarion: CNV-7767
+        """
         failed_pingable_interfaces = []
         for interface in vm_interfaces_names:
             LOGGER.info(f"Verify {sap_hana_vm.name} network connectivity via interface {interface}.")
@@ -835,8 +892,11 @@ class TestSAPHANAVirtualMachine:
         )
 
     @pytest.mark.dependency(depends=[SAP_HANA_VM_TEST_NAME])
-    @pytest.mark.polarion("CNV-7869")
     def test_vm_dedicated_cpus_on_node(self, sap_hana_vm, crio_cpuset, vm_cpu_list):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-12831 # <skip-jira-utils-check>
+        Polarion: CNV-7869
+        """
         verify_vm_reserved_cpus_on_node(vm_cpu_list=vm_cpu_list, crio_cpuset=crio_cpuset)
 
 
@@ -848,12 +908,15 @@ class TestSAPHANAVirtualMachineMultipleNUMANodes:
                 {
                     "set_cpus": True,
                 },
-                marks=pytest.mark.polarion("CNV-8050"),
             )
         ],
         indirect=True,
     )
     def test_hana_vm_cpus_on_multiple_numa_nodes(self, sap_hana_vm, vm_cpu_list):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-12831 # <skip-jira-utils-check>
+        Polarion: CNV-8050
+        """
         expected_num_cores = sap_hana_vm.instance.spec.template.spec.domain.cpu.cores
         assert len(vm_cpu_list) == expected_num_cores, (
             f"VM number of CPUs {vm_cpu_list} is not as expected {expected_num_cores}"
