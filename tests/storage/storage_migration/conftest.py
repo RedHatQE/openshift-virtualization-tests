@@ -43,7 +43,6 @@ from utilities.constants import Images
 from utilities.constants.images import OS_FLAVOR_FEDORA, OS_FLAVOR_RHEL
 from utilities.constants.instance_types import U1_SMALL
 from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5SEC, TIMEOUT_10MIN
-from utilities.exceptions import StorageMigrationError
 from utilities.infra import create_ns, unique_name
 from utilities.jira import is_jira_open
 from utilities.storage import (
