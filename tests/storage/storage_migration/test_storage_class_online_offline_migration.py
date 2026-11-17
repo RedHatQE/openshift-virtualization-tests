@@ -44,19 +44,23 @@ FILESYSTEM = DataVolume.VolumeMode.FILE
 # tests/global_config*.py). A DV or migration target that requests Block on a Filesystem-only class
 # fails with ErrClaimNotValid, so the Block-to-Block pairing is only enumerated where the configured
 # storage class matrix declares both classes as Block.
+# The volume mode is read from system_storage_class_matrix, the configured matrix captured before
+# --storage-class-matrix narrows it: storage_class_a / storage_class_b are independent of that filter.
 CONFIGURED_STORAGE_CLASS_VOLUME_MODES = {
     storage_class_name: storage_class_config[VOLUME_MODE]
-    for storage_class_entry in py_config["storage_class_matrix"]
+    for storage_class_entry in py_config["system_storage_class_matrix"]
     for storage_class_name, storage_class_config in storage_class_entry.items()
 }
 
 # On Filesystem-only environments - for example the default HPP one, where STORAGE_CLASS_A is
 # hostpath-csi-basic - Block-to-Block cannot be enumerated and is omitted rather than failing the
-# migration with ErrClaimNotValid.
-BLOCK_TO_BLOCK_SUPPORTED = {
-    CONFIGURED_STORAGE_CLASS_VOLUME_MODES[py_config[storage_class_key]]
+# migration with ErrClaimNotValid. A class set with --tc=storage_class_a:<name> /
+# --tc=storage_class_b:<name> may not appear in any configured matrix; its volume mode is then
+# unknown, so the pairing is omitted as well.
+BLOCK_TO_BLOCK_SUPPORTED = all(
+    CONFIGURED_STORAGE_CLASS_VOLUME_MODES.get(py_config[storage_class_key]) == BLOCK
     for storage_class_key in (STORAGE_CLASS_A, STORAGE_CLASS_B)
-} == {BLOCK}
+)
 
 BLOCK_TO_BLOCK_PARAMS = (
     [
