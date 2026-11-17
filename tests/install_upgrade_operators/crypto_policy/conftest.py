@@ -48,6 +48,7 @@ from tests.install_upgrade_operators.crypto_policy.constants import (
     TLS_PROPAGATION_OMITTED_GROUP,
 )
 from tests.install_upgrade_operators.crypto_policy.utils import (
+    CurvePropagationExpectation,
     get_node_available_tls_groups,
     get_resource_crypto_policy,
     get_services_pqc_status,
@@ -336,28 +337,35 @@ def worker_exec(workers_utility_pods: list[Pod], worker_node1: Node) -> ExecComm
 
 
 @pytest.fixture(scope="class")
-def curve_propagation_expectations(cnv_services_with_template, fips_enabled_cluster, services_tls_runtime):
-    """Per-service expected curve negotiation outcome and pending-Jira gate.
+def pending_jira_by_service(cnv_services_with_template: list[Service]) -> dict[str, str | None]:
+    """Resolves the curve-propagation pending-Jira gate for each CNV service.
 
-    Computed once as test setup so the test itself only decides which services need to
-    run, without deciding per-service business rules inline. The actual TLS probing
-    happens inside each subtest, so a single probe failure does not hide the results of
-    the others.
+    A service's Jira is cleared to None once that Jira is no longer open, so the
+    propagation test auto-switches from xfail to a strict assertion once resolved.
     """
-    LOGGER.info(f"Curve propagation test running on a {'FIPS' if fips_enabled_cluster else 'non-FIPS'} cluster")
-    expectations = {}
     jira_open_by_id: dict[str, bool] = {}
+    pending_by_service: dict[str, str | None] = {}
     for service in cnv_services_with_template:
-        service_name = service.name
-        if service_name in CURVE_PROBE_EXCLUDED:
-            continue
-        pending_jira = CURVE_PROPAGATION_PENDING.get(service_name)
+        pending_jira = CURVE_PROPAGATION_PENDING.get(service.name)
         if pending_jira:
             if pending_jira not in jira_open_by_id:
                 jira_open_by_id[pending_jira] = is_jira_open(jira_id=pending_jira)
             if not jira_open_by_id[pending_jira]:
                 pending_jira = None
+        pending_by_service[service.name] = pending_jira
+    return pending_by_service
 
+
+@pytest.fixture(scope="class")
+def expected_negotiable_curves_by_service(
+    cnv_services_with_template: list[Service], fips_enabled_cluster: bool, services_tls_runtime: dict[str, str]
+) -> dict[str, set[str]]:
+    """Computes the TLS curve set each CNV service is expected to negotiate under the Custom profile."""
+    expected_by_service: dict[str, set[str]] = {}
+    for service in cnv_services_with_template:
+        service_name = service.name
+        if service_name in CURVE_PROBE_EXCLUDED:
+            continue
         expected_negotiable = set(TLS_PROPAGATION_CUSTOM_GROUPS)
         if fips_enabled_cluster:
             assert service_name in services_tls_runtime, f"TLS runtime not detected for service {service_name}"
@@ -372,10 +380,31 @@ def curve_propagation_expectations(cnv_services_with_template, fips_enabled_clus
         # (GetFIPSCompliantGroups), so it never negotiates them on any cluster.
         if service_name == KUBEVIRT_CONSOLE_PLUGIN_SERVICE:
             expected_negotiable.difference_update(NON_FIPS_GROUPS)
+        expected_by_service[service_name] = expected_negotiable
+    return expected_by_service
 
-        expectations[service_name] = {
+
+@pytest.fixture(scope="class")
+def curve_propagation_expectations(
+    cnv_services_with_template: list[Service],
+    fips_enabled_cluster: bool,
+    pending_jira_by_service: dict[str, str | None],
+    expected_negotiable_curves_by_service: dict[str, set[str]],
+) -> dict[str, CurvePropagationExpectation]:
+    """Per-service expected curve negotiation outcome and pending-Jira gate.
+
+    Computed once as test setup so the test itself only decides which services need to
+    run, without deciding per-service business rules inline. The actual TLS probing
+    happens inside each subtest, so a single probe failure does not hide the results of
+    the others.
+    """
+    LOGGER.info(f"Curve propagation test running on a {'FIPS' if fips_enabled_cluster else 'non-FIPS'} cluster")
+    return {
+        service.name: {
             "service": service,
-            "expected_negotiable": expected_negotiable,
-            "pending_jira": pending_jira,
+            "expected_negotiable": expected_negotiable_curves_by_service[service.name],
+            "pending_jira": pending_jira_by_service[service.name],
         }
-    return expectations
+        for service in cnv_services_with_template
+        if service.name not in CURVE_PROBE_EXCLUDED
+    }

@@ -1,5 +1,6 @@
 import logging
 from contextlib import contextmanager
+from typing import TypedDict
 
 import deepdiff
 import pytest
@@ -343,27 +344,27 @@ def get_node_available_tls_groups(utility_pods: list, node: Node) -> list[str]:
     return [group.strip() for group in output.strip().split(":") if group.strip()]
 
 
-def compose_openssl_probe_command(
-    service: Service, groups: str, connect_timeout: int = 10, use_sni: bool = False
-) -> str:
+def compose_openssl_probe_command(service: Service, groups: str, connect_timeout: int = 10) -> str:
     """Builds an openssl s_client command probing the given TLS group(s).
 
+    Explicitly requests TLS 1.3, since the PQC hybrid groups (e.g. SecP256r1MLKEM768)
+    only negotiate over TLS 1.3 - relying on openssl's default offered versions would
+    make the probe depend on the client tool's version defaults rather than the group
+    itself.
+
     Args:
-        service: Service resource to probe (provides clusterIP, port and SNI name).
+        service: Service resource to probe (provides clusterIP and port).
         groups: Colon-separated TLS group names to offer (e.g. "SecP256r1MLKEM768:secp256r1").
         connect_timeout: Timeout in seconds for the TLS connection attempt.
-        use_sni: When True, send ``-servername <service>.<namespace>.svc`` so that
-            name-based virtual hosts (e.g. the nginx console-plugin and apiserver-proxy)
-            present their certificate instead of rejecting with ``unrecognized name``.
 
     Returns:
         str: The openssl command string.
     """
     service_spec = service.instance.spec
-    sni = f" -servername {service.name}.{service.namespace}.svc" if use_sni else ""
     return (
         f"echo | timeout {connect_timeout}"
-        f" openssl s_client -connect {service_spec.clusterIP}:{service_spec.ports[0].port}{sni} -groups {groups} 2>&1"
+        f" openssl s_client -connect {service_spec.clusterIP}:{service_spec.ports[0].port}"
+        f" -tls1_3 -groups {groups} 2>&1"
     )
 
 
@@ -431,12 +432,18 @@ def get_services_pqc_status(
     return results
 
 
+class CurvePropagationExpectation(TypedDict):
+    service: Service
+    expected_negotiable: set[str]
+    pending_jira: str | None
+
+
 def probe_service_curve_negotiated(
     worker_exec: ExecCommandOnPod,
     service: Service,
     group: str,
 ) -> bool | None:
-    """Probes a single service for a single TLS group (with SNI).
+    """Probes a single service for a single TLS group.
 
     Args:
         worker_exec: ExecCommandOnPod instance for running commands on a worker node.
@@ -448,7 +455,7 @@ def probe_service_curve_negotiated(
             (reachable), None if neither indicator was seen (service/group unreachable).
     """
     output = worker_exec.exec(
-        command=compose_openssl_probe_command(service=service, groups=group, use_sni=True),
+        command=compose_openssl_probe_command(service=service, groups=group),
         ignore_rc=True,
     )
     negotiated = classify_openssl_probe_output(output=output)
