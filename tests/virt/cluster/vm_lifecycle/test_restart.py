@@ -32,8 +32,11 @@ def vm_to_restart(unprivileged_client, namespace):
 
 
 @pytest.mark.s390x
-@pytest.mark.polarion("CNV-1497")
 def test_vm_restart(vm_to_restart):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-3110 # <skip-jira-utils-check>
+    Polarion: CNV-1497
+    """
     LOGGER.info("VM is running: Restarting VM")
     vm_to_restart.restart(wait=True)
     LOGGER.info("VM is running: Stopping VM")

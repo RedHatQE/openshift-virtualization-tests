@@ -31,7 +31,6 @@ pytestmark = [
 )
 class TestAAQDifferentAllocationMethods:
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::test_aaq_allocation_methods")
-    @pytest.mark.polarion("CNV-11242")
     def test_aaq_with_virtual_resources_allocation_methods(
         self,
         admin_client,
@@ -39,6 +38,10 @@ class TestAAQDifferentAllocationMethods:
         application_aware_resource_quota,
         vm_for_aaq_allocation_methods_test,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-36385 # <skip-jira-utils-check>
+        Polarion: CNV-11242
+        """
         check_arq_status_values_different_allocations(
             arq=application_aware_resource_quota,
             vm=vm_for_aaq_allocation_methods_test,
@@ -47,14 +50,16 @@ class TestAAQDifferentAllocationMethods:
         )
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::test_aaq_allocation_methods"])
-    @pytest.mark.polarion("CNV-11387")
     def test_aaq_vm_migration_with_different_allocation(
         self, admin_client: DynamicClient, vm_for_aaq_allocation_methods_test: VirtualMachineForTests
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-36385 # <skip-jira-utils-check>
+        Polarion: CNV-11387
+        """
         migrate_vm_and_verify(vm=vm_for_aaq_allocation_methods_test, client=admin_client)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::test_aaq_allocation_methods"])
-    @pytest.mark.polarion("CNV-11248")
     def test_aaq_different_allocation_memory_overcommit(
         self,
         admin_client,
@@ -63,6 +68,10 @@ class TestAAQDifferentAllocationMethods:
         updated_hco_memory_overcommit,
         restarted_vm_for_aaq_allocation_methods_test,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-36385 # <skip-jira-utils-check>
+        Polarion: CNV-11248
+        """
         check_arq_status_values_different_allocations(
             arq=application_aware_resource_quota,
             vm=restarted_vm_for_aaq_allocation_methods_test,

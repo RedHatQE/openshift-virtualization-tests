@@ -37,13 +37,21 @@ def smbios_defaults(cnv_current_version):
 
 
 @pytest.mark.s390x
-@pytest.mark.polarion("CNV-4346")
 def test_cm_smbios_defaults(smbios_from_kubevirt_config, smbios_defaults):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-1335 # <skip-jira-utils-check>
+    Jira: https://redhat.atlassian.net/browse/CNV-6437 # <skip-jira-utils-check>
+    Polarion: CNV-4346
+    """
     check_smbios_defaults(smbios_defaults=smbios_defaults, cm_values=smbios_from_kubevirt_config)
 
 
-@pytest.mark.polarion("CNV-4325")
 def test_vm_smbios_default_values(admin_client, smbios_from_kubevirt_config, configmap_smbios_vm):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-1335 # <skip-jira-utils-check>
+    Jira: https://redhat.atlassian.net/browse/CNV-6437 # <skip-jira-utils-check>
+    Polarion: CNV-4325
+    """
     check_vm_xml_smbios(
         vm=configmap_smbios_vm,
         cm_values=smbios_from_kubevirt_config,

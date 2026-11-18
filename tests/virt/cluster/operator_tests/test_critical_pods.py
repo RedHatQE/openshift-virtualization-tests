@@ -44,17 +44,19 @@ def virt_pods(request, admin_client, hco_namespace):
 @pytest.mark.parametrize(
     "virt_pods",
     [
-        pytest.param(VIRT_API, marks=(pytest.mark.polarion("CNV-788"))),
-        pytest.param(
-            VIRT_CONTROLLER,
-            marks=(pytest.mark.polarion("CNV-8867")),
-        ),
-        pytest.param(VIRT_HANDLER, marks=(pytest.mark.polarion("CNV-8868"))),
+        pytest.param(VIRT_API),
+        pytest.param(VIRT_CONTROLLER),
+        pytest.param(VIRT_HANDLER),
     ],
     indirect=True,
 )
 def test_kubevirt_pods_are_critical(virt_pods):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-2797 # <skip-jira-utils-check>
+    Polarion: CNV-788
+    Polarion: CNV-8867
+    Polarion: CNV-8868
+
     Positive: ensure infra pods are critical
     """
     verify_pods_priority_class_value(pods=virt_pods, expected_value="kubevirt-cluster-critical")

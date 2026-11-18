@@ -217,9 +217,9 @@ class TestRunStrategyBaseActions:
     @pytest.mark.parametrize(
         "vm_action",
         [
-            pytest.param("start", marks=pytest.mark.polarion("CNV-4685")),
-            pytest.param("restart", marks=pytest.mark.polarion("CNV-4686")),
-            pytest.param("stop", marks=pytest.mark.polarion("CNV-4687")),
+            "start",
+            "restart",
+            "stop",
         ],
     )
     def test_run_strategy_policy(
@@ -228,6 +228,12 @@ class TestRunStrategyBaseActions:
         matrix_updated_vm_run_strategy,
         vm_action,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1160 # <skip-jira-utils-check>
+        Polarion: CNV-4685
+        Polarion: CNV-4686
+        Polarion: CNV-4687
+        """
         LOGGER.info(f"Verify VM with run strategy {matrix_updated_vm_run_strategy} and VM action {vm_action}")
         verify_vm_action(
             vm=lifecycle_vm,
@@ -242,7 +248,6 @@ class TestRunStrategyBaseActions:
     indirect=True,
 )
 class TestRunStrategyAdvancedActions:
-    @pytest.mark.polarion("CNV-5054")
     @pytest.mark.usefixtures("start_vm_if_not_running")
     def test_run_strategy_shutdown(
         self,
@@ -251,6 +256,10 @@ class TestRunStrategyAdvancedActions:
         xfail_vm_shutdown_run_strategy_halted,
         matrix_updated_vm_run_strategy,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1160 # <skip-jira-utils-check>
+        Polarion: CNV-5054
+        """
         vmi = lifecycle_vm.vmi
         launcher_pod = vmi.get_virt_launcher_pod(privileged_client=admin_client)
         run_strategy = matrix_updated_vm_run_strategy
@@ -277,12 +286,10 @@ class TestRunStrategyAdvancedActions:
         [
             pytest.param(
                 {"run_strategy": MANUAL},
-                marks=pytest.mark.polarion("CNV-4688"),
                 id="Manual",
             ),
             pytest.param(
                 {"run_strategy": ALWAYS},
-                marks=pytest.mark.polarion("CNV-4689"),
                 id="Always",
             ),
         ],
@@ -290,6 +297,11 @@ class TestRunStrategyAdvancedActions:
     )
     @pytest.mark.usefixtures("start_vm_if_not_running")
     def test_run_strategy_pause_unpause_vmi(self, lifecycle_vm, request_updated_vm_run_strategy):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1160 # <skip-jira-utils-check>
+        Polarion: CNV-4688
+        Polarion: CNV-4689
+        """
         LOGGER.info(f"Verify VMI pause/un-pause with runStrategy: {request_updated_vm_run_strategy}")
         pause_unpause_vmi_and_verify_status(vm=lifecycle_vm)
 
@@ -298,12 +310,10 @@ class TestRunStrategyAdvancedActions:
         [
             pytest.param(
                 {"run_strategy": MANUAL},
-                marks=pytest.mark.polarion("CNV-5893"),
                 id="Manual",
             ),
             pytest.param(
                 {"run_strategy": ALWAYS},
-                marks=pytest.mark.polarion("CNV-4690"),
                 id="Always",
             ),
         ],
@@ -317,6 +327,11 @@ class TestRunStrategyAdvancedActions:
         lifecycle_vm: VirtualMachineForTests,
         request_updated_vm_run_strategy: str,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1160 # <skip-jira-utils-check>
+        Polarion: CNV-5893
+        Polarion: CNV-4690
+        """
         migrate_validate_run_strategy_vm(
             vm=lifecycle_vm, client=admin_client, run_strategy=request_updated_vm_run_strategy
         )
