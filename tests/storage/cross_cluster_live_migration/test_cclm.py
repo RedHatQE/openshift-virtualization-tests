@@ -116,6 +116,7 @@ class TestCCLMSeveralVMs:
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME_SEVERAL_VMS}::test_migrate_vm_from_remote_to_local_cluster"])
     @pytest.mark.polarion("CNV-14332")
+    @pytest.mark.jira("CNV-101205", run=False)
     def test_verify_file_persisted_after_migration(self, local_vms_after_cclm_migration):
         """
         Test that files written before migration are preserved after cross-cluster live migration.
@@ -395,6 +396,7 @@ class TestCCLMFromStorageAtoB:
         depends=[f"{TESTS_CLASS_NAME_STORAGE_A_TO_B}::test_migrate_vm_from_remote_to_local_cluster"]
     )
     @pytest.mark.polarion("CNV-15957")
+    @pytest.mark.jira("CNV-101205", run=False)
     def test_verify_file_persisted_after_migration(self, local_vms_after_cclm_migration):
         """
         Test that files written before migration are preserved after cross-cluster live migration.
