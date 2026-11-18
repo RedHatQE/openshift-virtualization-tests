@@ -52,7 +52,6 @@ class TestVMTemplatePreUpgrade:
     @pytest.mark.dependency(name=f"{VM_TEMPLATE_PRE_UPGRADE_NODE_ID_PREFIX}::test_template_creation_before_upgrade")
     def test_template_creation_before_upgrade(self, vm_template_before_upgrade):
         """
-        Jira: https://redhat.atlassian.net/browse/CNV-73392 # <skip-jira-utils-check>
         Polarion: CNV-16822
 
         Test that a VirtualMachineTemplate can be created before the cluster upgrade
@@ -82,7 +81,6 @@ class TestVMTemplatePreUpgrade:
         self, vm_template_before_upgrade, vm_created_from_template_before_upgrade
     ):
         """
-        Jira: https://redhat.atlassian.net/browse/CNV-73392 # <skip-jira-utils-check>
         Polarion: CNV-16821
 
         Test that a VM can be created from a VirtualMachineTemplate before the cluster
@@ -115,7 +113,6 @@ class TestVMTemplatePreUpgrade:
     )
     def test_template_request_before_upgrade(self, captured_template):
         """
-        Jira: https://redhat.atlassian.net/browse/CNV-73392 # <skip-jira-utils-check>
         Polarion: CNV-16817
 
         Test that a VirtualMachineTemplateRequest can be created before the cluster
@@ -171,7 +168,6 @@ class TestVMTemplatePostUpgrade:
         self, vm_template_before_upgrade, vm_template_request_before_upgrade, captured_template
     ):
         """
-        Jira: https://redhat.atlassian.net/browse/CNV-73392 # <skip-jira-utils-check>
         Polarion: CNV-16818
 
         Test that a directly-created VirtualMachineTemplate, a VirtualMachineTemplateRequest,
@@ -217,7 +213,6 @@ class TestVMTemplatePostUpgrade:
         self, vm_template_before_upgrade, captured_template
     ):
         """
-        Jira: https://redhat.atlassian.net/browse/CNV-73392 # <skip-jira-utils-check>
         Polarion: CNV-16819
 
         Test that a new VM can be created from each pre-existing VirtualMachineTemplate
