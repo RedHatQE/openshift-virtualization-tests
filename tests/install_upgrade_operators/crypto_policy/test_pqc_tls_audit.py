@@ -14,7 +14,6 @@ def test_cnv_services_pqc_key_exchange(subtests, fips_enabled_cluster, pqc_statu
     Test that every CNV service negotiates PQC key exchange.
 
     Jira: https://redhat.atlassian.net/browse/CNV-74453  # <skip-jira-utils-check>
-    Jira: https://redhat.atlassian.net/browse/CNV-61452 # <skip-jira-utils-check>
     Polarion: CNV-15222
 
 
