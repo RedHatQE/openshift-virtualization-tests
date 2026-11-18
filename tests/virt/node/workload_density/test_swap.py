@@ -139,13 +139,11 @@ def vm_with_different_qos(request, unprivileged_client, namespace):
     [
         pytest.param(
             {"name": "burstable-vm"},
-            marks=pytest.mark.polarion("CNV-11530"),
             id="Burstable_QoS",
         ),
         pytest.param(
             {"name": "guaranteed-vm", "memory_limits": Images.Fedora.DEFAULT_MEMORY_SIZE},
             marks=[
-                pytest.mark.polarion("CNV-11488"),
                 pytest.mark.jira("CNV-98658", run=False),
             ],
             id="Guaranteed_QoS",
@@ -154,6 +152,11 @@ def vm_with_different_qos(request, unprivileged_client, namespace):
     indirect=True,
 )
 def test_swap_status_on_pod(admin_client, vm_with_different_qos):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-22314 # <skip-jira-utils-check>
+    Polarion: CNV-11530
+    Polarion: CNV-11488
+    """
     swap_max = vm_with_different_qos.vmi.get_virt_launcher_pod(privileged_client=admin_client).execute(
         command=shlex.split(f"bash -c 'cat {MEMORY_SWAP_MAX_PATH} | {REMOVE_NEWLINE}'")
     )
@@ -164,7 +167,6 @@ def test_swap_status_on_pod(admin_client, vm_with_different_qos):
 
 class TestVMCanUseSwap:
     @pytest.mark.dependency(name="test_virt_launcher_pod_use_swap")
-    @pytest.mark.polarion("CNV-11258")
     def test_virt_launcher_pod_use_swap(
         self,
         admin_client,
@@ -173,15 +175,22 @@ class TestVMCanUseSwap:
         vm_for_swap_usage_test,
         swap_vm_stress_started,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-22314 # <skip-jira-utils-check>
+        Polarion: CNV-11258
+        """
         wait_virt_launcher_pod_using_swap(vm=vm_for_swap_usage_test, admin_client=admin_client)
 
     @pytest.mark.dependency(depends=["test_virt_launcher_pod_use_swap"])
-    @pytest.mark.polarion("CNV-11259")
     @pytest.mark.usefixtures(
         "node_with_max_memory_labeled_for_swap_test",
         "migration_policy_with_allow_auto_converge",
     )
     def test_migrate_vm_using_swap(self, admin_client: DynamicClient, vm_for_swap_usage_test: VirtualMachineForTests):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-22314 # <skip-jira-utils-check>
+        Polarion: CNV-11259
+        """
         migrate_vm_and_verify(
             vm=vm_for_swap_usage_test, client=admin_client, check_ssh_connectivity=True, timeout=TIMEOUT_20MIN
         )

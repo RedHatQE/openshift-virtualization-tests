@@ -60,7 +60,6 @@ def test_vm_with_cpu_feature_positive(cpu_features_vm_positive):
         pytest.param(
             [{"name": "pcid", "policy": "nomatch"}],
             id="1 invalid policy",
-            marks=pytest.mark.polarion("CNV-1832"),
         ),
         pytest.param(
             [
@@ -68,13 +67,18 @@ def test_vm_with_cpu_feature_positive(cpu_features_vm_positive):
                 {"name": "pclmuldq", "policy": "nomatch"},
             ],
             id="1 valid, 1 invalid policy",
-            marks=pytest.mark.polarion("CNV-3056"),
         ),
     ],
 )
 @pytest.mark.s390x
 def test_invalid_cpu_feature_policy_negative(unprivileged_client, namespace, features):
-    """VM should not be created successfully"""
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-6429 # <skip-jira-utils-check>
+    Polarion: CNV-1832
+    Polarion: CNV-3056
+
+    VM should not be created successfully
+    """
     vm_name = "invalid-cpu-feature-policy-vm"
     with pytest.raises(UnprocessibleEntityError):
         with VirtualMachineForTests(
