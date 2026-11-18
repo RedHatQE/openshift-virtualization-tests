@@ -6,15 +6,19 @@ Co-authored-by: Claude <noreply@anthropic.com>
 
 import argparse
 import ast
+import sys
 import textwrap
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from scripts.tests_analyzer.pytest_marker_analyzer import (
     AttributeAccessCollector,
     Fixture,
     ImportVisitor,
     MarkedTest,
+    MarkerTestAnalyzer,
     SymbolClassification,
     _build_intra_class_call_graph,
     _build_line_to_symbol_map,
@@ -28,6 +32,7 @@ from scripts.tests_analyzer.pytest_marker_analyzer import (
     _get_modified_function_names,
     _is_fixture_decorator_standalone,
     _parse_diff_for_functions,
+    main,
     run_github_mode,
 )
 
@@ -1537,6 +1542,33 @@ class TestExtractModifiedSymbolsUnattributed:
             )
 
         assert result is None, "Remote mode fetch failure should return None (conservative fallback)"
+
+
+class TestLocalModeRequiresBaseBranch:
+    """Local mode must not silently diff against an assumed base branch.
+
+    Diffing a release-branch checkout against main reports the whole branch
+    divergence as affected dependencies, so local mode requires --base.
+    """
+
+    def test_local_mode_without_base_exits_with_parser_error(self, monkeypatch, capsys):
+        """Local mode without --base exits with a parser error naming --base."""
+        monkeypatch.setattr(sys, "argv", ["pytest_marker_analyzer.py", "--markers", "smoke"])
+
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+
+        assert exc_info.value.code == 2, "argparse errors must exit with code 2"
+        assert "--base is required in local mode" in capsys.readouterr().err, (
+            "local mode without --base must fail with a message naming --base"
+        )
+
+    def test_get_changed_files_without_base_or_files_raises(self, tmp_path):
+        """get_changed_files raises when neither files nor base_branch is provided."""
+        analyzer = MarkerTestAnalyzer(marker_expression="smoke", repo_root=tmp_path)
+
+        with pytest.raises(ValueError, match="base_branch is required when files is not provided"):
+            analyzer.get_changed_files()
 
 
 class TestRunGithubModeCheckoutGithubPrInfo:

@@ -89,20 +89,20 @@ This enables CI pipelines to skip expensive test suites when changes don't affec
 
 ### Local Mode
 
-Analyze current branch against main:
+`--base` is required in local mode — pass the branch the work targets. There is no
+default: diffing against `main` from a release-branch checkout (e.g. `cnv-5.0`)
+reports the whole branch divergence as affected dependencies.
+
+Analyze the current branch against the branch it targets:
 ```bash
-uv run python scripts/test_analyzer/pytest_marker_analyzer.py
+uv run python scripts/tests_analyzer/pytest_marker_analyzer.py --base origin/main
+uv run python scripts/tests_analyzer/pytest_marker_analyzer.py --base origin/cnv-5.0
 ```
 
-Analyze specific files:
+Analyze specific files (the base is still needed to diff each file's symbols):
 ```bash
-uv run python scripts/test_analyzer/pytest_marker_analyzer.py \
+uv run python scripts/tests_analyzer/pytest_marker_analyzer.py --base origin/main \
   --files path/to/file1.py path/to/file2.py
-```
-
-Compare against specific base branch:
-```bash
-uv run python scripts/test_analyzer/pytest_marker_analyzer.py --base develop
 ```
 
 ### GitHub PR Mode

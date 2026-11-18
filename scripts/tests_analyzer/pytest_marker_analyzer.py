@@ -3560,8 +3560,18 @@ class MarkerTestAnalyzer:
             self.conftest_files.append(root_conftest)
         logger.info(msg="Found conftest.py files", extra={"file_count": len(self.conftest_files)})
 
-    def get_changed_files(self, base_branch: str = "main", files: list[str] | None = None) -> list[Path]:
-        """Get list of changed files either from git or from provided list."""
+    def get_changed_files(self, base_branch: str | None = None, files: list[str] | None = None) -> list[Path]:
+        """Get list of changed files either from git or from provided list.
+
+        Args:
+            base_branch: Branch to diff against. Required when ``files`` is not provided;
+                there is no default because diffing against the wrong branch reports
+                unrelated changes as affected test dependencies.
+            files: Explicit files to analyze instead of running a git diff.
+
+        Raises:
+            ValueError: If ``files`` is not provided and ``base_branch`` is empty.
+        """
         if files:
             # Use provided files with validation
             validated_files = []
@@ -3582,6 +3592,9 @@ class MarkerTestAnalyzer:
                 except ValueError:
                     logger.warning(msg="File is outside repository", extra={"file": file_path_str})
             return validated_files
+
+        if not base_branch:
+            raise ValueError("base_branch is required when files is not provided")
 
         # Validate branch name (alphanumeric, dash, underscore, slash, dot)
         if not re.match(pattern=r"^[a-zA-Z0-9/_.-]+$", string=base_branch):
@@ -4051,8 +4064,12 @@ def main() -> int:
     )
     parser.add_argument(
         "--base",
-        default="main",
-        help="Base branch to compare against (default: main)",
+        default=None,
+        help=(
+            "Base branch to compare against (required in local mode). "
+            "Pass the branch the work targets, e.g. origin/main or origin/cnv-5.0. "
+            "GitHub PR mode takes the base from the PR instead."
+        ),
     )
 
     # GitHub mode arguments
@@ -4138,6 +4155,11 @@ def main() -> int:
     if github_mode:
         result, exit_code = run_github_mode(args=args)
     else:
+        if not args.base:
+            parser.error(
+                "--base is required in local mode: pass the branch this work targets, "
+                "e.g. --base origin/main or --base origin/cnv-5.0"
+            )
         result, exit_code = run_local_mode(args=args)
 
     if exit_code != 0 or result is None:
