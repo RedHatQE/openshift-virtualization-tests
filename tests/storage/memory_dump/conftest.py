@@ -8,7 +8,7 @@ from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from pytest_testconfig import config as py_config
 
 from tests.storage.memory_dump.utils import wait_for_memory_dump_status_completed
-from tests.utils import create_windows2022_vm_with_data_volume_template
+from tests.utils import create_windows2022_vm
 from utilities.constants import TIMEOUT_2MIN, WIN_2K22, Images
 from utilities.storage import (
     PodWithPVC,
@@ -25,8 +25,8 @@ def windows_vm_with_vtpm_for_memory_dump(
     modern_cpu_for_migration,
     windows_validation_os_images_data_source_scope_session,
 ):
-    with create_windows2022_vm_with_data_volume_template(
-        dv_template=data_volume_template_with_source_ref_dict(
+    with create_windows2022_vm(
+        data_volume_template=data_volume_template_with_source_ref_dict(
             data_source=windows_validation_os_images_data_source_scope_session,
             storage_class=py_config["default_storage_class"],
         ),
