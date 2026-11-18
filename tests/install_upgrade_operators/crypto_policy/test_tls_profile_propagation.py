@@ -26,7 +26,6 @@ def test_modern_profile_propagates_to_cnv_services(
     Test that the Modern TLS profile propagates from the APIServer to all CNV services.
 
     Jira: https://redhat.atlassian.net/browse/CNV-74453  # <skip-jira-utils-check>
-    Jira: https://redhat.atlassian.net/browse/CNV-61452 # <skip-jira-utils-check>
     Polarion: CNV-15973
 
 
