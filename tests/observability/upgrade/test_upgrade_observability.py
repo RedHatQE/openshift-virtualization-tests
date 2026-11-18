@@ -16,12 +16,15 @@ class TestUpgradeObservability:
 
     @pytest.mark.order(before=IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID)
     @pytest.mark.dependency(name=TEST_METRIC_KUBEVIRT_VMI_NUMBER_OF_OUTDATED_BEFORE_UPGRADE)
-    @pytest.mark.polarion("CNV-11749")
     @pytest.mark.xfail(
         reason=f"{QUARANTINED}: pre-upgrade setup for quarantined post-upgrade tests; CNV-84508",
         run=False,
     )
     def test_metric_kubevirt_vmi_number_of_outdated_before_upgrade(self, prometheus, vm_with_node_selector_for_upgrade):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-36659 # <skip-jira-utils-check>
+        Polarion: CNV-11749
+        """
         validate_metrics_value(
             prometheus=prometheus,
             metric_name=KUBEVIRT_VMI_NUMBER_OF_OUTDATED,
@@ -30,7 +33,6 @@ class TestUpgradeObservability:
 
     """Post-upgrade tests"""
 
-    @pytest.mark.polarion("CNV-11757")
     @pytest.mark.order(after=IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID)
     @pytest.mark.dependency(
         name=TEST_OUTDATED_VMIS_COUNT_MATCHES,
@@ -45,6 +47,9 @@ class TestUpgradeObservability:
         self, outdated_vmis_count, kubevirt_resource_outdated_vmi_workloads_count
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-45822 # <skip-jira-utils-check>
+        Polarion: CNV-11757
+
         Verify that the number of VMIs with outdatedLauncherImage label
         matches the outdatedVirtualMachineInstanceWorkloads count in KubeVirt status
         """
@@ -54,7 +59,6 @@ class TestUpgradeObservability:
             f"but KubeVirt status shows {kubevirt_resource_outdated_vmi_workloads_count} outdated workloads"
         )
 
-    @pytest.mark.polarion("CNV-11758")
     @pytest.mark.order(after=IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID)
     @pytest.mark.dependency(
         depends=[
@@ -71,6 +75,10 @@ class TestUpgradeObservability:
     def test_metric_kubevirt_vmi_number_of_outdated_after_upgrade(
         self, prometheus, kubevirt_resource_outdated_vmi_workloads_count, vm_with_node_selector_for_upgrade
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-36659 # <skip-jira-utils-check>
+        Polarion: CNV-11758
+        """
         validate_metrics_value(
             prometheus=prometheus,
             metric_name=f"{KUBEVIRT_VMI_NUMBER_OF_OUTDATED}"

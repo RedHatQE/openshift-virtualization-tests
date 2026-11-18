@@ -15,12 +15,14 @@ pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
 
 
 class TestMetricsLinux:
-    @pytest.mark.polarion("CNV-11906")
     @pytest.mark.s390x
     def test_cnv_vmi_monitoring_metrics_linux_vm(
         self, admin_client, prometheus, single_metric_vm, cnv_vmi_monitoring_metrics_matrix__function__
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-36659 # <skip-jira-utils-check>
+        Polarion: CNV-11906
+
         Tests validating ability to perform various prometheus api queries on various metrics against a given vm
         and validates appropriate label information (node, namespace) exists for those metrics.
         """
@@ -35,7 +37,6 @@ class TestMetricsLinux:
 @pytest.mark.tier3
 @pytest.mark.windows
 class TestMetricsWindows:
-    @pytest.mark.polarion("CNV-11880")
     def test_cnv_vmi_monitoring_metrics_windows_vm(
         self,
         admin_client,
@@ -43,6 +44,10 @@ class TestMetricsWindows:
         windows_vm_for_test,
         cnv_vmi_monitoring_metrics_matrix__function__,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-36659 # <skip-jira-utils-check>
+        Polarion: CNV-11880
+        """
         assert_vm_metric_labels(
             prometheus=prometheus,
             query=cnv_vmi_monitoring_metrics_matrix__function__,
@@ -51,12 +56,15 @@ class TestMetricsWindows:
         )
 
 
-@pytest.mark.polarion("CNV-10438")
 @pytest.mark.s390x
 @pytest.mark.conformance
 def test_cnv_installation_with_hco_cr_metrics(
     prometheus,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-5810 # <skip-jira-utils-check>
+    Polarion: CNV-10438
+    """
     validate_metrics_value(
         prometheus=prometheus,
         metric_name=KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS,
@@ -65,9 +73,12 @@ def test_cnv_installation_with_hco_cr_metrics(
 
 
 class TestVMIMetricsLinuxVms:
-    @pytest.mark.polarion("CNV-11862")
     @pytest.mark.s390x
     def test_metric_kubevirt_vm_info(self, prometheus, single_metric_vm, linux_vm_info_to_compare):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-36659 # <skip-jira-utils-check>
+        Polarion: CNV-11862
+        """
         compare_kubevirt_vmi_info_metric_with_vm_info(
             prometheus=prometheus,
             query=KUBEVIRT_VM_INFO.format(vm_name=single_metric_vm.name),
@@ -79,8 +90,11 @@ class TestVMIMetricsLinuxVms:
 @pytest.mark.tier3
 @pytest.mark.windows
 class TestVMIMetricsWindowsVms:
-    @pytest.mark.polarion("CNV-11861")
     def test_kubevirt_vmi_info_windows(self, prometheus, windows_vm_for_test, vmi_guest_os_kernel_release_info_windows):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-36659 # <skip-jira-utils-check>
+        Polarion: CNV-11861
+        """
         compare_kubevirt_vmi_info_metric_with_vm_info(
             prometheus=prometheus,
             query=KUBEVIRT_VMI_INFO.format(vm_name=windows_vm_for_test.name),
@@ -88,8 +102,11 @@ class TestVMIMetricsWindowsVms:
             values_to_compare=vmi_guest_os_kernel_release_info_windows,
         )
 
-    @pytest.mark.polarion("CNV-11863")
     def test_metric_kubevirt_vm_info_windows(self, prometheus, windows_vm_for_test, windows_vm_info_to_compare):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-36659 # <skip-jira-utils-check>
+        Polarion: CNV-11863
+        """
         compare_kubevirt_vmi_info_metric_with_vm_info(
             prometheus=prometheus,
             query=KUBEVIRT_VM_INFO.format(vm_name=windows_vm_for_test.name),

@@ -61,9 +61,12 @@ def created_multiple_failed_vms(
 
 
 class TestSSPTemplate:
-    @pytest.mark.polarion("CNV-11356")
     @pytest.mark.s390x
     def test_metric_kubevirt_ssp_common_templates_restored_increase(self, prometheus, template_modified):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-35212 # <skip-jira-utils-check>
+        Polarion: CNV-11356
+        """
         validate_metric_value_within_range(
             prometheus=prometheus,
             metric_name=KUBEVIRT_SSP_COMMON_TEMPLATES_RESTORED_INCREASE,
@@ -76,12 +79,10 @@ class TestSSPTemplate:
             pytest.param(
                 {"deployment_name": SSP_OPERATOR, "replicas": 0},
                 KUBEVIRT_SSP_OPERATOR_UP,
-                marks=pytest.mark.polarion("CNV-11307"),
             ),
             pytest.param(
                 {"deployment_name": VIRT_TEMPLATE_VALIDATOR, "replicas": 0},
                 KUBEVIRT_SSP_TEMPLATE_VALIDATOR_UP,
-                marks=pytest.mark.polarion("CNV-11349"),
             ),
         ],
         indirect=["scaled_deployment"],
@@ -90,17 +91,26 @@ class TestSSPTemplate:
     def test_metrics_kubevirt_ssp_operator_validator_up(
         self, prometheus, paused_ssp_operator, scaled_deployment, metric_name
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-35212 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-28605 # <skip-jira-utils-check>
+        Polarion: CNV-11307
+        Polarion: CNV-11349
+        """
         validate_metrics_value(
             prometheus=prometheus,
             metric_name=metric_name,
             expected_value="0",
         )
 
-    @pytest.mark.polarion("CNV-11357")
     @pytest.mark.s390x
     def test_metric_kubevirt_ssp_operator_reconcile_succeeded_aggregated(
         self, prometheus, paused_ssp_operator, template_validator_finalizer, deleted_ssp_operator_pod
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-35212 # <skip-jira-utils-check>
+        Polarion: CNV-11357
+        """
         validate_metrics_value(
             prometheus=prometheus,
             metric_name=KUBEVIRT_SSP_OPERATOR_RECONCILE_SUCCEEDED_AGGREGATED,
@@ -124,9 +134,12 @@ class TestSSPTemplate:
 )
 @pytest.mark.usefixtures("initiate_metric_value", "instance_type_for_test_scope_class", "created_multiple_failed_vms")
 class TestSSPTemplateValidatorRejected:
-    @pytest.mark.polarion("CNV-11310")
     @pytest.mark.s390x
     def test_metric_kubevirt_ssp_template_validator_rejected_increase(self, prometheus, initiate_metric_value):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-35212 # <skip-jira-utils-check>
+        Polarion: CNV-11310
+        """
         validate_metric_value_with_round_down(
             prometheus=prometheus,
             metric_name=KUBEVIRT_SSP_TEMPLATE_VALIDATOR_REJECTED_INCREASE,
