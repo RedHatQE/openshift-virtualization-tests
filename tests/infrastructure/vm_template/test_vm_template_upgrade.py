@@ -17,7 +17,6 @@ Markers:
 
 import pytest
 
-from tests.infrastructure.vm_template.utils import process_and_create_vm
 from tests.upgrade_params import (
     IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID,
     IUO_UPGRADE_TEST_ORDERING_NODE_ID,
@@ -25,6 +24,7 @@ from tests.upgrade_params import (
 )
 from utilities.constants.pytest import DEPENDENCY_SCOPE_SESSION
 from utilities.constants.timeouts import TIMEOUT_1MIN
+from utilities.virt import process_and_create_vm
 
 pytestmark = [
     pytest.mark.upgrade,

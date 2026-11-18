@@ -9,10 +9,9 @@ from tests.data_protection.oadp.utils import (
 from utilities.constants import Images
 from utilities.constants.oadp import FILE_NAME_FOR_BACKUP, TEXT_TO_TEST
 from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_10SEC, TIMEOUT_15MIN
-from utilities.infra import process_and_create_vm
 from utilities.oadp import check_file_in_running_vm
 from utilities.storage import verify_file_in_windows_vm
-from utilities.virt import running_vm, wait_for_running_vm
+from utilities.virt import process_and_create_vm, running_vm, wait_for_running_vm
 
 pytestmark = pytest.mark.usefixtures("skip_if_no_storage_class_for_snapshot")
 
