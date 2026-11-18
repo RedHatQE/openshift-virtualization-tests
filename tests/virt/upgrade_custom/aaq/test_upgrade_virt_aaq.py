@@ -28,7 +28,6 @@ pytestmark = [
 class TestUpgradeVirtAAQ:
     """Pre-upgrade tests"""
 
-    @pytest.mark.polarion("CNV-11245")
     @pytest.mark.order(before=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
     @pytest.mark.dependency(name=f"{VIRT_NODE_ID_PREFIX}::test_arq_before_upgrade")
     def test_arq_before_upgrade(
@@ -37,12 +36,15 @@ class TestUpgradeVirtAAQ:
         vm_for_arq_upgrade_test,
         vm_for_arq_upgrade_test_in_gated_state,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-36385 # <skip-jira-utils-check>
+        Polarion: CNV-11245
+        """
         check_arq_status_values(
             current_values=application_aware_resource_quota_upgrade.instance.status.used,
             expected_values=UPGRADE_QUOTA_FOR_ONE_VMI,
         )
 
-    @pytest.mark.polarion("CNV-11428")
     @pytest.mark.order(before=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
     @pytest.mark.dependency(name=f"{VIRT_NODE_ID_PREFIX}::test_acrq_before_upgrade")
     def test_acrq_before_upgrade(
@@ -51,6 +53,10 @@ class TestUpgradeVirtAAQ:
         vm_for_acrq_upgrade_test,
         vm_for_acrq_upgrade_test_in_gated_state,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-36385 # <skip-jira-utils-check>
+        Polarion: CNV-11428
+        """
         check_arq_status_values(
             current_values=application_aware_cluster_resource_quota_upgrade.instance.status.total.used,
             expected_values=UPGRADE_QUOTA_FOR_ONE_VMI,
@@ -58,7 +64,6 @@ class TestUpgradeVirtAAQ:
 
     """ Post-upgrade tests """
 
-    @pytest.mark.polarion("CNV-11429")
     @pytest.mark.order(after=[IUO_CNV_ALERT_ORDERING_NODE_ID])
     @pytest.mark.dependency(
         depends=[
@@ -74,6 +79,10 @@ class TestUpgradeVirtAAQ:
         vm_for_arq_upgrade_test,
         vm_for_arq_upgrade_test_in_gated_state,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-36385 # <skip-jira-utils-check>
+        Polarion: CNV-11429
+        """
         check_pod_in_gated_state(
             pod=vm_for_arq_upgrade_test_in_gated_state.vmi.get_virt_launcher_pod(privileged_client=admin_client)
         )
@@ -82,7 +91,6 @@ class TestUpgradeVirtAAQ:
             expected_values=UPGRADE_QUOTA_FOR_ONE_VMI,
         )
 
-    @pytest.mark.polarion("CNV-11430")
     @pytest.mark.order(after=[IUO_CNV_ALERT_ORDERING_NODE_ID])
     @pytest.mark.dependency(
         depends=[
@@ -98,6 +106,10 @@ class TestUpgradeVirtAAQ:
         vm_for_acrq_upgrade_test,
         vm_for_acrq_upgrade_test_in_gated_state,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-36385 # <skip-jira-utils-check>
+        Polarion: CNV-11430
+        """
         check_pod_in_gated_state(
             pod=vm_for_acrq_upgrade_test_in_gated_state.vmi.get_virt_launcher_pod(privileged_client=admin_client)
         )

@@ -69,7 +69,6 @@ class TestMigrationVMWithMemoryLoad:
                     "memory_guest": "4Gi",
                     "cpu_cores": 2,
                 },
-                marks=pytest.mark.polarion("CNV-4661"),
             ),
         ],
         indirect=True,
@@ -81,6 +80,10 @@ class TestMigrationVMWithMemoryLoad:
         stress_pid_before_migration,
         migrate_vm_with_memory_load,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-19880 # <skip-jira-utils-check>
+        Polarion: CNV-4661
+        """
         verify_stress_ng_pid_not_changed(vm=vm_with_memory_load, initial_pid=stress_pid_before_migration)
 
     @pytest.mark.ibm_bare_metal
@@ -102,13 +105,16 @@ class TestMigrationVMWithMemoryLoad:
         indirect=True,
     )
     @pytest.mark.windows
-    @pytest.mark.polarion("CNV-9844")
     def test_windows_vm_migrate_with_memory_load(
         self,
         vm_with_memory_load,
         stress_pid_before_migration,
         migrate_vm_with_memory_load,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-19880 # <skip-jira-utils-check>
+        Polarion: CNV-9844
+        """
         verify_stress_ng_pid_not_changed(
             vm=vm_with_memory_load,
             initial_pid=stress_pid_before_migration,

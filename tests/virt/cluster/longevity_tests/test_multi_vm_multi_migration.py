@@ -32,7 +32,6 @@ pytestmark = [pytest.mark.longevity, pytest.mark.special_infra]
         pytest.param(
             {"dv_params": LINUX_DV_PARAMS},
             {"vm_params": LINUX_VM_PARAMS},
-            marks=pytest.mark.polarion("CNV-8310"),
         )
     ],
     indirect=True,
@@ -40,6 +39,10 @@ pytestmark = [pytest.mark.longevity, pytest.mark.special_infra]
 def test_migration_storm_linux_vms(
     admin_client: DynamicClient, linux_vms_with_pids: dict[str, dict[str, VirtualMachineForTests]]
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-16058 # <skip-jira-utils-check>
+    Polarion: CNV-8310
+    """
     run_migration_loop(
         client=admin_client,
         iterations=int(py_config["linux_iterations"]),
@@ -54,7 +57,6 @@ def test_migration_storm_linux_vms(
         pytest.param(
             {"dv_params": WINDOWS_DV_PARAMS},
             {"vm_params": WINDOWS_VM_PARAMS},
-            marks=pytest.mark.polarion("CNV-8311"),
         )
     ],
     indirect=True,
@@ -63,6 +65,10 @@ def test_migration_storm_linux_vms(
 def test_migration_storm_windows_vms(
     admin_client: DynamicClient, windows_vms_with_pids: dict[str, dict[str, VirtualMachineForTests]]
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-16058 # <skip-jira-utils-check>
+    Polarion: CNV-8311
+    """
     run_migration_loop(
         client=admin_client,
         iterations=int(py_config["windows_iterations"]),
@@ -77,7 +83,6 @@ def test_migration_storm_windows_vms(
         pytest.param(
             {"dv_params": [WSL2_DV_PARAMS]},
             {"vm_params": [WSL2_VM_PARAMS]},
-            marks=pytest.mark.polarion("CNV-9692"),
         )
     ],
     indirect=True,
@@ -85,6 +90,10 @@ def test_migration_storm_windows_vms(
 def test_migration_storm_wsl2_vms(
     admin_client: DynamicClient, wsl2_vms_with_pids: dict[str, dict[str, VirtualMachineForTests]]
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-25129 # <skip-jira-utils-check>
+    Polarion: CNV-9692
+    """
     run_migration_loop(
         client=admin_client,
         iterations=int(py_config["windows_iterations"]),

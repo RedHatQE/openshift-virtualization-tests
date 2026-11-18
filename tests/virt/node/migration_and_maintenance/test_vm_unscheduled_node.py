@@ -45,9 +45,12 @@ def unscheduled_node_vm(
     ],
     indirect=True,
 )
-@pytest.mark.polarion("CNV-4157")
 def test_schedule_vm_on_cordoned_node(admin_client, worker_node1, unscheduled_node_vm):
-    """Test VM scheduling on a node under maintenance.
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-220 # <skip-jira-utils-check>
+    Polarion: CNV-4157
+
+    Test VM scheduling on a node under maintenance.
     1. Cordon the target node specified in the VM's nodeAffinity (worker_node1).
     2. Wait until the node status becomes 'Ready,SchedulingDisabled'.
     3. Start the VM and verify that the VMI phase is 'Scheduling'.

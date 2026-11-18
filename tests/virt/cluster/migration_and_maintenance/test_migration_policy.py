@@ -145,7 +145,6 @@ class TestMigrationPolicies:
                 },
                 MIGRATION_POLICY_VM_LABEL,
                 NAMESPACE_LABEL,
-                marks=pytest.mark.polarion("CNV-8241"),
                 id="by_namespace_label_selector",
             ),
             pytest.param(
@@ -155,7 +154,6 @@ class TestMigrationPolicies:
                 },
                 MIGRATION_POLICY_VM_LABEL,
                 NAMESPACE_LABEL,
-                marks=pytest.mark.polarion("CNV-8242"),
                 id="by_vmi_label_selector",
             ),
         ],
@@ -168,6 +166,11 @@ class TestMigrationPolicies:
         vm_for_migration_policy_test,
         vm_migrated_with_policy,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-7089 # <skip-jira-utils-check>
+        Polarion: CNV-8241
+        Polarion: CNV-8242
+        """
         assert_applied_migration_policy(
             vmi=vm_for_migration_policy_test.vmi,
             expected_policy=migration_policy_a.name,
@@ -185,7 +188,6 @@ class TestMigrationPolicies:
                     "virtualMachineInstanceSelector": MIGRATION_POLICY_VM_LABEL,
                 },
                 MIGRATION_POLICY_VM_LABEL,
-                marks=pytest.mark.polarion("CNV-8308"),
             ),
         ],
         indirect=True,
@@ -197,6 +199,10 @@ class TestMigrationPolicies:
         vm_migrated_with_policy,
         vm_re_migrated_after_updating_migration_policy,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-7089 # <skip-jira-utils-check>
+        Polarion: CNV-8308
+        """
         assert_applied_migration_configuration(
             vmi=vm_for_migration_policy_test.vmi,
             migration_policy=migration_policy_a,
@@ -222,7 +228,6 @@ class TestMigrationPolicies:
                 MIGRATION_POLICY_VM_LABEL,
                 NAMESPACE_LABEL,
                 "migration-policy-a",
-                marks=pytest.mark.polarion("CNV-8243"),
                 id="with_identical_labels",
             ),
             pytest.param(
@@ -239,7 +244,6 @@ class TestMigrationPolicies:
                 MIGRATION_POLICY_VM_LABEL,
                 NAMESPACE_LABEL,
                 "migration-policy-b",
-                marks=pytest.mark.polarion("CNV-8247"),
                 id="namespace_vs_vmi_selectors",
             ),
             pytest.param(
@@ -256,7 +260,6 @@ class TestMigrationPolicies:
                 MIGRATION_POLICY_VM_LABEL,
                 {"label-1": "", "label-2": ""},
                 "migration-policy-b",
-                marks=pytest.mark.polarion("CNV-8248"),
                 id="multiple_selectors_vs_one",
             ),
         ],
@@ -276,6 +279,12 @@ class TestMigrationPolicies:
         vm_migrated_with_policy,
         expected_applied_policy,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-7089 # <skip-jira-utils-check>
+        Polarion: CNV-8243
+        Polarion: CNV-8247
+        Polarion: CNV-8248
+        """
         assert_applied_migration_policy(
             vmi=vm_for_migration_policy_test.vmi,
             expected_policy=expected_applied_policy,
@@ -291,7 +300,6 @@ class TestMigrationPolicies:
                     "namespaceSelector": {"namespace-fake-label": ""},
                 },
                 MIGRATION_POLICY_VM_LABEL,
-                marks=pytest.mark.polarion("CNV-8249"),
             ),
         ],
         indirect=True,
@@ -302,6 +310,10 @@ class TestMigrationPolicies:
         vm_for_migration_policy_test,
         vm_migrated_with_policy,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-7089 # <skip-jira-utils-check>
+        Polarion: CNV-8249
+        """
         assert_applied_migration_policy(
             vmi=vm_for_migration_policy_test.vmi,
             expected_policy=None,

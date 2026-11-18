@@ -109,7 +109,6 @@ def migrated_vm_with_hotplug_support(admin_client, vm_with_hotplug_support):
 class TestRhelWorkloadMigration:
     # Chain root: migration mutates the shared class-scoped VM; subsequent tests verify cumulative side effects.
     @pytest.mark.dependency(name=f"{RHEL_CLASS_NAME}::migrate_vm")
-    @pytest.mark.polarion("CNV-15225")
     @pytest.mark.arm64
     def test_awd_migration_mode(
         self,
@@ -119,6 +118,9 @@ class TestRhelWorkloadMigration:
         migrated_vm_with_hotplug_support,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-7089 # <skip-jira-utils-check>
+        Polarion: CNV-15225
+
         Test that an AllowWorkloadDisruption RHEL migration completes in the requested migration mode.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/pull/82
@@ -143,7 +145,6 @@ class TestRhelWorkloadMigration:
     )
     # CPU hotplug must follow migration; the VM must be in a migrated state before hotplug changes.
     @pytest.mark.dependency(name=f"{RHEL_CLASS_NAME}::hotplug_cpu", depends=[f"{RHEL_CLASS_NAME}::migrate_vm"])
-    @pytest.mark.polarion("CNV-15234")
     def test_awd_hotplug_cpu(
         self,
         vm_with_hotplug_support,
@@ -152,6 +153,9 @@ class TestRhelWorkloadMigration:
         hotplugged_sockets_memory_guest,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-7089 # <skip-jira-utils-check>
+        Polarion: CNV-15234
+
         Test that CPU hotplug succeeds after an AllowWorkloadDisruption migration of a RHEL VM.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/pull/82
@@ -177,7 +181,6 @@ class TestRhelWorkloadMigration:
     )
     # Memory hotplug follows CPU hotplug; verifies cumulative hotplug and PID survival on the shared VM.
     @pytest.mark.dependency(depends=[f"{RHEL_CLASS_NAME}::hotplug_cpu"])
-    @pytest.mark.polarion("CNV-15235")
     def test_awd_hotplug_memory(
         self,
         vm_with_hotplug_support,
@@ -186,6 +189,9 @@ class TestRhelWorkloadMigration:
         hotplugged_sockets_memory_guest,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-7089 # <skip-jira-utils-check>
+        Polarion: CNV-15235
+
         Test that memory hotplug succeeds after an AllowWorkloadDisruption migration and CPU hotplug of a RHEL VM.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/pull/82
@@ -229,7 +235,6 @@ class TestRhelWorkloadMigration:
 class TestWindowsWorkloadMigration:
     # Chain root: migration mutates the shared class-scoped VM; subsequent tests verify cumulative side effects.
     @pytest.mark.dependency(name=f"{WIN_CLASS_NAME}::migrate_vm")
-    @pytest.mark.polarion("CNV-15246")
     @pytest.mark.arm64
     def test_awd_migration_mode(
         self,
@@ -239,6 +244,9 @@ class TestWindowsWorkloadMigration:
         migrated_vm_with_hotplug_support,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-7089 # <skip-jira-utils-check>
+        Polarion: CNV-15246
+
         Test that an AllowWorkloadDisruption Windows migration completes in the requested migration mode.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/pull/82
@@ -263,7 +271,6 @@ class TestWindowsWorkloadMigration:
     )
     # Memory hotplug must follow migration; the VM must be in a migrated state before hotplug changes.
     @pytest.mark.dependency(depends=[f"{WIN_CLASS_NAME}::migrate_vm"])
-    @pytest.mark.polarion("CNV-16312")
     def test_awd_hotplug_memory(
         self,
         vm_with_hotplug_support,
@@ -272,6 +279,9 @@ class TestWindowsWorkloadMigration:
         hotplugged_sockets_memory_guest,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-7089 # <skip-jira-utils-check>
+        Polarion: CNV-16312
+
         Test that memory hotplug succeeds after an AllowWorkloadDisruption migration of a Windows VM.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/pull/82
