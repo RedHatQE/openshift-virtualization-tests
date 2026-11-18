@@ -2143,9 +2143,9 @@ class TestUpdateLatestOsConfig:
 
         update_latest_os_config(session_config=mock_session_config)
 
-        assert mock_py_config["rhel_os_matrix"] == [
-            {"rhel.9.8": {"os_version": "9.8", "latest_released": True}}
-        ], "expected only RHEL 9.8 when latest is selected"
+        assert mock_py_config["rhel_os_matrix"] == [{"rhel.9.8": {"os_version": "9.8", "latest_released": True}}], (
+            "expected only RHEL 9.8 when latest is selected"
+        )
         assert mock_py_config["instance_type_rhel_os_matrix"] == [
             {"rhel.9": {"preference": "rhel.9", "latest_released": True}}
         ]
