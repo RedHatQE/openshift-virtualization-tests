@@ -1,8 +1,13 @@
 import logging
 import shlex
+from collections.abc import Sequence
 from contextlib import contextmanager
 
 import pytest
+from kubernetes.dynamic import DynamicClient
+from ocp_resources.daemonset import DaemonSet
+from ocp_resources.node import Node
+from ocp_resources.pod import Pod
 from ocp_resources.resource import ResourceEditor
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
@@ -12,12 +17,17 @@ from tests.virt.node.gpu.constants import (
     VGPU_DEVICE_MANAGER_DEPLOY_LABEL,
     VGPU_DEVICE_NAME_STR,
 )
-from tests.virt.utils import fetch_gpu_device_name_from_vm_instance, verify_gpu_device_exists_in_vm
+from tests.virt.utils import (
+    fetch_gpu_device_name_from_vm_instance,
+    get_non_terminated_pods,
+    verify_gpu_device_exists_in_vm,
+)
 from utilities.constants.timeouts import (
     TCP_TIMEOUT_30SEC,
     TIMEOUT_1MIN,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
+    TIMEOUT_5MIN,
     TIMEOUT_5SEC,
 )
 from utilities.infra import ExecCommandOnPod
@@ -67,6 +77,30 @@ def install_nvidia_drivers_on_windows_vm(vm, supported_gpu_device):
     # Wait for Running VM, as only vGPU VM Reboots after installing NVIDIA GRID Drivers.
     if fetch_gpu_device_name_from_vm_instance(vm=vm) == vgpu_device_name:
         running_vm(vm=vm)
+
+
+def wait_for_vgpu_manager_container_image_pull_always(daemon_set: DaemonSet) -> None:
+    """Wait until nvidia-vgpu-manager-ctr container uses imagePullPolicy Always.
+
+    Args:
+        daemon_set: The vGPU manager DaemonSet to check.
+
+    Raises:
+        TimeoutExpiredError: The container is not Always before the timeout.
+    """
+    LOGGER.info(f"Waiting for {daemon_set.name} nvidia-vgpu-manager-ctr imagePullPolicy Always")
+
+    def _vgpu_manager_pull_policy_is_always() -> bool:
+        for container in daemon_set.instance.spec.template.spec.containers:
+            if container.name == "nvidia-vgpu-manager-ctr":
+                return container.imagePullPolicy == "Always"
+        return False
+
+    for sample in TimeoutSampler(
+        wait_timeout=TIMEOUT_2MIN, sleep=TIMEOUT_5SEC, func=_vgpu_manager_pull_policy_is_always
+    ):
+        if sample:
+            return
 
 
 def wait_for_ds_ready(ds, expected):
@@ -160,6 +194,43 @@ def wait_for_nvidia_vgpu_manager(nvidia_vgpu_manager_ds, nodes_with_supported_gp
     wait_for_ds_ready(ds=nvidia_vgpu_manager_ds, expected=len(nodes_with_supported_gpus))
 
 
+def wait_for_mig_vgpu_manager_rollout(
+    nvidia_vgpu_manager_ds: DaemonSet,
+    mig_gpu_nodes: list[Node],
+    image_name: str,
+) -> None:
+    """Wait until each MIG node has a running vGPU manager pod with the given image.
+
+    Raises:
+        TimeoutExpiredError: A selected node does not have that pod before the timeout.
+    """
+    node_names = {node.name for node in mig_gpu_nodes}
+    label_selector = ",".join(
+        f"{key}={value}" for key, value in nvidia_vgpu_manager_ds.instance.spec.selector.matchLabels.items()
+    )
+    LOGGER.info(f"Waiting for {nvidia_vgpu_manager_ds.name} image {image_name} on {sorted(node_names)}")
+
+    def _pods_updated() -> bool:
+        ready_nodes = set()
+        for pod in Pod.get(
+            client=nvidia_vgpu_manager_ds.client,
+            namespace=nvidia_vgpu_manager_ds.namespace,
+            label_selector=label_selector,
+        ):
+            if pod.instance.spec.nodeName not in node_names or pod.status != Pod.Status.RUNNING:
+                continue
+            if any(
+                image_name in container.image and container.imagePullPolicy == "Always"
+                for container in pod.instance.spec.containers
+            ):
+                ready_nodes.add(pod.instance.spec.nodeName)
+        return ready_nodes == node_names
+
+    for sample in TimeoutSampler(wait_timeout=TIMEOUT_5MIN, sleep=TIMEOUT_5SEC, func=_pods_updated):
+        if sample:
+            return
+
+
 def verify_mdev_bus_available(workers_utility_pods, vgpu_nodes):
     """Verify mdev_bus is available on all vGPU nodes.
 
@@ -189,3 +260,61 @@ def verify_mdev_bus_available(workers_utility_pods, vgpu_nodes):
                 "Ensure that in 'nvidia-gpu-operator' namespace nvidia-vgpu-manager-daemonset Pod is Running."
             )
         )
+
+
+def gpu_allocated_count(admin_client: DynamicClient, gpu_node: Node, device_name: str) -> int:
+    """Return the GPU device requests already placed on a node.
+
+    This is the Requests value under Allocated resources in the node description.
+
+    Args:
+        admin_client: Client that can list pods on the node.
+        gpu_node: Node whose non-terminated pods are summed.
+        device_name: Extended resource name requested by those pods.
+
+    Returns:
+        Total requested count of the device on the node.
+    """
+    allocated = 0
+    for pod in get_non_terminated_pods(client=admin_client, node=gpu_node):
+        for container in pod.instance.spec.containers:
+            if not container.resources or not container.resources.requests:
+                continue
+            device_request = container.resources.requests.get(device_name)
+            if device_request:
+                allocated += int(device_request)
+    LOGGER.info(f"Allocated {device_name} on {gpu_node.name} is {allocated}")
+    return allocated
+
+
+def wait_for_gpu_resource_count(gpu_nodes: Sequence[Node], device_name: str, expected_count: str) -> None:
+    """Wait until capacity and allocatable for a GPU resource match the expected count.
+
+    Args:
+        gpu_nodes: GPU nodes to read.
+        device_name: Extended resource name advertised by the node.
+        expected_count: Resource count expected in both capacity and allocatable.
+
+    Raises:
+        TimeoutExpiredError: If the count does not match within TIMEOUT_5MIN.
+    """
+    LOGGER.info(
+        f"Waiting for {device_name} capacity and allocatable to equal {expected_count} "
+        f"on {[gpu_node.name for gpu_node in gpu_nodes]}"
+    )
+
+    def _resource_count_matches():
+        for gpu_node in gpu_nodes:
+            for status_type in ("allocatable", "capacity"):
+                resources = getattr(gpu_node.instance.status, status_type)
+                if device_name not in resources.keys() or resources[device_name] != expected_count:
+                    return False
+        return True
+
+    for sample in TimeoutSampler(
+        wait_timeout=TIMEOUT_5MIN,
+        sleep=TIMEOUT_5SEC,
+        func=_resource_count_matches,
+    ):
+        if sample:
+            return

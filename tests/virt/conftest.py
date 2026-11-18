@@ -33,7 +33,7 @@ from utilities.constants.architecture import (
 )
 from utilities.constants.namespaces import NamespacesNames
 from utilities.exceptions import ResourceValueError, UnsupportedGPUDeviceError
-from utilities.infra import get_nodes_with_label, get_resources_by_name_prefix
+from utilities.infra import get_nodes_with_label
 from utilities.pytest_utils import exit_pytest_execution
 from utilities.virt import (
     get_data_volume_template_dict_with_default_storage_class,
@@ -234,11 +234,11 @@ def hco_cr_with_mdev_permitted_hostdevices_scope_session(
 
 @pytest.fixture(scope="session")
 def nvidia_vgpu_manager_ds(admin_client):
-    return get_resources_by_name_prefix(
-        prefix=NVIDIA_VGPU_MANAGER_DS,
-        namespace=NamespacesNames.NVIDIA_GPU_OPERATOR,
-        api_resource_name=DaemonSet,
-    )[0]
+    return [
+        daemon_set
+        for daemon_set in DaemonSet.get(client=admin_client, namespace=NamespacesNames.NVIDIA_GPU_OPERATOR)
+        if daemon_set.name.startswith(NVIDIA_VGPU_MANAGER_DS)
+    ][0]
 
 
 @pytest.fixture(scope="session")

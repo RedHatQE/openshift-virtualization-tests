@@ -5,12 +5,74 @@ STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob
 """
 
 import pytest
+from ocp_resources.virtual_machine import VirtualMachine
 
-pytestmark = [pytest.mark.gpu, pytest.mark.special_infra]
+from tests.os_params import RHEL_LATEST, RHEL_LATEST_LABELS
+from tests.virt.node.gpu.constants import (
+    MDEV_AVAILABLE_INSTANCES_STR,
+    VGPU_DEVICE_NAME_STR,
+)
+from tests.virt.node.gpu.utils import gpu_allocated_count, verify_gpu_expected_count_updated_on_node
+from tests.virt.utils import (
+    get_num_gpu_devices_in_rhel_vm,
+    verify_gpu_device_exists_in_vm,
+    verify_gpu_device_exists_on_node,
+)
 
-__test__ = False
+pytestmark = [
+    pytest.mark.special_infra,
+    pytest.mark.gpu,
+    pytest.mark.usefixtures("hco_cr_with_mig_mdev_permitted_hostdevices"),
+]
 
 
+def test_permitted_hostdevices_mig_vgpu_visible(
+    mig_gpu_nodes_with_full_mig_vgpu_capacity,
+    supported_mig_gpu_device,
+):
+    """
+    Test that the GPU node advertises the MIG vGPU resource after MIG vGPU configuration.
+
+    STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/mig-vgpu-stp.md
+
+    Preconditions:
+        - GPU node with an NVIDIA MIG-capable GPU (NVIDIA A30), MIG mode enabled, and the
+          NVIDIA GPU Operator's vGPU manager configured to expose a MIG-backed vGPU mediated device
+
+    Steps:
+        1. Read the Capacity and Allocatable sections of the GPU node
+
+    Expected:
+        - GPU node Capacity and Allocatable sections list the MIG vGPU resource
+        - The listed MIG vGPU resource count equals the number of configured MIG vGPU
+          instances
+    """
+    vgpu_device_name = supported_mig_gpu_device[VGPU_DEVICE_NAME_STR]
+    verify_gpu_device_exists_on_node(
+        gpu_nodes=mig_gpu_nodes_with_full_mig_vgpu_capacity,
+        device_name=vgpu_device_name,
+    )
+    verify_gpu_expected_count_updated_on_node(
+        gpu_nodes=mig_gpu_nodes_with_full_mig_vgpu_capacity,
+        device_name=vgpu_device_name,
+        expected_count=supported_mig_gpu_device[MDEV_AVAILABLE_INSTANCES_STR],
+    )
+
+
+@pytest.mark.parametrize(
+    "golden_image_data_source_for_test_scope_class, mig_gpu_vma",
+    [
+        pytest.param(
+            {"os_dict": RHEL_LATEST},
+            {
+                "vm_name": "rhel-mig-vgpu-vm",
+                "template_labels": RHEL_LATEST_LABELS,
+                "gpu_device": VGPU_DEVICE_NAME_STR,
+            },
+        ),
+    ],
+    indirect=True,
+)
 class TestMIGVGPURHELGPUSSpec:
     """
     Tests for VM MIG vGPU support using RHEL virtual machines.
@@ -25,27 +87,7 @@ class TestMIGVGPURHELGPUSSpec:
         - The HCO CR is configured to allow the MIG-backed vGPU mediated device as a host device
     """
 
-    @pytest.mark.manual
-    def test_permitted_hostdevices_mig_vgpu_visible(self):
-        """
-        Jira: https://redhat.atlassian.net/browse/CNV-13713 # <skip-jira-utils-check>
-        Polarion: CNV-12572
-
-        Test that the GPU node advertises the MIG vGPU resource after MIG vGPU configuration.
-
-        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/mig-vgpu-stp.md
-
-        Steps:
-            1. Read the Capacity and Allocatable sections of the GPU node
-
-        Expected:
-            - GPU node Capacity and Allocatable sections list the MIG vGPU resource
-            - The listed MIG vGPU resource count equals the number of configured MIG vGPU
-              instances
-        """
-
-    @pytest.mark.manual
-    def test_access_mig_vgpus_rhel_vm(self):
+    def test_access_mig_vgpus_rhel_vm(self, supported_mig_gpu_device, mig_gpu_vma):
         """
         Jira: https://redhat.atlassian.net/browse/CNV-13713 # <skip-jira-utils-check>
         Polarion: CNV-12573
@@ -66,9 +108,9 @@ class TestMIGVGPURHELGPUSSpec:
             - VM is "Running" and the guest OS reports GPU device matching the
               requested MIG vGPU device
         """
+        verify_gpu_device_exists_in_vm(vm=mig_gpu_vma, supported_gpu_device=supported_mig_gpu_device)
 
-    @pytest.mark.manual
-    def test_access_vgpus_in_both_rhel_vm_using_same_mig_gpu(self):
+    def test_access_vgpus_in_both_rhel_vm_using_same_mig_gpu(self, mig_gpu_vma, mig_gpu_vmb):
         """
         Jira: https://redhat.atlassian.net/browse/CNV-13713 # <skip-jira-utils-check>
         Polarion: CNV-12574
@@ -90,9 +132,17 @@ class TestMIGVGPURHELGPUSSpec:
             - Both VMs are "Running" concurrently, and the guest OS of each VM reports exactly
               one GPU device matching the requested MIG vGPU device
         """
+        vm_with_no_gpu = [vm.name for vm in [mig_gpu_vma, mig_gpu_vmb] if get_num_gpu_devices_in_rhel_vm(vm=vm) != 1]
+        assert not vm_with_no_gpu, f"GPU does not exist in following vms: {vm_with_no_gpu}"
 
-    @pytest.mark.manual
-    def test_vm_pending_no_mig_vgpu_capacity_available(self):
+    @pytest.mark.usefixtures("mig_gpu_vmb")
+    def test_vm_pending_no_mig_vgpu_capacity_available(
+        self,
+        admin_client,
+        mig_gpu_vma,
+        supported_mig_gpu_device,
+        mig_vgpu_unschedulable_vm,
+    ):
         """
         Jira: https://redhat.atlassian.net/browse/CNV-13713 # <skip-jira-utils-check>
         Polarion: CNV-16809
@@ -103,15 +153,31 @@ class TestMIGVGPURHELGPUSSpec:
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/mig-vgpu-stp.md
 
         Preconditions:
-            - All MIG vGPU instances on the GPU node already consumed by running VMs
-            - Additional VM configured to request one MIG vGPU device, scheduled on the same
-              GPU node
+            - Two VMs are running, each using one MIG vGPU slice on the same GPU node
 
         Steps:
-            1. Create the additional VM requesting one MIG vGPU device
-            2. Wait and observe the VM's scheduling state and associated events or messages
+            1. Read the MIG vGPU count already requested on that node and the node's allocatable count
+            2. Confirm the requested count equals the allocatable count
+            3. Create an additional VM requesting one MIG vGPU device
+            4. Wait and observe the VM's scheduling state and associated events or messages
 
         Expected:
-            - VM remains "Pending" and is not scheduled, and the scheduling events or status
-              messages reported to the user indicate the MIG vGPU resource is unavailable
+            - The requested MIG vGPU count equals the node's allocatable count
+            - The additional VM remains unschedulable, and the scheduling message indicates the
+              MIG vGPU resource is unavailable
         """
+        device_name = supported_mig_gpu_device[VGPU_DEVICE_NAME_STR]
+        gpu_node = mig_gpu_vma.vmi.get_node(privileged_client=admin_client)
+        allocated = gpu_allocated_count(admin_client=admin_client, gpu_node=gpu_node, device_name=device_name)
+        allocatable = int(gpu_node.instance.status.allocatable[device_name])
+        assert allocated == allocatable, (
+            f"{device_name} on {gpu_node.name}: allocated {allocated}, allocatable {allocatable}"
+        )
+        mig_vgpu_unschedulable_vm.start(wait=False)
+        mig_vgpu_unschedulable_vm.wait_for_specific_status(status=VirtualMachine.Status.ERROR_UNSCHEDULABLE)
+        mig_vgpu_unschedulable_vm.vmi.wait_for_condition(
+            condition="PodScheduled",
+            status=VirtualMachine.Condition.Status.FALSE,
+            reason="Unschedulable",
+            message=f"Insufficient {device_name}",
+        )
