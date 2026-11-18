@@ -28,12 +28,14 @@ Per test function:
 
 ### Tests that already link an STP
 
-A test whose **own docstring** already carries an `STP:` line needs no Jira
-line: the STP is its traceability link, and `Jira:` is only the fallback for
-tests that have no STP (`docs/SOFTWARE_TEST_DESCRIPTION.md`). For those tests
-the tool still moves the Polarion ID out of the decorator into a `Polarion:`
-line, but adds no `Jira:` line. This is the default — pass `--no-skip-stp` to
-add the Jira line anyway.
+A test whose **own docstring** already carries an `STP: <link>` line needs no
+Jira line: the STP is its traceability link, and `Jira:` is only the fallback
+for tests that have no STP (`docs/SOFTWARE_TEST_DESCRIPTION.md`). The link is
+required — an empty `STP:` field or a placeholder such as `STP: TBD` is not
+traceability and does not suppress the Jira line. For STP-linked tests the tool
+still moves the Polarion ID out of the decorator into a `Polarion:` line, but
+adds no `Jira:` line. This is the default — pass `--no-skip-stp` to add the Jira
+line anyway.
 
 A module- or class-level STP link does not count: it is shared context, not
 per-test traceability, so those tests still get their `Jira:` line.
@@ -41,6 +43,11 @@ per-test traceability, so those tests still get their `Jira:` line.
 Earlier versions of this tool skipped the whole file when the **module**
 docstring had an STP link, which also skipped the Polarion move — that is why
 the check moved to the individual test.
+
+A run resolves **every** collected Polarion ID up front, including IDs whose only
+tests are STP-linked (their Jira result is simply unused). Polarion access, or a
+mapping cache that already contains those IDs, is therefore a prerequisite even
+for an STP-only migration; `--mapping-only` keeps the full lookup too.
 
 ## Usage
 

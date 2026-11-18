@@ -48,7 +48,11 @@ LOGGER = logging.getLogger("polarion_jira_backfill")
 POLARION_ID_RE = re.compile(r"^(CNV-\d+)$")
 JIRA_URL_RE = re.compile(r"/browse/([A-Z][A-Z0-9]+-\d+)")
 JIRA_URL_TEMPLATE = "https://redhat.atlassian.net/browse/{jid}"
-STP_RE = re.compile(r"^\s*STP:?\s*\S", re.MULTILINE)
+# A real STP line carries a link: an empty ``STP:`` field (or a placeholder such as
+# ``STP: TBD``) is not traceability, so it must not suppress the Jira: line. The URL
+# is matched on the same line — a multi-line \s* would let an empty field match the
+# text that follows it.
+STP_RE = re.compile(r"^\s*STP:[ \t]*https?://\S+", re.MULTILINE)
 
 # Mapping cache statuses
 STATUS_NOT_FOUND = "test_case_not_found"
@@ -312,7 +316,7 @@ def _docstring_node(func: ast.FunctionDef | ast.AsyncFunctionDef) -> ast.Constan
 
 
 def _docstring_has_stp(docstring: str | None) -> bool:
-    """Whether a docstring already carries an STP traceability link."""
+    """Whether a docstring already carries an STP link."""
     return bool(docstring and STP_RE.search(docstring))
 
 
@@ -456,6 +460,9 @@ def compute_new_source(result: FileResult) -> tuple[str | None, list[str]]:
         to_add = [j for j in new_jiras if j not in existing]
         polarions_to_add = [p for p in func.polarion_ids if p not in _existing_polarion_ids(docstring=doc_value)]
         if not to_add and not polarions_to_add:
+            # The docstring already documents this test. A leftover marker may still
+            # need removing (the ID is in the docstring, the decorator is not gone).
+            _remove_polarion_markers(func=func, lines=lines, edits=edits)
             continue
 
         indent = _indent_of(source_lines=lines, lineno=doc.lineno)
@@ -631,7 +638,7 @@ class PRGroup:
 
     def body(self, flagged: list[str]) -> str:
         """PR body using the repo's required pull_request_template headings."""
-        jira_list = ", ".join(sorted(set(self.jira_ids))) or "none — every test here already links an STP"
+        jira_list = ", ".join(sorted(set(self.jira_ids))) or "none added by this PR"
         lines = [
             "##### What this PR does / why we need it:",
             "Adds Jira requirement traceability to test function docstrings and moves",
@@ -642,7 +649,8 @@ class PRGroup:
                 "line(s) added to each test docstring (after any existing `Jira:` "
                 "lines, otherwise at the top). Skipped for tests whose own docstring "
                 "already links an STP — the STP is that test's required traceability "
-                "link, and the Jira line is the fallback for tests without one."
+                "link, and the Jira line is the fallback for tests without one (unless "
+                "the run used `--no-skip-stp`)."
             ),
             (
                 '- Polarion test-case IDs move from `@pytest.mark.polarion("CNV-XXXX")` '
@@ -1204,9 +1212,8 @@ def _run_backfill(args: argparse.Namespace, work_repo: Path, base: str | None, f
     stp_skipped = [func.name for r in results for func in r.functions if func.stp_linked]
     if stp_skipped:
         LOGGER.info(
-            "%s test functions already link an STP — Polarion: line only, no Jira: line "
-            "(pass --no-skip-stp to add them anyway)",
-            len(stp_skipped),
+            f"{len(stp_skipped)} test functions already link an STP — Polarion: line only, "
+            "no Jira: line (pass --no-skip-stp to add them anyway)"
         )
 
     mapper = PolarionMapper(cache_file=args.mapping_file, project_id=args.project)
