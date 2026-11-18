@@ -7,7 +7,7 @@ from contextlib import contextmanager
 
 from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import NotFoundError
-from ocp_resources.daemonset import DaemonSet
+from ocp_resources.daemon_set import DaemonSet
 from ocp_resources.persistent_volume import PersistentVolume
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.pod import Pod

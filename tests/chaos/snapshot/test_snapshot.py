@@ -1,5 +1,5 @@
 import pytest
-from ocp_resources.daemonset import DaemonSet
+from ocp_resources.daemon_set import DaemonSet
 from ocp_resources.deployment import Deployment
 from ocp_resources.virtual_machine_restore import VirtualMachineRestore
 from pytest_testconfig import py_config

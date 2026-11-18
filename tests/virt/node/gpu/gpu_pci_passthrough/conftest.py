@@ -3,7 +3,7 @@ GPU PCI Passthrough VM
 """
 
 import pytest
-from ocp_resources.daemonset import DaemonSet
+from ocp_resources.daemon_set import DaemonSet
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.resource import ResourceEditor
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
