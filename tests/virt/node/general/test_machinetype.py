@@ -140,9 +140,12 @@ def migrated_vm(
     return vm_for_machine_type_test
 
 
-@pytest.mark.polarion("CNV-3311")
 @pytest.mark.s390x
 def test_vm_machine_type(admin_client, explicit_machine_type, vm_with_explicit_machine_type):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-346 # <skip-jira-utils-check>
+    Polarion: CNV-3311
+    """
     validate_machine_type(
         vm=vm_with_explicit_machine_type, expected_machine_type=explicit_machine_type, admin_client=admin_client
     )
@@ -163,8 +166,11 @@ class TestMachineType:
     @pytest.mark.arm64
     @pytest.mark.s390x
     @pytest.mark.conformance
-    @pytest.mark.polarion("CNV-3312")
     def test_default_vm_machine_type(self, admin_client, machine_type_from_kubevirt_config, vm_for_machine_type_test):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-346 # <skip-jira-utils-check>
+        Polarion: CNV-3312
+        """
         validate_machine_type(
             vm=vm_for_machine_type_test,
             expected_machine_type=machine_type_from_kubevirt_config,
@@ -181,7 +187,6 @@ class TestMachineType:
         indirect=True,
     )
     @pytest.mark.rwx_default_storage
-    @pytest.mark.polarion("CNV-11268")
     @pytest.mark.usefixtures("updated_kubevirt_config_machine_type")
     def test_machine_type_after_vm_migrate(
         self,
@@ -190,7 +195,12 @@ class TestMachineType:
         vm_for_machine_type_test,
         migrated_vm,
     ):
-        """Existing VM does not get new value after migration"""
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-346 # <skip-jira-utils-check>
+        Polarion: CNV-11268
+
+        Existing VM does not get new value after migration
+        """
         validate_machine_type(
             vm=vm_for_machine_type_test,
             expected_machine_type=machine_type_from_kubevirt_config,
@@ -206,7 +216,6 @@ class TestMachineType:
         ],
         indirect=True,
     )
-    @pytest.mark.polarion("CNV-4347")
     @pytest.mark.usefixtures("updated_kubevirt_config_machine_type")
     def test_machine_type_after_vm_restart(
         self,
@@ -215,7 +224,12 @@ class TestMachineType:
         vm_for_machine_type_test,
         restarted_vm,
     ):
-        """Existing VM does not get new value after restart"""
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-346 # <skip-jira-utils-check>
+        Polarion: CNV-4347
+
+        Existing VM does not get new value after restart
+        """
         validate_machine_type(
             vm=vm_for_machine_type_test,
             expected_machine_type=machine_type_from_kubevirt_config,
@@ -229,7 +243,6 @@ class TestMachineType:
         pytest.param(
             {"vm_name": "updated-kubevirt-config"},
             {"machineType": MachineTypesNames.pc_q35_rhel8_1},
-            marks=pytest.mark.polarion("CNV-3681"),
         )
     ],
     indirect=True,
@@ -237,15 +250,23 @@ class TestMachineType:
 @pytest.mark.gating
 @pytest.mark.usefixtures("updated_kubevirt_config_machine_type")
 def test_machine_type_kubevirt_config_update(admin_client, vm_for_machine_type_test):
-    """Test machine type change in kubevirt_config; new VM gets new value"""
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-346 # <skip-jira-utils-check>
+    Polarion: CNV-3681
+
+    Test machine type change in kubevirt_config; new VM gets new value
+    """
     validate_machine_type(
         vm=vm_for_machine_type_test, expected_machine_type=MachineTypesNames.pc_q35_rhel8_1, admin_client=admin_client
     )
 
 
 @pytest.mark.s390x
-@pytest.mark.polarion("CNV-3688")
 def test_unsupported_machine_type(namespace, unprivileged_client):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-346 # <skip-jira-utils-check>
+    Polarion: CNV-3688
+    """
     vm_name = "vm-invalid-machine-type"
 
     with pytest.raises(UnprocessibleEntityError):
@@ -262,18 +283,26 @@ def test_unsupported_machine_type(namespace, unprivileged_client):
 @pytest.mark.arm64
 @pytest.mark.gating
 @pytest.mark.conformance
-@pytest.mark.polarion("CNV-5658")
 def test_major_release_machine_type(machine_type_from_kubevirt_config):
-    # CNV should always use a major release for machine type, for example: pc-q35-rhel8.3.0
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-346 # <skip-jira-utils-check>
+    Polarion: CNV-5658
+
+    CNV should always use a major release for machine type, for example: pc-q35-rhel8.3.0
+    """
     assert machine_type_from_kubevirt_config.endswith(".0"), (
         f"Machine type should be a major release {machine_type_from_kubevirt_config}"
     )
 
 
 @pytest.mark.gating
-@pytest.mark.polarion("CNV-8561")
 def test_machine_type_as_rhel_9_8(machine_type_from_kubevirt_config):
-    """Verify that machine type in KubeVirt CR match the value pc-q35-rhel9.8.0"""
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-346 # <skip-jira-utils-check>
+    Polarion: CNV-8561
+
+    Verify that machine type in KubeVirt CR match the value pc-q35-rhel9.8.0
+    """
     assert machine_type_from_kubevirt_config == MachineTypesNames.pc_q35_rhel9_8, (
         f"Machine type value is {machine_type_from_kubevirt_config} "
         f"does not match with {MachineTypesNames.pc_q35_rhel9_8}"
@@ -285,13 +314,17 @@ def test_machine_type_as_rhel_9_8(machine_type_from_kubevirt_config):
     [
         pytest.param(
             {"emulatedMachines": ["q35*", "pc-q35*", MachineTypesNames.pc_i440fx_rhel7_6]},
-            marks=pytest.mark.polarion("CNV-7311"),
         )
     ],
     indirect=True,
 )
 @pytest.mark.usefixtures("updated_kubevirt_config_machine_type")
 def test_legacy_machine_type(admin_client, vm_for_legacy_machine_type_test):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-346 # <skip-jira-utils-check>
+    Jira: https://redhat.atlassian.net/browse/CNV-12092 # <skip-jira-utils-check>
+    Polarion: CNV-7311
+    """
     validate_machine_type(
         vm=vm_for_legacy_machine_type_test,
         expected_machine_type=MachineTypesNames.pc_i440fx_rhel7_6,

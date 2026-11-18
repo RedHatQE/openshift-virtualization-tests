@@ -112,13 +112,15 @@ class TestPCITopologyStability:
         - Sorted PCI BDF address list captured before each operation
     """
 
-    @pytest.mark.polarion("CNV-16326")
     def test_pci_address_stability_on_restart(
         self,
         initial_pci_addresses: list[str],
         restarted_pci_topology_vm: VirtualMachineForTests,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-4762 # <skip-jira-utils-check>
+        Polarion: CNV-16326
+
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/pci-topology-stability.md
 
         Steps:
@@ -133,13 +135,15 @@ class TestPCITopologyStability:
             f"PCI topology changed after restart:\n  before: {initial_pci_addresses}\n  after:  {addresses_after}"
         )
 
-    @pytest.mark.polarion("CNV-16327")
     def test_pci_address_stability_on_migration(
         self,
         initial_pci_addresses: list[str],
         migrated_pci_topology_vm: VirtualMachineForTests,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-4762 # <skip-jira-utils-check>
+        Polarion: CNV-16327
+
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/pci-topology-stability.md
 
         Steps:
@@ -154,7 +158,6 @@ class TestPCITopologyStability:
             f"PCI topology changed after migration:\n  before: {initial_pci_addresses}\n  after:  {addresses_after}"
         )
 
-    @pytest.mark.polarion("CNV-16328")
     @pytest.mark.usefixtures("skip_if_no_storage_class_for_snapshot")
     def test_pci_address_stability_on_snapshot_restore(
         self,
@@ -162,6 +165,9 @@ class TestPCITopologyStability:
         snapshot_restored_pci_topology_vm: VirtualMachineForTests,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-4762 # <skip-jira-utils-check>
+        Polarion: CNV-16328
+
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/pci-topology-stability.md
 
         Preconditions:

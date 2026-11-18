@@ -50,7 +50,6 @@ def sidecar_vm(namespace, unprivileged_client):
     [
         pytest.param(
             "Sidecar",
-            marks=pytest.mark.polarion("CNV-840"),
         ),
     ],
     indirect=True,
@@ -58,6 +57,9 @@ def sidecar_vm(namespace, unprivileged_client):
 @pytest.mark.gating
 def test_vm_with_sidecar_hook(enabled_featuregate_scope_function, sidecar_vm):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-30546 # <skip-jira-utils-check>
+    Polarion: CNV-840
+
     Test VM with sidecar hook, Install dmidecode with annotation
     smbios.vm.kubevirt.io/baseBoardManufacturer: "Radical Edward"
     And check that package includes manufacturer: "Radical Edward"

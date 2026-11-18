@@ -18,8 +18,11 @@ def vm_with_cloud_init_disk(unprivileged_client, namespace):
         yield vm
 
 
-@pytest.mark.polarion("CNV-10555")
 def test_vm_with_cloud_init_disk_logging_no_disk_capacity(vm_with_cloud_init_disk, admin_client):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-32427 # <skip-jira-utils-check>
+    Polarion: CNV-10555
+    """
     assert "No disk capacity" not in vm_with_cloud_init_disk.vmi.get_virt_launcher_pod(
         privileged_client=admin_client
     ).log(container="compute"), "Error msg 'No disk capacity' logged in virt-launcher pod"

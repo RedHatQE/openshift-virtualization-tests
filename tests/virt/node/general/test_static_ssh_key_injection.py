@@ -67,12 +67,18 @@ class TestVMWithStaticKeyInjection:
     Test VM with static key injection.
     """
 
-    @pytest.mark.polarion("CNV-5875")
     def test_static_ssh_key_injection(self, vm_with_ssh_secret):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-10115 # <skip-jira-utils-check>
+        Polarion: CNV-5875
+        """
         running_vm(vm=vm_with_ssh_secret)
 
-    @pytest.mark.polarion("CNV-6061")
     def test_ssh_access_is_successful_with_updated_secret(self, ssh_secret, vm_with_ssh_secret):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-10115 # <skip-jira-utils-check>
+        Polarion: CNV-6061
+        """
         with ResourceEditor(
             patches={
                 ssh_secret: {"data": {"id_rsa.pub": base64_encode_str(text="ssh-rsa junk-pub-key root@exec1.rdocloud")}}
