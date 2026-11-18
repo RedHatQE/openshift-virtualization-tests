@@ -46,8 +46,11 @@ def get_cnv_crds(admin_client: DynamicClient) -> list[CustomResourceDefinition]:
     ]
 
 
-@pytest.mark.polarion("CNV-8263")
 def test_crds_cluster_readers_role(admin_client):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-10844 # <skip-jira-utils-check>
+    Polarion: CNV-8263
+    """
     cluster_readers = "system:cluster-readers"
     unreadable_crds = []
     for crd in get_cnv_crds(admin_client=admin_client):

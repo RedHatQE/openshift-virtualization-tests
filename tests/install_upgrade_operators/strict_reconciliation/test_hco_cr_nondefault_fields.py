@@ -75,7 +75,6 @@ class TestHCONonDefaultFields:
                 {"resource_class": CDI, "resource_name": CDI_KUBEVIRT_HYPERCONVERGED},
                 RESOURCE_REQUIREMENTS_KEY_HCO_CR,
                 WORKLOAD_RESOURCE_REQUIREMENTS,
-                marks=(pytest.mark.polarion("CNV-6541")),
                 id="set_non_default_field_resourceRequirements",
             ),
             pytest.param(
@@ -92,7 +91,6 @@ class TestHCONonDefaultFields:
                 {"resource_class": CDI, "resource_name": CDI_KUBEVIRT_HYPERCONVERGED},
                 SCRATCH_SPACE_STORAGE_CLASS_KEY,
                 SCRATCH_SPACE_STORAGE_CLASS_VALUE,
-                marks=(pytest.mark.polarion("CNV-6542")),
                 id="set_non_default_field_scratchSpaceStorageClass",
             ),
             pytest.param(
@@ -109,7 +107,6 @@ class TestHCONonDefaultFields:
                 {"resource_class": KubeVirt, "resource_name": KUBEVIRT_HCO_NAME},
                 OBSOLETE_CPU_MODELS_KEY,
                 OBSOLETE_CPUS_VALUE_KUBEVIRT_CR,
-                marks=(pytest.mark.polarion("CNV-6544")),
                 id="set_non_default_field_obsoleteCPUs",
             ),
             pytest.param(
@@ -126,7 +123,6 @@ class TestHCONonDefaultFields:
                 {"resource_class": CDI, "resource_name": CDI_KUBEVIRT_HYPERCONVERGED},
                 STORAGE_IMPORT_KEY_HCO_CR,
                 STORAGE_IMPORT_VALUE,
-                marks=(pytest.mark.polarion("CNV-6545")),
                 id="set_non_default_field_storage_import",
             ),
             pytest.param(
@@ -146,7 +142,6 @@ class TestHCONonDefaultFields:
                 {"resource_class": CDI, "resource_name": CDI_KUBEVIRT_HYPERCONVERGED},
                 NP_INFRA_KEY,
                 NP_INFRA_VALUE_CDI_CR,
-                marks=(pytest.mark.polarion("CNV-6539")),
                 id="set_non_default_field_infra",
             ),
             pytest.param(
@@ -166,7 +161,6 @@ class TestHCONonDefaultFields:
                 {"resource_class": CDI, "resource_name": CDI_KUBEVIRT_HYPERCONVERGED},
                 NP_WORKLOADS_KEY_HCO_CR,
                 NP_WORKLOADS_VALUE_CDI_CR,
-                marks=(pytest.mark.polarion("CNV-6540")),
                 id="set_non_default_field_workloads",
             ),
         ],
@@ -180,6 +174,15 @@ class TestHCONonDefaultFields:
         field_to_verify,
         expected,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-8296 # <skip-jira-utils-check>
+        Polarion: CNV-6541
+        Polarion: CNV-6542
+        Polarion: CNV-6544
+        Polarion: CNV-6545
+        Polarion: CNV-6539
+        Polarion: CNV-6540
+        """
         LOGGER.info(f"Validating: {reconciled_cr_post_hco_update.name} for reconciliation.")
         current_value = get_resource_current_value(
             resource_spec=reconciled_cr_post_hco_update.instance.to_dict()["spec"],

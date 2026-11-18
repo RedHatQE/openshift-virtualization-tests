@@ -26,28 +26,24 @@ class TestNegativeFeatureGates:
                 {
                     "fgs": ["fakeGate", "Sidecar"],
                 },
-                marks=(pytest.mark.polarion("CNV-6273")),
                 id="invalid_featuregates_fake_kept_on_hco_not_propagated",
             ),
             pytest.param(
                 {
                     "fgs": ["LiveMigration"],
                 },
-                marks=(pytest.mark.polarion("CNV-6274")),
                 id="invalid_featuregates_livemigration_kept_on_hco_not_propagated",
             ),
             pytest.param(
                 {
                     "fgs": ["Sidecar"],
                 },
-                marks=(pytest.mark.polarion("CNV-6276")),
                 id="invalid_featuregates_sidecar_kept_on_hco_not_propagated",
             ),
             pytest.param(
                 {
                     "fgs": ["HonorWaitForFirstConsumer"],
                 },
-                marks=(pytest.mark.polarion("CNV-6278")),
                 id="invalid_cdi_featuregate_kept_on_hco_not_propagated",
             ),
         ],
@@ -61,6 +57,13 @@ class TestNegativeFeatureGates:
         hyperconverged_resource_scope_function,
         hco_with_non_default_feature_gates,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-8296 # <skip-jira-utils-check>
+        Polarion: CNV-6273
+        Polarion: CNV-6274
+        Polarion: CNV-6276
+        Polarion: CNV-6278
+        """
         updated_hco_names = {
             entry["name"] for entry in get_hco_feature_gates(hco=hyperconverged_resource_scope_function)
         }
@@ -85,12 +88,10 @@ class TestNegativeFeatureGates:
         [
             pytest.param(
                 ["fakeGate", "Sidecar"],
-                marks=(pytest.mark.polarion("CNV-6272")),
                 id="kubevirt_cr_reconciles_on_modifcation_fakegate_sidecar",
             ),
             pytest.param(
                 ["Sidecar"],
-                marks=(pytest.mark.polarion("CNV-6275")),
                 id="kubevirt_cr_reconciles_on_modifcation_sidecar",
             ),
         ],
@@ -103,6 +104,11 @@ class TestNegativeFeatureGates:
         updated_kv_with_feature_gates,
         kubevirt_feature_gates_scope_module,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-8296 # <skip-jira-utils-check>
+        Polarion: CNV-6272
+        Polarion: CNV-6275
+        """
         wait_for_kubevirt_conditions(
             admin_client=admin_client,
             hco_namespace=hco_namespace,
@@ -117,7 +123,6 @@ class TestNegativeFeatureGates:
 
 
 class TestHCOOptionalFeatureGatesSuite:
-    @pytest.mark.polarion("CNV-6277")
     @pytest.mark.parametrize(
         "updated_cdi_with_feature_gates",
         [["fakeGate"]],
@@ -129,6 +134,10 @@ class TestHCOOptionalFeatureGatesSuite:
         admin_client,
         hco_namespace,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-8296 # <skip-jira-utils-check>
+        Polarion: CNV-6277
+        """
         wait_for_fg_update(
             admin_client=admin_client,
             hco_namespace=hco_namespace,

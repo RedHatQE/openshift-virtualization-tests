@@ -51,13 +51,16 @@ def json_patched_cnao(
     "json_patched_cnao",
 )
 class TestCNAOJsonPatch:
-    @pytest.mark.polarion("CNV-8715")
     def test_cnao_json_patch(
         self,
         admin_client,
         hco_namespace,
         cnao_resource,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-9096 # <skip-jira-utils-check>
+        Polarion: CNV-8715
+        """
         wait_for_hco_conditions(
             admin_client=admin_client,
             hco_namespace=hco_namespace,
@@ -68,8 +71,11 @@ class TestCNAOJsonPatch:
         cnao_spec = cnao_resource.instance.spec
         assert not cnao_spec.get(PATH), f"Unable to replace {PATH} from CNAO via json patch. Current value: {cnao_spec}"
 
-    @pytest.mark.polarion("CNV-9713")
     def test_cnao_json_patch_metrics(self, prometheus, kubevirt_all_unsafe_modification_metrics_before_test):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-9096 # <skip-jira-utils-check>
+        Polarion: CNV-9713
+        """
         before_value = filter_metric_by_component(
             metrics=kubevirt_all_unsafe_modification_metrics_before_test,
             component_name=COMPONENT,
@@ -82,6 +88,9 @@ class TestCNAOJsonPatch:
             previous_value=before_value,
         )
 
-    @pytest.mark.polarion("CNV-9712")
     def test_cnao_json_patch_alert(self, prometheus):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-9096 # <skip-jira-utils-check>
+        Polarion: CNV-9712
+        """
         wait_for_alert(prometheus=prometheus, alert_name=ALERT_NAME, component_name=COMPONENT)

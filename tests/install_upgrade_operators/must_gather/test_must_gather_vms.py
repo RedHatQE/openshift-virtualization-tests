@@ -57,12 +57,15 @@ def kubevirt_architecture_configuration_scope_session(
 @pytest.mark.usefixtures("collected_cluster_must_gather_with_vms")
 @pytest.mark.sno
 class TestMustGatherClusterWithVMs:
-    @pytest.mark.polarion("CNV-2720")
     def test_network_attachment_definitions_resources(
         self,
         admin_client,
         collected_cluster_must_gather_with_vms,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-4834 # <skip-jira-utils-check>
+        Polarion: CNV-2720
+        """
         check_list_of_resources(
             client=admin_client,
             resource_type=NetworkAttachmentDefinition,
@@ -82,79 +85,66 @@ class TestMustGatherVmDetails:
             pytest.param(
                 {FILE_SUFFIX: BRIDGE_TXT, SECTION_TITLE: "bridge fdb show:"},
                 "{mac_address}",
-                marks=(pytest.mark.polarion("CNV-2735")),
                 id="test_bridge_fdb_show_mac_address",
             ),
             pytest.param(
                 {FILE_SUFFIX: BRIDGE_TXT, SECTION_TITLE: f"{BRIDGE_COMMAND}:"},
                 "{bridge_link_show}",
-                marks=(pytest.mark.polarion("CNV-10280")),
                 id="test_bridge_link_show",
             ),
             pytest.param(
                 {FILE_SUFFIX: BRIDGE_TXT, SECTION_TITLE: "bridge vlan show:"},
                 "{interface_name}",
-                marks=(pytest.mark.polarion("CNV-2736")),
                 id="test_bridge_vlan_show",
             ),
             pytest.param(
                 {FILE_SUFFIX: IP_TXT, SECTION_TITLE: None},
                 "{interface_name}",
-                marks=(pytest.mark.polarion("CNV-2734")),
                 id="test_ip",
             ),
             pytest.param(
                 {FILE_SUFFIX: RULETABLES_TXT, SECTION_TITLE: None},
                 TABLE_IP_FILTER,
-                marks=(pytest.mark.polarion("CNV-2737"),),
                 id="test_ruletables_ip_filter",
             ),
             pytest.param(
                 {FILE_SUFFIX: RULETABLES_TXT, SECTION_TITLE: None},
                 TABLE_IP_NAT,
-                marks=(pytest.mark.polarion("CNV-2741"),),
                 id="test_ruletables_nat_table",
             ),
             pytest.param(
                 {FILE_SUFFIX: "qemu.log", SECTION_TITLE: None},
                 "-name guest={namespace}_{name},debug-threads=on \\\\$",
-                marks=(pytest.mark.polarion("CNV-2725")),
                 id="test_qemu",
             ),
             pytest.param(
                 {FILE_SUFFIX: DUMPXML_XML, SECTION_TITLE: None},
                 "^ +<name>{namespace}_{name}</name>$",
-                marks=(pytest.mark.polarion("CNV-3477")),
                 id="test_dumpxml",
             ),
             pytest.param(
                 {FILE_SUFFIX: CAPABILITIES_XML, SECTION_TITLE: None},
                 "{machine_type}</machine>",
-                marks=(pytest.mark.polarion("CNV-10518")),
                 id="test_capabilities",
             ),
             pytest.param(
                 {FILE_SUFFIX: DOMBLKLIST_TXT, SECTION_TITLE: None},
                 "{namespace}/{name}",
-                marks=(pytest.mark.polarion("CNV-10517")),
                 id="test_domblklist",
             ),
             pytest.param(
                 {FILE_SUFFIX: LIST_TXT, SECTION_TITLE: None},
                 "{namespace}_{name}",
-                marks=(pytest.mark.polarion("CNV-10516")),
                 id="test_list",
             ),
             pytest.param(
                 {FILE_SUFFIX: DOMCAPABILITIES_XML, SECTION_TITLE: None},
                 "<path>/usr/libexec/qemu-kvm</path>",
-                marks=(pytest.mark.polarion("CNV-10519")),
                 id="test_domcapabilities",
             ),
             pytest.param(
                 {FILE_SUFFIX: DOMJOBINFO_TXT, SECTION_TITLE: None},
                 r"Job type:(\s*)None",
-                marks=(pytest.mark.polarion("CNV-10520")),
                 id="test_domjobinfo",
             ),
         ],
@@ -172,6 +162,23 @@ class TestMustGatherVmDetails:
         format_regex,
         executed_bridge_link_show_command,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-4834 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-29382 # <skip-jira-utils-check>
+        Polarion: CNV-2735
+        Polarion: CNV-10280
+        Polarion: CNV-2736
+        Polarion: CNV-2734
+        Polarion: CNV-2737
+        Polarion: CNV-2741
+        Polarion: CNV-2725
+        Polarion: CNV-3477
+        Polarion: CNV-10518
+        Polarion: CNV-10517
+        Polarion: CNV-10516
+        Polarion: CNV-10519
+        Polarion: CNV-10520
+        """
         if "name" in format_regex and "namespace" in format_regex:
             format_regex = format_regex.format(namespace=must_gather_vm.namespace, name=must_gather_vm.name)
         elif "mac_address" in format_regex:
@@ -230,7 +237,6 @@ class TestMustGatherVmDetails:
                     "storage_class": py_config["default_storage_class"],
                     "dv_size": FEDORA_LATEST.get("dv_size"),
                 },
-                marks=(pytest.mark.polarion("CNV-10515")),
                 id="test_blockjob",
             ),
         ],
@@ -244,15 +250,22 @@ class TestMustGatherVmDetails:
         collected_vm_details_must_gather_function_scope,
         extracted_data_from_must_gather_file_multiple_disks,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-29382 # <skip-jira-utils-check>
+        Polarion: CNV-10515
+        """
         check_disks_exists_in_blockjob_file(
             disks_from_multiple_disks_vm=disks_from_multiple_disks_vm,
             extracted_data_from_must_gather_file_multiple_disks=extracted_data_from_must_gather_file_multiple_disks,
         )
 
-    @pytest.mark.polarion("CNV-10243")
     def test_must_gather_and_vm_same_node(
         self, admin_client, must_gather_vm, collected_vm_details_must_gather_from_vm_node
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-4834 # <skip-jira-utils-check>
+        Polarion: CNV-10243
+        """
         extracted_data_from_must_gather_on_vm_node(
             collected_vm_details_must_gather_from_vm_node=collected_vm_details_must_gather_from_vm_node,
             must_gather_vm=must_gather_vm,
@@ -263,13 +276,16 @@ class TestMustGatherVmDetails:
 @pytest.mark.sno
 class TestGuestConsoleLog:
     @pytest.mark.usefixtures("updated_disable_serial_console_log_false", "must_gather_vm_scope_class")
-    @pytest.mark.polarion("CNV-10630")
     def test_guest_console_logs(
         self,
         admin_client,
         must_gather_vm_scope_class,
         collected_vm_details_must_gather,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-29382 # <skip-jira-utils-check>
+        Polarion: CNV-10630
+        """
         validate_guest_console_logs_collected(
             vm=must_gather_vm_scope_class,
             collected_vm_details_must_gather=collected_vm_details_must_gather,
@@ -284,7 +300,6 @@ class TestNoMultipleFilesCollected:
             pytest.param(
                 "vm-migrate",
                 COUNT_FIVE,
-                marks=(pytest.mark.polarion("CNV-10643")),
             )
         ],
         indirect=True,
@@ -297,6 +312,10 @@ class TestNoMultipleFilesCollected:
         collected_vm_details_must_gather,
         must_gather_vm_files_path,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-29382 # <skip-jira-utils-check>
+        Polarion: CNV-10643
+        """
         check_no_duplicate_and_missing_files_collected_from_migrated_vm(
             must_gather_vm_file_list=must_gather_vm_files_path,
             vm_namespace=vm_for_migration_test.namespace,
@@ -311,11 +330,14 @@ class TestNoMultipleFilesCollected:
 
 @pytest.mark.sno
 class TestControllerRevisionCollected:
-    @pytest.mark.polarion("CNV-10978")
     def test_controller_revision_collected(
         self,
         rhel_vm_with_cluster_instance_type_and_preference,
         collected_vm_details_must_gather,
         extracted_controller_revision_from_must_gather,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-28605 # <skip-jira-utils-check>
+        Polarion: CNV-10978
+        """
         assert os.path.getsize(extracted_controller_revision_from_must_gather) > 0

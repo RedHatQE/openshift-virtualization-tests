@@ -12,8 +12,11 @@ REQUIRED_SCC_VALUE = "restricted-v2"
 pytestmark = [pytest.mark.s390x, pytest.mark.skip_must_gather_collection]
 
 
-@pytest.mark.polarion("CNV-11964")
 def test_deployment_required_scc(subtests, discovered_cnv_deployments):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-53950 # <skip-jira-utils-check>
+    Polarion: CNV-11964
+    """
     assert discovered_cnv_deployments, "No CNV deployments were discovered in the HCO namespace"
     for deployment in discovered_cnv_deployments:
         with subtests.test(msg=deployment.name):

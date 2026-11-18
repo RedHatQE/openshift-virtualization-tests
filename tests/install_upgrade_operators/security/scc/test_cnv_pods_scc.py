@@ -48,9 +48,11 @@ def verify_cnv_pods_with_scc(cnv_pods):
     assert not failed_pods, f"The following pods do not have scc annotation: {failed_pods}"
 
 
-@pytest.mark.polarion("CNV-4438")
 def test_openshift_io_scc_exists(cnv_pods):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-7261 # <skip-jira-utils-check>
+    Polarion: CNV-4438
+
     Validate that Pods in openshift-cnv have 'openshift.io/scc' annotation
     """
     verify_cnv_pods_with_scc(cnv_pods=cnv_pods)
@@ -68,9 +70,11 @@ def pods_not_allowlisted_or_anyuid(cnv_pods):
     return pod_names
 
 
-@pytest.mark.polarion("CNV-4211")
 def test_pods_scc_in_allowlist(pods_not_allowlisted_or_anyuid):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-7261 # <skip-jira-utils-check>
+    Polarion: CNV-4211
+
     Validate that Pods in openshift-cnv have SCC from a predefined allowlist
     """
     assert not pods_not_allowlisted_or_anyuid, (

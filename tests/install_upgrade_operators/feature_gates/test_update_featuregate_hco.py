@@ -33,12 +33,15 @@ def updated_fg_hco(
         yield
 
 
-@pytest.mark.polarion("CNV-10091")
 def test_enable_fg_disable_mdev_config_hco(
     updated_fg_hco,
     hyperconverged_resource_scope_function,
     kubevirt_resource,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-13528 # <skip-jira-utils-check>
+    Polarion: CNV-10091
+    """
     assert is_feature_gate_enabled(
         hco_resource=hyperconverged_resource_scope_function,
         name=DISABLE_MDEV_CONFIGURATION,

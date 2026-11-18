@@ -3,9 +3,11 @@ import pytest
 pytestmark = [pytest.mark.sno, pytest.mark.s390x, pytest.mark.skip_must_gather_collection]
 
 
-@pytest.mark.polarion("CNV-4751")
 def test_immutable_image_using_sha(kubevirt_package_manifest_current_channel):
     """
+    Jira: https://redhat.atlassian.net/browse/KNIP-1206 # <skip-jira-utils-check>
+    Polarion: CNV-4751
+
     check all images of the current channel on the kubevirt-hyperconverged Package Manifest.
     make sure all images have SHA256 in their string (this indicates they are immutable)
     """

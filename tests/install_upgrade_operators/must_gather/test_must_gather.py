@@ -48,12 +48,15 @@ LOGGER = logging.getLogger(__name__)
     "collected_cluster_must_gather", "collected_must_gather_all_images", "cnv_image_path_must_gather_all_images"
 )
 class TestMustGatherCluster:
-    @pytest.mark.polarion("CNV-2707")
     def test_nodenetworkstate_resources(
         self,
         admin_client,
         must_gather_for_test,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-4834 # <skip-jira-utils-check>
+        Polarion: CNV-2707
+        """
         check_list_of_resources(
             client=admin_client,
             resource_type=NodeNetworkState,
@@ -63,8 +66,11 @@ class TestMustGatherCluster:
             checks=VALIDATE_UID_NAME,
         )
 
-    @pytest.mark.polarion("CNV-2982")
     def test_namespace(self, hco_namespace, must_gather_for_test):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-4834 # <skip-jira-utils-check>
+        Polarion: CNV-2982
+        """
         namespace_name = hco_namespace.name
         check_resource(
             resource=Namespace,
@@ -74,9 +80,11 @@ class TestMustGatherCluster:
             checks=VALIDATE_FIELDS,
         )
 
-    @pytest.mark.polarion("CNV-5885")
     def test_no_upstream_only_namespaces(self, must_gather_for_test, sriov_namespace):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-4834 # <skip-jira-utils-check>
+        Polarion: CNV-5885
+
         After running must-gather command on the cluster, there are some upstream-only namespaces
         present. We counter "POD Error from server (NotFound)" in the logs as there no upstream-only
         namespaces present. This test case will ensure that there is no logs showing "POD Error from
@@ -107,37 +115,31 @@ class TestMustGatherCluster:
             pytest.param(
                 f"app={BRIDGE_MARKER}",
                 py_config["hco_namespace"],
-                marks=(pytest.mark.polarion("CNV-2721")),
                 id="test_bridge_marker_pods",
             ),
             pytest.param(
                 f"name={KUBE_CNI_LINUX_BRIDGE_PLUGIN}",
                 py_config["hco_namespace"],
-                marks=(pytest.mark.polarion("CNV-2705")),
                 id="test_kube_cni_pods",
             ),
             pytest.param(
                 f"name={CLUSTER_NETWORK_ADDONS_OPERATOR}",
                 py_config["hco_namespace"],
-                marks=(pytest.mark.polarion("CNV-2985")),
                 id=f"{CLUSTER_NETWORK_ADDONS_OPERATOR}_pods",
             ),
             pytest.param(
                 "app=ovs-cni",
                 py_config["hco_namespace"],
-                marks=(pytest.mark.polarion("CNV-2986")),
                 id="ovs-cni_pods",
             ),
             pytest.param(
                 "app=kubemacpool",
                 py_config["hco_namespace"],
-                marks=(pytest.mark.polarion("CNV-8880")),
                 id="kubemacpool_pods",
             ),
             pytest.param(
                 "app=containerized-data-importer",
                 py_config["hco_namespace"],
-                marks=(pytest.mark.polarion("CNV-3369")),
                 id="test_cdi_deployment_pods",
             ),
         ],
@@ -149,6 +151,16 @@ class TestMustGatherCluster:
         label_selector,
         resource_namespace,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-4834 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/KNIP-1123 # <skip-jira-utils-check>
+        Polarion: CNV-2721
+        Polarion: CNV-2705
+        Polarion: CNV-2985
+        Polarion: CNV-2986
+        Polarion: CNV-8880
+        Polarion: CNV-3369
+        """
         check_list_of_resources(
             client=admin_client,
             resource_type=Pod,
@@ -159,8 +171,11 @@ class TestMustGatherCluster:
             label_selector=label_selector,
         )
 
-    @pytest.mark.polarion("CNV-2727")
     def test_template_in_openshift_ns_data(self, admin_client, must_gather_for_test):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-4834 # <skip-jira-utils-check>
+        Polarion: CNV-2727
+        """
         template_resources = list(Template.get(client=admin_client, singular_name="template", namespace="openshift"))
         template_log = os.path.join(
             must_gather_for_test,
@@ -174,8 +189,11 @@ class TestMustGatherCluster:
             f"{count_templates}"
         )
 
-    @pytest.mark.polarion("CNV-2809")
     def test_node_nftables(self, collected_nft_files_must_gather, nftables_from_utility_pods):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-4834 # <skip-jira-utils-check>
+        Polarion: CNV-2809
+        """
         table_not_found_errors = []
         for node_name in collected_nft_files_must_gather:
             nftables = nftables_from_utility_pods[node_name]
@@ -197,21 +215,18 @@ class TestMustGatherCluster:
                 ["ip", "-o", "link", "show", "type", "bridge"],
                 "bridge",
                 "simple_compare",
-                marks=(pytest.mark.polarion("CNV-2730"),),
                 id="test_nodes_bridge_data",
             ),
             pytest.param(
                 ["/bin/bash", "-c", "ls -l /host/var/lib/cni/bin"],
                 "var-lib-cni-bin",
                 "simple_compare",
-                marks=(pytest.mark.polarion("CNV-2810"),),
                 id="test_nodes_cni_bin_data",
             ),
             pytest.param(
                 ["ip", "a"],
                 "ip_addr",
                 "not_empty",
-                marks=(pytest.mark.polarion("CNV-2732"),),
                 id="test_nodes_ip_data",
             ),
         ],
@@ -224,6 +239,12 @@ class TestMustGatherCluster:
         results_file,
         compare_method,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-4834 # <skip-jira-utils-check>
+        Polarion: CNV-2730
+        Polarion: CNV-2810
+        Polarion: CNV-2732
+        """
         for pod in workers_utility_pods:
             check_node_resource(
                 temp_dir=must_gather_for_test,
@@ -235,9 +256,13 @@ class TestMustGatherCluster:
 
     @pytest.mark.parametrize(
         "label_selector",
-        [pytest.param({"app": "cni-plugins"}, marks=(pytest.mark.polarion("CNV-2715")))],
+        [pytest.param({"app": "cni-plugins"})],
     )
     def test_logs_gathering(self, must_gather_for_test, running_hco_containers, label_selector):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-4834 # <skip-jira-utils-check>
+        Polarion: CNV-2715
+        """
         check_logs(
             cnv_must_gather=must_gather_for_test,
             running_hco_containers=running_hco_containers,
@@ -251,7 +276,6 @@ class TestMustGatherCluster:
             pytest.param(
                 [KUBEMACPOOL_MAC_RANGE_CONFIG, py_config["hco_namespace"]],
                 True,
-                marks=(pytest.mark.polarion("CNV-2718")),
                 id="test_config_map_kubemacpool-mac-range-config",
             ),
         ],
@@ -264,6 +288,10 @@ class TestMustGatherCluster:
         config_map_by_name,
         has_owner,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-4834 # <skip-jira-utils-check>
+        Polarion: CNV-2718
+        """
         compare_resource_contents(
             resource=config_map_by_name,
             file_content=next(
@@ -275,8 +303,11 @@ class TestMustGatherCluster:
             checks=VALIDATE_UID_NAME + (("metadata", "ownerReferences"),),
         )
 
-    @pytest.mark.polarion("CNV-2723")
     def test_apiservice_resources(self, admin_client, must_gather_for_test):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-4834 # <skip-jira-utils-check>
+        Polarion: CNV-2723
+        """
         check_list_of_resources(
             client=admin_client,
             resource_type=APIService,
@@ -286,8 +317,11 @@ class TestMustGatherCluster:
             filter_resource="kubevirt",
         )
 
-    @pytest.mark.polarion("CNV-2726")
     def test_webhookconfig_resources(self, admin_client, must_gather_for_test):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-4834 # <skip-jira-utils-check>
+        Polarion: CNV-2726
+        """
         check_list_of_resources(
             client=admin_client,
             resource_type=ValidatingWebhookConfiguration,
@@ -314,8 +348,11 @@ class TestMustGatherCluster:
                 checks=VALIDATE_UID_NAME,
             )
 
-    @pytest.mark.polarion("CNV-2724")
     def test_crd_resources(self, admin_client, must_gather_for_test, kubevirt_crd_by_type):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-4834 # <skip-jira-utils-check>
+        Polarion: CNV-2724
+        """
         crd_name = kubevirt_crd_by_type.name
         for version in kubevirt_crd_by_type.instance.spec.versions:
             if not version.served:
@@ -383,12 +420,15 @@ class TestMustGatherCluster:
 @pytest.mark.sriov
 @pytest.mark.special_infra
 class TestSriovMustGather:
-    @pytest.mark.polarion("CNV-3045")
     def test_node_sriov_resource(
         self,
         must_gather_for_test,
         workers_utility_pods,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-4834 # <skip-jira-utils-check>
+        Polarion: CNV-3045
+        """
         for pod in workers_utility_pods:
             check_node_resource(
                 temp_dir=must_gather_for_test,
@@ -400,8 +440,11 @@ class TestSriovMustGather:
 
 
 class TestCNVCollectsLogs:
-    @pytest.mark.polarion("CNV-9906")
     def test_kubevirt_logs_collected(self, gathered_kubevirt_logs, running_hco_containers, hco_namespace):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-4834 # <skip-jira-utils-check>
+        Polarion: CNV-9906
+        """
         LOGGER.info(f"Pod containers: {running_hco_containers}")
         check_logs(
             cnv_must_gather=gathered_kubevirt_logs,

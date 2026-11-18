@@ -34,7 +34,6 @@ LOGGER = logging.getLogger(__name__)
     "cnv_subscription_resource_before_np",
 )
 class TestDeployCNVOnSubsetOfClusterNodes:
-    @pytest.mark.polarion("CNV-5226")
     @pytest.mark.parametrize(
         "alter_cnv_subscription_configuration",
         [
@@ -54,6 +53,10 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         expected_node_by_label,
         nodes_labeled,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-5163 # <skip-jira-utils-check>
+        Polarion: CNV-5226
+        """
         assert nodes_labeled["op2"] == expected_node_by_label["op2"]
         # Verify all operator components are removed from control plane node-0 and created on control plane node-1.
         verify_all_components_on_node(
@@ -69,7 +72,6 @@ class TestDeployCNVOnSubsetOfClusterNodes:
             hco_namespace=hco_namespace,
         )
 
-    @pytest.mark.polarion("CNV-5228")
     @pytest.mark.parametrize(
         "alter_np_configuration",
         [
@@ -87,6 +89,10 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         expected_node_by_label,
         nodes_labeled,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-5163 # <skip-jira-utils-check>
+        Polarion: CNV-5228
+        """
         assert nodes_labeled["infra2"] == expected_node_by_label["infra2"]
         # Verify all Infra components are moved to worker-2.
         verify_all_components_on_node(
@@ -102,7 +108,6 @@ class TestDeployCNVOnSubsetOfClusterNodes:
             hco_namespace=hco_namespace,
         )
 
-    @pytest.mark.polarion("CNV-5229")
     @pytest.mark.parametrize(
         "alter_np_configuration",
         [
@@ -123,6 +128,10 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         nodes_labeled,
         expected_node_by_label,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-5163 # <skip-jira-utils-check>
+        Polarion: CNV-5229
+        """
         assert nodes_labeled["work3"] == expected_node_by_label["work3"]
         # Verify all Workloads Pods are moved to worker-3.
         verify_all_components_on_node(
@@ -138,7 +147,6 @@ class TestDeployCNVOnSubsetOfClusterNodes:
             hco_namespace=hco_namespace,
         )
 
-    @pytest.mark.polarion("CNV-5230")
     @pytest.mark.dependency(
         name="test_deploying_workloads_on_selected_nodes",
         depends=["test_change_workload_components_on_selected_node_before_workload"],
@@ -148,9 +156,12 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         vm_placement_vm_work3,
         nodes_labeled,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-5163 # <skip-jira-utils-check>
+        Polarion: CNV-5230
+        """
         assert vm_placement_vm_work3.vmi.node.name == nodes_labeled["work3"][0]
 
-    @pytest.mark.polarion("CNV-5231")
     @pytest.mark.dependency(
         depends=["test_deploying_workloads_on_selected_nodes"],
     )
@@ -161,6 +172,10 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         vm_placement_vm_work3,
         hyperconverged_resource_scope_function,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-5163 # <skip-jira-utils-check>
+        Polarion: CNV-5231
+        """
         LOGGER.info("Attempting to update HCO with node placement, expecting it to fail")
         try:
             with ResourceEditorValidateHCOReconcile(
@@ -176,7 +191,6 @@ class TestDeployCNVOnSubsetOfClusterNodes:
             LOGGER.error("Unable to change workload label  {WORK_LABEL_1} while vm/workload is present")
             raise
 
-    @pytest.mark.polarion("CNV-5232")
     @pytest.mark.parametrize(
         "alter_np_configuration",
         [
@@ -198,6 +212,10 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         nodes_labeled,
         expected_node_by_label,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-5163 # <skip-jira-utils-check>
+        Polarion: CNV-5232
+        """
         assert nodes_labeled["infra1"] == expected_node_by_label["infra1"]
         # Verify all infra components are removed from worker-2 and created on worker-1.
         verify_all_components_on_node(
@@ -213,7 +231,6 @@ class TestDeployCNVOnSubsetOfClusterNodes:
             hco_namespace=hco_namespace,
         )
 
-    @pytest.mark.polarion("CNV-5233")
     @pytest.mark.parametrize(
         "alter_cnv_subscription_configuration",
         [
@@ -237,6 +254,10 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         expected_node_by_label,
         nodes_labeled,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-5163 # <skip-jira-utils-check>
+        Polarion: CNV-5233
+        """
         assert nodes_labeled["op3"] == expected_node_by_label["op3"]
         # Verify all operator components are removed from control plane node -2 and created on control plane node-3.
         verify_all_components_on_node(
@@ -252,7 +273,6 @@ class TestDeployCNVOnSubsetOfClusterNodes:
             hco_namespace=hco_namespace,
         )
 
-    @pytest.mark.polarion("CNV-5236")
     @pytest.mark.parametrize(
         "alter_np_configuration",
         [
@@ -274,6 +294,10 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         nodes_labeled,
         expected_node_by_label,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-5163 # <skip-jira-utils-check>
+        Polarion: CNV-5236
+        """
         assert nodes_labeled["infra3"] == expected_node_by_label["infra3"]
         # Verify all infrastructure components are removed from worker-1 and created on worker-3
         verify_all_components_on_node(
@@ -289,7 +313,6 @@ class TestDeployCNVOnSubsetOfClusterNodes:
             hco_namespace=hco_namespace,
         )
 
-    @pytest.mark.polarion("CNV-5237")
     @pytest.mark.parametrize(
         "alter_cnv_subscription_configuration",
         [
@@ -312,6 +335,10 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         expected_node_by_label,
         nodes_labeled,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-5163 # <skip-jira-utils-check>
+        Polarion: CNV-5237
+        """
         assert nodes_labeled["op1"] == expected_node_by_label["op1"]
         # Verify all the operators are moved to control plane -0
         verify_all_components_on_node(
@@ -327,7 +354,6 @@ class TestDeployCNVOnSubsetOfClusterNodes:
             hco_namespace=hco_namespace,
         )
 
-    @pytest.mark.polarion("CNV-5235")
     @pytest.mark.parametrize(
         "alter_np_configuration",
         [
@@ -347,6 +373,10 @@ class TestDeployCNVOnSubsetOfClusterNodes:
         nodes_labeled,
         expected_node_by_label,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-5163 # <skip-jira-utils-check>
+        Polarion: CNV-5235
+        """
         assert nodes_labeled["work2"] == expected_node_by_label["work2"]
         # Verify all workloads components are removed from worker-3 and created on worker-2
         verify_all_components_on_node(

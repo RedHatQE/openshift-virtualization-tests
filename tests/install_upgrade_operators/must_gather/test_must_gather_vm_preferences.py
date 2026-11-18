@@ -27,13 +27,16 @@ class TestInstanceTypesAndPreferencesCollected:
         ],
         indirect=True,
     )
-    @pytest.mark.polarion("CNV-9648")
     def test_instancestypes_collected(
         self,
         admin_client,
         resource_types_and_pathes_dict,
         gathered_instancetypes,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-4834 # <skip-jira-utils-check>
+        Polarion: CNV-9648
+        """
         for resource_type in resource_types_and_pathes_dict:
             check_list_of_resources(
                 client=admin_client,

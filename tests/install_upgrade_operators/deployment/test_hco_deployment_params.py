@@ -22,19 +22,23 @@ pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.arm64, pyte
     [
         pytest.param(
             {"deployment_name": HCO_WEBHOOK},
-            marks=(pytest.mark.polarion("CNV-6500")),
             id="test-hco-webhook-liveness-probe",
         ),
         pytest.param(
             {"deployment_name": HCO_OPERATOR},
-            marks=(pytest.mark.polarion("CNV-6499")),
             id="test-hco-operator-liveness-probe",
         ),
     ],
     indirect=True,
 )
 def test_liveness_probe(deployment_by_name):
-    """Validates various livenessProbe fields values for different deployment objects"""
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-1206 # <skip-jira-utils-check>
+    Polarion: CNV-6500
+    Polarion: CNV-6499
+
+    Validates various livenessProbe fields values for different deployment objects
+    """
     validate_liveness_probe_fields(deployment=deployment_by_name)
 
 
@@ -46,30 +50,37 @@ def test_liveness_probe(deployment_by_name):
         pytest.param(
             {"deployment_name": HCO_WEBHOOK},
             5,
-            marks=(pytest.mark.polarion("CNV-7187")),
             id="test-hco-webhook-req-param",
         ),
         pytest.param(
             {"deployment_name": HCO_OPERATOR},
             5,
-            marks=(pytest.mark.polarion("CNV-7188")),
             id="test-hco-operator-req-param",
         ),
     ],
     indirect=["deployment_by_name"],
 )
 def test_request_param(deployment_by_name, cpu_min_value):
-    """Validates resources.requests fields keys and default cpu values for different deployment objects"""
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-12232 # <skip-jira-utils-check>
+    Polarion: CNV-7187
+    Polarion: CNV-7188
+
+    Validates resources.requests fields keys and default cpu values for different deployment objects
+    """
     validate_request_fields(deployment=deployment_by_name, cpu_min_value=cpu_min_value)
 
 
 @pytest.mark.gating
 @pytest.mark.conformance
-@pytest.mark.polarion("CNV-7675")
 def test_cnv_deployment_priority_class_name(
     cnv_deployment_by_name,
     xfail_if_jira_76659_open_and_migration_controller_deployment,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-12232 # <skip-jira-utils-check>
+    Polarion: CNV-7675
+    """
     if cnv_deployment_by_name.name.startswith(HPP_POOL):
         pytest.xfail("HPP pool deployment doesn't have priority class name")
     elif not cnv_deployment_by_name.instance.spec.template.spec.priorityClassName:
@@ -81,7 +92,10 @@ def test_cnv_deployment_priority_class_name(
 @pytest.mark.usefixtures("xfail_if_sriov_conforma_jira_open_and_hco_operator")
 @pytest.mark.gating
 @pytest.mark.conformance
-@pytest.mark.polarion("CNV-8264")
 def test_cnv_deployment_container_image(cnv_deployment_by_name):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-1206 # <skip-jira-utils-check>
+    Polarion: CNV-8264
+    """
     assert_cnv_deployment_container_image_not_in_upstream(cnv_deployment=cnv_deployment_by_name)
     assert_cnv_deployment_container_env_image_not_in_upstream(cnv_deployment=cnv_deployment_by_name)

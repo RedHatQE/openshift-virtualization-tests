@@ -44,13 +44,16 @@ def json_patched_kubevirt(admin_client, hco_namespace, prometheus, hyperconverge
     "json_patched_kubevirt",
 )
 class TestKubevirtJsonPatch:
-    @pytest.mark.polarion("CNV-8689")
     def test_kubevirt_json_patch(
         self,
         admin_client,
         hco_namespace,
         kubevirt_resource,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-9096 # <skip-jira-utils-check>
+        Polarion: CNV-8689
+        """
         wait_for_hco_conditions(
             admin_client=admin_client,
             hco_namespace=hco_namespace,
@@ -60,8 +63,11 @@ class TestKubevirtJsonPatch:
         )
         validate_kubevirt_json_patch(kubevirt_resource=kubevirt_resource)
 
-    @pytest.mark.polarion("CNV-9697")
     def test_kubevirt_json_patch_metrics(self, prometheus, kubevirt_all_unsafe_modification_metrics_before_test):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-9096 # <skip-jira-utils-check>
+        Polarion: CNV-9697
+        """
         before_value = filter_metric_by_component(
             metrics=kubevirt_all_unsafe_modification_metrics_before_test,
             component_name=COMPONENT_KUBEVIRT,
@@ -74,8 +80,11 @@ class TestKubevirtJsonPatch:
             previous_value=before_value,
         )
 
-    @pytest.mark.polarion("CNV-9698")
     def test_kubevirt_json_patch_alert(self, prometheus):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-9096 # <skip-jira-utils-check>
+        Polarion: CNV-9698
+        """
         wait_for_alert(
             prometheus=prometheus,
             alert_name=ALERT_NAME,

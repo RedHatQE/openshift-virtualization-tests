@@ -39,21 +39,25 @@ def csv_infrastructure_features_annotation_value(csv_scope_session):
     return csv_scope_session.instance.metadata.annotations.get(CSV_INFRASTRUCTURE_FEATURES_ANNOTATION)
 
 
-@pytest.mark.polarion("CNV-4456")
 @pytest.mark.smoke
 @pytest.mark.ocp_interop
 def test_csv_keywords(csv_scope_session):
     """
+    Jira: https://redhat.atlassian.net/browse/KNIP-1206 # <skip-jira-utils-check>
+    Polarion: CNV-4456
+
     Assert keywords. Check that each one of the expected keywords are actually there
     """
     assert EXPECTED_KEYWORDS_SET == set(csv_scope_session.instance.spec.keywords)
 
 
-@pytest.mark.polarion("CNV-4457")
 @pytest.mark.smoke
 @pytest.mark.ocp_interop
 def test_csv_links(csv_scope_session):
     """
+    Jira: https://redhat.atlassian.net/browse/KNIP-1206 # <skip-jira-utils-check>
+    Polarion: CNV-4457
+
     Check links list.
     """
     # links is a list of dicts, with keys of "name" and "url"
@@ -65,11 +69,13 @@ def test_csv_links(csv_scope_session):
     assert len(EXPECTED_LINK_MAP) == len(csv_scope_session.instance.spec.links)
 
 
-@pytest.mark.polarion("CNV-4458")
 @pytest.mark.smoke
 @pytest.mark.ocp_interop
 def test_csv_icon(csv_scope_session):
     """
+    Jira: https://redhat.atlassian.net/browse/KNIP-1206 # <skip-jira-utils-check>
+    Polarion: CNV-4458
+
     Assert Icon/Logo.
     """
     assert len(csv_scope_session.instance.spec.icon) == 1
@@ -81,11 +87,13 @@ def test_csv_icon(csv_scope_session):
     assert svg == expected_svg, f"Expected icon: {expected_svg} and actual icon: {svg}"
 
 
-@pytest.mark.polarion("CNV-4376")
 @pytest.mark.smoke
 @pytest.mark.ocp_interop
 def test_csv_properties(csv_scope_session):
     """
+    Jira: https://redhat.atlassian.net/browse/KNIP-1206 # <skip-jira-utils-check>
+    Polarion: CNV-4376
+
     Asserting remaining csv properties.
     """
     assert csv_scope_session.instance.spec.provider.name == "Red Hat"
@@ -101,23 +109,26 @@ def test_csv_properties(csv_scope_session):
     [
         pytest.param(
             "disconnected",
-            marks=pytest.mark.polarion("CNV-5840"),
             id="test_csv_disconnected_annotation",
         ),
         pytest.param(
             "fips",
-            marks=pytest.mark.polarion("CNV-7297"),
             id="test_csv_fips_annotation",
         ),
         pytest.param(
             "sno",
-            marks=(pytest.mark.polarion("CNV-7397"), pytest.mark.sno()),
+            marks=(pytest.mark.sno()),
             id="test_csv_sno_annotation",
         ),
     ],
 )
 def test_csv_infrastructure_features(csv_scope_session, csv_infrastructure_features_annotation_value, expected_feature):
     """
+    Jira: https://redhat.atlassian.net/browse/KNIP-1206 # <skip-jira-utils-check>
+    Polarion: CNV-5840
+    Polarion: CNV-7297
+    Polarion: CNV-7397
+
     Validates badges have been added to csv's operators.openshift.io/infrastructure-features annotation
     """
     assert expected_feature in csv_infrastructure_features_annotation_value, (

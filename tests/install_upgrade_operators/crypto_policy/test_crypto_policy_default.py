@@ -47,7 +47,6 @@ pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.s390x]
                 KEY_NAME_STR: TLS_SECURITY_PROFILE,
             },
             APIServer,
-            marks=(pytest.mark.polarion("CNV-9328")),
             id="test_default_crypto_policy_api_server",
         ),
         pytest.param(
@@ -58,7 +57,6 @@ pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.s390x]
                 KEY_NAME_STR: f"security{KEY_PATH_SEPARATOR}{TLS_SECURITY_PROFILE}",
             },
             HyperConverged,
-            marks=(pytest.mark.polarion("CNV-9464")),
             id="test_default_crypto_policy_hyperconverged",
         ),
         pytest.param(
@@ -69,7 +67,6 @@ pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.s390x]
                 KEY_NAME_STR: KUBEVIRT_TLS_CONFIG_STR,
             },
             KubeVirt,
-            marks=(pytest.mark.polarion("CNV-9465")),
             id="test_default_crypto_policy_kubevirt",
         ),
         pytest.param(
@@ -80,7 +77,6 @@ pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.s390x]
                 KEY_NAME_STR: TLS_SECURITY_PROFILE,
             },
             SSP,
-            marks=(pytest.mark.polarion("CNV-9466")),
             id="test_default_crypto_policy_ssp",
         ),
         pytest.param(
@@ -90,7 +86,6 @@ pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.s390x]
                 KEY_NAME_STR: f"config->{TLS_SECURITY_PROFILE}",
             },
             CDI,
-            marks=(pytest.mark.polarion("CNV-9467")),
             id="test_default_crypto_policy_cdi",
         ),
         pytest.param(
@@ -100,13 +95,21 @@ pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno, pytest.mark.s390x]
                 KEY_NAME_STR: TLS_SECURITY_PROFILE,
             },
             NetworkAddonsConfig,
-            marks=(pytest.mark.polarion("CNV-9468")),
             id="test_default_crypto_policy_cnao",
         ),
     ],
     indirect=["resource_crypto_policy_settings"],
 )
 def test_default_crypto_policy(resource_crypto_policy_settings, resource_type):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-15705 # <skip-jira-utils-check>
+    Polarion: CNV-9328
+    Polarion: CNV-9464
+    Polarion: CNV-9465
+    Polarion: CNV-9466
+    Polarion: CNV-9467
+    Polarion: CNV-9468
+    """
     expected_result = CRYPTO_POLICY_EXPECTED_DICT[TLS_INTERMEDIATE_POLICY].get(resource_type)
     assert resource_crypto_policy_settings == expected_result, (
         f"For {resource_type.kind}, actual crypto setting found is={resource_crypto_policy_settings},"
@@ -114,10 +117,13 @@ def test_default_crypto_policy(resource_crypto_policy_settings, resource_type):
     )
 
 
-@pytest.mark.polarion("CNV-9266")
 def test_default_crypto_policy_check_connectivity(
     workers, workers_utility_pods, services_to_check_connectivity, fips_enabled_cluster, subtests
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-14597 # <skip-jira-utils-check>
+    Polarion: CNV-9266
+    """
     for service in services_to_check_connectivity:
         service_name = service.name
         with subtests.test(msg=service_name):

@@ -206,13 +206,15 @@ def recreated_hco(
 @pytest.mark.destructive
 @pytest.mark.parametrize("data_volume_scope_class", [pytest.param(DV_PARAMS)], indirect=True)
 class TestAttemptRemoveHCO:
-    @pytest.mark.polarion("CNV-8615")
     def test_remove_hco_with_dv_no_vms(
         self,
         hyperconverged_resource_scope_function,
         data_volume_scope_class,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1218 # <skip-jira-utils-check>
+        Polarion: CNV-8615
+
         This test validates the failure to remove HCO,
         when there is only DV exists with no VM
         """
@@ -221,7 +223,6 @@ class TestAttemptRemoveHCO:
             dv_resource=data_volume_scope_class,
         )
 
-    @pytest.mark.polarion("CNV-8613")
     @pytest.mark.usefixtures("hco_fedora_vm")
     def test_default_uninstall_strategy(
         self,
@@ -231,6 +232,9 @@ class TestAttemptRemoveHCO:
         kubevirt_resource,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1218 # <skip-jira-utils-check>
+        Polarion: CNV-8613
+
         This test validates the default uninstallStrategy 'BlockUninstallIfWorkloadsExist'
         of HCO, KubeVirt, CDI CR
         """
@@ -244,7 +248,6 @@ class TestAttemptRemoveHCO:
             expected_strategy=BLOCK_STRATEGY,
         )
 
-    @pytest.mark.polarion("CNV-8614")
     @pytest.mark.usefixtures("hco_fedora_vm")
     def test_hco_removal_with_block_strategy_with_vm_and_dv(
         self,
@@ -252,6 +255,9 @@ class TestAttemptRemoveHCO:
         hyperconverged_resource_scope_function,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1218 # <skip-jira-utils-check>
+        Polarion: CNV-8614
+
         This test validates failure of HCO removal when both VM and DV exists
         """
         assert_hco_exists_after_delete(
@@ -259,7 +265,6 @@ class TestAttemptRemoveHCO:
             dv_resource=data_volume_scope_class,
         )
 
-    @pytest.mark.polarion("CNV-8725")
     @pytest.mark.usefixtures("stopped_fedora_vm")
     def test_hco_removal_with_block_strategy_with_stopped_vm(
         self,
@@ -267,6 +272,9 @@ class TestAttemptRemoveHCO:
         data_volume_scope_class,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1218 # <skip-jira-utils-check>
+        Polarion: CNV-8725
+
         This test validates that the removal of HCO fails when VM
         exists in stopped state
         """
@@ -278,7 +286,6 @@ class TestAttemptRemoveHCO:
 
 @pytest.mark.destructive
 class TestRemoveHCO:
-    @pytest.mark.polarion("CNV-8726")
     @pytest.mark.dependency(name=BLOCK_REMOVAL_TEST_NODE_ID)
     @pytest.mark.usefixtures("removed_hco")
     def test_block_strategy_no_dv_and_no_vm(
@@ -286,12 +293,14 @@ class TestRemoveHCO:
         hyperconverged_resource_scope_function,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1218 # <skip-jira-utils-check>
+        Polarion: CNV-8726
+
         Remove HCO CR with default uninstallStrategy
         BlockUninstallIfWorkloadsExist
         """
         assert not hyperconverged_resource_scope_function.exists, "hco still exists after test removed it"
 
-    @pytest.mark.polarion("CNV-8618")
     @pytest.mark.parametrize("data_volume_scope_function", [pytest.param(DV_PARAMS)], indirect=True)
     def test_remove_strategy_with_dv_no_vm(
         self,
@@ -301,12 +310,14 @@ class TestRemoveHCO:
         removed_hco,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1218 # <skip-jira-utils-check>
+        Polarion: CNV-8618
+
         Remove HCO when DV exists with no VMs
         """
         assert not hyperconverged_resource_scope_function.exists, "hco still exists after test removed it"
         LOGGER.info(f"Successfully removed HCO  with {REMOVE_STRATEGY} uninstallStrategy, with DV and no VM in cluster")
 
-    @pytest.mark.polarion("CNV-8617")
     @pytest.mark.parametrize("data_volume_scope_function", [pytest.param(DV_PARAMS)], indirect=True)
     @pytest.mark.usefixtures("hco_fedora_vm")
     def test_remove_strategy_with_vm_and_dv(
@@ -317,13 +328,15 @@ class TestRemoveHCO:
         removed_hco,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1218 # <skip-jira-utils-check>
+        Polarion: CNV-8617
+
         Test HCO removal after setting uninstallStrategy to
         RemoveWorkloads, with VMs and DVs
         """
         assert not hyperconverged_resource_scope_function.exists, "hco still exists after test removed it"
         LOGGER.info(f"Successfully removed HCO with f{REMOVE_STRATEGY} uninstallStrategywith VM and DV in the cluster")
 
-    @pytest.mark.polarion("CNV-8751")
     @pytest.mark.usefixtures("recreated_hco")
     def test_recreate_hco(
         self,
@@ -336,6 +349,9 @@ class TestRemoveHCO:
         kubevirt_resource,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1218 # <skip-jira-utils-check>
+        Polarion: CNV-8751
+
         Validate the uninstallStrategy remains at BlockUninstallIfWorkloadsExists
         after removing and creating HCO again. Also make sure that related objects
         too remain the same
