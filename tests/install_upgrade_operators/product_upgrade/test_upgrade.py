@@ -21,7 +21,6 @@ LOGGER = logging.getLogger(__name__)
 @pytest.mark.upgrade_custom
 class TestUpgrade:
     @pytest.mark.ocp_upgrade
-    @pytest.mark.polarion("CNV-8381")
     @pytest.mark.dependency(name=IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID)
     def test_ocp_upgrade_process(
         self,
@@ -34,6 +33,10 @@ class TestUpgrade:
         fired_alerts_before_upgrade,
         triggered_ocp_upgrade,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-4747 # <skip-jira-utils-check>
+        Polarion: CNV-8381
+        """
         verify_upgrade_ocp(
             admin_client=admin_client,
             target_ocp_version=extracted_ocp_version_from_image_url,
@@ -44,7 +47,6 @@ class TestUpgrade:
 
     @pytest.mark.gating
     @pytest.mark.cnv_upgrade
-    @pytest.mark.polarion("CNV-2991")
     @pytest.mark.dependency(name=IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID)
     def test_cnv_upgrade_process(
         self,
@@ -65,6 +67,11 @@ class TestUpgrade:
         upgraded_cnv,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/KNIP-264 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-11483 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-4747 # <skip-jira-utils-check>
+        Polarion: CNV-2991
+
         Test the CNV upgrade process (using OSBS/fbc sources). The main steps of the test are:
 
         1. Disable the default sources in operatorhub in order to be able to upgrade usg a custom catalog source.
@@ -88,7 +95,6 @@ class TestUpgrade:
 
     @pytest.mark.gating
     @pytest.mark.cnv_upgrade
-    @pytest.mark.polarion("CNV-9933")
     @pytest.mark.dependency(name=IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID)
     def test_production_source_cnv_upgrade_process(
         self,
@@ -106,6 +112,11 @@ class TestUpgrade:
         upgraded_cnv,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/KNIP-264 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-11483 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-4747 # <skip-jira-utils-check>
+        Polarion: CNV-9933
+
         Test the CNV upgrade process using the production source.
         The main steps of the test are the same as for osbs/fbc source,
         but it is not needed to disable the default sources, create a new ICSP or update the HCO CatalogSource.

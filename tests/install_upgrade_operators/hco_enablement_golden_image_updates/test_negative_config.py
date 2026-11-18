@@ -70,12 +70,15 @@ def updated_hco_cr_custom_template_disable(
     )
 
 
-@pytest.mark.polarion("CNV-8731")
 def test_custom_template_no_disable(
     updated_hco_cr_custom_template_disable,
     hyperconverged_status_templates_scope_function,
     ssp_spec_templates_scope_function,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-15392 # <skip-jira-utils-check>
+    Polarion: CNV-8731
+    """
     custom_template_name = CUSTOM_CRON_TEMPLATE["metadata"]["name"]
     for status_template in [
         hyperconverged_status_templates_scope_function,
@@ -88,8 +91,11 @@ def test_custom_template_no_disable(
         ), f"Disabled custom template {custom_template_name} is found in status: {status_template}"
 
 
-@pytest.mark.polarion("CNV-8709")
 def test_disable_template_annotation_value(admin_client, hco_namespace, editor_hyperconverged_custom_template):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-15392 # <skip-jira-utils-check>
+    Polarion: CNV-8709
+    """
     try:
         with pytest.raises(
             ForbiddenError,

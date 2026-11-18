@@ -37,22 +37,20 @@ class TestDisconnectedVirtctlDownload:
         [
             pytest.param(
                 {"os": "win", "machine_type": AMD_64},
-                marks=(pytest.mark.polarion("CNV-6914"),),
                 id="test_download_virtcli_binary_win_amd64",
             ),
             pytest.param(
                 {"os": "win", "machine_type": ARM_64},
-                marks=(pytest.mark.polarion("CNV-10098"), pytest.mark.arm64),
+                marks=(pytest.mark.arm64),
                 id="test_download_virtcli_binary_win_arm64",
             ),
             pytest.param(
                 {"os": "mac", "machine_type": AMD_64},
-                marks=(pytest.mark.polarion("CNV-6954"),),
                 id="test_download_virtcli_binary_mac_amd64",
             ),
             pytest.param(
                 {"os": "mac", "machine_type": ARM_64},
-                marks=(pytest.mark.polarion("CNV-10099"), pytest.mark.arm64),
+                marks=(pytest.mark.arm64),
                 id="test_download_virtcli_binary_mac_arm64",
             ),
         ],
@@ -62,6 +60,14 @@ class TestDisconnectedVirtctlDownload:
         self,
         downloaded_and_extracted_virtctl_binary_for_os,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-5267 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-24934 # <skip-jira-utils-check>
+        Polarion: CNV-6914
+        Polarion: CNV-10098
+        Polarion: CNV-6954
+        Polarion: CNV-10099
+        """
         assert os.path.exists(downloaded_and_extracted_virtctl_binary_for_os)
 
 
@@ -72,19 +78,24 @@ class TestDisconnectedVirtctlDownloadAndExecute:
             pytest.param(
                 {"os": "linux", "machine_type": AMD_64},
                 AMD_64,
-                marks=(pytest.mark.polarion("CNV-6913"),),
                 id="test_download_virtcli_binary_linux_amd64",
             ),
             pytest.param(
                 {"os": "linux", "machine_type": ARM_64},
                 ARM_64,
-                marks=(pytest.mark.polarion("CNV-10097"), pytest.mark.arm64),
+                marks=(pytest.mark.arm64),
                 id="test_download_virtcli_binary_linux_arm64",
             ),
         ],
         indirect=["downloaded_and_extracted_virtctl_binary_for_os"],
     )
     def test_download_and_execute_virtcli_binary_linux(self, downloaded_and_extracted_virtctl_binary_for_os, platform):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-5267 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-24934 # <skip-jira-utils-check>
+        Polarion: CNV-6913
+        Polarion: CNV-10097
+        """
         assert os.path.exists(downloaded_and_extracted_virtctl_binary_for_os)
         # this part should only be repeated if the execution is being done on a matching platform:
         if get_machine_platform() == platform:
@@ -93,8 +104,11 @@ class TestDisconnectedVirtctlDownloadAndExecute:
 
 @pytest.mark.arm64
 class TestDisconnectedVirtctlAllLinksInternal:
-    @pytest.mark.polarion("CNV-6915")
     def test_all_links_internal(self, all_virtctl_urls_scope_class, non_internal_fqdns):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-5267 # <skip-jira-utils-check>
+        Polarion: CNV-6915
+        """
         assert not non_internal_fqdns, (
             "Found virtctl URLs that do not point to the cluster internally: "
             f"violating_fqdns={non_internal_fqdns} all_virtctl_urls={all_virtctl_urls_scope_class}"

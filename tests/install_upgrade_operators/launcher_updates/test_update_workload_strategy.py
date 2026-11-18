@@ -32,13 +32,11 @@ class TestLauncherUpdateAll:
             pytest.param(
                 "hyperconverged",
                 CUSTOM_WORKLOAD_UPDATE_STRATEGY,
-                marks=pytest.mark.polarion("CNV-6926"),
                 id="test_hyperconverged_modify_custom_workload_update_strategy_all",
             ),
             pytest.param(
                 "kubevirt",
                 CUSTOM_WORKLOAD_UPDATE_STRATEGY,
-                marks=pytest.mark.polarion("CNV-6927"),
                 id="test_kubevirt_modify_custom_workload_update_strategy",
             ),
         ],
@@ -51,7 +49,13 @@ class TestLauncherUpdateAll:
         resource_name,
         expected,
     ):
-        """Validate ability to update, hyperconverged's spec.workloadUpdateStrategy to custom values"""
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-8762 # <skip-jira-utils-check>
+        Polarion: CNV-6926
+        Polarion: CNV-6927
+
+        Validate ability to update, hyperconverged's spec.workloadUpdateStrategy to custom values
+        """
         if resource_name == "hyperconverged":
             wait_for_spec_change(
                 expected=expected,
@@ -89,7 +93,6 @@ class TestCustomWorkLoadStrategy:
                     },
                 },
                 MOD_DEFAULT_BATCH_EVICTION_INTERVAL,
-                marks=pytest.mark.polarion("CNV-6932"),
                 id="test_hyperconverged_modify_custom_workloadUpdateStrategy_batchEvictionInterval",
             ),
             pytest.param(
@@ -103,7 +106,6 @@ class TestCustomWorkLoadStrategy:
                     },
                 },
                 MOD_DEFAULT_BATCH_EVICTION_SIZE,
-                marks=pytest.mark.polarion("CNV-6933"),
                 id="test_hyperconverged_modify_custom_workloadUpdateStrategy_batchEvictionSize",
             ),
             pytest.param(
@@ -119,7 +121,6 @@ class TestCustomWorkLoadStrategy:
                     },
                 },
                 MOD_DEFAULT_WORKLOAD_UPDATE_METHOD,
-                marks=pytest.mark.polarion("CNV-6934"),
                 id="test_hyperconverged_modify_custom_workloadUpdateStrategy_workloadUpdateMethods",
             ),
             pytest.param(
@@ -129,7 +130,6 @@ class TestCustomWorkLoadStrategy:
                     },
                 },
                 MOD_DEFAULT_WORKLOAD_UPDATE_METHOD_EMPTY,
-                marks=pytest.mark.polarion("CNV-6935"),
                 id="test_hyperconverged_modify_workloadUpdateStrategy_workloadUpdateMethods_empty",
             ),
             pytest.param(
@@ -139,7 +139,6 @@ class TestCustomWorkLoadStrategy:
                     },
                 },
                 MOD_DEFAULT_BATCH_EVICTION_INTERVAL_ZERO,
-                marks=pytest.mark.polarion("CNV-6936"),
                 id="test_hyperconverged_modify_workloadUpdateStrategy_batchEvictionInterval_zero",
             ),
             pytest.param(
@@ -155,7 +154,6 @@ class TestCustomWorkLoadStrategy:
                     },
                 },
                 MOD_DEFAULT_BATCH_EVICTION_INTERVAL_INT,
-                marks=pytest.mark.polarion("CNV-6937"),
                 id="Test_hyperconverged_modify_workloadUpdateStrategy_batchEvictionInterval_large_value",
             ),
             pytest.param(
@@ -165,7 +163,6 @@ class TestCustomWorkLoadStrategy:
                     },
                 },
                 MOD_DEFAULT_BATCH_EVICTION_SIZE_ZERO,
-                marks=pytest.mark.polarion("CNV-6938"),
                 id="Test_hyperconverged_modify_workloadUpdateStrategy_batchEvictionSize_zero",
             ),
             pytest.param(
@@ -179,7 +176,6 @@ class TestCustomWorkLoadStrategy:
                     },
                 },
                 MOD_DEFAULT_BATCH_EVICTION_SIZE_INT,
-                marks=pytest.mark.polarion("CNV-6939"),
                 id="test_hyperconverged_modify_workloadUpdateStrategy_batchEvictionSize_large_value",
             ),
         ],
@@ -188,7 +184,19 @@ class TestCustomWorkLoadStrategy:
     def test_hyperconverged_modify_custom_workload_update_strategy(
         self, admin_client, hco_namespace, updated_hco_cr, expected
     ):
-        """Validate ability to update, hyperconverged's spec.workloadUpdateStrategy to custom values"""
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-8762 # <skip-jira-utils-check>
+        Polarion: CNV-6932
+        Polarion: CNV-6933
+        Polarion: CNV-6934
+        Polarion: CNV-6935
+        Polarion: CNV-6936
+        Polarion: CNV-6937
+        Polarion: CNV-6938
+        Polarion: CNV-6939
+
+        Validate ability to update, hyperconverged's spec.workloadUpdateStrategy to custom values
+        """
         wait_for_spec_change(
             expected=expected,
             get_spec_func=lambda: get_hco_spec(admin_client=admin_client, hco_namespace=hco_namespace),

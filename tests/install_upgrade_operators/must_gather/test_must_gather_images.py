@@ -29,16 +29,19 @@ class TestImageGathering:
             pytest.param(
                 "cluster-scoped-resources/images/{name}.yaml",
                 Image,
-                marks=(pytest.mark.polarion("CNV-9234")),
             ),
             pytest.param(
                 f"namespaces/{NamespacesNames.OPENSHIFT}/imagestreams/{{name}}.yaml",
                 ImageStream,
-                marks=(pytest.mark.polarion("CNV-9235")),
             ),
         ],
     )
     def test_image_gather(self, admin_client, gathered_images, resource, resource_path):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-4834 # <skip-jira-utils-check>
+        Polarion: CNV-9234
+        Polarion: CNV-9235
+        """
         check_list_of_resources(
             client=admin_client,
             resource_type=resource,
@@ -48,8 +51,11 @@ class TestImageGathering:
             filter_resource="redhat",
         )
 
-    @pytest.mark.polarion("CNV-9236")
     def test_image_stream_tag_gather(self, admin_client, gathered_images):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-4834 # <skip-jira-utils-check>
+        Polarion: CNV-9236
+        """
         istag_dir = os.path.join(gathered_images, IMAGESTREAMTAGS_PATH)
         collected_count = len(os.listdir(istag_dir))
         cluster_count = len(list(ImageStreamTag.get(client=admin_client, namespace=NamespacesNames.OPENSHIFT)))

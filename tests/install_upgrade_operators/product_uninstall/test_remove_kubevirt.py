@@ -40,9 +40,12 @@ def remove_kubevirt_vm(unprivileged_client, namespace):
         yield vm
 
 
-@pytest.mark.polarion("CNV-3718")
 @pytest.mark.destructive
 def test_block_removal(kubevirt_resource, remove_kubevirt_vm):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-1218 # <skip-jira-utils-check>
+    Polarion: CNV-3718
+    """
     with pytest.raises(BadRequestError):
         kubevirt_resource.delete()
 
@@ -54,14 +57,18 @@ def test_block_removal(kubevirt_resource, remove_kubevirt_vm):
 
 
 @pytest.mark.destructive
-@pytest.mark.polarion("CNV-3684")
 def test_remove_workloads(
     set_uninstall_strategy_remove_workloads,
     kubevirt_resource,
     remove_kubevirt_vm,
     admin_client,
 ):
-    """WARNING: DESTRUCTIVE; DELETES ALL RUNNING CNV WORKLOADS"""
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-1218 # <skip-jira-utils-check>
+    Polarion: CNV-3684
+
+    WARNING: DESTRUCTIVE; DELETES ALL RUNNING CNV WORKLOADS
+    """
 
     # deletion is hard to catch with this resource because HCO re-raises it instantly
     # so we'll validate its deletion by comparing the uid before and after the
@@ -85,7 +92,10 @@ def test_remove_workloads(
 
 
 @pytest.mark.order(after="test_remove_workloads")
-@pytest.mark.polarion("CNV-3739")
 @pytest.mark.destructive
 def test_raise_vm_after_removal(remove_kubevirt_vm):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-1218 # <skip-jira-utils-check>
+    Polarion: CNV-3739
+    """
     assert remove_kubevirt_vm.exists and remove_kubevirt_vm.vmi.status == remove_kubevirt_vm.vmi.Status.RUNNING

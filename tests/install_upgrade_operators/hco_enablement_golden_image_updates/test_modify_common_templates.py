@@ -122,15 +122,16 @@ class TestModifyCommonTemplateSpec:
         [
             pytest.param(
                 {"num_templates": 1, "update_dict": None},
-                marks=(
-                    pytest.mark.polarion("CNV-8706"),
-                    pytest.mark.dependency(name="test_common_template_status_modified"),
-                ),
+                marks=(pytest.mark.dependency(name="test_common_template_status_modified"),),
             ),
         ],
         indirect=["updated_common_template"],
     )
     def test_modified_common_template(self, updated_common_template, hyperconverged_status_templates_scope_function):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-15392 # <skip-jira-utils-check>
+        Polarion: CNV-8706
+        """
         template_name = updated_common_template[0]["metadata"]["name"]
         hco_template = get_template_dict_by_name(
             template_name=template_name,
@@ -146,22 +147,18 @@ class TestModifyCommonTemplateSpec:
             pytest.param(
                 {"num_templates": 1, "update_dict": UPDATE_TEMPLATE_SCHEDULE},
                 UPDATE_TEMPLATE_SCHEDULE,
-                marks=pytest.mark.polarion("CNV-8739"),
             ),
             pytest.param(
                 {"num_templates": 1, "update_dict": UPDATE_MULTIPLE_VALUE_IN_SPEC},
                 UPDATE_MULTIPLE_VALUE_IN_SPEC,
-                marks=pytest.mark.polarion("CNV-8734"),
             ),
             pytest.param(
                 {"num_templates": 1, "update_dict": UPDATE_ONE_VALUE_IN_SPEC},
                 UPDATE_ONE_VALUE_IN_SPEC,
-                marks=pytest.mark.polarion("CNV-8733"),
             ),
             pytest.param(
                 {"num_templates": 1, "update_dict": UPDATE_STORAGE_CLASS_IN_SPEC},
                 UPDATE_STORAGE_CLASS_IN_SPEC,
-                marks=(pytest.mark.polarion("CNV-8740"),),
             ),
         ],
         indirect=["updated_common_template"],
@@ -176,6 +173,13 @@ class TestModifyCommonTemplateSpec:
         golden_images_namespace,
         expected_value,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-15392 # <skip-jira-utils-check>
+        Polarion: CNV-8739
+        Polarion: CNV-8734
+        Polarion: CNV-8733
+        Polarion: CNV-8740
+        """
         errors = []
         for template_name in updated_template_names:
             hco_error = validate_template_change(
@@ -230,10 +234,7 @@ class TestCommonTemplatesEnableDisable:
         [
             pytest.param(
                 {"num_templates": 1, "update_dict": COMMON_TEMPLATE_DISABLE},
-                marks=(
-                    pytest.mark.polarion("CNV-8735"),
-                    pytest.mark.dependency(name="test_one_common_template_config_disable"),
-                ),
+                marks=(pytest.mark.dependency(name="test_one_common_template_config_disable"),),
             ),
             pytest.param(
                 {
@@ -241,17 +242,11 @@ class TestCommonTemplatesEnableDisable:
                     "update_dict": COMMON_TEMPLATE_DISABLE,
                     "delete_spec": True,
                 },
-                marks=(
-                    pytest.mark.polarion("CNV-8732"),
-                    pytest.mark.dependency(name="test_one_common_template_config_disable_no_spec"),
-                ),
+                marks=(pytest.mark.dependency(name="test_one_common_template_config_disable_no_spec"),),
             ),
             pytest.param(
                 {"num_templates": 3, "update_dict": COMMON_TEMPLATE_DISABLE},
-                marks=(
-                    pytest.mark.polarion("CNV-8710"),
-                    pytest.mark.dependency(name="test_multiple_common_templates_config_disable"),
-                ),
+                marks=(pytest.mark.dependency(name="test_multiple_common_templates_config_disable"),),
             ),
         ],
         indirect=["updated_common_template"],
@@ -265,6 +260,12 @@ class TestCommonTemplatesEnableDisable:
         ssp_spec_templates_scope_function,
         golden_images_namespace,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-15392 # <skip-jira-utils-check>
+        Polarion: CNV-8735
+        Polarion: CNV-8732
+        Polarion: CNV-8710
+        """
         LOGGER.info(f"templates getting disabled: {updated_template_names}")
         errors = []
         for template_name in updated_template_names:

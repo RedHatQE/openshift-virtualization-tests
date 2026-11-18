@@ -27,7 +27,6 @@ pytestmark = [
 class TestUpgradeIUO:
     """Post-upgrade tests"""
 
-    @pytest.mark.polarion("CNV-9081")
     @pytest.mark.dependency(
         name=IUO_CNV_ALERT_ORDERING_NODE_ID,
         depends=[IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID],
@@ -37,23 +36,29 @@ class TestUpgradeIUO:
         self,
         fired_alerts_during_upgrade,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-264 # <skip-jira-utils-check>
+        Polarion: CNV-9081
+        """
         assert not fired_alerts_during_upgrade, (
             f"Following alerts were fired during upgrade: {list(fired_alerts_during_upgrade.keys())}"
         )
 
     @pytest.mark.eus_upgrade
-    @pytest.mark.polarion("CNV-6866")
     @pytest.mark.order(before=IMAGE_UPDATE_AFTER_UPGRADE_NODE_ID, after=IUO_CNV_ALERT_ORDERING_NODE_ID)
     @pytest.mark.dependency(
         depends=[IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID],
         scope=DEPENDENCY_SCOPE_SESSION,
     )
     def test_nodes_taints_after_upgrade(self, admin_client, nodes, nodes_taints_before_upgrade):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-264 # <skip-jira-utils-check>
+        Polarion: CNV-6866
+        """
         LOGGER.info("Verify nodes taints after upgrade.")
         verify_nodes_taints_after_upgrade(nodes=nodes, nodes_taints_before_upgrade=nodes_taints_before_upgrade)
 
     @pytest.mark.eus_upgrade
-    @pytest.mark.polarion("CNV-6924")
     @pytest.mark.order(before=IMAGE_UPDATE_AFTER_UPGRADE_NODE_ID, after=IUO_CNV_ALERT_ORDERING_NODE_ID)
     @pytest.mark.dependency(
         depends=[IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID],
@@ -66,6 +71,10 @@ class TestUpgradeIUO:
         nodes_labels_before_upgrade,
         cnv_upgrade,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-264 # <skip-jira-utils-check>
+        Polarion: CNV-6924
+        """
         LOGGER.info("Verify nodes labels after upgrade.")
         verify_nodes_labels_after_upgrade(
             nodes=nodes,

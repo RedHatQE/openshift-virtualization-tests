@@ -35,8 +35,11 @@ def vm_virt_launcher_pod(developer_vm, namespace, unprivileged_client, admin_cli
     )
 
 
-@pytest.mark.polarion("CNV-4897")
 def test_unprivileged_client_virt_launcher(unprivileged_client, developer_vm, vm_virt_launcher_pod):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-7261 # <skip-jira-utils-check>
+    Polarion: CNV-4897
+    """
     with pytest.raises(
         ApiException,
         match="Reason: Handshake status 403 Forbidden",

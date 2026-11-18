@@ -45,12 +45,15 @@ class TestRelationshipLabels:
         [
             pytest.param(
                 {"expected_labels_dict": EXPECTED_VIRT_DEPLOYMENTS_LABELS_DICT_MAP},
-                marks=pytest.mark.polarion("CNV-7190"),
             ),
         ],
         indirect=True,
     )
     def test_verify_mismatch_relationship_labels_deployments(self, expected_label_dictionary, cnv_deployment_by_name):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-7261 # <skip-jira-utils-check>
+        Polarion: CNV-7190
+        """
         verify_component_labels_by_resource(
             component=cnv_deployment_by_name,
             expected_component_labels=expected_label_dictionary,
@@ -61,12 +64,15 @@ class TestRelationshipLabels:
         [
             pytest.param(
                 {"expected_labels_dict": EXPECTED_VIRT_DAEMONSETS_LABELS_DICT_MAP},
-                marks=pytest.mark.polarion("CNV-7269"),
             ),
         ],
         indirect=True,
     )
     def test_verify_mismatch_relationship_labels_daemonsets(self, expected_label_dictionary, cnv_daemonset_by_name):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-7261 # <skip-jira-utils-check>
+        Polarion: CNV-7269
+        """
         verify_component_labels_by_resource(
             component=cnv_daemonset_by_name,
             expected_component_labels=expected_label_dictionary,
@@ -77,12 +83,15 @@ class TestRelationshipLabels:
         [
             pytest.param(
                 {"expected_labels_dict": EXPECTED_VIRT_PODS_LABELS_DICT_MAP},
-                marks=pytest.mark.polarion("CNV-10307"),
             ),
         ],
         indirect=True,
     )
     def test_verify_mismatch_relationship_labels_pods(self, expected_label_dictionary, cnv_pods_by_type):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-7261 # <skip-jira-utils-check>
+        Polarion: CNV-10307
+        """
         for pod in cnv_pods_by_type:
             verify_component_labels_by_resource(
                 component=pod,
@@ -94,7 +103,6 @@ class TestRelationshipLabels:
         [
             pytest.param(
                 {"expected_labels_dict": EXPECTED_RELATED_OBJECTS_LABELS_DICT_MAP},
-                marks=pytest.mark.polarion("CNV-7189"),
             ),
         ],
         indirect=True,
@@ -104,6 +112,10 @@ class TestRelationshipLabels:
         expected_label_dictionary,
         ocp_resource_by_name,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-7261 # <skip-jira-utils-check>
+        Polarion: CNV-7189
+        """
         verify_component_labels_by_resource(
             component=ocp_resource_by_name,
             expected_component_labels=expected_label_dictionary,

@@ -18,12 +18,14 @@ LOGGER = logging.getLogger(__name__)
 pytestmark = pytest.mark.s390x
 
 
-@pytest.mark.polarion("CNV-9367")
 def test_set_hco_crypto_failed_without_required_cipher(
     admin_client,
     hyperconverged_resource_scope_function,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-15705 # <skip-jira-utils-check>
+    Polarion: CNV-9367
+
     This test validates that the operation is failed with proper error message,
     when hco.spec.tlsSecurityProfile set with 'Custom' profile with TLS 1.2 and
     ciphers without mandatory http/2 required ciphers
@@ -46,8 +48,11 @@ def test_set_hco_crypto_failed_without_required_cipher(
             )
 
 
-@pytest.mark.polarion("CNV-10551")
 def test_set_ciphers_for_tlsv13(admin_client, hyperconverged_resource_scope_function):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-15705 # <skip-jira-utils-check>
+    Polarion: CNV-10551
+    """
     error_string = r"custom ciphers cannot be selected when minTLSVersion is VersionTLS13"
     tls_custom_profile = copy.deepcopy(TLS_CUSTOM_PROFILE)
     tls_custom_profile[TLS_CUSTOM_POLICY]["minTLSVersion"] = "VersionTLS13"

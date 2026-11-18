@@ -23,13 +23,15 @@ def remove_hyperconverged_resource(hyperconverged_resource_scope_function):
 
 @pytest.mark.install
 class TestRemoveNamespace:
-    @pytest.mark.polarion("CNV-5846")
     def test_block_namespace_removal(
         self,
         hyperconverged_resource_scope_function,
         hco_namespace,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1218 # <skip-jira-utils-check>
+        Polarion: CNV-5846
+
         testcase to verify that HCO namespace deletion is blocked while the HyperConverged
         resource still exists.
 
@@ -57,7 +59,6 @@ class TestRemoveNamespace:
             "deletionTimestamp is set on HCO namespace"
         )
 
-    @pytest.mark.polarion("CNV-5847")
     @pytest.mark.dependency(depends=[BLOCK_REMOVAL_TEST_NODE_ID], scope="package")
     def test_unblock_namespace_removal(
         self,
@@ -65,6 +66,9 @@ class TestRemoveNamespace:
         hco_namespace,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1218 # <skip-jira-utils-check>
+        Polarion: CNV-5847
+
         testcase to verify that HCO namespace deletion is unblocked when the HyperConverged
         resource does not exist.
 

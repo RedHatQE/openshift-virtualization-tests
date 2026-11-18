@@ -17,7 +17,6 @@ LOGGER = logging.getLogger(__name__)
 
 
 class TestCertRotation:
-    @pytest.mark.polarion("CNV-6203")
     @pytest.mark.parametrize(
         "hyperconverged_resource_certconfig_change",
         [
@@ -38,6 +37,9 @@ class TestCertRotation:
         secrets_with_non_closed_bugs,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-5128 # <skip-jira-utils-check>
+        Polarion: CNV-6203
+
         The test verifies the proper certificate rotation/renewal in high-level, that is using the openssl command with
         the -checkend command argument.
         There are 3 steps:

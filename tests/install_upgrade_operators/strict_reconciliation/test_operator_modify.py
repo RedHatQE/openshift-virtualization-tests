@@ -48,7 +48,6 @@ class TestOperatorsModify:
                         }
                     }
                 },
-                marks=pytest.mark.polarion("CNV-6312"),
             ),
             pytest.param(
                 {
@@ -62,7 +61,6 @@ class TestOperatorsModify:
                         }
                     }
                 },
-                marks=pytest.mark.polarion("CNV-6315"),
             ),
             pytest.param(
                 {
@@ -76,7 +74,6 @@ class TestOperatorsModify:
                         }
                     }
                 },
-                marks=pytest.mark.polarion("CNV-6318"),
             ),
             pytest.param(
                 {
@@ -90,7 +87,6 @@ class TestOperatorsModify:
                         }
                     }
                 },
-                marks=pytest.mark.polarion("CNV-6321"),
             ),
             pytest.param(
                 {
@@ -104,7 +100,6 @@ class TestOperatorsModify:
                         }
                     }
                 },
-                marks=pytest.mark.polarion("CNV-6324"),
             ),
         ],
         indirect=True,
@@ -119,6 +114,14 @@ class TestOperatorsModify:
         cnao_spec,
         updated_cdi_cr,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-8296 # <skip-jira-utils-check>
+        Polarion: CNV-6312
+        Polarion: CNV-6315
+        Polarion: CNV-6318
+        Polarion: CNV-6321
+        Polarion: CNV-6324
+        """
         assert verify_specs(
             admin_client,
             hco_namespace,
@@ -150,7 +153,6 @@ class TestOperatorsModify:
                         }
                     }
                 },
-                marks=pytest.mark.polarion("CNV-6313"),
             ),
             pytest.param(
                 {
@@ -166,7 +168,6 @@ class TestOperatorsModify:
                         }
                     }
                 },
-                marks=pytest.mark.polarion("CNV-6316"),
             ),
             pytest.param(
                 {
@@ -182,7 +183,6 @@ class TestOperatorsModify:
                         }
                     }
                 },
-                marks=pytest.mark.polarion("CNV-6319"),
             ),
             pytest.param(
                 {
@@ -198,7 +198,6 @@ class TestOperatorsModify:
                         }
                     }
                 },
-                marks=pytest.mark.polarion("CNV-6322"),
             ),
             pytest.param(
                 {
@@ -214,7 +213,6 @@ class TestOperatorsModify:
                         }
                     }
                 },
-                marks=pytest.mark.polarion("CNV-6325"),
             ),
             pytest.param(
                 {
@@ -231,7 +229,6 @@ class TestOperatorsModify:
                         }
                     }
                 },
-                marks=pytest.mark.polarion("CNV-6328"),
             ),
             pytest.param(
                 {
@@ -245,7 +242,6 @@ class TestOperatorsModify:
                         }
                     }
                 },
-                marks=pytest.mark.polarion("CNV-6334"),
             ),
             pytest.param(
                 {
@@ -259,7 +255,6 @@ class TestOperatorsModify:
                         }
                     }
                 },
-                marks=pytest.mark.polarion("CNV-6337"),
             ),
             pytest.param(
                 {
@@ -273,11 +268,9 @@ class TestOperatorsModify:
                         }
                     }
                 },
-                marks=pytest.mark.polarion("CNV-6340"),
             ),
             pytest.param(
                 {"patch": {"spec": {"configuration": {"migrations": {PROGRESS_TIMEOUT_KEY: PROGRESS_TIMEOUT_VALUE}}}}},
-                marks=pytest.mark.polarion("CNV-6343"),
             ),
         ],
         indirect=True,
@@ -292,6 +285,19 @@ class TestOperatorsModify:
         cnao_spec,
         updated_kubevirt_cr,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-8296 # <skip-jira-utils-check>
+        Polarion: CNV-6313
+        Polarion: CNV-6316
+        Polarion: CNV-6319
+        Polarion: CNV-6322
+        Polarion: CNV-6325
+        Polarion: CNV-6328
+        Polarion: CNV-6334
+        Polarion: CNV-6337
+        Polarion: CNV-6340
+        Polarion: CNV-6343
+        """
         assert verify_specs(
             admin_client,
             hco_namespace,
@@ -317,7 +323,6 @@ class TestOperatorsModify:
                         }
                     }
                 },
-                marks=pytest.mark.polarion("CNV-6314"),
             ),
             pytest.param(
                 {
@@ -329,7 +334,6 @@ class TestOperatorsModify:
                         }
                     }
                 },
-                marks=pytest.mark.polarion("CNV-6317"),
             ),
             pytest.param(
                 {
@@ -341,7 +345,6 @@ class TestOperatorsModify:
                         }
                     }
                 },
-                marks=pytest.mark.polarion("CNV-6320"),
             ),
             pytest.param(
                 {
@@ -353,7 +356,6 @@ class TestOperatorsModify:
                         }
                     }
                 },
-                marks=pytest.mark.polarion("CNV-6323"),
             ),
             pytest.param(
                 {
@@ -365,7 +367,6 @@ class TestOperatorsModify:
                         }
                     }
                 },
-                marks=pytest.mark.polarion("CNV-6326"),
             ),
         ],
         indirect=True,
@@ -380,6 +381,14 @@ class TestOperatorsModify:
         cnao_spec,
         updated_cnao_cr,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-8296 # <skip-jira-utils-check>
+        Polarion: CNV-6314
+        Polarion: CNV-6317
+        Polarion: CNV-6320
+        Polarion: CNV-6323
+        Polarion: CNV-6326
+        """
         assert verify_specs(
             admin_client,
             hco_namespace,

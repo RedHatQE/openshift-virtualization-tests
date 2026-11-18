@@ -47,13 +47,16 @@ def json_patched_ssp(admin_client, hco_namespace, prometheus, hyperconverged_res
     "json_patched_ssp",
 )
 class TestSSPJsonPatch:
-    @pytest.mark.polarion("CNV-8690")
     def test_ssp_json_patch(
         self,
         admin_client,
         hco_namespace,
         ssp_resource_scope_function,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-9096 # <skip-jira-utils-check>
+        Polarion: CNV-8690
+        """
         wait_for_hco_conditions(
             admin_client=admin_client,
             hco_namespace=hco_namespace,
@@ -67,8 +70,11 @@ class TestSSPJsonPatch:
             f"Current Value: {ssp_replicas_current_value}."
         )
 
-    @pytest.mark.polarion("CNV-8691")
     def test_ssp_json_patch_metrics(self, prometheus, kubevirt_all_unsafe_modification_metrics_before_test):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-9096 # <skip-jira-utils-check>
+        Polarion: CNV-8691
+        """
         before_value = filter_metric_by_component(
             metrics=kubevirt_all_unsafe_modification_metrics_before_test,
             component_name=COMPONENT,
@@ -81,6 +87,9 @@ class TestSSPJsonPatch:
             previous_value=before_value,
         )
 
-    @pytest.mark.polarion("CNV-8714")
     def test_ssp_json_patch_alert(self, prometheus):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-9096 # <skip-jira-utils-check>
+        Polarion: CNV-8714
+        """
         wait_for_alert(prometheus=prometheus, alert_name=ALERT_NAME, component_name=COMPONENT)

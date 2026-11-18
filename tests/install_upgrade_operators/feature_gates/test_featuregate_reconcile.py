@@ -35,7 +35,6 @@ class TestHardcodedFeatureGates:
                 },
                 EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES,
                 f"configuration{KEY_PATH_SEPARATOR}{DEVELOPER_CONFIGURATION}{KEY_PATH_SEPARATOR}{FEATURE_GATES}",
-                marks=pytest.mark.polarion("CNV-6427"),
                 id="delete_featuregates_kubevirt_cr",
             ),
             pytest.param(
@@ -46,7 +45,6 @@ class TestHardcodedFeatureGates:
                 },
                 EXPECTED_CDI_HARDCODED_FEATUREGATES,
                 f"config{KEY_PATH_SEPARATOR}{FEATURE_GATES}",
-                marks=(pytest.mark.polarion("CNV-6640")),
                 id="delete_featuregates_cdi_cr",
             ),
         ],
@@ -58,6 +56,11 @@ class TestHardcodedFeatureGates:
         expected_value,
         key_name,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-8296 # <skip-jira-utils-check>
+        Polarion: CNV-6427
+        Polarion: CNV-6640
+        """
         actual_value = get_resource_key_value(resource=updated_resource, key_name=key_name)
         if isinstance(actual_value, list):
             actual_value = set(actual_value)

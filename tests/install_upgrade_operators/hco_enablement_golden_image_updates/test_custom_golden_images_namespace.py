@@ -94,8 +94,8 @@ class TestDefaultCommonTemplates:
     @pytest.mark.parametrize(
         "common_templates",
         [
-            pytest.param("common_templates_from_hco_status_scope_class", marks=pytest.mark.polarion("CNV-11473")),
-            pytest.param("ssp_spec_templates_scope_function", marks=pytest.mark.polarion("CNV-11677")),
+            "common_templates_from_hco_status_scope_class",
+            "ssp_spec_templates_scope_function",
         ],
     )
     def test_custom_namespace_added_to_templates_metadata(
@@ -104,6 +104,11 @@ class TestDefaultCommonTemplates:
         custom_golden_images_namespace,
         common_templates,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-23187 # <skip-jira-utils-check>
+        Polarion: CNV-11473
+        Polarion: CNV-11677
+        """
         verify_common_template_namespace_updated(
             common_templates=request.getfixturevalue(common_templates),
             namespace_name=custom_golden_images_namespace.name,
@@ -112,13 +117,12 @@ class TestDefaultCommonTemplates:
     @pytest.mark.parametrize(
         "resource_type, ready_condition",
         [
-            pytest.param(ImageStream, None, marks=pytest.mark.polarion("CNV-11474")),
-            pytest.param(DataImportCron, DataImportCron.Condition.UP_TO_DATE, marks=pytest.mark.polarion("CNV-11475")),
+            pytest.param(ImageStream, None),
+            pytest.param(DataImportCron, DataImportCron.Condition.UP_TO_DATE),
             pytest.param(
                 DataSource,
                 DataSource.Condition.READY,
                 marks=(
-                    pytest.mark.polarion("CNV-11476"),
                     *((pytest.mark.jira("CNV-98662", run=False),) if py_config["cluster_type"] == MULTIARCH else ()),
                 ),
             ),
@@ -132,6 +136,12 @@ class TestDefaultCommonTemplates:
         resource_type,
         ready_condition,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-23187 # <skip-jira-utils-check>
+        Polarion: CNV-11474
+        Polarion: CNV-11475
+        Polarion: CNV-11476
+        """
         verify_resource_in_ns(
             expected_resource_names=expected_common_templates_related_resources[resource_type.kind],
             namespace=custom_golden_images_namespace.name,
@@ -140,8 +150,11 @@ class TestDefaultCommonTemplates:
             ready_condition=ready_condition,
         )
 
-    @pytest.mark.polarion("CNV-11477")
     def test_resources_deleted_from_default_namespace(self, admin_client, golden_images_namespace, subtests):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-23187 # <skip-jira-utils-check>
+        Polarion: CNV-11477
+        """
         for resource_type in [DataImportCron, ImageStream, DataVolume, VolumeSnapshot]:
             with subtests.test(msg=resource_type.kind):
                 verify_resource_not_in_ns(
@@ -151,13 +164,15 @@ class TestDefaultCommonTemplates:
                 )
 
 
-@pytest.mark.polarion("CNV-11631")
 def test_non_existent_namespace(
     admin_client,
     hco_namespace,
     updated_common_templates_non_existent_ns,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-23187 # <skip-jira-utils-check>
+    Polarion: CNV-11631
+
     Verify that HCO is degraded if we set non-existent namespace
     """
     wait_for_hco_conditions(
