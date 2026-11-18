@@ -15,7 +15,8 @@ linked requirement) → Jira ID from the requirement's hyperlinks
 Per test function:
 
 - `Jira: https://redhat.atlassian.net/browse/<ID> # <skip-jira-utils-check>`
-  lines are added (after any existing `Jira:` lines, otherwise at the top).
+  lines are added (after any existing `Jira:` lines, otherwise at the top) —
+  except for tests that already link an STP, see below.
 - The Polarion test-case ID moves from the `@pytest.mark.polarion("CNV-XXXX")`
   decorator into the docstring as a `Polarion: CNV-XXXX` line; the decorator
   is removed. Polarion marks inside `pytest.mark.parametrize` argvalues are
@@ -25,8 +26,21 @@ Per test function:
 - The edit is idempotent — re-running on an already-backfilled file changes
   nothing.
 
-Files whose module docstring already has an STP link are skipped
-(Test → STP → Jira is already complete); disable with `--no-skip-stp`.
+### Tests that already link an STP
+
+A test whose **own docstring** already carries an `STP:` line needs no Jira
+line: the STP is its traceability link, and `Jira:` is only the fallback for
+tests that have no STP (`docs/SOFTWARE_TEST_DESCRIPTION.md`). For those tests
+the tool still moves the Polarion ID out of the decorator into a `Polarion:`
+line, but adds no `Jira:` line. This is the default — pass `--no-skip-stp` to
+add the Jira line anyway.
+
+A module- or class-level STP link does not count: it is shared context, not
+per-test traceability, so those tests still get their `Jira:` line.
+
+Earlier versions of this tool skipped the whole file when the **module**
+docstring had an STP link, which also skipped the Polarion move — that is why
+the check moved to the individual test.
 
 ## Usage
 
