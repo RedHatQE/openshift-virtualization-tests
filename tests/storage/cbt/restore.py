@@ -12,8 +12,7 @@ from __future__ import annotations
 
 import json
 import logging
-import shlex
-from contextlib import ExitStack, contextmanager
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -25,7 +24,6 @@ from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.virtual_machine_backup_tracker import VirtualMachineBackupTracker
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
-from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError
 
 from tests.storage.cbt.constants import (
@@ -46,6 +44,7 @@ from tests.storage.cbt.constants import (
 from tests.storage.cbt.utils import cbt_pvc_size_with_headroom
 from utilities.constants.networking import POD_CONTAINER_SPEC
 from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5MIN, TIMEOUT_5SEC, TIMEOUT_30MIN
+from utilities.storage import run_command_on_vm_and_check_output
 from utilities.virt import VirtualMachineForTests, running_vm
 
 if TYPE_CHECKING:
@@ -97,9 +96,10 @@ def assert_restored_cbt_vm_data(vm: VirtualMachineForTests) -> None:
     Raises:
         AssertionError: When the guest file is missing or has different content.
     """
-    output = _read_linux_guest_file(vm=vm, filename=CBT_BOOT_DISK_TEST_DATA_FILE)
-    assert output.strip() == CBT_TEST_DATA, (
-        f"VM {vm.name} file {CBT_BOOT_DISK_TEST_DATA_FILE} is {output.strip()!r}, expected {CBT_TEST_DATA!r}"
+    run_command_on_vm_and_check_output(
+        vm=vm,
+        command=f"cat {CBT_BOOT_DISK_TEST_DATA_FILE}",
+        expected_result=CBT_TEST_DATA,
     )
 
 
@@ -126,6 +126,9 @@ def restored_cbt_vm_from_push_backup(
 
     Side effects:
         Writes the restored boot disk, and deletes the restored VM and target PVC on exit.
+
+    Raises:
+        RuntimeError: When the target PVC is not deleted before the wait timeout.
     """
     backup = _single_full_backup(backups=backups)
     vm_name = _backed_up_vm_name(backup=backup, namespace=namespace, client=client)
@@ -178,11 +181,12 @@ def restored_cbt_vm_from_push_backup(
         running_vm(vm=restored_vm, ssh_timeout=TIMEOUT_5MIN)
         yield restored_vm
     finally:
-        with ExitStack() as stack:
-            if target_pvc is not None:
-                stack.callback(target_pvc.clean_up, wait=True)
+        try:
             if restored_vm is not None:
-                stack.callback(restored_vm.clean_up, wait=True)
+                restored_vm.clean_up(wait=True)
+        finally:
+            if target_pvc is not None and not target_pvc.clean_up(wait=True):
+                raise RuntimeError(f"Timed out deleting restore PVC {namespace}/{target_pvc.name}")
 
 
 def _single_full_backup(backups: list[VirtualMachineBackup]) -> VirtualMachineBackup:
@@ -416,29 +420,21 @@ def _deploy_restored_vm(
     return restored_vm
 
 
-def _read_linux_guest_file(vm: VirtualMachineForTests, filename: str) -> str:
-    """Return the text of a regular file inside a Linux guest."""
-    output = run_ssh_commands(
-        host=vm.ssh_exec,
-        commands=shlex.split(f"cat {filename}"),
-        wait_timeout=TIMEOUT_2MIN,
-        sleep=TIMEOUT_5SEC,
-    )[0]
-    return str(output)
-
-
 def _files_for_backup(
     qcow2_files: list[str],
     vm_name: str,
     backup_name: str,
     checkpoint_name: str,
 ) -> list[str]:
-    """Return qcow2 paths that identify one backup.
+    """Return qcow2 paths whose directory components identify one backup.
 
-    The backup directory name contains the backup name or the checkpoint name.
+    A directory component must equal the backup name or the checkpoint name.
+    Paths that also have the VM name as a directory component are preferred.
     """
-    matched = [path for path in qcow2_files if backup_name in path or checkpoint_name in path]
-    vm_matched = [path for path in matched if vm_name in path]
+    matched = [
+        path for path in qcow2_files if backup_name in Path(path).parts[:-1] or checkpoint_name in Path(path).parts[:-1]
+    ]
+    vm_matched = [path for path in matched if vm_name in Path(path).parts[:-1]]
     if vm_matched:
         return vm_matched
     return matched
@@ -451,7 +447,11 @@ def _select_volume_qcow2(
     checkpoint_name: str,
     volume_name: str,
 ) -> str:
-    """Return the qcow2 path for one volume in the full backup."""
+    """Return the one qcow2 whose filename stem equals the volume name.
+
+    Raises:
+        RuntimeError: When the backup does not contain exactly one matching qcow2.
+    """
     exact_candidates = [
         f"{CBT_BACKUP_DIR}/{vm_name}/{backup_name}/{volume_name}.qcow2",
         f"{CBT_BACKUP_DIR}/{vm_name}/{checkpoint_name}/{volume_name}.qcow2",
@@ -470,9 +470,6 @@ def _select_volume_qcow2(
     exact_names = [path for path in matched if Path(path).stem == volume_name]
     if len(exact_names) == 1:
         return exact_names[0]
-    containing_names = [path for path in matched if volume_name in Path(path).name]
-    if len(containing_names) == 1:
-        return containing_names[0]
     listing = "\n".join(qcow2_files) if qcow2_files else "<none>"
     raise RuntimeError(
         f"Could not find one qcow2 for volume {volume_name} in backup {backup_name} "
