@@ -93,33 +93,41 @@ class TestVGPUWindowsGPUSSpec:
     """
 
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::test_access_vgpus_win_vm")
-    @pytest.mark.polarion("CNV-8081")
     def test_access_vgpus_win_vm(self, supported_gpu_device, gpu_vma):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-7278 # <skip-jira-utils-check>
+        Polarion: CNV-8081
+
         Test vGPU is accessible in Windows VM with gpus spec.
         """
         verify_gpu_device_exists_in_vm(vm=gpu_vma, supported_gpu_device=supported_gpu_device)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::test_access_vgpus_win_vm"])
-    @pytest.mark.polarion("CNV-8082")
     def test_pause_unpause_gpus_win_vm(self, gpu_vma):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-7278 # <skip-jira-utils-check>
+        Polarion: CNV-8082
+
         Test Windows VM with vGPU using gpus spec, can be paused and unpaused successfully.
         """
         validate_pause_unpause_windows_vm(vm=gpu_vma)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::test_access_vgpus_win_vm"])
-    @pytest.mark.polarion("CNV-8083")
     def test_restart_gpus_win_vm(self, gpu_vma, supported_gpu_device):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-7278 # <skip-jira-utils-check>
+        Polarion: CNV-8083
+
         Test Windows VM with vGPU using gpus spec, can be restarted successfully.
         """
         restart_and_check_gpu_exists(vm=gpu_vma, supported_gpu_device=supported_gpu_device)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::test_access_vgpus_win_vm"])
-    @pytest.mark.polarion("CNV-8573")
     def test_access_vgpus_in_both_win11_vm(self, gpu_vma, gpu_vmc, supported_gpu_device):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-7278 # <skip-jira-utils-check>
+        Polarion: CNV-8573
+
         Test vGPU is accessible in both the Windows11 VMs using same GPU, using GPUs spec.
         """
         vm_with_no_gpu = [

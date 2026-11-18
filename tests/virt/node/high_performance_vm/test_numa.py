@@ -84,8 +84,11 @@ def vm_numa_sriov(namespace, unprivileged_client, sriov_net):
         yield vm
 
 
-@pytest.mark.polarion("CNV-4216")
 def test_numa(admin_client, vm_numa):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-4353 # <skip-jira-utils-check>
+    Polarion: CNV-4216
+    """
     numa_pod = vm_numa.vmi.get_virt_launcher_pod(privileged_client=admin_client).instance
     pod_limits = numa_pod.spec.containers[0].resources.limits
     pod_requests = numa_pod.spec.containers[0].resources.requests
@@ -103,10 +106,13 @@ def test_numa(admin_client, vm_numa):
 
 
 @pytest.mark.sriov
-@pytest.mark.polarion("CNV-4309")
 def test_numa_with_sriov(
     admin_client,
     vm_numa_sriov,
     workers_utility_pods,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-4353 # <skip-jira-utils-check>
+    Polarion: CNV-4309
+    """
     assert_cpus_and_sriov_on_same_node(vm=vm_numa_sriov, utility_pods=workers_utility_pods, admin_client=admin_client)

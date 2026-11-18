@@ -25,10 +25,12 @@ class TestMIGVGPURHELGPUSSpec:
         - The HCO CR is configured to allow the MIG-backed vGPU mediated device as a host device
     """
 
-    @pytest.mark.polarion("CNV-12572")
     @pytest.mark.manual
     def test_permitted_hostdevices_mig_vgpu_visible(self):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-13713 # <skip-jira-utils-check>
+        Polarion: CNV-12572
+
         Test that the GPU node advertises the MIG vGPU resource after MIG vGPU configuration.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/mig-vgpu-stp.md
@@ -42,10 +44,12 @@ class TestMIGVGPURHELGPUSSpec:
               instances
         """
 
-    @pytest.mark.polarion("CNV-12573")
     @pytest.mark.manual
     def test_access_mig_vgpus_rhel_vm(self):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-13713 # <skip-jira-utils-check>
+        Polarion: CNV-12573
+
         Test that a VM requesting a MIG vGPU device reaches Running state and the guest OS
         detects the GPU.
 
@@ -63,10 +67,12 @@ class TestMIGVGPURHELGPUSSpec:
               requested MIG vGPU device
         """
 
-    @pytest.mark.polarion("CNV-12574")
     @pytest.mark.manual
     def test_access_vgpus_in_both_rhel_vm_using_same_mig_gpu(self):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-13713 # <skip-jira-utils-check>
+        Polarion: CNV-12574
+
         Test that two VMs, each using a MIG vGPU slice from the same physical GPU, run
         concurrently.
 
@@ -85,10 +91,12 @@ class TestMIGVGPURHELGPUSSpec:
               one GPU device matching the requested MIG vGPU device
         """
 
-    @pytest.mark.polarion("CNV-16809")
     @pytest.mark.manual
     def test_vm_pending_no_mig_vgpu_capacity_available(self):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-13713 # <skip-jira-utils-check>
+        Polarion: CNV-16809
+
         [NEGATIVE] Test that a VM requesting a MIG vGPU device remains unschedulable when no
         MIG vGPU capacity remains on the GPU node.
 

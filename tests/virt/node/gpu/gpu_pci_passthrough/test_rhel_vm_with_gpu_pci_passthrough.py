@@ -91,9 +91,12 @@ class TestPCIPassthroughRHELHostDevicesSpec:
     Test PCI Passthrough with RHEL VM using HostDevices Spec.
     """
 
-    @pytest.mark.polarion("CNV-5638")
     def test_permitted_hostdevices_visible(self, gpu_vma, nodes_with_supported_gpus, supported_gpu_device):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-4762 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-4776 # <skip-jira-utils-check>
+        Polarion: CNV-5638
+
         Test Permitted HostDevice is visible and count updated under Capacity/Allocatable
         section of the GPU Node.
         """
@@ -104,26 +107,35 @@ class TestPCIPassthroughRHELHostDevicesSpec:
         )
 
     @pytest.mark.dependency(name=f"{TESTS_CLASS_RHEL_HOSTDEVICES_NAME}::test_access_hostdevices_rhel_vm")
-    @pytest.mark.polarion("CNV-5639")
     def test_access_hostdevices_rhel_vm(self, supported_gpu_device, gpu_vma):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-4762 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-4776 # <skip-jira-utils-check>
+        Polarion: CNV-5639
+
         Test Device is accessible in VM with hostdevices spec.
         """
         verify_gpu_device_exists_in_vm(vm=gpu_vma, supported_gpu_device=supported_gpu_device)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_RHEL_HOSTDEVICES_NAME}::test_access_hostdevices_rhel_vm"])
-    @pytest.mark.polarion("CNV-5643")
     def test_pause_unpause_hostdevices_rhel_vm(self, gpu_vma):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-4762 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-4776 # <skip-jira-utils-check>
+        Polarion: CNV-5643
+
         Test VM with Device using hostdevices spec, can be paused and unpaused successfully.
         """
         with running_sleep_in_linux(vm=gpu_vma):
             pause_unpause_vm_and_check_connectivity(vm=gpu_vma)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_RHEL_HOSTDEVICES_NAME}::test_access_hostdevices_rhel_vm"])
-    @pytest.mark.polarion("CNV-5641")
     def test_restart_hostdevices_rhel_vm(self, gpu_vma, supported_gpu_device):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-4762 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-4776 # <skip-jira-utils-check>
+        Polarion: CNV-5641
+
         Test VM with Device using hostdevices spec, can be restarted successfully.
         """
         restart_and_check_gpu_exists(vm=gpu_vma, supported_gpu_device=supported_gpu_device)
@@ -149,34 +161,46 @@ class TestPCIPassthroughRHELGPUSSpec:
     """
 
     @pytest.mark.dependency(name=f"{TESTS_CLASS_RHEL_GPUS_NAME}::access_gpus_rhel_vm")
-    @pytest.mark.polarion("CNV-5640")
     def test_access_gpus_rhel_vm(self, supported_gpu_device, gpu_vma):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-4762 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-4776 # <skip-jira-utils-check>
+        Polarion: CNV-5640
+
         Test Device is accessible in VM with GPUS spec.
         """
         verify_gpu_device_exists_in_vm(vm=gpu_vma, supported_gpu_device=supported_gpu_device)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_RHEL_GPUS_NAME}::access_gpus_rhel_vm"])
-    @pytest.mark.polarion("CNV-5644")
     def test_pause_unpause_gpus_rhel_vm(self, gpu_vma):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-4762 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-4776 # <skip-jira-utils-check>
+        Polarion: CNV-5644
+
         Test VM with Device using GPUS spec, can be paused and unpaused successfully.
         """
         with running_sleep_in_linux(vm=gpu_vma):
             pause_unpause_vm_and_check_connectivity(vm=gpu_vma)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_RHEL_GPUS_NAME}::access_gpus_rhel_vm"])
-    @pytest.mark.polarion("CNV-5642")
     def test_restart_gpus_rhel_vm(self, gpu_vma, supported_gpu_device):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-4762 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-4776 # <skip-jira-utils-check>
+        Polarion: CNV-5642
+
         Test VM with Device using GPUS spec, can be restarted successfully.
         """
         restart_and_check_gpu_exists(vm=gpu_vma, supported_gpu_device=supported_gpu_device)
 
 
-@pytest.mark.polarion("CNV-5645")
 def test_only_permitted_hostdevices_allowed(supported_gpu_device, non_permitted_hostdevices_vm):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-4762 # <skip-jira-utils-check>
+    Jira: https://redhat.atlassian.net/browse/CNV-4776 # <skip-jira-utils-check>
+    Polarion: CNV-5645
+
     Test that virt-launcher Pod creation is not allowed,
     for devices which are not in Permitted Hostdevices section of HCO CR.
 
