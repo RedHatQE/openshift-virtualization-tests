@@ -62,12 +62,15 @@ class TestWindowsTabletDevice:
                     "template_labels": WINDOWS_LATEST_LABELS,
                     "vm_dict": set_vm_tablet_device_dict({"name": "tablet1", "type": "tablet", "bus": "usb"}),
                 },
-                marks=pytest.mark.polarion("CNV-2644"),
             ),
         ],
         indirect=True,
     )
     def test_tablet_usb_tablet_device(self, admin_client, tablet_device_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-374 # <skip-jira-utils-check>
+        Polarion: CNV-2644
+        """
         LOGGER.info("Test tablet device - USB bus.")
 
         check_windows_vm_tablet_device(vm=tablet_device_vm, driver_state="Running")
@@ -82,13 +85,16 @@ class TestWindowsTabletDevice:
                     "template_labels": WINDOWS_LATEST_LABELS,
                     "vm_dict": set_vm_tablet_device_dict({"name": "win_tablet", "type": "tablet", "bus": VIRTIO}),
                 },
-                marks=pytest.mark.polarion("CNV-3444"),
             ),
         ],
         indirect=True,
     )
     def test_tablet_virtio_tablet_device(self, admin_client, tablet_device_vm):
-        """Verify that when a Windows VM is configured with virtio tablet input
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-374 # <skip-jira-utils-check>
+        Polarion: CNV-3444
+
+        Verify that when a Windows VM is configured with virtio tablet input
         device(virtio drivers do not support tablet device), the VM is running.
         """
 
@@ -105,13 +111,16 @@ class TestWindowsTabletDevice:
                     "vm_name": "windows-server-default-tablet-device",
                     "template_labels": WINDOWS_LATEST_LABELS,
                 },
-                marks=pytest.mark.polarion("CNV-4151"),
             ),
         ],
         indirect=True,
     )
     def test_windows_server_default_tablet_device(self, admin_client, tablet_device_vm):
-        """Verify that when a Windows Server VM is configured by default with
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-374 # <skip-jira-utils-check>
+        Polarion: CNV-4151
+
+        Verify that when a Windows Server VM is configured by default with
         tablet device
         """
 
@@ -128,13 +137,16 @@ class TestWindowsTabletDevice:
                     "vm_name": "windows-desktop-default-tablet-device",
                     "template_labels": WINDOWS_11.get("template_labels"),
                 },
-                marks=pytest.mark.polarion("CNV-4150"),
             ),
         ],
         indirect=True,
     )
     def test_windows_desktop_default_tablet_device(self, admin_client, tablet_device_vm):
-        """Verify that when a Desktop Windows VM is configured by default with
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-374 # <skip-jira-utils-check>
+        Polarion: CNV-4150
+
+        Verify that when a Desktop Windows VM is configured by default with
         tablet device
         """
 

@@ -54,9 +54,17 @@ class TestCommonTemplatesRhel:
     @pytest.mark.sno
     @pytest.mark.smoke
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::create_vm")
-    @pytest.mark.polarion("CNV-3802")
     def test_create_vm(self, matrix_rhel_os_vm_from_template):
-        """Test CNV VM creation from template"""
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-468 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/KNIP-1220 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/KNIP-469 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/KNIP-431 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-11657 # <skip-jira-utils-check>
+        Polarion: CNV-3802
+
+        Test CNV VM creation from template
+        """
 
         LOGGER.info("Create VM from template.")
         matrix_rhel_os_vm_from_template.create(wait=True)
@@ -65,18 +73,34 @@ class TestCommonTemplatesRhel:
     @pytest.mark.sno
     @pytest.mark.smoke
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::start_vm", depends=[f"{TESTS_CLASS_NAME}::create_vm"])
-    @pytest.mark.polarion("CNV-3266")
     def test_start_vm(self, matrix_rhel_os_vm_from_template):
-        """Test CNV common templates VM initiation"""
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-468 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/KNIP-1220 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/KNIP-469 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/KNIP-431 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-11657 # <skip-jira-utils-check>
+        Polarion: CNV-3266
+
+        Test CNV common templates VM initiation
+        """
         running_vm(vm=matrix_rhel_os_vm_from_template)
 
     @pytest.mark.arm64
     @pytest.mark.sno
     @pytest.mark.smoke
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
-    @pytest.mark.polarion("CNV-3259")
     def test_vm_console(self, matrix_rhel_os_vm_from_template):
-        """Test CNV common templates VM console"""
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-468 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/KNIP-1220 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/KNIP-469 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/KNIP-431 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-11657 # <skip-jira-utils-check>
+        Polarion: CNV-3259
+
+        Test CNV common templates VM console
+        """
 
         LOGGER.info("Verify VM console connection.")
         wait_for_console(vm=matrix_rhel_os_vm_from_template)
@@ -84,18 +108,30 @@ class TestCommonTemplatesRhel:
     @pytest.mark.arm64
     @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
-    @pytest.mark.polarion("CNV-3318")
     def test_os_version(self, matrix_rhel_os_vm_from_template):
-        """Test CNV common templates OS version"""
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-468 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/KNIP-1220 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/KNIP-469 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/KNIP-431 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-11657 # <skip-jira-utils-check>
+        Polarion: CNV-3318
+
+        Test CNV common templates OS version
+        """
 
         vm_os_version(vm=matrix_rhel_os_vm_from_template)
 
     @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
-    @pytest.mark.polarion("CNV-8712")
     @pytest.mark.usefixtures("xfail_on_rhel_version_below_rhel9")
     def test_efi_secureboot_enabled_by_default(self, matrix_rhel_os_vm_from_template):
-        """Test CNV common templates EFI secureboot status"""
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-11658 # <skip-jira-utils-check>
+        Polarion: CNV-8712
+
+        Test CNV common templates EFI secureboot status
+        """
 
         assert_linux_efi(vm=matrix_rhel_os_vm_from_template)
         assert_secure_boot_mokutil_status(vm=matrix_rhel_os_vm_from_template)
@@ -103,9 +139,17 @@ class TestCommonTemplatesRhel:
     @pytest.mark.arm64
     @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::create_vm"])
-    @pytest.mark.polarion("CNV-3306")
     def test_domain_label(self, matrix_rhel_os_vm_from_template):
-        """CNV common templates 'domain' label contains vm name"""
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-468 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/KNIP-1220 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/KNIP-469 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/KNIP-431 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-11657 # <skip-jira-utils-check>
+        Polarion: CNV-3306
+
+        CNV common templates 'domain' label contains vm name
+        """
 
         vm = matrix_rhel_os_vm_from_template
         label = vm.instance.spec.template.metadata["labels"]["kubevirt.io/domain"]
@@ -115,9 +159,17 @@ class TestCommonTemplatesRhel:
     @pytest.mark.sno
     @pytest.mark.smoke
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::vm_expose_ssh", depends=[f"{TESTS_CLASS_NAME}::start_vm"])
-    @pytest.mark.polarion("CNV-3320")
     def test_expose_ssh(self, matrix_rhel_os_vm_from_template):
-        """CNV common templates access VM via SSH"""
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-468 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/KNIP-1220 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/KNIP-469 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/KNIP-431 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-11657 # <skip-jira-utils-check>
+        Polarion: CNV-3320
+
+        CNV common templates access VM via SSH
+        """
         assert matrix_rhel_os_vm_from_template.ssh_exec.executor().is_connective(tcp_timeout=120), (
             "Failed to login via SSH"
         )
@@ -126,8 +178,16 @@ class TestCommonTemplatesRhel:
     @pytest.mark.sno
     @pytest.mark.smoke
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::vmi_guest_agent", depends=[f"{TESTS_CLASS_NAME}::vm_expose_ssh"])
-    @pytest.mark.polarion("CNV-6688")
     def test_vmi_guest_agent_exists(self, matrix_rhel_os_vm_from_template):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-468 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/KNIP-1013 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/KNIP-1220 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/KNIP-469 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/KNIP-431 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-11657 # <skip-jira-utils-check>
+        Polarion: CNV-6688
+        """
         assert check_qemu_guest_agent_installed(ssh_exec=matrix_rhel_os_vm_from_template.ssh_exec), (
             "qemu guest agent package is not installed"
         )
@@ -137,45 +197,78 @@ class TestCommonTemplatesRhel:
     @pytest.mark.dependency(
         name=f"{TESTS_CLASS_NAME}::vmi_guest_agent_info", depends=[f"{TESTS_CLASS_NAME}::vmi_guest_agent"]
     )
-    @pytest.mark.polarion("CNV-3513")
     def test_vmi_guest_agent_info(self, matrix_rhel_os_vm_from_template):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1013 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/KNIP-468 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/KNIP-1220 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/KNIP-469 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/KNIP-431 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-11657 # <skip-jira-utils-check>
+        Polarion: CNV-3513
+        """
         validate_os_info_vmi_vs_linux_os(vm=matrix_rhel_os_vm_from_template)
 
     @pytest.mark.arm64
     @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::vmi_guest_agent"])
-    @pytest.mark.polarion("CNV-4195")
     def test_virtctl_guest_agent_os_info(self, admin_client, matrix_rhel_os_vm_from_template):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1013 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-11657 # <skip-jira-utils-check>
+        Polarion: CNV-4195
+        """
         validate_os_info_virtctl_vs_linux_os(vm=matrix_rhel_os_vm_from_template, admin_client=admin_client)
 
     @pytest.mark.arm64
     @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::vmi_guest_agent"])
-    @pytest.mark.polarion("CNV-4550")
     def test_virtctl_guest_agent_user_info(self, admin_client, matrix_rhel_os_vm_from_template):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1013 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-11657 # <skip-jira-utils-check>
+        Polarion: CNV-4550
+        """
         with console.Console(vm=matrix_rhel_os_vm_from_template):
             validate_user_info_virtctl_vs_linux_os(vm=matrix_rhel_os_vm_from_template, admin_client=admin_client)
 
     @pytest.mark.arm64
     @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::vmi_guest_agent"])
-    @pytest.mark.polarion("CNV-6531")
     @pytest.mark.usefixtures("xfail_rhel_with_old_guest_agent")
     def test_virtctl_guest_agent_fs_info(self, admin_client, matrix_rhel_os_vm_from_template):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1013 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-11657 # <skip-jira-utils-check>
+        Polarion: CNV-6531
+        """
         validate_fs_info_virtctl_vs_linux_os(vm=matrix_rhel_os_vm_from_template, admin_client=admin_client)
 
     @pytest.mark.arm64
     @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
-    @pytest.mark.polarion("CNV-3671")
     def test_vm_machine_type(self, matrix_rhel_os_vm_from_template):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-346 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/KNIP-468 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/KNIP-1220 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/KNIP-469 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/KNIP-431 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-11657 # <skip-jira-utils-check>
+        Polarion: CNV-3671
+        """
         check_machine_type(vm=matrix_rhel_os_vm_from_template)
 
     @pytest.mark.arm64
     @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
-    @pytest.mark.polarion("CNV-4201")
     def test_vm_smbios_default(self, admin_client, smbios_from_kubevirt_config, matrix_rhel_os_vm_from_template):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1335 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-6437 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-11657 # <skip-jira-utils-check>
+        Polarion: CNV-4201
+        """
         check_vm_xml_smbios(
             vm=matrix_rhel_os_vm_from_template, cm_values=smbios_from_kubevirt_config, admin_client=admin_client
         )
@@ -183,51 +276,74 @@ class TestCommonTemplatesRhel:
     @pytest.mark.arm64
     @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
-    @pytest.mark.polarion("CNV-5916")
     def test_pause_unpause_vm(self, matrix_rhel_os_vm_from_template):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1067 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-11657 # <skip-jira-utils-check>
+        Polarion: CNV-5916
+        """
         validate_pause_unpause_linux_vm(vm=matrix_rhel_os_vm_from_template)
 
     @pytest.mark.arm64
     @pytest.mark.smoke
     @pytest.mark.rwx_default_storage
-    @pytest.mark.polarion("CNV-3038")
     @pytest.mark.dependency(
         name=f"{TESTS_CLASS_NAME}::migrate_vm_and_verify", depends=[f"{TESTS_CLASS_NAME}::vm_expose_ssh"]
     )
     def test_migrate_vm(self, admin_client: DynamicClient, matrix_rhel_os_vm_from_template: VirtualMachineForTests):
-        """Test SSH connectivity after migration"""
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-11657 # <skip-jira-utils-check>
+        Polarion: CNV-3038
+
+        Test SSH connectivity after migration
+        """
         vm = matrix_rhel_os_vm_from_template
         migrate_vm_and_verify(vm=vm, client=admin_client, check_ssh_connectivity=True)
         validate_libvirt_persistent_domain(vm=vm, admin_client=admin_client)
 
     @pytest.mark.arm64
-    @pytest.mark.polarion("CNV-5902")
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::migrate_vm_and_verify"])
     def test_pause_unpause_after_migrate(self, matrix_rhel_os_vm_from_template, ping_process_in_rhel_os):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1067 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-11657 # <skip-jira-utils-check>
+        Polarion: CNV-5902
+        """
         validate_pause_unpause_linux_vm(
             vm=matrix_rhel_os_vm_from_template,
             pre_pause_pid=ping_process_in_rhel_os(matrix_rhel_os_vm_from_template),
         )
 
     @pytest.mark.arm64
-    @pytest.mark.polarion("CNV-6007")
     @pytest.mark.dependency(
         depends=[f"{TESTS_CLASS_NAME}::vmi_guest_agent", f"{TESTS_CLASS_NAME}::migrate_vm_and_verify"]
     )
     def test_verify_virtctl_guest_agent_data_after_migrate(self, matrix_rhel_os_vm_from_template):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1220 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-5015 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-11657 # <skip-jira-utils-check>
+        Polarion: CNV-6007
+        """
         assert validate_virtctl_guest_agent_data_over_time(vm=matrix_rhel_os_vm_from_template), (
             "Guest agent stopped responding"
         )
 
-    @pytest.mark.polarion("CNV-12221")
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::vmi_guest_agent_info"])
     def test_vmi_guest_agent_info_after_guest_reboot(self, matrix_rhel_os_vm_from_template):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1013 # <skip-jira-utils-check>
+        Polarion: CNV-12221
+        """
         validate_virtctl_guest_agent_after_guest_reboot(vm=matrix_rhel_os_vm_from_template, os_type=LINUX_STR)
 
-    @pytest.mark.polarion("CNV-6951")
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
     @pytest.mark.usefixtures("xfail_on_rhel_version_below_rhel9")
     def test_efi_secureboot_disabled(self, matrix_rhel_os_vm_from_template):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-10696 # <skip-jira-utils-check>
+        Polarion: CNV-6951
+        """
         vm = matrix_rhel_os_vm_from_template
         update_vm_efi_spec_and_restart(vm=vm, spec={"secureBoot": False})
         assert_linux_efi(vm=vm)
@@ -237,7 +353,15 @@ class TestCommonTemplatesRhel:
     @pytest.mark.sno
     @pytest.mark.smoke
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::create_vm"])
-    @pytest.mark.polarion("CNV-3269")
     def test_vm_deletion(self, matrix_rhel_os_vm_from_template):
-        """Test CNV common templates VM deletion"""
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-468 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/KNIP-1220 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/KNIP-469 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/KNIP-431 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-11657 # <skip-jira-utils-check>
+        Polarion: CNV-3269
+
+        Test CNV common templates VM deletion
+        """
         matrix_rhel_os_vm_from_template.delete(wait=True)

@@ -200,28 +200,40 @@ def custom_windows_vm(
 )
 @pytest.mark.windows
 class TestCustomWindowsOptions:
-    @pytest.mark.polarion("CNV-7496")
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::boot")
     def test_windows_custom_options_boot_and_domxml(self, custom_windows_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-989 # <skip-jira-utils-check>
+        Polarion: CNV-7496
+        """
         running_vm(vm=custom_windows_vm)
 
-    @pytest.mark.polarion("CNV-7960")
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::domxml", depends=[f"{TESTS_CLASS_NAME}::boot"])
     def test_windows_custom_options_fw_uuid_in_domxml(self, admin_client, custom_windows_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-989 # <skip-jira-utils-check>
+        Polarion: CNV-7960
+        """
         assert_firmware_uuid_in_domxml(vm=custom_windows_vm, uuid=FIRMWARE_UUID, admin_client=admin_client)
 
-    @pytest.mark.polarion("CNV-7956")
     @pytest.mark.dependency(
         name=f"{TESTS_CLASS_NAME}::initialize disk",
         depends=[f"{TESTS_CLASS_NAME}::boot"],
     )
     def test_windows_custom_options_initialize_disk(self, custom_windows_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-989 # <skip-jira-utils-check>
+        Polarion: CNV-7956
+        """
         initialize_and_format_windows_drive(vm=custom_windows_vm, disk_number=1, partition_number=2, drive_letter="D")
 
     @pytest.mark.rwx_default_storage
-    @pytest.mark.polarion("CNV-7886")
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::migration", depends=[f"{TESTS_CLASS_NAME}::boot"])
     def test_windows_custom_options_migration(self, admin_client, custom_windows_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-989 # <skip-jira-utils-check>
+        Polarion: CNV-7886
+        """
         with VirtualMachineInstanceMigration(
             client=admin_client,
             name="custom-windows-vm-migration",

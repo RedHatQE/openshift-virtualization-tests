@@ -56,12 +56,15 @@ class TestRHELTabletDevice:
                     "template_labels": RHEL_LATEST_LABELS,
                     "vm_dict": set_vm_tablet_device_dict({"bus": VIRTIO, "name": "tablet", "type": "tablet"}),
                 },
-                marks=pytest.mark.polarion("CNV-3072"),
             ),
         ],
         indirect=True,
     )
     def test_tablet_virtio_tablet_device(self, admin_client, tablet_device_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-374 # <skip-jira-utils-check>
+        Polarion: CNV-3072
+        """
         LOGGER.info("Test tablet device - virtio bus.")
 
         check_vm_system_tablet_device(vm=tablet_device_vm, expected_device="Virtio")
@@ -76,12 +79,15 @@ class TestRHELTabletDevice:
                     "template_labels": RHEL_LATEST_LABELS,
                     "vm_dict": set_vm_tablet_device_dict({"name": "my_tablet", "type": "tablet", "bus": "usb"}),
                 },
-                marks=pytest.mark.polarion("CNV-3073"),
             ),
         ],
         indirect=True,
     )
     def test_tablet_usb_tablet_device(self, admin_client, tablet_device_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-374 # <skip-jira-utils-check>
+        Polarion: CNV-3073
+        """
         LOGGER.info("Test tablet device -  USB bus.")
 
         check_vm_system_tablet_device(vm=tablet_device_vm, expected_device="USB")
@@ -96,12 +102,15 @@ class TestRHELTabletDevice:
                     "template_labels": RHEL_LATEST_LABELS,
                     "vm_dict": set_vm_tablet_device_dict({"name": "tablet1", "type": "tablet"}),
                 },
-                marks=pytest.mark.polarion("CNV-2640"),
             ),
         ],
         indirect=True,
     )
     def test_tablet_default_bus_tablet_device(self, admin_client, tablet_device_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-374 # <skip-jira-utils-check>
+        Polarion: CNV-2640
+        """
         LOGGER.info("Test tablet device - default device bus - USB.")
 
         check_vm_system_tablet_device(vm=tablet_device_vm, expected_device="USB")
@@ -117,7 +126,7 @@ class TestRHELTabletDevice:
                     "vm_dict": set_vm_tablet_device_dict({"name": "my_tablet", "type": "tablet", "bus": "usb"}),
                     "set_vm_common_cpu": True,
                 },
-                marks=[pytest.mark.polarion("CNV-5833"), pytest.mark.rwx_default_storage],
+                marks=[pytest.mark.rwx_default_storage],
             ),
         ],
         indirect=True,
@@ -125,6 +134,10 @@ class TestRHELTabletDevice:
     def test_tablet_device_migrate_vm(
         self, admin_client: DynamicClient, tablet_device_vm: VirtualMachineForTestsFromTemplate
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-374 # <skip-jira-utils-check>
+        Polarion: CNV-5833
+        """
         migrate_vm_and_verify(vm=tablet_device_vm, client=admin_client, check_ssh_connectivity=True)
 
 
@@ -140,17 +153,14 @@ class TestRHELTabletDeviceNegative:
             pytest.param(
                 "rhel-ps2-tablet-device-vm",
                 set_vm_tablet_device_dict({"name": "tablet1", "type": "tablet", "bus": "ps2"}),
-                marks=pytest.mark.polarion("CNV-3074"),
             ),
             pytest.param(
                 "rhel-zen-tablet-device-vm",
                 set_vm_tablet_device_dict({"name": "tablet1", "type": "tablet", "bus": "zen"}),
-                marks=pytest.mark.polarion("CNV-3441"),
             ),
             pytest.param(
                 "rhel-tranition-tablet-device-vm",
                 set_vm_tablet_device_dict({"name": "tablet1", "type": "tablet", "bus": "virtio-transitional"}),
-                marks=pytest.mark.polarion("CNV-3442"),
             ),
         ],
         indirect=False,
@@ -158,6 +168,12 @@ class TestRHELTabletDeviceNegative:
     def test_tablet_invalid_usb_tablet_device(
         self, vm_name, vm_dict, unprivileged_client, namespace, golden_image_data_source_for_test_scope_class
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-374 # <skip-jira-utils-check>
+        Polarion: CNV-3074
+        Polarion: CNV-3441
+        Polarion: CNV-3442
+        """
         LOGGER.info("Test tablet device - wrong device bus.")
 
         with pytest.raises(UnprocessibleEntityError, match=r".*Input device can have only virtio or usb bus.*"):
@@ -176,7 +192,6 @@ class TestRHELTabletDeviceNegative:
         [
             pytest.param(
                 set_vm_tablet_device_dict({"name": "tablet1", "type": "keyboard", "bus": "usb"}),
-                marks=pytest.mark.polarion("CNV-2642"),
             ),
         ],
         indirect=False,
@@ -184,6 +199,10 @@ class TestRHELTabletDeviceNegative:
     def test_tablet_invalid_type_tablet_device(
         self, vm_dict, unprivileged_client, namespace, golden_image_data_source_for_test_scope_class
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-374 # <skip-jira-utils-check>
+        Polarion: CNV-2642
+        """
         LOGGER.info("Test tablet device - wrong device type.")
 
         with pytest.raises(UnprocessibleEntityError, match=r".*Input device can have only tablet type.*"):

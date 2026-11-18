@@ -153,7 +153,7 @@ def fedora_target_vm_instance(fedora_target_vm):
                 "volume_name_policy": "PrefixTargetName",
                 "target_name": TARGET_NAME_PREFIX,
             },
-            marks=(pytest.mark.polarion("CNV-10295"), pytest.mark.gating()),
+            marks=(pytest.mark.gating()),
         )
     ],
     indirect=True,
@@ -164,6 +164,10 @@ def test_clone_vm_two_pvc_disks(
     cloning_job_scope_function,
     target_vm_scope_function,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-6042 # <skip-jira-utils-check>
+    Polarion: CNV-10295
+    """
     assert_target_vm_has_new_pvc_disks(
         source_vm=vm_with_dv_for_cloning, target_vm=target_vm_scope_function, prefix=TARGET_NAME_PREFIX
     )
@@ -181,12 +185,15 @@ def test_clone_vm_two_pvc_disks(
     ],
     indirect=True,
 )
-@pytest.mark.polarion("CNV-10766")
 def test_clone_vm_with_instance_type_and_preference(
     rhel_vm_with_instancetype_and_preference_for_cloning,
     cloning_job_scope_function,
     target_vm_scope_function,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-6042 # <skip-jira-utils-check>
+    Polarion: CNV-10766
+    """
     assert_guest_disk_count(vm=target_vm_scope_function)
 
 
@@ -211,7 +218,6 @@ def test_clone_vm_with_instance_type_and_preference(
                 "volume_name_policy": "PrefixTargetName",
                 "target_name": TARGET_NAME_PREFIX,
             },
-            marks=pytest.mark.polarion("CNV-10296"),
         )
     ],
     indirect=True,
@@ -225,6 +231,10 @@ def test_clone_windows_vm(
     cloning_job_scope_function,
     target_vm_scope_function,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-6042 # <skip-jira-utils-check>
+    Polarion: CNV-10296
+    """
     assert_target_vm_has_new_pvc_disks(
         source_vm=vm_with_dv_for_cloning, target_vm=target_vm_scope_function, prefix=TARGET_NAME_PREFIX
     )
@@ -261,15 +271,21 @@ def test_clone_windows_vm(
     "cloning_job_fedora_vm",
 )
 class TestVMCloneAndMigrate:
-    @pytest.mark.polarion("CNV-10333")
     def test_clone_vm_with_labels_annotations_smbios(
         self,
         fedora_target_vm,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-6042 # <skip-jira-utils-check>
+        Polarion: CNV-10333
+        """
         assert_guest_disk_count(vm=fedora_target_vm)
 
-    @pytest.mark.polarion("CNV-10352")
     def test_check_labels_on_clone(self, fedora_target_vm_instance):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-6042 # <skip-jira-utils-check>
+        Polarion: CNV-10352
+        """
         labels = dict(fedora_target_vm_instance.metadata.labels)
         assert LABEL_TO_COPY_STR in labels, (
             f"Not all expected labels present on the clone: \n Current labels: {labels}, Expected: {LABEL_TO_COPY_STR}"
@@ -278,8 +294,11 @@ class TestVMCloneAndMigrate:
             f"Excluded labels present on the clone: \n Current labels: {labels}, Excluded: {LABEL_TO_EXCLUDE_STR}"
         )
 
-    @pytest.mark.polarion("CNV-10353")
     def test_check_annotations_on_clone(self, fedora_target_vm_instance):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-6042 # <skip-jira-utils-check>
+        Polarion: CNV-10353
+        """
         annotations = dict(fedora_target_vm_instance.metadata.annotations)
         assert ANNOTATION_TO_COPY_STR in annotations, (
             f"Not all expected annotations present on the clone: \n Current labels: {annotations}, "
@@ -290,23 +309,32 @@ class TestVMCloneAndMigrate:
             f"Excluded: {ANNOTATION_TO_EXCLUDE_STR}"
         )
 
-    @pytest.mark.polarion("CNV-10354")
     def test_check_new_mac_address_on_clone(self, fedora_target_vm_instance):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-6042 # <skip-jira-utils-check>
+        Polarion: CNV-10354
+        """
         for iface in fedora_target_vm_instance.spec.template.spec.domain.devices.interfaces:
             assert iface.macAddress == NEW_MAC_ADDRESS_CLONE_STR, (
                 f"MAC Address on the target VM is not correct: {iface.macAddress}"
             )
 
-    @pytest.mark.polarion("CNV-12507")
     def test_check_unique_smbios_serial_on_clone(self, fedora_vm_for_cloning, fedora_target_vm_instance):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-6042 # <skip-jira-utils-check>
+        Polarion: CNV-12507
+        """
         assert fedora_vm_for_cloning.instance.spec.template.spec.domain.get("firmware", {}).get(
             "serial"
         ) != fedora_target_vm_instance.spec.template.spec.domain.get("firmware", {}).get("serial"), (
             "Cloned VM has identical serial to source! Uniqueness failed."
         )
 
-    @pytest.mark.polarion("CNV-10320")
     def test_migrate_the_vm_clone(self, admin_client: DynamicClient, fedora_target_vm: VirtualMachineForCloning):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-6042 # <skip-jira-utils-check>
+        Polarion: CNV-10320
+        """
         migrate_vm_and_verify(vm=fedora_target_vm, client=admin_client)
 
     @pytest.mark.parametrize(
@@ -322,6 +350,9 @@ class TestVMCloneAndMigrate:
         ],
         indirect=True,
     )
-    @pytest.mark.polarion("CNV-10294")
     def test_clone_vm_with_clone_as_source(self, cloning_job_scope_function, target_vm_scope_function):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-6042 # <skip-jira-utils-check>
+        Polarion: CNV-10294
+        """
         assert_guest_disk_count(vm=target_vm_scope_function)
