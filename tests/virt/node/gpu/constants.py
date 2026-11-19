@@ -14,6 +14,8 @@ SANDBOX_VALIDATOR_DEPLOY_LABEL = "nvidia.com/gpu.deploy.sandbox-validator"
 VGPU_DEVICE_MANAGER_DEPLOY_LABEL = "nvidia.com/gpu.deploy.vgpu-device-manager"
 VGPU_CONFIG_LABEL = "nvidia.com/vgpu.config"
 GPU_WORKLOAD_CONFIG_LABEL = "nvidia.com/gpu.workload.config"
+GPU_CLUSTER_POLICY_NAME = "gpu-cluster-policy"
+MIG_VGPU_MANAGER_IMAGE = "qe-cnv-tests-ocp-nvidia-aie-vgpu-installer"
 
 DEVICE_ID_STR = "device_id"
 GPU_DEVICE_NAME_STR = "gpu_device_name"
@@ -56,5 +58,19 @@ GPU_CARDS_MAP = {
         MDEV_GRID_NAME_STR: "NVIDIA A2-4Q",
         MDEV_GRID_AVAILABLE_INSTANCES_STR: "4",
         MDEV_GRID_TYPE_STR: "nvidia-746",
+    },
+    "10de:20b7": {
+        DEVICE_ID_STR: "10de:20b7",
+        GPU_DEVICE_NAME_STR: f"{GPU_DEVICE_MANUFACTURER}/NVIDIA_A30-1-6C",
+        VGPU_DEVICE_NAME_STR: f"{GPU_DEVICE_MANUFACTURER}/NVIDIA_A30-1-6C",
+        GPU_PRETTY_NAME_STR: "NVIDIA A30-1-6C",
+        VGPU_PRETTY_NAME_STR: "NVIDIA A30-1-6C",
+        MDEV_NAME_STR: "NVIDIA A30-1-6C",
+        MDEV_AVAILABLE_INSTANCES_STR: "4",
+        MDEV_TYPE_STR: "nvidia-689",
+        VGPU_GRID_NAME_STR: f"{GPU_DEVICE_MANUFACTURER}/A30_1_6C",
+        MDEV_GRID_NAME_STR: "NVIDIA A30-1-6C",
+        MDEV_GRID_AVAILABLE_INSTANCES_STR: "4",
+        MDEV_GRID_TYPE_STR: "nvidia-689",
     },
 }

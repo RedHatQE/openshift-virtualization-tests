@@ -18,6 +18,7 @@ from utilities.constants.timeouts import (
     TIMEOUT_1MIN,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
+    TIMEOUT_5MIN,
     TIMEOUT_5SEC,
 )
 from utilities.infra import ExecCommandOnPod
@@ -189,3 +190,36 @@ def verify_mdev_bus_available(workers_utility_pods, vgpu_nodes):
                 "Ensure that in 'nvidia-gpu-operator' namespace nvidia-vgpu-manager-daemonset Pod is Running."
             )
         )
+
+
+def wait_for_gpu_resource_count(gpu_nodes, device_name, expected_count):
+    """Wait until capacity and allocatable for a GPU resource match the expected count.
+
+    Args:
+        gpu_nodes: GPU nodes to read.
+        device_name: Extended resource name advertised by the node.
+        expected_count: Resource count expected in both capacity and allocatable.
+
+    Raises:
+        TimeoutExpiredError: If the count does not match within TIMEOUT_5MIN.
+    """
+    LOGGER.info(
+        f"Waiting for {device_name} capacity and allocatable to equal {expected_count} "
+        f"on {[gpu_node.name for gpu_node in gpu_nodes]}"
+    )
+
+    def _resource_count_matches():
+        for gpu_node in gpu_nodes:
+            for status_type in ("allocatable", "capacity"):
+                resources = getattr(gpu_node.instance.status, status_type)
+                if device_name not in resources.keys() or resources[device_name] != expected_count:
+                    return False
+        return True
+
+    for sample in TimeoutSampler(
+        wait_timeout=TIMEOUT_5MIN,
+        sleep=TIMEOUT_5SEC,
+        func=_resource_count_matches,
+    ):
+        if sample:
+            return
