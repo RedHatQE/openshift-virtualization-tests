@@ -43,7 +43,6 @@ pytestmark = pytest.mark.usefixtures("fail_when_no_unprivileged_client_available
             {"dv_name": SOURCE_DV},
             {PERMISSIONS_SRC: DATAVOLUMES_AND_DVS_SRC, VERBS_SRC: ALL},
             {"dv_name": "cnv-8905"},
-            marks=pytest.mark.polarion("CNV-8905"),
         ),
     ],
     indirect=True,
@@ -53,6 +52,10 @@ def test_unprivileged_user_clone_dv_same_namespace_positive(
     permissions_pvc_source,
     dv_cloned_by_unprivileged_user_in_the_same_namespace,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-720 # <skip-jira-utils-check>
+    Polarion: CNV-8905
+    """
     dv_cloned_by_unprivileged_user_in_the_same_namespace.wait_for_dv_success(
         stop_status_func=dv_stop_status_restart_threshold,
         dv=dv_cloned_by_unprivileged_user_in_the_same_namespace,
@@ -72,7 +75,6 @@ def test_unprivileged_user_clone_dv_same_namespace_positive(
             {PERMISSIONS_DST: DATAVOLUMES_AND_DVS_SRC, VERBS_DST: ALL},
             {"dv_name": "cnv-2692"},
             {"verify_image_permissions": True},
-            marks=pytest.mark.polarion("CNV-2692"),
             id="src_dv_and_dv_source_all_dest_dv_and_dv_source_all",
         ),
         pytest.param(
@@ -82,7 +84,6 @@ def test_unprivileged_user_clone_dv_same_namespace_positive(
             {PERMISSIONS_DST: DATAVOLUMES, VERBS_DST: CREATE_DELETE_LIST_GET},
             {"dv_name": "cnv-2971"},
             {"verify_image_permissions": False},
-            marks=pytest.mark.polarion("CNV-2971"),
             id="src_dv_source_create_dest_dv_create_delete_list_get",
         ),
     ],
@@ -96,6 +97,11 @@ def test_user_permissions_positive(
     dv_destination_cloned_from_pvc,
     requested_verify_image_permissions,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-720 # <skip-jira-utils-check>
+    Polarion: CNV-2692
+    Polarion: CNV-2971
+    """
     verify_snapshot_used_namespace_transfer(cdv=dv_destination_cloned_from_pvc, unprivileged_client=unprivileged_client)
     if requested_verify_image_permissions:
         with create_vm_from_dv(
@@ -117,7 +123,6 @@ def test_user_permissions_positive(
             {"dv_name": SOURCE_DV},
             {PERMISSIONS_SRC: DATAVOLUMES, VERBS_SRC: ALL},
             {PERMISSIONS_DST: DATAVOLUMES_AND_DVS_SRC, VERBS_DST: ALL},
-            marks=pytest.mark.polarion("CNV-2793"),
             id="src_dv_all_dest_dv_and_dv_source_all",
         ),
         pytest.param(
@@ -125,7 +130,6 @@ def test_user_permissions_positive(
             {"dv_name": SOURCE_DV},
             {PERMISSIONS_SRC: DATAVOLUMES_AND_DVS_SRC, VERBS_SRC: LIST_GET},
             {PERMISSIONS_DST: DATAVOLUMES_AND_DVS_SRC, VERBS_DST: ALL},
-            marks=pytest.mark.polarion("CNV-2691"),
             id="src_dv_and_dv_source_list_get_dest_dv_and_dv_source_all",
         ),
     ],
@@ -142,6 +146,11 @@ def test_user_permissions_negative(
     permissions_datavolume_destination,
     user_has_get_permissions_in_source_namespace,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-720 # <skip-jira-utils-check>
+    Polarion: CNV-2793
+    Polarion: CNV-2691
+    """
     create_dv_negative(
         namespace=destination_namespace.name,
         storage_class=storage_class_name_scope_module,
@@ -159,7 +168,6 @@ def test_user_permissions_negative(
         pytest.param(
             ADMIN_NAMESPACE_PARAM,
             {"dv_name": SOURCE_DV},
-            marks=pytest.mark.polarion("CNV-2688"),
         ),
     ],
     indirect=True,
@@ -171,6 +179,10 @@ def test_unprivileged_user_clone_same_namespace_negative(
     dv_cloned_from_datasource,
     unprivileged_client,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-720 # <skip-jira-utils-check>
+    Polarion: CNV-2688
+    """
     create_dv_negative(
         namespace=namespace.name,
         storage_class=storage_class_name_scope_module,
@@ -190,7 +202,6 @@ def test_unprivileged_user_clone_same_namespace_negative(
             ADMIN_NAMESPACE_PARAM,
             {"dv_name": SOURCE_DV},
             {PERMISSIONS_DST: DATAVOLUMES_AND_DVS_SRC, VERBS_DST: ALL},
-            marks=pytest.mark.polarion("CNV-8907"),
         ),
     ],
     indirect=True,
@@ -203,6 +214,10 @@ def test_user_permissions_only_for_dst_ns_negative(
     unprivileged_client,
     permissions_datavolume_destination,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-720 # <skip-jira-utils-check>
+    Polarion: CNV-8907
+    """
     create_dv_negative(
         namespace=destination_namespace.name,
         storage_class=storage_class_name_scope_module,
