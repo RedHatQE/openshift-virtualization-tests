@@ -3,21 +3,23 @@ from __future__ import annotations
 # Run strategies logic can be found under
 # https://kubevirt.io/user-guide/#/creation/run-strategies?id=run-strategies
 import logging
-import re
 from typing import TYPE_CHECKING
 
 import pytest
-from kubernetes.client.rest import ApiException
-from ocp_resources.pod import Pod
-from ocp_resources.resource import ResourceEditor
-from ocp_resources.virtual_machine import VirtualMachine
-from ocp_resources.virtual_machine_instance import VirtualMachineInstance
-from rrmngmnt import power_manager
-from timeout_sampler import TimeoutSampler
 
 from tests.os_params import RHEL_LATEST
-from utilities.constants.timeouts import TIMEOUT_10MIN
-from utilities.virt import migrate_vm_and_verify, running_vm
+from tests.virt.cluster.vm_lifecycle.utils import (
+    ALWAYS,
+    HALTED,
+    MANUAL,
+    RERUNONFAILURE,
+    RUN_STRATEGY_SHUTDOWN_STATUS,
+    migrate_validate_run_strategy_vm,
+    pause_unpause_vmi_and_verify_status,
+    shutdown_vm_guest_os,
+    verify_vm_action,
+)
+from utilities.virt import running_vm
 
 if TYPE_CHECKING:
     from kubernetes.dynamic import DynamicClient
@@ -26,213 +28,100 @@ if TYPE_CHECKING:
 
 pytestmark = pytest.mark.post_upgrade
 
-
 LOGGER = logging.getLogger(__name__)
-
-MANUAL = VirtualMachine.RunStrategy.MANUAL
-ALWAYS = VirtualMachine.RunStrategy.ALWAYS
-HALTED = VirtualMachine.RunStrategy.HALTED
-RERUNONFAILURE = VirtualMachine.RunStrategy.RERUNONFAILURE
-
-RUN_STRATEGY_DICT = {
-    MANUAL: {
-        "start": {"status": True, "run_strategy": MANUAL},
-        "restart": {"status": True, "run_strategy": MANUAL},
-        "stop": {"status": None, "run_strategy": MANUAL},
-    },
-    ALWAYS: {
-        "start": {
-            "status": True,
-            "run_strategy": ALWAYS,
-            "expected_exceptions": [
-                ".*Always does not support manual start requests.*",
-                ".*VM is already running.*",
-            ],
-        },
-        "restart": {"status": True, "run_strategy": ALWAYS},
-        "stop": {"status": None, "run_strategy": HALTED},
-    },
-    HALTED: {
-        "start": {"status": True, "run_strategy": ALWAYS},
-        "restart": {"status": True, "run_strategy": ALWAYS},
-        "stop": {"status": None, "run_strategy": HALTED},
-    },
-    RERUNONFAILURE: {
-        "start": {
-            "status": True,
-            "run_strategy": RERUNONFAILURE,
-            "expected_exceptions": [
-                ".*RerunOnFailure does not support starting VM from failed state.*",
-                ".*VM is already running.*",
-            ],
-        },
-        "restart": {
-            "status": True,
-            "run_strategy": RERUNONFAILURE,
-        },
-        "stop": {
-            "status": None,
-            "run_strategy": RERUNONFAILURE,
-            "expected_exception": "VM is not running",
-        },
-    },
-}
-
-# expected statuses for vmi and virt-launcher pod after shutdown from inside vm
-RUN_STRATEGY_SHUTDOWN_STATUS = {
-    MANUAL: {
-        "vmi": VirtualMachineInstance.Status.SUCCEEDED,
-        "launcher_pod": Pod.Status.SUCCEEDED,
-    },
-    RERUNONFAILURE: {
-        "vmi": None,
-        "launcher_pod": None,
-    },
-    ALWAYS: {
-        "vmi": VirtualMachineInstance.Status.RUNNING,
-        "launcher_pod": Pod.Status.RUNNING,
-    },
-}
-
-
-@pytest.fixture()
-def xfail_vm_shutdown_run_strategy_halted(run_strategy_matrix__class__):
-    if run_strategy_matrix__class__ == HALTED:
-        pytest.xfail(reason="Shutdown is not supported for Halted runStrategy")
-
-
-def updated_vm_run_strategy(run_strategy, vm_for_test):
-    if vm_for_test.instance.spec.runStrategy != run_strategy:
-        LOGGER.info(f"Update VM with runStrategy {run_strategy}")
-
-        if vm_for_test.vmi.exists and vm_for_test.vmi.status == VirtualMachineInstance.Status.RUNNING:
-            vm_for_test.stop(wait=True)
-
-        ResourceEditor(patches={vm_for_test: {"spec": {"runStrategy": run_strategy}}}).update()
-
-        if run_strategy == ALWAYS:
-            vm_for_test.wait_for_specific_status(status=VirtualMachine.Status.RUNNING)
-    return run_strategy
-
-
-@pytest.fixture(scope="class")
-def matrix_updated_vm_run_strategy(run_strategy_matrix__class__, lifecycle_vm):
-    # Update the VM run strategy from run_strategy_matrix__class__
-    return updated_vm_run_strategy(run_strategy=run_strategy_matrix__class__, vm_for_test=lifecycle_vm)
-
-
-@pytest.fixture()
-def request_updated_vm_run_strategy(request, lifecycle_vm):
-    # Update the VM run strategy from request.param
-    return updated_vm_run_strategy(run_strategy=request.param["run_strategy"], vm_for_test=lifecycle_vm)
-
-
-@pytest.fixture()
-def start_vm_if_not_running(lifecycle_vm):
-    running_vm(vm=lifecycle_vm)
-
-
-def run_vm_action(vm, vm_action, expected_exceptions=None):
-    LOGGER.info(f"{vm_action} VM")
-
-    def _vm_run_action():
-        if expected_exceptions:
-            # when runStrategy changes cause a VM to start and then we immediately
-            # send the start instruction from here there is a race condition which may
-            # cause expected exceptions not to be raised.
-            try:
-                getattr(vm, vm_action)(wait=True, timeout=TIMEOUT_10MIN)
-            except ApiException as e:
-                if re.search(pattern=rf"{'|'.join(expected_exceptions)}", string=str(e)):
-                    return True
-                raise
-        else:
-            getattr(vm, vm_action)(wait=True, timeout=TIMEOUT_10MIN)
-            return True
-
-    for sample in TimeoutSampler(
-        wait_timeout=TIMEOUT_10MIN,
-        sleep=2,
-        func=_vm_run_action,
-    ):
-        if sample:
-            break
-
-
-def verify_vm_ready_status(vm, ready_status=True):
-    LOGGER.info(f"Verify VM ready status: {ready_status}")
-    vm.wait_for_ready_status(status=ready_status, timeout=TIMEOUT_10MIN)
-    if ready_status:
-        running_vm(vm=vm)
-
-
-def verify_vm_run_strategy(vm, run_strategy):
-    LOGGER.info(f"Verify VM runStrategy: {run_strategy}")
-    assert vm.instance.spec.runStrategy == run_strategy
-
-
-def verify_vm_action(vm, vm_action, run_strategy):
-    run_strategy_policy = RUN_STRATEGY_DICT[run_strategy][vm_action]
-    run_vm_action(
-        vm=vm,
-        vm_action=vm_action,
-        expected_exceptions=run_strategy_policy.get("expected_exceptions"),
-    )
-    verify_vm_ready_status(vm=vm, ready_status=run_strategy_policy["status"])
-    verify_vm_run_strategy(vm=vm, run_strategy=run_strategy_policy["run_strategy"])
-
-
-def pause_unpause_vmi_and_verify_status(vm):
-    vm.vmi.pause(wait=True)
-    assert vm.printable_status == vm.Status.PAUSED, f"VM is not paused, status: {vm.printable_status}"
-    vm.vmi.unpause(wait=True)
-    verify_vm_ready_status(vm=vm)
-
-
-def migrate_validate_run_strategy_vm(vm: VirtualMachineForTests, client: DynamicClient, run_strategy: str) -> None:
-    LOGGER.info(f"The VM migration with runStrategy {run_strategy}")
-    verify_vm_ready_status(vm=vm)
-    migrate_vm_and_verify(vm=vm, client=client)
-    verify_vm_ready_status(vm=vm)
-    verify_vm_run_strategy(vm=vm, run_strategy=run_strategy)
-
-
-def shutdown_vm_guest_os(vm):
-    LOGGER.info(f"Powering off {vm.name}")
-    host = vm.ssh_exec
-    host.sudo = True
-    host.add_power_manager(pm_type=power_manager.SSH_TYPE)
-    host.power_manager.poweroff()
 
 
 @pytest.mark.parametrize(
-    "golden_image_data_source_for_test_scope_module",
-    [{"os_dict": RHEL_LATEST}],
-    indirect=True,
+    "run_strategy",
+    [
+        pytest.param(MANUAL, id="Manual"),
+        pytest.param(ALWAYS, id="Always"),
+        pytest.param(HALTED, id="Halted"),
+        pytest.param(RERUNONFAILURE, id="RerunOnFailure"),
+    ],
+    scope="class",
 )
 @pytest.mark.arm64
 @pytest.mark.s390x
 @pytest.mark.gating
-class TestRunStrategyBaseActions:
-    @pytest.mark.parametrize(
-        "vm_action",
-        [
-            pytest.param("start", marks=pytest.mark.polarion("CNV-4685")),
-            pytest.param("restart", marks=pytest.mark.polarion("CNV-4686")),
-            pytest.param("stop", marks=pytest.mark.polarion("CNV-4687")),
-        ],
-    )
-    def test_run_strategy_policy(
-        self,
-        lifecycle_vm,
-        matrix_updated_vm_run_strategy,
-        vm_action,
-    ):
-        LOGGER.info(f"Verify VM with run strategy {matrix_updated_vm_run_strategy} and VM action {vm_action}")
+class TestRunStrategyPolicy:
+    """RunStrategy start, restart, and stop policy checks.
+
+    Preconditions:
+        - A container-disk VM exists created with the parametrized runStrategy
+    """
+
+    @pytest.mark.dependency(name="start", scope="class")
+    def test_start(self, run_strategy_container_vm: VirtualMachineForTests, run_strategy: str) -> None:
+        """Verify VM start honors the configured runStrategy.
+
+        Jira: https://redhat.atlassian.net/browse/KNIP-1160 # <skip-jira-utils-check>
+        Polarion: CNV-4685
+
+        Preconditions:
+            - A container-disk VM exists created with the parametrized runStrategy
+
+        Steps:
+            - Request start on the VM
+
+        Expected:
+            - VM Ready status and runStrategy match the start policy for that runStrategy
+        """
+        LOGGER.info(f"Verify VM start with runStrategy {run_strategy}")
         verify_vm_action(
-            vm=lifecycle_vm,
-            vm_action=vm_action,
-            run_strategy=matrix_updated_vm_run_strategy,
+            vm=run_strategy_container_vm,
+            vm_action="start",
+            run_strategy=run_strategy,
+        )
+
+    # WHY: class-scoped VM; restart requires successful start for this strategy
+    @pytest.mark.dependency(name="restart", depends=["start"], scope="class")
+    def test_restart(self, run_strategy_container_vm: VirtualMachineForTests, run_strategy: str) -> None:
+        """Verify VM restart honors the configured runStrategy.
+
+        Jira: https://redhat.atlassian.net/browse/KNIP-1160 # <skip-jira-utils-check>
+        Polarion: CNV-4686
+
+        Preconditions:
+            - A container-disk VM exists created with the parametrized runStrategy
+            - Start for this runStrategy succeeded
+
+        Steps:
+            - Request restart on the VM
+
+        Expected:
+            - VM Ready status and runStrategy match the restart policy for that runStrategy
+        """
+        LOGGER.info(f"Verify VM restart with runStrategy {run_strategy}")
+        verify_vm_action(
+            vm=run_strategy_container_vm,
+            vm_action="restart",
+            run_strategy=run_strategy,
+        )
+
+    # WHY: class-scoped VM; stop requires successful restart for this strategy
+    @pytest.mark.dependency(depends=["restart"], scope="class")
+    def test_stop(self, run_strategy_container_vm: VirtualMachineForTests, run_strategy: str) -> None:
+        """Verify VM stop honors the configured runStrategy.
+
+        Jira: https://redhat.atlassian.net/browse/KNIP-1160 # <skip-jira-utils-check>
+        Polarion: CNV-4687
+
+        Preconditions:
+            - A container-disk VM exists created with the parametrized runStrategy
+            - Restart for this runStrategy succeeded
+
+        Steps:
+            - Request stop on the VM
+
+        Expected:
+            - VM Ready status and runStrategy match the stop policy for that runStrategy
+        """
+        LOGGER.info(f"Verify VM stop with runStrategy {run_strategy}")
+        verify_vm_action(
+            vm=run_strategy_container_vm,
+            vm_action="stop",
+            run_strategy=run_strategy,
         )
 
 
@@ -241,22 +130,50 @@ class TestRunStrategyBaseActions:
     [{"os_dict": RHEL_LATEST}],
     indirect=True,
 )
-class TestRunStrategyAdvancedActions:
-    @pytest.mark.polarion("CNV-5054")
-    @pytest.mark.usefixtures("start_vm_if_not_running")
+@pytest.mark.parametrize(
+    "run_strategy",
+    [
+        pytest.param(MANUAL, id="Manual"),
+        pytest.param(ALWAYS, id="Always"),
+        pytest.param(RERUNONFAILURE, id="RerunOnFailure"),
+    ],
+    scope="class",
+)
+class TestRunStrategyGuestShutdown:
+    """Guest OS shutdown behavior under runStrategy.
+
+    Preconditions:
+        - A data-volume VM exists created with the parametrized runStrategy
+    """
+
     def test_run_strategy_shutdown(
         self,
-        admin_client,
-        lifecycle_vm,
-        xfail_vm_shutdown_run_strategy_halted,
-        matrix_updated_vm_run_strategy,
-    ):
-        vmi = lifecycle_vm.vmi
+        admin_client: DynamicClient,
+        run_strategy_dv_vm: VirtualMachineForTests,
+        run_strategy: str,
+    ) -> None:
+        """Verify guest OS shutdown results match the runStrategy policy.
+
+        Jira: https://redhat.atlassian.net/browse/KNIP-1160 # <skip-jira-utils-check>
+        Polarion: CNV-5054
+
+        Preconditions:
+            - A data-volume VM exists created with the parametrized runStrategy
+            - The VM is running
+
+        Steps:
+            - Power off the guest operating system from inside the VM
+            - Observe VMI and virt-launcher pod lifecycle
+
+        Expected:
+            - VMI and virt-launcher pod reach the statuses defined for that runStrategy after guest shutdown
+        """
+        running_vm(vm=run_strategy_dv_vm)
+        vmi = run_strategy_dv_vm.vmi
         launcher_pod = vmi.get_virt_launcher_pod(privileged_client=admin_client)
-        run_strategy = matrix_updated_vm_run_strategy
         status_dict = RUN_STRATEGY_SHUTDOWN_STATUS[run_strategy]
 
-        shutdown_vm_guest_os(vm=lifecycle_vm)
+        shutdown_vm_guest_os(vm=run_strategy_dv_vm)
 
         # runStrategy "Always" and "RerunOnFailure" first terminates the pod, then re-raises it
         if run_strategy in (ALWAYS, RERUNONFAILURE):
@@ -272,51 +189,98 @@ class TestRunStrategyAdvancedActions:
                 status=status_dict["launcher_pod"]
             )
 
-    @pytest.mark.parametrize(
-        "request_updated_vm_run_strategy",
-        [
-            pytest.param(
-                {"run_strategy": MANUAL},
-                marks=pytest.mark.polarion("CNV-4688"),
-                id="Manual",
-            ),
-            pytest.param(
-                {"run_strategy": ALWAYS},
-                marks=pytest.mark.polarion("CNV-4689"),
-                id="Always",
-            ),
-        ],
-        indirect=True,
-    )
-    @pytest.mark.usefixtures("start_vm_if_not_running")
-    def test_run_strategy_pause_unpause_vmi(self, lifecycle_vm, request_updated_vm_run_strategy):
-        LOGGER.info(f"Verify VMI pause/un-pause with runStrategy: {request_updated_vm_run_strategy}")
-        pause_unpause_vmi_and_verify_status(vm=lifecycle_vm)
 
-    @pytest.mark.parametrize(
-        "request_updated_vm_run_strategy",
-        [
-            pytest.param(
-                {"run_strategy": MANUAL},
-                marks=pytest.mark.polarion("CNV-5893"),
-                id="Manual",
-            ),
-            pytest.param(
-                {"run_strategy": ALWAYS},
-                marks=pytest.mark.polarion("CNV-4690"),
-                id="Always",
-            ),
-        ],
-        indirect=True,
-    )
-    @pytest.mark.rwx_default_storage
-    @pytest.mark.usefixtures("start_vm_if_not_running")
+@pytest.mark.parametrize(
+    "run_strategy",
+    [
+        pytest.param(MANUAL, id="Manual"),
+        pytest.param(ALWAYS, id="Always"),
+    ],
+    scope="class",
+)
+class TestRunStrategyPause:
+    """VMI pause and unpause under runStrategy.
+
+    Preconditions:
+        - A container-disk VM exists created with the parametrized runStrategy
+    """
+
+    def test_run_strategy_pause_unpause_vmi(
+        self,
+        run_strategy_container_vm: VirtualMachineForTests,
+        run_strategy: str,
+    ) -> None:
+        """Verify VMI pause and unpause keep the VM usable under runStrategy.
+
+        Jira: https://redhat.atlassian.net/browse/KNIP-1160 # <skip-jira-utils-check>
+        Polarion: CNV-4688
+        Polarion: CNV-4689
+
+        Preconditions:
+            - A container-disk VM exists created with the parametrized runStrategy
+            - The VM is running
+
+        Steps:
+            - Pause the VMI
+            - Unpause the VMI
+
+        Expected:
+            - The VM is paused after pause and Ready again after unpause
+        """
+        LOGGER.info(f"Verify VMI pause/un-pause with runStrategy: {run_strategy}")
+        running_vm(vm=run_strategy_container_vm)
+        pause_unpause_vmi_and_verify_status(vm=run_strategy_container_vm)
+
+
+@pytest.mark.parametrize(
+    "golden_image_data_source_for_test_scope_module",
+    [{"os_dict": RHEL_LATEST}],
+    indirect=True,
+)
+@pytest.mark.parametrize(
+    "run_strategy",
+    [
+        pytest.param(MANUAL, id="Manual"),
+        pytest.param(ALWAYS, id="Always"),
+    ],
+    scope="class",
+)
+@pytest.mark.special_infra
+@pytest.mark.rwx_default_storage
+class TestRunStrategyMigrate:
+    """Live migration under runStrategy.
+
+    Preconditions:
+        - A data-volume VM exists created with the parametrized runStrategy
+        - Default storage supports ReadWriteMany
+    """
+
     def test_run_strategy_migrate_vm(
         self,
         admin_client: DynamicClient,
-        lifecycle_vm: VirtualMachineForTests,
-        request_updated_vm_run_strategy: str,
-    ):
+        run_strategy_dv_vm: VirtualMachineForTests,
+        run_strategy: str,
+    ) -> None:
+        """Verify live migration preserves Ready status and runStrategy.
+
+        Jira: https://redhat.atlassian.net/browse/KNIP-1160 # <skip-jira-utils-check>
+        Polarion: CNV-5893
+        Polarion: CNV-4690
+
+        Preconditions:
+            - A data-volume VM exists created with the parametrized runStrategy
+            - The VM is running
+            - Default storage supports ReadWriteMany
+
+        Steps:
+            - Live-migrate the VM
+
+        Expected:
+            - The VM is Ready after migration and runStrategy is unchanged
+        """
+        running_vm(vm=run_strategy_dv_vm)
         migrate_validate_run_strategy_vm(
-            vm=lifecycle_vm, client=admin_client, run_strategy=request_updated_vm_run_strategy
+            vm=run_strategy_dv_vm,
+            client=admin_client,
+            run_strategy=run_strategy,
         )
