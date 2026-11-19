@@ -196,13 +196,16 @@ def rhel9_golden_image_vm(
         yield vm
 
 
-@pytest.mark.polarion("CNV-10721")
 @pytest.mark.s390x
 def test_automatic_update_for_system_cached_snapshot(
     rhel9_cached_snapshot,
     disabled_common_boot_image_import_hco_spec_rhel9_scope_function,
     rhel9_data_source_scope_session,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-25151 # <skip-jira-utils-check>
+    Polarion: CNV-10721
+    """
     rhel9_data_source_scope_session.wait_for_condition(
         condition=rhel9_data_source_scope_session.Condition.READY,
         status=rhel9_data_source_scope_session.Condition.Status.FALSE,
@@ -210,13 +213,16 @@ def test_automatic_update_for_system_cached_snapshot(
     )
 
 
-@pytest.mark.polarion("CNV-10722")
 @pytest.mark.s390x
 def test_disable_automatic_update_using_annotation(
     disabled_data_import_cron_annotation_rhel9,
     rhel9_data_import_cron,
     rhel9_data_source_scope_session,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-25151 # <skip-jira-utils-check>
+    Polarion: CNV-10722
+    """
     wait_for_deleted_data_import_crons(data_import_crons=[rhel9_data_import_cron])
     rhel9_data_source_scope_session.wait_for_condition(
         condition=rhel9_data_source_scope_session.Condition.READY,
@@ -233,11 +239,14 @@ def test_disable_automatic_update_using_annotation(
                 "vm_name": "vm-10722",
                 "template_labels": RHEL_LATEST_LABELS,
             },
-            marks=pytest.mark.polarion("CNV-10749"),
         ),
     ],
     indirect=True,
 )
 @pytest.mark.s390x
 def test_unprivileged_user_vm_snapshot_datasource(rhel9_golden_image_vm):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-25151 # <skip-jira-utils-check>
+    Polarion: CNV-10749
+    """
     running_vm(vm=rhel9_golden_image_vm)
