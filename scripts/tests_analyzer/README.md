@@ -89,39 +89,39 @@ This enables CI pipelines to skip expensive test suites when changes don't affec
 
 ### Local Mode
 
-Analyze current branch against main:
+`--base` is required in local mode — pass the branch the work targets. There is no
+default: diffing against `main` from a release-branch checkout (e.g. `cnv-5.0`)
+reports the whole branch divergence as affected dependencies.
+
+Analyze the current branch against the branch it targets:
 ```bash
-uv run python scripts/test_analyzer/pytest_marker_analyzer.py
+uv run python scripts/tests_analyzer/pytest_marker_analyzer.py --base origin/main
+uv run python scripts/tests_analyzer/pytest_marker_analyzer.py --base origin/cnv-5.0
 ```
 
-Analyze specific files:
+Analyze specific files (the base is still needed to diff each file's symbols):
 ```bash
-uv run python scripts/test_analyzer/pytest_marker_analyzer.py \
+uv run python scripts/tests_analyzer/pytest_marker_analyzer.py --base origin/main \
   --files path/to/file1.py path/to/file2.py
-```
-
-Compare against specific base branch:
-```bash
-uv run python scripts/test_analyzer/pytest_marker_analyzer.py --base develop
 ```
 
 ### GitHub PR Mode
 
 Most common for CI:
 ```bash
-uv run python scripts/test_analyzer/pytest_marker_analyzer.py \
+uv run python scripts/tests_analyzer/pytest_marker_analyzer.py \
   --repo owner/repo --pr 123
 ```
 
 With explicit token:
 ```bash
-uv run python scripts/test_analyzer/pytest_marker_analyzer.py \
+uv run python scripts/tests_analyzer/pytest_marker_analyzer.py \
   --repo owner/repo --pr 123 --github-token ghp_xxx
 ```
 
 With checkout (for CI without pre-checkout):
 ```bash
-uv run python scripts/test_analyzer/pytest_marker_analyzer.py \
+uv run python scripts/tests_analyzer/pytest_marker_analyzer.py \
   --repo owner/repo --pr 123 --checkout
 ```
 
@@ -129,50 +129,52 @@ uv run python scripts/test_analyzer/pytest_marker_analyzer.py \
 
 Single marker:
 ```bash
-uv run python scripts/test_analyzer/pytest_marker_analyzer.py --markers smoke
+uv run python scripts/tests_analyzer/pytest_marker_analyzer.py \
+  --base origin/main --markers smoke
 ```
 
 AND logic:
 ```bash
-uv run python scripts/test_analyzer/pytest_marker_analyzer.py \
-  --markers "smoke and tier2"
+uv run python scripts/tests_analyzer/pytest_marker_analyzer.py \
+  --base origin/main --markers "smoke and tier2"
 ```
 
 OR logic:
 ```bash
-uv run python scripts/test_analyzer/pytest_marker_analyzer.py \
-  --markers "smoke or gating"
+uv run python scripts/tests_analyzer/pytest_marker_analyzer.py \
+  --base origin/main --markers "smoke or gating"
 ```
 
 NOT logic:
 ```bash
-uv run python scripts/test_analyzer/pytest_marker_analyzer.py \
-  --markers "gating and not ipv4"
+uv run python scripts/tests_analyzer/pytest_marker_analyzer.py \
+  --base origin/main --markers "gating and not ipv4"
 ```
 
 Complex expressions:
 ```bash
-uv run python scripts/test_analyzer/pytest_marker_analyzer.py \
-  --markers "(tier2 or tier3) and not gpu"
+uv run python scripts/tests_analyzer/pytest_marker_analyzer.py \
+  --base origin/main --markers "(tier2 or tier3) and not gpu"
 ```
 
 ### Output Formats
 
 JSON for CI consumption:
 ```bash
-uv run python scripts/test_analyzer/pytest_marker_analyzer.py \
-  --output json
+uv run python scripts/tests_analyzer/pytest_marker_analyzer.py \
+  --base origin/main --output json
 ```
 
 Write output to directory (for CI artifacts):
 ```bash
-uv run python scripts/test_analyzer/pytest_marker_analyzer.py \
-  --output json --output-dir /tmp/results
+uv run python scripts/tests_analyzer/pytest_marker_analyzer.py \
+  --base origin/main --output json --output-dir /tmp/results
 ```
 
 Enable verbose logging:
 ```bash
-uv run python scripts/test_analyzer/pytest_marker_analyzer.py --verbose
+uv run python scripts/tests_analyzer/pytest_marker_analyzer.py \
+  --base origin/main --verbose
 ```
 
 ## Running in Container
@@ -182,7 +184,7 @@ When using the openshift-virtualization-tests container image:
 ```bash
 podman run -v "$(pwd)":/mnt/host:Z \
   quay.io/openshift-cnv/openshift-virtualization-tests \
-  uv run python scripts/test_analyzer/pytest_marker_analyzer.py \
+  uv run python scripts/tests_analyzer/pytest_marker_analyzer.py \
   --repo owner/repo --pr 123
 ```
 
@@ -254,7 +256,7 @@ Example Jenkins/GitHub Actions workflow:
 
 ```bash
 # Run analyzer
-RESULT=$(uv run python scripts/test_analyzer/pytest_marker_analyzer.py \
+RESULT=$(uv run python scripts/tests_analyzer/pytest_marker_analyzer.py \
   --repo $REPO --pr $PR_NUMBER --output json)
 
 # Parse decision
@@ -272,7 +274,7 @@ fi
 
 Report decision to Jenkins input step:
 ```bash
-uv run python scripts/test_analyzer/pytest_marker_analyzer.py \
+uv run python scripts/tests_analyzer/pytest_marker_analyzer.py \
   --repo owner/repo --pr 123 \
   --report-url "https://jenkins.example.com/job/smoke/buildWithParameters" \
   --report-format form \
@@ -281,7 +283,7 @@ uv run python scripts/test_analyzer/pytest_marker_analyzer.py \
 
 Report to webhook with JSON:
 ```bash
-uv run python scripts/test_analyzer/pytest_marker_analyzer.py \
+uv run python scripts/tests_analyzer/pytest_marker_analyzer.py \
   --repo owner/repo --pr 123 \
   --report-url "https://webhook.example.com/smoke-decision" \
   --report-format json \
@@ -344,7 +346,7 @@ When analyzing remote PRs (`--repo/--pr` without `--checkout`):
 Example:
 ```bash
 export GITHUB_TOKEN=ghp_xxx
-uv run python scripts/test_analyzer/pytest_marker_analyzer.py \
+uv run python scripts/tests_analyzer/pytest_marker_analyzer.py \
   --repo owner/repo --pr 123
 ```
 
@@ -354,7 +356,7 @@ uv run python scripts/test_analyzer/pytest_marker_analyzer.py \
 
 Use custom temporary directory:
 ```bash
-uv run python scripts/test_analyzer/pytest_marker_analyzer.py \
+uv run python scripts/tests_analyzer/pytest_marker_analyzer.py \
   --repo owner/repo --pr 123 --checkout \
   --work-dir /mnt/workspace/temp
 ```
@@ -365,8 +367,8 @@ Useful in Jenkins to use workspace directory instead of system temp.
 
 Write results to specific directory:
 ```bash
-uv run python scripts/test_analyzer/pytest_marker_analyzer.py \
-  --output json --output-dir /tmp/results
+uv run python scripts/tests_analyzer/pytest_marker_analyzer.py \
+  --base origin/main --output json --output-dir /tmp/results
 ```
 
 Creates `marker_analysis.json` or `marker_analysis.md` in specified directory.

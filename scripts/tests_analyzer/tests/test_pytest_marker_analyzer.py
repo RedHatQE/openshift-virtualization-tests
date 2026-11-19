@@ -4,17 +4,25 @@ Unit tests for pytest_marker_analyzer hierarchical symbol analysis.
 Co-authored-by: Claude <noreply@anthropic.com>
 """
 
+from __future__ import annotations
+
 import argparse
 import ast
 import textwrap
+from collections.abc import Callable
 from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from scripts.tests_analyzer.pytest_marker_analyzer import (
+    AnalyzerGitError,
     AttributeAccessCollector,
     Fixture,
     ImportVisitor,
     MarkedTest,
+    MarkerTestAnalyzer,
     SymbolClassification,
     _build_intra_class_call_graph,
     _build_line_to_symbol_map,
@@ -27,9 +35,18 @@ from scripts.tests_analyzer.pytest_marker_analyzer import (
     _extract_modified_symbols,
     _get_modified_function_names,
     _is_fixture_decorator_standalone,
+    _iter_diff_statements,
     _parse_diff_for_functions,
+    main,
     run_github_mode,
+    run_local_mode,
 )
+
+if TYPE_CHECKING:
+    from pytest import CaptureFixture
+
+# A (changed file, marked test, classification cache) conftest pathway.
+Pathway = tuple[Path, MarkedTest, dict[Path, SymbolClassification | None]]
 
 
 class TestBuildLineToSymbolMap:
@@ -1093,9 +1110,14 @@ class TestExtractModifiedSymbolsUnattributed:
     """
 
     def test_import_only_change_returns_classification_not_none(self, tmp_path: Path) -> None:
-        """When only import lines change, returns SymbolClassification with has_unattributed_changes=True."""
+        """An import swap is attributed to the imported names, not left unattributed.
+
+        ``utilities.ssp.get_windows_timezone`` is no longer bound by the new
+        file, so it is reported as a removal; ``TCP_TIMEOUT_30SEC`` is bound, so
+        swapping in its import has no impact.
+        """
         source = textwrap.dedent("""\
-            import os
+            from utilities.constants import TCP_TIMEOUT_30SEC
 
             def my_func():
                 pass
@@ -1104,7 +1126,13 @@ class TestExtractModifiedSymbolsUnattributed:
         file_path.write_text(source)
 
         # Diff that changes only the import line (line 1)
-        diff_content = "--- a/module.py\n+++ b/module.py\n@@ -1 +1 @@\n-import sys\n+import os\n"
+        diff_content = (
+            "--- a/module.py\n"
+            "+++ b/module.py\n"
+            "@@ -1 +1 @@\n"
+            "-from utilities.ssp import get_windows_timezone\n"
+            "+from utilities.constants import TCP_TIMEOUT_30SEC\n"
+        )
         mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
         with patch(
             "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
@@ -1118,8 +1146,10 @@ class TestExtractModifiedSymbolsUnattributed:
             )
 
         assert result is not None, "Should return SymbolClassification, not None"
-        assert result.modified_symbols == set()
-        assert result.has_unattributed_changes is True
+        assert result.modified_symbols == {"get_windows_timezone"}, (
+            "a removed project import name must be attributed as modified"
+        )
+        assert result.has_unattributed_changes is False, "import-line edits must not force file-level fallback"
 
     def test_mixed_import_and_constant_change(self, tmp_path: Path) -> None:
         """When both an import and a constant change, returns both info."""
@@ -1159,7 +1189,9 @@ class TestExtractModifiedSymbolsUnattributed:
 
         assert result is not None, "Should return SymbolClassification, not None"
         assert "TIMEOUT" in result.modified_symbols
-        assert result.has_unattributed_changes is True
+        assert result.has_unattributed_changes is False, (
+            "import edits alongside a constant change are still attributable"
+        )
 
     def test_all_changes_within_symbols_no_unattributed(self, tmp_path: Path) -> None:
         """When all changed lines fall within symbols, has_unattributed_changes is False."""
@@ -1211,8 +1243,8 @@ class TestExtractModifiedSymbolsUnattributed:
 
         assert result is None
 
-    def test_pure_deletion_returns_empty_classification(self, tmp_path: Path) -> None:
-        """When diff is pure deletion of non-symbol lines, returns empty SymbolClassification."""
+    def test_pure_deletion_returns_classification_with_removed_imports(self, tmp_path: Path) -> None:
+        """A pure deletion of imports returns the unbound names, not an empty set."""
         file_path = tmp_path / "module.py"
         file_path.write_text("def foo(): pass\n")
 
@@ -1232,7 +1264,7 @@ class TestExtractModifiedSymbolsUnattributed:
 
         # Pure deletion now returns SymbolClassification (not None) to enable symbol narrowing
         assert result is not None
-        assert result.modified_symbols == set()  # No def/class in deleted lines
+        assert result.modified_symbols == {"os", "sys"}, "dropped imports unbind their names, so both are removals"
 
     def test_executable_module_level_code_returns_none(self, tmp_path: Path) -> None:
         """When unmapped line is executable code (e.g. function call), returns None (conservative)."""
@@ -1295,6 +1327,48 @@ class TestExtractModifiedSymbolsUnattributed:
 
         assert result is not None, "Comment-only change should not trigger conservative fallback"
         assert result.has_unattributed_changes is True
+
+    def test_indented_docstring_line_starting_with_from_is_not_an_import(self, tmp_path: Path) -> None:
+        """An indented prose line starting with ``from`` binds no import name."""
+        source = textwrap.dedent('''\
+            def helper():
+                """Docstring.
+
+                Values are taken
+                from the caller.
+                """
+                return True
+        ''')
+        file_path = tmp_path / "module.py"
+        file_path.write_text(source)
+
+        diff_content = (
+            "--- a/module.py\n"
+            "+++ b/module.py\n"
+            "@@ -3,4 +3,4 @@\n"
+            " \n"
+            "     Values are taken\n"
+            "-        from the environment.\n"
+            "+        from the caller.\n"
+            '     """\n'
+        )
+        mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
+        with patch(
+            "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+            return_value=mock_result,
+        ):
+            result = _extract_modified_symbols(
+                file_path=file_path,
+                base_branch="main",
+                repo_root=tmp_path,
+                github_pr_info=None,
+            )
+
+        assert result is not None, "a resolvable diff must produce a classification, not None"
+        assert "helper" in result.modified_symbols, "a docstring edit belongs to the enclosing symbol"
+        assert result.has_unattributed_changes is False, (
+            "an indented prose line starting with 'from' must not be read as an import edit"
+        )
 
     def test_blank_line_between_functions_is_safe(self, tmp_path: Path) -> None:
         """When unmapped line is blank, returns SymbolClassification with has_unattributed_changes."""
@@ -1537,6 +1611,556 @@ class TestExtractModifiedSymbolsUnattributed:
             )
 
         assert result is None, "Remote mode fetch failure should return None (conservative fallback)"
+
+
+class TestLocalModeRequiresBaseBranch:
+    """Local mode must not silently diff against an assumed base branch.
+
+    Diffing a release-branch checkout against main reports the whole branch
+    divergence as affected dependencies, so local mode requires --base.
+    """
+
+    def test_local_mode_without_base_exits_with_parser_error(self, capsys: CaptureFixture[str]) -> None:
+        """Local mode without --base exits with a parser error naming --base."""
+        with (
+            patch(target="sys.argv", new=["pytest_marker_analyzer.py", "--markers", "smoke"]),
+            pytest.raises(SystemExit) as exc_info,
+        ):
+            main()
+
+        assert exc_info.value.code == 2, "argparse errors must exit with code 2"
+        assert "--base is required in local mode" in capsys.readouterr().err, (
+            "local mode without --base must fail with a message naming --base"
+        )
+
+    def test_get_changed_files_without_base_or_files_raises(self, tmp_path: Path) -> None:
+        """get_changed_files raises when neither files nor base_branch is provided."""
+        analyzer = MarkerTestAnalyzer(marker_expression="smoke", repo_root=tmp_path)
+
+        with pytest.raises(ValueError, match="base_branch is required when files is not provided"):
+            analyzer.get_changed_files()
+
+    def test_get_changed_files_unresolvable_base_raises(self, tmp_path: Path) -> None:
+        """An unresolvable base ref raises instead of reporting an empty change set."""
+        analyzer = MarkerTestAnalyzer(marker_expression="smoke", repo_root=tmp_path)
+        unresolved = type("Result", (), {"returncode": 1, "stdout": "", "stderr": ""})()
+
+        with (
+            patch(
+                "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+                return_value=unresolved,
+            ),
+            pytest.raises(AnalyzerGitError) as exc_info,
+        ):
+            analyzer.get_changed_files(base_branch="origin/cnv-5.0")
+
+        assert "origin/cnv-5.0" in str(exc_info.value), "error must name the unresolvable base branch"
+
+    def test_get_changed_files_failing_diff_raises_with_context(self, tmp_path: Path) -> None:
+        """A failing git diff (e.g. no merge base) raises with base, cwd and stderr."""
+        analyzer = MarkerTestAnalyzer(marker_expression="smoke", repo_root=tmp_path)
+        verified = type("Result", (), {"returncode": 0, "stdout": "abc123\n", "stderr": ""})()
+        diff_failed = type("Result", (), {"returncode": 128, "stdout": "", "stderr": "fatal: no merge base"})()
+
+        with (
+            patch(
+                "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+                side_effect=[verified, diff_failed],
+            ),
+            pytest.raises(AnalyzerGitError) as exc_info,
+        ):
+            analyzer.get_changed_files(base_branch="origin/cnv-5.0")
+
+        message = str(exc_info.value)
+        assert "origin/cnv-5.0" in message, "error must name the base branch"
+        assert str(tmp_path) in message, "error must name the working directory"
+        assert "fatal: no merge base" in message, "error must include the git stderr"
+
+    def test_run_local_mode_returns_error_on_analyzer_git_error(self) -> None:
+        """run_local_mode exits non-zero when the change set cannot be determined."""
+        with patch("scripts.tests_analyzer.pytest_marker_analyzer.MarkerTestAnalyzer") as mock_analyzer_cls:
+            mock_analyzer = MagicMock()
+            mock_analyzer.marked_tests = ["test_something"]
+            mock_analyzer.get_changed_files.side_effect = AnalyzerGitError(
+                "base branch 'origin/nope' could not be resolved; pass a valid --base"
+            )
+            mock_analyzer_cls.return_value = mock_analyzer
+
+            result, exit_code = run_local_mode(args=argparse.Namespace(markers="smoke", base="origin/nope", files=None))
+
+        assert result is None, "run_local_mode must not return a result when the change set is undeterminable"
+        assert exit_code == 1, "an undeterminable change set must exit non-zero"
+
+
+class TestSymbolAttributionRemovals:
+    """Moved/removed symbols must be attributed instead of wiping the change set.
+
+    PR 6631 moved helpers from ``utilities/ssp.py`` to ``utilities/windows.py``
+    and re-imported them.  The deleted ``def`` lines and the changed import
+    lines must attribute those names.  A removal-derived name always stays in
+    ``modified_symbols``, even when the new file re-binds it from another
+    module: the re-export can still change behaviour for importers.
+    """
+
+    def test_import_swap_with_name_still_bound_stays_modified(self, tmp_path: Path) -> None:
+        """``from utilities.ssp import x`` -> ``from utilities.guest_agent import x``."""
+        source = textwrap.dedent("""\
+            from utilities.guest_agent import guest_agent_version_parser
+
+            def some_helper():
+                return 1
+        """)
+        file_path = tmp_path / "infra.py"
+        file_path.write_text(source)
+
+        diff_content = (
+            "--- a/utilities/infra.py\n"
+            "+++ b/utilities/infra.py\n"
+            "@@ -1 +1 @@\n"
+            "-from utilities.ssp import guest_agent_version_parser\n"
+            "+from utilities.guest_agent import guest_agent_version_parser\n"
+        )
+        mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
+        with patch(
+            "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+            return_value=mock_result,
+        ):
+            result = _extract_modified_symbols(
+                file_path=file_path,
+                base_branch="main",
+                repo_root=tmp_path,
+                github_pr_info=None,
+            )
+
+        assert result is not None, "a resolvable diff must produce a classification, not None"
+        assert "guest_agent_version_parser" in result.modified_symbols, (
+            "a re-bound removal-derived name stays modified: the new source can change behaviour"
+        )
+        assert result.has_unattributed_changes is False, "import-line edits must not force file-level fallback"
+
+    def test_import_removal_of_unbound_name_is_attributed(self, tmp_path: Path) -> None:
+        """A name removed by an import edit and not re-bound is a modified symbol."""
+        source = textwrap.dedent("""\
+            from utilities.guest_agent import something_else
+
+            def some_helper():
+                return 1
+        """)
+        file_path = tmp_path / "infra.py"
+        file_path.write_text(source)
+
+        diff_content = (
+            "--- a/utilities/infra.py\n"
+            "+++ b/utilities/infra.py\n"
+            "@@ -1 +1 @@\n"
+            "-from utilities.ssp import guest_agent_version_parser\n"
+            "+from utilities.guest_agent import something_else\n"
+        )
+        mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
+        with patch(
+            "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+            return_value=mock_result,
+        ):
+            result = _extract_modified_symbols(
+                file_path=file_path,
+                base_branch="main",
+                repo_root=tmp_path,
+                github_pr_info=None,
+            )
+
+        assert result is not None, "a resolvable diff must produce a classification, not None"
+        assert "guest_agent_version_parser" in result.modified_symbols, (
+            "a removed project import name must be attributed as modified"
+        )
+        assert result.has_unattributed_changes is False, "import-line edits must not force file-level fallback"
+
+    def test_mixed_deletion_and_addition_keeps_deleted_defs(self, tmp_path: Path) -> None:
+        """Deleted defs stay in modified_symbols even when the new file re-imports one."""
+        source = textwrap.dedent("""\
+            from utilities.windows import get_windows_os_info
+
+            def helper():
+                return 42
+        """)
+        file_path = tmp_path / "ssp.py"
+        file_path.write_text(source)
+
+        diff_content = (
+            "--- a/utilities/ssp.py\n"
+            "+++ b/utilities/ssp.py\n"
+            "@@ -1,6 +1,4 @@\n"
+            "+from utilities.windows import get_windows_os_info\n"
+            " \n"
+            "-def get_windows_os_info():\n"
+            '-    return "ga"\n'
+            "-def get_windows_timezone():\n"
+            '-    return "tz"\n'
+            "+def helper():\n"
+            "+    return 42\n"
+        )
+        mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
+        with patch(
+            "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+            return_value=mock_result,
+        ):
+            result = _extract_modified_symbols(
+                file_path=file_path,
+                base_branch="main",
+                repo_root=tmp_path,
+                github_pr_info=None,
+            )
+
+        assert result is not None, "a resolvable diff must produce a classification, not None"
+        assert "get_windows_timezone" in result.modified_symbols, "deleted defs must stay attributed"
+        assert "get_windows_os_info" in result.modified_symbols, (
+            "a deleted def stays modified even though the new file re-imports the name"
+        )
+        assert result.has_unattributed_changes is False, "import and deletion edits are fully attributable"
+
+    def test_body_modified_symbol_is_never_dropped(self, tmp_path: Path) -> None:
+        """A changed function body keeps the symbol even though its def binds the name."""
+        source = textwrap.dedent("""\
+            def wait_for_windows_vm():
+                return True
+        """)
+        file_path = tmp_path / "virt.py"
+        file_path.write_text(source)
+
+        diff_content = (
+            "--- a/utilities/virt.py\n"
+            "+++ b/utilities/virt.py\n"
+            "@@ -1,2 +1,2 @@\n"
+            " def wait_for_windows_vm():\n"
+            "-    return False\n"
+            "+    return True\n"
+        )
+        mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
+        with patch(
+            "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+            return_value=mock_result,
+        ):
+            result = _extract_modified_symbols(
+                file_path=file_path,
+                base_branch="main",
+                repo_root=tmp_path,
+                github_pr_info=None,
+            )
+
+        assert result is not None, "a resolvable diff must produce a classification, not None"
+        assert "wait_for_windows_vm" in result.modified_symbols, "a body-modified symbol must stay attributed"
+        assert result.has_unattributed_changes is False, "import-line edits must not force file-level fallback"
+
+    def test_removed_third_party_imports_are_symbol_removals(self, tmp_path: Path) -> None:
+        """A diff-dropped stdlib/third-party import still unbinds its names.
+
+        PR 6631 moved helpers out of ``utilities/ssp.py``; the now-unused
+        ``import json``, ``import shlex`` and ``run_ssh_commands`` import were
+        dropped by the diff.  The names leave the module namespace, so callers
+        using ``ssp.run_ssh_commands()`` break and must not be skipped.
+        """
+        source = textwrap.dedent("""\
+            from utilities.constants import TCP_TIMEOUT_30SEC
+            from ocp_resources.virtual_machine import VirtualMachine
+
+            def some_helper():
+                return 1
+        """)
+        file_path = tmp_path / "ssp.py"
+        file_path.write_text(source)
+
+        diff_content = (
+            "--- a/utilities/ssp.py\n"
+            "+++ b/utilities/ssp.py\n"
+            "@@ -1,3 +1,2 @@\n"
+            "-import json\n"
+            "-import shlex\n"
+            "-from pyhelper_utils.shell import run_ssh_commands\n"
+            "+from utilities.constants import TCP_TIMEOUT_30SEC\n"
+            "+from ocp_resources.virtual_machine import VirtualMachine\n"
+        )
+        mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
+        with patch(
+            "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+            return_value=mock_result,
+        ):
+            result = _extract_modified_symbols(
+                file_path=file_path,
+                base_branch="main",
+                repo_root=tmp_path,
+                github_pr_info=None,
+            )
+
+        assert result is not None, "a resolvable diff must produce a classification, not None"
+        assert result.modified_symbols == {"json", "shlex", "run_ssh_commands"}, (
+            f"every name a removed import bound is a removal symbol: {result.modified_symbols}"
+        )
+        assert result.has_unattributed_changes is False, "third-party import removals are fully attributable"
+
+    def test_relative_import_removal_of_unbound_name_is_attributed(self, tmp_path: Path) -> None:
+        """A relative import of project code is a project import."""
+        source = textwrap.dedent("""\
+            from .windows import something_else
+
+            def some_helper():
+                return 1
+        """)
+        file_path = tmp_path / "infra.py"
+        file_path.write_text(source)
+
+        diff_content = (
+            "--- a/utilities/infra.py\n"
+            "+++ b/utilities/infra.py\n"
+            "@@ -1 +1 @@\n"
+            "-from .ssp import guest_agent_version_parser\n"
+            "+from .windows import something_else\n"
+        )
+        mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
+        with patch(
+            "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+            return_value=mock_result,
+        ):
+            result = _extract_modified_symbols(
+                file_path=file_path,
+                base_branch="main",
+                repo_root=tmp_path,
+                github_pr_info=None,
+            )
+
+        assert result is not None, "a resolvable diff must produce a classification, not None"
+        assert "guest_agent_version_parser" in result.modified_symbols, (
+            "a removed project import name must be attributed as modified"
+        )
+        assert "something_else" not in result.modified_symbols, (
+            "an added import binds a name here; it removes no API from this module"
+        )
+        assert result.has_unattributed_changes is False, "import-line edits must not force file-level fallback"
+
+    def test_removed_multiline_project_import_is_attributed(self, tmp_path: Path) -> None:
+        """A parenthesized multi-line project import attributes its removed names."""
+        source = textwrap.dedent("""\
+            from utilities.guest_agent import something_else
+
+            def some_helper():
+                return 1
+        """)
+        file_path = tmp_path / "infra.py"
+        file_path.write_text(source)
+
+        diff_content = (
+            "--- a/utilities/infra.py\n"
+            "+++ b/utilities/infra.py\n"
+            "@@ -1,3 +1 @@\n"
+            "-from utilities.ssp import (\n"
+            "-    guest_agent_version_parser,\n"
+            "-)\n"
+            "+from utilities.guest_agent import something_else\n"
+        )
+        mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
+        with patch(
+            "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+            return_value=mock_result,
+        ):
+            result = _extract_modified_symbols(
+                file_path=file_path,
+                base_branch="main",
+                repo_root=tmp_path,
+                github_pr_info=None,
+            )
+
+        assert result is not None, "a resolvable diff must produce a classification, not None"
+        assert "guest_agent_version_parser" in result.modified_symbols, (
+            "a name removed by a multi-line import must be attributed, not silently ignored"
+        )
+        assert result.has_unattributed_changes is False, "a balanced multi-line import is fully attributable"
+
+    def test_incomplete_multiline_import_is_unattributed(self, tmp_path: Path) -> None:
+        """An unbalanced import hunk cannot be narrowed and must stay conservative."""
+        file_path = tmp_path / "infra.py"
+        file_path.write_text("def some_helper():\n    return 1\n")
+
+        diff_content = (
+            "--- a/utilities/infra.py\n"
+            "+++ b/utilities/infra.py\n"
+            "@@ -1,2 +1,0 @@\n"
+            "-from utilities.ssp import (\n"
+            "-    guest_agent_version_parser,\n"
+        )
+        mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
+        with patch(
+            "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+            return_value=mock_result,
+        ):
+            result = _extract_modified_symbols(
+                file_path=file_path,
+                base_branch="main",
+                repo_root=tmp_path,
+                github_pr_info=None,
+            )
+
+        assert result is not None, "a resolvable diff must produce a classification, not None"
+        assert result.has_unattributed_changes is True, (
+            "an import whose continuation lines are missing must not be silently ignored"
+        )
+
+    def test_deleted_body_statement_is_unattributed(self, tmp_path: Path) -> None:
+        """Deleting one statement inside a live function must not look clean."""
+        file_path = tmp_path / "virt.py"
+        file_path.write_text("def wait_for_windows_vm():\n    return True\n")
+
+        diff_content = (
+            "--- a/utilities/virt.py\n"
+            "+++ b/utilities/virt.py\n"
+            "@@ -1,3 +1,2 @@\n"
+            " def wait_for_windows_vm():\n"
+            '-    return "debug"\n'
+            "     return True\n"
+        )
+        mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
+        with patch(
+            "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+            return_value=mock_result,
+        ):
+            result = _extract_modified_symbols(
+                file_path=file_path,
+                base_branch="main",
+                repo_root=tmp_path,
+                github_pr_info=None,
+            )
+
+        assert result is not None, "a resolvable diff must produce a classification, not None"
+        assert result.modified_symbols == set(), "a deleted body line maps to no new-file line"
+        assert result.has_unattributed_changes is True, (
+            "a deletion the diff cannot attribute must force the conservative fallback"
+        )
+
+
+class TestCheckConftestPathwayEmptyCleanClassification:
+    """An empty-and-clean classification must resolve the conftest pathway as safe."""
+
+    @pytest.fixture(scope="function")
+    def pathway_builder(self, tmp_path: Path) -> Callable[[SymbolClassification], Pathway]:
+        """Build a conftest pathway that opaquely imports a changed module.
+
+        Args:
+            tmp_path: Pytest temporary directory used as the repository root.
+
+        Returns:
+            A builder taking the changed file's classification and returning the
+            changed file, a marked test depending on the conftest, and the
+            classification cache keyed by the changed file.
+        """
+
+        def build(classification: SymbolClassification) -> Pathway:
+            conftest_path = tmp_path / "tests" / "conftest.py"
+            conftest_path.parent.mkdir(parents=True)
+            conftest_path.touch()
+
+            changed_file = tmp_path / "utilities" / "ssp.py"
+            changed_file.parent.mkdir(parents=True)
+            changed_file.touch()
+
+            test_file = tmp_path / "tests" / "test_ssp.py"
+            test_file.touch()
+
+            marked_test = MarkedTest(
+                file_path=test_file,
+                test_name="test_ssp",
+                node_id="tests/test_ssp.py::test_ssp",
+                dependencies={conftest_path},
+                fixtures=set(),
+                symbol_imports={},
+            )
+            return changed_file, marked_test, {changed_file: classification}
+
+        return build
+
+    def test_empty_clean_classification_is_not_affected(
+        self,
+        pathway_builder: Callable[[SymbolClassification], Pathway],
+        tmp_path: Path,
+    ) -> None:
+        """Nothing observable changed — every opaque importer must not be flagged."""
+        changed_file, marked_test, modified_symbols_cache = pathway_builder(
+            SymbolClassification(modified_symbols=set(), new_symbols=set(), has_unattributed_changes=False)
+        )
+
+        is_affected, matching_deps = _check_conftest_pathway(
+            changed_file=changed_file,
+            marked_test=marked_test,
+            conftest_symbol_imports={},
+            conftest_opaque_deps={tmp_path / "tests" / "conftest.py": {changed_file}},
+            modified_symbols_cache=modified_symbols_cache,
+            fixtures_dict={},
+            repo_root=tmp_path,
+        )
+
+        assert is_affected is False, f"empty-and-clean classification must not flag tests, got {matching_deps}"
+        assert matching_deps == [], "an empty-and-clean classification must produce no dependency entries"
+
+    def test_unattributed_changes_still_flag(
+        self,
+        pathway_builder: Callable[[SymbolClassification], Pathway],
+        tmp_path: Path,
+    ) -> None:
+        """Module-level changes we could not attribute stay conservative."""
+        changed_file, marked_test, modified_symbols_cache = pathway_builder(
+            SymbolClassification(modified_symbols=set(), new_symbols=set(), has_unattributed_changes=True)
+        )
+
+        is_affected, matching_deps = _check_conftest_pathway(
+            changed_file=changed_file,
+            marked_test=marked_test,
+            conftest_symbol_imports={},
+            conftest_opaque_deps={tmp_path / "tests" / "conftest.py": {changed_file}},
+            modified_symbols_cache=modified_symbols_cache,
+            fixtures_dict={},
+            repo_root=tmp_path,
+        )
+
+        assert is_affected is True, "unattributed changes must still flag the test through the conftest pathway"
+        assert matching_deps, "a flagged pathway must report the dependency that caused it"
+
+    def test_deletion_only_body_edit_flags_instead_of_resolving(
+        self,
+        pathway_builder: Callable[[SymbolClassification], Pathway],
+        tmp_path: Path,
+    ) -> None:
+        """A diff that only deletes a body statement must not resolve as safe."""
+        changed_path = tmp_path / "module.py"
+        changed_path.write_text("def helper():\n    return True\n")
+        diff_content = (
+            '--- a/module.py\n+++ b/module.py\n@@ -1,3 +1,2 @@\n def helper():\n-    return "debug"\n     return True\n'
+        )
+        mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
+        with patch(
+            "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+            return_value=mock_result,
+        ):
+            classification = _extract_modified_symbols(
+                file_path=changed_path,
+                base_branch="main",
+                repo_root=tmp_path,
+                github_pr_info=None,
+            )
+
+        assert classification is not None, "a resolvable diff must produce a classification, not None"
+        assert classification.has_unattributed_changes is True, (
+            "a deletion-only body edit must not look like an empty-and-clean diff"
+        )
+
+        changed_file, marked_test, modified_symbols_cache = pathway_builder(classification)
+        is_affected, matching_deps = _check_conftest_pathway(
+            changed_file=changed_file,
+            marked_test=marked_test,
+            conftest_symbol_imports={},
+            conftest_opaque_deps={tmp_path / "tests" / "conftest.py": {changed_file}},
+            modified_symbols_cache=modified_symbols_cache,
+            fixtures_dict={},
+            repo_root=tmp_path,
+        )
+
+        assert is_affected is True, "a deletion-only body edit must flag the test instead of resolving the pathway"
+        assert matching_deps, "a flagged pathway must report the dependency that caused it"
 
 
 class TestRunGithubModeCheckoutGithubPrInfo:
@@ -2642,6 +3266,26 @@ class TestExtractDeletedSymbolsFromDiff:
         # causing broader test selection — acceptable over-reporting for safety.
         assert result == {"OldHelper", "setup", "teardown"}
 
+    def test_paren_in_string_keeps_following_deleted_def(self) -> None:
+        """A paren inside a string literal must not swallow the next deleted def."""
+        diff = '@@ -1,4 +1,0 @@\n-def first(label="("):\n-    return label\n-def removed_helper():\n-    return None\n'
+        result = _extract_deleted_symbols_from_diff(diff_content=diff)
+        assert result == {"first", "removed_helper"}, (
+            f"every deleted def is detected on its own line; removed_helper must not be lost: {result}"
+        )
+
+
+class TestIterDiffStatements:
+    """Tests for the statement grouping used for import attribution."""
+
+    def test_balanced_multiline_import_is_one_statement(self) -> None:
+        """A parenthesized multi-line import stays grouped as a single statement."""
+        diff = "@@ -1,3 +1,0 @@\n-from utilities.ssp import (\n-    guest_agent_version_parser,\n-)\n"
+        statements = [statement for sign, statement in _iter_diff_statements(diff_content=diff) if sign]
+        assert statements == ["from utilities.ssp import (\n    guest_agent_version_parser,\n)"], (
+            f"a balanced multiline import must be attributed as one statement: {statements}"
+        )
+
 
 class TestPureDeletionSymbolNarrowing:
     """Tests that pure-deletion diffs enable symbol-level narrowing."""
@@ -2676,7 +3320,7 @@ class TestPureDeletionSymbolNarrowing:
         assert result.new_symbols == set()
 
     def test_pure_deletion_no_symbols_returns_empty_classification(self, tmp_path: Path) -> None:
-        """When a diff deletes only non-symbol lines, returns empty classification."""
+        """A diff that deletes only non-symbol lines attributes no symbol."""
         source = textwrap.dedent("""\
             import os
 
@@ -2701,7 +3345,10 @@ class TestPureDeletionSymbolNarrowing:
             )
 
         assert result is not None, "Should return SymbolClassification, not None"
-        assert result.modified_symbols == set()
+        assert result.modified_symbols == set(), "a deleted comment attributes no symbol"
+        assert result.has_unattributed_changes is True, (
+            "a deletion the diff cannot attribute must force the conservative fallback"
+        )
 
 
 class TestTypeCheckingLineSafety:
