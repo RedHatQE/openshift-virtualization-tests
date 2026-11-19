@@ -17,7 +17,7 @@ from libs.vm.oper import run_vms
 from libs.vm.vm import BaseVirtualMachine
 from tests.network.libs.vm_factory import udn_vm
 from tests.network.user_defined_network.libudn import ALLOWED_POD_CONTAINER_NAME
-from utilities.constants.architecture import AMD_64, ARM_64
+from utilities.architecture import get_worker_arch_pairs
 from utilities.constants.networking import POD_CONTAINER_SPEC
 from utilities.infra import create_ns
 
@@ -26,6 +26,50 @@ if TYPE_CHECKING:
 
 ALLOWED_POD_LABEL: Final[dict[str, str]] = {"udn": "allowed"}
 VMI_ID_LABEL: Final[str] = "vmi.kubevirt.io/id"
+
+
+def pytest_generate_tests(metafunc):
+    if "arch_pair_udn_vms" in metafunc.fixturenames:
+        pairs = get_worker_arch_pairs()
+        metafunc.parametrize(
+            "arch_pair_udn_vms",
+            pairs,
+            indirect=True,
+            ids=[f"{a}-{b}" for a, b in pairs],
+            scope="class",
+        )
+
+
+@pytest.fixture(scope="class")
+def arch_pair_udn_vms(
+    request: pytest.FixtureRequest,
+    admin_client: DynamicClient,
+    namespaced_layer2_user_defined_network: Layer2UserDefinedNetwork,
+) -> Generator[tuple[BaseVirtualMachine, BaseVirtualMachine]]:
+    """Yield a started (vm_a, vm_b) UDN pair for the given (arch_a, arch_b) param.
+
+    Both VMs are connected to the primary UDN and started in parallel via
+    ``run_vms()``.  Parametrized indirectly via pytest_generate_tests.
+    """
+    arch_a, arch_b = request.param
+    with (
+        udn_vm(
+            namespace_name=namespaced_layer2_user_defined_network.namespace,
+            name=f"{arch_a}-udn-vm",
+            client=admin_client,
+            binding=UDN_BINDING_DEFAULT_PLUGIN_NAME,
+            architecture=arch_a,
+        ) as vm_a,
+        udn_vm(
+            namespace_name=namespaced_layer2_user_defined_network.namespace,
+            name=f"{arch_b}-udn-vm",
+            client=admin_client,
+            binding=UDN_BINDING_DEFAULT_PLUGIN_NAME,
+            architecture=arch_b,
+        ) as vm_b,
+    ):
+        run_vms(vms=(vm_a, vm_b))
+        yield vm_a, vm_b
 
 
 @pytest.fixture(scope="module")
@@ -107,56 +151,6 @@ def client(vma_udn, server):
         server_port=IPERF_SERVER_PORT,
     ) as client:
         yield client
-
-
-@pytest.fixture(scope="class")
-def arm64_udn_vm(
-    admin_client: DynamicClient,
-    namespaced_layer2_user_defined_network: Layer2UserDefinedNetwork,
-) -> Generator[BaseVirtualMachine]:
-    """
-    ARM64 VM with UDN as primary interface.
-    """
-    with udn_vm(
-        namespace_name=namespaced_layer2_user_defined_network.namespace,
-        name="arm64-udn-vm",
-        client=admin_client,
-        binding=UDN_BINDING_DEFAULT_PLUGIN_NAME,
-        architecture=ARM_64,
-    ) as vm:
-        yield vm
-
-
-@pytest.fixture(scope="class")
-def amd64_udn_vm(
-    admin_client: DynamicClient,
-    namespaced_layer2_user_defined_network: Layer2UserDefinedNetwork,
-) -> Generator[BaseVirtualMachine]:
-    """
-    AMD64 VM with UDN as primary interface.
-    """
-    with udn_vm(
-        namespace_name=namespaced_layer2_user_defined_network.namespace,
-        name="amd64-udn-vm",
-        client=admin_client,
-        binding=UDN_BINDING_DEFAULT_PLUGIN_NAME,
-        architecture=AMD_64,
-    ) as vm:
-        yield vm
-
-
-@pytest.fixture(scope="class")
-def running_amd_and_arm_vms(
-    amd64_udn_vm: BaseVirtualMachine, arm64_udn_vm: BaseVirtualMachine
-) -> tuple[BaseVirtualMachine, BaseVirtualMachine]:
-    """
-    Start AMD64 and ARM64 UDN VMs in parallel.
-
-    Returns:
-        Tuple of (amd64_vm, arm64_vm) both running with agent connected.
-    """
-    amd64_vm, arm64_vm = run_vms(vms=(amd64_udn_vm, arm64_udn_vm))
-    return amd64_vm, arm64_vm
 
 
 @pytest.fixture(scope="class")

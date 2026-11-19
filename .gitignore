@@ -131,5 +131,8 @@ docs/source/rst
 # Claude Code assistant
 .claude/
 
+# IBM Bob Code assistant
+.bob/
+
 # For local run (debug).
 ocp_resources
