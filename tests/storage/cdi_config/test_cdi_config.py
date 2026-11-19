@@ -22,10 +22,12 @@ INSECURE_REGISTRIES_LIST = ["added-private-registry:5000"]
 
 @pytest.mark.sno
 @pytest.mark.gating
-@pytest.mark.polarion("CNV-2208")
 @pytest.mark.s390x
 def test_cdi_config_exists(cdi_config, upload_proxy_route):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-484 # <skip-jira-utils-check>
+    Polarion: CNV-2208
+
     Test that CDIConfig exists and has the expected upload_proxy_url
     """
     assert cdi_config.upload_proxy_url == upload_proxy_route.host, (
@@ -35,9 +37,11 @@ def test_cdi_config_exists(cdi_config, upload_proxy_route):
 
 
 @pytest.mark.destructive
-@pytest.mark.polarion("CNV-2209")
 def test_different_route_for_upload_proxy(admin_client, hco_namespace, cdi_config, uploadproxy_route_deleted):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-484 # <skip-jira-utils-check>
+    Polarion: CNV-2209
+
     Test that CDIConfig's upload_proxy_url changes when the upload-proxy route is deleted
     and recreated with a different host
     """
@@ -51,10 +55,12 @@ def test_different_route_for_upload_proxy(admin_client, hco_namespace, cdi_confi
 
 
 @pytest.mark.sno
-@pytest.mark.polarion("CNV-2215")
 @pytest.mark.s390x
 def test_route_for_different_service(admin_client, cdi_config, upload_proxy_route):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-484 # <skip-jira-utils-check>
+    Polarion: CNV-2215
+
     Test that CDIConfig's upload_proxy_url does not change when a route for a different service is created
     """
     with Route(
@@ -69,10 +75,12 @@ def test_route_for_different_service(admin_client, cdi_config, upload_proxy_rout
 
 
 @pytest.mark.sno
-@pytest.mark.polarion("CNV-2216")
 @pytest.mark.s390x
 def test_upload_proxy_url_overridden(admin_client, cdi_config, namespace, cdi_config_upload_proxy_overridden):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-484 # <skip-jira-utils-check>
+    Polarion: CNV-2216
+
     Test that CDIConfig's upload_proxy_url does not change when overridden
     and a new route is created for upload-proxy service
     """
@@ -83,10 +91,12 @@ def test_upload_proxy_url_overridden(admin_client, cdi_config, namespace, cdi_co
 
 
 @pytest.mark.sno
-@pytest.mark.polarion("CNV-6312")
 @pytest.mark.s390x
 def test_cdi_spec_reconciled_by_hco(initial_cdi_config_from_cr, cdi_with_extra_non_existent_feature_gate):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-8296 # <skip-jira-utils-check>
+    Polarion: CNV-6312
+
     Test that added feature gate on the CDI CR does not persist
     (HCO Should reconcile back changes on the CDI CR)
     """
@@ -102,20 +112,17 @@ def test_cdi_spec_reconciled_by_hco(initial_cdi_config_from_cr, cdi_with_extra_n
         pytest.param(
             {"storage": {"workloadResourceRequirements": STORAGE_WORKLOADS_DICT}},
             {"podResourceRequirements": STORAGE_WORKLOADS_DICT},
-            marks=(pytest.mark.polarion("CNV-6000")),
-            id="test_storage_workloads_in_hco_propagated_to_cdi_cr",
+            id="test_storage_workloads_in_hco_propagated_to_cdi_cr [Polarion: CNV-6000]",
         ),
         pytest.param(
             NON_EXISTENT_SCRATCH_SC_DICT,
             {"scratchSpaceStorageClass": NON_EXISTENT_SCRATCH_SC},
-            marks=(pytest.mark.polarion("CNV-6001")),
-            id="test_scratch_sc_in_hco_propagated_to_cdi_cr",
+            id="test_scratch_sc_in_hco_propagated_to_cdi_cr [Polarion: CNV-6001]",
         ),
         pytest.param(
             {"storage": {"storageImport": {"insecureRegistries": INSECURE_REGISTRIES_LIST}}},
             {"insecureRegistries": INSECURE_REGISTRIES_LIST},
-            marks=(pytest.mark.polarion("CNV-6092")),
-            id="test_insecure_registries_in_hco_propagated_to_cdi_cr",
+            id="test_insecure_registries_in_hco_propagated_to_cdi_cr [Polarion: CNV-6092]",
         ),
     ],
 )
@@ -129,6 +136,7 @@ def test_cdi_tunables_in_hco_propagated_to_cr(
     hco_updated_spec_stanza,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-8296 # <skip-jira-utils-check>
     Test that the exposed CDI-related tunables in HCO are propagated to the CDI CR
     """
     initial_cdi_config_from_cr = cdi.instance.to_dict()["spec"]["config"]
