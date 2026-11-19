@@ -146,7 +146,7 @@ class TestRunStrategyGuestShutdown:
         - A data-volume VM exists created with the parametrized runStrategy
     """
 
-    def test_run_strategy_shutdown(
+    def test_shutdown(
         self,
         admin_client: DynamicClient,
         run_strategy_dv_vm: VirtualMachineForTests,
@@ -205,7 +205,7 @@ class TestRunStrategyPause:
         - A container-disk VM exists created with the parametrized runStrategy
     """
 
-    def test_run_strategy_pause_unpause_vmi(
+    def test_pause_unpause_vmi(
         self,
         run_strategy_container_vm: VirtualMachineForTests,
         run_strategy: str,
@@ -255,7 +255,7 @@ class TestRunStrategyMigrate:
         - Default storage supports ReadWriteMany
     """
 
-    def test_run_strategy_migrate_vm(
+    def test_migrate_vm(
         self,
         admin_client: DynamicClient,
         run_strategy_dv_vm: VirtualMachineForTests,
