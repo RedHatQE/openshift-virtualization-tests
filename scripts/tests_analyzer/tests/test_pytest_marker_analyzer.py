@@ -4,11 +4,13 @@ Unit tests for pytest_marker_analyzer hierarchical symbol analysis.
 Co-authored-by: Claude <noreply@anthropic.com>
 """
 
+from __future__ import annotations
+
 import argparse
 import ast
-import sys
 import textwrap
 from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -35,6 +37,9 @@ from scripts.tests_analyzer.pytest_marker_analyzer import (
     main,
     run_github_mode,
 )
+
+if TYPE_CHECKING:
+    from pytest import CaptureFixture
 
 
 class TestBuildLineToSymbolMap:
@@ -1551,11 +1556,12 @@ class TestLocalModeRequiresBaseBranch:
     divergence as affected dependencies, so local mode requires --base.
     """
 
-    def test_local_mode_without_base_exits_with_parser_error(self, monkeypatch, capsys):
+    def test_local_mode_without_base_exits_with_parser_error(self, capsys: CaptureFixture[str]) -> None:
         """Local mode without --base exits with a parser error naming --base."""
-        monkeypatch.setattr(sys, "argv", ["pytest_marker_analyzer.py", "--markers", "smoke"])
-
-        with pytest.raises(SystemExit) as exc_info:
+        with (
+            patch(target="sys.argv", new=["pytest_marker_analyzer.py", "--markers", "smoke"]),
+            pytest.raises(SystemExit) as exc_info,
+        ):
             main()
 
         assert exc_info.value.code == 2, "argparse errors must exit with code 2"
@@ -1563,7 +1569,7 @@ class TestLocalModeRequiresBaseBranch:
             "local mode without --base must fail with a message naming --base"
         )
 
-    def test_get_changed_files_without_base_or_files_raises(self, tmp_path):
+    def test_get_changed_files_without_base_or_files_raises(self, tmp_path: Path) -> None:
         """get_changed_files raises when neither files nor base_branch is provided."""
         analyzer = MarkerTestAnalyzer(marker_expression="smoke", repo_root=tmp_path)
 
