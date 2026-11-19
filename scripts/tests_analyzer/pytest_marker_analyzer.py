@@ -1515,12 +1515,24 @@ def _diff_has_deletions(diff_content: str) -> bool:
     return any(line.startswith("-") and not line.startswith("---") for line in diff_content.splitlines())
 
 
+# Quoted segments are stripped before counting parentheses so that a literal
+# like "(" does not unbalance a statement. Escapes, nested quotes and multi-line
+# strings are not modelled, which can still leave a count wrong.
+_QUOTED_SEGMENT_PATTERN = re.compile(pattern=r"""(?:"[^"]*"|'[^']*')""")
+
+
 def _iter_diff_statements(diff_content: str) -> Iterator[tuple[str, str]]:
     """Iterate the changed statements of a unified diff.
 
     Continuation lines of a statement with unbalanced parentheses are joined so
-    that a multi-line import or signature is inspected as a whole instead of
-    being ignored or misread line by line.
+    that a multi-line import is inspected as a whole instead of being ignored or
+    misread line by line.  Grouping is only reliable for balanced statements:
+    parentheses inside string literals are stripped before counting, but
+    imperfect literal detection (escapes, nested quotes, multi-line strings) can
+    still leave the count unbalanced, in which case the following deleted lines
+    are joined into the same statement.  Callers must therefore not rely on a
+    statement starting a definition; deleted definitions are detected per line
+    (see ``_extract_deleted_symbols_from_diff``).
 
     Args:
         diff_content: Unified diff text.
@@ -1547,7 +1559,8 @@ def _iter_diff_statements(diff_content: str) -> Iterator[tuple[str, str]]:
         while index < len(lines) and lines[index][:1] == sign:
             content = lines[index][1:]
             parts.append(content)
-            open_parentheses += content.count("(") - content.count(")")
+            unquoted = _QUOTED_SEGMENT_PATTERN.sub(repl="", string=content)
+            open_parentheses += unquoted.count("(") - unquoted.count(")")
             index += 1
             if open_parentheses == 0:
                 break
@@ -1574,9 +1587,11 @@ def _deleted_definition_name(statement: str) -> str | None:
 def _extract_deleted_symbols_from_diff(diff_content: str) -> set[str]:
     """Extract names of functions and classes that were deleted in a diff.
 
-    Scans deletion statements (``-``) for ``def`` and ``class`` statements to
-    identify symbols that were removed.  This avoids the need to fetch
-    and parse the old file source.
+    Scans every deletion line (``-``) individually for ``def`` and ``class``
+    statements to identify symbols that were removed.  Per-line scanning keeps
+    a following deleted definition from being swallowed by a preceding one whose
+    statement grouping stayed open (an unbalanced parenthesis).  This avoids the
+    need to fetch and parse the old file source.
 
     Note:
         When a class with methods is deleted, both the class name *and* its member
@@ -1592,10 +1607,10 @@ def _extract_deleted_symbols_from_diff(diff_content: str) -> set[str]:
         Set of deleted function/class names.
     """
     deleted_symbols: set[str] = set()
-    for sign, statement in _iter_diff_statements(diff_content=diff_content):
-        if sign != "-":
+    for line in diff_content.splitlines():
+        if not line.startswith("-") or line.startswith("---"):
             continue
-        deleted_name = _deleted_definition_name(statement=statement.strip())
+        deleted_name = _deleted_definition_name(statement=line[1:].strip())
         if deleted_name is not None:
             deleted_symbols.add(deleted_name)
     return deleted_symbols
@@ -1650,8 +1665,8 @@ def _extract_imported_names(line: str) -> set[str] | None:
 def _collect_removal_symbols(diff_content: str) -> tuple[set[str], bool]:
     """Collect the symbols a diff removes and flag deletions it cannot attribute.
 
-    Deleted functions/classes and the names a deleted project import bound are
-    removal symbols.  A deletion is attributed when its replacement lines are in
+    Deleted functions/classes and the names a deleted import bound are removal
+    symbols.  A deletion is attributed when its replacement lines are in
     the diff (they map to changed new-file lines), when it is an import, or when
     it is part of a deleted definition.  An import that cannot be parsed (star
     import, unbalanced parentheses) and any other deletion are reported as
@@ -1699,53 +1714,32 @@ def _collect_removal_symbols(diff_content: str) -> tuple[set[str], bool]:
                 if imported_names is None:
                     # Star import or unparsable import edit — cannot narrow
                     has_unattributed = True
-                elif sign == "-" and _is_project_import(statement=statement):
-                    # Dropping a stdlib/third-party import only unbinds that
-                    # module's name here; it is not an API removal for importers.
+                elif sign == "-":
+                    # Any removed import unbinds its names in this module, whatever
+                    # the source: dropping ``from pyhelper_utils.shell import
+                    # run_command`` breaks ``ssp.run_command()`` for callers.
                     removal_symbols.update(imported_names)
                 continue
             if sign != "-" or replaced:
                 continue
-            indentation = len(statement) - len(statement.lstrip())
-            if deleted_definition_indent is not None and indentation > deleted_definition_indent:
-                # Line belongs to the body of the deleted definition above it.
-                continue
-            deleted_definition_indent = None
-            if _deleted_definition_name(statement=statement.strip()) is not None:
-                deleted_definition_indent = indentation
-                continue
-            has_unattributed = True
+            # Grouping may have joined lines (unbalanced parenthesis), so each
+            # line is attributed on its own: a deleted def is recognised wherever
+            # it starts, and its body is skipped by indentation.
+            for line in statement.splitlines():
+                if not line.strip():
+                    # A removed blank line removes no statement.
+                    continue
+                indentation = len(line) - len(line.lstrip())
+                if deleted_definition_indent is not None and indentation > deleted_definition_indent:
+                    # Line belongs to the body of the deleted definition above it.
+                    continue
+                deleted_definition_indent = None
+                if _deleted_definition_name(statement=line.strip()) is not None:
+                    deleted_definition_indent = indentation
+                    continue
+                has_unattributed = True
 
     return removal_symbols, has_unattributed
-
-
-_PROJECT_MODULE_PATTERN = re.compile(pattern=r"^(?:from|import)\s+(\.*)([A-Za-z_]\w*)")
-_PROJECT_PACKAGES = frozenset({"utilities", "libs", "tests"})
-
-
-def _is_project_import(statement: str) -> bool:
-    """Check whether an import statement imports from project code.
-
-    Used to tell a real API removal from the side effect of a diff dropping an
-    import that became unused (``import json``, ``from pyhelper_utils.shell
-    import run_ssh_commands``): only project modules can be imported by callers
-    through the changed file, so only those names are API removals.
-
-    Args:
-        statement: Stripped source line starting with ``import `` or
-            ``from ``.
-
-    Returns:
-        ``True`` for relative imports and for imports rooted at a project
-        package (``utilities``, ``libs``, ``tests``), ``False`` for stdlib and
-        third-party imports.
-    """
-    match = _PROJECT_MODULE_PATTERN.match(string=statement.strip())
-    if match is None:
-        # Unparsable — callers stay conservative.
-        return False
-    relative_dots, module = match.group(1), match.group(2)
-    return bool(relative_dots) or module in _PROJECT_PACKAGES
 
 
 def _get_diff_content(
@@ -1979,7 +1973,7 @@ def _extract_modified_symbols(
 
     has_deletions = _diff_has_deletions(diff_content=diff_content)
     # Symbols whose definition or binding was removed: deleted defs/classes plus
-    # names a deleted project import bound.  ``has_unattributed`` flags
+    # names a deleted import bound.  ``has_unattributed`` flags
     # deletions and import edits the diff cannot attribute to a symbol.
     removal_symbols, has_unattributed = _collect_removal_symbols(diff_content=diff_content)
 

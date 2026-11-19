@@ -35,6 +35,7 @@ from scripts.tests_analyzer.pytest_marker_analyzer import (
     _extract_modified_symbols,
     _get_modified_function_names,
     _is_fixture_decorator_standalone,
+    _iter_diff_statements,
     _parse_diff_for_functions,
     main,
     run_github_mode,
@@ -1242,8 +1243,8 @@ class TestExtractModifiedSymbolsUnattributed:
 
         assert result is None
 
-    def test_pure_deletion_returns_empty_classification(self, tmp_path: Path) -> None:
-        """When diff is pure deletion of non-symbol lines, returns empty SymbolClassification."""
+    def test_pure_deletion_returns_classification_with_removed_imports(self, tmp_path: Path) -> None:
+        """A pure deletion of imports returns the unbound names, not an empty set."""
         file_path = tmp_path / "module.py"
         file_path.write_text("def foo(): pass\n")
 
@@ -1263,7 +1264,7 @@ class TestExtractModifiedSymbolsUnattributed:
 
         # Pure deletion now returns SymbolClassification (not None) to enable symbol narrowing
         assert result is not None
-        assert result.modified_symbols == set()  # No def/class in deleted lines
+        assert result.modified_symbols == {"os", "sys"}, "dropped imports unbind their names, so both are removals"
 
     def test_executable_module_level_code_returns_none(self, tmp_path: Path) -> None:
         """When unmapped line is executable code (e.g. function call), returns None (conservative)."""
@@ -1849,13 +1850,13 @@ class TestSymbolAttributionRemovals:
         assert "wait_for_windows_vm" in result.modified_symbols, "a body-modified symbol must stay attributed"
         assert result.has_unattributed_changes is False, "import-line edits must not force file-level fallback"
 
-    def test_removed_third_party_imports_are_not_symbol_removals(self, tmp_path: Path) -> None:
-        """Diff-dropped stdlib/third-party imports are not API removals for importers.
+    def test_removed_third_party_imports_are_symbol_removals(self, tmp_path: Path) -> None:
+        """A diff-dropped stdlib/third-party import still unbinds its names.
 
         PR 6631 moved helpers out of ``utilities/ssp.py``; the now-unused
         ``import json``, ``import shlex`` and ``run_ssh_commands`` import were
-        dropped by the diff.  Those bare names collide with conftest fixture
-        calls, so treating them as removed symbols false-flagged smoke tests.
+        dropped by the diff.  The names leave the module namespace, so callers
+        using ``ssp.run_ssh_commands()`` break and must not be skipped.
         """
         source = textwrap.dedent("""\
             from utilities.constants import TCP_TIMEOUT_30SEC
@@ -1890,7 +1891,9 @@ class TestSymbolAttributionRemovals:
             )
 
         assert result is not None, "a resolvable diff must produce a classification, not None"
-        assert result.modified_symbols == set(), f"third-party imports are not API removals: {result.modified_symbols}"
+        assert result.modified_symbols == {"json", "shlex", "run_ssh_commands"}, (
+            f"every name a removed import bound is a removal symbol: {result.modified_symbols}"
+        )
         assert result.has_unattributed_changes is False, "third-party import removals are fully attributable"
 
     def test_relative_import_removal_of_unbound_name_is_attributed(self, tmp_path: Path) -> None:
@@ -3262,6 +3265,26 @@ class TestExtractDeletedSymbolsFromDiff:
         # "setup" and "teardown" could collide with unrelated top-level fixtures,
         # causing broader test selection — acceptable over-reporting for safety.
         assert result == {"OldHelper", "setup", "teardown"}
+
+    def test_paren_in_string_keeps_following_deleted_def(self) -> None:
+        """A paren inside a string literal must not swallow the next deleted def."""
+        diff = '@@ -1,4 +1,0 @@\n-def first(label="("):\n-    return label\n-def removed_helper():\n-    return None\n'
+        result = _extract_deleted_symbols_from_diff(diff_content=diff)
+        assert result == {"first", "removed_helper"}, (
+            f"every deleted def is detected on its own line; removed_helper must not be lost: {result}"
+        )
+
+
+class TestIterDiffStatements:
+    """Tests for the statement grouping used for import attribution."""
+
+    def test_balanced_multiline_import_is_one_statement(self) -> None:
+        """A parenthesized multi-line import stays grouped as a single statement."""
+        diff = "@@ -1,3 +1,0 @@\n-from utilities.ssp import (\n-    guest_agent_version_parser,\n-)\n"
+        statements = [statement for sign, statement in _iter_diff_statements(diff_content=diff) if sign]
+        assert statements == ["from utilities.ssp import (\n    guest_agent_version_parser,\n)"], (
+            f"a balanced multiline import must be attributed as one statement: {statements}"
+        )
 
 
 class TestPureDeletionSymbolNarrowing:
