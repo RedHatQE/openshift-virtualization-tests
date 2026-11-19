@@ -9,8 +9,8 @@ pytestmark = [pytest.mark.tier3, pytest.mark.special_infra, pytest.mark.tekton]
 @pytest.mark.parametrize(
     "pipelinerun_for_disk_uploader",
     [
-        pytest.param("vm", marks=pytest.mark.polarion("CNV-11721")),
-        pytest.param(PVC, marks=pytest.mark.polarion("CNV-11785")),
+        "vm",
+        PVC,
     ],
     indirect=True,
 )
@@ -20,6 +20,11 @@ def test_disk_uploader_pipelinerun(
     pipelinerun_for_disk_uploader,
     final_status_pipelinerun_for_disk_uploader,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-26682 # <skip-jira-utils-check>
+    Polarion: CNV-11721
+    Polarion: CNV-11785
+    """
     assert (
         final_status_pipelinerun_for_disk_uploader.status == Resource.Condition.Status.TRUE
         and final_status_pipelinerun_for_disk_uploader.type == Resource.Condition.Phase.SUCCEEDED

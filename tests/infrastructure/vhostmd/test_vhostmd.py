@@ -158,13 +158,16 @@ def run_vm_dump_metrics(vm):
     ],
     indirect=True,
 )
-@pytest.mark.polarion("CNV-6547")
 def test_vhostmd_disk(
     vhostmd_vm1,
     vhostmd_vm2,
     running_vhostmd_vm1,
     running_vhostmd_vm2,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-4398 # <skip-jira-utils-check>
+    Polarion: CNV-6547
+    """
     assert vhostmd_vm1.node_selector == vhostmd_vm2.node_selector, (
         f"Both the VM's should be running on the same node. "
         f"The  VM {vhostmd_vm1.name} runs on {vhostmd_vm1.node_selector} and "
