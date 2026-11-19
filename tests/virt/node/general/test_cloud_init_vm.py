@@ -25,6 +25,9 @@ def vm_with_cloud_init_type(unprivileged_client, namespace):
         yield vm
 
 
-@pytest.mark.polarion("CNV-3804")
 def test_cloud_init_types(vm_with_cloud_init_type):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-32427 # <skip-jira-utils-check>
+    Polarion: CNV-3804
+    """
     vm_with_cloud_init_type.ssh_exec.executor().is_connective()

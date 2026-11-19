@@ -68,7 +68,6 @@ class TestRHELIOOptions:
                     "disk_io_option": "threads",
                 },
                 "threads",
-                marks=pytest.mark.polarion("CNV-4567"),
             ),
             pytest.param(
                 {
@@ -76,7 +75,6 @@ class TestRHELIOOptions:
                     "template_labels": RHEL_LATEST_LABELS,
                 },
                 "native",
-                marks=pytest.mark.polarion("CNV-4560"),
             ),
         ],
         indirect=["disk_options_vm"],
@@ -87,6 +85,11 @@ class TestRHELIOOptions:
         disk_options_vm,
         expected_disk_io_option,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-197 # <skip-jira-utils-check>
+        Polarion: CNV-4567
+        Polarion: CNV-4560
+        """
         check_disk_io_option_on_domain_xml(
             vm=disk_options_vm,
             expected_disk_io_option=expected_disk_io_option,
@@ -114,7 +117,6 @@ class TestWindowsIOOptions:
                     "cpu_threads": 2,
                 },
                 "native",
-                marks=pytest.mark.polarion("CNV-4692"),
             ),
         ],
         indirect=["disk_options_vm"],
@@ -125,6 +127,10 @@ class TestWindowsIOOptions:
         disk_options_vm,
         expected_disk_io_option,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-197 # <skip-jira-utils-check>
+        Polarion: CNV-4692
+        """
         check_disk_io_option_on_domain_xml(
             vm=disk_options_vm,
             expected_disk_io_option=expected_disk_io_option,
