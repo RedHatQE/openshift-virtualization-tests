@@ -63,7 +63,6 @@ class TestIsolateEmulatorThreadAndIOThreadsPolicy:
                     "iothreads_policy": "auto",
                     "dedicated_iothread": True,
                 },
-                marks=pytest.mark.polarion("CNV-6755"),
                 id="test_latest_rhel_template_flavor_large",
             ),
         ],
@@ -75,6 +74,9 @@ class TestIsolateEmulatorThreadAndIOThreadsPolicy:
         iothreads_policy_vm,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-9064 # <skip-jira-utils-check>
+        Polarion: CNV-6755
+
         Test when ioThreadsPolicy is "auto"
         Ensure that KubeVirt will allocate ioThreads to the same physical cpu
         of the QEMU Emulator Thread.

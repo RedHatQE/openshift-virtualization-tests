@@ -68,13 +68,15 @@ class TestIsolateEmulatorThread:
     """
 
     @pytest.mark.dependency(name=ISOLATE_EMULATOR_THREAD)
-    @pytest.mark.polarion("CNV-6744")
     def test_isolate_emulator_thread(
         self,
         admin_client,
         isolated_emulatorthread_vm,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-9064 # <skip-jira-utils-check>
+        Polarion: CNV-6744
+
         Test if a dedicated cpu is allocated for QEMU Emulator,
         when isolateEmulatorThread is True.
         """
@@ -88,8 +90,11 @@ class TestIsolateEmulatorThread:
 
     @pytest.mark.rwx_default_storage
     @pytest.mark.dependency(depends=[ISOLATE_EMULATOR_THREAD])
-    @pytest.mark.polarion("CNV-10554")
     def test_vm_with_isolate_emulator_thread_live_migrates(
         self, admin_client: DynamicClient, isolated_emulatorthread_vm: VirtualMachineForTests
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-9064 # <skip-jira-utils-check>
+        Polarion: CNV-10554
+        """
         migrate_vm_and_verify(vm=isolated_emulatorthread_vm, client=admin_client)

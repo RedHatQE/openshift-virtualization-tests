@@ -61,49 +61,67 @@ class TestPCIPassthroughWinHostDevicesSpec:
     """
 
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::test_access_hostdevices_win_vm")
-    @pytest.mark.polarion("CNV-5646")
     def test_access_hostdevices_win_vm(self, supported_gpu_device, gpu_vma):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-4762 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-4776 # <skip-jira-utils-check>
+        Polarion: CNV-5646
+
         Test Device is accessible in Windows VM with hostdevices spec.
         """
         verify_gpu_device_exists_in_vm(vm=gpu_vma, supported_gpu_device=supported_gpu_device)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::test_access_hostdevices_win_vm"])
-    @pytest.mark.polarion("CNV-5647")
     def test_pause_unpause_hostdevices_win_vm(self, gpu_vma):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-4762 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-4776 # <skip-jira-utils-check>
+        Polarion: CNV-5647
+
         Test Windows VM with Device using hostdevices spec, can be paused and unpaused successfully.
         """
         validate_pause_unpause_windows_vm(vm=gpu_vma)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::test_access_hostdevices_win_vm"])
-    @pytest.mark.polarion("CNV-5648")
     def test_restart_hostdevices_win_vm(self, gpu_vma, supported_gpu_device):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-4762 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-4776 # <skip-jira-utils-check>
+        Polarion: CNV-5648
+
         Test Windows VM with Device using hostdevices spec, can be restarted successfully.
         """
         restart_and_check_gpu_exists(vm=gpu_vma, supported_gpu_device=supported_gpu_device)
 
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::test_access_gpus_win_vm")
-    @pytest.mark.polarion("CNV-5742")
     def test_access_gpus_win_vm(self, gpu_vma, updated_vm_gpus_spec, supported_gpu_device):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-4762 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-4776 # <skip-jira-utils-check>
+        Polarion: CNV-5742
+
         Test Device is accessible in Windows VM with gpus spec.
         """
         restart_and_check_gpu_exists(vm=gpu_vma, supported_gpu_device=supported_gpu_device)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::test_access_gpus_win_vm"])
-    @pytest.mark.polarion("CNV-5743")
     def test_pause_unpause_gpus_win_vm(self, gpu_vma):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-4762 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-4776 # <skip-jira-utils-check>
+        Polarion: CNV-5743
+
         Test Windows VM with Device using gpus spec, can be paused and unpaused successfully.
         """
         validate_pause_unpause_windows_vm(vm=gpu_vma)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::test_access_gpus_win_vm"])
-    @pytest.mark.polarion("CNV-5744")
     def test_restart_gpus_win_vm(self, gpu_vma, supported_gpu_device):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-4776 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-4762 # <skip-jira-utils-check>
+        Polarion: CNV-5744
+
         Test Windows VM with Device using gpus spec, can be restarted successfully.
         """
         restart_and_check_gpu_exists(vm=gpu_vma, supported_gpu_device=supported_gpu_device)

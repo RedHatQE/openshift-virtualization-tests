@@ -24,9 +24,11 @@ def rng_vm(unprivileged_client, namespace):
         yield vm
 
 
-@pytest.mark.polarion("CNV-791")
 def test_vm_with_rng(rng_vm):
     """
+    Jira: https://redhat.atlassian.net/browse/KNIP-197 # <skip-jira-utils-check>
+    Polarion: CNV-791
+
     Test VM with RNG
      - check random device should be present
      - create random data with each device
