@@ -134,10 +134,11 @@ def get_all_release_versions_from_docs(major_ver_num: int) -> list[int]:
         requests.RequestException: If the HTTP request to the documentation page fails.
     """
     url = f"https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/{major_ver_num}/"
+    # docs.redhat.com returns 403 unless the User-Agent starts with "curl/"
     response = requests.get(
         url=url,
         timeout=TIMEOUT_30SEC,
-        headers={"User-Agent": "curl/latest"},
+        headers={"User-Agent": "curl/openshift-virtualization-tests"},
     )
     response.raise_for_status()
 
