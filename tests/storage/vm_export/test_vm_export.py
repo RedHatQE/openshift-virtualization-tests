@@ -11,6 +11,7 @@ from ocp_resources.resource import Resource
 from ocp_resources.virtual_machine_export import VirtualMachineExport
 
 from tests.storage.constants import TEST_FILE_CONTENT, TEST_FILE_NAME
+from tests.storage.stop_status_utils import dv_stop_status_no_progress
 from utilities.infra import run_virtctl_command
 from utilities.storage import run_command_on_vm_and_check_output
 from utilities.virt import running_vm
@@ -61,7 +62,11 @@ def test_fail_to_vmexport_with_unprivileged_client_no_permissions(
 def test_vmexport_snapshot_manifests(
     vm_from_vmexport,
 ):
-    running_vm(vm=vm_from_vmexport)
+    running_vm(
+        vm=vm_from_vmexport,
+        dv_stop_status_func=dv_stop_status_no_progress,
+        dv_stop_status_kwargs={"progress_state": {}},
+    )
     run_command_on_vm_and_check_output(
         vm=vm_from_vmexport, command=f"cat {TEST_FILE_NAME}", expected_result=TEST_FILE_CONTENT
     )
