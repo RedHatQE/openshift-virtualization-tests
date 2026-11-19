@@ -128,7 +128,7 @@ def restored_cbt_vm_from_push_backup(
         Writes the restored boot disk, and deletes the restored VM and target PVC on exit.
 
     Raises:
-        RuntimeError: When the target PVC is not deleted before the wait timeout.
+        RuntimeError: When the restored VM or the target PVC is not deleted before the wait timeout.
     """
     backup = _single_full_backup(backups=backups)
     vm_name = _backed_up_vm_name(backup=backup, namespace=namespace, client=client)
@@ -184,9 +184,22 @@ def restored_cbt_vm_from_push_backup(
         try:
             if restored_vm is not None:
                 restored_vm.clean_up(wait=True)
+                require_vm_deleted(vm=restored_vm)
         finally:
             if target_pvc is not None and not target_pvc.clean_up(wait=True):
                 raise RuntimeError(f"Timed out deleting restore PVC {namespace}/{target_pvc.name}")
+
+
+def require_vm_deleted(vm: VirtualMachineForTests) -> None:
+    """Raise when a VM is still present after cleanup.
+
+    VirtualMachineForTests.clean_up returns True when VM deletion times out.
+
+    Raises:
+        RuntimeError: When the VM still exists.
+    """
+    if vm.exists:
+        raise RuntimeError(f"Timed out deleting VM {vm.namespace}/{vm.name}")
 
 
 def _single_full_backup(backups: list[VirtualMachineBackup]) -> VirtualMachineBackup:
@@ -447,12 +460,17 @@ def _select_volume_qcow2(
     checkpoint_name: str,
     volume_name: str,
 ) -> str:
-    """Return the one qcow2 whose filename stem equals the volume name.
+    """Return the one qcow2 for this volume in the full backup.
+
+    KubeVirt writes ``<vm>/<checkpoint>/<backup>-<volume>.qcow2``. A file whose
+    stem is exactly ``<backup>-<volume>`` or the volume name is also accepted.
 
     Raises:
         RuntimeError: When the backup does not contain exactly one matching qcow2.
     """
+    producer_filename = f"{backup_name}-{volume_name}.qcow2"
     exact_candidates = [
+        f"{CBT_BACKUP_DIR}/{vm_name}/{checkpoint_name}/{producer_filename}",
         f"{CBT_BACKUP_DIR}/{vm_name}/{backup_name}/{volume_name}.qcow2",
         f"{CBT_BACKUP_DIR}/{vm_name}/{checkpoint_name}/{volume_name}.qcow2",
         f"{CBT_BACKUP_DIR}/{backup_name}/{volume_name}.qcow2",
@@ -467,7 +485,8 @@ def _select_volume_qcow2(
         backup_name=backup_name,
         checkpoint_name=checkpoint_name,
     )
-    exact_names = [path for path in matched if Path(path).stem == volume_name]
+    exact_stems = {volume_name, f"{backup_name}-{volume_name}"}
+    exact_names = [path for path in matched if Path(path).stem in exact_stems]
     if len(exact_names) == 1:
         return exact_names[0]
     listing = "\n".join(qcow2_files) if qcow2_files else "<none>"

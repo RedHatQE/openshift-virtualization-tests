@@ -14,7 +14,7 @@ from tests.storage.cbt.constants import (
     CBT_CONCURRENT_VM_COUNT,
     CBT_ENABLED_LABEL,
 )
-from tests.storage.cbt.restore import restored_cbt_vm_from_push_backup
+from tests.storage.cbt.restore import require_vm_deleted, restored_cbt_vm_from_push_backup
 from tests.storage.cbt.utils import (
     cbt_backup_pvc,
     cbt_backup_tracker,
@@ -740,9 +740,13 @@ def deleted_cbt_source_vm(
 
     Yields:
         VirtualMachineForTests: The deleted source VM.
+
+    Raises:
+        RuntimeError: When the source VM is still present after deletion.
     """
     LOGGER.info(f"Deleting source VM {vm_with_cbt_label.name} after push backup {completed_push_backup_chain[0].name}")
     vm_with_cbt_label.clean_up(wait=True)
+    require_vm_deleted(vm=vm_with_cbt_label)
     vm_with_cbt_label.teardown = False
     yield vm_with_cbt_label
 
