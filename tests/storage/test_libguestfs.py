@@ -95,12 +95,10 @@ def client_for_test(request, admin_client, unprivileged_client):
         pytest.param(
             {"admin_client": False},
             {"data_volume_name": "guestfs-cnv-9655"},
-            marks=(pytest.mark.polarion("CNV-9655")),
         ),
         pytest.param(
             {"admin_client": True},
             {"data_volume_name": "guestfs-cnv-6566"},
-            marks=(pytest.mark.polarion("CNV-6566")),
         ),
     ],
     indirect=True,
@@ -113,6 +111,9 @@ def test_virtctl_libguestfs_with_specific_user(
     Test that virtctl guestfs runs libguestfs-test-tool successfully as the selected user.
 
     Jira: https://redhat.atlassian.net/browse/CNV-7487  # <skip-jira-utils-check>
+    Polarion: CNV-9655
+    Polarion: CNV-6566
+
 
     Preconditions:
         - Fedora data volume successfully imported in the test namespace
