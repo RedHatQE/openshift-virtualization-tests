@@ -99,8 +99,10 @@ from utilities.constants.timeouts import (
     TIMEOUT_10MIN,
     TIMEOUT_10SEC,
     TIMEOUT_12MIN,
+    TIMEOUT_15SEC,
     TIMEOUT_25MIN,
     TIMEOUT_30MIN,
+    TIMEOUT_30SEC,
 )
 from utilities.constants.virt import (
     CLOUD_INIT_DISK_NAME,
@@ -3057,19 +3059,36 @@ def guest_reboot(vm: VirtualMachineForTests, os_type: str) -> None:
     }
 
     LOGGER.info("Stopping user agent")
-    run_os_command(vm=vm, command=commands["stop-user-agent"][os_type])
+    if os_type == OS_FLAVOR_WINDOWS:
+        run_os_command(vm=vm, command=commands["stop-user-agent"][os_type], timeout=TIMEOUT_30SEC)
+    else:
+        run_os_command(vm=vm, command=commands["stop-user-agent"][os_type])
     wait_for_user_agent_down(vm=vm, timeout=TIMEOUT_2MIN)
 
     LOGGER.info(f"Rebooting {vm.name} from guest")
     run_os_command(vm=vm, command=commands["reboot"][os_type])
 
 
-def run_os_command(vm: VirtualMachineForTests, command: str) -> str | None:
+def run_os_command(vm: VirtualMachineForTests, command: str, timeout: int = TIMEOUT_15SEC) -> str | None:
+    """
+    Run a command over the VM SSH connection.
+
+    Args:
+        vm (VirtualMachineForTests): Guest VM to run the command on.
+        command (str): Shell command to execute.
+        timeout (int): Seconds to wait for command output after the SSH session is up.
+
+    Returns:
+        str | None: Command output. None when a reboot command drops the SSH proxy.
+
+    Raises:
+        ProxyCommandFailure: The SSH proxy dropped and the command is not a reboot.
+    """
     try:
         return run_ssh_commands(
             host=vm.ssh_exec,
             commands=shlex.split(command),
-            timeout=15,
+            timeout=timeout,
             tcp_timeout=TCP_TIMEOUT_30SEC,
         )[0]
     except ProxyCommandFailure:
