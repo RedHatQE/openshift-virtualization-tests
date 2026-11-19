@@ -440,14 +440,19 @@ def verify_vm_pending_until_storage_migration_completed(
     try:
         for sample in samples:
             last_sample = sample
+            # Record the not-ready observation before the completion check: the migration can
+            # complete between the in-progress wait and the VM start, and the freshly started VM
+            # must still count as observed not ready before the loop exits.
+            vm_is_ready = vm.ready
+            if not vm_is_ready:
+                observed_vm_not_ready = True
             if (
                 sample
                 and sample.namespaces
                 and all(namespace.get("phase") == mig_migration.Status.COMPLETED for namespace in sample.namespaces)
             ):
                 break
-            if not vm.ready:
-                observed_vm_not_ready = True
+            if not vm_is_ready:
                 continue
             not_succeeded_dvs = {}
             for dv_name in get_vm_dv_names(vm=vm):

@@ -134,7 +134,7 @@ class TestOfflineVMStorageMigrationVolumeModes:
     """
 
     @pytest.mark.polarion("CNV-16796")
-    @pytest.mark.usefixtures("volume_mode_offline_mig_migration")
+    @pytest.mark.usefixtures("completed_volume_mode_offline_mig_migration")
     def test_offline_vm_storage_migration_across_volume_modes(
         self,
         target_storage_class,
@@ -281,7 +281,7 @@ class TestOfflineStorageMigrationCleanupPolicy:
         indirect=True,
     )
     @pytest.mark.polarion("CNV-16798")
-    @pytest.mark.usefixtures("offline_vm_mig_migration")
+    @pytest.mark.usefixtures("completed_offline_vm_mig_migration")
     def test_source_volumes_retained_after_offline_migration(
         self,
         stopped_vm_with_written_file_for_scmig,
@@ -326,7 +326,7 @@ class TestOfflineStorageMigrationCleanupPolicy:
         indirect=True,
     )
     @pytest.mark.polarion("CNV-16799")
-    @pytest.mark.usefixtures("offline_vm_mig_migration")
+    @pytest.mark.usefixtures("completed_offline_vm_mig_migration")
     def test_source_volumes_deleted_after_offline_migration(
         self,
         stopped_vm_with_written_file_for_scmig,
@@ -388,7 +388,7 @@ class TestOfflineVMStorageMigrationWithHotplugDisks:
     """
 
     @pytest.mark.polarion("CNV-16800")
-    @pytest.mark.usefixtures("hotplug_offline_mig_migration")
+    @pytest.mark.usefixtures("completed_hotplug_offline_mig_migration")
     def test_offline_vm_with_hotplug_disks_storage_migration(
         self,
         target_storage_class,
@@ -465,7 +465,7 @@ class TestOfflineVMSameClassMigrationAcrossNodes:
     @pytest.mark.special_infra
     @pytest.mark.tier3
     @pytest.mark.polarion("CNV-16801")
-    @pytest.mark.usefixtures("hpp_node_to_node_mig_migration")
+    @pytest.mark.usefixtures("completed_hpp_node_to_node_mig_migration")
     def test_offline_vm_same_class_hpp_migration_across_nodes(
         self,
         stopped_vm_with_written_file_for_scmig,
@@ -540,7 +540,7 @@ class TestOfflineVMStorageMigrationFailureRollback:
         run=False,
     )
     @pytest.mark.polarion("CNV-16802")
-    @pytest.mark.usefixtures("offline_failure_mig_migration")
+    @pytest.mark.usefixtures("failed_offline_failure_mig_migration")
     def test_offline_vm_rollback_on_migration_failure(
         self,
         stopped_vm_for_scmig_test_first_ns,
@@ -603,7 +603,7 @@ class TestVMStartDuringStorageMigration:
     def test_vm_start_during_offline_storage_migration(
         self,
         target_storage_class,
-        offline_vm_mig_migration_in_progress,
+        in_progress_offline_vm_mig_migration,
         started_vm_during_offline_scmig,
     ):
         """
@@ -631,7 +631,7 @@ class TestVMStartDuringStorageMigration:
             - File content equals the pre-migration written data
         """
         verify_vm_pending_until_storage_migration_completed(
-            vm=started_vm_during_offline_scmig, mig_migration=offline_vm_mig_migration_in_progress
+            vm=started_vm_during_offline_scmig, mig_migration=in_progress_offline_vm_mig_migration
         )
         running_vm(vm=started_vm_during_offline_scmig)
         verify_vm_storage_class_updated(vm=started_vm_during_offline_scmig, target_storage_class=target_storage_class)
