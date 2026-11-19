@@ -27,7 +27,6 @@ ERROR_MSG_USER_CANNOT_CREATE_VM_EXPORT = (
     [
         pytest.param(
             {"use_unprivileged_client": False},
-            marks=pytest.mark.polarion("CNV-9338"),
         )
     ],
     indirect=True,
@@ -38,6 +37,10 @@ def test_fail_to_vmexport_with_unprivileged_client_no_permissions(
     blank_dv_created_by_admin_user,
     unprivileged_client,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-17429 # <skip-jira-utils-check>
+    Polarion: CNV-9338
+    """
     with pytest.raises(
         ApiException,
         match=ERROR_MSG_USER_CANNOT_CREATE_VM_EXPORT,
@@ -55,12 +58,15 @@ def test_fail_to_vmexport_with_unprivileged_client_no_permissions(
             assert not vmexport, "VMExport created by unprivileged client"
 
 
-@pytest.mark.polarion("CNV-9903")
 @pytest.mark.gating()
 @pytest.mark.s390x
 def test_vmexport_snapshot_manifests(
     vm_from_vmexport,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-17429 # <skip-jira-utils-check>
+    Polarion: CNV-9903
+    """
     running_vm(vm=vm_from_vmexport)
     run_command_on_vm_and_check_output(
         vm=vm_from_vmexport, command=f"cat {TEST_FILE_NAME}", expected_result=TEST_FILE_CONTENT
@@ -68,10 +74,13 @@ def test_vmexport_snapshot_manifests(
 
 
 @pytest.mark.s390x
-@pytest.mark.polarion("CNV-11597")
 def test_virtctl_vmexport_unprivileged(
     vmexport_download_path, blank_dv_created_by_unprivileged_user, virtctl_unprivileged_client
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-17429 # <skip-jira-utils-check>
+    Polarion: CNV-11597
+    """
     return_code, out, err = run_virtctl_command(
         command=shlex.split(
             f"vmexport download test-pvc-export-unprivileged --pvc={blank_dv_created_by_unprivileged_user.name} "

@@ -52,8 +52,11 @@ def get_population_method_by_provisioner(storage_class, cluster_csi_drivers_name
 
 
 @pytest.mark.sno
-@pytest.mark.polarion("CNV-2192")
 def test_successful_virtctl_upload_no_url(unprivileged_client, namespace, tmpdir):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-498 # <skip-jira-utils-check>
+    Polarion: CNV-2192
+    """
     local_name = f"{tmpdir}/{Images.Cdi.QCOW2_IMG}"
     get_downloaded_artifact(remote_name=f"{Images.Cdi.DIR}/{Images.Cdi.QCOW2_IMG}", local_name=local_name)
     pvc_name = "cnv-2192"
@@ -71,7 +74,6 @@ def test_successful_virtctl_upload_no_url(unprivileged_client, namespace, tmpdir
 
 
 @pytest.mark.destructive
-@pytest.mark.polarion("CNV-2191")
 def test_successful_virtctl_upload_no_route(
     admin_client,
     hco_namespace,
@@ -79,6 +81,10 @@ def test_successful_virtctl_upload_no_route(
     tmpdir,
     uploadproxy_route_deleted,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-498 # <skip-jira-utils-check>
+    Polarion: CNV-2191
+    """
     route = Route(name=CDI_UPLOADPROXY, namespace=hco_namespace.name, client=admin_client)
     with pytest.raises(NotFoundError):
         route.instance
@@ -104,13 +110,16 @@ def test_successful_virtctl_upload_no_route(
 
 
 @pytest.mark.sno
-@pytest.mark.polarion("CNV-2217")
 def test_image_upload_with_overridden_url(
     unprivileged_client,
     namespace,
     tmpdir,
     cdi_config_upload_proxy_overridden,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-484 # <skip-jira-utils-check>
+    Polarion: CNV-2217
+    """
     pvc_name = "cnv-2217"
     local_name = f"{tmpdir}/{Images.Cdi.QCOW2_IMG}"
     get_downloaded_artifact(remote_name=f"{Images.Cdi.DIR}/{Images.Cdi.QCOW2_IMG}", local_name=local_name)
@@ -128,7 +137,6 @@ def test_image_upload_with_overridden_url(
 
 
 @pytest.mark.sno
-@pytest.mark.polarion("CNV-3031")
 @pytest.mark.s390x
 @pytest.mark.xfail(
     reason=f"{QUARANTINED}: Test fails when running from container; tracked in CNV-18870",
@@ -140,6 +148,10 @@ def test_virtctl_image_upload_with_ca(
     tmpdir,
     namespace,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-498 # <skip-jira-utils-check>
+    Polarion: CNV-3031
+    """
     local_path = f"{tmpdir}/{Images.Cdi.QCOW2_IMG}"
     get_downloaded_artifact(remote_name=f"{Images.Cdi.DIR}/{Images.Cdi.QCOW2_IMG}", local_name=local_path)
     pvc_name = "cnv-3031"
@@ -158,7 +170,6 @@ def test_virtctl_image_upload_with_ca(
 
 @pytest.mark.smoke
 @pytest.mark.sno
-@pytest.mark.polarion("CNV-3724")
 def test_virtctl_image_upload_dv(
     unprivileged_client,
     namespace,
@@ -166,6 +177,10 @@ def test_virtctl_image_upload_dv(
     download_image,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/KNIP-1123 # <skip-jira-utils-check>
+    Jira: https://redhat.atlassian.net/browse/KNIP-1196 # <skip-jira-utils-check>
+    Polarion: CNV-3724
+
     Check that upload a local disk image to a newly created DataVolume
     """
     dv_name = f"cnv-3724-{storage_class_name_immediate_binding_scope_module}"
@@ -194,7 +209,6 @@ def test_virtctl_image_upload_dv(
                 "image": f"{Images.Cirros.DIR}/{Images.Cirros.QCOW2_IMG}",
                 "dv_size": Images.Cirros.DEFAULT_DV_SIZE,
             },
-            marks=(pytest.mark.polarion("CNV-3726")),
         ),
     ],
     indirect=True,
@@ -209,6 +223,9 @@ def test_virtctl_image_upload_with_exist_dv_image(
     cluster_csi_drivers_names,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/KNIP-1123 # <skip-jira-utils-check>
+    Polarion: CNV-3726
+
     Check that virtctl fails gracefully when attempting to upload an image to a data volume that already has disk.img
     """
     dv_name = data_volume_multi_storage_scope_function.name
@@ -238,10 +255,12 @@ def test_virtctl_image_upload_with_exist_dv_image(
 
 @pytest.mark.sno
 @pytest.mark.gating
-@pytest.mark.polarion("CNV-3728")
 @pytest.mark.s390x
 def test_virtctl_image_upload_pvc(download_image, namespace, storage_class_name_scope_module):
     """
+    Jira: https://redhat.atlassian.net/browse/KNIP-1123 # <skip-jira-utils-check>
+    Polarion: CNV-3728
+
     Check that virtctl can create a new PVC and upload an image to it
     """
     if is_ipv6_single_stack_cluster():
@@ -266,18 +285,24 @@ def test_virtctl_image_upload_pvc(download_image, namespace, storage_class_name_
 
 @pytest.mark.sno
 class TestVirtctlUploadExistingDV:
-    @pytest.mark.polarion("CNV-3725")
     def test_virtctl_image_upload_to_existing_dv_and_create_vm(self, unprivileged_client, uploaded_dv_scope_class):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1123 # <skip-jira-utils-check>
+        Polarion: CNV-3725
+        """
         uploaded_dv_scope_class.wait_for_dv_success(
             stop_status_func=dv_stop_status_restart_threshold, dv=uploaded_dv_scope_class
         )
         with create_vm_from_dv(dv=uploaded_dv_scope_class, client=unprivileged_client, start=True):
             pass
 
-    @pytest.mark.polarion("CNV-4033")
     def test_virtctl_image_upload_to_existing_dv_and_validate_populator(
         self, uploaded_dv_scope_class, storage_class_name_scope_class, cluster_csi_drivers_names
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-365 # <skip-jira-utils-check>
+        Polarion: CNV-4033
+        """
         assert_use_populator(
             pvc=uploaded_dv_scope_class.pvc,
             storage_class=storage_class_name_scope_class,
@@ -314,7 +339,6 @@ def empty_pvc(
 
 
 @pytest.mark.sno
-@pytest.mark.polarion("CNV-3727")
 def test_virtctl_image_upload_with_exist_pvc(
     empty_pvc,
     download_image,
@@ -322,6 +346,9 @@ def test_virtctl_image_upload_with_exist_pvc(
     storage_class_name_scope_module,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/KNIP-1123 # <skip-jira-utils-check>
+    Polarion: CNV-3727
+
     Check that virtctl can upload an local disk image to an existing empty PVC
     """
     with virtctl_upload_dv(
@@ -348,7 +375,6 @@ def test_virtctl_image_upload_with_exist_pvc(
                 running_vm(vm=vm, wait_for_interfaces=False)
 
 
-@pytest.mark.polarion("CNV-3729")
 @pytest.mark.s390x
 def test_virtctl_image_upload_with_exist_pvc_image(
     admin_client,
@@ -358,6 +384,9 @@ def test_virtctl_image_upload_with_exist_pvc_image(
     cluster_csi_drivers_names,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/KNIP-1123 # <skip-jira-utils-check>
+    Polarion: CNV-3729
+
     Check that virtctl fails gracefully when attempting to upload an image to a PVC that already has disk.img
     """
     pvc_name = f"cnv-3729-{storage_class_name_scope_module}"
@@ -395,7 +424,6 @@ def test_virtctl_image_upload_with_exist_pvc_image(
             )
 
 
-@pytest.mark.polarion("CNV-3730")
 @pytest.mark.s390x
 def test_virtctl_image_upload_dv_with_exist_pvc(
     empty_pvc,
@@ -405,6 +433,9 @@ def test_virtctl_image_upload_dv_with_exist_pvc(
     schedulable_nodes,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/KNIP-1123 # <skip-jira-utils-check>
+    Polarion: CNV-3730
+
     Check that virtctl fails gracefully when attempting to upload an image to a new data volume
     - PVC with the same name already exists.
     """
@@ -424,7 +455,6 @@ def test_virtctl_image_upload_dv_with_exist_pvc(
         )
 
 
-@pytest.mark.polarion("CNV-16270")
 @pytest.mark.usefixtures("primary_udn_for_upload", "download_image")
 def test_virtctl_image_upload_dv_in_pudn_namespace(
     admin_client,
@@ -436,6 +466,9 @@ def test_virtctl_image_upload_dv_in_pudn_namespace(
     with a primary User Defined Network (UDN).
 
     Jira: https://redhat.atlassian.net/browse/CNV-58018 # <skip-jira-utils-check>
+    Jira: https://redhat.atlassian.net/browse/KNIP-1123 # <skip-jira-utils-check>
+    Polarion: CNV-16270
+
 
     Preconditions:
         - Namespace with a primary UDN label
@@ -509,7 +542,6 @@ def test_successful_vm_from_uploaded_dv_windows(
                 "image_path": RHEL_LATEST.get("image_path"),
                 "image_file": RHEL_LATEST.get("image_name"),
             },
-            marks=(pytest.mark.polarion("CNV-4512")),
         ),
     ],
     indirect=True,
@@ -519,6 +551,9 @@ def test_print_response_body_on_error_upload_virtctl(
     namespace, download_specified_image, storage_class_name_scope_module
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-4910 # <skip-jira-utils-check>
+    Polarion: CNV-4512
+
     Check that CDI now reports validation failures as part of the body response
     in case for instance the disk image virtual size > PVC size > disk size
     """

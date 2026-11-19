@@ -128,7 +128,6 @@ def vm_from_uploaded_dv(namespace, uploaded_dv_via_virtctl_wffc, uploaded_wffc_d
 
 class TestWFFCUploadVirtctl:
     @pytest.mark.sno
-    @pytest.mark.polarion("CNV-4711")
     @pytest.mark.s390x
     def test_wffc_fail_to_upload_dv_via_virtctl(
         self,
@@ -136,6 +135,10 @@ class TestWFFCUploadVirtctl:
         uploaded_dv_via_virtctl_wffc,
         uploaded_wffc_dv,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-2641 # <skip-jira-utils-check>
+        Polarion: CNV-4711
+        """
         check_upload_virtctl_result(
             result=uploaded_dv_via_virtctl_wffc,
             expected_success=False,
@@ -156,7 +159,6 @@ class TestWFFCUploadVirtctl:
         )
 
     @pytest.mark.sno
-    @pytest.mark.polarion("CNV-7413")
     @pytest.mark.s390x
     def test_wffc_create_vm_from_uploaded_dv_via_virtctl(
         self,
@@ -164,6 +166,10 @@ class TestWFFCUploadVirtctl:
         vm_from_uploaded_dv,
         wffc_storage_class_name_scope_module,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-2641 # <skip-jira-utils-check>
+        Polarion: CNV-7413
+        """
         with virtctl_upload_dv(
             client=vm_from_uploaded_dv.client,
             namespace=vm_from_uploaded_dv.namespace,
@@ -183,7 +189,6 @@ class TestWFFCUploadVirtctl:
 
 @pytest.mark.sno
 @pytest.mark.s390x
-@pytest.mark.polarion("CNV-4742")
 @pytest.mark.parametrize(
     "blank_dv_wffc_scope_function",
     [
@@ -198,6 +203,10 @@ def test_wffc_add_dv_to_vm_with_data_volume_template(
     rhel10_data_source_scope_module,
     blank_dv_wffc_scope_function,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-4772 # <skip-jira-utils-check>
+    Polarion: CNV-4742
+    """
     with VirtualMachineForTests(
         client=unprivileged_client,
         name="cnv-4742-vm",
@@ -219,7 +228,6 @@ def test_wffc_add_dv_to_vm_with_data_volume_template(
 
 @pytest.mark.sno
 @pytest.mark.s390x
-@pytest.mark.polarion("CNV-4743")
 @pytest.mark.parametrize(
     "blank_dv_template_wffc_scope_function", [pytest.param({"dv_name": "blank-wffc-4743"})], indirect=True
 )
@@ -230,6 +238,10 @@ def test_wffc_vm_with_two_data_volume_templates(
     rhel10_data_source_scope_module,
     blank_dv_template_wffc_scope_function,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-4772 # <skip-jira-utils-check>
+    Polarion: CNV-4743
+    """
     with VirtualMachineForTests(
         client=unprivileged_client,
         name="cnv-4743-vm",
