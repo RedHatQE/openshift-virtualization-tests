@@ -22,10 +22,13 @@ def virtctl_go_kube_server_version():
     return virtctl_go_kube_version_dict
 
 
-@pytest.mark.polarion("CNV-11017")
 @pytest.mark.s390x
 @pytest.mark.conformance
 def test_kubevirt_info_version(prometheus, virtctl_go_kube_server_version):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-29829 # <skip-jira-utils-check>
+    Polarion: CNV-11017
+    """
     metric_result_output = prometheus.query_sampler(query="kubevirt_info")
     assert_virtctl_version_equal_metric_output(
         virtctl_server_version=virtctl_go_kube_server_version,

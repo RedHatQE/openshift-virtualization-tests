@@ -22,23 +22,17 @@ class TestKubevirtVmiMigrationMetrics:
     @pytest.mark.parametrize(
         "query",
         [
-            pytest.param(KUBEVIRT_VMI_MIGRATION_DATA_PROCESSED_BYTES, marks=(pytest.mark.polarion("CNV-11417"))),
-            pytest.param(
-                KUBEVIRT_VMI_MIGRATION_DATA_REMAINING_BYTES,
-                marks=(pytest.mark.polarion("CNV-11600")),
-            ),
+            KUBEVIRT_VMI_MIGRATION_DATA_PROCESSED_BYTES,
+            KUBEVIRT_VMI_MIGRATION_DATA_REMAINING_BYTES,
             pytest.param(
                 KUBEVIRT_VMI_MIGRATION_MEMORY_TRANSFER_RATE_BYTES,
-                marks=[pytest.mark.jira("CNV-98667", run=False), pytest.mark.polarion("CNV-11598")],
+                marks=[pytest.mark.jira("CNV-98667", run=False)],
             ),
             pytest.param(
                 KUBEVIRT_VMI_MIGRATION_DIRTY_MEMORY_RATE_BYTES,
-                marks=[pytest.mark.jira("CNV-98667", run=False), pytest.mark.polarion("CNV-11599")],
+                marks=[pytest.mark.jira("CNV-98667", run=False)],
             ),
-            pytest.param(
-                KUBEVIRT_VMI_MIGRATION_DATA_TOTAL_BYTES,
-                marks=(pytest.mark.polarion("CNV-11802")),
-            ),
+            KUBEVIRT_VMI_MIGRATION_DATA_TOTAL_BYTES,
         ],
     )
     @pytest.mark.s390x
@@ -52,13 +46,21 @@ class TestKubevirtVmiMigrationMetrics:
         vm_migration_metrics_vmim_scope_function,
         query,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-37525 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-48213 # <skip-jira-utils-check>
+        Polarion: CNV-11417
+        Polarion: CNV-11600
+        Polarion: CNV-11598
+        Polarion: CNV-11599
+        Polarion: CNV-11802
+        """
         wait_for_non_empty_metrics_value(
             prometheus=prometheus, metric_name=query.format(vm_name=vm_for_migration_metrics_test.name)
         )
 
 
 class TestKubevirtVmiMigrationStartAndEnd:
-    @pytest.mark.polarion("CNV-11809")
     @pytest.mark.s390x
     def test_metric_kubevirt_vmi_migration_start_time_seconds(
         self,
@@ -66,6 +68,10 @@ class TestKubevirtVmiMigrationStartAndEnd:
         vm_for_migration_metrics_test,
         vm_migration_metrics_vmim_scope_class,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-48213 # <skip-jira-utils-check>
+        Polarion: CNV-11809
+        """
         validate_metrics_value(
             prometheus=prometheus,
             metric_name=f"kubevirt_vmi_migration_start_time_seconds{{name='{vm_for_migration_metrics_test.name}'}}",
@@ -76,7 +82,6 @@ class TestKubevirtVmiMigrationStartAndEnd:
             ),
         )
 
-    @pytest.mark.polarion("CNV-11810")
     @pytest.mark.s390x
     def test_metric_kubevirt_vmi_migration_end_time_seconds(
         self,
@@ -85,6 +90,10 @@ class TestKubevirtVmiMigrationStartAndEnd:
         vm_migration_metrics_vmim_scope_class,
         migration_succeeded_scope_class,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-48213 # <skip-jira-utils-check>
+        Polarion: CNV-11810
+        """
         validate_metrics_value(
             prometheus=prometheus,
             metric_name=f"kubevirt_vmi_migration_end_time_seconds{{name='{vm_for_migration_metrics_test.name}'}}",

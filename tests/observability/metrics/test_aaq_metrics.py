@@ -15,19 +15,21 @@ pytestmark = [
 
 
 class TestAAQMetrics:
-    @pytest.mark.polarion("CNV-12183")
     def test_kube_application_aware_resourcequota_creation_timestamp_seconds(
         self,
         prometheus,
         application_aware_resource_quota_creation_timestamp,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-61365 # <skip-jira-utils-check>
+        Polarion: CNV-12183
+        """
         validate_metrics_value(
             prometheus=prometheus,
             expected_value=str(timestamp_to_seconds(timestamp=application_aware_resource_quota_creation_timestamp)),
             metric_name="kube_application_aware_resourcequota_creation_timestamp_seconds",
         )
 
-    @pytest.mark.polarion("CNV-12184")
     def test_kube_application_aware_resourcequota_metrics(
         self,
         prometheus,
@@ -35,6 +37,10 @@ class TestAAQMetrics:
         vm_for_test_with_resource_limits,
         aaq_resource_hard_limit_and_used,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-61365 # <skip-jira-utils-check>
+        Polarion: CNV-12184
+        """
         validate_values_from_kube_application_aware_resourcequota_metric(
             prometheus=prometheus, aaq_resource_hard_limit_and_used=aaq_resource_hard_limit_and_used
         )

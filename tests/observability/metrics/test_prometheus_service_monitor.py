@@ -20,12 +20,14 @@ def kubevirt_service_monitor_namespace(kubevirt_hyperconverged_spec_scope_functi
 
 
 class TestPrometheusServiceMonitor:
-    @pytest.mark.polarion("CNV-9287")
     @pytest.mark.s390x
     def test_kubevirt_service_monitor_namespace(self, kubevirt_service_monitor_namespace, hco_namespace):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-883 # <skip-jira-utils-check>
+        Polarion: CNV-9287
+        """
         assert kubevirt_service_monitor_namespace == hco_namespace.name
 
-    @pytest.mark.polarion("CNV-9264")
     @pytest.mark.s390x
     @pytest.mark.conformance
     def test_prometheus_service_monitor_in_our_namespace(
@@ -33,5 +35,9 @@ class TestPrometheusServiceMonitor:
         kubevirt_prometheus_service_monitor_list,
         kubevirt_service_monitor_namespace,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-883 # <skip-jira-utils-check>
+        Polarion: CNV-9264
+        """
         for service_monitor_object in kubevirt_prometheus_service_monitor_list:
             assert service_monitor_object.namespace == kubevirt_service_monitor_namespace
