@@ -74,18 +74,20 @@ class TestUpgradeVirt:
     @pytest.mark.gating
     @pytest.mark.ocp_upgrade
     @pytest.mark.sno
-    @pytest.mark.polarion("CNV-2974")
     @pytest.mark.order("first")
     @pytest.mark.dependency(name=VMS_RUNNING_BEFORE_UPGRADE_TEST_NODE_ID)
     @pytest.mark.usefixtures("linux_boot_time_before_upgrade", "pci_addresses_before_upgrade")
     def test_is_vm_running_before_upgrade(self, vms_for_upgrade):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-264 # <skip-jira-utils-check>
+        Polarion: CNV-2974
+        """
         for vm in vms_for_upgrade:
             assert vm.vmi.status == VirtualMachineInstance.Status.RUNNING
 
     @pytest.mark.gating
     @pytest.mark.ocp_upgrade
     @pytest.mark.sno
-    @pytest.mark.polarion("CNV-2987")
     @pytest.mark.order(before=MIGRATION_BEFORE_UPGRADE_TEST_ORDERING)
     @pytest.mark.dependency(
         name=VMS_CONSOLE_BEFORE_UPGRADE_TEST_NODE_ID,
@@ -93,13 +95,16 @@ class TestUpgradeVirt:
         scope=DEPENDENCY_SCOPE_SESSION,
     )
     def test_vm_console_before_upgrade(self, vms_for_upgrade):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-264 # <skip-jira-utils-check>
+        Polarion: CNV-2987
+        """
         for vm in vms_for_upgrade:
             vm_console_run_commands(vm=vm, commands=["ls"])
 
     @pytest.mark.gating
     @pytest.mark.ocp_upgrade
     @pytest.mark.sno
-    @pytest.mark.polarion("CNV-4208")
     @pytest.mark.order(before=MIGRATION_BEFORE_UPGRADE_TEST_ORDERING)
     @pytest.mark.dependency(
         name=VMS_SSH_BEFORE_UPGRADE_TEST_NODE_ID,
@@ -107,11 +112,14 @@ class TestUpgradeVirt:
         scope=DEPENDENCY_SCOPE_SESSION,
     )
     def test_vm_ssh_before_upgrade(self, vms_for_upgrade):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-264 # <skip-jira-utils-check>
+        Polarion: CNV-4208
+        """
         verify_vms_ssh_connectivity(vms_list=vms_for_upgrade)
 
     @pytest.mark.ocp_upgrade
     @pytest.mark.sno
-    @pytest.mark.polarion("CNV-6999")
     @pytest.mark.order(before=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
     @pytest.mark.dependency(name=VM_RUN_STRATEGY_BEFORE_UPGRADE_TEST_NODE_ID)
     def test_vm_run_strategy_before_upgrade(
@@ -121,13 +129,16 @@ class TestUpgradeVirt:
         running_manual_run_strategy_vm,
         running_always_run_strategy_vm,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-264 # <skip-jira-utils-check>
+        Polarion: CNV-6999
+        """
         verify_vms_ssh_connectivity(vms_list=[manual_run_strategy_vm, always_run_strategy_vm])
 
     @pytest.mark.ocp_upgrade
     @pytest.mark.sno
     @pytest.mark.high_resource_vm
     @pytest.mark.windows
-    @pytest.mark.polarion("CNV-7243")
     @pytest.mark.order(before=MIGRATION_BEFORE_UPGRADE_TEST_ORDERING)
     @pytest.mark.dependency(name=WINDOWS_VM_BEFORE_UPGRADE_TEST_NODE_ID)
     def test_windows_vm_before_upgrade(
@@ -135,10 +146,13 @@ class TestUpgradeVirt:
         windows_vm,
         windows_boot_time_before_upgrade,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-264 # <skip-jira-utils-check>
+        Polarion: CNV-7243
+        """
         verify_vms_ssh_connectivity(vms_list=[windows_vm])
 
     @pytest.mark.ocp_upgrade
-    @pytest.mark.polarion("CNV-12018")
     @pytest.mark.order(before=MIGRATION_BEFORE_UPGRADE_TEST_ORDERING)
     @pytest.mark.dependency(name=f"{VIRT_NODE_ID_PREFIX}::test_vm_post_copy_migration_before_upgrade")
     @pytest.mark.usefixtures("post_copy_migration_policy_for_upgrade")
@@ -147,11 +161,14 @@ class TestUpgradeVirt:
         admin_client: DynamicClient,
         vm_for_post_copy_upgrade: VirtualMachineForTests,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-264 # <skip-jira-utils-check>
+        Polarion: CNV-12018
+        """
         migrate_vm_and_verify(vm=vm_for_post_copy_upgrade, client=admin_client, check_ssh_connectivity=True)
         assert_migration_post_copy_mode(vm=vm_for_post_copy_upgrade)
 
     @pytest.mark.ocp_upgrade
-    @pytest.mark.polarion("CNV-2975")
     @pytest.mark.order(before=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
     @pytest.mark.dependency(
         name=MIGRATION_BEFORE_UPGRADE_TEST_NODE_ID,
@@ -160,13 +177,16 @@ class TestUpgradeVirt:
     def test_migration_before_upgrade(
         self, admin_client: DynamicClient, virt_migratable_vms: list[VirtualMachineForTests]
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-264 # <skip-jira-utils-check>
+        Polarion: CNV-2975
+        """
         for vm in virt_migratable_vms:
             migrate_vm_and_verify(vm=vm, client=admin_client, wait_for_interfaces=False, check_ssh_connectivity=False)
 
     """ Post-upgrade tests """
 
     @pytest.mark.gating
-    @pytest.mark.polarion("CNV-5932")
     @pytest.mark.order(after=IUO_CNV_ALERT_ORDERING_NODE_ID, before=AFTER_UPGRADE_STORAGE_ORDERING)
     @pytest.mark.dependency(
         name=IMAGE_UPDATE_AFTER_UPGRADE_NODE_ID,
@@ -178,6 +198,9 @@ class TestUpgradeVirt:
         unupdated_vmi_pods_names,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-8386 # <skip-jira-utils-check>
+        Polarion: CNV-5932
+
         Check that the VMI Pods use the latest images after the upgrade
         """
         assert not unupdated_vmi_pods_names, f"The following VMI Pods were not updated: {unupdated_vmi_pods_names}"
@@ -185,7 +208,6 @@ class TestUpgradeVirt:
     @pytest.mark.gating
     @pytest.mark.ocp_upgrade
     @pytest.mark.sno
-    @pytest.mark.polarion("CNV-2978")
     @pytest.mark.order(after=[IMAGE_UPDATE_AFTER_UPGRADE_NODE_ID], before=AFTER_UPGRADE_STORAGE_ORDERING)
     @pytest.mark.dependency(
         name=VIRT_VMS_RUNNING_AFTER_UPGRADE_TEST_NODE_ID,
@@ -193,13 +215,16 @@ class TestUpgradeVirt:
         scope=DEPENDENCY_SCOPE_SESSION,
     )
     def test_is_vm_running_after_upgrade(self, vms_for_upgrade):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-264 # <skip-jira-utils-check>
+        Polarion: CNV-2978
+        """
         for vm in vms_for_upgrade:
             vm.vmi.wait_until_running()
 
     @pytest.mark.gating
     @pytest.mark.ocp_upgrade
     @pytest.mark.sno
-    @pytest.mark.polarion("CNV-2980")
     @pytest.mark.order(after=[IMAGE_UPDATE_AFTER_UPGRADE_NODE_ID], before=AFTER_UPGRADE_STORAGE_ORDERING)
     @pytest.mark.dependency(
         depends=[
@@ -210,13 +235,16 @@ class TestUpgradeVirt:
         scope=DEPENDENCY_SCOPE_SESSION,
     )
     def test_vm_console_after_upgrade(self, vms_for_upgrade):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-264 # <skip-jira-utils-check>
+        Polarion: CNV-2980
+        """
         for vm in vms_for_upgrade:
             vm_console_run_commands(vm=vm, commands=["ls"])
 
     @pytest.mark.gating
     @pytest.mark.ocp_upgrade
     @pytest.mark.sno
-    @pytest.mark.polarion("CNV-4209")
     @pytest.mark.order(after=[IMAGE_UPDATE_AFTER_UPGRADE_NODE_ID], before=AFTER_UPGRADE_STORAGE_ORDERING)
     @pytest.mark.dependency(
         depends=[
@@ -227,11 +255,14 @@ class TestUpgradeVirt:
         scope=DEPENDENCY_SCOPE_SESSION,
     )
     def test_vm_ssh_after_upgrade(self, vms_for_upgrade):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-264 # <skip-jira-utils-check>
+        Polarion: CNV-4209
+        """
         verify_vms_ssh_connectivity(vms_list=vms_for_upgrade)
 
     @pytest.mark.ocp_upgrade
     @pytest.mark.sno
-    @pytest.mark.polarion("CNV-7000")
     @pytest.mark.order(
         after=[IMAGE_UPDATE_AFTER_UPGRADE_NODE_ID, VIRT_VMS_RUNNING_AFTER_UPGRADE_TEST_NODE_ID],
         before=AFTER_UPGRADE_STORAGE_ORDERING,
@@ -241,6 +272,10 @@ class TestUpgradeVirt:
         scope=DEPENDENCY_SCOPE_SESSION,
     )
     def test_vm_run_strategy_after_upgrade(self, manual_run_strategy_vm, always_run_strategy_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-264 # <skip-jira-utils-check>
+        Polarion: CNV-7000
+        """
         run_strategy_vmi_list = verify_run_strategy_vmi_status(
             run_strategy_vmi_list=[manual_run_strategy_vm, always_run_strategy_vm]
         )
@@ -248,7 +283,6 @@ class TestUpgradeVirt:
 
     @pytest.mark.ocp_upgrade
     @pytest.mark.sno
-    @pytest.mark.polarion("CNV-7244")
     @pytest.mark.order(
         after=[IMAGE_UPDATE_AFTER_UPGRADE_NODE_ID, VIRT_VMS_RUNNING_AFTER_UPGRADE_TEST_NODE_ID],
         before=AFTER_UPGRADE_STORAGE_ORDERING,
@@ -264,12 +298,15 @@ class TestUpgradeVirt:
         windows_boot_time_before_upgrade,
         virt_migratable_vms_names,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-264 # <skip-jira-utils-check>
+        Polarion: CNV-7244
+        """
         verify_vms_ssh_connectivity(vms_list=[windows_vm])
         if windows_vm.name in virt_migratable_vms_names:
             verify_guest_boot_time(vm_list=[windows_vm], initial_boot_time=windows_boot_time_before_upgrade)
 
     @pytest.mark.ocp_upgrade
-    @pytest.mark.polarion("CNV-2979")
     @pytest.mark.order(
         after=[IMAGE_UPDATE_AFTER_UPGRADE_NODE_ID, VIRT_VMS_RUNNING_AFTER_UPGRADE_TEST_NODE_ID],
         before=AFTER_UPGRADE_STORAGE_ORDERING,
@@ -281,11 +318,14 @@ class TestUpgradeVirt:
     def test_migration_after_upgrade(
         self, admin_client: DynamicClient, virt_migratable_vms: list[VirtualMachineForTests]
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-264 # <skip-jira-utils-check>
+        Polarion: CNV-2979
+        """
         for vm in virt_migratable_vms:
             migrate_vm_and_verify(vm=vm, client=admin_client, wait_for_interfaces=False, check_ssh_connectivity=False)
 
     @pytest.mark.ocp_upgrade
-    @pytest.mark.polarion("CNV-12571")
     @pytest.mark.order(
         after=[IMAGE_UPDATE_AFTER_UPGRADE_NODE_ID, VIRT_VMS_RUNNING_AFTER_UPGRADE_TEST_NODE_ID],
         before=AFTER_UPGRADE_STORAGE_ORDERING,
@@ -297,12 +337,15 @@ class TestUpgradeVirt:
     def test_vms_boot_time_after_upgrade(
         self, vms_for_upgrade, linux_boot_time_before_upgrade, virt_migratable_vms_names
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-264 # <skip-jira-utils-check>
+        Polarion: CNV-12571
+        """
         migratable_vms = [vm for vm in vms_for_upgrade if vm.name in virt_migratable_vms_names]
         verify_guest_boot_time(vm_list=migratable_vms, initial_boot_time=linux_boot_time_before_upgrade)
 
     @pytest.mark.ocp_upgrade
     @pytest.mark.sno
-    @pytest.mark.polarion("CNV-16329")
     @pytest.mark.order(
         after=[IMAGE_UPDATE_AFTER_UPGRADE_NODE_ID, VIRT_VMS_RUNNING_AFTER_UPGRADE_TEST_NODE_ID],
         before=AFTER_UPGRADE_STORAGE_ORDERING,
@@ -315,7 +358,12 @@ class TestUpgradeVirt:
         scope=DEPENDENCY_SCOPE_SESSION,
     )
     def test_pci_topology_after_upgrade(self, vms_for_upgrade, pci_addresses_before_upgrade):
-        """STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/pci-topology-stability.md"""
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-4762 # <skip-jira-utils-check>
+        Polarion: CNV-16329
+
+        STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-virt/pci-topology-stability.md
+        """
         failed_vms = {}
         for vm in vms_for_upgrade:
             current_addresses = get_pci_addresses(vm=vm)
@@ -325,7 +373,6 @@ class TestUpgradeVirt:
 
     @pytest.mark.ocp_upgrade
     @pytest.mark.sno
-    @pytest.mark.polarion("CNV-3682")
     @pytest.mark.order(
         after=[IMAGE_UPDATE_AFTER_UPGRADE_NODE_ID, VIRT_VMS_RUNNING_AFTER_UPGRADE_TEST_NODE_ID],
         before=AFTER_UPGRADE_STORAGE_ORDERING,
@@ -335,6 +382,10 @@ class TestUpgradeVirt:
         scope=DEPENDENCY_SCOPE_SESSION,
     )
     def test_machine_type_after_upgrade(self, vms_for_upgrade, vms_for_upgrade_dict_before):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-346 # <skip-jira-utils-check>
+        Polarion: CNV-3682
+        """
         for vm in vms_for_upgrade:
             assert (
                 vm.instance.spec.template.spec.domain.machine.type
@@ -343,7 +394,6 @@ class TestUpgradeVirt:
 
     @pytest.mark.ocp_upgrade
     @pytest.mark.sno
-    @pytest.mark.polarion("CNV-5749")
     @pytest.mark.order(
         after=[IMAGE_UPDATE_AFTER_UPGRADE_NODE_ID, VIRT_VMS_RUNNING_AFTER_UPGRADE_TEST_NODE_ID],
         before=AFTER_UPGRADE_STORAGE_ORDERING,
@@ -353,6 +403,10 @@ class TestUpgradeVirt:
         scope=DEPENDENCY_SCOPE_SESSION,
     )
     def test_golden_image_pvc_names_after_upgrade(self, base_templates, base_templates_after_upgrade):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-6624 # <skip-jira-utils-check>
+        Polarion: CNV-5749
+        """
         LOGGER.info(
             f"Comparing default value for parameter {DATA_SOURCE_NAME} in base templates before and after upgrade"
         )
@@ -367,7 +421,6 @@ class TestUpgradeVirt:
             )
 
     @pytest.mark.ocp_upgrade
-    @pytest.mark.polarion("CNV-12019")
     @pytest.mark.order(
         after=[IMAGE_UPDATE_AFTER_UPGRADE_NODE_ID, VIRT_VMS_RUNNING_AFTER_UPGRADE_TEST_NODE_ID],
         before=AFTER_UPGRADE_STORAGE_ORDERING,
@@ -384,5 +437,9 @@ class TestUpgradeVirt:
         admin_client: DynamicClient,
         vm_for_post_copy_upgrade: VirtualMachineForTests,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-264 # <skip-jira-utils-check>
+        Polarion: CNV-12019
+        """
         migrate_vm_and_verify(vm=vm_for_post_copy_upgrade, client=admin_client, check_ssh_connectivity=True)
         assert_migration_post_copy_mode(vm=vm_for_post_copy_upgrade)

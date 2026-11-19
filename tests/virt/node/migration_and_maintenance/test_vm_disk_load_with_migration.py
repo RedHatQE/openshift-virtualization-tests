@@ -101,7 +101,6 @@ def get_disk_usage(ssh_exec):
                 "template_labels": FEDORA_LATEST_LABELS,
                 "cpu_threads": 2,
             },
-            marks=pytest.mark.polarion("CNV-4663"),
         ),
     ],
     indirect=True,
@@ -110,6 +109,10 @@ def get_disk_usage(ssh_exec):
 @pytest.mark.rwx_default_storage
 @pytest.mark.usefixtures("running_fio_in_vm")
 def test_fedora_vm_load_migration(admin_client: DynamicClient, vm_with_fio: VirtualMachineForTests):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-19880 # <skip-jira-utils-check>
+    Polarion: CNV-4663
+    """
     LOGGER.info("Test migrate VM with disk load")
     migrate_vm_and_verify(vm=vm_with_fio, client=admin_client, check_ssh_connectivity=True)
     get_disk_usage(ssh_exec=vm_with_fio.ssh_exec)

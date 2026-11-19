@@ -54,7 +54,6 @@ def xfail_if_no_odf_cephfs_sc(cluster_storage_classes_names):
         pytest.param(
             {"os_dict": FEDORA_LATEST},
             {"vm_name": "cephfs-vm", "template_labels": FEDORA_LATEST_LABELS},
-            marks=pytest.mark.polarion("CNV-11303"),
         )
     ],
     indirect=True,
@@ -63,4 +62,8 @@ def xfail_if_no_odf_cephfs_sc(cluster_storage_classes_names):
 def test_vm_with_odf_cephfs_storage_class_migrates(
     admin_client: DynamicClient, vm_with_cephfs_storage: VirtualMachineForTests
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-511 # <skip-jira-utils-check>
+    Polarion: CNV-11303
+    """
     migrate_vm_and_verify(vm=vm_with_cephfs_storage, client=admin_client)

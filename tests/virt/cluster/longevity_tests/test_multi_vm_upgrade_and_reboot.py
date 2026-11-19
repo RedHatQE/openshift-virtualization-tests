@@ -12,10 +12,13 @@ pytestmark = [pytest.mark.usefixtures("skip_test_if_no_ocs_sc"), pytest.mark.lon
         pytest.param(
             {"dv_params": [WSL2_DV_PARAMS]},
             {"vm_params": [WSL2_VM_PARAMS]},
-            marks=pytest.mark.polarion("CNV-10152"),
         )
     ],
     indirect=True,
 )
 def test_win_upgrade_storm_wsl2_vms(wsl2_vms_with_pids):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-22103 # <skip-jira-utils-check>
+    Polarion: CNV-10152
+    """
     run_windows_upgrade_storm(vms_with_pids=wsl2_vms_with_pids)
