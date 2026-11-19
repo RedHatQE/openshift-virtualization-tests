@@ -24,7 +24,7 @@ from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.virtual_machine_backup_tracker import VirtualMachineBackupTracker
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
-from timeout_sampler import TimeoutExpiredError, TimeoutSampler
+from timeout_sampler import TimeoutExpiredError
 
 from tests.storage.cbt.constants import (
     CBT_BACKUP_DIR,
@@ -400,7 +400,7 @@ def _deploy_target_pvc(
     """Create an empty PVC large enough for the backup image and wait until it is Bound.
 
     Raises:
-        CbtRestoreError: When the PVC is not Bound before the wait timeout.
+        TimeoutExpiredError: When the PVC is not Bound before the wait timeout.
     """
     pvc = PersistentVolumeClaim(
         name=f"cbt-rst-{vm_name}",
@@ -413,23 +413,8 @@ def _deploy_target_pvc(
     )
     LOGGER.info(f"Creating restore target PVC {pvc.name} for VM {vm_name}")
     pvc.deploy()
-    _wait_for_pvc_bound(pvc=pvc)
+    pvc.wait_for_status(status=PersistentVolumeClaim.Status.BOUND, timeout=TIMEOUT_5MIN)
     return pvc
-
-
-def _wait_for_pvc_bound(pvc: PersistentVolumeClaim) -> None:
-    """Wait until the PVC is Bound.
-
-    Raises:
-        CbtRestoreError: When the PVC is not Bound before the wait timeout.
-            The original timeout is chained.
-    """
-    try:
-        for sample in TimeoutSampler(wait_timeout=TIMEOUT_5MIN, sleep=TIMEOUT_5SEC, func=pvc.bound):
-            if sample:
-                return
-    except TimeoutExpiredError as unbound:
-        raise CbtRestoreError(f"Restore PVC {pvc.namespace}/{pvc.name} did not bind") from unbound
 
 
 def _deploy_restored_vm(
