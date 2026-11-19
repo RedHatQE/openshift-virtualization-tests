@@ -85,7 +85,6 @@ def create_vm_negative(
             {PERMISSIONS_SRC_SA: DATAVOLUMES_AND_DVS_SRC, VERBS_SRC_SA: ALL},
             {PERMISSIONS_DST_SA: DATAVOLUMES_AND_DVS_SRC, VERBS_DST_SA: ALL},
             {PERMISSIONS_DST: DATAVOLUMES, VERBS_DST: LIST_GET},
-            marks=pytest.mark.polarion("CNV-2826"),
         )
     ],
     indirect=True,
@@ -101,6 +100,10 @@ def test_create_vm_with_cloned_data_volume_positive(
     permissions_datavolume_destination,
     vm_for_restricted_namespace_cloning_test,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-720 # <skip-jira-utils-check>
+    Polarion: CNV-2826
+    """
     verify_snapshot_used_namespace_transfer(
         cdv=data_volume_clone_settings,
         unprivileged_client=unprivileged_client,
@@ -119,7 +122,6 @@ def test_create_vm_with_cloned_data_volume_positive(
             {"dv_name": SOURCE_DV},
             {PERMISSIONS_SRC: DATAVOLUMES_SRC, VERBS_SRC: ALL},
             {PERMISSIONS_DST: DATAVOLUMES, VERBS_DST: ALL},
-            marks=pytest.mark.polarion("CNV-2828"),
         )
     ],
     indirect=True,
@@ -135,6 +137,10 @@ def test_create_vm_with_cloned_data_volume_grant_unprivileged_client_permissions
     permissions_datavolume_source,
     permissions_datavolume_destination,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-720 # <skip-jira-utils-check>
+    Polarion: CNV-2828
+    """
     create_vm_negative(
         namespace=destination_namespace.name,
         service_accounts=[restricted_namespace_service_account.name],
@@ -151,7 +157,6 @@ def test_create_vm_with_cloned_data_volume_grant_unprivileged_client_permissions
             {"dv_name": SOURCE_DV},
             {PERMISSIONS_SRC_SA: DATAVOLUMES, VERBS_SRC_SA: ALL},
             {PERMISSIONS_DST_SA: DATAVOLUMES, VERBS_DST_SA: ALL},
-            marks=pytest.mark.polarion("CNV-2827"),
         )
     ],
     indirect=True,
@@ -166,6 +171,10 @@ def test_create_vm_cloned_data_volume_restricted_ns_service_account_no_clone_per
     perm_src_service_account,
     perm_destination_service_account,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-720 # <skip-jira-utils-check>
+    Polarion: CNV-2827
+    """
     create_vm_negative(
         namespace=destination_namespace.name,
         service_accounts=[restricted_namespace_service_account.name],
@@ -182,7 +191,6 @@ def test_create_vm_cloned_data_volume_restricted_ns_service_account_no_clone_per
             ADMIN_NAMESPACE_PARAM,
             {"dv_name": SOURCE_DV},
             {PERMISSIONS_DST: DATAVOLUMES, VERBS_DST: LIST_GET},
-            marks=pytest.mark.polarion("CNV-2829"),
         ),
     ],
     indirect=True,
@@ -197,6 +205,10 @@ def test_create_vm_with_cloned_data_volume_permissions_for_pods_positive(
     permissions_datavolume_destination,
     vm_for_restricted_namespace_cloning_test,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-720 # <skip-jira-utils-check>
+    Polarion: CNV-2829
+    """
     verify_snapshot_used_namespace_transfer(
         cdv=data_volume_clone_settings,
         unprivileged_client=unprivileged_client,

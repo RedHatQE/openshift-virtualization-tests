@@ -38,10 +38,12 @@ pytestmark = pytest.mark.usefixtures(
 )
 
 
-@pytest.mark.polarion("CNV-5781")
 @pytest.mark.s390x
 def test_snapshot_feature_gate_present(kubevirt_feature_gates):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-5802 # <skip-jira-utils-check>
+    Polarion: CNV-5781
+
     This test will ensure that 'Snapshot' feature gate is present in KubeVirt ConfigMap.
     """
     assert "Snapshot" in kubevirt_feature_gates
@@ -56,10 +58,7 @@ class TestRestoreSnapshots:
                 {"number_of_snapshots": 1, "online_vm": False},
                 [expected_output_after_restore(1)],
                 [0],
-                marks=(
-                    pytest.mark.polarion("CNV-4789"),
-                    pytest.mark.gating(),
-                ),
+                marks=(pytest.mark.gating(),),
                 id="test_restore_basic_snapshot",
             ),
             pytest.param(
@@ -67,7 +66,6 @@ class TestRestoreSnapshots:
                 {"number_of_snapshots": 3, "online_vm": False},
                 [expected_output_after_restore(2)],
                 [1],
-                marks=pytest.mark.polarion("CNV-4865"),
                 id="test_restore_middle_snapshot",
             ),
             pytest.param(
@@ -79,7 +77,6 @@ class TestRestoreSnapshots:
                     expected_output_after_restore(1),
                 ],
                 [2, 1, 0],
-                marks=pytest.mark.polarion("CNV-4843"),
                 id="test_restore_all_snapshots",
             ),
             pytest.param(
@@ -87,7 +84,6 @@ class TestRestoreSnapshots:
                 {"number_of_snapshots": 1, "online_vm": True},
                 [expected_output_after_restore(1)],
                 [0],
-                marks=pytest.mark.polarion("CNV-6526"),
                 id="test_restore_basic_snapshot",
             ),
             pytest.param(
@@ -95,7 +91,6 @@ class TestRestoreSnapshots:
                 {"number_of_snapshots": 3, "online_vm": True},
                 [expected_output_after_restore(2)],
                 [1],
-                marks=pytest.mark.polarion("CNV-6527"),
                 id="test_restore_middle_snapshot",
             ),
             pytest.param(
@@ -107,7 +102,6 @@ class TestRestoreSnapshots:
                     expected_output_after_restore(1),
                 ],
                 [2, 1, 0],
-                marks=pytest.mark.polarion("CNV-6528"),
                 id="test_restore_all_snapshots",
             ),
         ],
@@ -121,6 +115,16 @@ class TestRestoreSnapshots:
         expected_results,
         snapshots_to_restore_idx,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-6440 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-7491 # <skip-jira-utils-check>
+        Polarion: CNV-4789
+        Polarion: CNV-4865
+        Polarion: CNV-4843
+        Polarion: CNV-6526
+        Polarion: CNV-6527
+        Polarion: CNV-6528
+        """
         if rhel_vm_for_snapshot.ready:
             rhel_vm_for_snapshot.stop(wait=True)
         for idx in range(len(snapshots_to_restore_idx)):
@@ -147,7 +151,6 @@ class TestRestoreSnapshots:
             pytest.param(
                 {"vm_name": "vm-cnv-5048"},
                 {"number_of_snapshots": 1},
-                marks=pytest.mark.polarion("CNV-5048"),
             ),
         ],
         indirect=True,
@@ -158,6 +161,10 @@ class TestRestoreSnapshots:
         rhel_vm_for_snapshot,
         snapshot_with_content,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-6440 # <skip-jira-utils-check>
+        Polarion: CNV-5048
+        """
         running_vm(vm=rhel_vm_for_snapshot)
 
         # snapshot restore with online VM should create vmstore object
@@ -196,7 +203,6 @@ class TestRestoreSnapshots:
                 {"vm_name": "vm-cnv-5049"},
                 {"number_of_snapshots": 1},
                 ADMIN_NAMESPACE_PARAM,
-                marks=pytest.mark.polarion("CNV-5049"),
             ),
         ],
         indirect=True,
@@ -207,6 +213,10 @@ class TestRestoreSnapshots:
         snapshot_with_content,
         unprivileged_client,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-6440 # <skip-jira-utils-check>
+        Polarion: CNV-5049
+        """
         if rhel_vm_for_snapshot.ready:
             rhel_vm_for_snapshot.stop(wait=True)
         with pytest.raises(
@@ -229,7 +239,6 @@ class TestRestoreSnapshots:
             pytest.param(
                 {"vm_name": "vm-cnv-5084"},
                 {"number_of_snapshots": 1},
-                marks=pytest.mark.polarion("CNV-5084"),
                 id="test_that_restore_the_same_snapshot_twice ",
             ),
         ],
@@ -241,6 +250,10 @@ class TestRestoreSnapshots:
         rhel_vm_for_snapshot,
         snapshot_with_content,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-6440 # <skip-jira-utils-check>
+        Polarion: CNV-5084
+        """
         if rhel_vm_for_snapshot.ready:
             rhel_vm_for_snapshot.stop(wait=True)
         with VirtualMachineRestore(
@@ -272,7 +285,6 @@ class TestRestoreSnapshots:
             pytest.param(
                 {"vm_name": "vm-cnv-16212"},
                 {"number_of_snapshots": 1, "online_vm": False},
-                marks=pytest.mark.polarion("CNV-16212"),
             ),
         ],
         indirect=True,
@@ -283,6 +295,9 @@ class TestRestoreSnapshots:
         source_volume_name_for_predictable_name_restore,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-76230 # <skip-jira-utils-check>
+        Polarion: CNV-16212
+
         Test restore snapshot where the DV/PVC restored has a predictable name derived from the source vm name and
         source volume name when `volumeRestorePolicy` is set to `PrefixTargetName`.
 
@@ -316,7 +331,6 @@ class TestRestoreSnapshots:
         pytest.param(
             {"vm_name": "vm-cnv-4866"},
             {"number_of_snapshots": 2},
-            marks=pytest.mark.polarion("CNV-4866"),
         ),
     ],
     indirect=True,
@@ -325,6 +339,10 @@ def test_remove_vm_with_snapshots(
     rhel_vm_for_snapshot,
     snapshot_with_content,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-6440 # <skip-jira-utils-check>
+    Polarion: CNV-4866
+    """
     if rhel_vm_for_snapshot.ready:
         rhel_vm_for_snapshot.stop(wait=True)
     rhel_vm_for_snapshot.delete(wait=True)
@@ -339,7 +357,6 @@ def test_remove_vm_with_snapshots(
             {"vm_name": "vm-cnv-4870"},
             {"number_of_snapshots": 2},
             "after-snap-1.txt after-snap-2.txt before-snap-1.txt before-snap-2.txt",
-            marks=pytest.mark.polarion("CNV-4870"),
         ),
     ],
     indirect=["rhel_vm_name", "snapshot_with_content"],
@@ -349,6 +366,10 @@ def test_remove_snapshots_while_vm_is_running(
     snapshot_with_content,
     expected_result,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-6440 # <skip-jira-utils-check>
+    Polarion: CNV-4870
+    """
     running_vm(vm=rhel_vm_for_snapshot)
     for idx in range(len(snapshot_with_content)):
         snapshot_with_content[idx].delete(wait=True)
@@ -372,19 +393,22 @@ def test_remove_snapshots_while_vm_is_running(
             ADMIN_NAMESPACE_PARAM,
             VirtualMachineSnapshot,
             ERROR_MSG_USER_CANNOT_LIST_VM_SNAPSHOTS,
-            marks=pytest.mark.polarion("CNV-5050"),
         ),
         pytest.param(
             ADMIN_NAMESPACE_PARAM,
             VirtualMachineRestore,
             ERROR_MSG_USER_CANNOT_LIST_VM_RESTORE,
-            marks=pytest.mark.polarion("CNV-5331"),
         ),
     ],
     indirect=["namespace"],
 )
 @pytest.mark.s390x
 def test_unprivileged_client_fails_to_list_resources(namespace, unprivileged_client, resource, error_msg):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-6440 # <skip-jira-utils-check>
+    Polarion: CNV-5050
+    Polarion: CNV-5331
+    """
     with pytest.raises(
         ApiException,
         match=error_msg,
@@ -398,7 +422,6 @@ def test_unprivileged_client_fails_to_list_resources(namespace, unprivileged_cli
         pytest.param(
             {"vm_name": "vm-cnv-4867"},
             ADMIN_NAMESPACE_PARAM,
-            marks=pytest.mark.polarion("CNV-4867"),
         ),
     ],
     indirect=True,
@@ -408,6 +431,10 @@ def test_fail_to_snapshot_with_unprivileged_client_no_permissions(
     rhel_vm_for_snapshot,
     unprivileged_client,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-6440 # <skip-jira-utils-check>
+    Polarion: CNV-4867
+    """
     fail_to_create_snapshot_no_permissions(
         snapshot_name="snapshot-cnv-4867-unprivileged",
         namespace=rhel_vm_for_snapshot.namespace,
@@ -422,7 +449,6 @@ def test_fail_to_snapshot_with_unprivileged_client_no_permissions(
         pytest.param(
             {"vm_name": "vm-cnv-4868"},
             ADMIN_NAMESPACE_PARAM,
-            marks=pytest.mark.polarion("CNV-4868"),
         ),
     ],
     indirect=True,
@@ -433,6 +459,10 @@ def test_fail_to_snapshot_with_unprivileged_client_dv_permissions(
     permissions_for_dv,
     unprivileged_client,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-6440 # <skip-jira-utils-check>
+    Polarion: CNV-4868
+    """
     fail_to_create_snapshot_no_permissions(
         snapshot_name="snapshot-cnv-4868-unprivileged",
         namespace=rhel_vm_for_snapshot.namespace,
@@ -449,7 +479,6 @@ def test_fail_to_snapshot_with_unprivileged_client_dv_permissions(
     [
         pytest.param(
             {"vm_name": "vm-8307"},
-            marks=pytest.mark.polarion("CNV-8307"),
         ),
     ],
     indirect=True,
@@ -459,6 +488,10 @@ def test_online_windows_vm_successful_restore(
     windows_snapshot,
     snapshot_dirctory_removed,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-15124 # <skip-jira-utils-check>
+    Polarion: CNV-8307
+    """
     with VirtualMachineRestore(
         name="restore-vm",
         namespace=windows_vm_with_vtpm_for_snapshot.namespace,
@@ -482,7 +515,6 @@ def test_online_windows_vm_successful_restore(
     [
         pytest.param(
             {"vm_name": "vm-8536"},
-            marks=pytest.mark.polarion("CNV-8536"),
         ),
     ],
     indirect=True,
@@ -492,6 +524,10 @@ def test_write_to_file_while_snapshot(
     windows_snapshot,
     file_created_during_snapshot,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-15124 # <skip-jira-utils-check>
+    Polarion: CNV-8536
+    """
     with VirtualMachineRestore(
         name="restore-vm",
         namespace=windows_vm_with_vtpm_for_snapshot.namespace,
@@ -515,9 +551,11 @@ class TestRestoreMultiDiskPerformance:
         - Fedora golden image DataSource available
     """
 
-    @pytest.mark.polarion("CNV-16805")
     def test_restore_single_vm_with_4_disks_completes_within_five_minutes(self, vm_with_4_disks):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-84717 # <skip-jira-utils-check>
+        Polarion: CNV-16805
+
         Test that restoring a snapshot of a single VM with 4 disks completes within 5 minutes.
 
         Preconditions:
@@ -558,9 +596,11 @@ class TestRestoreMultiDiskPerformance:
                 running_vm(vm=vm)
                 assert_guest_disk_count(vm=vm)
 
-    @pytest.mark.polarion("CNV-16806")
     def test_restore_four_vms_with_4_disks_completes_within_five_minutes(self, vms_with_4_disks_created):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-84717 # <skip-jira-utils-check>
+        Polarion: CNV-16806
+
         Test that restoring snapshots of 4 VMs (each with 4 disks) in parallel completes within 5 minutes per VM.
 
         Preconditions:
