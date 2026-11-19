@@ -3,7 +3,7 @@
 import logging
 
 import pytest
-from ocp_resources.daemonset import DaemonSet
+from ocp_resources.daemon_set import DaemonSet
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.secret import Secret
 from ocp_resources.service_account import ServiceAccount

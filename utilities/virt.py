@@ -24,7 +24,7 @@ from kubernetes.client import ApiException
 from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import NotFoundError
 from kubernetes.utils.quantity import parse_quantity
-from ocp_resources.daemonset import DaemonSet
+from ocp_resources.daemon_set import DaemonSet
 from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.kubevirt import KubeVirt

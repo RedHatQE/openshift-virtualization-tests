@@ -28,7 +28,7 @@ from kubernetes.dynamic.exceptions import NotFoundError, ResourceNotFoundError
 from ocp_resources.cluster_service_version import ClusterServiceVersion
 from ocp_resources.cluster_version import ClusterVersion
 from ocp_resources.console_cli_download import ConsoleCLIDownload
-from ocp_resources.daemonset import DaemonSet
+from ocp_resources.daemon_set import DaemonSet
 from ocp_resources.deployment import Deployment
 from ocp_resources.exceptions import ResourceTeardownError
 from ocp_resources.hyperconverged import HyperConverged
