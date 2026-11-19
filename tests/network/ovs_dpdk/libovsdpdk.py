@@ -6,7 +6,8 @@ from typing import TYPE_CHECKING, Any, Final
 
 from ocp_resources.hyperconverged import HyperConverged
 
-from libs.net.ip import random_cidr_addresses_by_family
+from libs.net.ip import filter_link_local_addresses, random_cidr_addresses_by_family
+from libs.net.vmspec import lookup_iface_status
 from libs.vm.factory import base_vmspec, fedora_vm
 from libs.vm.spec import (
     Devices,
@@ -17,6 +18,7 @@ from libs.vm.spec import (
     ResourceClaim,
 )
 from tests.network.libs import cloudinit
+from tests.network.libs.connectivity import poll_tcp_connectivity
 from utilities.hco import hco_feature_gates_patch
 
 if TYPE_CHECKING:
@@ -158,3 +160,19 @@ def ovs_dpdk_vm_spec(resource_claim_name: str) -> VMSpec:
         Interface(name=OVS_DPDK_INTERFACE_NAME, binding=NetBinding(name=OVS_DPDK_NETWORK_BINDING_NAME)),
     ]
     return spec
+
+
+def verify_baseline_connectivity(client_vm: BaseVirtualMachine, ref_vm: BaseVirtualMachine) -> None:
+    """Poll until TCP connectivity works successfully on every OVS-DPDK address on the reference VM.
+
+    Args:
+        client_vm: VM that initiates connectivity checks toward the reference VM.
+        ref_vm: Reference VM that receives traffic on the OVS-DPDK interface.
+    """
+    ref_iface = lookup_iface_status(vm=ref_vm, iface_name=OVS_DPDK_INTERFACE_NAME)
+    for server_ip in filter_link_local_addresses(ip_addresses=ref_iface.ipAddresses):
+        assert poll_tcp_connectivity(
+            client_vm=client_vm,
+            server_vm=ref_vm,
+            server_ip=str(server_ip),
+        ), f"Baseline TCP connectivity from {client_vm.name} to {ref_vm.name} failed for server IP {server_ip}"

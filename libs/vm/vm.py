@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import uuid
 from dataclasses import asdict
 from typing import TYPE_CHECKING, Any
@@ -9,6 +10,7 @@ from dacite import from_dict
 from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_instance import VirtualMachineInstance
+from ocp_utilities.exceptions import CommandExecFailed
 from pytest_testconfig import config as py_config
 
 from libs.net.vmspec import VMInterfaceSpecNotFoundError
@@ -28,11 +30,14 @@ from libs.vm.spec import (
 )
 from tests.network.libs import cloudinit
 from utilities import infra
+from utilities.constants.timeouts import TIMEOUT_2MIN
 from utilities.constants.virt import CLOUD_INIT_DISK_NAME
 from utilities.virt import get_oc_image_info, vm_console_run_commands
 
 if TYPE_CHECKING:
     from kubernetes.dynamic import DynamicClient
+
+LOGGER = logging.getLogger(__name__)
 
 
 class BaseVirtualMachine(VirtualMachine):
@@ -87,6 +92,13 @@ class BaseVirtualMachine(VirtualMachine):
             condition=VirtualMachineInstance.Condition.Type.AGENT_CONNECTED,
             status=VirtualMachineInstance.Condition.Status.TRUE,
         )
+
+    def guest_reboot(self) -> None:
+        LOGGER.info(f"Rebooting {self.name} from guest")
+        try:
+            self.console(commands=["sudo reboot"], timeout=TIMEOUT_2MIN)
+        except CommandExecFailed:
+            pass
 
     def set_interface_state(self, network_name: str, state: str) -> None:
         if not self._spec.template.spec.domain.devices:
