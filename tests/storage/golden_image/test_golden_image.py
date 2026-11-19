@@ -71,13 +71,16 @@ def dv_created_by_unprivileged_user_with_rolebinding(
 
 
 @pytest.mark.sno
-@pytest.mark.polarion("CNV-4755")
 @pytest.mark.s390x
 def test_regular_user_cant_create_dv_in_ns(
     golden_images_namespace,
     unprivileged_client,
     fedora_data_source_scope_module,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-6319 # <skip-jira-utils-check>
+    Polarion: CNV-4755
+    """
     LOGGER.info("Try as a regular user, to create a DV in golden image NS and receive the proper error")
     size = get_dv_size_from_datasource(data_source=fedora_data_source_scope_module)
     with pytest.raises(
@@ -101,11 +104,14 @@ def test_regular_user_cant_create_dv_in_ns(
 
 @pytest.mark.sno
 @pytest.mark.s390x
-@pytest.mark.polarion("CNV-4756")
 def test_regular_user_cant_delete_dv_from_cloned_dv(
     unprivileged_client,
     golden_image_dv_from_fedora_datasource_scope_module,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-4764 # <skip-jira-utils-check>
+    Polarion: CNV-4756
+    """
     LOGGER.info("Try as a regular user, to delete a dv from golden image NS and receive the proper error")
     with pytest.raises(
         ApiException,
@@ -120,12 +126,15 @@ def test_regular_user_cant_delete_dv_from_cloned_dv(
 
 @pytest.mark.sno
 @pytest.mark.s390x
-@pytest.mark.polarion("CNV-4758")
 def test_regular_user_can_list_all_pvc_in_ns(
     golden_images_namespace,
     unprivileged_client,
     golden_image_dv_from_fedora_datasource_scope_module,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-4764 # <skip-jira-utils-check>
+    Polarion: CNV-4758
+    """
     LOGGER.info("Make sure regular user have permissions to view PVC's in golden image NS")
     assert list(
         PersistentVolumeClaim.get(
@@ -138,11 +147,14 @@ def test_regular_user_can_list_all_pvc_in_ns(
 
 @pytest.mark.sno
 @pytest.mark.s390x
-@pytest.mark.polarion("CNV-4760")
 def test_regular_user_cant_clone_dv_in_ns(
     unprivileged_client,
     golden_image_dv_from_fedora_datasource_scope_module,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-6319 # <skip-jira-utils-check>
+    Polarion: CNV-4760
+    """
     LOGGER.info("Try to clone a DV in the golden image NS and fail with the proper message")
 
     storage_class = golden_image_dv_from_fedora_datasource_scope_module.storage_class
@@ -172,7 +184,6 @@ def test_regular_user_cant_clone_dv_in_ns(
     [
         pytest.param(
             {"dv_name": "cnv-5275"},
-            marks=pytest.mark.polarion("CNV-5275"),
         ),
     ],
     indirect=True,
@@ -181,6 +192,10 @@ def test_regular_user_cant_clone_dv_in_ns(
 def test_regular_user_can_create_dv_in_ns_given_proper_rolebinding(
     dv_created_by_unprivileged_user_with_rolebinding,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-6319 # <skip-jira-utils-check>
+    Polarion: CNV-5275
+    """
     LOGGER.info(
         "Once a proper RoleBinding created, that use the os-images.kubevirt.io:edit\
         ClusterRole, a regular user can create a DV in the golden image NS.",
