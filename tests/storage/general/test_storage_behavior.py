@@ -54,10 +54,12 @@ def test_pvc_recreates_after_deletion(fedora_data_volume, namespace, storage_cla
     fedora_data_volume.wait_for_dv_success(stop_status_func=dv_stop_status_restart_threshold, dv=fedora_data_volume)
 
 
-@pytest.mark.polarion("CNV-3065")
 @pytest.mark.sno
 def test_disk_falloc(fedora_vm_with_instance_type):
     """
+    Jira: https://redhat.atlassian.net/browse/KNIP-1123 # <skip-jira-utils-check>
+    Polarion: CNV-3065
+
     Test that attempting to allocate more space than available on a disk fails with the expected error.
 
     Preconditions:
@@ -78,13 +80,15 @@ def test_disk_falloc(fedora_vm_with_instance_type):
         vm_console.expect("No space left on device", timeout=TIMEOUT_1MIN)
 
 
-@pytest.mark.polarion("CNV-3632")
 def test_vm_from_dv_on_different_node(
     unprivileged_client,
     schedulable_nodes,
     fedora_dv_rwx_with_importer_node,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/KNIP-1123 # <skip-jira-utils-check>
+    Polarion: CNV-3632
+
     Test that a VM created from a DataVolume runs on a different node than the import operation.
 
     Preconditions:
