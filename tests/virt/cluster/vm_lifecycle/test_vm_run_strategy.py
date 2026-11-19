@@ -151,7 +151,7 @@ class TestRunStrategyGuestShutdown:
         - A data-volume VM exists created with the parametrized runStrategy
     """
 
-    def test_run_strategy_shutdown(
+    def test_shutdown(
         self,
         admin_client: DynamicClient,
         run_strategy_dv_vm: VirtualMachineForTests,
