@@ -430,7 +430,7 @@ test_<specific_behavior>.__test__ = False
 |--------------------------|------------------------------------------------------|--------------------------------------------------------------|
 | **Fixture-based Setup**  | Use pytest fixtures for resource creation            | `vm_to_restart`, `namespace`                                 |
 | **Parameterize Testing** | Parametrize tests or fixtures for multiple scenarios | `@pytest.mark.parametrize("run_strategy", [Always, Manual])` |
-| **Matrix Testing**       | Advanced parametrization via dynamic fixtures        | `storage_class_matrix`, `run_strategy_matrix`                |
+| **Matrix Testing**       | Advanced parametrization via dynamic fixtures        | `storage_class_matrix`, `sysprep_source_matrix`              |
 | **Architecture Markers** | Indicate architecture compatibility                  | `@pytest.mark.arm64`, `@pytest.mark.s390x`                   |
 | **Gating Tests**         | Critical tests for CI/CD pipelines                   | `@pytest.mark.gating`                                        |
 
