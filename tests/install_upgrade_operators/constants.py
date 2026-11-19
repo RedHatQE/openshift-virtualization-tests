@@ -20,13 +20,14 @@ RESOURCE_NAME_STR = "resource_name"
 RESOURCE_NAMESPACE_STR = "resource_namespace"
 KEY_NAME_STR = "key_name"
 EXPECTED_KUBEVIRT_HARDCODED_FEATUREGATES = {
+    "ContainerPathVolumes",
     "CPUManager",
     "DecentralizedLiveMigration",
     "DeclarativeHotplugVolumes",
-    "ExternalNetResourceInjection",
     "HostDevices",
     "HypervStrictCheck",
     "KubevirtSeccompProfile",
+    "VSOCK",
     "RebootPolicy",
     "Snapshot",
     "Template",
