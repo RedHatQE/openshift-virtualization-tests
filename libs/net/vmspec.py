@@ -22,27 +22,68 @@ IP_ADDRESS: Final[str] = "ipAddress"
 
 
 class VMInterfaceSpecNotFoundError(Exception):
-    pass
+    """Raised when a network interface is not found in a VM spec."""
+
+    def __init__(self, vm_name: str, interface_name: str) -> None:
+        self.vm_name = vm_name
+        self.interface_name = interface_name
+        super().__init__(f"Interface {interface_name} not found in VM {vm_name} spec")
 
 
 class VMInterfaceStatusNotFoundError(Exception):
-    pass
+    """Raised when a network interface is not found in a VM status."""
+
+    def __init__(self, vm_name: str, interface_name: str) -> None:
+        self.vm_name = vm_name
+        self.interface_name = interface_name
+        super().__init__(f"Interface {interface_name} not found in VM {vm_name} status")
 
 
 class VMInterfaceStatusStillExistsError(Exception):
-    pass
+    """Raised when a network interface still exists in a VM status after the expected removal."""
+
+    def __init__(self, vm_name: str, interface_name: str) -> None:
+        self.vm_name = vm_name
+        self.interface_name = interface_name
+        super().__init__(f"Interface {interface_name} still exists in VM {vm_name} status")
 
 
-class IpNotFound(Exception):
-    pass
+class IpNotFoundError(Exception):
+    """Raised when no IP address is found for a VM network interface.
+
+    Args:
+        vm_name: The name of the VM owning the interface.
+        interface_name: The name of the network interface.
+        ip_family: The IP version (4 or 6) that was searched for, if family-specific.
+    """
+
+    def __init__(self, vm_name: str, interface_name: str, ip_family: int | None = None) -> None:
+        self.vm_name = vm_name
+        self.interface_name = interface_name
+        self.ip_family = ip_family
+        family_prefix = f"IPv{ip_family} address" if ip_family is not None else "IP address"
+        super().__init__(f"{family_prefix} not found for interface {interface_name} on VM {vm_name}.")
 
 
 class VMIConditionNotReachedError(Exception):
-    pass
+    """Raised when a VMI status condition is not reached within the timeout."""
+
+    def __init__(self, vm_name: str, condition: str, status: str, timeout: int) -> None:
+        self.vm_name = vm_name
+        self.condition = condition
+        self.status = status
+        self.timeout = timeout
+        super().__init__(f"VMI {vm_name}: condition {condition}={status} was not reached within {timeout}s.")
 
 
 class VMIConditionStillPresentError(Exception):
-    pass
+    """Raised when a VMI status condition is still present after the timeout."""
+
+    def __init__(self, vm_name: str, condition: str, timeout: int) -> None:
+        self.vm_name = vm_name
+        self.condition = condition
+        self.timeout = timeout
+        super().__init__(f"VMI {vm_name}: condition {condition} is still present after {timeout}s.")
 
 
 def _default_interface_predicate(interface: ResourceField) -> bool:
@@ -87,7 +128,7 @@ def lookup_iface_status(
             if iface := _lookup_iface_status(interfaces=interfaces, iface_name=iface_name, predicate=predicate):
                 return iface
 
-    raise VMInterfaceStatusNotFoundError(f"Network interface named {iface_name} was not found in VM {vm.name}.")
+    raise VMInterfaceStatusNotFoundError(vm_name=vm.name, interface_name=iface_name)
 
 
 def _lookup_iface_status(
@@ -132,7 +173,7 @@ def wait_for_missing_iface_status(vm: BaseVirtualMachine, iface_name: str) -> bo
         VMInterfaceStatusStillExistsError: If the interface still exists after the timeout period.
     """
     if _lookup_iface_status(interfaces=vm.vmi.interfaces, iface_name=iface_name, predicate=lambda _: True) is not None:
-        raise VMInterfaceStatusStillExistsError(f"Interface {iface_name} still exists in {vm.name}")
+        raise VMInterfaceStatusStillExistsError(vm_name=vm.name, interface_name=iface_name)
 
     return True
 
@@ -141,7 +182,7 @@ def lookup_primary_network(vm: BaseVirtualMachine) -> Network:
     for network in vm.instance.spec.template.spec.networks:
         if network.pod is not None:
             return Network(**network)
-    raise VMInterfaceSpecNotFoundError(f"No interface connected to the primary network was found in VM {vm.name}.")
+    raise VMInterfaceSpecNotFoundError(vm_name=vm.name, interface_name="connected to the primary network")
 
 
 def lookup_iface_status_ip(
@@ -159,7 +200,7 @@ def lookup_iface_status_ip(
         The IP address matching the specified family.
 
     Raises:
-        IpNotFound: If no IP address of the specified family is found.
+        IpNotFoundError: If no IP address of the specified family is found.
     """
     try:
         iface = lookup_iface_status(
@@ -171,7 +212,7 @@ def lookup_iface_status_ip(
             timeout=120,
         )
     except VMInterfaceStatusNotFoundError:
-        raise IpNotFound(f"IPv{ip_family} address not found for interface {iface_name} on VM {vm.name}.")
+        raise IpNotFoundError(vm_name=vm.name, interface_name=iface_name, ip_family=ip_family)
 
     return _lookup_first_ip_address(ip_addresses=iface["ipAddresses"], ip_family=ip_family)
 
@@ -248,9 +289,7 @@ def wait_for_vmi_condition_status(
         ):
             return
 
-    raise VMIConditionNotReachedError(
-        f"VMI {vm.name}: condition {condition}={status} was not reached within {timeout}s."
-    )
+    raise VMIConditionNotReachedError(vm_name=vm.name, condition=condition, status=status, timeout=timeout)
 
 
 def wait_for_no_vmi_condition(
@@ -291,7 +330,7 @@ def wait_for_no_vmi_condition(
         ):
             return
 
-    raise VMIConditionStillPresentError(f"VMI {vm.name}: condition {condition} is still present after {timeout}s.")
+    raise VMIConditionStillPresentError(vm_name=vm.name, condition=condition, timeout=timeout)
 
 
 def _vmi_condition_set(existing_conditions: list[ResourceField], required_condition: str, status: str) -> bool:
