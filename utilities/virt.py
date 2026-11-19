@@ -1794,7 +1794,7 @@ def wait_for_windows_vm(vm: VirtualMachineForTests, version: str, timeout: int =
         wait_timeout=timeout,
         sleep=15,
         func=get_windows_os_properties,
-        exceptions_dict={RemoteCommandExecFailed: [], SSHException: [], OSError: [], JSONDecodeError: []},
+        exceptions_dict={RemoteCommandExecFailed: [], SSHException: [], OSError: [], JSONDecodeError: [], EOFError: []},
         ssh_exec=vm.ssh_exec,
     )
     timeout_message = f"Windows VM {vm.name} did not report Caption containing {version!r}"

@@ -133,7 +133,7 @@ class TestWaitForWindowsVm:
             wait_timeout=30,
             sleep=15,
             func=cim_query,
-            exceptions_dict={CommandExecFailed: [], SSHException: [], OSError: [], JSONDecodeError: []},
+            exceptions_dict={CommandExecFailed: [], SSHException: [], OSError: [], JSONDecodeError: [], EOFError: []},
             ssh_exec=mock_vm.ssh_exec,
         )
 
@@ -142,6 +142,7 @@ class TestWaitForWindowsVm:
         [
             SSHException("Guest SSH is starting"),
             OSError("Connection refused"),
+            EOFError("SSH connection closed"),
             CommandExecFailed(name="CIM query", err="Guest is starting"),
             JSONDecodeError(msg="Incomplete output", doc="", pos=0),
         ],
