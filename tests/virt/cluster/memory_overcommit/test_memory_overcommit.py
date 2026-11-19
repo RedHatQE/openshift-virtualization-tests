@@ -34,7 +34,6 @@ class TestMemoryOvercommit:
             pytest.param(
                 {"vm_name": "vm-with-guest-only"},
                 True,
-                marks=pytest.mark.polarion("CNV-12376"),
                 id="vm_with_guest_only_has_less_pod_memory",
             ),
             pytest.param(
@@ -43,7 +42,6 @@ class TestMemoryOvercommit:
                     "memory_requests": VM_MEMORY,
                 },
                 False,
-                marks=pytest.mark.polarion("CNV-12377"),
                 id="vm_with_memory_request_not_overcommited",
             ),
         ],
@@ -55,6 +53,11 @@ class TestMemoryOvercommit:
         vm_for_memory_overcommit,
         expected_less_memory,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-14960 # <skip-jira-utils-check>
+        Polarion: CNV-12376
+        Polarion: CNV-12377
+        """
         pod_instance = vm_for_memory_overcommit.vmi.get_virt_launcher_pod(privileged_client=admin_client).instance
         pod_memory = pod_instance.spec.containers[0].resources.requests["memory"]
         assert (

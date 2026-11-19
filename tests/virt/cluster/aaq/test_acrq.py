@@ -24,21 +24,27 @@ TESTS_ACRQ_CLASS_NAME = "TestApplicationAwareClusterResourceQuota"
 )
 class TestApplicationAwareClusterResourceQuota:
     @pytest.mark.dependency(name=f"{TESTS_ACRQ_CLASS_NAME}::vm_gated")
-    @pytest.mark.polarion("CNV-11241")
     def test_acrq_can_manage_vms_in_multiple_namespaces(
         self,
         application_aware_cluster_resource_quota,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-36385 # <skip-jira-utils-check>
+        Polarion: CNV-11241
+        """
         check_arq_status_values(
             current_values=application_aware_cluster_resource_quota.instance.status.total.used,
             expected_values=QUOTA_FOR_TWO_VMI,
         )
 
     @pytest.mark.dependency(depends=[f"{TESTS_ACRQ_CLASS_NAME}::vm_gated"])
-    @pytest.mark.polarion("CNV-11284")
     def test_acrq_gated_vm_started_when_namespace_label_removed(
         self,
         vm_for_aaq_test_in_gated_state,
         removed_acrq_label_from_second_namespace,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-36385 # <skip-jira-utils-check>
+        Polarion: CNV-11284
+        """
         wait_for_running_vm(vm=vm_for_aaq_test_in_gated_state)

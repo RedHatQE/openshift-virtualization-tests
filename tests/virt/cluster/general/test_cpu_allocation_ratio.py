@@ -99,7 +99,6 @@ def limit_range_for_cpu_allocation_test(admin_client, namespace):
         yield limit_range
 
 
-@pytest.mark.polarion("CNV-10521")
 def test_inspect_cpu_allocation_ratio_pod(
     admin_client,
     hco_cr_with_vmi_cpu_allocation_ratio,
@@ -107,6 +106,10 @@ def test_inspect_cpu_allocation_ratio_pod(
     vmi_cpu_allocation_from_kubevirt,
     vmi_cpu_allocation_ratio_from_hco_post_update,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-12516 # <skip-jira-utils-check>
+    Polarion: CNV-10521
+    """
     (
         assert_vmi_cpu_allocation_ratio(
             vmi_cpu_allocation_from_kubevirt=vmi_cpu_allocation_from_kubevirt,
@@ -122,13 +125,16 @@ def test_inspect_cpu_allocation_ratio_pod(
     )
 
 
-@pytest.mark.polarion("CNV-11294")
 def test_limitrange_default_cpu_not_override_vm_cpu(
     admin_client,
     limit_range_for_cpu_allocation_test,
     vmi_cpu_allocation_from_kubevirt,
     vm_for_test_cpu_allocation_ratio,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-12516 # <skip-jira-utils-check>
+    Polarion: CNV-11294
+    """
     assert_pod_cpu_request_value(
         vmi_cpu_allocation_from_kubevirt=vmi_cpu_allocation_from_kubevirt,
         vm=vm_for_test_cpu_allocation_ratio,
