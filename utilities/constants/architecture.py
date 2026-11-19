@@ -1,6 +1,6 @@
 """CPU architecture identifiers and multi-architecture support constants.
 
-Covers architecture strings (AMD_64, ARM_64, S390X, X86_64), container platform
+Covers architecture strings (AARCH_64, AMD_64, ARM_64, S390X, X86_64), container platform
 strings (LINUX_AMD_64), CPU vendor identifiers (INTEL, AMD), and supported
 architecture sets.
 
@@ -11,6 +11,7 @@ Not here:
 - Image architecture variants → ``images.py``
 """
 
+AARCH_64 = "aarch64"
 AMD_64 = "amd64"
 ARM_64 = "arm64"
 S390X = "s390x"
