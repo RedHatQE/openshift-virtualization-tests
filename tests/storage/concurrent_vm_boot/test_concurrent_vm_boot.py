@@ -43,12 +43,14 @@ class TestConcurrentVMBoot:
         - Sufficient cluster resources to schedule 20 VMs simultaneously
     """
 
-    @pytest.mark.polarion("CNV-16335")
     def test_concurrent_vms_boot_with_five_disks(self, running_vms_with_five_disks):
         """
         Test that 20 VMs boot simultaneously with five disk devices each and all reach Running state.
 
         Jira: https://redhat.atlassian.net/browse/CNV-88906  # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-84717 # <skip-jira-utils-check>
+        Polarion: CNV-16335
+
 
         Preconditions:
             - 20 running VMs, each with one golden image boot volume (PVC clone via DataSource),

@@ -27,7 +27,6 @@ MSG_UNKNOWN_PROVISIONER = "there are StorageProfiles with empty ClaimPropertySet
     run=False,
 )
 class TestCheckupNegative:
-    @pytest.mark.polarion("CNV-10701")
     def test_no_default_storage_class(
         self,
         removed_default_storage_classes,
@@ -36,6 +35,9 @@ class TestCheckupNegative:
         checkup_job,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-27928 # <skip-jira-utils-check>
+        Polarion: CNV-10701
+
         Checkup Should Fail when there is no default StorageClass
         """
         assert_results_in_configmap(
@@ -45,7 +47,6 @@ class TestCheckupNegative:
             result_entry=DEFAULT_STORAGE_CLASS_ENTRY,
         )
 
-    @pytest.mark.polarion("CNV-10705")
     def test_additional_default_storage_class(
         self,
         updated_two_default_storage_classes,
@@ -54,6 +55,9 @@ class TestCheckupNegative:
         checkup_job,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-27928 # <skip-jira-utils-check>
+        Polarion: CNV-10705
+
         Checkup should fail when there is more than one default StorageClass
         """
         assert_results_in_configmap(
@@ -63,7 +67,6 @@ class TestCheckupNegative:
             result_entry=DEFAULT_STORAGE_CLASS_ENTRY,
         )
 
-    @pytest.mark.polarion("CNV-10706")
     def test_unknown_provisioner(
         self,
         storage_class_with_unknown_provisioner,
@@ -71,6 +74,9 @@ class TestCheckupNegative:
         checkup_job,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-27928 # <skip-jira-utils-check>
+        Polarion: CNV-10706
+
         Checkup should fail when there is StorageClass with unknown provisioner.
         """
         assert_results_in_configmap(
@@ -80,7 +86,6 @@ class TestCheckupNegative:
             result_entry="storageProfilesWithEmptyClaimPropertySets",
         )
 
-    @pytest.mark.polarion("CNV-10711")
     def test_golden_image_data_source_not_ready(
         self,
         broken_data_import_cron,
@@ -88,6 +93,9 @@ class TestCheckupNegative:
         checkup_job,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-27928 # <skip-jira-utils-check>
+        Polarion: CNV-10711
+
         Checkup should fail when there are golden image DataSources not ready
         """
         assert_results_in_configmap(
