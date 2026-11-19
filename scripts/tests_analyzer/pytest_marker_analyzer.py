@@ -55,6 +55,15 @@ MAX_FILES_PER_PR = 10000
 MAX_WORKERS = min(32, (os.cpu_count() or 1) + 4)
 
 
+class AnalyzerGitError(RuntimeError):
+    """Raised when a git operation needed for change detection fails.
+
+    Signals that the analyzer cannot determine the PR change set. Callers must
+    fail loudly (non-zero exit) instead of reporting "no changes", which would
+    silently skip every test.
+    """
+
+
 def validate_repo_name(repo: str) -> None:
     """Validate GitHub repo name format strictly.
 
@@ -1541,6 +1550,148 @@ def _extract_deleted_symbols_from_diff(diff_content: str) -> set[str]:
     return deleted_symbols
 
 
+_IMPORT_ALIAS_PATTERN = re.compile(pattern=r"^([A-Za-z_][\w.]*)(?:\s+as\s+([A-Za-z_]\w*))?$")
+
+
+def _extract_imported_names(line: str) -> set[str] | None:
+    """Extract the module-level names bound by a single-line import statement.
+
+    Args:
+        line: Stripped source line (or diff line content) starting with
+            ``import `` or ``from ``.
+
+    Returns:
+        Set of names the statement binds.  Empty set for a multi-line import
+        opener (``from x import (``) whose names live on continuation lines.
+        ``None`` when the names cannot be determined (star import, unusual
+        syntax) — the caller must then stay conservative.
+    """
+    statement = line.strip()
+    if statement.startswith("import "):
+        operands = statement.removeprefix("import ")
+    else:
+        _, import_separator, operands = statement.partition(" import ")
+        if not import_separator:
+            return None
+
+    operands = operands.split("#")[0].strip().strip("()").strip()
+    if not operands:
+        return set()
+
+    names: set[str] = set()
+    for operand in operands.split(","):
+        match = _IMPORT_ALIAS_PATTERN.match(string=operand.strip())
+        if match is None:
+            # Star import or unexpected syntax — cannot narrow
+            return None
+        alias_name, imported_alias = match.group(1), match.group(2)
+        names.add(imported_alias or alias_name.split(".")[0])
+    return names
+
+
+_PROJECT_MODULE_PATTERN = re.compile(pattern=r"^(?:from|import)\s+(\.*)([A-Za-z_]\w*)")
+_PROJECT_PACKAGES = frozenset({"utilities", "libs", "tests"})
+
+
+def _is_project_import(statement: str) -> bool:
+    """Check whether an import statement imports from project code.
+
+    Used to tell a real API removal from the side effect of a diff dropping an
+    import that became unused (``import json``, ``from pyhelper_utils.shell
+    import run_ssh_commands``): only project modules can be imported by callers
+    through the changed file, so only those names are API removals.
+
+    Args:
+        statement: Stripped source line starting with ``import `` or
+            ``from ``.
+
+    Returns:
+        ``True`` for relative imports and for imports rooted at a project
+        package (``utilities``, ``libs``, ``tests``), ``False`` for stdlib and
+        third-party imports.
+    """
+    match = _PROJECT_MODULE_PATTERN.match(string=statement.strip())
+    if match is None:
+        # Unparsable — callers stay conservative.
+        return False
+    relative_dots, module = match.group(1), match.group(2)
+    return bool(relative_dots) or module in _PROJECT_PACKAGES
+
+
+def _is_type_checking_guard(test: ast.expr) -> bool:
+    """Check whether an ``if`` test guards a ``TYPE_CHECKING`` block.
+
+    Args:
+        test: The ``if`` statement's test expression.
+
+    Returns:
+        ``True`` when the test references ``TYPE_CHECKING``, either as a bare
+        name or as an attribute such as ``typing.TYPE_CHECKING``.
+    """
+    return any(
+        (isinstance(node, ast.Name) and node.id == "TYPE_CHECKING")
+        or (isinstance(node, ast.Attribute) and node.attr == "TYPE_CHECKING")
+        for node in ast.walk(node=test)
+    )
+
+
+def _extract_module_level_bindings(source: str) -> set[str]:
+    """Collect the names bound at module level by a Python source file.
+
+    Used to decide whether a symbol removed by the diff is still available to
+    importers: a name that is re-imported, reassigned, or redefined at module
+    level still exists, so removing its old definition cannot break callers.
+
+    Guarded definitions (``if``/``try``/``with``/loops) count as module-level
+    bindings, except for ``if TYPE_CHECKING:`` blocks: those bind names for type
+    checkers only, so a name that survives there alone is not importable at
+    runtime and must not be treated as still bound.
+
+    Args:
+        source: Python source text of the new (post-change) file.
+
+    Returns:
+        Set of module-level bound names.  Empty when ``source`` cannot be
+        parsed.
+    """
+
+    def collect(statements: list[ast.stmt], names: set[str]) -> None:
+        for node in statements:
+            if isinstance(node, (ast.Import, ast.ImportFrom)):
+                for alias in node.names:
+                    if alias.asname:
+                        names.add(alias.asname)
+                    elif isinstance(node, ast.Import):
+                        names.add(alias.name.split(".")[0])
+                    elif alias.name != "*":
+                        names.add(alias.name)
+            elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                names.add(node.name)
+            elif isinstance(node, ast.Assign):
+                names.update(target.id for target in node.targets if isinstance(target, ast.Name))
+            elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+                names.add(node.target.id)
+            elif isinstance(node, ast.If) and _is_type_checking_guard(test=node.test):
+                continue
+            else:
+                # Guarded definitions (if/try/with/loops) still bind their names
+                nested_bodies = [getattr(node, "body", []), getattr(node, "orelse", [])]
+                if isinstance(node, ast.Try):
+                    nested_bodies.extend(handler.body for handler in node.handlers)
+                    nested_bodies.append(node.finalbody)
+                for body in nested_bodies:
+                    collect(statements=body, names=names)
+
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return set()
+
+    names: set[str] = set()
+    collect(statements=tree.body, names=names)
+    return names
+
+
 def _get_diff_content(
     file_path: Path,
     base_branch: str,
@@ -1747,11 +1898,12 @@ def _extract_modified_symbols(
         or parse errors).  A ``None`` return signals the
         caller to fall back to file-level dependency tracking.
 
-        When some changed lines fall outside any named symbol (e.g. import
-        reorderings or comments between functions), the returned
-        ``SymbolClassification`` will have ``has_unattributed_changes=True``
-        but still contain any symbols that *were* identified from other
-        changed lines.
+        When some changed lines fall outside any named symbol (e.g. comments
+        between functions), the returned ``SymbolClassification`` will have
+        ``has_unattributed_changes=True`` but still contain any symbols that
+        *were* identified from other changed lines.  Import-line edits are
+        attributed to the imported names instead and do not set
+        ``has_unattributed_changes``.
     """
     diff_content = _get_diff_content(
         file_path=file_path,
@@ -1819,12 +1971,34 @@ def _extract_modified_symbols(
 
     has_unattributed = False
     source_lines = source.splitlines()
-    modified_symbols: set[str] = set()
+    module_bindings = _extract_module_level_bindings(source=source)
+
+    # Symbols whose definition or binding was removed: deleted defs/classes
+    # plus names added or removed by changed import lines.
+    removal_symbols: set[str] = _extract_deleted_symbols_from_diff(diff_content=diff_content)
+    for diff_line in diff_content.splitlines():
+        if diff_line.startswith(("---", "+++")) or diff_line[:1] not in {"+", "-"}:
+            continue
+        diff_line_content = diff_line[1:].strip()
+        if not diff_line_content.startswith(("import ", "from ")):
+            continue
+        imported_names = _extract_imported_names(line=diff_line_content)
+        if imported_names is None:
+            # Star import or unparsable import edit — cannot narrow
+            has_unattributed = True
+            continue
+        if not _is_project_import(statement=diff_line_content):
+            # Dropping a stdlib/third-party import only unbinds that module's
+            # name here; it is not an API removal for importers of this file.
+            continue
+        removal_symbols.update(imported_names)
+
+    body_modified_symbols: set[str] = set()
     for line_number in changed_lines:
         found = False
         for start_line, end_line, symbol_name in symbol_map.top_level:
             if start_line <= line_number <= end_line:
-                modified_symbols.add(symbol_name)
+                body_modified_symbols.add(symbol_name)
                 found = True
                 break
         if not found:
@@ -1833,11 +2007,16 @@ def _extract_modified_symbols(
             # or potentially impactful executable code.
             if line_number <= len(source_lines):
                 line_content = source_lines[line_number - 1].strip()
-                if not line_content or line_content.startswith((
+                if not line_content:
+                    has_unattributed = True
+                elif line_content.startswith(("import ", "from ")):
+                    # Import edits are attributed to the imported names (via
+                    # removal_symbols), so they are not unattributed changes.
+                    if _extract_imported_names(line=line_content) is None:
+                        has_unattributed = True
+                elif line_content.startswith((
                     "#",
                     "@",
-                    "import ",
-                    "from ",
                     '"""',
                     "'''",
                     '"',
@@ -1868,6 +2047,12 @@ def _extract_modified_symbols(
                     return None
             else:
                 return None
+
+    # A removed name that is still bound at module level (e.g. re-imported from
+    # its new home) is unaffected for importers, so it is not "modified".
+    modified_symbols = body_modified_symbols | {
+        removed_symbol for removed_symbol in removal_symbols if removed_symbol not in module_bindings
+    }
 
     # --- Member-level analysis for modified classes ---
     modified_members: dict[str, set[str]] = {}
@@ -2192,15 +2377,15 @@ def _check_conftest_pathway(
             if (
                 classification is not None
                 and not classification.modified_symbols
-                and classification.new_symbols
                 and not classification.has_unattributed_changes
             ):
-                # Only new symbols added — cannot break existing tests
+                # Only new symbols added, or nothing observable changed —
+                # cannot break existing tests
                 conftest_resolved = True
                 continue
             if classification is not None and not classification.modified_symbols:
-                # Empty modified_symbols without new_symbols — could be pure deletion
-                # or unmapped module-level edits; fall back to conservative behavior
+                # Empty modified_symbols with unattributed changes — module-level
+                # edits we could not attribute; fall back to conservative behavior
                 matching_deps.append(
                     f"{changed_file.relative_to(repo_root)} (opaque import via {conftest_path.relative_to(repo_root)})"
                 )
@@ -3571,6 +3756,9 @@ class MarkerTestAnalyzer:
 
         Raises:
             ValueError: If ``files`` is not provided and ``base_branch`` is empty.
+            AnalyzerGitError: If the branch name is invalid, the base ref cannot
+                be resolved, or ``git diff`` fails. Returning an empty change set
+                in these cases would silently skip every test.
         """
         if files:
             # Use provided files with validation
@@ -3598,8 +3786,21 @@ class MarkerTestAnalyzer:
 
         # Validate branch name (alphanumeric, dash, underscore, slash, dot)
         if not re.match(pattern=r"^[a-zA-Z0-9/_.-]+$", string=base_branch):
-            logger.error(msg="Invalid branch name", extra={"branch": base_branch})
-            return []
+            raise AnalyzerGitError(f"invalid base branch name '{base_branch}'; pass a valid --base")
+
+        # Verify the base ref resolves before diffing: an unresolvable base
+        # (typo, unfetched remote branch) would otherwise produce an empty diff.
+        try:
+            verified = subprocess.run(
+                ["git", "rev-parse", "--verify", "--quiet", f"{base_branch}^{{commit}}"],
+                cwd=self.repo_root,
+                capture_output=True,
+                text=True,
+            )
+        except (subprocess.SubprocessError, OSError) as exc:
+            raise AnalyzerGitError(f"could not run git in {self.repo_root}: {exc}") from exc
+        if verified.returncode != 0:
+            raise AnalyzerGitError(f"base branch '{base_branch}' could not be resolved; pass a valid --base")
 
         # Get changed files from git
         try:
@@ -3608,15 +3809,17 @@ class MarkerTestAnalyzer:
                 cwd=self.repo_root,
                 capture_output=True,
                 text=True,
-                check=True,
             )
-            changed = [self.repo_root / line.strip() for line in result.stdout.splitlines() if line.strip()]
-            logger.info(msg="Found changed files from git", extra={"file_count": len(changed)})
-            return changed
+        except (subprocess.SubprocessError, OSError) as exc:
+            raise AnalyzerGitError(f"git diff against base '{base_branch}' failed in {self.repo_root}: {exc}") from exc
+        if result.returncode != 0:
+            raise AnalyzerGitError(
+                f"git diff against base '{base_branch}' failed in {self.repo_root}: {result.stderr.strip()}"
+            )
 
-        except subprocess.CalledProcessError as e:
-            logger.error(msg="Failed to get changed files from git", extra={"error": str(e)})
-            return []
+        changed = [self.repo_root / line.strip() for line in result.stdout.splitlines() if line.strip()]
+        logger.info(msg="Found changed files from git", extra={"file_count": len(changed)})
+        return changed
 
     def analyze_impact(self, changed_files: list[Path]) -> AnalysisResult:
         """Analyze if changed files impact marked tests (parallelized).
@@ -4023,7 +4226,12 @@ def run_local_mode(args: argparse.Namespace) -> tuple[AnalysisResult | None, int
         return None, 1
 
     analyzer.analyze_dependencies()
-    changed_files = analyzer.get_changed_files(base_branch=args.base, files=args.files)  # keyword args used
+
+    try:
+        changed_files = analyzer.get_changed_files(base_branch=args.base, files=args.files)  # keyword args used
+    except AnalyzerGitError as exc:
+        logger.error(msg=str(exc))
+        return None, 1
 
     if not changed_files:
         logger.warning(msg="No changed files found")
