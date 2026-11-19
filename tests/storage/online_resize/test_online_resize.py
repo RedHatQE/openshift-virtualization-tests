@@ -35,7 +35,6 @@ pytestmark = pytest.mark.usefixtures("xfail_if_gcp_storage_class")
 
 @pytest.mark.gating
 @pytest.mark.conformance
-@pytest.mark.polarion("CNV-6793")
 @pytest.mark.parametrize(
     "rhel_dv_for_online_resize, rhel_vm_for_online_resize",
     [
@@ -51,13 +50,17 @@ def test_sequential_disk_expand(
     rhel_vm_for_online_resize,
     running_rhel_vm,
 ):
-    # Expand PVC and wait for resize 6 times
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-7490 # <skip-jira-utils-check>
+    Polarion: CNV-6793
+
+    Expand PVC and wait for resize 6 times
+    """
     for _ in range(6):
         with wait_for_resize(vm=rhel_vm_for_online_resize):
             expand_pvc(dv=rhel_dv_for_online_resize, size_change=SMALLEST_POSSIBLE_EXPAND)
 
 
-@pytest.mark.polarion("CNV-6794")
 @pytest.mark.parametrize(
     "rhel_dv_for_online_resize, rhel_vm_for_online_resize",
     [
@@ -74,6 +77,10 @@ def test_simultaneous_disk_expand(
     second_rhel_dv_for_online_resize,
     rhel_vm_for_online_resize,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-7490 # <skip-jira-utils-check>
+    Polarion: CNV-6794
+    """
     add_dv_to_vm(vm=rhel_vm_for_online_resize, dv_name=second_rhel_dv_for_online_resize.name)
     running_vm(vm=rhel_vm_for_online_resize)
     with wait_for_resize(vm=rhel_vm_for_online_resize, count=2):
@@ -81,7 +88,6 @@ def test_simultaneous_disk_expand(
         expand_pvc(dv=second_rhel_dv_for_online_resize, size_change=SMALLEST_POSSIBLE_EXPAND)
 
 
-@pytest.mark.polarion("CNV-8257")
 @pytest.mark.parametrize(
     "rhel_dv_for_online_resize, rhel_vm_for_online_resize",
     [
@@ -97,6 +103,10 @@ def test_disk_expand_then_clone_fail(
     rhel_dv_for_online_resize,
     rhel_vm_after_expand,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-7490 # <skip-jira-utils-check>
+    Polarion: CNV-8257
+    """
     LOGGER.info("Trying to clone DV with original size - should fail at webhook")
     with create_dv(
         source="pvc",
@@ -123,7 +133,6 @@ def test_disk_expand_then_clone_fail(
 
 @pytest.mark.gating
 @pytest.mark.conformance
-@pytest.mark.polarion("CNV-6578")
 @pytest.mark.parametrize(
     "rhel_dv_for_online_resize, rhel_vm_for_online_resize",
     [
@@ -140,7 +149,12 @@ def test_disk_expand_then_clone_success(
     rhel_dv_for_online_resize,
     rhel_vm_after_expand,
 ):
-    # Can't clone a running VM
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-7490 # <skip-jira-utils-check>
+    Polarion: CNV-6578
+
+    Can't clone a running VM
+    """
     rhel_vm_after_expand.stop()
 
     LOGGER.info("Trying to clone DV with new size - should succeed")
@@ -161,7 +175,6 @@ def test_disk_expand_then_clone_success(
         )
 
 
-@pytest.mark.polarion("CNV-6580")
 @pytest.mark.parametrize(
     "rhel_dv_for_online_resize, rhel_vm_for_online_resize",
     [
@@ -176,11 +189,14 @@ def test_disk_expand_then_clone_success(
 def test_disk_expand_then_migrate(
     admin_client: DynamicClient, rhel_vm_after_expand: VirtualMachineForTests, orig_cksum: str
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-7490 # <skip-jira-utils-check>
+    Polarion: CNV-6580
+    """
     migrate_vm_and_verify(vm=rhel_vm_after_expand, client=admin_client, check_ssh_connectivity=True)
     check_file_unchanged(orig_cksum=orig_cksum, vm=rhel_vm_after_expand)
 
 
-@pytest.mark.polarion("CNV-6797")
 @pytest.mark.parametrize(
     "rhel_dv_for_online_resize, rhel_vm_for_online_resize",
     [
@@ -197,6 +213,10 @@ def test_disk_expand_with_snapshots(
     rhel_vm_for_online_resize,
     orig_cksum,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-7490 # <skip-jira-utils-check>
+    Polarion: CNV-6797
+    """
     with vm_snapshot(vm=rhel_vm_for_online_resize, name="snapshot-before") as vm_snapshot_before:
         with wait_for_resize(vm=rhel_vm_for_online_resize):
             expand_pvc(dv=rhel_dv_for_online_resize, size_change=SMALLEST_POSSIBLE_EXPAND)
