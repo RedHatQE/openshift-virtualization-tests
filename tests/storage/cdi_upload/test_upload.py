@@ -27,9 +27,12 @@ LOGGER = logging.getLogger(__name__)
 CONCURRENT_UPLOAD_DVS_COUNT = 10
 
 
-@pytest.mark.polarion("CNV-2318")
 @pytest.mark.s390x
 def test_cdi_uploadproxy_route_owner_references(admin_client, hco_namespace):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-1123 # <skip-jira-utils-check>
+    Polarion: CNV-2318
+    """
     route = Route(name=CDI_UPLOADPROXY, namespace=hco_namespace.name, client=admin_client)
     assert route.instance
     assert route.instance["metadata"]["ownerReferences"][0]["name"] == "cdi-deployment"
@@ -293,7 +296,6 @@ def test_successful_concurrent_uploads(
                 "dv_size": "3Gi",
                 "wait": True,
             },
-            marks=(pytest.mark.polarion("CNV-4511")),
         ),
     ],
     indirect=True,
@@ -306,6 +308,9 @@ def test_print_response_body_on_error_upload(
     data_volume_multi_storage_scope_function,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-4910 # <skip-jira-utils-check>
+    Polarion: CNV-4511
+
     Check that CDI now reports validation failures as part of the body response
     in case for instance the disk image virtual size > PVC size > disk size
     """
