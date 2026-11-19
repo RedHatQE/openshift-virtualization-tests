@@ -25,9 +25,9 @@ from utilities.constants.timeouts import (
     TIMEOUT_2MIN,
     TIMEOUT_5MIN,
 )
-from utilities.ssp import get_windows_timezone
 from utilities.storage import get_downloaded_artifact
 from utilities.virt import VirtualMachineForTests, migrate_vm_and_verify, running_vm
+from utilities.windows import get_windows_timezone
 
 if TYPE_CHECKING:
     from kubernetes.dynamic import DynamicClient

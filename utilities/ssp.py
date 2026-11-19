@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import json
 import logging
 import os
 import re
-import shlex
 import urllib.request
 from contextlib import contextmanager
 from typing import TYPE_CHECKING
@@ -16,7 +14,6 @@ from ocp_resources.namespace import Namespace
 from ocp_resources.ssp import SSP
 from ocp_resources.template import Template
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
-from pyhelper_utils.shell import run_ssh_commands
 from pytest_testconfig import config as py_config
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
@@ -32,7 +29,6 @@ from utilities.constants.components import (
 )
 from utilities.constants.hco import DEFAULT_RESOURCE_CONDITIONS
 from utilities.constants.timeouts import (
-    TCP_TIMEOUT_30SEC,
     TIMEOUT_2MIN,
     TIMEOUT_3MIN,
     TIMEOUT_5MIN,
@@ -44,6 +40,7 @@ from utilities.constants.virt import (
     EIGHT_CPU_SOCKETS,
     FOUR_GI_MEMORY,
 )
+from utilities.windows import get_windows_os_info
 
 LOGGER = logging.getLogger(__name__)
 
@@ -172,73 +169,6 @@ def create_custom_template_from_url(url, template_name, template_dir, namespace,
         client=client,
     ) as template:
         yield template
-
-
-def guest_agent_version_parser(version_string):
-    # Return qemu-guest-agent version (including build number, e.g: "4.2.0-34" or "100.0.0.0" or "100.0.0" for Windows)
-    return re.search(r"[0-9]+\.[0-9]+\.[0-9]+(?:[.|-][0-9]+)?", version_string).group(0)
-
-
-def get_windows_timezone(ssh_exec, get_standard_name=False):
-    """
-    Args:
-        ssh_exec: vm SSH executor
-        get_standard_name (bool, default False): If True, get only Windows StandardName
-    """
-    standard_name_cmd = '| findstr "StandardName"' if get_standard_name else ""
-    timezone_cmd = shlex.split(f'powershell -command "Get-TimeZone {standard_name_cmd}"')
-    return run_ssh_commands(host=ssh_exec, commands=[timezone_cmd], tcp_timeout=TCP_TIMEOUT_30SEC)[0]
-
-
-def get_ga_version(ssh_exec):
-    return run_ssh_commands(
-        host=ssh_exec,
-        commands=[
-            "powershell",
-            "-Command",
-            "(Get-Item",
-            "'C:\\Program Files\\Qemu-ga\\qemu-ga.exe').VersionInfo.FileVersion",
-        ],
-        tcp_timeout=TCP_TIMEOUT_30SEC,
-    )[0].strip()
-
-
-def get_cim_instance_json(ssh_exec):
-    return json.loads(
-        run_ssh_commands(
-            host=ssh_exec,
-            commands=shlex.split('powershell -c "Get-CimInstance -Class Win32_OperatingSystem | ConvertTo-Json"'),
-        )[0]
-    )
-
-
-def get_reg_product_name(ssh_exec):
-    return run_ssh_commands(
-        host=ssh_exec,
-        commands=shlex.split(
-            'REG QUERY "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion" /v "ProductName"'
-        ),
-        tcp_timeout=TCP_TIMEOUT_30SEC,
-    )[0]
-
-
-def get_windows_os_info(ssh_exec):
-    cim_instance_json = get_cim_instance_json(ssh_exec=ssh_exec)
-    return {
-        "guestAgentVersion": guest_agent_version_parser(version_string=get_ga_version(ssh_exec=ssh_exec)),
-        "hostname": cim_instance_json["CSName"],
-        "os": {
-            "name": "Microsoft Windows",
-            "kernelRelease": cim_instance_json["BuildNumber"],
-            "version": re.search(r"(.+\d+)", cim_instance_json["Caption"]).group(1),
-            "prettyName": re.search(r"REG_SZ\s+(.+)\r\n", get_reg_product_name(ssh_exec=ssh_exec)).group(1),
-            "versionId": re.search(r"\D+(\d+)", cim_instance_json["Caption"]).group(1),
-            "kernelVersion": re.search(r"(\d+\.\d+)\.", cim_instance_json["Version"]).group(1),
-            "machine": "x86_64" if "64" in cim_instance_json["OSArchitecture"] else "x86",
-            "id": "mswindows",
-        },
-        "timezone": get_windows_timezone(ssh_exec=ssh_exec),
-    }
 
 
 def validate_os_info_vmi_vs_windows_os(vm):
