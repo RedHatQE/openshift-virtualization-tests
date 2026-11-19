@@ -1,12 +1,6 @@
 """CBT feature-local constants."""
 
-from utilities.constants.images import OS_FLAVOR_RHEL
-from utilities.constants.instance_types import RHEL9_PREFERENCE, U1_SMALL
-
 CBT_TEST_DATA: str = "cbt-backup-test-data-content"
-CBT_INSTANCE_TYPE_NAME: str = U1_SMALL
-CBT_PREFERENCE_NAME: str = RHEL9_PREFERENCE
-CBT_OS_FLAVOR: str = OS_FLAVOR_RHEL
 # On the root filesystem. /tmp may be tmpfs and would be empty after the restored VM boots.
 CBT_BOOT_DISK_TEST_DATA_FILE: str = "/var/tmp/cbt-test-data.txt"
 CBT_WINDOWS_BOOT_DISK_TEST_DATA_FILE: str = "C:/cbt-test-data.txt"

@@ -736,18 +736,15 @@ def deleted_cbt_source_vm(
 ):
     """Source VM removed after the push backup, so the restored VM can reuse its name.
 
-    The VM fixture teardown is disabled because the VM no longer exists.
-
     Yields:
         VirtualMachineForTests: The deleted source VM.
 
     Raises:
-        RuntimeError: When the source VM is still present after deletion.
+        CbtRestoreError: When the source VM is still present after deletion.
     """
     LOGGER.info(f"Deleting source VM {vm_with_cbt_label.name} after push backup {completed_push_backup_chain[0].name}")
     vm_with_cbt_label.clean_up(wait=True)
     require_vm_deleted(vm=vm_with_cbt_label)
-    vm_with_cbt_label.teardown = False
     yield vm_with_cbt_label
 
 

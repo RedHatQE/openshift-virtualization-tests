@@ -24,7 +24,7 @@ from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.virtual_machine_backup_tracker import VirtualMachineBackupTracker
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
-from timeout_sampler import TimeoutExpiredError
+from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.storage.cbt.constants import (
     CBT_BACKUP_DIR,
@@ -33,15 +33,14 @@ from tests.storage.cbt.constants import (
     CBT_BOOT_DISK_TEST_DATA_FILE,
     CBT_ENABLED_LABEL,
     CBT_FILESYSTEM_RESTORE_HEADROOM_GIB,
-    CBT_INSTANCE_TYPE_NAME,
-    CBT_OS_FLAVOR,
-    CBT_PREFERENCE_NAME,
     CBT_TARGET_DEVICE_PATH,
     CBT_TARGET_MOUNT_PATH,
     CBT_TARGET_VOLUME_NAME,
     CBT_TEST_DATA,
 )
 from tests.storage.cbt.utils import cbt_pvc_size_with_headroom
+from utilities.constants.images import OS_FLAVOR_RHEL
+from utilities.constants.instance_types import RHEL9_PREFERENCE, U1_SMALL
 from utilities.constants.networking import POD_CONTAINER_SPEC
 from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5MIN, TIMEOUT_5SEC, TIMEOUT_30MIN
 from utilities.storage import run_command_on_vm_and_check_output
@@ -54,6 +53,11 @@ if TYPE_CHECKING:
     from ocp_resources.virtual_machine_backup import VirtualMachineBackup
 
 LOGGER = logging.getLogger(__name__)
+
+
+class CbtRestoreError(Exception):
+    """The push restore cannot proceed because a required backup assumption is not met."""
+
 
 # restricted-v2 assigns the namespace UID and fsGroup. Leave runAsUser, fsGroup,
 # and hostUsers unset so admission succeeds and the container can call setgroups.
@@ -75,7 +79,7 @@ class CbtVolumeRestoreSpec:
 
 
 @dataclass(frozen=True)
-class _RestoredDiskStorage:
+class _RestoredDiskStorageClassProperties:
     """Storage class of the backup PVC, and the volume mode and access mode of that class.
 
     The backup PVC is a filesystem volume so it can hold qcow2 files. The restored disk uses
@@ -128,12 +132,12 @@ def restored_cbt_vm_from_push_backup(
         Writes the restored boot disk, and deletes the restored VM and target PVC on exit.
 
     Raises:
-        RuntimeError: When the restored VM or the target PVC is not deleted before the wait timeout.
+        CbtRestoreError: When the restored VM or the target PVC is not deleted before the wait timeout.
     """
     backup = _single_full_backup(backups=backups)
     vm_name = _backed_up_vm_name(backup=backup, namespace=namespace, client=client)
     volume_name = _full_backup_volume_name(backup=backup)
-    backup_storage = _restored_disk_storage(
+    backup_storage = _get_restored_disk_storage_class_properties(
         backup_pvc_name=backup_pvc_name,
         namespace=namespace,
         client=client,
@@ -187,7 +191,7 @@ def restored_cbt_vm_from_push_backup(
                 require_vm_deleted(vm=restored_vm)
         finally:
             if target_pvc is not None and not target_pvc.clean_up(wait=True):
-                raise RuntimeError(f"Timed out deleting restore PVC {namespace}/{target_pvc.name}")
+                raise CbtRestoreError(f"Timed out deleting restore PVC {namespace}/{target_pvc.name}")
 
 
 def require_vm_deleted(vm: VirtualMachineForTests) -> None:
@@ -196,17 +200,17 @@ def require_vm_deleted(vm: VirtualMachineForTests) -> None:
     VirtualMachineForTests.clean_up returns True when VM deletion times out.
 
     Raises:
-        RuntimeError: When the VM still exists.
+        CbtRestoreError: When the VM still exists.
     """
     if vm.exists:
-        raise RuntimeError(f"Timed out deleting VM {vm.namespace}/{vm.name}")
+        raise CbtRestoreError(f"Timed out deleting VM {vm.namespace}/{vm.name}")
 
 
 def _single_full_backup(backups: list[VirtualMachineBackup]) -> VirtualMachineBackup:
     """Return the one backup a full restore can apply."""
     if len(backups) != 1:
         backup_names = [backup.name for backup in backups]
-        raise RuntimeError(f"Push full restore expects one backup, got {len(backups)}: {backup_names}")
+        raise CbtRestoreError(f"Push full restore expects one backup, got {len(backups)}: {backup_names}")
     return backups[0]
 
 
@@ -214,25 +218,25 @@ def _backed_up_vm_name(backup: VirtualMachineBackup, namespace: str, client: Dyn
     """Return the VM name recorded on the backup or its tracker.
 
     Raises:
-        RuntimeError: When the backup or its tracker has no source VM. The original lookup error is chained.
+        CbtRestoreError: When the backup or its tracker has no source VM. The original lookup error is chained.
     """
     try:
         source = backup.instance.to_dict()["spec"]["source"]
         source_name = str(source["name"])
         source_kind = source["kind"]
     except NotFoundError as missing_backup:
-        raise RuntimeError(f"Backup {backup.name} not found") from missing_backup
+        raise CbtRestoreError(f"Backup {backup.name} not found") from missing_backup
     except KeyError as missing_field:
-        raise RuntimeError(f"Backup {backup.name} has no source VM ({missing_field})") from missing_field
+        raise CbtRestoreError(f"Backup {backup.name} has no source VM ({missing_field})") from missing_field
     if source_kind != VirtualMachineBackupTracker.kind:
         return source_name
     tracker = VirtualMachineBackupTracker(name=source_name, namespace=namespace, client=client)
     try:
         return str(tracker.instance.to_dict()["spec"]["source"]["name"])
     except NotFoundError as missing_tracker:
-        raise RuntimeError(f"Backup tracker {source_name} not found in namespace {namespace}") from missing_tracker
+        raise CbtRestoreError(f"Backup tracker {source_name} not found in namespace {namespace}") from missing_tracker
     except KeyError as missing_field:
-        raise RuntimeError(f"Backup tracker {source_name} has no source VM ({missing_field})") from missing_field
+        raise CbtRestoreError(f"Backup tracker {source_name} has no source VM ({missing_field})") from missing_field
 
 
 def _full_backup_volume_name(backup: VirtualMachineBackup) -> str:
@@ -241,7 +245,7 @@ def _full_backup_volume_name(backup: VirtualMachineBackup) -> str:
     Backup type is ``status.type``. ``includedVolumes`` entries carry only ``volumeName``.
 
     Raises:
-        RuntimeError: When the backup is missing, is not full, or does not record exactly one volume.
+        CbtRestoreError: When the backup is missing, is not full, or does not record exactly one volume.
             The original lookup error is chained.
     """
     try:
@@ -249,47 +253,48 @@ def _full_backup_volume_name(backup: VirtualMachineBackup) -> str:
         backup_type = status["type"]
         included_volumes = status["includedVolumes"]
     except NotFoundError as missing_backup:
-        raise RuntimeError(f"Backup {backup.name} not found") from missing_backup
+        raise CbtRestoreError(f"Backup {backup.name} not found") from missing_backup
     except KeyError as missing_field:
-        raise RuntimeError(f"Backup {backup.name} is missing {missing_field}") from missing_field
+        raise CbtRestoreError(f"Backup {backup.name} is missing {missing_field}") from missing_field
     if backup_type != CBT_BACKUP_TYPE_FULL:
-        raise RuntimeError(f"Backup {backup.name} type is {backup_type!r}, expected {CBT_BACKUP_TYPE_FULL!r}")
+        raise CbtRestoreError(f"Backup {backup.name} type is {backup_type!r}, expected {CBT_BACKUP_TYPE_FULL!r}")
     try:
         volume_names = [str(volume["volumeName"]) for volume in included_volumes]
     except KeyError as missing_field:
-        raise RuntimeError(f"Backup {backup.name} volume is missing {missing_field}") from missing_field
+        raise CbtRestoreError(f"Backup {backup.name} volume is missing {missing_field}") from missing_field
     if len(volume_names) != 1:
-        raise RuntimeError(f"Backup {backup.name} full restore expects one volume, got {volume_names}")
+        raise CbtRestoreError(f"Backup {backup.name} full restore expects one volume, got {volume_names}")
     return volume_names[0]
 
 
-def _restored_disk_storage(backup_pvc_name: str, namespace: str, client: DynamicClient) -> _RestoredDiskStorage:
+def _get_restored_disk_storage_class_properties(
+    backup_pvc_name: str, namespace: str, client: DynamicClient
+) -> _RestoredDiskStorageClassProperties:
     """Return the storage class of the backup PVC and that class's disk claim shape.
 
     Raises:
-        RuntimeError: When the backup PVC or the StorageProfile of its class does not exist,
-            or the profile has no claim property set. The original lookup error is chained.
+        CbtRestoreError: When the backup PVC or the StorageProfile of its class does not exist,
+            or the profile has no claim property set. A lookup error is chained when one was raised.
     """
     pvc = PersistentVolumeClaim(name=backup_pvc_name, namespace=namespace, client=client)
     try:
         storage_class = pvc.instance.to_dict()["spec"]["storageClassName"]
     except NotFoundError as missing_pvc:
-        raise RuntimeError(f"Backup PVC {backup_pvc_name} not found in namespace {namespace}") from missing_pvc
+        raise CbtRestoreError(f"Backup PVC {backup_pvc_name} not found in namespace {namespace}") from missing_pvc
     except KeyError as missing_field:
-        raise RuntimeError(f"Backup PVC {backup_pvc_name} has no storage class ({missing_field})") from missing_field
+        raise CbtRestoreError(f"Backup PVC {backup_pvc_name} has no storage class ({missing_field})") from missing_field
     profile = StorageProfile(name=storage_class, client=client)
     try:
-        claim = profile.instance.to_dict()["status"]["claimPropertySets"][0]
-        volume_mode = claim["volumeMode"]
-        access_mode = claim["accessModes"][0]
+        volume_mode = profile.first_claim_property_set_volume_mode()
+        access_modes = profile.first_claim_property_set_access_modes()
     except NotFoundError as missing_profile:
-        raise RuntimeError(f"StorageProfile {storage_class} not found") from missing_profile
-    except (KeyError, IndexError) as missing_claim:
-        raise RuntimeError(f"StorageProfile {storage_class} has no claim property set") from missing_claim
-    return _RestoredDiskStorage(
+        raise CbtRestoreError(f"StorageProfile {storage_class} not found") from missing_profile
+    if not volume_mode or not access_modes:
+        raise CbtRestoreError(f"StorageProfile {storage_class} has no claim property set")
+    return _RestoredDiskStorageClassProperties(
         storage_class=storage_class,
         volume_mode=volume_mode,
-        access_mode=access_mode,
+        access_mode=access_modes[0],
     )
 
 
@@ -392,7 +397,11 @@ def _deploy_target_pvc(
     namespace: str,
     client: DynamicClient,
 ) -> PersistentVolumeClaim:
-    """Create an empty PVC large enough for the backup image."""
+    """Create an empty PVC large enough for the backup image and wait until it is Bound.
+
+    Raises:
+        CbtRestoreError: When the PVC is not Bound before the wait timeout.
+    """
     pvc = PersistentVolumeClaim(
         name=f"cbt-rst-{vm_name}",
         namespace=namespace,
@@ -404,7 +413,23 @@ def _deploy_target_pvc(
     )
     LOGGER.info(f"Creating restore target PVC {pvc.name} for VM {vm_name}")
     pvc.deploy()
+    _wait_for_pvc_bound(pvc=pvc)
     return pvc
+
+
+def _wait_for_pvc_bound(pvc: PersistentVolumeClaim) -> None:
+    """Wait until the PVC is Bound.
+
+    Raises:
+        CbtRestoreError: When the PVC is not Bound before the wait timeout.
+            The original timeout is chained.
+    """
+    try:
+        for sample in TimeoutSampler(wait_timeout=TIMEOUT_5MIN, sleep=TIMEOUT_5SEC, func=pvc.bound):
+            if sample:
+                return
+    except TimeoutExpiredError as unbound:
+        raise CbtRestoreError(f"Restore PVC {pvc.namespace}/{pvc.name} did not bind") from unbound
 
 
 def _deploy_restored_vm(
@@ -422,10 +447,10 @@ def _deploy_restored_vm(
         name=vm_name,
         namespace=namespace,
         client=client,
-        vm_instance_type=VirtualMachineClusterInstancetype(client=client, name=CBT_INSTANCE_TYPE_NAME),
-        vm_preference=VirtualMachineClusterPreference(client=client, name=CBT_PREFERENCE_NAME),
+        vm_instance_type=VirtualMachineClusterInstancetype(client=client, name=U1_SMALL),
+        vm_preference=VirtualMachineClusterPreference(client=client, name=RHEL9_PREFERENCE),
         pvc=target_pvc,
-        os_flavor=CBT_OS_FLAVOR,
+        os_flavor=OS_FLAVOR_RHEL,
         label=CBT_ENABLED_LABEL,
         generate_unique_name=False,
     )
@@ -466,7 +491,7 @@ def _select_volume_qcow2(
     stem is exactly ``<backup>-<volume>`` or the volume name is also accepted.
 
     Raises:
-        RuntimeError: When the backup does not contain exactly one matching qcow2.
+        CbtRestoreError: When the backup does not contain exactly one matching qcow2.
     """
     producer_filename = f"{backup_name}-{volume_name}.qcow2"
     exact_candidates = [
@@ -490,7 +515,7 @@ def _select_volume_qcow2(
     if len(exact_names) == 1:
         return exact_names[0]
     listing = "\n".join(qcow2_files) if qcow2_files else "<none>"
-    raise RuntimeError(
+    raise CbtRestoreError(
         f"Could not find one qcow2 for volume {volume_name} in backup {backup_name} "
         f"(checkpoint {checkpoint_name}). Files:\n{listing}"
     )
@@ -528,7 +553,7 @@ def _list_qcow2_files(pod: Pod) -> list[str]:
         command=["find", CBT_BACKUP_DIR, "-type", "f"],
         timeout=TIMEOUT_2MIN,
     )
-    raise RuntimeError(f"No qcow2 files under {CBT_BACKUP_DIR}. Files:\n{listing}")
+    raise CbtRestoreError(f"No qcow2 files under {CBT_BACKUP_DIR}. Files:\n{listing}")
 
 
 @contextmanager
@@ -566,7 +591,7 @@ def _push_restore_pod(
         except TimeoutExpiredError as wait_error:
             restore_pod.get()
             status = restore_pod.instance.to_dict().get("status", {})
-            raise RuntimeError(
+            raise CbtRestoreError(
                 f"CBT push restore pod {restore_pod.name} did not start: {wait_error}. status={status}"
             ) from wait_error
         yield restore_pod
