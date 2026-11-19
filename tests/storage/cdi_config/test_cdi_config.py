@@ -112,17 +112,17 @@ def test_cdi_spec_reconciled_by_hco(initial_cdi_config_from_cr, cdi_with_extra_n
         pytest.param(
             {"storage": {"workloadResourceRequirements": STORAGE_WORKLOADS_DICT}},
             {"podResourceRequirements": STORAGE_WORKLOADS_DICT},
-            id="test_storage_workloads_in_hco_propagated_to_cdi_cr",
+            id="test_storage_workloads_in_hco_propagated_to_cdi_cr [Polarion: CNV-6000]",
         ),
         pytest.param(
             NON_EXISTENT_SCRATCH_SC_DICT,
             {"scratchSpaceStorageClass": NON_EXISTENT_SCRATCH_SC},
-            id="test_scratch_sc_in_hco_propagated_to_cdi_cr",
+            id="test_scratch_sc_in_hco_propagated_to_cdi_cr [Polarion: CNV-6001]",
         ),
         pytest.param(
             {"storage": {"storageImport": {"insecureRegistries": INSECURE_REGISTRIES_LIST}}},
             {"insecureRegistries": INSECURE_REGISTRIES_LIST},
-            id="test_insecure_registries_in_hco_propagated_to_cdi_cr",
+            id="test_insecure_registries_in_hco_propagated_to_cdi_cr [Polarion: CNV-6092]",
         ),
     ],
 )
@@ -137,10 +137,6 @@ def test_cdi_tunables_in_hco_propagated_to_cr(
 ):
     """
     Jira: https://redhat.atlassian.net/browse/CNV-8296 # <skip-jira-utils-check>
-    Polarion: CNV-6000
-    Polarion: CNV-6001
-    Polarion: CNV-6092
-
     Test that the exposed CDI-related tunables in HCO are propagated to the CDI CR
     """
     initial_cdi_config_from_cr = cdi.instance.to_dict()["spec"]["config"]
