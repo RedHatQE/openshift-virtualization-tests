@@ -3,7 +3,6 @@ from typing import Any
 import pytest_testconfig
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.deployment import Deployment
-from ocp_resources.virtual_machine import VirtualMachine
 
 from utilities.architecture import get_cluster_architecture
 from utilities.artifactory import BASE_ARTIFACTORY_LOCATION
@@ -166,14 +165,6 @@ link_aggregation_mode_matrix = [
 link_aggregation_mode_no_connectivity_matrix = [
     "balance-xor",
     "802.3ad",
-]
-
-vm_volumes_matrix = ["container_disk_vm", "data_volume_vm"]
-run_strategy_matrix = [
-    VirtualMachine.RunStrategy.MANUAL,
-    VirtualMachine.RunStrategy.ALWAYS,
-    VirtualMachine.RunStrategy.HALTED,
-    VirtualMachine.RunStrategy.RERUNONFAILURE,
 ]
 
 aaq_allocation_methods_matrix = [AAQ_VIRTUAL_RESOURCES, AAQ_VMI_POD_USAGE]
