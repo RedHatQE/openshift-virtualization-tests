@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import uuid
+from typing import TYPE_CHECKING, Any, Final
 
 from ocp_resources.resource import Resource
 
@@ -13,6 +16,17 @@ from libs.vm.spec import (
     PodAffinityTerm,
     PodAntiAffinity,
 )
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import ResourceInstance
+
+    from libs.vm.vm import BaseVirtualMachine
+
+WAIT_FOR_VMI_TEMPLATE_AFFINITY_TIMEOUT_SEC: Final[int] = 120
+
+
+class VMIAffinityNotSyncedError(Exception):
+    pass
 
 
 def new_label(key_prefix: str) -> tuple[str, str]:
@@ -106,3 +120,55 @@ def new_node_affinity(key: str, exists: bool) -> Affinity:
             )
         )
     )
+
+
+def wait_for_vmi_template_affinity(
+    vm: BaseVirtualMachine,
+    expected_vmi_affinity: dict[str, Any] | None,
+    timeout: int = WAIT_FOR_VMI_TEMPLATE_AFFINITY_TIMEOUT_SEC,
+    resource_version: str | None = None,
+) -> None:
+    """Wait until the running VMI's affinity matches the expected configuration.
+
+    virt-controller propagates VM template affinity changes onto the running VMI
+    asynchronously, not as part of the patch itself. Callers that depend on the
+    VMI already reflecting the new affinity should wait for this rather than
+    assume it applies synchronously.
+
+    Args:
+        vm: The virtual machine whose VMI should be updated.
+        expected_vmi_affinity: Affinity dict applied on the VM template, or None if cleared.
+        timeout: Maximum seconds to wait.
+        resource_version: VMI resource version captured before patching the VM.
+
+    Raises:
+        VMIAffinityNotSyncedError: If the VMI spec does not match within timeout.
+    """
+    vmi = vm.vmi
+    vmi_instance = vmi.instance
+    if _vmi_spec_affinity_matches(vmi_object=vmi_instance, expected=expected_vmi_affinity):
+        return
+
+    watch_from_resource_version = resource_version or vmi_instance.metadata.resourceVersion
+    for event in vmi.watcher(timeout=timeout, resource_version=watch_from_resource_version):
+        if event["type"] != "MODIFIED":
+            continue
+        if _vmi_spec_affinity_matches(vmi_object=event["object"], expected=expected_vmi_affinity):
+            return
+
+    last_observed_affinity = _vmi_spec_affinity(vmi_object=vmi.instance)
+    raise VMIAffinityNotSyncedError(
+        f"VMI {vm.name}: template affinity was not synced to the running VMI within {timeout}s. "
+        f"Expected affinity: {expected_vmi_affinity!r}. Last observed affinity: {last_observed_affinity!r}."
+    )
+
+
+def _vmi_spec_affinity_matches(vmi_object: ResourceInstance, expected: dict[str, Any] | None) -> bool:
+    spec_affinity = _vmi_spec_affinity(vmi_object=vmi_object)
+    if expected is None:
+        return not spec_affinity
+    return spec_affinity == expected
+
+
+def _vmi_spec_affinity(vmi_object: ResourceInstance) -> dict[str, Any] | None:
+    return vmi_object.to_dict()["spec"].get("affinity")
