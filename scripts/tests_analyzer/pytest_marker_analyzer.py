@@ -31,11 +31,13 @@ import tempfile
 import urllib.error
 import urllib.parse
 import urllib.request
+from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from pyhelper_utils.shell import run_command
 from simple_logger.logger import get_logger
 
 # Configure logging
@@ -1513,10 +1515,66 @@ def _diff_has_deletions(diff_content: str) -> bool:
     return any(line.startswith("-") and not line.startswith("---") for line in diff_content.splitlines())
 
 
+def _iter_diff_statements(diff_content: str) -> Iterator[tuple[str, str]]:
+    """Iterate the changed statements of a unified diff.
+
+    Continuation lines of a statement with unbalanced parentheses are joined so
+    that a multi-line import or signature is inspected as a whole instead of
+    being ignored or misread line by line.
+
+    Args:
+        diff_content: Unified diff text.
+
+    Yields:
+        A ``(sign, statement)`` pair per changed statement, where ``sign`` is
+        the diff marker of its first line (``"+"`` or ``"-"``) and
+        ``statement`` is that line's content plus the content of following
+        lines carrying the same marker while parentheses are unbalanced.  File
+        headers, hunk headers and context lines are yielded as ``("", "")`` so
+        callers can tell where a run of changed statements ends.
+    """
+    lines = diff_content.splitlines()
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        sign = line[:1]
+        if sign not in {"+", "-"} or line.startswith(("---", "+++")):
+            index += 1
+            yield "", ""
+            continue
+        parts: list[str] = []
+        open_parentheses = 0
+        while index < len(lines) and lines[index][:1] == sign:
+            content = lines[index][1:]
+            parts.append(content)
+            open_parentheses += content.count("(") - content.count(")")
+            index += 1
+            if open_parentheses == 0:
+                break
+        yield sign, "\n".join(parts)
+
+
+def _deleted_definition_name(statement: str) -> str | None:
+    """Return the name of the function or class defined by a statement.
+
+    Args:
+        statement: Stripped statement text, e.g. ``def foo(...):``.
+
+    Returns:
+        The defined name, or ``None`` when the statement defines neither a
+        function nor a class.
+    """
+    func_match = re.match(pattern=r"(?:async\s+)?def\s+(\w+)\s*\(", string=statement)
+    if func_match:
+        return func_match.group(1)
+    class_match = re.match(pattern=r"class\s+(\w+)[\s:(]", string=statement)
+    return class_match.group(1) if class_match else None
+
+
 def _extract_deleted_symbols_from_diff(diff_content: str) -> set[str]:
     """Extract names of functions and classes that were deleted in a diff.
 
-    Scans deletion lines (``-``) for ``def`` and ``class`` statements to
+    Scans deletion statements (``-``) for ``def`` and ``class`` statements to
     identify symbols that were removed.  This avoids the need to fetch
     and parse the old file source.
 
@@ -1534,19 +1592,12 @@ def _extract_deleted_symbols_from_diff(diff_content: str) -> set[str]:
         Set of deleted function/class names.
     """
     deleted_symbols: set[str] = set()
-    for line in diff_content.splitlines():
-        if not line.startswith("-") or line.startswith("---"):
+    for sign, statement in _iter_diff_statements(diff_content=diff_content):
+        if sign != "-":
             continue
-        stripped = line[1:].strip()
-        # Match function definitions
-        func_match = re.match(pattern=r"(?:async\s+)?def\s+(\w+)\s*\(", string=stripped)
-        if func_match:
-            deleted_symbols.add(func_match.group(1))
-            continue
-        # Match class definitions
-        class_match = re.match(pattern=r"class\s+(\w+)[\s:(]", string=stripped)
-        if class_match:
-            deleted_symbols.add(class_match.group(1))
+        deleted_name = _deleted_definition_name(statement=statement.strip())
+        if deleted_name is not None:
+            deleted_symbols.add(deleted_name)
     return deleted_symbols
 
 
@@ -1554,11 +1605,12 @@ _IMPORT_ALIAS_PATTERN = re.compile(pattern=r"^([A-Za-z_][\w.]*)(?:\s+as\s+([A-Za
 
 
 def _extract_imported_names(line: str) -> set[str] | None:
-    """Extract the module-level names bound by a single-line import statement.
+    """Extract the module-level names bound by an import statement.
 
     Args:
-        line: Stripped source line (or diff line content) starting with
-            ``import `` or ``from ``.
+        line: Stripped source line (or diff statement) starting with
+            ``import `` or ``from ``.  Multi-line statements may be passed
+            with their continuation lines.
 
     Returns:
         Set of names the statement binds.  Empty set for a multi-line import
@@ -1566,7 +1618,9 @@ def _extract_imported_names(line: str) -> set[str] | None:
         ``None`` when the names cannot be determined (star import, unusual
         syntax) — the caller must then stay conservative.
     """
-    statement = line.strip()
+    # Strip comments per line so a multi-line import keeps the names that
+    # follow a trailing comment.
+    statement = "\n".join(part.split("#")[0] for part in line.splitlines()).strip()
     if statement.startswith("import "):
         operands = statement.removeprefix("import ")
     else:
@@ -1574,19 +1628,95 @@ def _extract_imported_names(line: str) -> set[str] | None:
         if not import_separator:
             return None
 
-    operands = operands.split("#")[0].strip().strip("()").strip()
+    operands = operands.strip().strip("()").strip()
     if not operands:
         return set()
 
     names: set[str] = set()
     for operand in operands.split(","):
-        match = _IMPORT_ALIAS_PATTERN.match(string=operand.strip())
+        operand = operand.strip()
+        if not operand:
+            # Trailing comma (as in "from x import (a,)")
+            continue
+        match = _IMPORT_ALIAS_PATTERN.match(string=operand)
         if match is None:
             # Star import or unexpected syntax — cannot narrow
             return None
         alias_name, imported_alias = match.group(1), match.group(2)
         names.add(imported_alias or alias_name.split(".")[0])
     return names
+
+
+def _collect_removal_symbols(diff_content: str) -> tuple[set[str], bool]:
+    """Collect the symbols a diff removes and flag deletions it cannot attribute.
+
+    Deleted functions/classes and the names a deleted project import bound are
+    removal symbols.  A deletion is attributed when its replacement lines are in
+    the diff (they map to changed new-file lines), when it is an import, or when
+    it is part of a deleted definition.  An import that cannot be parsed (star
+    import, unbalanced parentheses) and any other deletion are reported as
+    unattributed instead of being silently ignored, so the caller can stay
+    conservative: a statement deleted from a live function body maps to no
+    new-file line and would otherwise look like a clean change.
+
+    Args:
+        diff_content: Unified diff text.
+
+    Returns:
+        Tuple of (removal symbol names, has unattributed changes).
+    """
+    removal_symbols: set[str] = _extract_deleted_symbols_from_diff(diff_content=diff_content)
+    has_unattributed = False
+    statements = list(_iter_diff_statements(diff_content=diff_content))
+
+    index = 0
+    while index < len(statements):
+        sign, first_statement = statements[index]
+        index += 1
+        if sign not in {"+", "-"}:
+            continue
+        run = [first_statement]
+        while index < len(statements) and statements[index][0] == sign:
+            run.append(statements[index][1])
+            index += 1
+        # A run of deletions followed by a run of additions is a replacement:
+        # its additions are attributed through the new file.
+        replaced = sign == "-" and index < len(statements) and statements[index][0] == "+"
+        deleted_definition_indent: int | None = None
+        for statement in run:
+            if not statement.strip():
+                # A removed blank line removes no statement.
+                continue
+            if statement.startswith(("import ", "from ")):
+                # Only a module-level import (column 0) binds an API name here;
+                # an indented line starting with "from " is prose in a docstring.
+                if statement.count("(") != statement.count(")"):
+                    # Incomplete multi-line import: its continuation lines are
+                    # not in the diff, so the bound names are unknown.
+                    has_unattributed = True
+                    continue
+                imported_names = _extract_imported_names(line=statement)
+                if imported_names is None:
+                    # Star import or unparsable import edit — cannot narrow
+                    has_unattributed = True
+                elif sign == "-" and _is_project_import(statement=statement):
+                    # Dropping a stdlib/third-party import only unbinds that
+                    # module's name here; it is not an API removal for importers.
+                    removal_symbols.update(imported_names)
+                continue
+            if sign != "-" or replaced:
+                continue
+            indentation = len(statement) - len(statement.lstrip())
+            if deleted_definition_indent is not None and indentation > deleted_definition_indent:
+                # Line belongs to the body of the deleted definition above it.
+                continue
+            deleted_definition_indent = None
+            if _deleted_definition_name(statement=statement.strip()) is not None:
+                deleted_definition_indent = indentation
+                continue
+            has_unattributed = True
+
+    return removal_symbols, has_unattributed
 
 
 _PROJECT_MODULE_PATTERN = re.compile(pattern=r"^(?:from|import)\s+(\.*)([A-Za-z_]\w*)")
@@ -1616,80 +1746,6 @@ def _is_project_import(statement: str) -> bool:
         return False
     relative_dots, module = match.group(1), match.group(2)
     return bool(relative_dots) or module in _PROJECT_PACKAGES
-
-
-def _is_type_checking_guard(test: ast.expr) -> bool:
-    """Check whether an ``if`` test guards a ``TYPE_CHECKING`` block.
-
-    Args:
-        test: The ``if`` statement's test expression.
-
-    Returns:
-        ``True`` when the test references ``TYPE_CHECKING``, either as a bare
-        name or as an attribute such as ``typing.TYPE_CHECKING``.
-    """
-    return any(
-        (isinstance(node, ast.Name) and node.id == "TYPE_CHECKING")
-        or (isinstance(node, ast.Attribute) and node.attr == "TYPE_CHECKING")
-        for node in ast.walk(node=test)
-    )
-
-
-def _extract_module_level_bindings(source: str) -> set[str]:
-    """Collect the names bound at module level by a Python source file.
-
-    Used to decide whether a symbol removed by the diff is still available to
-    importers: a name that is re-imported, reassigned, or redefined at module
-    level still exists, so removing its old definition cannot break callers.
-
-    Guarded definitions (``if``/``try``/``with``/loops) count as module-level
-    bindings, except for ``if TYPE_CHECKING:`` blocks: those bind names for type
-    checkers only, so a name that survives there alone is not importable at
-    runtime and must not be treated as still bound.
-
-    Args:
-        source: Python source text of the new (post-change) file.
-
-    Returns:
-        Set of module-level bound names.  Empty when ``source`` cannot be
-        parsed.
-    """
-
-    def collect(statements: list[ast.stmt], names: set[str]) -> None:
-        for node in statements:
-            if isinstance(node, (ast.Import, ast.ImportFrom)):
-                for alias in node.names:
-                    if alias.asname:
-                        names.add(alias.asname)
-                    elif isinstance(node, ast.Import):
-                        names.add(alias.name.split(".")[0])
-                    elif alias.name != "*":
-                        names.add(alias.name)
-            elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-                names.add(node.name)
-            elif isinstance(node, ast.Assign):
-                names.update(target.id for target in node.targets if isinstance(target, ast.Name))
-            elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
-                names.add(node.target.id)
-            elif isinstance(node, ast.If) and _is_type_checking_guard(test=node.test):
-                continue
-            else:
-                # Guarded definitions (if/try/with/loops) still bind their names
-                nested_bodies = [getattr(node, "body", []), getattr(node, "orelse", [])]
-                if isinstance(node, ast.Try):
-                    nested_bodies.extend(handler.body for handler in node.handlers)
-                    nested_bodies.append(node.finalbody)
-                for body in nested_bodies:
-                    collect(statements=body, names=names)
-
-    try:
-        tree = ast.parse(source)
-    except SyntaxError:
-        return set()
-
-    names: set[str] = set()
-    collect(statements=tree.body, names=names)
-    return names
 
 
 def _get_diff_content(
@@ -1903,7 +1959,9 @@ def _extract_modified_symbols(
         ``has_unattributed_changes=True`` but still contain any symbols that
         *were* identified from other changed lines.  Import-line edits are
         attributed to the imported names instead and do not set
-        ``has_unattributed_changes``.
+        ``has_unattributed_changes``; a deleted line that is neither an import
+        nor part of a deleted definition does, because it maps to no new-file
+        line and cannot be attributed.
     """
     diff_content = _get_diff_content(
         file_path=file_path,
@@ -1920,16 +1978,23 @@ def _extract_modified_symbols(
         return None
 
     has_deletions = _diff_has_deletions(diff_content=diff_content)
+    # Symbols whose definition or binding was removed: deleted defs/classes plus
+    # names a deleted project import bound.  ``has_unattributed`` flags
+    # deletions and import edits the diff cannot attribute to a symbol.
+    removal_symbols, has_unattributed = _collect_removal_symbols(diff_content=diff_content)
 
     changed_lines = _parse_diff_for_changed_lines(diff_content=diff_content)
     if not changed_lines:
         if has_deletions:
             if file_status == "renamed":
                 return SymbolClassification(modified_symbols=set(), new_symbols=set())
-            # Pure deletion — extract deleted symbol names from the diff
-            # to enable symbol-level narrowing instead of conservative fallback
-            deleted_symbols = _extract_deleted_symbols_from_diff(diff_content=diff_content)
-            return SymbolClassification(modified_symbols=deleted_symbols, new_symbols=set())
+            # Pure deletion — the removal symbols extracted from the diff enable
+            # symbol-level narrowing instead of a conservative fallback.
+            return SymbolClassification(
+                modified_symbols=removal_symbols,
+                new_symbols=set(),
+                has_unattributed_changes=has_unattributed,
+            )
         return SymbolClassification(modified_symbols=set(), new_symbols=set())
 
     try:
@@ -1969,29 +2034,7 @@ def _extract_modified_symbols(
         )
         return None
 
-    has_unattributed = False
     source_lines = source.splitlines()
-    module_bindings = _extract_module_level_bindings(source=source)
-
-    # Symbols whose definition or binding was removed: deleted defs/classes
-    # plus names added or removed by changed import lines.
-    removal_symbols: set[str] = _extract_deleted_symbols_from_diff(diff_content=diff_content)
-    for diff_line in diff_content.splitlines():
-        if diff_line.startswith(("---", "+++")) or diff_line[:1] not in {"+", "-"}:
-            continue
-        diff_line_content = diff_line[1:].strip()
-        if not diff_line_content.startswith(("import ", "from ")):
-            continue
-        imported_names = _extract_imported_names(line=diff_line_content)
-        if imported_names is None:
-            # Star import or unparsable import edit — cannot narrow
-            has_unattributed = True
-            continue
-        if not _is_project_import(statement=diff_line_content):
-            # Dropping a stdlib/third-party import only unbinds that module's
-            # name here; it is not an API removal for importers of this file.
-            continue
-        removal_symbols.update(imported_names)
 
     body_modified_symbols: set[str] = set()
     for line_number in changed_lines:
@@ -2048,11 +2091,9 @@ def _extract_modified_symbols(
             else:
                 return None
 
-    # A removed name that is still bound at module level (e.g. re-imported from
-    # its new home) is unaffected for importers, so it is not "modified".
-    modified_symbols = body_modified_symbols | {
-        removed_symbol for removed_symbol in removal_symbols if removed_symbol not in module_bindings
-    }
+    # Removal-derived names always stay reported: a name removed here and
+    # re-bound by an import from a different module can still change behaviour.
+    modified_symbols = body_modified_symbols | removal_symbols
 
     # --- Member-level analysis for modified classes ---
     modified_members: dict[str, set[str]] = {}
@@ -3791,15 +3832,16 @@ class MarkerTestAnalyzer:
         # Verify the base ref resolves before diffing: an unresolvable base
         # (typo, unfetched remote branch) would otherwise produce an empty diff.
         try:
-            verified = subprocess.run(
-                ["git", "rev-parse", "--verify", "--quiet", f"{base_branch}^{{commit}}"],
+            resolved, _, _ = run_command(
+                command=["git", "rev-parse", "--verify", "--quiet", f"{base_branch}^{{commit}}"],
                 cwd=self.repo_root,
-                capture_output=True,
-                text=True,
+                check=False,
+                verify_stderr=False,
+                log_errors=False,
             )
         except (subprocess.SubprocessError, OSError) as exc:
             raise AnalyzerGitError(f"could not run git in {self.repo_root}: {exc}") from exc
-        if verified.returncode != 0:
+        if not resolved:
             raise AnalyzerGitError(f"base branch '{base_branch}' could not be resolved; pass a valid --base")
 
         # Get changed files from git
