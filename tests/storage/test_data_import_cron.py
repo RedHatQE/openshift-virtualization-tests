@@ -208,7 +208,6 @@ def second_object_cleanup(
     resource_class(namespace=namespace.name, name=second_object_name, client=admin_client).clean_up()
 
 
-@pytest.mark.polarion("CNV-7602")
 @pytest.mark.s390x
 def test_data_import_cron_garbage_collection(
     admin_client,
@@ -223,6 +222,10 @@ def test_data_import_cron_garbage_collection(
     second_object_name,
     storage_with_import_cron_source_snapshot,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-10844 # <skip-jira-utils-check>
+    Polarion: CNV-7602
+    """
     assert_first_imported_object_was_deleted(namespace=namespace.name, name=first_object_name, client=admin_client)
     resource_class = VolumeSnapshot if storage_with_import_cron_source_snapshot else PersistentVolumeClaim
     assert resource_class(namespace=namespace.name, name=second_object_name, client=admin_client).exists, (

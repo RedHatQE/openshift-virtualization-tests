@@ -47,9 +47,10 @@ class TestFileRestoreOperatorDeployment:
         - openshift-cnv namespace exists
     """
 
-    @pytest.mark.polarion("CNV-16810")
     def test_file_restore_operator_deployed_after_cnv_install(self, admin_client):
         """
+        Polarion: CNV-16810
+
         Test that vm-file-restore-operator is deployed and running after OpenShift Virtualization
         installation via HCO-managed lifecycle.
 
@@ -82,7 +83,6 @@ class TestFileRestoreBackupVendorWorkflow:
         - Target file content recorded before deletion (for comparison after restore)
     """
 
-    @pytest.mark.polarion("CNV-16767")
     def test_restore_workflow_from_api(
         self,
         admin_client,
@@ -92,6 +92,8 @@ class TestFileRestoreBackupVendorWorkflow:
         deleted_linux_test_file_on_data_disk,
     ):
         """
+        Polarion: CNV-16767
+
         Test that the end-to-end restore workflow from request creation to file verification succeeds.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
@@ -145,7 +147,6 @@ class TestFileRestoreWindowsGuestFileCount:
         - Backup volume (PVC or VolumeSnapshot) with a known number of files on NTFS filesystem
     """
 
-    @pytest.mark.polarion("CNV-16770")
     def test_file_count_matches_transferred_on_windows_vm(
         self,
         admin_client,
@@ -154,6 +155,8 @@ class TestFileRestoreWindowsGuestFileCount:
         windows_multi_file_snapshot_file_restore,
     ):
         """
+        Polarion: CNV-16770
+
         Test that the restored file count in status matches actual files transferred on a Windows VM.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
@@ -214,7 +217,6 @@ class TestFileRestoreWindowsNTFSACLsAndOwnership:
         - Running Windows VM with OpenSSH Server and guest helper installed, and filerestore user SSH-configured
     """
 
-    @pytest.mark.polarion("CNV-16768")
     def test_windows_vm_restore_from_backup_pvc_preserves_ntfs_acls_and_ownership(
         self,
         admin_client,
@@ -225,6 +227,8 @@ class TestFileRestoreWindowsNTFSACLsAndOwnership:
         deleted_windows_test_file_on_data_disk,
     ):
         """
+        Polarion: CNV-16768
+
         Test that file restore on Windows VM from a backup PVC preserves NTFS ACLs and ownership.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
@@ -261,7 +265,6 @@ class TestFileRestoreWindowsNTFSACLsAndOwnership:
             snapshot_source=False,
         )
 
-    @pytest.mark.polarion("CNV-16769")
     def test_windows_vm_restore_from_snapshot_preserves_ntfs_acls_and_ownership(
         self,
         admin_client,
@@ -272,6 +275,8 @@ class TestFileRestoreWindowsNTFSACLsAndOwnership:
         deleted_windows_test_file_for_snapshot,
     ):
         """
+        Polarion: CNV-16769
+
         Test that file restore on Windows VM from a volume snapshot preserves NTFS ACLs and ownership.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
@@ -323,7 +328,6 @@ class TestFileRestoreWindowsDriveRoot:
         - Backup volume with a file at a Windows drive root path
     """
 
-    @pytest.mark.polarion("CNV-16771")
     def test_windows_vm_restore_from_drive_root_path(
         self,
         admin_client,
@@ -333,6 +337,8 @@ class TestFileRestoreWindowsDriveRoot:
         deleted_windows_drive_root_file,
     ):
         """
+        Polarion: CNV-16771
+
         Test that file restore on Windows VM succeeds when the source file is at a drive root.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
@@ -382,7 +388,6 @@ class TestFileRestoreRootDiskToOriginalPath:
         - Running root-only Linux VM with guest helper installed and filerestore user SSH-configured
     """
 
-    @pytest.mark.polarion("CNV-16811")
     def test_restore_from_root_disk_snapshot_to_original_path(
         self,
         admin_client,
@@ -392,6 +397,8 @@ class TestFileRestoreRootDiskToOriginalPath:
         linux_root_disk_snapshot_file_restore,
     ):
         """
+        Polarion: CNV-16811
+
         Test that files are restored from a root disk VolumeSnapshot to their original location
         in a running Linux VM.
 
@@ -427,7 +434,6 @@ class TestFileRestoreRootDiskToOriginalPath:
             snapshot_source=True,
         )
 
-    @pytest.mark.polarion("CNV-16812")
     def test_restore_from_root_disk_backup_pvc_to_original_path(
         self,
         admin_client,
@@ -437,6 +443,8 @@ class TestFileRestoreRootDiskToOriginalPath:
         linux_root_disk_backup_pvc_file_restore,
     ):
         """
+        Polarion: CNV-16812
+
         Test that files are restored from a root disk backup PVC to their original location
         in a running Linux VM.
 
@@ -487,7 +495,6 @@ class TestFileRestoreSequentialFromSameSnapshot:
         - VolumeSnapshot of the VM data disk with both test files available
     """
 
-    @pytest.mark.polarion("CNV-16813")
     def test_restore_from_data_disk_snapshot(
         self,
         admin_client,
@@ -497,6 +504,8 @@ class TestFileRestoreSequentialFromSameSnapshot:
         first_linux_data_disk_snapshot_file_restore,
     ):
         """
+        Polarion: CNV-16813
+
         Test that files are restored from a data disk VolumeSnapshot in a running Linux VM
         and temporary resources are cleaned up after the operation.
 
@@ -533,7 +542,6 @@ class TestFileRestoreSequentialFromSameSnapshot:
             snapshot_source=True,
         )
 
-    @pytest.mark.polarion("CNV-16815")
     def test_second_restore_from_same_data_disk_snapshot(
         self,
         admin_client,
@@ -544,6 +552,8 @@ class TestFileRestoreSequentialFromSameSnapshot:
         second_linux_data_disk_snapshot_file_restore,
     ):
         """
+        Polarion: CNV-16815
+
         Test that a second restore from the same data disk VolumeSnapshot completes successfully.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
@@ -599,7 +609,6 @@ class TestFileRestoreCrossNamespace:
         - Cross-namespace restore permissions configured for the source VolumeSnapshot
     """
 
-    @pytest.mark.polarion("CNV-16835")
     def test_restore_from_different_namespace(
         self,
         admin_client,
@@ -610,6 +619,8 @@ class TestFileRestoreCrossNamespace:
         cross_namespace_file_restore,
     ):
         """
+        Polarion: CNV-16835
+
         Test that restore from a volume snapshot in a different namespace succeeds and cleans up.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
@@ -664,10 +675,11 @@ class TestFileRestoreStorageCompatibility:
 
     __test__ = False
 
-    @pytest.mark.polarion("CNV-16836")
     @pytest.mark.manual
     def test_restore_with_source_volume_mode_mismatch(self):
         """
+        Polarion: CNV-16836
+
         Test that restore succeeds when the source volume mode differs from the StorageProfile's default volume mode.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
@@ -701,7 +713,6 @@ class TestFileRestoreWindowsManualBrowsing:
         - NTFS backup volume containing files with known content
     """
 
-    @pytest.mark.polarion("CNV-16837")
     def test_manual_browsing_of_windows_ntfs_backup_volume(
         self,
         windows_file_restore_vm,
@@ -709,6 +720,8 @@ class TestFileRestoreWindowsManualBrowsing:
         windows_manual_browsing_file_restore,
     ):
         """
+        Polarion: CNV-16837
+
         Test that manual restore mode exposes an NTFS backup volume for read-only browsing.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
@@ -757,11 +770,12 @@ class TestFileRestoreGuestConnectionInterruption:
 
     __test__ = False
 
-    @pytest.mark.polarion("CNV-16838")
     @pytest.mark.jira("CNV-93092", run=False)
     @pytest.mark.manual
     def test_guest_connection_loss_during_file_transfer(self):
         """
+        Polarion: CNV-16838
+
         [NEGATIVE] Test that an interrupted guest connection reports partial completion and supports retry.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
@@ -791,7 +805,6 @@ class TestFileRestoreRootDiskManualBrowsing:
         - Root disk backup available for manual browsing
     """
 
-    @pytest.mark.polarion("CNV-16839")
     @pytest.mark.parametrize(
         "linux_root_disk_browsing_source",
         [
@@ -807,6 +820,8 @@ class TestFileRestoreRootDiskManualBrowsing:
         linux_root_disk_manual_browsing_file_restore,
     ):
         """
+        Polarion: CNV-16839
+
         Test that manual restore mode exposes root disk backup contents for read-only browsing.
 
         Parametrize:
@@ -867,7 +882,6 @@ class TestFileRestoreLargeFile:
         - VolumeSnapshot-capable StorageClass available
     """
 
-    @pytest.mark.polarion("CNV-16840")
     def test_restore_big_file_from_data_disk_snapshot(
         self,
         file_restore_linux_vm,
@@ -875,6 +889,8 @@ class TestFileRestoreLargeFile:
         large_file_snapshot_file_restore,
     ):
         """
+        Polarion: CNV-16840
+
         Test that a 1 GB file is restored successfully from a data disk snapshot.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
@@ -917,7 +933,6 @@ class TestFileRestoreConcurrentVirtualMachines:
         - Independent backup volume available for each Linux VM
     """
 
-    @pytest.mark.polarion("CNV-16841")
     @pytest.mark.parametrize(
         "linux_test_file_on_root_disk",
         [{"content": "file-restore-concurrent-root-content"}],
@@ -935,6 +950,8 @@ class TestFileRestoreConcurrentVirtualMachines:
         concurrent_root_disk_file_restore,
     ):
         """
+        Polarion: CNV-16841
+
         Test that concurrent file restores on different virtual machines complete independently.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/VIRTSTRAT-480_file_level_restore.md
