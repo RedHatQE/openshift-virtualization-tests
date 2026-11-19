@@ -33,7 +33,6 @@ from tests.storage.storage_migration.utils import (
     create_fedora_vm_with_instance_type,
     get_vm_dv_names,
     get_vm_volume_node,
-    wait_for_offline_storage_migration_completed,
     wait_for_storage_migration_in_progress,
     wait_for_storage_migration_phase,
 )
@@ -925,7 +924,10 @@ def completed_volume_mode_offline_mig_migration(
     Side effects:
         Blocks until the migration reports successful completion.
     """
-    wait_for_offline_storage_migration_completed(mig_migration=volume_mode_offline_mig_migration)
+    wait_for_storage_migration_phase(
+        mig_migration=volume_mode_offline_mig_migration,
+        expected_phase=volume_mode_offline_mig_migration.Status.COMPLETED,
+    )
     yield volume_mode_offline_mig_migration
 
 
@@ -988,7 +990,10 @@ def completed_offline_vm_mig_migration(
     Side effects:
         Blocks until the migration reports successful completion.
     """
-    wait_for_offline_storage_migration_completed(mig_migration=offline_vm_mig_migration)
+    wait_for_storage_migration_phase(
+        mig_migration=offline_vm_mig_migration,
+        expected_phase=offline_vm_mig_migration.Status.COMPLETED,
+    )
     yield offline_vm_mig_migration
 
 
@@ -1160,7 +1165,10 @@ def completed_hotplug_offline_mig_migration(
     Side effects:
         Blocks until the migration reports successful completion.
     """
-    wait_for_offline_storage_migration_completed(mig_migration=hotplug_offline_mig_migration)
+    wait_for_storage_migration_phase(
+        mig_migration=hotplug_offline_mig_migration,
+        expected_phase=hotplug_offline_mig_migration.Status.COMPLETED,
+    )
     yield hotplug_offline_mig_migration
 
 
@@ -1305,5 +1313,8 @@ def completed_hpp_node_to_node_mig_migration(
     Side effects:
         Blocks until the migration reports successful completion.
     """
-    wait_for_offline_storage_migration_completed(mig_migration=hpp_node_to_node_mig_migration)
+    wait_for_storage_migration_phase(
+        mig_migration=hpp_node_to_node_mig_migration,
+        expected_phase=hpp_node_to_node_mig_migration.Status.COMPLETED,
+    )
     yield hpp_node_to_node_mig_migration

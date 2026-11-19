@@ -28,7 +28,7 @@ from tests.storage.storage_migration.utils import (
     verify_vm_pvcs_volume_mode,
     verify_vm_storage_class_updated,
     verify_vms_boot_time_after_storage_migration,
-    wait_for_offline_storage_migration_completed,
+    wait_for_storage_migration_phase,
 )
 from tests.storage.utils import check_file_in_vm
 from utilities.constants.pytest import QUARANTINED
@@ -234,7 +234,10 @@ class TestMixedOfflineOnlineStorageMigration:
         assert running_vm_for_scmig_test_first_ns.ready, (
             f"VM {running_vm_for_scmig_test_first_ns.name} is not running while storage migration is in progress"
         )
-        wait_for_offline_storage_migration_completed(mig_migration=combined_mode_mig_migration_in_progress)
+        wait_for_storage_migration_phase(
+            mig_migration=combined_mode_mig_migration_in_progress,
+            expected_phase=combined_mode_mig_migration_in_progress.Status.COMPLETED,
+        )
         verify_vm_storage_class_updated(
             vm=stopped_vm_for_scmig_test_first_ns, target_storage_class=target_storage_class
         )

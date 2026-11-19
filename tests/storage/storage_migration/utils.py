@@ -1,6 +1,5 @@
 import shlex
 
-import pytest
 from kubernetes.dynamic.exceptions import NotFoundError
 from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
@@ -23,7 +22,6 @@ from utilities.constants.images import OS_FLAVOR_FEDORA
 from utilities.constants.instance_types import U1_SMALL
 from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5SEC, TIMEOUT_10MIN, TIMEOUT_10SEC
 from utilities.exceptions import StorageMigrationError
-from utilities.jira import is_jira_open
 from utilities.storage import (
     data_volume_template_with_source_ref_dict,
     wait_for_vm_volume_ready,
@@ -344,29 +342,6 @@ def wait_for_storage_migration_in_progress(
             f"Timeout waiting for storage migration '{mig_migration.name}' to reach phase "
             f"'{STORAGE_MIGRATION_IN_PROGRESS_PHASE}'. Last status sample: {last_sample}"
         ) from err
-
-
-def wait_for_offline_storage_migration_completed(mig_migration: MultiNamespaceVirtualMachineStorageMigration) -> None:
-    """Wait for a migration that includes offline VMs to complete.
-
-    Args:
-        mig_migration: Migration resource to monitor.
-
-    Raises:
-        StorageMigrationError: If the migration does not complete within timeout, unless the
-            failure matches open bug CNV-99047, in which case the test is marked xfail.
-    """
-    try:
-        wait_for_storage_migration_phase(mig_migration=mig_migration, expected_phase=mig_migration.Status.COMPLETED)
-    except StorageMigrationError:
-        non_completed_phases = {
-            namespace.get("phase")
-            for namespace in (mig_migration.instance.status.namespaces or [])
-            if namespace.get("phase") != mig_migration.Status.COMPLETED
-        }
-        if non_completed_phases == {STORAGE_MIGRATION_IN_PROGRESS_PHASE} and is_jira_open(jira_id="CNV-99047"):
-            pytest.xfail(reason="Offline VM storage migration stuck in WaitForLiveMigrationToComplete, CNV-99047")
-        raise
 
 
 def verify_vm_pvcs_volume_mode(vm: VirtualMachineForTests, volume_mode: str) -> None:
