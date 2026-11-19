@@ -31,7 +31,6 @@ LOGGER = logging.getLogger(__name__)
 pytestmark = [pytest.mark.install, pytest.mark.s390x]
 
 
-@pytest.mark.polarion("CNV-10072")
 @pytest.mark.order(before=CNV_INSTALLATION_TEST)
 def test_cnv_installation_without_hco_cr_alert(
     prometheus,
@@ -39,6 +38,10 @@ def test_cnv_installation_without_hco_cr_alert(
     installed_openshift_virtualization,
     alert_dictionary_hco_not_installed,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-5810 # <skip-jira-utils-check>
+    Polarion: CNV-10072
+    """
     validate_alerts(
         prometheus=prometheus,
         alert_dict=alert_dictionary_hco_not_installed,
@@ -47,11 +50,14 @@ def test_cnv_installation_without_hco_cr_alert(
     )
 
 
-@pytest.mark.polarion("CNV-10437")
 @pytest.mark.order(before=CNV_INSTALLATION_TEST)
 def test_cnv_installation_without_hco_cr_metrics(
     prometheus,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-5810 # <skip-jira-utils-check>
+    Polarion: CNV-10437
+    """
     wait_for_gauge_metrics_value(
         prometheus=prometheus,
         query=KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS,
@@ -59,9 +65,12 @@ def test_cnv_installation_without_hco_cr_metrics(
     )
 
 
-@pytest.mark.polarion("CNV-9311")
 @pytest.mark.dependency(name=CNV_INSTALLATION_TEST)
 def test_cnv_installation(admin_client, cnv_version_to_install_info, created_cnv_namespace, created_hco_cr):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-5810 # <skip-jira-utils-check>
+    Polarion: CNV-9311
+    """
     wait_for_hco_conditions(admin_client=admin_client, hco_namespace=created_cnv_namespace)
     current_hco_version = created_hco_cr.instance.status.versions[0]["version"]
     version_to_install = cnv_version_to_install_info["version"]
@@ -71,26 +80,35 @@ def test_cnv_installation(admin_client, cnv_version_to_install_info, created_cnv
     wait_for_pods_running(admin_client=admin_client, namespace=created_cnv_namespace)
 
 
-@pytest.mark.polarion("CNV-10074")
 @pytest.mark.order(after=CNV_INSTALLATION_TEST)
 @pytest.mark.dependency(name=CNV_ALERT_CLEANUP_TEST)
 def test_cnv_installation_alert_cleanup(prometheus):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-5810 # <skip-jira-utils-check>
+    Polarion: CNV-10074
+    """
     wait_for_firing_alert_clean_up(prometheus=prometheus, alert_name=HCO_NOT_INSTALLED_ALERT)
 
 
-@pytest.mark.polarion("CNV-12453")
 @pytest.mark.order(after=CNV_INSTALLATION_TEST)
 # Dependency: CNV must be installed before storage class configuration can be verified
 @pytest.mark.dependency(depends=[CNV_INSTALLATION_TEST])
 @pytest.mark.usefixtures("updated_default_storage_class_from_config")
 def test_default_storage_class_set(admin_client, golden_images_namespace):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-5810 # <skip-jira-utils-check>
+    Polarion: CNV-12453
+    """
     assert verify_boot_sources_reimported(
         admin_client=admin_client, namespace=golden_images_namespace.name, consecutive_checks_count=3
     ), "Failed to re-import boot sources"
 
 
-@pytest.mark.polarion("CNV-10528")
 def test_install_hpp(admin_client, schedulable_nodes, installed_hpp, created_cnv_namespace):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-5810 # <skip-jira-utils-check>
+    Polarion: CNV-10528
+    """
     validate_hpp_installation(
         admin_client=admin_client,
         schedulable_nodes=schedulable_nodes,

@@ -25,7 +25,6 @@ LOGGER = logging.getLogger(__name__)
 )
 @pytest.mark.usefixtures("node_placement_labels", "hyperconverged_with_node_placement")
 class TestCreateHCOWithNodePlacement:
-    @pytest.mark.polarion("CNV-5368")
     @pytest.mark.dependency(name="test_hco_cr_with_node_placement")
     def test_hco_cr_with_node_placement(
         self,
@@ -36,6 +35,9 @@ class TestCreateHCOWithNodePlacement:
         expected_node_by_label,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-6347 # <skip-jira-utils-check>
+        Polarion: CNV-5368
+
         "test_hco_cr_with_node_placement" test case check HyperConverged CR created with infra
         and workloads label.
         Verify that all the infrastructure and workloads Pod will be deployed on labeled nodes.
@@ -61,7 +63,6 @@ class TestCreateHCOWithNodePlacement:
             hco_namespace=hco_namespace,
         )
 
-    @pytest.mark.polarion("CNV-5369")
     @pytest.mark.dependency(depends=["test_hco_cr_with_node_placement"])
     def test_node_placement_propagated_to_ssp_cr(
         self,
@@ -69,6 +70,9 @@ class TestCreateHCOWithNodePlacement:
         virt_template_validator_spec_nodeselector,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-6347 # <skip-jira-utils-check>
+        Polarion: CNV-5369
+
         This test we are going to check the HCO CR node placement
         propagated to SSP CR and then cascade to deployment 'virt-template-validator'.
         """
@@ -79,7 +83,6 @@ class TestCreateHCOWithNodePlacement:
         # propagated to 'virt-template-validator' deployment
         assert virt_template_validator_spec_nodeselector == NODE_PLACEMENT_INFRA["nodeSelector"]
 
-    @pytest.mark.polarion("CNV-5382")
     @pytest.mark.dependency(depends=["test_hco_cr_with_node_placement"])
     def test_node_placement_propagated_to_network_addons_cr(
         self,
@@ -88,6 +91,9 @@ class TestCreateHCOWithNodePlacement:
         network_deployment_placement,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-6347 # <skip-jira-utils-check>
+        Polarion: CNV-5382
+
         In this test case, check the HCO CR node placement
         propagated to NetworkAddonsConfig CR and it's Daemonsets and Deployments.
         """
@@ -121,7 +127,6 @@ class TestCreateHCOWithNodePlacement:
             f"For following deployment workload change did not get propagated: {daemonsets_mismatch}"
         )
 
-    @pytest.mark.polarion("CNV-5383")
     @pytest.mark.dependency(depends=["test_hco_cr_with_node_placement"])
     def test_node_placement_propagated_to_kubevirt_cr(
         self,
@@ -130,6 +135,9 @@ class TestCreateHCOWithNodePlacement:
         virt_deployment_nodeselector_comp_list,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-6347 # <skip-jira-utils-check>
+        Polarion: CNV-5383
+
         In this test case, check the HCO CR node placement
         propagated to KubeVirt CR and it's daemonsets and deployments.
         """
@@ -149,7 +157,6 @@ class TestCreateHCOWithNodePlacement:
         for virt_deployment_nodeselector_comp in virt_deployment_nodeselector_comp_list:
             assert virt_deployment_nodeselector_comp == NODE_PLACEMENT_INFRA["nodeSelector"]["infra-comp"]
 
-    @pytest.mark.polarion("CNV-5384")
     @pytest.mark.dependency(depends=["test_hco_cr_with_node_placement"])
     def test_node_placement_propagated_to_cdi_cr(
         self,
@@ -157,6 +164,9 @@ class TestCreateHCOWithNodePlacement:
         cdi_deployment_nodeselector_list,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-6347 # <skip-jira-utils-check>
+        Polarion: CNV-5384
+
         In this test case, check the HCO CR node placement
         propagated to CDI CR and it's deployments.
         """

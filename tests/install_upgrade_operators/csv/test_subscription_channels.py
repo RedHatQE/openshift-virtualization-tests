@@ -3,18 +3,24 @@ import pytest
 pytestmark = [pytest.mark.sno, pytest.mark.s390x, pytest.mark.skip_must_gather_collection]
 
 
-@pytest.mark.polarion("CNV-7169")
 def test_stable_channel_in_manifest(kubevirt_package_manifest_channels):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-60341 # <skip-jira-utils-check>
+    Polarion: CNV-7169
+    """
     channels_names_from_manifest = [channel.name for channel in kubevirt_package_manifest_channels]
     assert "stable" in channels_names_from_manifest, (
         f"Stable channel must be on package manifest\nAvailable channels: {channels_names_from_manifest}"
     )
 
 
-@pytest.mark.polarion("CNV-11944")
 def test_cnv_subscription_channel(
     cnv_subscription_scope_session, kubevirt_package_manifest_channels, cnv_current_version
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-64119 # <skip-jira-utils-check>
+    Polarion: CNV-11944
+    """
     subscription_channel = cnv_subscription_scope_session.instance.spec.channel
 
     available_channels_for_version = [

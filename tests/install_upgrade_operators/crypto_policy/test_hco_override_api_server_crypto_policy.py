@@ -60,7 +60,6 @@ def updated_apiserver_with_tls_old_profile(
     run=False,
 )
 @pytest.mark.jira("RHSTOR-6566", run=False)  # <skip-jira-utils-check>
-@pytest.mark.polarion("CNV-9368")
 def test_hco_overriding_apiserver_crypto_policy(
     admin_client,
     resources_dict,
@@ -68,6 +67,10 @@ def test_hco_overriding_apiserver_crypto_policy(
     expected_all_managed_crs_crypto_policies,
     updated_apiserver_with_tls_old_profile,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-15705 # <skip-jira-utils-check>
+    Polarion: CNV-9368
+    """
     sampler = TimeoutSampler(
         wait_timeout=TIMEOUT_2MIN,
         sleep=TIMEOUT_10SEC,

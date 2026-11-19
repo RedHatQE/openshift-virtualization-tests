@@ -26,22 +26,28 @@ def xfail_if_jira_76659_open_and_migration_controller_pod(jira_76659_open, cnv_p
         pytest.xfail(f"{KUBEVIRT_MIGRATION_CONTROLLER} pod has no priority class name due to CNV-98645 bug")
 
 
-@pytest.mark.polarion("CNV-7262")
 def test_pods_priority_class_value(
     cnv_pods_by_type,
     xfail_if_jira_76659_open_and_migration_controller_pod,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-12232 # <skip-jira-utils-check>
+    Polarion: CNV-7262
+    """
     if any(pod.name.startswith((HPP_POOL, HOSTPATH_PROVISIONER_CSI)) for pod in cnv_pods_by_type):
         pytest.xfail("HPP pods don't have priority class name")
     validate_cnv_pods_priority_class_name_exists(pod_list=cnv_pods_by_type)
     validate_priority_class_value(pod_list=cnv_pods_by_type)
 
 
-@pytest.mark.polarion("CNV-7306")
 def test_pods_resource_request(
     cnv_pods_by_type,
     pod_resource_validation_matrix__function__,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-12232 # <skip-jira-utils-check>
+    Polarion: CNV-7306
+    """
     validate_cnv_pods_resource_request(
         cnv_pods=cnv_pods_by_type,
         resource=pod_resource_validation_matrix__function__,
@@ -49,7 +55,10 @@ def test_pods_resource_request(
 
 
 @pytest.mark.usefixtures("xfail_if_sriov_conforma_jira_open_and_hco_operator")
-@pytest.mark.polarion("CNV-8267")
 def test_cnv_pod_container_image(cnv_pods_by_type):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-1206 # <skip-jira-utils-check>
+    Polarion: CNV-8267
+    """
     assert_cnv_pod_container_image_not_in_upstream(cnv_pods_by_type=cnv_pods_by_type)
     assert_cnv_pod_container_env_image_not_in_upstream(cnv_pods_by_type=cnv_pods_by_type)

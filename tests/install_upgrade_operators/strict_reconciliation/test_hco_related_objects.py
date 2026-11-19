@@ -14,7 +14,6 @@ pytestmark = [
 
 
 class TestRelatedObjects:
-    @pytest.mark.polarion("CNV-7267")
     def test_hco_related_objects(
         self,
         admin_client,
@@ -23,6 +22,10 @@ class TestRelatedObjects:
         pre_update_resource_version,
         updated_resource_labels,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-8296 # <skip-jira-utils-check>
+        Polarion: CNV-7267
+        """
         validate_related_objects(
             admin_client=admin_client,
             hco_namespace=hco_namespace,

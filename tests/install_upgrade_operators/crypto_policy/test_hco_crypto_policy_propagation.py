@@ -45,7 +45,6 @@ def updated_hco_crypto_policy(
         yield
 
 
-@pytest.mark.polarion("CNV-9331")
 def test_set_hco_crypto_policy(
     admin_client,
     cnv_crypto_policy_matrix__function__,
@@ -53,6 +52,10 @@ def test_set_hco_crypto_policy(
     hco_crypto_policy,
     resources_dict,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-15705 # <skip-jira-utils-check>
+    Polarion: CNV-9331
+    """
     expected_hco_crypto_policy = CRYPTO_POLICY_SPEC_DICT[cnv_crypto_policy_matrix__function__]
     assert hco_crypto_policy == expected_hco_crypto_policy, (
         f"Current HCO crypto policy: '{hco_crypto_policy}'\n "

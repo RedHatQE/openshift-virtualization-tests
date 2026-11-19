@@ -24,7 +24,6 @@ class TestLauncherUpdateResetFields:
                     "patch": {"spec": {"virtualization": {WORKLOAD_UPDATE_STRATEGY_KEY_NAME: None}}},
                 },
                 DEFAULT_WORKLOAD_UPDATE_STRATEGY,
-                marks=(pytest.mark.polarion("CNV-6928"),),
             ),
             pytest.param(
                 {
@@ -33,7 +32,6 @@ class TestLauncherUpdateResetFields:
                     },
                 },
                 MOD_CUST_DEFAULT_BATCH_EVICTION_INTERVAL,
-                marks=pytest.mark.polarion("CNV-6929"),
                 id="test_hyperconverged_reset_workload_update_strategy_batch_eviction_size",
             ),
             pytest.param(
@@ -43,7 +41,6 @@ class TestLauncherUpdateResetFields:
                     },
                 },
                 MOD_CUST_DEFAULT_BATCH_EVICTION_SIZE,
-                marks=pytest.mark.polarion("CNV-6930"),
                 id="test_hyperconverged_reset_workload_update_strategy_workload_update_methods",
             ),
             pytest.param(
@@ -53,7 +50,6 @@ class TestLauncherUpdateResetFields:
                     },
                 },
                 MOD_CUST_DEFAULT_WORKLOAD_UPDATE_METHOD,
-                marks=pytest.mark.polarion("CNV-6931"),
             ),
         ],
         indirect=["updated_hco_cr"],
@@ -66,7 +62,15 @@ class TestLauncherUpdateResetFields:
         updated_hco_cr,
         expected,
     ):
-        """Validate ability to reset, hyperconverged's spec.workloadUpdateStrategy from custom values"""
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-8762 # <skip-jira-utils-check>
+        Polarion: CNV-6928
+        Polarion: CNV-6929
+        Polarion: CNV-6930
+        Polarion: CNV-6931
+
+        Validate ability to reset, hyperconverged's spec.workloadUpdateStrategy from custom values
+        """
         wait_for_spec_change(
             expected=expected,
             get_spec_func=lambda: get_hco_spec(admin_client=admin_client, hco_namespace=hco_namespace),

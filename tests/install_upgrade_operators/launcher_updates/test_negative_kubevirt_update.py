@@ -25,7 +25,6 @@ class TestLauncherUpdateNegative:
                 {
                     "patch": {"spec": {WORKLOAD_UPDATE_STRATEGY_KEY_NAME: KUBEVIRT_NEGATIVE_STRATEGY}},
                 },
-                marks=pytest.mark.polarion("CNV-6945"),
             ),
             pytest.param(
                 {
@@ -37,7 +36,6 @@ class TestLauncherUpdateNegative:
                         }
                     },
                 },
-                marks=pytest.mark.polarion("CNV-6946"),
             ),
             pytest.param(
                 {
@@ -49,7 +47,6 @@ class TestLauncherUpdateNegative:
                         }
                     },
                 },
-                marks=pytest.mark.polarion("CNV-6947"),
             ),
             pytest.param(
                 {
@@ -61,7 +58,6 @@ class TestLauncherUpdateNegative:
                         }
                     },
                 },
-                marks=pytest.mark.polarion("CNV-6948"),
             ),
         ],
         indirect=True,
@@ -73,7 +69,15 @@ class TestLauncherUpdateNegative:
         hco_namespace,
         updated_kubevirt_cr,
     ):
-        """Negative tests to validate, workload update strategy fields of kubevirt gets reconciled"""
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-8762 # <skip-jira-utils-check>
+        Polarion: CNV-6945
+        Polarion: CNV-6946
+        Polarion: CNV-6947
+        Polarion: CNV-6948
+
+        Negative tests to validate, workload update strategy fields of kubevirt gets reconciled
+        """
         wait_for_spec_change(
             expected=CUSTOM_WORKLOAD_UPDATE_STRATEGY,
             get_spec_func=lambda: get_hco_spec(admin_client=admin_client, hco_namespace=hco_namespace),

@@ -48,8 +48,11 @@ def csv_permissions(admin_client):
     )
 
 
-@pytest.mark.polarion("CNV-9548")
 def test_global_csv_permissions(subtests, csv_permissions):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-76378 # <skip-jira-utils-check>
+    Polarion: CNV-9548
+    """
     for operator_name, all_permissions in csv_permissions.items():
         with subtests.test(msg=operator_name):
             errors = {}

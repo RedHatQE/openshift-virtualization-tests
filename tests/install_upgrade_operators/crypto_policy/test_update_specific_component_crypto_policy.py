@@ -110,7 +110,6 @@ def updated_cr_with_custom_crypto_policy(
                 "key": TLS_SECURITY_PROFILE,
                 "value": deepcopy(TLS_CUSTOM_PROFILE),
             },
-            marks=pytest.mark.polarion("CNV-9332"),
             id="test_set_CDI_crypto_policy_using_hco_jsonpatch_annotation",
         ),
         pytest.param(
@@ -120,7 +119,6 @@ def updated_cr_with_custom_crypto_policy(
                 "key": TLS_SECURITY_PROFILE,
                 "value": deepcopy(TLS_CUSTOM_PROFILE),
             },
-            marks=pytest.mark.polarion("CNV-9380"),
             id="test_set_CNAO_crypto_policy_using_hco_jsonpatch_annotation",
         ),
         pytest.param(
@@ -130,7 +128,6 @@ def updated_cr_with_custom_crypto_policy(
                 "key": KUBEVIRT_TLS_CONFIG_KEY,
                 "value": deepcopy(TLS_CUSTOM_PROFILE_KUBEVIRT[TLS_CUSTOM_POLICY]),
             },
-            marks=pytest.mark.polarion("CNV-9381"),
             id="test_set_kubevirt_crypto_policy_using_hco_jsonpatch_annotation",
         ),
         pytest.param(
@@ -140,7 +137,6 @@ def updated_cr_with_custom_crypto_policy(
                 "key": TLS_SECURITY_PROFILE,
                 "value": deepcopy(TLS_CUSTOM_PROFILE),
             },
-            marks=pytest.mark.polarion("CNV-9676"),
             id="test_set_ssp_crypto_policy_using_hco_jsonpatch_annotation",
         ),
     ],
@@ -151,6 +147,13 @@ def test_update_specific_component_crypto_policy(
     resources_dict,
     updated_cr_with_custom_crypto_policy,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-15705 # <skip-jira-utils-check>
+    Polarion: CNV-9332
+    Polarion: CNV-9380
+    Polarion: CNV-9381
+    Polarion: CNV-9676
+    """
     wait_for_resource_crypto_policy_update(
         resource=updated_cr_with_custom_crypto_policy["resource"],
         expected_crypto_policy=updated_cr_with_custom_crypto_policy["tls_policy"],

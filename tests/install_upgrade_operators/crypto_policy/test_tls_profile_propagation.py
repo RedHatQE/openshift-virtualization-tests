@@ -18,7 +18,6 @@ LOGGER = logging.getLogger(__name__)
 pytestmark = [pytest.mark.post_upgrade, pytest.mark.tier3]
 
 
-@pytest.mark.polarion("CNV-15973")
 @pytest.mark.usefixtures("modern_tls_profile_applied", "console_plugin_test_network_policy")
 def test_modern_profile_propagates_to_cnv_services(
     subtests, workers_utility_pods, worker_node1, cnv_services_with_template
@@ -27,6 +26,8 @@ def test_modern_profile_propagates_to_cnv_services(
     Test that the Modern TLS profile propagates from the APIServer to all CNV services.
 
     Jira: https://redhat.atlassian.net/browse/CNV-74453  # <skip-jira-utils-check>
+    Polarion: CNV-15973
+
 
     Preconditions:
         - AAQ enabled

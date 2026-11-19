@@ -19,7 +19,6 @@ pytestmark = pytest.mark.usefixtures(
 @pytest.mark.upgrade_custom
 @pytest.mark.eus_upgrade
 class TestEUSToEUSUpgrade:
-    @pytest.mark.polarion("CNV-9509")
     @pytest.mark.dependency(name=IUO_UPGRADE_TEST_DEPENDENCY_NODE_ID)
     def test_eus_upgrade_process(
         self,
@@ -37,6 +36,10 @@ class TestEUSToEUSUpgrade:
         eus_unpaused_workload_update,
         eus_unpaused_worker_mcp,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-13992 # <skip-jira-utils-check>
+        Polarion: CNV-9509
+        """
         LOGGER.info("Validate EUS to EUS upgrade process")
         verify_upgrade_cnv(
             client=admin_client,
