@@ -93,6 +93,7 @@ from utilities.constants import (
     SANITY_TESTS_FAILURE,
     TIMEOUT_1MIN,
     TIMEOUT_2MIN,
+    TIMEOUT_4MIN,
     TIMEOUT_5MIN,
     TIMEOUT_5SEC,
     TIMEOUT_6MIN,
@@ -1344,7 +1345,7 @@ def generate_openshift_pull_secret_file(client: DynamicClient = None) -> str:
 
 
 @retry(
-    wait_timeout=TIMEOUT_30SEC,
+    wait_timeout=TIMEOUT_4MIN,
     sleep=TIMEOUT_10SEC,
     exceptions_dict={RuntimeError: []},
 )
