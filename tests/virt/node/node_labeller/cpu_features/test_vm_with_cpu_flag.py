@@ -61,12 +61,14 @@ def test_vm_with_cpu_flag_negative(cpu_flag_vm_negative):
         cpu_flag_vm_negative.vmi.wait_until_running(timeout=TIMEOUT_1MIN)
 
 
-@pytest.mark.polarion("CNV-1269")
 @pytest.mark.s390x
 @pytest.mark.gating
 @pytest.mark.conformance
 def test_vm_with_cpu_flag_positive_case(cpu_flag_vm_positive, cluster_common_node_cpu):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-6429 # <skip-jira-utils-check>
+    Polarion: CNV-1269
+
     Test VM with cpu flag, test CPU model and SSH connectivity
     """
     cpu_flag_vm_positive.ssh_exec.executor().is_connective()

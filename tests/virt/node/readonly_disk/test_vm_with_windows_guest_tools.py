@@ -116,8 +116,11 @@ def migrated_vm_with_guest_tools(
     return vm_with_guest_tools
 
 
-@pytest.mark.polarion("CNV-9794")
 def test_win_virtio_image(virtio_win_image, hco_csv_win_virtio_image):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-481 # <skip-jira-utils-check>
+    Polarion: CNV-9794
+    """
     assert virtio_win_image == hco_csv_win_virtio_image, (
         f"Mismatch between virtio images. CM image: {virtio_win_image}; CSV image: {hco_csv_win_virtio_image}"
     )
@@ -130,16 +133,22 @@ def test_win_virtio_image(virtio_win_image, hco_csv_win_virtio_image):
 )
 @pytest.mark.windows
 class TestWindowsGuestTools:
-    @pytest.mark.polarion("CNV-6517")
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::vm_with_guest_tools")
     def test_vm_with_windows_guest_tools(self, admin_client, vm_with_guest_tools):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-481 # <skip-jira-utils-check>
+        Polarion: CNV-6517
+        """
         LOGGER.info("Test VM with Windows guest tools")
         verify_cdrom_in_xml(vm=vm_with_guest_tools, admin_client=admin_client)
 
     @pytest.mark.rwx_default_storage
-    @pytest.mark.polarion("CNV-6518")
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::vm_with_guest_tools"])
     @pytest.mark.usefixtures("migrated_vm_with_guest_tools")
     def test_migrate_vm_with_windows_guest_tools(self, admin_client, vm_with_guest_tools):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-481 # <skip-jira-utils-check>
+        Polarion: CNV-6518
+        """
         LOGGER.info("Test migration of a VM with Windows guest tools")
         verify_cdrom_in_xml(vm=vm_with_guest_tools, admin_client=admin_client)

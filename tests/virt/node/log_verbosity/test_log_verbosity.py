@@ -53,14 +53,15 @@ def virt_component_pods_in_first_node(worker_node1, virt_component_pods):
 @pytest.mark.parametrize(
     "updated_log_verbosity_config",
     [
-        pytest.param(
-            "component",
-            marks=pytest.mark.polarion("CNV-8574"),
-        ),
+        "component",
     ],
     indirect=True,
 )
 def test_component_log_verbosity(updated_log_verbosity_config, virt_component_pods):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-14403 # <skip-jira-utils-check>
+    Polarion: CNV-8574
+    """
     assert_log_verbosity_level_in_virt_pods(
         virt_pods_list=virt_component_pods,
     )
@@ -70,14 +71,15 @@ def test_component_log_verbosity(updated_log_verbosity_config, virt_component_po
 @pytest.mark.parametrize(
     "updated_log_verbosity_config",
     [
-        pytest.param(
-            "node",
-            marks=pytest.mark.polarion("CNV-8576"),
-        ),
+        "node",
     ],
     indirect=True,
 )
 def test_node_log_verbosity(updated_log_verbosity_config, virt_component_pods_in_first_node):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-14403 # <skip-jira-utils-check>
+    Polarion: CNV-8576
+    """
     assert_log_verbosity_level_in_virt_pods(
         virt_pods_list=virt_component_pods_in_first_node,
     )
