@@ -64,7 +64,6 @@ class TestStorageMigrationRetentionPolicy:
         [pytest.param({}, id="default")],
         indirect=True,
     )
-    @pytest.mark.polarion("CNV-16297")
     @pytest.mark.usefixtures("combined_mode_mig_migration")
     def test_retention_policy_default_behavior(
         self,
@@ -75,6 +74,8 @@ class TestStorageMigrationRetentionPolicy:
         stopped_vm_for_scmig_test_source_dvs,
     ):
         """
+        Polarion: CNV-16297
+
         Verify default behavior keeps source volumes when retentionPolicy is not specified.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_cleanup.md
@@ -108,7 +109,6 @@ class TestStorageMigrationRetentionPolicy:
         [pytest.param({"ns_retention_policy": DELETE_SOURCE}, id="ns_delete")],
         indirect=True,
     )
-    @pytest.mark.polarion("CNV-16298")
     @pytest.mark.usefixtures("combined_mode_mig_migration")
     def test_namespace_level_retention_policy_delete_source(
         self,
@@ -120,6 +120,8 @@ class TestStorageMigrationRetentionPolicy:
         combined_mode_mig_plan,
     ):
         """
+        Polarion: CNV-16298
+
         Verify namespace-level retentionPolicy=deleteSource deletes source volumes.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_cleanup.md
@@ -157,7 +159,6 @@ class TestStorageMigrationRetentionPolicy:
         [pytest.param({"spec_retention_policy": DELETE_SOURCE}, id="spec_delete")],
         indirect=True,
     )
-    @pytest.mark.polarion("CNV-16299")
     @pytest.mark.usefixtures("combined_mode_mig_migration")
     def test_spec_level_retention_policy_delete_source(
         self,
@@ -169,6 +170,8 @@ class TestStorageMigrationRetentionPolicy:
         combined_mode_mig_plan,
     ):
         """
+        Polarion: CNV-16299
+
         Verify plan-level retentionPolicy=deleteSource deletes source volumes.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_cleanup.md
@@ -206,7 +209,6 @@ class TestStorageMigrationRetentionPolicy:
         [pytest.param({"ns_retention_policy": KEEP_SOURCE}, id="ns_keep")],
         indirect=True,
     )
-    @pytest.mark.polarion("CNV-16301")
     @pytest.mark.usefixtures("combined_mode_mig_migration")
     def test_namespace_level_retention_policy_keep_source(
         self,
@@ -217,6 +219,8 @@ class TestStorageMigrationRetentionPolicy:
         stopped_vm_for_scmig_test_source_dvs,
     ):
         """
+        Polarion: CNV-16301
+
         Verify namespace-level retentionPolicy=keepSource keeps source volumes.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_cleanup.md
@@ -250,7 +254,6 @@ class TestStorageMigrationRetentionPolicy:
         [pytest.param({"spec_retention_policy": KEEP_SOURCE}, id="spec_keep")],
         indirect=True,
     )
-    @pytest.mark.polarion("CNV-16302")
     @pytest.mark.usefixtures("combined_mode_mig_migration")
     def test_spec_level_retention_policy_keep_source(
         self,
@@ -261,6 +264,8 @@ class TestStorageMigrationRetentionPolicy:
         stopped_vm_for_scmig_test_source_dvs,
     ):
         """
+        Polarion: CNV-16302
+
         Verify plan-level retentionPolicy=keepSource keeps source volumes.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_cleanup.md
@@ -331,7 +336,6 @@ class TestStorageMigrationCombinedRetentionPolicy:
         ],
         indirect=True,
     )
-    @pytest.mark.polarion("CNV-16305")
     @pytest.mark.usefixtures("combined_policy_mig_migration")
     def test_namespace_delete_overrides_plan_keep(
         self,
@@ -343,6 +347,8 @@ class TestStorageMigrationCombinedRetentionPolicy:
         combined_policy_and_combined_mode_mig_plan,
     ):
         """
+        Polarion: CNV-16305
+
         Verify namespace-level deleteSource overrides plan-level keepSource for that namespace.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_cleanup.md
@@ -391,7 +397,6 @@ class TestStorageMigrationCombinedRetentionPolicy:
         reason=f"{QUARANTINED}: Product bug found, the namespace level retention policy is not applied, CNV-96425",
         run=False,
     )
-    @pytest.mark.polarion("CNV-16306")
     @pytest.mark.usefixtures("combined_policy_mig_migration")
     def test_namespace_keep_overrides_plan_delete(
         self,
@@ -403,6 +408,8 @@ class TestStorageMigrationCombinedRetentionPolicy:
         combined_policy_and_combined_mode_mig_plan,
     ):
         """
+        Polarion: CNV-16306
+
         Verify namespace-level keepSource overrides plan-level deleteSource for that namespace.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_cleanup.md
@@ -448,7 +455,6 @@ class TestStorageMigrationCombinedRetentionPolicy:
         ],
         indirect=True,
     )
-    @pytest.mark.polarion("CNV-16307")
     @pytest.mark.usefixtures("combined_policy_mig_migration")
     def test_namespace_and_plan_level_delete_source_retention_policy(
         self,
@@ -460,6 +466,8 @@ class TestStorageMigrationCombinedRetentionPolicy:
         combined_policy_and_combined_mode_mig_plan,
     ):
         """
+        Polarion: CNV-16307
+
         Verify namespace-level and plan-level deleteSource together delete all source volumes.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_cleanup.md
@@ -503,7 +511,6 @@ class TestStorageMigrationCombinedRetentionPolicy:
         ],
         indirect=True,
     )
-    @pytest.mark.polarion("CNV-16308")
     @pytest.mark.usefixtures("combined_policy_mig_migration")
     def test_namespace_and_plan_level_keep_source_retention_policy(
         self,
@@ -514,6 +521,8 @@ class TestStorageMigrationCombinedRetentionPolicy:
         source_dv_names_second_ns_for_scmig_test,
     ):
         """
+        Polarion: CNV-16308
+
         Verify namespace-level and plan-level keepSource together keep all source volumes.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_cleanup.md
@@ -574,7 +583,6 @@ class TestStorageMigrationFailureRetentionPolicy:
         reason=f"{QUARANTINED}: Not clarified Failing migration cases, wait for product clarification, CNV-98407",
         run=False,
     )
-    @pytest.mark.polarion("CNV-16309")
     @pytest.mark.usefixtures("failure_mig_migration")
     def test_failed_migration_with_delete_source_policy(
         self,
@@ -582,6 +590,8 @@ class TestStorageMigrationFailureRetentionPolicy:
         failure_source_dv_names,
     ):
         """
+        Polarion: CNV-16309
+
         [NEGATIVE] Verify source volumes are retained when migration fails with retentionPolicy=deleteSource.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_cleanup.md
@@ -608,7 +618,6 @@ class TestStorageMigrationFailureRetentionPolicy:
         reason=f"{QUARANTINED}: Not clarified Failing migration cases, wait for product clarification, CNV-98407",
         run=False,
     )
-    @pytest.mark.polarion("CNV-16310")
     @pytest.mark.usefixtures("failure_mig_migration")
     def test_failed_migration_with_keep_source_policy(
         self,
@@ -616,6 +625,8 @@ class TestStorageMigrationFailureRetentionPolicy:
         failure_source_dv_names,
     ):
         """
+        Polarion: CNV-16310
+
         [NEGATIVE] Verify source volumes are retained when migration fails with retentionPolicy=keepSource.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_cleanup.md

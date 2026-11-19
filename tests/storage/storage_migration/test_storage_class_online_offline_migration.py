@@ -30,10 +30,11 @@ class TestOfflineVMStorageMigrationVolumeModes:
 
     __test__ = False
 
-    @pytest.mark.polarion("CNV-16796")
     @pytest.mark.manual
     def test_offline_vm_storage_migration_across_volume_modes(self):
         """
+        Polarion: CNV-16796
+
         Test that offline VM storage migration completes successfully and preserves data
         across volume mode combinations between different storage classes.
 
@@ -70,10 +71,11 @@ class TestMixedOfflineOnlineStorageMigration:
 
     __test__ = False
 
-    @pytest.mark.polarion("CNV-16797")
     @pytest.mark.manual
     def test_mixed_offline_online_vm_storage_migration(self):
         """
+        Polarion: CNV-16797
+
         Test that storage migration completes for a plan containing both offline and running VMs
         while each VM preserves its original state.
 
@@ -111,10 +113,11 @@ class TestOfflineStorageMigrationCleanupPolicy:
 
     __test__ = False
 
-    @pytest.mark.polarion("CNV-16798")
     @pytest.mark.manual
     def test_source_volumes_retained_after_offline_migration(self):
         """
+        Polarion: CNV-16798
+
         Test that source volumes are retained after offline VM storage migration
         when cleanup policy is set to retain.
 
@@ -137,10 +140,11 @@ class TestOfflineStorageMigrationCleanupPolicy:
             - File content equals the pre-migration written data
         """
 
-    @pytest.mark.polarion("CNV-16799")
     @pytest.mark.manual
     def test_source_volumes_deleted_after_offline_migration(self):
         """
+        Polarion: CNV-16799
+
         Test that source volumes are deleted after offline VM storage migration
         when cleanup policy is set to delete.
 
@@ -176,10 +180,11 @@ class TestOfflineVMStorageMigrationWithHotplugDisks:
 
     __test__ = False
 
-    @pytest.mark.polarion("CNV-16800")
     @pytest.mark.manual
     def test_offline_vm_with_hotplug_disks_storage_migration(self):
         """
+        Polarion: CNV-16800
+
         Test that offline VM storage migration migrates all disks including hotplug disks.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/storage_mig_offline.md
@@ -215,10 +220,11 @@ class TestOfflineVMStorageMigrationFailureRollback:
 
     __test__ = False
 
-    @pytest.mark.polarion("CNV-16802")
     @pytest.mark.manual
     def test_offline_vm_rollback_on_migration_failure(self):
         """
+        Polarion: CNV-16802
+
         [NEGATIVE] Test that offline VM disk references remain unchanged and the source volume
         is preserved when storage migration fails.
 
@@ -255,10 +261,11 @@ class TestVMStartDuringStorageMigration:
 
     __test__ = False
 
-    @pytest.mark.polarion("CNV-16803")
     @pytest.mark.manual
     def test_vm_start_during_offline_storage_migration(self):
         """
+        Polarion: CNV-16803
+
         Test that starting a stopped VM during storage migration succeeds
         and the VM waits for migration completion before becoming ready.
 
@@ -297,10 +304,11 @@ class TestCancelInProgressStorageMigration:
 
     __test__ = False
 
-    @pytest.mark.polarion("CNV-16804")
     @pytest.mark.manual
     def test_cancel_in_progress_storage_migration(self):
         """
+        Polarion: CNV-16804
+
         Test that cancelling an in-progress storage migration preserves original VM state
         for both offline and online VMs.
 
