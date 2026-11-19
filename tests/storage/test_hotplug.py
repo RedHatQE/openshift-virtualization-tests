@@ -228,7 +228,6 @@ def hotplugged_dvs_scope_class(
 @pytest.mark.usefixtures("hotplug_volume_scope_class")
 class TestHotPlugWithPersist:
     @pytest.mark.sno
-    @pytest.mark.polarion("CNV-6014")
     @pytest.mark.dependency(name="test_hotplug_volume_with_bus_and_persist")
     @pytest.mark.s390x
     def test_hotplug_volume_with_bus_and_persist(
@@ -237,6 +236,10 @@ class TestHotPlugWithPersist:
         fedora_vm_for_hotplug_scope_class,
         expected_bus,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-7303 # <skip-jira-utils-check>
+        Polarion: CNV-6014
+        """
         wait_for_vm_volume_ready(
             vm=fedora_vm_for_hotplug_scope_class, volume_name=blank_disk_dv_multi_storage_scope_class.name
         )
@@ -247,7 +250,6 @@ class TestHotPlugWithPersist:
             expected_bus=expected_bus,
         )
 
-    @pytest.mark.polarion("CNV-11390")
     @pytest.mark.dependency(depends=["test_hotplug_volume_with_bus_and_persist"])
     @pytest.mark.usefixtures("expected_bus")
     @pytest.mark.s390x
@@ -257,6 +259,10 @@ class TestHotPlugWithPersist:
         blank_disk_dv_multi_storage_scope_class: DataVolume,
         fedora_vm_for_hotplug_scope_class: VirtualMachineForTests,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-7303 # <skip-jira-utils-check>
+        Polarion: CNV-11390
+        """
         if is_dv_migratable(dv=blank_disk_dv_multi_storage_scope_class, client=admin_client):
             migrate_vm_and_verify(
                 vm=fedora_vm_for_hotplug_scope_class, client=admin_client, check_ssh_connectivity=True
@@ -298,7 +304,6 @@ class TestHotPlugWithSerialPersist:
         - N blank DataVolumes hotplugged to the VM with persistence enabled and a unique serial per disk
     """
 
-    @pytest.mark.polarion("CNV-6425")
     @pytest.mark.dependency(name="test_hotplug_volume_with_serial_and_persist", scope="class")
     def test_hotplug_volume_with_serial_and_persist(
         self,
@@ -306,6 +311,9 @@ class TestHotPlugWithSerialPersist:
         fedora_vm_for_hotplug_scope_class: VirtualMachineForTests,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-7303 # <skip-jira-utils-check>
+        Polarion: CNV-6425
+
         Verify that persisted hotplugged disks are visible with correct serials and converted to regular disks.
 
         Preconditions:
@@ -364,7 +372,6 @@ class TestHotPlugWithSerialPersist:
                 "not all hotplugged DVs support RWX access mode"
             )
 
-    @pytest.mark.polarion("CNV-16331")
     # Depends on the base persist test to avoid validating reboot behavior on top of a broken persistence step.
     @pytest.mark.dependency(depends=["test_hotplug_volume_with_serial_and_persist"], scope="class")
     def test_hotplug_volume_with_serial_and_persist_after_reboot(
@@ -376,6 +383,10 @@ class TestHotPlugWithSerialPersist:
         Test that hotplugged persistent disks survive VM reboot.
 
         Jira: https://issues.redhat.com/browse/CNV-92782  # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-7303 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-84717 # <skip-jira-utils-check>
+        Polarion: CNV-16331
+
 
         Preconditions:
             - Running Fedora VM with hotplugged disks persisted to VM spec
@@ -411,13 +422,16 @@ class TestHotPlugWithSerialPersist:
 @pytest.mark.conformance
 @pytest.mark.windows
 class TestHotPlugWindows:
-    @pytest.mark.polarion("CNV-6525")
     @pytest.mark.dependency(name="test_windows_hotplug")
     def test_windows_hotplug(
         self,
         blank_disk_dv_multi_storage_scope_class,
         vm_instance_multi_storage_scope_class,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-9748 # <skip-jira-utils-check>
+        Polarion: CNV-6525
+        """
         wait_for_vm_volume_ready(
             vm=vm_instance_multi_storage_scope_class,
             volume_name=blank_disk_dv_multi_storage_scope_class.name,
@@ -428,7 +442,6 @@ class TestHotPlugWindows:
         )
         assert_hotplugvolume_nonexist(vm=vm_instance_multi_storage_scope_class)
 
-    @pytest.mark.polarion("CNV-11391")
     @pytest.mark.dependency(depends=["test_windows_hotplug"])
     def test_windows_hotplug_migrate(
         self,
@@ -436,6 +449,10 @@ class TestHotPlugWindows:
         blank_disk_dv_multi_storage_scope_class: DataVolume,
         vm_instance_multi_storage_scope_class: VirtualMachineForTests,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-7303 # <skip-jira-utils-check>
+        Polarion: CNV-11391
+        """
         if is_dv_migratable(dv=blank_disk_dv_multi_storage_scope_class, client=admin_client):
             migrate_vm_and_verify(
                 vm=vm_instance_multi_storage_scope_class,

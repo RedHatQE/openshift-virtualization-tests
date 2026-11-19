@@ -150,9 +150,12 @@ def hpp_pool_deployments_scope_module(admin_client, hco_namespace):
 
 
 @pytest.mark.sno
-@pytest.mark.polarion("CNV-8928")
 @pytest.mark.s390x
 def test_hpp_cr(hostpath_provisioner_scope_module):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-993 # <skip-jira-utils-check>
+    Polarion: CNV-8928
+    """
     assert hostpath_provisioner_scope_module.exists
     hostpath_provisioner_scope_module.wait_for_condition(
         condition=hostpath_provisioner_scope_module.Condition.AVAILABLE,
@@ -162,9 +165,12 @@ def test_hpp_cr(hostpath_provisioner_scope_module):
 
 
 @pytest.mark.sno
-@pytest.mark.polarion("CNV-7969")
 @pytest.mark.s390x
 def test_hpp_prometheus_resources(hpp_prometheus_resources):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-9042 # <skip-jira-utils-check>
+    Polarion: CNV-7969
+    """
     non_existing_resources = []
     for rsc in hpp_prometheus_resources:
         if not rsc.exists:
@@ -173,13 +179,16 @@ def test_hpp_prometheus_resources(hpp_prometheus_resources):
 
 
 @pytest.mark.sno
-@pytest.mark.polarion("CNV-3279")
 @pytest.mark.s390x
 def test_hpp_serviceaccount(
     hpp_serviceaccount,
     hpp_daemonset_scope_module,
     hpp_pool_deployments_scope_module,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-993 # <skip-jira-utils-check>
+    Polarion: CNV-3279
+    """
     assert hpp_serviceaccount.exists, "HPP serviceAccount doesn't exist"
     hpp_serviceaccount_name = hpp_serviceaccount.instance.metadata.name
     hpp_daemonset_serviceaccount = hpp_daemonset_scope_module.instance.spec.template.spec.serviceAccount
@@ -199,9 +208,12 @@ def test_hpp_serviceaccount(
 
 
 @pytest.mark.sno
-@pytest.mark.polarion("CNV-8901")
 @pytest.mark.s390x
 def test_hpp_scc(hpp_scc, hpp_cr_suffix_scope_module):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-993 # <skip-jira-utils-check>
+    Polarion: CNV-8901
+    """
     assert hpp_scc.exists
     assert (
         hpp_scc.instance.users[0]
@@ -210,7 +222,6 @@ def test_hpp_scc(hpp_scc, hpp_cr_suffix_scope_module):
 
 
 @pytest.mark.sno
-@pytest.mark.polarion("CNV-8902")
 @pytest.mark.s390x
 def test_hpp_clusterrole_and_clusterrolebinding(
     hpp_clusterrole,
@@ -218,6 +229,10 @@ def test_hpp_clusterrole_and_clusterrolebinding(
     hpp_clusterrole_version_suffix,
     hpp_cr_suffix_scope_module,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-993 # <skip-jira-utils-check>
+    Polarion: CNV-8902
+    """
     assert hpp_clusterrole.exists
     assert (
         hpp_clusterrole.instance["metadata"]["name"]
@@ -232,9 +247,12 @@ def test_hpp_clusterrole_and_clusterrolebinding(
 
 
 @pytest.mark.sno
-@pytest.mark.polarion("CNV-8903")
 @pytest.mark.s390x
 def test_hpp_daemonset(hpp_daemonset_scope_module):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-993 # <skip-jira-utils-check>
+    Polarion: CNV-8903
+    """
     assert (
         hpp_daemonset_scope_module.instance.status.numberReady
         == hpp_daemonset_scope_module.instance.status.desiredNumberScheduled
@@ -242,19 +260,24 @@ def test_hpp_daemonset(hpp_daemonset_scope_module):
 
 
 @pytest.mark.sno
-@pytest.mark.polarion("CNV-8904")
 @pytest.mark.s390x
 def test_hpp_operator_pod(hpp_operator_pod):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-993 # <skip-jira-utils-check>
+    Polarion: CNV-8904
+    """
     assert hpp_operator_pod.status == Pod.Status.RUNNING, f"HPP operator pod {hpp_operator_pod.name} is not running"
 
 
 @pytest.mark.destructive
-@pytest.mark.polarion("CNV-3277")
 def test_hpp_operator_recreate_after_deletion(
     hpp_operator_deployment,
     storage_class_matrix_hpp_matrix__module__,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/KNIP-993 # <skip-jira-utils-check>
+    Polarion: CNV-3277
+
     Check that Hostpath-provisioner operator will be created again by HCO after its deletion.
     The Deployment is deleted, then its RepliceSet and Pod will be deleted and created again.
     """
@@ -268,9 +291,12 @@ def test_hpp_operator_recreate_after_deletion(
 
 
 @pytest.mark.sno
-@pytest.mark.polarion("CNV-6097")
 @pytest.mark.s390x
 def test_hpp_operator_scc(hpp_scc, hpp_operator_pod):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-9264 # <skip-jira-utils-check>
+    Polarion: CNV-6097
+    """
     assert hpp_scc.exists, f"scc {hpp_scc.name} is not existed"
     user_id = hpp_operator_pod.instance.spec["containers"][0]["securityContext"]["runAsUser"]
     assert isinstance(user_id, int) and len(str(user_id)) == 10, (
@@ -284,47 +310,38 @@ def test_hpp_operator_scc(hpp_scc, hpp_operator_pod):
     [
         pytest.param(
             Pod,
-            marks=(pytest.mark.polarion("CNV-7204")),
             id="hpp-pods",
         ),
         pytest.param(
             ServiceAccount,
-            marks=(pytest.mark.polarion("CNV-7205")),
             id="hpp-service-accounts",
         ),
         pytest.param(
             Service,
-            marks=(pytest.mark.polarion("CNV-7206")),
             id="hpp-service",
         ),
         pytest.param(
             Deployment,
-            marks=(pytest.mark.polarion("CNV-7213")),
             id="hpp-deployment",
         ),
         pytest.param(
             CustomResourceDefinition,
-            marks=(pytest.mark.polarion("CNV-7211")),
             id="hpp-crd",
         ),
         pytest.param(
             Role,
-            marks=(pytest.mark.polarion("CNV-7212")),
             id="hpp-role",
         ),
         pytest.param(
             RoleBinding,
-            marks=(pytest.mark.polarion("CNV-7209")),
             id="hpp-role-binding",
         ),
         pytest.param(
             ClusterRole,
-            marks=(pytest.mark.polarion("CNV-7210")),
             id="hpp-cluster-role",
         ),
         pytest.param(
             ClusterRoleBinding,
-            marks=(pytest.mark.polarion("CNV-7208")),
             id="hpp-cluster-role-binding",
         ),
     ],
@@ -335,4 +352,16 @@ def test_verify_hpp_res_app_label(
     hpp_resources,
     cnv_current_version,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-6112 # <skip-jira-utils-check>
+    Polarion: CNV-7204
+    Polarion: CNV-7205
+    Polarion: CNV-7206
+    Polarion: CNV-7213
+    Polarion: CNV-7211
+    Polarion: CNV-7212
+    Polarion: CNV-7209
+    Polarion: CNV-7210
+    Polarion: CNV-7208
+    """
     verify_hpp_app_label(hpp_resources=hpp_resources, cnv_version=cnv_current_version)

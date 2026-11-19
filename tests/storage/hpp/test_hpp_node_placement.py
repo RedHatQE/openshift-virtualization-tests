@@ -34,19 +34,16 @@ pytestmark = pytest.mark.hpp
             {TYPE: NODE_SELECTOR},
             HCO_NODE_PLACEMENT,
             {DV_NAME: "dv-5711", VM_NAME: "vm-5711", NODE_STR: None},
-            marks=pytest.mark.polarion("CNV-5711"),
         ),
         pytest.param(
             {TYPE: "affinity"},
             HCO_NODE_PLACEMENT,
             {DV_NAME: "dv-5712", VM_NAME: "vm-5712", NODE_STR: None},
-            marks=pytest.mark.polarion("CNV-5712"),
         ),
         pytest.param(
             {TYPE: "tolerations"},
             HCO_NODE_PLACEMENT,
             {DV_NAME: "dv-5713", VM_NAME: "vm-5713", NODE_STR: None},
-            marks=pytest.mark.polarion("CNV-5713"),
         ),
     ],
     indirect=True,
@@ -58,7 +55,14 @@ def test_create_dv_on_right_node_with_node_placement(
     hyperconverged_with_node_placement,
     cirros_vm_for_node_placement_tests,
 ):
-    # The VM should be created on the node that have the node labels
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-6898 # <skip-jira-utils-check>
+    Polarion: CNV-5711
+    Polarion: CNV-5712
+    Polarion: CNV-5713
+
+    The VM should be created on the node that have the node labels
+    """
     assert cirros_vm_for_node_placement_tests.vmi.node.name == worker_node1.name
 
 
@@ -68,7 +72,6 @@ def test_create_dv_on_right_node_with_node_placement(
     [
         pytest.param(
             {DV_NAME: "dv-5601", VM_NAME: "vm-5601"},
-            marks=pytest.mark.polarion("CNV-5601"),
         ),
     ],
     indirect=True,
@@ -81,6 +84,10 @@ def test_vm_with_dv_on_functional_after_configuring_hpp_not_to_work_on_that_same
     schedulable_nodes,
     cirros_vm_for_node_placement_tests,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-6898 # <skip-jira-utils-check>
+    Polarion: CNV-5601
+    """
     assert_guest_disk_count(vm=cirros_vm_for_node_placement_tests)
     with edit_hpp_with_node_selector(
         hpp_resource=hostpath_provisioner_scope_module,
@@ -95,7 +102,6 @@ def test_vm_with_dv_on_functional_after_configuring_hpp_not_to_work_on_that_same
     [
         pytest.param(
             {DV_NAME: "dv-5616", VM_NAME: "vm-5616"},
-            marks=pytest.mark.polarion("CNV-5616"),
         ),
     ],
     indirect=True,
@@ -111,6 +117,10 @@ def test_pv_stay_released_after_deleted_when_no_hpp_pod(
     cirros_pvc_on_hpp,
     cirros_pv_on_hpp,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-6898 # <skip-jira-utils-check>
+    Polarion: CNV-5616
+    """
     with edit_hpp_with_node_selector(
         hpp_resource=hostpath_provisioner_scope_module,
         hpp_daemonset=hpp_daemonset_scope_session,

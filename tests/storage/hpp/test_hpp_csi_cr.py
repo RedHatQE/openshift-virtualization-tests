@@ -180,7 +180,6 @@ def vm_from_template_with_existing_dv_on_hpp_pvc(
                 "dv_name": "dv-cnv-7834",
                 "storage_class": HppCsiStorageClass.Name.HOSTPATH_CSI_BASIC,
             },
-            marks=pytest.mark.polarion("CNV-7834"),
         ),
     ],
     indirect=True,
@@ -195,6 +194,10 @@ def test_install_and_delete_hpp_csi_cr_basic(
     cirros_data_volume_on_hpp_basic,
     vm_from_template_with_existing_dv_on_hpp_basic,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-10502 # <skip-jira-utils-check>
+    Polarion: CNV-7834
+    """
     check_disk_count_in_vm_and_image_location(
         vm=vm_from_template_with_existing_dv_on_hpp_basic,
         dv=cirros_data_volume_on_hpp_basic,
@@ -220,7 +223,6 @@ def test_install_and_delete_hpp_csi_cr_basic(
                 "dv_name": "dv-cnv-7967-pvc-ocs-fs",
                 "storage_class": HppCsiStorageClass.Name.HOSTPATH_CSI_PVC_TEMPLATE_OCS_FS,
             },
-            marks=pytest.mark.polarion("CNV-7967"),
         ),
         pytest.param(
             "hpp-cr-pvc_template_ocs_block.yaml",
@@ -236,7 +238,6 @@ def test_install_and_delete_hpp_csi_cr_basic(
                 "dv_name": "dv-cnv-8899-pvc-ocs-block",
                 "storage_class": HppCsiStorageClass.Name.HOSTPATH_CSI_PVC_TEMPLATE_OCS_BLOCK,
             },
-            marks=pytest.mark.polarion("CNV-8899"),
         ),
     ],
     indirect=True,
@@ -251,6 +252,11 @@ def test_install_and_delete_hpp_csi_cr_with_pvc_template(
     cirros_data_volume_on_hpp_pvc,
     vm_from_template_with_existing_dv_on_hpp_pvc,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-10502 # <skip-jira-utils-check>
+    Polarion: CNV-7967
+    Polarion: CNV-8899
+    """
     storage_class = hpp_csi_storage_classes.get("pvc-ocs-fs", hpp_csi_storage_classes.get("pvc-ocs-block"))
     check_disk_count_in_vm_and_image_location(
         vm=vm_from_template_with_existing_dv_on_hpp_pvc,
@@ -282,7 +288,6 @@ def test_install_and_delete_hpp_csi_cr_with_pvc_template(
                 "dv_name": "dv-cnv-7832-pvc",
                 "storage_class": HppCsiStorageClass.Name.HOSTPATH_CSI_PVC_TEMPLATE_OCS_FS,
             },
-            marks=pytest.mark.polarion("CNV-7832"),
         ),
     ],
     indirect=True,
@@ -299,6 +304,10 @@ def test_install_and_delete_hpp_csi_cr_basic_and_with_pvc_template(
     cirros_data_volume_on_hpp_pvc,
     vm_from_template_with_existing_dv_on_hpp_pvc,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-10502 # <skip-jira-utils-check>
+    Polarion: CNV-7832
+    """
     check_disk_count_in_vm_and_image_location(
         vm=vm_from_template_with_existing_dv_on_hpp_basic,
         dv=cirros_data_volume_on_hpp_basic,
