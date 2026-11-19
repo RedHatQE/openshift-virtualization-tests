@@ -66,8 +66,11 @@ class TestVMCloneVirtctlManifest:
         [pytest.param("vm")],
         indirect=True,
     )
-    @pytest.mark.polarion("CNV-10300")
     def test_clone_vm_with_virtctl_manifest(self, unprivileged_client, virtctl_cloning_manifest):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-6042 # <skip-jira-utils-check>
+        Polarion: CNV-10300
+        """
         create_cloning_job_from_manifest_and_wait_for_success(
             client=unprivileged_client, manifest=virtctl_cloning_manifest
         )
@@ -77,10 +80,13 @@ class TestVMCloneVirtctlManifest:
         [pytest.param("vmsnapshot")],
         indirect=True,
     )
-    @pytest.mark.polarion("CNV-10301")
     def test_clone_vmsnapshot_with_virtctl_manifest(
         self, unprivileged_client, vmsnapshot_created, virtctl_cloning_manifest
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-6042 # <skip-jira-utils-check>
+        Polarion: CNV-10301
+        """
         create_cloning_job_from_manifest_and_wait_for_success(
             client=unprivileged_client, manifest=virtctl_cloning_manifest
         )

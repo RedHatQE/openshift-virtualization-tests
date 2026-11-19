@@ -14,7 +14,6 @@ LOGGER = logging.getLogger(__name__)
     [
         pytest.param(
             {"source_name": "non-existing-vm", "source_kind": "VirtualMachine"},
-            marks=pytest.mark.polarion("CNV-10302"),
             id="VirtualMachine_as_source",
         ),
         pytest.param(
@@ -22,12 +21,16 @@ LOGGER = logging.getLogger(__name__)
                 "source_name": "non-existing-vm-snapshot",
                 "source_kind": "VirtualMachineSnapshot",
             },
-            marks=pytest.mark.polarion("CNV-10303"),
             id="VirtualMachineSnapshot_as_source",
         ),
     ],
 )
 def test_cloning_job_if_source_not_exist_negative(unprivileged_client, namespace, cloning_job_bad_params):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-6042 # <skip-jira-utils-check>
+    Polarion: CNV-10302
+    Polarion: CNV-10303
+    """
     with VirtualMachineClone(
         name="clone-job-negative-test",
         namespace=namespace.name,

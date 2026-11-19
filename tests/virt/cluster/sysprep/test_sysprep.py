@@ -276,23 +276,35 @@ def detached_sysprep_resource_and_restarted_vm(sysprep_vm, attached_sysprep_volu
 @pytest.mark.high_resource_vm
 @pytest.mark.usefixtures("sysprep_vm", "sealed_vm", "attached_sysprep_volume_to_vm")
 class TestSysprep:
-    @pytest.mark.polarion("CNV-6760")
     def test_admin_user_locale_computer_name_after_boot(self, sysprep_vm, sysprep_vm_hostname):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-6746 # <skip-jira-utils-check>
+        Polarion: CNV-6760
+        """
         verify_changes_from_autounattend(vm=sysprep_vm, timezone=NEW_TIMEZONE, hostname=sysprep_vm_hostname)
 
     @pytest.mark.rwx_default_storage
-    @pytest.mark.polarion("CNV-6761")
     def test_migrate_vm_with_sysprep_cm(self, sysprep_vm, migrated_sysprep_vm, sysprep_vm_hostname):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-6746 # <skip-jira-utils-check>
+        Polarion: CNV-6761
+        """
         verify_changes_from_autounattend(vm=sysprep_vm, timezone=NEW_TIMEZONE, hostname=sysprep_vm_hostname)
 
-    @pytest.mark.polarion("CNV-6762")
     def test_remove_sysprep_volume_and_check_data_persistence(
         self, sysprep_vm, detached_sysprep_resource_and_restarted_vm, sysprep_vm_hostname
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-6746 # <skip-jira-utils-check>
+        Polarion: CNV-6762
+        """
         verify_changes_from_autounattend(vm=sysprep_vm, timezone=NEW_TIMEZONE, hostname=sysprep_vm_hostname)
 
-    @pytest.mark.polarion("CNV-6763")
     def test_remove_autounattend_and_boot(self, sysprep_vm, shutdown_and_removed_autounattend_from_sysprep_resource):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-6746 # <skip-jira-utils-check>
+        Polarion: CNV-6763
+        """
         assert verify_failed_boot_without_autounattend(vm=sysprep_vm), (
             f"Error condition for missing {ANSWER_FILE_NAME} not met when attempting to start VM {sysprep_vm.name}"
         )

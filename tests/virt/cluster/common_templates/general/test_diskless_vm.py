@@ -25,11 +25,10 @@ class TestDisklessVM:
         [
             pytest.param(
                 {"vm_name": "rhel-diskless-vm", "template_labels": RHEL_LATEST_LABELS},
-                marks=(pytest.mark.polarion("CNV-4696"), pytest.mark.gating, pytest.mark.s390x),
+                marks=(pytest.mark.gating, pytest.mark.s390x),
             ),
             pytest.param(
                 {"vm_name": "windows-diskless-vm", "template_labels": WINDOWS_LATEST_LABELS},
-                marks=pytest.mark.polarion("CNV-4697"),
             ),
         ],
     )
@@ -40,6 +39,11 @@ class TestDisklessVM:
         namespace,
         golden_image_data_source_for_test_scope_class,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-5795 # <skip-jira-utils-check>
+        Polarion: CNV-4696
+        Polarion: CNV-4697
+        """
         LOGGER.info("Verify diskless VM is created.")
         with VirtualMachineForTestsFromTemplate(
             name=vm_params["vm_name"],
