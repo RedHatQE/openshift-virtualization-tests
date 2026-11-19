@@ -1,9 +1,20 @@
+from collections.abc import Generator
+from typing import TYPE_CHECKING
+
 import pytest
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.namespace import Namespace
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
+from ocp_resources.virtual_machine_instancetype import VirtualMachineInstancetype
+from ocp_resources.virtual_machine_preference import VirtualMachinePreference
+from ocp_resources.virtual_machine_template import VirtualMachineTemplate
+from ocp_resources.virtual_machine_template_request import VirtualMachineTemplateRequest
 from pytest_testconfig import config as py_config
+
+if TYPE_CHECKING:
+    from kubernetes.dynamic import DynamicClient
+    from ocp_resources.data_source import DataSource
 
 from tests.data_protection.oadp.utils import (
     FILE_PATH_FOR_WINDOWS_BACKUP,
@@ -430,3 +441,174 @@ def paused_rhel_vm_with_hooks_opt_out(rhel_vm_with_hooks_opt_out):
     """
     rhel_vm_with_hooks_opt_out.vmi.pause(wait=True)
     yield rhel_vm_with_hooks_opt_out
+
+
+@pytest.fixture()
+def rhel_virtual_machine_instancetype(
+    admin_client: DynamicClient,
+    namespace_for_backup: Namespace,
+) -> Generator[VirtualMachineInstancetype]:
+    """Namespaced VirtualMachineInstancetype in the OADP backup namespace.
+
+    Yields:
+        VirtualMachineInstancetype: Created instance type.
+    """
+    with VirtualMachineInstancetype(
+        client=admin_client,
+        name="rhel-vmt-instancetype",
+        namespace=namespace_for_backup.name,
+        cpu={"guest": 1},
+        memory={"guest": "2Gi"},
+    ) as virtual_machine_instancetype:
+        yield virtual_machine_instancetype
+
+
+@pytest.fixture()
+def rhel_virtual_machine_preference(
+    admin_client: DynamicClient,
+    namespace_for_backup: Namespace,
+) -> Generator[VirtualMachinePreference]:
+    """Namespaced VirtualMachinePreference in the OADP backup namespace.
+
+    Yields:
+        VirtualMachinePreference: Created preference.
+    """
+    with VirtualMachinePreference(
+        client=admin_client,
+        name="rhel-vmt-preference",
+        namespace=namespace_for_backup.name,
+        cpu={"preferredCPUTopology": "sockets"},
+    ) as virtual_machine_preference:
+        yield virtual_machine_preference
+
+
+@pytest.fixture()
+def rhel_vm_for_template_capture(
+    admin_client: DynamicClient,
+    namespace_for_backup: Namespace,
+    rhel_virtual_machine_instancetype: VirtualMachineInstancetype,
+    rhel_virtual_machine_preference: VirtualMachinePreference,
+    rhel10_data_source_scope_session: DataSource,
+    snapshot_storage_class_name_scope_module: str,
+) -> Generator[VirtualMachineForTests]:
+    """Running RHEL VM used as the capture source for a VirtualMachineTemplateRequest.
+
+    Yields:
+        VirtualMachineForTests: Running VM with namespaced instance type and preference.
+    """
+    with VirtualMachineForTests(
+        name="rhel-vmt-source-vm",
+        namespace=namespace_for_backup.name,
+        client=admin_client,
+        os_flavor=OS_FLAVOR_RHEL,
+        vm_instance_type=rhel_virtual_machine_instancetype,
+        vm_preference=rhel_virtual_machine_preference,
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=rhel10_data_source_scope_session,
+            storage_class=snapshot_storage_class_name_scope_module,
+        ),
+    ) as virtual_machine:
+        running_vm(vm=virtual_machine)
+        yield virtual_machine
+
+
+@pytest.fixture()
+def rhel_virtual_machine_template_request(
+    admin_client: DynamicClient,
+    namespace_for_backup: Namespace,
+    rhel_vm_for_template_capture: VirtualMachineForTests,
+) -> Generator[VirtualMachineTemplateRequest]:
+    """VirtualMachineTemplateRequest that captures the source RHEL VM into a template.
+
+    Yields:
+        VirtualMachineTemplateRequest: Ready request that produced a VirtualMachineTemplate.
+    """
+    with VirtualMachineTemplateRequest(
+        client=admin_client,
+        name="rhel-virtual-machine-template-request",
+        namespace=namespace_for_backup.name,
+        template_name="rhel-virtual-machine-template",
+        virtual_machine_ref={
+            "name": rhel_vm_for_template_capture.name,
+            "namespace": namespace_for_backup.name,
+        },
+    ) as template_request:
+        template_request.wait_for_condition(
+            condition=template_request.Condition.READY,
+            status=template_request.Condition.Status.TRUE,
+            timeout=TIMEOUT_8MIN,
+        )
+        yield template_request
+
+
+@pytest.fixture()
+def rhel_virtual_machine_template(
+    rhel_virtual_machine_template_request: VirtualMachineTemplateRequest,
+) -> Generator[VirtualMachineTemplate]:
+    """VirtualMachineTemplate captured from the source RHEL VM.
+
+    Yields:
+        VirtualMachineTemplate: Template referenced by the ready VirtualMachineTemplateRequest.
+    """
+    template_ref = rhel_virtual_machine_template_request.instance.status.templateRef
+    virtual_machine_template = VirtualMachineTemplate(
+        client=rhel_virtual_machine_template_request.client,
+        name=template_ref.name,
+        namespace=rhel_virtual_machine_template_request.namespace,
+    )
+    yield virtual_machine_template
+
+
+@pytest.fixture()
+def deleted_rhel_vm_for_template_capture(
+    rhel_vm_for_template_capture: VirtualMachineForTests,
+    rhel_virtual_machine_template: VirtualMachineTemplate,
+) -> Generator[VirtualMachineForTests]:
+    """Capture-source VM removed after the template is ready.
+
+    Yields:
+        VirtualMachineForTests: Handle for the deleted capture-source VM.
+    """
+    rhel_vm_for_template_capture.delete(wait=True)
+    yield rhel_vm_for_template_capture
+
+
+@pytest.fixture()
+def velero_backup_rhel_virtual_machine_template_with_datamover(
+    admin_client: DynamicClient,
+    namespace_for_backup: Namespace,
+    rhel_virtual_machine_template: VirtualMachineTemplate,
+    deleted_rhel_vm_for_template_capture: VirtualMachineForTests,
+) -> Generator[VeleroBackup]:
+    """Velero datamover backup of the namespace that holds the captured VMT graph."""
+    with VeleroBackup(
+        client=admin_client,
+        included_namespaces=[namespace_for_backup.name],
+        name="datamover-backup-vmt-ns",
+        snapshot_move_data=True,
+        storage_location=BACKUP_STORAGE_LOCATION,
+        timeout=TIMEOUT_8MIN,
+    ) as backup:
+        yield backup
+
+
+@pytest.fixture()
+def velero_restore_rhel_virtual_machine_template(
+    admin_client: DynamicClient,
+    namespace_for_backup: Namespace,
+    velero_backup_rhel_virtual_machine_template_with_datamover: VeleroBackup,
+) -> Generator[VeleroRestore]:
+    """Delete the backup namespace, then restore it from the VMT datamover backup.
+
+    Yields:
+        VeleroRestore: Completed restore of the VirtualMachineTemplate namespace.
+    """
+    namespace_for_backup.delete(wait=True)
+    with VeleroRestore(
+        client=admin_client,
+        included_namespaces=[namespace_for_backup.name],
+        name="datamover-restore-vmt-ns",
+        backup_name=velero_backup_rhel_virtual_machine_template_with_datamover.name,
+        timeout=TIMEOUT_15MIN,
+    ) as restore:
+        yield restore
