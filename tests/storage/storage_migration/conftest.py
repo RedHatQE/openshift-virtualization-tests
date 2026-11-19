@@ -1,14 +1,18 @@
 import contextlib
 import logging
 import shlex
+from collections.abc import Generator
 
 import pytest
+from kubernetes.dynamic import DynamicClient
 from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.multi_namespace_virtual_machine_storage_migration import MultiNamespaceVirtualMachineStorageMigration
 from ocp_resources.multi_namespace_virtual_machine_storage_migration_plan import (
     MultiNamespaceVirtualMachineStorageMigrationPlan,
 )
+from ocp_resources.namespace import Namespace
+from ocp_resources.node import Node
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from pyhelper_utils.shell import run_ssh_commands
@@ -25,8 +29,11 @@ from tests.storage.storage_migration.constants import (
 )
 from tests.storage.storage_migration.utils import (
     build_namespaces_spec_for_storage_migration,
+    build_namespaces_spec_with_target_volume_mode,
     create_fedora_vm_with_instance_type,
     get_vm_dv_names,
+    get_vm_volume_node,
+    wait_for_storage_migration_in_progress,
     wait_for_storage_migration_phase,
 )
 from tests.storage.utils import create_windows_directory, get_storage_class_for_storage_migration
@@ -34,8 +41,8 @@ from tests.utils import create_windows2022_vm
 from utilities.constants import Images
 from utilities.constants.images import OS_FLAVOR_FEDORA, OS_FLAVOR_RHEL
 from utilities.constants.instance_types import U1_SMALL
-from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5SEC
-from utilities.infra import create_ns
+from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5SEC, TIMEOUT_10MIN
+from utilities.infra import create_ns, unique_name
 from utilities.jira import is_jira_open
 from utilities.storage import (
     construct_datavolume_source_dict,
@@ -48,6 +55,7 @@ from utilities.storage import (
 )
 from utilities.virt import (
     VirtualMachineForTests,
+    cordon_node,
     get_vm_boot_time,
     running_vm,
     vm_instance_from_template,
@@ -445,8 +453,21 @@ def running_vm_for_scmig_test_first_ns(
 
 @pytest.fixture()
 def stopped_vm_for_scmig_test_first_ns(
-    unprivileged_client, namespace, fedora_data_source_scope_module, source_storage_class, cpu_for_migration
-):
+    unprivileged_client: DynamicClient,
+    namespace: Namespace,
+    fedora_data_source_scope_module: DataSource,
+    source_storage_class: str,
+    cpu_for_migration: str,
+) -> Generator[VirtualMachineForTests]:
+    """Provide a stopped Fedora VM on the source storage class.
+
+    Yields:
+        VirtualMachineForTests: The VM, stopped.
+
+    Side effects:
+        Creates the VM, stops it before yielding, and deletes it on teardown. Cleanup also runs
+        when setup fails before the fixture yields.
+    """
     vm_creator = create_fedora_vm_with_instance_type(
         unprivileged_client=unprivileged_client,
         namespace_name=namespace.name,
@@ -455,11 +476,14 @@ def stopped_vm_for_scmig_test_first_ns(
         cpu_for_migration=cpu_for_migration,
         vm_name="stopped-vm",
     )
-    vm = next(vm_creator)
-    vm.stop(wait=True)
-    yield vm
-    # Exhaust the creator generator so the VM's context-manager teardown runs after the test.
-    yield from vm_creator
+    try:
+        vm = next(vm_creator)
+        vm.stop(wait=True)
+        yield vm
+    finally:
+        # Closing the creator unwinds its context manager and deletes the VM. This runs both on
+        # normal teardown and when an exception before the yield aborts the generator frame.
+        vm_creator.close()
 
 
 @pytest.fixture()
@@ -682,3 +706,615 @@ def failure_mig_migration(admin_client, failure_mig_plan, failure_source_dv_name
         # (xfail, run=False) pending product clarification on failed-migration behavior (CNV-98407).
         wait_for_storage_migration_phase(mig_migration=mig_migration, expected_phase=mig_migration.Status.FAILED)
         yield mig_migration
+
+
+@pytest.fixture()
+def running_vm_for_offline_scmig(
+    unprivileged_client: DynamicClient,
+    namespace: Namespace,
+    fedora_data_source_scope_module: DataSource,
+    source_storage_class: str,
+    cpu_for_migration: str,
+) -> Generator[VirtualMachineForTests]:
+    """Provide a running Fedora VM whose data disk uses the source storage class.
+
+    Yields:
+        VirtualMachineForTests: The running VM.
+
+    Side effects:
+        Creates the VM and deletes it on teardown.
+    """
+    yield from create_fedora_vm_with_instance_type(
+        unprivileged_client=unprivileged_client,
+        namespace_name=namespace.name,
+        data_source=fedora_data_source_scope_module,
+        source_storage_class=source_storage_class,
+        cpu_for_migration=cpu_for_migration,
+        vm_name="offline-vm-with-file",
+    )
+
+
+@pytest.fixture()
+def vm_with_written_file_for_scmig(
+    running_vm_for_offline_scmig: VirtualMachineForTests,
+) -> Generator[VirtualMachineForTests]:
+    """Write the pre-migration marker file into the running VM's guest filesystem.
+
+    Yields:
+        VirtualMachineForTests: The VM, still running, with ``FILE_BEFORE_STORAGE_MIGRATION``
+            written so post-migration content can be verified.
+
+    Side effects:
+        Starts the VM if it is not running and writes the marker file; the VM is left running.
+    """
+    write_file(
+        vm=running_vm_for_offline_scmig,
+        filename=FILE_BEFORE_STORAGE_MIGRATION,
+        content=CONTENT,
+        stop_vm=False,
+    )
+    yield running_vm_for_offline_scmig
+
+
+@pytest.fixture()
+def stopped_vm_with_written_file_for_scmig(
+    vm_with_written_file_for_scmig: VirtualMachineForTests,
+) -> Generator[VirtualMachineForTests]:
+    """Stop the VM holding the pre-migration marker file.
+
+    Yields:
+        VirtualMachineForTests: The VM, stopped, with the marker file already written.
+
+    Side effects:
+        Stops the VM and waits until it reaches the stopped state.
+    """
+    vm_with_written_file_for_scmig.stop(wait=True)
+    yield vm_with_written_file_for_scmig
+
+
+@pytest.fixture()
+def stopped_vm_with_written_file_source_dv_names(
+    stopped_vm_with_written_file_for_scmig: VirtualMachineForTests,
+) -> Generator[list[str]]:
+    yield get_vm_dv_names(vm=stopped_vm_with_written_file_for_scmig)
+
+
+@pytest.fixture()
+def vm_with_volume_mode_for_scmig(
+    unprivileged_client: DynamicClient,
+    namespace: Namespace,
+    fedora_data_source_scope_module: DataSource,
+    source_storage_class: str,
+    source_volume_mode: str,
+    cpu_for_migration: str,
+) -> Generator[VirtualMachineForTests]:
+    """Provide a Fedora VM whose data disk uses the source storage class and volume mode.
+
+    Yields:
+        VirtualMachineForTests: The created VM.
+
+    Side effects:
+        Creates the VM and deletes it on teardown.
+    """
+    with VirtualMachineForTests(
+        name="offline-vm-volume-mode",
+        namespace=namespace.name,
+        client=unprivileged_client,
+        os_flavor=OS_FLAVOR_FEDORA,
+        vm_instance_type=VirtualMachineClusterInstancetype(name=U1_SMALL, client=unprivileged_client),
+        vm_preference=VirtualMachineClusterPreference(name=OS_FLAVOR_FEDORA, client=unprivileged_client),
+        data_volume_template=data_volume_template_with_source_ref_dict(
+            data_source=fedora_data_source_scope_module,
+            storage_class=source_storage_class,
+            name=unique_name(name="offline-vm-volume-mode-dv"),
+            volume_mode=source_volume_mode,
+        ),
+        cpu_model=cpu_for_migration,
+    ) as vm:
+        yield vm
+
+
+@pytest.fixture()
+def running_vm_with_volume_mode_for_scmig(
+    vm_with_volume_mode_for_scmig: VirtualMachineForTests,
+) -> Generator[VirtualMachineForTests]:
+    """Start the volume-mode VM and wait until it is ready.
+
+    Yields:
+        VirtualMachineForTests: The running VM.
+
+    Side effects:
+        Starts the VM and waits until it is ready.
+    """
+    running_vm(vm=vm_with_volume_mode_for_scmig)
+    yield vm_with_volume_mode_for_scmig
+
+
+@pytest.fixture()
+def vm_with_volume_mode_and_written_file_for_scmig(
+    running_vm_with_volume_mode_for_scmig: VirtualMachineForTests,
+) -> Generator[VirtualMachineForTests]:
+    """Write the pre-migration marker file into the volume-mode VM's guest filesystem.
+
+    Yields:
+        VirtualMachineForTests: The VM, still running, with ``FILE_BEFORE_STORAGE_MIGRATION``
+            written so post-migration content can be verified.
+
+    Side effects:
+        Writes the marker file; the VM is left running.
+    """
+    write_file(
+        vm=running_vm_with_volume_mode_for_scmig,
+        filename=FILE_BEFORE_STORAGE_MIGRATION,
+        content=CONTENT,
+        stop_vm=False,
+    )
+    yield running_vm_with_volume_mode_for_scmig
+
+
+@pytest.fixture()
+def stopped_vm_with_volume_mode_for_scmig(
+    vm_with_volume_mode_and_written_file_for_scmig: VirtualMachineForTests,
+) -> Generator[VirtualMachineForTests]:
+    """Stop the volume-mode VM holding the pre-migration marker file.
+
+    Yields:
+        VirtualMachineForTests: The VM, stopped, with the marker file already written.
+
+    Side effects:
+        Stops the VM and waits until it reaches the stopped state.
+    """
+    vm_with_volume_mode_and_written_file_for_scmig.stop(wait=True)
+    yield vm_with_volume_mode_and_written_file_for_scmig
+
+
+@pytest.fixture()
+def volume_mode_offline_mig_plan(
+    admin_client: DynamicClient,
+    migration_resources_namespace: Namespace,
+    target_storage_class: str,
+    target_volume_mode: str,
+    stopped_vm_with_volume_mode_for_scmig: VirtualMachineForTests,
+    unique_suffix_scope_function: str,
+) -> Generator[MultiNamespaceVirtualMachineStorageMigrationPlan]:
+    with MultiNamespaceVirtualMachineStorageMigrationPlan(
+        name=f"volume-mode-plan-{unique_suffix_scope_function}",
+        namespace=migration_resources_namespace.name,
+        client=admin_client,
+        namespaces=build_namespaces_spec_with_target_volume_mode(
+            vms=[stopped_vm_with_volume_mode_for_scmig],
+            target_storage_class=target_storage_class,
+            target_volume_mode=target_volume_mode,
+        ),
+    ) as mig_plan:
+        yield mig_plan
+
+
+@pytest.fixture()
+def volume_mode_offline_mig_migration(
+    admin_client: DynamicClient,
+    volume_mode_offline_mig_plan: MultiNamespaceVirtualMachineStorageMigrationPlan,
+) -> Generator[MultiNamespaceVirtualMachineStorageMigration]:
+    """Create a storage migration for the volume-mode VM.
+
+    Yields:
+        MultiNamespaceVirtualMachineStorageMigration: The created migration.
+
+    Side effects:
+        Creates the migration and deletes it on teardown.
+    """
+    with MultiNamespaceVirtualMachineStorageMigration(
+        name=f"mig-{volume_mode_offline_mig_plan.name}",
+        namespace=volume_mode_offline_mig_plan.namespace,
+        client=admin_client,
+        multi_namespace_virtual_machine_storage_migration_plan_ref={"name": volume_mode_offline_mig_plan.name},
+    ) as mig_migration:
+        yield mig_migration
+
+
+@pytest.fixture()
+def completed_volume_mode_offline_mig_migration(
+    volume_mode_offline_mig_migration: MultiNamespaceVirtualMachineStorageMigration,
+) -> Generator[MultiNamespaceVirtualMachineStorageMigration]:
+    """Wait for the volume-mode storage migration to complete.
+
+    Yields:
+        MultiNamespaceVirtualMachineStorageMigration: The migration, in the completed phase.
+
+    Side effects:
+        Blocks until the migration reports successful completion.
+    """
+    wait_for_storage_migration_phase(
+        mig_migration=volume_mode_offline_mig_migration,
+        expected_phase=volume_mode_offline_mig_migration.Status.COMPLETED,
+    )
+    yield volume_mode_offline_mig_migration
+
+
+@pytest.fixture()
+def offline_vm_mig_plan(
+    request: pytest.FixtureRequest,
+    admin_client: DynamicClient,
+    migration_resources_namespace: Namespace,
+    target_storage_class: str,
+    stopped_vm_with_written_file_for_scmig: VirtualMachineForTests,
+    stopped_vm_with_written_file_source_dv_names: list[str],
+    unique_suffix_scope_function: str,
+) -> Generator[MultiNamespaceVirtualMachineStorageMigrationPlan]:
+    retention_policy = request.param.get("retention_policy")
+    LOGGER.info(f"Creating offline VM migration plan with retentionPolicy={retention_policy}")
+    with MultiNamespaceVirtualMachineStorageMigrationPlan(
+        name=f"offline-vm-plan-{unique_suffix_scope_function}",
+        namespace=migration_resources_namespace.name,
+        client=admin_client,
+        namespaces=build_namespaces_spec_for_storage_migration(
+            vms=[stopped_vm_with_written_file_for_scmig],
+            target_storage_class=target_storage_class,
+        ),
+        retention_policy=retention_policy,
+    ) as mig_plan:
+        yield mig_plan
+
+
+@pytest.fixture()
+def offline_vm_mig_migration(
+    admin_client: DynamicClient,
+    offline_vm_mig_plan: MultiNamespaceVirtualMachineStorageMigrationPlan,
+) -> Generator[MultiNamespaceVirtualMachineStorageMigration]:
+    """Create a storage migration for the offline VM.
+
+    Yields:
+        MultiNamespaceVirtualMachineStorageMigration: The created migration.
+
+    Side effects:
+        Creates the migration and deletes it on teardown.
+    """
+    with MultiNamespaceVirtualMachineStorageMigration(
+        name=f"mig-{offline_vm_mig_plan.name}",
+        namespace=offline_vm_mig_plan.namespace,
+        client=admin_client,
+        multi_namespace_virtual_machine_storage_migration_plan_ref={"name": offline_vm_mig_plan.name},
+    ) as mig_migration:
+        yield mig_migration
+
+
+@pytest.fixture()
+def completed_offline_vm_mig_migration(
+    offline_vm_mig_migration: MultiNamespaceVirtualMachineStorageMigration,
+) -> Generator[MultiNamespaceVirtualMachineStorageMigration]:
+    """Wait for the offline VM storage migration to complete.
+
+    Yields:
+        MultiNamespaceVirtualMachineStorageMigration: The migration, in the completed phase.
+
+    Side effects:
+        Blocks until the migration reports successful completion.
+    """
+    wait_for_storage_migration_phase(
+        mig_migration=offline_vm_mig_migration,
+        expected_phase=offline_vm_mig_migration.Status.COMPLETED,
+    )
+    yield offline_vm_mig_migration
+
+
+@pytest.fixture()
+def in_progress_offline_vm_mig_migration(
+    offline_vm_mig_migration: MultiNamespaceVirtualMachineStorageMigration,
+) -> Generator[MultiNamespaceVirtualMachineStorageMigration]:
+    """Wait for the offline VM storage migration to start progressing.
+
+    Yields:
+        MultiNamespaceVirtualMachineStorageMigration: The migration, in progress.
+
+    Side effects:
+        Blocks until the migration reports that it is in progress.
+    """
+    wait_for_storage_migration_in_progress(mig_migration=offline_vm_mig_migration)
+    yield offline_vm_mig_migration
+
+
+@pytest.fixture()
+def started_vm_during_offline_scmig(
+    stopped_vm_with_written_file_for_scmig: VirtualMachineForTests,
+    in_progress_offline_vm_mig_migration: MultiNamespaceVirtualMachineStorageMigration,
+) -> Generator[VirtualMachineForTests]:
+    LOGGER.info(
+        f"Starting VM {stopped_vm_with_written_file_for_scmig.name} while storage migration "
+        f"{in_progress_offline_vm_mig_migration.name} is in progress"
+    )
+    stopped_vm_with_written_file_for_scmig.start(wait=False)
+    yield stopped_vm_with_written_file_for_scmig
+
+
+@pytest.fixture()
+def running_vm_for_scmig_test_boot_time(
+    running_vm_for_scmig_test_first_ns: VirtualMachineForTests,
+) -> Generator[str]:
+    yield get_vm_boot_time(vm=running_vm_for_scmig_test_first_ns)
+
+
+@pytest.fixture()
+def combined_mode_mig_migration_in_progress(
+    admin_client: DynamicClient,
+    combined_mode_mig_plan: MultiNamespaceVirtualMachineStorageMigrationPlan,
+    running_vm_for_scmig_test_source_dvs: list[str],
+    stopped_vm_for_scmig_test_source_dvs: list[str],
+    running_vm_for_scmig_test_boot_time: str,
+) -> Generator[MultiNamespaceVirtualMachineStorageMigration]:
+    with MultiNamespaceVirtualMachineStorageMigration(
+        name=f"mig-{combined_mode_mig_plan.name}",
+        namespace=combined_mode_mig_plan.namespace,
+        client=admin_client,
+        multi_namespace_virtual_machine_storage_migration_plan_ref={"name": combined_mode_mig_plan.name},
+    ) as mig_migration:
+        wait_for_storage_migration_in_progress(mig_migration=mig_migration)
+        yield mig_migration
+
+
+@pytest.fixture()
+def cancelled_combined_mode_mig_migration(
+    combined_mode_mig_migration_in_progress: MultiNamespaceVirtualMachineStorageMigration,
+) -> Generator[MultiNamespaceVirtualMachineStorageMigration]:
+    """Cancel the in-progress mixed offline and online storage migration.
+
+    Yields:
+        MultiNamespaceVirtualMachineStorageMigration: The cancelled migration.
+
+    Side effects:
+        Deletes the migration and blocks until cancellation cleanup finishes.
+    """
+    # Deleting the migration cancels it: the controller holds the resource with a finalizer while it
+    # reverts the VMs to their source volumes (Canceling -> CleanupCancelledMigrations -> Canceled), then
+    # removes the finalizer. The Canceled phase lasts a single reconcile, so a completed deletion is the
+    # reliable signal that the cancellation finished.
+    LOGGER.info(f"Cancelling storage migration {combined_mode_mig_migration_in_progress.name}")
+    assert combined_mode_mig_migration_in_progress.delete(wait=True, timeout=TIMEOUT_10MIN), (
+        f"Storage migration {combined_mode_mig_migration_in_progress.name} was not cancelled"
+    )
+    yield combined_mode_mig_migration_in_progress
+
+
+@pytest.fixture(scope="class")
+def vm_with_written_file_on_hotplugged_disks(
+    written_files_to_mounted_hotplugged_disks: VirtualMachineForTests,
+) -> Generator[VirtualMachineForTests]:
+    """Write the pre-migration marker file into the guest filesystem of the hotplugged-disks VM.
+
+    Yields:
+        VirtualMachineForTests: The VM, still running, with the marker file written.
+
+    Side effects:
+        Writes the marker file to the VM's guest filesystem; the VM is left running.
+    """
+    write_file(
+        vm=written_files_to_mounted_hotplugged_disks,
+        filename=FILE_BEFORE_STORAGE_MIGRATION,
+        content=CONTENT,
+        stop_vm=False,
+    )
+    yield written_files_to_mounted_hotplugged_disks
+
+
+@pytest.fixture(scope="class")
+def stopped_vm_with_written_files_on_hotplugged_disks(
+    vm_with_written_file_on_hotplugged_disks: VirtualMachineForTests,
+) -> Generator[VirtualMachineForTests]:
+    """Stop the hotplugged-disks VM holding the pre-migration marker file.
+
+    Yields:
+        VirtualMachineForTests: The VM, stopped, with the marker file already written.
+
+    Side effects:
+        Stops the VM and waits until it reaches the stopped state.
+    """
+    vm_with_written_file_on_hotplugged_disks.stop(wait=True)
+    yield vm_with_written_file_on_hotplugged_disks
+
+
+@pytest.fixture(scope="class")
+def hotplug_offline_mig_plan(
+    admin_client: DynamicClient,
+    migration_resources_namespace: Namespace,
+    target_storage_class: str,
+    stopped_vm_with_written_files_on_hotplugged_disks: VirtualMachineForTests,
+    unique_suffix: str,
+) -> Generator[MultiNamespaceVirtualMachineStorageMigrationPlan]:
+    with MultiNamespaceVirtualMachineStorageMigrationPlan(
+        name=f"hotplug-offline-plan-{unique_suffix}",
+        namespace=migration_resources_namespace.name,
+        client=admin_client,
+        namespaces=build_namespaces_spec_for_storage_migration(
+            vms=[stopped_vm_with_written_files_on_hotplugged_disks],
+            target_storage_class=target_storage_class,
+        ),
+    ) as mig_plan:
+        yield mig_plan
+
+
+@pytest.fixture(scope="class")
+def hotplug_offline_mig_migration(
+    admin_client: DynamicClient,
+    hotplug_offline_mig_plan: MultiNamespaceVirtualMachineStorageMigrationPlan,
+) -> Generator[MultiNamespaceVirtualMachineStorageMigration]:
+    """Create a storage migration for the VM with hotplugged volumes.
+
+    Yields:
+        MultiNamespaceVirtualMachineStorageMigration: The created migration.
+
+    Side effects:
+        Creates the migration and deletes it on teardown.
+    """
+    with MultiNamespaceVirtualMachineStorageMigration(
+        name=f"mig-{hotplug_offline_mig_plan.name}",
+        namespace=hotplug_offline_mig_plan.namespace,
+        client=admin_client,
+        multi_namespace_virtual_machine_storage_migration_plan_ref={"name": hotplug_offline_mig_plan.name},
+    ) as mig_migration:
+        yield mig_migration
+
+
+@pytest.fixture(scope="class")
+def completed_hotplug_offline_mig_migration(
+    hotplug_offline_mig_migration: MultiNamespaceVirtualMachineStorageMigration,
+) -> Generator[MultiNamespaceVirtualMachineStorageMigration]:
+    """Wait for the hotplugged-volumes storage migration to complete.
+
+    Yields:
+        MultiNamespaceVirtualMachineStorageMigration: The migration, in the completed phase.
+
+    Side effects:
+        Blocks until the migration reports successful completion.
+    """
+    wait_for_storage_migration_phase(
+        mig_migration=hotplug_offline_mig_migration,
+        expected_phase=hotplug_offline_mig_migration.Status.COMPLETED,
+    )
+    yield hotplug_offline_mig_migration
+
+
+@pytest.fixture()
+def offline_failure_mig_plan(
+    admin_client: DynamicClient,
+    migration_resources_namespace: Namespace,
+    stopped_vm_for_scmig_test_first_ns: VirtualMachineForTests,
+    stopped_vm_for_scmig_test_source_dvs: list[str],
+    unique_suffix_scope_function: str,
+) -> Generator[MultiNamespaceVirtualMachineStorageMigrationPlan]:
+    with MultiNamespaceVirtualMachineStorageMigrationPlan(
+        name=f"offline-failure-plan-{unique_suffix_scope_function}",
+        namespace=migration_resources_namespace.name,
+        client=admin_client,
+        namespaces=build_namespaces_spec_for_storage_migration(
+            vms=[stopped_vm_for_scmig_test_first_ns],
+            target_storage_class=NON_EXISTENT_STORAGE_CLASS,
+        ),
+    ) as mig_plan:
+        yield mig_plan
+
+
+@pytest.fixture()
+def offline_failure_mig_migration(
+    admin_client: DynamicClient,
+    offline_failure_mig_plan: MultiNamespaceVirtualMachineStorageMigrationPlan,
+) -> Generator[MultiNamespaceVirtualMachineStorageMigration]:
+    """Create the storage migration expected to fail because of a non-existent target storage class.
+
+    Yields:
+        MultiNamespaceVirtualMachineStorageMigration: The created migration.
+
+    Side effects:
+        Creates the migration and deletes it on teardown.
+    """
+    with MultiNamespaceVirtualMachineStorageMigration(
+        name=f"mig-{offline_failure_mig_plan.name}",
+        namespace=offline_failure_mig_plan.namespace,
+        client=admin_client,
+        multi_namespace_virtual_machine_storage_migration_plan_ref={"name": offline_failure_mig_plan.name},
+    ) as mig_migration:
+        yield mig_migration
+
+
+@pytest.fixture()
+def failed_offline_failure_mig_migration(
+    offline_failure_mig_migration: MultiNamespaceVirtualMachineStorageMigration,
+) -> Generator[MultiNamespaceVirtualMachineStorageMigration]:
+    """Wait for the failing storage migration to reach the failed phase.
+
+    Yields:
+        MultiNamespaceVirtualMachineStorageMigration: The migration, in the failed phase.
+
+    Side effects:
+        Blocks until the migration reports the failed phase.
+    """
+    # Same limitation as failure_mig_migration: an invalid target storage class does not reach a
+    # terminal "Failed" phase (CNV-98407), so tests using this fixture are quarantined.
+    wait_for_storage_migration_phase(
+        mig_migration=offline_failure_mig_migration,
+        expected_phase=offline_failure_mig_migration.Status.FAILED,
+    )
+    yield offline_failure_mig_migration
+
+
+@pytest.fixture()
+def source_volume_node_for_scmig(
+    stopped_vm_with_written_file_for_scmig: VirtualMachineForTests,
+) -> Generator[str | None]:
+    """Provide the node hosting the source VM's volume before the storage migration runs.
+
+    Yields:
+        The node name recorded by the ``volume.kubernetes.io/selected-node`` annotation of the
+        PVC backing the VM's first DataVolume, or ``None`` when that annotation is absent, which
+        means the storage is not bound to a specific node.
+
+    Raises:
+        StorageMigrationError: If the VM references no DataVolume, or its backing PVC does not
+            exist. Consumers that require node-local storage must assert a non-empty value
+            themselves, as ``cordoned_source_node_for_scmig`` does.
+    """
+    # Record the node hosting the source (node-local HPP) volume before the migration runs.
+    yield get_vm_volume_node(vm=stopped_vm_with_written_file_for_scmig)
+
+
+@pytest.fixture()
+def cordoned_source_node_for_scmig(
+    admin_client: DynamicClient,
+    source_volume_node_for_scmig: str | None,
+) -> Generator[Node]:
+    """Cordon the node hosting the source volume and uncordon it on teardown.
+
+    Yields:
+        Node: The cordoned source node.
+
+    Side effects:
+        Makes the source node unschedulable so the migrated HPP volume (WaitForFirstConsumer and
+        node-local) is provisioned on a different node, and uncordons it after the test.
+    """
+    assert source_volume_node_for_scmig, (
+        "Source volume node could not be determined; node-local (HPP) storage is required for node-to-node migration"
+    )
+    source_node = Node(client=admin_client, name=source_volume_node_for_scmig)
+    with cordon_node(admin_client=admin_client, node=source_node):
+        yield source_node
+
+
+@pytest.fixture()
+def hpp_node_to_node_mig_migration(
+    admin_client: DynamicClient,
+    offline_vm_mig_plan: MultiNamespaceVirtualMachineStorageMigrationPlan,
+    cordoned_source_node_for_scmig: Node,
+) -> Generator[MultiNamespaceVirtualMachineStorageMigration]:
+    """Create a storage migration while the source node is cordoned.
+
+    Yields:
+        MultiNamespaceVirtualMachineStorageMigration: The created migration.
+
+    Side effects:
+        Creates the migration and deletes it on teardown. The source node stays cordoned by
+        ``cordoned_source_node_for_scmig`` for the lifetime of this fixture.
+    """
+    with MultiNamespaceVirtualMachineStorageMigration(
+        name=f"mig-{offline_vm_mig_plan.name}",
+        namespace=offline_vm_mig_plan.namespace,
+        client=admin_client,
+        multi_namespace_virtual_machine_storage_migration_plan_ref={"name": offline_vm_mig_plan.name},
+    ) as mig_migration:
+        yield mig_migration
+
+
+@pytest.fixture()
+def completed_hpp_node_to_node_mig_migration(
+    hpp_node_to_node_mig_migration: MultiNamespaceVirtualMachineStorageMigration,
+) -> Generator[MultiNamespaceVirtualMachineStorageMigration]:
+    """Wait for the node-to-node HPP storage migration to complete.
+
+    Yields:
+        MultiNamespaceVirtualMachineStorageMigration: The migration, in the completed phase.
+
+    Side effects:
+        Blocks until the migration reports successful completion.
+    """
+    wait_for_storage_migration_phase(
+        mig_migration=hpp_node_to_node_mig_migration,
+        expected_phase=hpp_node_to_node_mig_migration.Status.COMPLETED,
+    )
+    yield hpp_node_to_node_mig_migration
