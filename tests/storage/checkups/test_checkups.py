@@ -33,7 +33,6 @@ LOGGER = logging.getLogger(__name__)
 )
 class TestCheckupPositive:
     @pytest.mark.s390x
-    @pytest.mark.polarion("CNV-10707")
     def test_overriden_storage_profile_claim_propertyset(
         self,
         updated_default_storage_profile,
@@ -41,6 +40,9 @@ class TestCheckupPositive:
         checkup_job,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-27928 # <skip-jira-utils-check>
+        Polarion: CNV-10707
+
         Checkup should succeed and mention in result configmap if a StorageProfile ClaimPropertySet overriden
         """
         assert_results_in_configmap(
@@ -49,7 +51,6 @@ class TestCheckupPositive:
             result_entry="storageProfilesWithSpecClaimPropertySets",
         )
 
-    @pytest.mark.polarion("CNV-10708")
     def test_storage_profile_missing_volume_snapshot_class(
         self,
         updated_storage_class_snapshot_clone_strategy,
@@ -57,6 +58,9 @@ class TestCheckupPositive:
         checkup_job,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-27928 # <skip-jira-utils-check>
+        Polarion: CNV-10708
+
         Checkup should succeed and mention in result configmap if there is SC with "snapshot" clone strategy
          without VolumeSnapshotClass
         """
@@ -67,7 +71,6 @@ class TestCheckupPositive:
         )
 
     @pytest.mark.ocs
-    @pytest.mark.polarion("CNV-10709")
     def test_ocs_rbd_non_virt_vm_exist(
         self,
         ocs_rbd_non_virt_vm_for_checkups_test,
@@ -75,6 +78,9 @@ class TestCheckupPositive:
         checkup_job,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-27928 # <skip-jira-utils-check>
+        Polarion: CNV-10709
+
         Checkup should succeed but mention in comfigmap if a VM with non-virt rbd StorageClass exists
         """
         assert_results_in_configmap(
@@ -83,7 +89,6 @@ class TestCheckupPositive:
             result_entry="vmsWithNonVirtRbdStorageClass",
         )
 
-    @pytest.mark.polarion("CNV-10712")
     def test_checkup_live_migration(
         self,
         default_storage_class_access_modes,
@@ -91,6 +96,9 @@ class TestCheckupPositive:
         checkup_job,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-27928 # <skip-jira-utils-check>
+        Polarion: CNV-10712
+
         checkup should succeed, and the migration should succeed if and only if the default StorageClass accessMode
         is RWX
         """

@@ -62,7 +62,6 @@ def create_vm_from_clone_dv_template(
 
 
 @pytest.mark.sno
-@pytest.mark.polarion("CNV-2148")
 @pytest.mark.gating()
 @pytest.mark.post_upgrade()
 def test_successful_vm_restart_with_cloned_dv(
@@ -72,6 +71,10 @@ def test_successful_vm_restart_with_cloned_dv(
     fedora_data_source_scope_module,
     cluster_csi_drivers_names,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-43 # <skip-jira-utils-check>
+    Polarion: CNV-2148
+    """
     size = get_dv_size_from_datasource(data_source=fedora_data_source_scope_module)
     with create_dv(
         dv_name="dv-target",
@@ -124,9 +127,11 @@ class TestWindowsClonedDv:
         - Cloned DataVolume created from the source DataVolume (PVC clone)
     """
 
-    @pytest.mark.polarion("CNV-1892")
     def test_clone_dv_windows(self, cloned_windows_dv_multi_storage_scope_class):
         """
+        Jira: https://redhat.atlassian.net/browse/KNIP-43 # <skip-jira-utils-check>
+        Polarion: CNV-1892
+
         Test that a large image can be cloned.
 
         Preconditions:
@@ -142,7 +147,6 @@ class TestWindowsClonedDv:
             f"Cloned DV status is {cloned_windows_dv_multi_storage_scope_class.status}, expected {DataVolume.Status.SUCCEEDED}"
         )
 
-    @pytest.mark.polarion("CNV-3638")
     def test_vm_from_cloned_dv_windows(
         self,
         unprivileged_client,
@@ -151,6 +155,9 @@ class TestWindowsClonedDv:
         cloned_windows_dv_multi_storage_scope_class,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/KNIP-43 # <skip-jira-utils-check>
+        Polarion: CNV-3638
+
         Test that a Windows 2022 VM with vTPM boots from a cloned DataVolume.
 
         Preconditions:
@@ -183,7 +190,7 @@ class TestWindowsClonedDv:
                 "image": FEDORA_LATEST.get("image_path"),
                 "dv_size": Images.Fedora.DEFAULT_DV_SIZE,
             },
-            marks=(pytest.mark.polarion("CNV-3545"), pytest.mark.gating()),
+            marks=(pytest.mark.gating()),
         ),
         pytest.param(
             {
@@ -191,7 +198,7 @@ class TestWindowsClonedDv:
                 "image": f"{Images.Windows.DIR}/{Images.Windows.WIN11_IMG}",
                 "dv_size": Images.Windows.DEFAULT_DV_SIZE,
             },
-            marks=(pytest.mark.polarion("CNV-3552"), pytest.mark.tier3()),
+            marks=(pytest.mark.tier3()),
         ),
     ],
     indirect=True,
@@ -201,6 +208,11 @@ def test_successful_snapshot_clone(
     data_volume_snapshot_capable_storage_scope_function,
     cluster_csi_drivers_names,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-7332 # <skip-jira-utils-check>
+    Polarion: CNV-3545
+    Polarion: CNV-3552
+    """
     namespace = data_volume_snapshot_capable_storage_scope_function.namespace
     storage_class = data_volume_snapshot_capable_storage_scope_function.storage_class
     with create_dv(
@@ -238,7 +250,6 @@ def test_successful_snapshot_clone(
 
 @pytest.mark.gating
 @pytest.mark.conformance
-@pytest.mark.polarion("CNV-5607")
 @pytest.mark.s390x
 def test_clone_from_fs_to_block_using_dv_template(
     skip_test_if_no_block_sc,
@@ -248,6 +259,9 @@ def test_clone_from_fs_to_block_using_dv_template(
     storage_class_with_block_volume_mode,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-9264 # <skip-jira-utils-check>
+    Polarion: CNV-5607
+
     Test cloning a DV from filesystem to block volume mode via DV template.
 
     Preconditions:
@@ -273,7 +287,6 @@ def test_clone_from_fs_to_block_using_dv_template(
 
 
 @pytest.mark.conformance
-@pytest.mark.polarion("CNV-5608")
 @pytest.mark.smoke()
 @pytest.mark.s390x
 def test_clone_from_block_to_fs_using_dv_template(
@@ -285,6 +298,9 @@ def test_clone_from_block_to_fs_using_dv_template(
     default_fs_overhead,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-9264 # <skip-jira-utils-check>
+    Polarion: CNV-5608
+
     Test cloning a DV from block to filesystem volume mode via DV template.
 
     Preconditions:
@@ -316,12 +332,14 @@ def test_clone_from_block_to_fs_using_dv_template(
 
 @pytest.mark.tier3
 @pytest.mark.conformance
-@pytest.mark.polarion("CNV-16775")
 def test_clone_vm_with_4_disks(target_vm_from_4_disk_clone):
     """
     Test that cloning a VM with 4 source disks preserves all 5 VM-spec disks, including cloud-init.
 
     Jira: https://issues.redhat.com/browse/CNV-88909  # <skip-jira-utils-check>
+    Jira: https://redhat.atlassian.net/browse/CNV-84717 # <skip-jira-utils-check>
+    Polarion: CNV-16775
+
 
     Preconditions:
         - Source Fedora VM with 1 boot disk (cloned from golden image DataSource), 3 blank data disks,
