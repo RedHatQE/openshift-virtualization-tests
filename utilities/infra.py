@@ -349,6 +349,8 @@ def wait_for_consistent_resource_conditions(
                 name=resource_name,
             )
         )
+        if not resources:
+            raise ResourceNotFoundError(f"{resource_kind.__name__}/{resource_name} not found in namespace {namespace}")
         return resources[0].instance.get("status", {}).get("conditions")
 
     samples = TimeoutSampler(
