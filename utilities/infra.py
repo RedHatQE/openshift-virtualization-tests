@@ -340,16 +340,21 @@ def wait_for_consistent_resource_conditions(
     Raises:
         TimeoutExpiredError: raised when expected conditions are not met within the timeframe
     """
-    samples = TimeoutSampler(
-        wait_timeout=total_timeout,
-        sleep=polling_interval,
-        func=lambda: list(
+
+    def _get_resource_conditions() -> list[dict[str, str]] | None:
+        resources = list(
             resource_kind.get(
                 client=dynamic_client,
                 namespace=namespace,
                 name=resource_name,
             )
-        ),
+        )
+        return resources[0].instance.get("status", {}).get("conditions")
+
+    samples = TimeoutSampler(
+        wait_timeout=total_timeout,
+        sleep=polling_interval,
+        func=_get_resource_conditions,
         exceptions_dict=exceptions_dict,
     )
     current_check = 0
@@ -359,8 +364,7 @@ def wait_for_consistent_resource_conditions(
         f"sleep={total_timeout} consecutive_checks_count={consecutive_checks_count}"
     )
     try:
-        for sample in samples:
-            status_conditions = sample[0].instance.get("status", {}).get("conditions")
+        for status_conditions in samples:
             if status_conditions:
                 actual_conditions = {
                     condition[condition_key1]: condition[condition_key2]
