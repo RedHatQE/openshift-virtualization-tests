@@ -1,4 +1,4 @@
-"""CBT backup fixtures (backup success only)."""
+"""CBT backup fixtures."""
 
 import secrets
 from contextlib import ExitStack
@@ -14,6 +14,7 @@ from tests.storage.cbt.constants import (
     CBT_CONCURRENT_VM_COUNT,
     CBT_ENABLED_LABEL,
 )
+from tests.storage.cbt.restore import require_vm_deleted, restored_cbt_vm_from_push_backup
 from tests.storage.cbt.utils import (
     cbt_backup_pvc,
     cbt_backup_tracker,
@@ -726,3 +727,45 @@ def ready_concurrent_pull_backups(
             namespace=namespace.name,
             client=unprivileged_client,
         )
+
+
+@pytest.fixture()
+def deleted_cbt_source_vm(
+    vm_with_cbt_label,
+    completed_push_backup_chain,
+):
+    """Source VM removed after the push backup, so the restored VM can reuse its name.
+
+    Yields:
+        VirtualMachineForTests: The deleted source VM.
+
+    Raises:
+        CbtRestoreError: When the source VM is still present after deletion.
+    """
+    LOGGER.info(f"Deleting source VM {vm_with_cbt_label.name} after push backup {completed_push_backup_chain[0].name}")
+    vm_with_cbt_label.clean_up(wait=True)
+    require_vm_deleted(vm=vm_with_cbt_label)
+    yield vm_with_cbt_label
+
+
+@pytest.fixture()
+def restored_vm_from_push_chain(
+    unprivileged_client,
+    namespace,
+    deleted_cbt_source_vm,
+    completed_push_backup_chain,
+    push_backup_pvc,
+):
+    """Running VM restored from the completed push-mode full backup.
+
+    Yields:
+        VirtualMachineForTests: Restored VM.
+    """
+    LOGGER.info(f"Restoring deleted source VM {deleted_cbt_source_vm.name} from the push backup")
+    with restored_cbt_vm_from_push_backup(
+        backups=completed_push_backup_chain,
+        backup_pvc_name=push_backup_pvc.name,
+        namespace=namespace.name,
+        client=unprivileged_client,
+    ) as restored_vm:
+        yield restored_vm
