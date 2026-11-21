@@ -355,7 +355,14 @@ def _restore_push_volume(
     namespace: str,
     client: DynamicClient,
 ) -> None:
-    """Write the full push-mode qcow2 onto the target PVC."""
+    """Write the full push-mode qcow2 onto the target PVC.
+
+    The restore pod consumes the target PVC, so the Bound wait runs after that pod exists.
+    A WaitForFirstConsumer storage class does not bind until then.
+
+    Raises:
+        TimeoutExpiredError: When the target PVC is not Bound before the wait timeout.
+    """
     target_file = _target_file(volume_mode=volume_spec.volume_mode)
     target_mounts, target_devices, target_volumes = _target_pod_volumes(
         pvc_name=target_pvc.name,
@@ -371,6 +378,7 @@ def _restore_push_volume(
         volume_devices=target_devices,
         volumes=[*target_volumes, *backup_volumes],
     ) as restore_pod:
+        target_pvc.wait_for_status(status=PersistentVolumeClaim.Status.BOUND, timeout=TIMEOUT_5MIN)
         LOGGER.info(f"Converting {qcow2_file} onto {target_file}")
         restore_pod.execute(
             command=["qemu-img", "convert", "-f", "qcow2", "-O", "raw", qcow2_file, target_file],
@@ -397,11 +405,7 @@ def _deploy_target_pvc(
     namespace: str,
     client: DynamicClient,
 ) -> PersistentVolumeClaim:
-    """Create an empty PVC large enough for the backup image and wait until it is Bound.
-
-    Raises:
-        TimeoutExpiredError: When the PVC is not Bound before the wait timeout.
-    """
+    """Create an empty PVC large enough for the backup image."""
     pvc = PersistentVolumeClaim(
         name=f"cbt-rst-{vm_name}",
         namespace=namespace,
@@ -413,7 +417,6 @@ def _deploy_target_pvc(
     )
     LOGGER.info(f"Creating restore target PVC {pvc.name} for VM {vm_name}")
     pvc.deploy()
-    pvc.wait_for_status(status=PersistentVolumeClaim.Status.BOUND, timeout=TIMEOUT_5MIN)
     return pvc
 
 
