@@ -361,7 +361,8 @@ def _restore_push_volume(
     A WaitForFirstConsumer storage class does not bind until then.
 
     Raises:
-        TimeoutExpiredError: When the target PVC is not Bound before the wait timeout.
+        CbtRestoreError: When the target PVC is not Bound before the wait timeout.
+            The original timeout is chained.
     """
     target_file = _target_file(volume_mode=volume_spec.volume_mode)
     target_mounts, target_devices, target_volumes = _target_pod_volumes(
@@ -378,7 +379,10 @@ def _restore_push_volume(
         volume_devices=target_devices,
         volumes=[*target_volumes, *backup_volumes],
     ) as restore_pod:
-        target_pvc.wait_for_status(status=PersistentVolumeClaim.Status.BOUND, timeout=TIMEOUT_5MIN)
+        try:
+            target_pvc.wait_for_status(status=PersistentVolumeClaim.Status.BOUND, timeout=TIMEOUT_5MIN)
+        except TimeoutExpiredError as wait_error:
+            raise CbtRestoreError(f"Restore PVC {target_pvc.namespace}/{target_pvc.name} is not Bound") from wait_error
         LOGGER.info(f"Converting {qcow2_file} onto {target_file}")
         restore_pod.execute(
             command=["qemu-img", "convert", "-f", "qcow2", "-O", "raw", qcow2_file, target_file],
