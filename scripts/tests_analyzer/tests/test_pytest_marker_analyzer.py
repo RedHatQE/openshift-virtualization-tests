@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import argparse
 import ast
+import base64
+import json
 import textwrap
 from collections.abc import Callable
 from pathlib import Path
@@ -17,6 +19,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from scripts.tests_analyzer.pytest_marker_analyzer import (
+    _OLD_REVISION_CACHE,
     AnalyzerGitError,
     AttributeAccessCollector,
     Fixture,
@@ -33,6 +36,7 @@ from scripts.tests_analyzer.pytest_marker_analyzer import (
     _extract_deleted_symbols_from_diff,
     _extract_modified_items_from_conftest,
     _extract_modified_symbols,
+    _fetch_old_file_source,
     _get_modified_function_names,
     _is_fixture_decorator_standalone,
     _iter_diff_statements,
@@ -2246,6 +2250,123 @@ class TestSymbolAttributionRemovals:
         assert result.has_unattributed_changes is True, (
             "an unattributable deletion must stay conservative instead of looking clean"
         )
+
+
+class TestFetchOldFileSourceRevision:
+    """The old file must come from the revision the diff was computed against."""
+
+    @pytest.fixture(autouse=True)
+    def _clear_revision_cache(self) -> None:
+        """The resolved revision is cached per run, so isolate every test."""
+        _OLD_REVISION_CACHE.clear()
+        yield
+        _OLD_REVISION_CACHE.clear()
+
+    @staticmethod
+    def _json_response(payload: dict) -> MagicMock:
+        response = MagicMock()
+        response.__enter__.return_value = response
+        response.read.return_value = json.dumps(payload).encode()
+        return response
+
+    def test_local_mode_reads_the_merge_base(self, tmp_path: Path) -> None:
+        """``git diff main...HEAD`` is relative to the merge base, not to main's tip."""
+        file_path = tmp_path / "module.py"
+        file_path.write_text("def helper():\n    return True\n")
+        merge_base_result = MagicMock(returncode=0, stdout="mergebasesha\n", stderr="")
+        show_result = MagicMock(returncode=0, stdout="def helper():\n    return False\n", stderr="")
+
+        with patch(
+            "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+            side_effect=[merge_base_result, show_result],
+        ) as run_mock:
+            content = _fetch_old_file_source(
+                file_path=file_path,
+                base_branch="main",
+                repo_root=tmp_path,
+                github_pr_info=None,
+            )
+
+        assert content == "def helper():\n    return False\n", "the base content must be returned"
+        commands = [call.args[0] for call in run_mock.call_args_list]
+        assert commands == [
+            ["git", "merge-base", "main", "HEAD"],
+            ["git", "show", "mergebasesha:module.py"],
+        ], f"the file must be read from the merge base, not from main: {commands}"
+
+    def test_local_mode_unresolvable_merge_base_is_conservative(self, tmp_path: Path) -> None:
+        """Without a merge base the old content is unknown, so nothing is attributed."""
+        file_path = tmp_path / "module.py"
+        file_path.write_text("def helper():\n    return True\n")
+        merge_base_result = MagicMock(returncode=1, stdout="", stderr="fatal: no merge base")
+
+        with patch(
+            "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+            side_effect=[merge_base_result],
+        ) as run_mock:
+            content = _fetch_old_file_source(
+                file_path=file_path,
+                base_branch="main",
+                repo_root=tmp_path,
+                github_pr_info=None,
+            )
+
+        assert content is None, "an unresolvable merge base must not fall back to the base tip"
+        assert len(run_mock.call_args_list) == 1, "no file read may happen without a merge base"
+
+    def test_remote_mode_reads_the_merge_base(self, tmp_path: Path) -> None:
+        """The pull-request patch is relative to the merge base, so the Contents API must use it."""
+        file_path = tmp_path / "module.py"
+        file_path.write_text("def helper():\n    return True\n")
+        compare_response = self._json_response({"merge_base_commit": {"sha": "mergebasesha"}})
+        contents_response = self._json_response({
+            "encoding": "base64",
+            "content": base64.b64encode(b"def helper():\n    return False\n").decode(),
+        })
+
+        with (
+            patch(
+                "scripts.tests_analyzer.pytest_marker_analyzer._fetch_pr_head_sha",
+                return_value="headsha",
+            ),
+            patch(
+                "scripts.tests_analyzer.pytest_marker_analyzer.urllib.request.urlopen",
+                side_effect=[compare_response, contents_response],
+            ) as urlopen_mock,
+        ):
+            content = _fetch_old_file_source(
+                file_path=file_path,
+                base_branch="main",
+                repo_root=tmp_path,
+                github_pr_info={"repo": "owner/repo", "pr_number": 7, "token": "token"},
+            )
+
+        assert content == "def helper():\n    return False\n", "the base content must be returned"
+        urls = [call.args[0].full_url for call in urlopen_mock.call_args_list]
+        assert any("/compare/main...headsha" in url for url in urls), f"the merge base must be resolved: {urls}"
+        assert urls[-1].endswith("?ref=mergebasesha"), f"the file must be read at the merge base: {urls[-1]}"
+
+    def test_merge_base_is_resolved_once_per_run(self, tmp_path: Path) -> None:
+        """The merge base is a property of the run, so it is resolved once."""
+        file_path = tmp_path / "module.py"
+        file_path.write_text("def helper():\n    return True\n")
+        merge_base_result = MagicMock(returncode=0, stdout="mergebasesha\n", stderr="")
+        show_result = MagicMock(returncode=0, stdout="def helper():\n    return False\n", stderr="")
+
+        with patch(
+            "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+            side_effect=[merge_base_result, show_result, show_result],
+        ) as run_mock:
+            for _ in range(2):
+                _fetch_old_file_source(
+                    file_path=file_path,
+                    base_branch="main",
+                    repo_root=tmp_path,
+                    github_pr_info=None,
+                )
+
+        merge_base_calls = [call for call in run_mock.call_args_list if call.args[0][1] == "merge-base"]
+        assert len(merge_base_calls) == 1, f"the merge base must be resolved once per run: {merge_base_calls}"
 
 
 class TestCheckConftestPathwayEmptyCleanClassification:

@@ -1314,17 +1314,133 @@ def _build_line_to_symbol_map(source: str) -> SymbolMap:
     )
 
 
+_OLD_REVISION_CACHE: dict[tuple[str, str, int], str | None] = {}
+
+
+def _resolve_git_merge_base(base_branch: str, repo_root: Path) -> str | None:
+    """Return the local merge base of ``base_branch`` and ``HEAD``.
+
+    Args:
+        base_branch: Base branch or ref to compare against.
+        repo_root: Repository root path.
+
+    Returns:
+        Merge-base commit SHA, or ``None`` when git cannot resolve it.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "merge-base", base_branch, "HEAD"],
+            capture_output=True,
+            text=True,
+            cwd=repo_root,
+            timeout=10,
+        )
+    except (subprocess.SubprocessError, OSError) as exc:
+        logger.warning(msg="Failed to resolve merge base", extra={"base": base_branch, "error": str(exc)})
+        return None
+    if result.returncode != 0 or not result.stdout.strip():
+        logger.warning(
+            msg="git merge-base failed",
+            extra={"base": base_branch, "returncode": result.returncode, "stderr": result.stderr.strip()},
+        )
+        return None
+    return result.stdout.strip()
+
+
+def _fetch_merge_base_sha(github_pr_info: dict[str, Any], base_branch: str) -> str | None:
+    """Return the merge base of the pull request's head and ``base_branch``.
+
+    Args:
+        github_pr_info: Dict with ``repo``, ``pr_number``, and optional ``token``.
+        base_branch: Base ref of the pull request.
+
+    Returns:
+        Merge-base commit SHA, or ``None`` when the GitHub API cannot resolve it
+        or the PR number is unknown.
+    """
+    if github_pr_info.get("pr_number") is None:
+        logger.warning(
+            msg="Cannot resolve merge base without a PR number",
+            extra={"repo": github_pr_info.get("repo"), "base": base_branch},
+        )
+        return None
+
+    head_sha = _fetch_pr_head_sha(github_pr_info=github_pr_info)
+    if not head_sha:
+        return None
+
+    repo = github_pr_info["repo"]
+    token = github_pr_info.get("token")
+    url = f"https://api.github.com/repos/{repo}/compare/{base_branch}...{head_sha}"
+    headers = {
+        "Accept": "application/vnd.github.v3+json",
+        "User-Agent": "pytest-marker-analyzer",
+    }
+    if token:
+        headers["Authorization"] = f"token {token}"
+
+    try:
+        request = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(request, timeout=GITHUB_API_TIMEOUT_SECONDS) as response:
+            return json.loads(response.read().decode())["merge_base_commit"]["sha"]
+    except (urllib.error.URLError, json.JSONDecodeError, KeyError, OSError) as exc:
+        logger.warning(
+            msg="Failed to resolve merge base with the base branch",
+            extra={"base": base_branch, "error": str(exc)},
+        )
+        return None
+
+
+def _resolve_old_revision(
+    base_branch: str,
+    repo_root: Path,
+    github_pr_info: dict[str, Any] | None,
+) -> str | None:
+    """Resolve the revision the changed-file diff is computed against.
+
+    ``git diff <base>...HEAD`` and the GitHub pull-request file patch both
+    describe the changes since the merge base with ``base_branch``, never since
+    its tip.  Reading the old version of a file from the tip would map old line
+    numbers onto a different revision whenever the base branch advanced, so the
+    merge base is used in both modes.  The result is cached per run.
+
+    Args:
+        base_branch: Base branch or ref to compare against.
+        repo_root: Repository root path.
+        github_pr_info: Optional dict with ``repo``, ``pr_number``, and
+            ``token`` keys for GitHub API access.
+
+    Returns:
+        Merge-base revision, or ``None`` when it cannot be resolved — callers
+        must then stay conservative.
+    """
+    cache_key = (
+        str(repo_root),
+        base_branch,
+        github_pr_info.get("pr_number", 0) if github_pr_info else 0,
+    )
+    if cache_key not in _OLD_REVISION_CACHE:
+        _OLD_REVISION_CACHE[cache_key] = (
+            _fetch_merge_base_sha(github_pr_info=github_pr_info, base_branch=base_branch)
+            if github_pr_info
+            else _resolve_git_merge_base(base_branch=base_branch, repo_root=repo_root)
+        )
+    return _OLD_REVISION_CACHE[cache_key]
+
+
 def _fetch_old_file_source(
     file_path: Path,
     base_branch: str,
     repo_root: Path,
     github_pr_info: dict[str, Any] | None,
 ) -> str | None:
-    """Fetch the base-branch version of a file.
+    """Fetch the version of a file the changed-file diff is computed against.
 
     Works in both analysis modes: the GitHub Contents API is used when
     ``github_pr_info`` is provided (remote PR analysis), otherwise ``git show``
-    reads the file from ``base_branch`` in the local checkout.
+    reads the file in the local checkout.  Both read the merge base with
+    ``base_branch`` rather than its tip, the revision ``git diff <base>...HEAD``
+    and the pull-request patch describe.
 
     Args:
         file_path: Absolute path to the file in the working tree.
@@ -1334,9 +1450,9 @@ def _fetch_old_file_source(
             ``token`` keys for GitHub API access.
 
     Returns:
-        The file content on the base branch, or ``None`` when it cannot be
-        obtained (absent from the base branch, unexpected encoding, API or git
-        error).  Callers must stay conservative on ``None``.
+        The file content at the merge base, or ``None`` when it cannot be
+        obtained (absent there, unexpected encoding, unresolvable merge base,
+        API or git error).  Callers must stay conservative on ``None``.
     """
     old_source: str | None = None
 
@@ -1345,12 +1461,20 @@ def _fetch_old_file_source(
     except ValueError:
         relative_path = str(file_path)
 
+    old_revision = _resolve_old_revision(
+        base_branch=base_branch,
+        repo_root=repo_root,
+        github_pr_info=github_pr_info,
+    )
+    if old_revision is None:
+        return None
+
     if github_pr_info:
         # Remote mode: use GitHub Contents API
         repo = github_pr_info["repo"]
         token = github_pr_info.get("token")
         encoded_path = urllib.parse.quote(string=relative_path, safe="/")
-        url = f"https://api.github.com/repos/{repo}/contents/{encoded_path}?ref={base_branch}"
+        url = f"https://api.github.com/repos/{repo}/contents/{encoded_path}?ref={old_revision}"
 
         headers = {
             "Accept": "application/vnd.github.v3+json",
@@ -1387,7 +1511,7 @@ def _fetch_old_file_source(
         # Local mode: use git show
         try:
             result = subprocess.run(
-                ["git", "show", f"{base_branch}:{relative_path}"],
+                ["git", "show", f"{old_revision}:{relative_path}"],
                 capture_output=True,
                 text=True,
                 cwd=repo_root,
