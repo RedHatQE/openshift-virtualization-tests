@@ -21,11 +21,9 @@ def fail_if_amd_cpu_nodes(nodes_cpu_vendor):
     params=[
         pytest.param(
             [{"features": [{"name": "pcid"}]}, "no-policy"],
-            marks=(pytest.mark.polarion("CNV-1830")),
         ),
         pytest.param(
             [{"features": [{"name": "pcid", "policy": "force"}]}, "policy-force"],
-            marks=(pytest.mark.polarion("CNV-1836")),
         ),
     ],
     ids=["Feature: name: pcid", "Feature: name: pcid , policy:force"],
@@ -45,6 +43,10 @@ def cpu_features_vm_positive(request, unprivileged_client, namespace):
 
 def test_vm_with_cpu_feature_positive(cpu_features_vm_positive):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-6429 # <skip-jira-utils-check>
+    Polarion: CNV-1830
+    Polarion: CNV-1836
+
     Test VM with cpu flag, test the VM started and is accessible via SSH
     """
     cpu_features_vm_positive.ssh_exec.executor().is_connective()
