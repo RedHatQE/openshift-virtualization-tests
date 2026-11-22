@@ -454,7 +454,6 @@ reviews:
     # GitHub checks integration
     github-checks:
       enabled: true
-      timeout_ms: 90000
     # Disabled tools (no JS/TS, PHP, Ruby, Kotlin, Rust, Terraform, Swift, SQL,
     # OpenAPI, Verilog/HDL, or web/mobile framework code in this repo; explicit
     # disables guard against new default-on tools under early_access)
