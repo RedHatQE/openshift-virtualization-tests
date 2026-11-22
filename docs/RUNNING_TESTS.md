@@ -178,6 +178,16 @@ export PYTEST_JIRA_URL=<url>
 export PYTEST_JIRA_TOKEN=<your_token>
 ```
 
+The suite's own Jira helpers (`is_jira_open()`) prefer a Jira Cloud service account:
+
+```bash
+export PYTEST_JIRA_OAUTH_CLIENT_ID=<client id>        # from the service account's OAuth 2.0 credential
+export PYTEST_JIRA_OAUTH_CLIENT_SECRET=<client secret>
+export PYTEST_JIRA_CLOUD_ID=<cloud id>
+```
+
+Never paste the client secret or the cloud id into a log, an issue or a pull request.
+
 ## Additional options
 There are other parameters that can be passed to the test suite if needed.
 
