@@ -1901,10 +1901,12 @@ def _collect_removal_symbols(
             ``None`` when the old source is unavailable.
 
     Returns:
-        Tuple of (removal symbol names, has unattributed changes).
+        Tuple of (removal symbol names, has unattributed changes, classes whose
+        member narrowing a class-scope deletion invalidates).
     """
     removal_symbols: set[str] = _extract_deleted_symbols_from_diff(diff_content=diff_content)
     has_unattributed = False
+    classes_with_class_scope_deletions: set[str] = set()
     statements = list(_iter_diff_statements(diff_content=diff_content))
 
     def deletion_is_attributed(old_line_number: int) -> bool:
@@ -1920,6 +1922,11 @@ def _collect_removal_symbols(
             modified_in_class = modified_members.get(old_symbol)
             if modified_in_class is not None:
                 return old_member in modified_in_class
+        elif old_symbol in modified_members:
+            # The line sat at class scope (a decorator, a class attribute or the
+            # class docstring), which every member depends on, so member
+            # narrowing for this class is no longer trustworthy.
+            classes_with_class_scope_deletions.add(old_symbol)
         return old_symbol in body_modified_symbols
 
     index = 0
@@ -1992,7 +1999,7 @@ def _collect_removal_symbols(
                 if not deletion_is_attributed(old_line_number=old_line + offset):
                     has_unattributed = True
 
-    return removal_symbols, has_unattributed
+    return removal_symbols, has_unattributed, classes_with_class_scope_deletions
 
 
 def _get_diff_content(
@@ -2303,7 +2310,7 @@ def _extract_modified_symbols(
                 return SymbolClassification(modified_symbols=set(), new_symbols=set())
             # Pure deletion — the removal symbols extracted from the diff enable
             # symbol-level narrowing instead of a conservative fallback.
-            removal_symbols, has_unattributed = _collect_removal_symbols(
+            removal_symbols, has_unattributed, _ = _collect_removal_symbols(
                 diff_content=diff_content,
                 body_modified_symbols=set(),
                 modified_members={},
@@ -2416,13 +2423,20 @@ def _extract_modified_symbols(
         changed_lines=changed_lines,
         class_symbols=body_modified_symbols,
     )
-    removal_symbols, has_unattributed_deletions = _collect_removal_symbols(
+    removal_symbols, has_unattributed_deletions, class_scope_deletions = _collect_removal_symbols(
         diff_content=diff_content,
         body_modified_symbols=body_modified_symbols,
         modified_members=modified_members,
         get_old_symbol_map=get_old_symbol_map,
     )
     has_unattributed = has_unattributed or has_unattributed_deletions
+
+    if has_unattributed_deletions:
+        # An unattributed deletion may have removed something at class scope in a
+        # class we cannot name, so no member narrowing is trustworthy either.
+        modified_members = {}
+    for class_name in class_scope_deletions:
+        modified_members.pop(class_name, None)
 
     # Removal-derived names always stay reported: a name removed here and
     # re-bound by an import from a different module can still change behaviour.

@@ -2262,7 +2262,7 @@ class TestBlankLineAndMemberAttribution:
             'def helper():\n    """\n    Do the thing.\n\n    More detail.\n    """\n    return True\n'
         )
 
-        diff_content = "--- a/module.py\n+++ b/module.py\n@@ -5,1 +4,0 @@\n-\n"
+        diff_content = "--- a/module.py\n+++ b/module.py\n@@ -4,1 +3,0 @@\n-\n"
         mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
         with (
             patch(
@@ -2322,7 +2322,7 @@ class TestBlankLineAndMemberAttribution:
         file_path = tmp_path / "module.py"
         file_path.write_text('def helper():\n    """\n    Do the thing.\n    More detail.\n    """\n    return False\n')
 
-        diff_content = "--- a/module.py\n+++ b/module.py\n@@ -5,1 +4,0 @@\n-\n@@ -7,1 +6,1 @@\n-    return True\n+    return False\n"
+        diff_content = "--- a/module.py\n+++ b/module.py\n@@ -4,1 +3,0 @@\n-\n@@ -7,1 +6,1 @@\n-    return True\n+    return False\n"
         mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
         with (
             patch(
@@ -2392,7 +2392,9 @@ class TestBlankLineAndMemberAttribution:
 
         assert result is not None, "a resolvable diff must produce a classification, not None"
         assert result.modified_symbols == {"Service"}, "the class is reported as modified"
-        assert result.modified_members == {"Service": {"second"}}, "only the second method changed"
+        assert result.modified_members == {}, (
+            "an unattributed deletion may hide a class-scope change, so member detail is dropped"
+        )
         assert result.has_unattributed_changes is True, (
             "the deleted line belongs to first(), which has no changed line on the new side"
         )
@@ -2486,6 +2488,58 @@ class TestBlankLineAndMemberAttribution:
         assert result.modified_members == {}, "an unmapped class line leaves member detail unknown"
         assert result.has_unattributed_changes is False, (
             "without member detail the deletion is attributed at class level"
+        )
+
+    def test_class_scope_deletion_drops_member_narrowing(self, tmp_path: Path) -> None:
+        """A removed class decorator changes every member, so narrowing must not survive."""
+        old_source = (
+            "@dataclass\n"
+            "class Service:\n"
+            "    def first(self):\n"
+            "        return 1\n"
+            "\n"
+            "    def second(self):\n"
+            "        return 2\n"
+        )
+        file_path = tmp_path / "module.py"
+        file_path.write_text(
+            "class Service:\n    def first(self):\n        return 1\n\n    def second(self):\n        return 3\n"
+        )
+
+        diff_content = (
+            "--- a/module.py\n"
+            "+++ b/module.py\n"
+            "@@ -1,1 +0,0 @@\n"
+            "-@dataclass\n"
+            "@@ -7,1 +6,1 @@\n"
+            "-        return 2\n"
+            "+        return 3\n"
+        )
+        mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
+        with (
+            patch(
+                target="scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+                return_value=mock_result,
+            ),
+            patch(
+                target="scripts.tests_analyzer.pytest_marker_analyzer._fetch_old_file_source",
+                return_value=old_source,
+            ),
+        ):
+            result = _extract_modified_symbols(
+                file_path=file_path,
+                base_branch="main",
+                repo_root=tmp_path,
+                github_pr_info=None,
+            )
+
+        assert result is not None, "a resolvable diff must produce a classification, not None"
+        assert result.modified_symbols == {"Service"}, "the class is reported as modified"
+        assert result.modified_members == {}, (
+            "a removed class decorator affects every member, so narrowing to second() would skip first()"
+        )
+        assert result.has_unattributed_changes is False, (
+            "a class-scope deletion is attributed to the class itself, which is reported as modified"
         )
 
 
@@ -2859,7 +2913,7 @@ class TestCheckConftestPathwayNoFixtureMatch:
             f"Test should NOT be flagged when no fixture calls the modified symbol, "
             f"but got matching_deps={matching_deps}"
         )
-        assert matching_deps == []
+        assert matching_deps == [], f"no dependency should be reported, but got {matching_deps}"
 
     def test_hierarchy_scans_past_no_fixture_match_conftest(self, tmp_path: Path) -> None:
         """When the first conftest has no fixture match, later conftests must still be checked.
