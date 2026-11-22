@@ -31,7 +31,7 @@ import tempfile
 import urllib.error
 import urllib.parse
 import urllib.request
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -1314,16 +1314,17 @@ def _build_line_to_symbol_map(source: str) -> SymbolMap:
     )
 
 
-def _get_old_file_symbols(
+def _fetch_old_file_source(
     file_path: Path,
     base_branch: str,
     repo_root: Path,
     github_pr_info: dict[str, Any] | None,
-) -> tuple[set[str], dict[str, set[str]]] | None:
-    """Fetch the base-branch version of a file and return its top-level symbol names.
+) -> str | None:
+    """Fetch the base-branch version of a file.
 
-    Used to distinguish genuinely new symbols (not present in the base version)
-    from modified ones (present in both versions).
+    Works in both analysis modes: the GitHub Contents API is used when
+    ``github_pr_info`` is provided (remote PR analysis), otherwise ``git show``
+    reads the file from ``base_branch`` in the local checkout.
 
     Args:
         file_path: Absolute path to the file in the working tree.
@@ -1333,11 +1334,9 @@ def _get_old_file_symbols(
             ``token`` keys for GitHub API access.
 
     Returns:
-        Tuple of (symbol_names, class_members) where symbol_names is the set
-        of top-level symbol names and class_members maps class names to their
-        member method names. Returns ``(set(), {})`` if the file is new.
-        Returns ``None`` on unexpected errors, signaling the caller to use
-        conservative (file-level) fallback behavior.
+        The file content on the base branch, or ``None`` when it cannot be
+        obtained (absent from the base branch, unexpected encoding, API or git
+        error).  Callers must stay conservative on ``None``.
     """
     old_source: str | None = None
 
@@ -1373,8 +1372,6 @@ def _get_old_file_symbols(
                     )
                     return None
         except urllib.error.HTTPError as exc:
-            if exc.code == 404:
-                return set(), {}  # File is new
             logger.warning(
                 msg="GitHub Contents API error fetching base file",
                 extra={"file": relative_path, "http_code": exc.code},
@@ -1397,13 +1394,6 @@ def _get_old_file_symbols(
                 timeout=10,
             )
             if result.returncode != 0:
-                stderr_lower = result.stderr.lower()
-                if (
-                    "does not exist" in stderr_lower
-                    or "not exist" in stderr_lower
-                    or "exists on disk, but not in" in stderr_lower
-                ):
-                    return set(), {}  # File is new (path not found in base branch)
                 logger.warning(
                     msg="git show failed for base file",
                     extra={"file": relative_path, "returncode": result.returncode, "stderr": result.stderr.strip()},
@@ -1417,39 +1407,86 @@ def _get_old_file_symbols(
             )
             return None
 
+    return old_source
+
+
+def _get_old_line_to_symbol_map(
+    file_path: Path,
+    base_branch: str,
+    repo_root: Path,
+    github_pr_info: dict[str, Any] | None,
+) -> SymbolMap | None:
+    """Build a line→symbol map from the base-branch version of a file.
+
+    Used to attribute a deleted line to the symbol that used to enclose it.
+
+    Args:
+        file_path: Absolute path to the file in the working tree.
+        base_branch: Base branch or ref to compare against.
+        repo_root: Repository root path.
+        github_pr_info: Optional dict with ``repo``, ``pr_number``, and
+            ``token`` keys for GitHub API access.
+
+    Returns:
+        SymbolMap of the base version, or ``None`` when its source cannot be
+        fetched or parsed — the caller must then stay conservative.
+    """
+    old_source = _fetch_old_file_source(
+        file_path=file_path,
+        base_branch=base_branch,
+        repo_root=repo_root,
+        github_pr_info=github_pr_info,
+    )
     if old_source is None:
         return None
 
-    # Parse old source to extract top-level symbol names
     try:
-        tree = ast.parse(old_source)
+        return _build_line_to_symbol_map(source=old_source)
     except SyntaxError:
         logger.warning(
             msg="Failed to parse base version of file",
-            extra={"file": relative_path},
+            extra={"file": str(file_path)},
         )
         return None
 
-    symbols: set[str] = set()
-    class_members: dict[str, set[str]] = {}
-    for node in ast.iter_child_nodes(tree):
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            symbols.add(node.name)
-        elif isinstance(node, ast.ClassDef):
-            symbols.add(node.name)
-            members: set[str] = set()
-            for child in ast.iter_child_nodes(node):
-                if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                    members.add(child.name)
-            class_members[node.name] = members
-        elif isinstance(node, ast.Assign):
-            for target in node.targets:
-                if isinstance(target, ast.Name):
-                    symbols.add(target.id)
-        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
-            symbols.add(node.target.id)
 
-    return symbols, class_members
+def _get_old_file_symbols(
+    file_path: Path,
+    base_branch: str,
+    repo_root: Path,
+    github_pr_info: dict[str, Any] | None,
+) -> tuple[set[str], dict[str, set[str]]] | None:
+    """Return the top-level symbol names of the base-branch version of a file.
+
+    Used to distinguish genuinely new symbols (not present in the base version)
+    from modified ones (present in both versions).
+
+    Args:
+        file_path: Absolute path to the file in the working tree.
+        base_branch: Base branch or ref to compare against.
+        repo_root: Repository root path.
+        github_pr_info: Optional dict with ``repo``, ``pr_number``, and
+            ``token`` keys for GitHub API access.
+
+    Returns:
+        Tuple of (symbol_names, class_members) where symbol_names is the set
+        of top-level symbol names and class_members maps class names to their
+        member method names.  Returns ``None`` when the base version cannot be
+        fetched or parsed, signaling the caller to stay conservative.
+    """
+    old_symbol_map = _get_old_line_to_symbol_map(
+        file_path=file_path,
+        base_branch=base_branch,
+        repo_root=repo_root,
+        github_pr_info=github_pr_info,
+    )
+    if old_symbol_map is None:
+        return None
+
+    return (
+        {symbol_name for _, _, symbol_name in old_symbol_map.top_level},
+        {class_name: set(info.members) for class_name, info in old_symbol_map.class_members.items()},
+    )
 
 
 def _parse_diff_for_changed_lines(diff_content: str) -> set[int]:
@@ -1521,7 +1558,7 @@ def _diff_has_deletions(diff_content: str) -> bool:
 _QUOTED_SEGMENT_PATTERN = re.compile(pattern=r"""(?:"[^"]*"|'[^']*')""")
 
 
-def _iter_diff_statements(diff_content: str) -> Iterator[tuple[str, str]]:
+def _iter_diff_statements(diff_content: str) -> Iterator[tuple[str, str, int]]:
     """Iterate the changed statements of a unified diff.
 
     Continuation lines of a statement with unbalanced parentheses are joined so
@@ -1538,22 +1575,36 @@ def _iter_diff_statements(diff_content: str) -> Iterator[tuple[str, str]]:
         diff_content: Unified diff text.
 
     Yields:
-        A ``(sign, statement)`` pair per changed statement, where ``sign`` is
-        the diff marker of its first line (``"+"`` or ``"-"``) and
-        ``statement`` is that line's content plus the content of following
-        lines carrying the same marker while parentheses are unbalanced.  File
-        headers, hunk headers and context lines are yielded as ``("", "")`` so
+        A ``(sign, statement, old_line_number)`` triple per changed statement,
+        where ``sign`` is the diff marker of its first line (``"+"`` or
+        ``"-"``), ``statement`` is that line's content plus the content of
+        following lines carrying the same marker while parentheses are
+        unbalanced, and ``old_line_number`` is the 1-based line in the old file
+        that the statement's first line carries (for a run of additions, the
+        old-file position the run is inserted at).  File headers, hunk headers
+        and context lines are yielded as ``("", "", old_line_number)`` so
         callers can tell where a run of changed statements ends.
     """
     lines = diff_content.splitlines()
+    old_line_number = 0
     index = 0
     while index < len(lines):
         line = lines[index]
         sign = line[:1]
+        hunk_header = re.match(pattern=r"^@@ -(\d+)", string=line)
+        if hunk_header:
+            old_line_number = int(hunk_header.group(1))
+            index += 1
+            yield "", "", old_line_number
+            continue
         if sign not in {"+", "-"} or line.startswith(("---", "+++")):
             index += 1
-            yield "", ""
+            yield "", "", old_line_number
+            if not line.startswith(("---", "+++", "\\")):
+                # Context lines exist in both versions, so they advance the counter too.
+                old_line_number += 1
             continue
+        statement_old_line = old_line_number
         parts: list[str] = []
         open_parentheses = 0
         while index < len(lines) and lines[index][:1] == sign:
@@ -1561,10 +1612,12 @@ def _iter_diff_statements(diff_content: str) -> Iterator[tuple[str, str]]:
             parts.append(content)
             unquoted = _QUOTED_SEGMENT_PATTERN.sub(repl="", string=content)
             open_parentheses += unquoted.count("(") - unquoted.count(")")
+            if sign == "-":
+                old_line_number += 1
             index += 1
             if open_parentheses == 0:
                 break
-        yield sign, "\n".join(parts)
+        yield sign, "\n".join(parts), statement_old_line
 
 
 def _deleted_definition_name(statement: str) -> str | None:
@@ -1662,20 +1715,51 @@ def _extract_imported_names(line: str) -> set[str] | None:
     return names
 
 
-def _collect_removal_symbols(diff_content: str) -> tuple[set[str], bool]:
+def _top_level_symbol_at_line(symbol_map: SymbolMap | None, line_number: int) -> str | None:
+    """Return the top-level symbol enclosing a line of an old file.
+
+    Args:
+        symbol_map: Line→symbol map of the old file, or ``None`` when it could
+            not be built.
+        line_number: 1-based line number in the old file.
+
+    Returns:
+        The enclosing top-level symbol name, or ``None`` when the map is
+        unavailable or the line is module-level.
+    """
+    if symbol_map is None:
+        return None
+    for start_line, end_line, symbol_name in symbol_map.top_level:
+        if start_line <= line_number <= end_line:
+            return symbol_name
+    return None
+
+
+def _collect_removal_symbols(
+    diff_content: str,
+    body_modified_symbols: set[str],
+    get_old_symbol_map: Callable[[], SymbolMap | None],
+) -> tuple[set[str], bool]:
     """Collect the symbols a diff removes and flag deletions it cannot attribute.
 
     Deleted functions/classes and the names a deleted import bound are removal
-    symbols.  A deletion is attributed when its replacement lines are in
-    the diff (they map to changed new-file lines), when it is an import, or when
-    it is part of a deleted definition.  An import that cannot be parsed (star
-    import, unbalanced parentheses) and any other deletion are reported as
-    unattributed instead of being silently ignored, so the caller can stay
-    conservative: a statement deleted from a live function body maps to no
-    new-file line and would otherwise look like a clean change.
+    symbols.  A deleted import or a deleted definition is attributed through
+    those removal symbols.  Any other deleted line is attributed only when the
+    top-level symbol that enclosed it in the old file is also in
+    ``body_modified_symbols`` — the same symbol has changed lines on the new
+    side, so this is a genuine in-place edit.  A deletion of a line that
+    belonged to another symbol, to module level, or to a symbol whose old
+    enclosing range is unknown (the old file could not be fetched or parsed)
+    maps to no changed new-file line and cannot be attributed, so it is reported
+    as unattributed instead of looking like a clean change.  Deleted imports
+    that cannot be parsed (star import, unbalanced parentheses) are unattributed
+    for the same reason.
 
     Args:
         diff_content: Unified diff text.
+        body_modified_symbols: Symbols with changed lines on the new-file side.
+        get_old_symbol_map: Lazily returns the old-file line→symbol map, or
+            ``None`` when the old source is unavailable.
 
     Returns:
         Tuple of (removal symbol names, has unattributed changes).
@@ -1686,19 +1770,16 @@ def _collect_removal_symbols(diff_content: str) -> tuple[set[str], bool]:
 
     index = 0
     while index < len(statements):
-        sign, first_statement = statements[index]
+        sign, first_statement, first_old_line = statements[index]
         index += 1
         if sign not in {"+", "-"}:
             continue
-        run = [first_statement]
+        run = [(first_statement, first_old_line)]
         while index < len(statements) and statements[index][0] == sign:
-            run.append(statements[index][1])
+            run.append((statements[index][1], statements[index][2]))
             index += 1
-        # A run of deletions followed by a run of additions is a replacement:
-        # its additions are attributed through the new file.
-        replaced = sign == "-" and index < len(statements) and statements[index][0] == "+"
         deleted_definition_indent: int | None = None
-        for statement in run:
+        for statement, old_line in run:
             if not statement.strip():
                 # A removed blank line removes no statement.
                 continue
@@ -1720,12 +1801,12 @@ def _collect_removal_symbols(diff_content: str) -> tuple[set[str], bool]:
                     # run_command`` breaks ``ssp.run_command()`` for callers.
                     removal_symbols.update(imported_names)
                 continue
-            if sign != "-" or replaced:
+            if sign != "-":
                 continue
             # Grouping may have joined lines (unbalanced parenthesis), so each
             # line is attributed on its own: a deleted def is recognised wherever
             # it starts, and its body is skipped by indentation.
-            for line in statement.splitlines():
+            for offset, line in enumerate(statement.splitlines()):
                 if not line.strip():
                     # A removed blank line removes no statement.
                     continue
@@ -1737,7 +1818,12 @@ def _collect_removal_symbols(diff_content: str) -> tuple[set[str], bool]:
                 if _deleted_definition_name(statement=line.strip()) is not None:
                     deleted_definition_indent = indentation
                     continue
-                has_unattributed = True
+                if has_unattributed or not body_modified_symbols:
+                    has_unattributed = True
+                    continue
+                old_symbol = _top_level_symbol_at_line(symbol_map=get_old_symbol_map(), line_number=old_line + offset)
+                if old_symbol is None or old_symbol not in body_modified_symbols:
+                    has_unattributed = True
 
     return removal_symbols, has_unattributed
 
@@ -1954,8 +2040,9 @@ def _extract_modified_symbols(
         *were* identified from other changed lines.  Import-line edits are
         attributed to the imported names instead and do not set
         ``has_unattributed_changes``; a deleted line that is neither an import
-        nor part of a deleted definition does, because it maps to no new-file
-        line and cannot be attributed.
+        nor part of a deleted definition does, unless the symbol enclosing it in
+        the old file is itself modified, because it otherwise maps to no
+        changed new-file line and cannot be attributed.
     """
     diff_content = _get_diff_content(
         file_path=file_path,
@@ -1972,10 +2059,18 @@ def _extract_modified_symbols(
         return None
 
     has_deletions = _diff_has_deletions(diff_content=diff_content)
-    # Symbols whose definition or binding was removed: deleted defs/classes plus
-    # names a deleted import bound.  ``has_unattributed`` flags
-    # deletions and import edits the diff cannot attribute to a symbol.
-    removal_symbols, has_unattributed = _collect_removal_symbols(diff_content=diff_content)
+    old_symbol_map_state: dict[str, SymbolMap | None] = {}
+
+    def get_old_symbol_map() -> SymbolMap | None:
+        """Return the old-file line→symbol map, fetching it at most once."""
+        if "map" not in old_symbol_map_state:
+            old_symbol_map_state["map"] = _get_old_line_to_symbol_map(
+                file_path=file_path,
+                base_branch=base_branch,
+                repo_root=repo_root,
+                github_pr_info=github_pr_info,
+            )
+        return old_symbol_map_state["map"]
 
     changed_lines = _parse_diff_for_changed_lines(diff_content=diff_content)
     if not changed_lines:
@@ -1984,6 +2079,11 @@ def _extract_modified_symbols(
                 return SymbolClassification(modified_symbols=set(), new_symbols=set())
             # Pure deletion — the removal symbols extracted from the diff enable
             # symbol-level narrowing instead of a conservative fallback.
+            removal_symbols, has_unattributed = _collect_removal_symbols(
+                diff_content=diff_content,
+                body_modified_symbols=set(),
+                get_old_symbol_map=get_old_symbol_map,
+            )
             return SymbolClassification(
                 modified_symbols=removal_symbols,
                 new_symbols=set(),
@@ -2030,6 +2130,7 @@ def _extract_modified_symbols(
 
     source_lines = source.splitlines()
 
+    has_unattributed = False
     body_modified_symbols: set[str] = set()
     for line_number in changed_lines:
         found = False
@@ -2084,6 +2185,13 @@ def _extract_modified_symbols(
                     return None
             else:
                 return None
+
+    removal_symbols, has_unattributed_deletions = _collect_removal_symbols(
+        diff_content=diff_content,
+        body_modified_symbols=body_modified_symbols,
+        get_old_symbol_map=get_old_symbol_map,
+    )
+    has_unattributed = has_unattributed or has_unattributed_deletions
 
     # Removal-derived names always stay reported: a name removed here and
     # re-bound by an import from a different module can still change behaviour.
@@ -2174,14 +2282,9 @@ def _extract_modified_symbols(
 
     # Deletions exist — need to check old file to distinguish rewrites
     # from genuine additions.
-    old_result = _get_old_file_symbols(
-        file_path=file_path,
-        base_branch=base_branch,
-        repo_root=repo_root,
-        github_pr_info=github_pr_info,
-    )
-    if old_result is None:
-        # Error fetching old file — conservative: treat all candidates as modified
+    old_symbol_map = get_old_symbol_map()
+    if old_symbol_map is None:
+        # Old file unavailable — conservative: treat all candidates as modified
         return SymbolClassification(
             modified_symbols=modified_symbols,
             new_symbols=set(),
@@ -2189,7 +2292,10 @@ def _extract_modified_symbols(
             has_unattributed_changes=has_unattributed,
         )
 
-    old_symbols, old_class_members = old_result
+    old_symbols = {symbol_name for _, _, symbol_name in old_symbol_map.top_level}
+    old_class_members = {
+        class_name: set(class_info.members) for class_name, class_info in old_symbol_map.class_members.items()
+    }
 
     truly_new: set[str] = set()
     for symbol_name in candidate_new:

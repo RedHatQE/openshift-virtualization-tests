@@ -1176,9 +1176,15 @@ class TestExtractModifiedSymbolsUnattributed:
             "+TIMEOUT = 60\n"
         )
         mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
-        with patch(
-            "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
-            return_value=mock_result,
+        with (
+            patch(
+                "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+                return_value=mock_result,
+            ),
+            patch(
+                "scripts.tests_analyzer.pytest_marker_analyzer._fetch_old_file_source",
+                return_value="import sys\n\nTIMEOUT = 30\n\ndef my_func():\n    pass\n",
+            ),
         ):
             result = _extract_modified_symbols(
                 file_path=file_path,
@@ -1209,9 +1215,15 @@ class TestExtractModifiedSymbolsUnattributed:
             "--- a/module.py\n+++ b/module.py\n@@ -3,2 +3,2 @@\n def my_func():\n-    return 0\n+    return 42\n"
         )
         mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
-        with patch(
-            "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
-            return_value=mock_result,
+        with (
+            patch(
+                "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+                return_value=mock_result,
+            ),
+            patch(
+                "scripts.tests_analyzer.pytest_marker_analyzer._fetch_old_file_source",
+                return_value="TIMEOUT = 60\n\ndef my_func():\n    return 0\n",
+            ),
         ):
             result = _extract_modified_symbols(
                 file_path=file_path,
@@ -1353,9 +1365,15 @@ class TestExtractModifiedSymbolsUnattributed:
             '     """\n'
         )
         mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
-        with patch(
-            "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
-            return_value=mock_result,
+        with (
+            patch(
+                "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+                return_value=mock_result,
+            ),
+            patch(
+                "scripts.tests_analyzer.pytest_marker_analyzer._fetch_old_file_source",
+                return_value=source.replace("from the caller.", "from the environment."),
+            ),
         ):
             result = _extract_modified_symbols(
                 file_path=file_path,
@@ -1835,9 +1853,15 @@ class TestSymbolAttributionRemovals:
             "+    return True\n"
         )
         mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
-        with patch(
-            "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
-            return_value=mock_result,
+        with (
+            patch(
+                "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+                return_value=mock_result,
+            ),
+            patch(
+                "scripts.tests_analyzer.pytest_marker_analyzer._fetch_old_file_source",
+                return_value="def wait_for_windows_vm():\n    return False\n",
+            ),
         ):
             result = _extract_modified_symbols(
                 file_path=file_path,
@@ -2031,6 +2055,196 @@ class TestSymbolAttributionRemovals:
         assert result.modified_symbols == set(), "a deleted body line maps to no new-file line"
         assert result.has_unattributed_changes is True, (
             "a deletion the diff cannot attribute must force the conservative fallback"
+        )
+
+    def test_replacement_adjacent_to_another_symbol_is_unattributed(self, tmp_path: Path) -> None:
+        """A deletion followed by an unrelated new function is not a replacement.
+
+        CodeRabbit's example: ``helper()`` loses its ``return False`` while an
+        unrelated ``newly_added()`` is added right after it.  Mapping the deleted
+        line to its old symbol (``helper``) shows that no modified symbol owns
+        it, so the change must stay conservative: a conftest fixture calling
+        ``helper()`` now gets ``None`` instead of ``False``.
+        """
+        source = "def helper():\n    setup()\ndef newly_added():\n    return True\n"
+        file_path = tmp_path / "module.py"
+        file_path.write_text(source)
+
+        diff_content = (
+            "--- a/module.py\n"
+            "+++ b/module.py\n"
+            "@@ -1,3 +1,4 @@\n"
+            " def helper():\n"
+            "     setup()\n"
+            "-    return False\n"
+            "+def newly_added():\n"
+            "+    return True\n"
+        )
+        mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
+        with (
+            patch(
+                "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+                return_value=mock_result,
+            ),
+            patch(
+                "scripts.tests_analyzer.pytest_marker_analyzer._fetch_old_file_source",
+                return_value="def helper():\n    setup()\n    return False\n",
+            ),
+        ):
+            result = _extract_modified_symbols(
+                file_path=file_path,
+                base_branch="main",
+                repo_root=tmp_path,
+                github_pr_info=None,
+            )
+
+        assert result is not None, "a resolvable diff must produce a classification, not None"
+        assert result.has_unattributed_changes is True, (
+            "the deleted return belongs to helper(), which has no changed line on the new side"
+        )
+        assert result.new_symbols == {"newly_added"}, "the unrelated addition is still a new symbol"
+
+        conftest_path = tmp_path / "tests" / "conftest.py"
+        conftest_path.parent.mkdir(parents=True)
+        conftest_path.touch()
+        test_file = tmp_path / "tests" / "test_module.py"
+        test_file.touch()
+        marked_test = MarkedTest(
+            file_path=test_file,
+            test_name="test_module",
+            node_id="tests/test_module.py::test_module",
+            dependencies={conftest_path},
+            fixtures=set(),
+            symbol_imports={},
+        )
+        is_affected, matching_deps = _check_conftest_pathway(
+            changed_file=file_path,
+            marked_test=marked_test,
+            conftest_symbol_imports={},
+            conftest_opaque_deps={conftest_path: {file_path}},
+            modified_symbols_cache={file_path: result},
+            fixtures_dict={},
+            repo_root=tmp_path,
+        )
+
+        assert is_affected is True, (
+            "a conftest fixture calling helper() must be flagged when helper() changes behaviour"
+        )
+        assert matching_deps, "a flagged pathway must report the dependency that caused it"
+
+    def test_module_level_deletion_with_unrelated_addition_is_unattributed(self, tmp_path: Path) -> None:
+        """A deleted module-level statement belongs to no modified symbol."""
+        source = "def helper():\n    return True\ndef newly_added():\n    return 1\n"
+        file_path = tmp_path / "module.py"
+        file_path.write_text(source)
+
+        diff_content = (
+            "--- a/module.py\n"
+            "+++ b/module.py\n"
+            "@@ -1,3 +1,4 @@\n"
+            "-TIMEOUT = 30\n"
+            " def helper():\n"
+            "     return True\n"
+            "+def newly_added():\n"
+            "+    return 1\n"
+        )
+        mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
+        with (
+            patch(
+                "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+                return_value=mock_result,
+            ),
+            patch(
+                "scripts.tests_analyzer.pytest_marker_analyzer._fetch_old_file_source",
+                return_value="TIMEOUT = 30\ndef helper():\n    return True\n",
+            ),
+        ):
+            result = _extract_modified_symbols(
+                file_path=file_path,
+                base_branch="main",
+                repo_root=tmp_path,
+                github_pr_info=None,
+            )
+
+        assert result is not None, "a resolvable diff must produce a classification, not None"
+        assert result.has_unattributed_changes is True, "a deleted module-level statement maps to no modified symbol"
+
+    def test_deleted_function_with_new_function_addition_still_narrows(self, tmp_path: Path) -> None:
+        """Deleting a definition must not stop a separate added function being new."""
+        source = "def helper():\n    return True\ndef newly_added():\n    return 1\n"
+        file_path = tmp_path / "module.py"
+        file_path.write_text(source)
+
+        diff_content = (
+            "--- a/module.py\n"
+            "+++ b/module.py\n"
+            "@@ -1,4 +1,4 @@\n"
+            "-def removed():\n"
+            "-    return False\n"
+            " def helper():\n"
+            "     return True\n"
+            "+def newly_added():\n"
+            "+    return 1\n"
+        )
+        mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
+        with (
+            patch(
+                "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+                return_value=mock_result,
+            ),
+            patch(
+                "scripts.tests_analyzer.pytest_marker_analyzer._fetch_old_file_source",
+                return_value="def removed():\n    return False\ndef helper():\n    return True\n",
+            ),
+        ):
+            result = _extract_modified_symbols(
+                file_path=file_path,
+                base_branch="main",
+                repo_root=tmp_path,
+                github_pr_info=None,
+            )
+
+        assert result is not None, "a resolvable diff must produce a classification, not None"
+        assert result.modified_symbols == {"removed"}, "the deleted definition stays attributed"
+        assert result.new_symbols == {"newly_added"}, "a fully added function must stay eligible for narrowing"
+        assert result.has_unattributed_changes is False, (
+            "a deleted definition and a new function are both fully attributable"
+        )
+
+    def test_in_place_body_edit_without_old_source_is_unattributed(self, tmp_path: Path) -> None:
+        """Without the old source a body edit cannot be proven to be in-place."""
+        file_path = tmp_path / "virt.py"
+        file_path.write_text("def wait_for_windows_vm():\n    return True\n")
+
+        diff_content = (
+            "--- a/utilities/virt.py\n"
+            "+++ b/utilities/virt.py\n"
+            "@@ -1,2 +1,2 @@\n"
+            " def wait_for_windows_vm():\n"
+            "-    return False\n"
+            "+    return True\n"
+        )
+        mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
+        with (
+            patch(
+                "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+                return_value=mock_result,
+            ),
+            patch(
+                "scripts.tests_analyzer.pytest_marker_analyzer._fetch_old_file_source",
+                return_value=None,
+            ),
+        ):
+            result = _extract_modified_symbols(
+                file_path=file_path,
+                base_branch="main",
+                repo_root=tmp_path,
+                github_pr_info=None,
+            )
+
+        assert result is not None, "an unavailable old file must not make the diff unresolvable"
+        assert result.has_unattributed_changes is True, (
+            "an unattributable deletion must stay conservative instead of looking clean"
         )
 
 
@@ -3281,7 +3495,7 @@ class TestIterDiffStatements:
     def test_balanced_multiline_import_is_one_statement(self) -> None:
         """A parenthesized multi-line import stays grouped as a single statement."""
         diff = "@@ -1,3 +1,0 @@\n-from utilities.ssp import (\n-    guest_agent_version_parser,\n-)\n"
-        statements = [statement for sign, statement in _iter_diff_statements(diff_content=diff) if sign]
+        statements = [statement for sign, statement, _ in _iter_diff_statements(diff_content=diff) if sign]
         assert statements == ["from utilities.ssp import (\n    guest_agent_version_parser,\n)"], (
             f"a balanced multiline import must be attributed as one statement: {statements}"
         )
