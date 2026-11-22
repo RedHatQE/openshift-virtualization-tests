@@ -78,7 +78,6 @@ class TestTektonEfiPipelineExecution:
         final_status_pipelinerun,
     ):
         """
-        Jira: https://redhat.atlassian.net/browse/CNV-21651 # <skip-jira-utils-check>
         Jira: https://redhat.atlassian.net/browse/CNV-47592 # <skip-jira-utils-check>
         Polarion: CNV-10373
         Polarion: CNV-10374
