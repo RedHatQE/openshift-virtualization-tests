@@ -4,12 +4,12 @@ import logging
 from time import monotonic
 from typing import TYPE_CHECKING
 
-from utilities.constants.timeouts import TIMEOUT_10MIN
+from ocp_resources.datavolume import DataVolume
+
+from utilities.constants.timeouts import TIMEOUT_10MIN, TIMEOUT_30MIN
 
 if TYPE_CHECKING:
     from typing import Any
-
-    from ocp_resources.datavolume import DataVolume
 
 LOGGER = logging.getLogger(__name__)
 
@@ -46,44 +46,55 @@ def dv_stop_status_no_progress(
 ) -> bool:
     """Stop waiting when DataVolume phase and progress both stop changing.
 
-    Watches ``status.phase`` and ``status.progress``. A change in either resets
-    the timer. Pass a fresh ``progress_state={}`` for each DataVolume. If the
-    DataVolume does not exist yet, keep waiting.
-
     Args:
         dv: DataVolume to check.
-        progress_state: Per-DataVolume tracker. Pass ``{}``; reused across polls.
-        no_progress_timeout: Seconds with no phase or progress change before stopping.
+        progress_state: Per-DataVolume tracker. Must start as ``{}``; the function
+            writes ``last_seen`` and ``updated_at`` into it. An absent or deleted
+            DataVolume keeps waiting; if the timer was already armed it is still
+            enforced. Timer arms only after a real progress percentage is seen
+            (not ``None`` / ``""`` / ``N/A``).
+        no_progress_timeout: Seconds with no phase/progress change before stopping.
 
     Returns:
         True to stop waiting; False to keep waiting.
-
-    Example::
-        dv.wait_for_dv_success(
-            stop_status_func=dv_stop_status_no_progress,
-            dv=dv,
-            progress_state={},
-        )
     """
     dv_instance = dv.exists
-    if dv_instance is None:
-        return False
+    if dv_instance is not None:
+        phase_and_progress = (
+            dv_instance.get("status", {}).get("phase"),
+            dv_instance.get("status", {}).get("progress"),
+        )
+        if phase_and_progress[1] in (None, "", "N/A"):
+            return False
+        if phase_and_progress != progress_state.get("last_seen"):
+            LOGGER.info(f"DV {dv.name} phase/progress={phase_and_progress}")
+            progress_state.update(last_seen=phase_and_progress, updated_at=monotonic())
+            return False
 
-    dv_status = getattr(dv_instance, "status", None)
-    phase = str(getattr(dv_status, "phase", None) or "")
-    progress = str(getattr(dv_status, "progress", None) or "")
-    if (phase, progress) != (progress_state.get("phase"), progress_state.get("progress")):
-        LOGGER.info(f"DV {dv.name} phase={phase!r} progress={progress!r}")
-        progress_state["phase"] = phase
-        progress_state["progress"] = progress
-        progress_state["updated_at"] = monotonic()
+    # Missing DV (dshchedr) or unchanged phase/progress: same no_progress check.
+    updated_at = progress_state.get("updated_at")
+    if updated_at is None:
         return False
-
-    no_progress_for = monotonic() - progress_state["updated_at"]
+    no_progress_for = monotonic() - updated_at
     if no_progress_for < no_progress_timeout:
         return False
 
     LOGGER.error(
-        f"DV {dv.name} unchanged at phase={phase!r} progress={progress!r} for {no_progress_for:.0f}s; failing fast"
+        f"DV {dv.name} unchanged at phase/progress={progress_state.get('last_seen')} "
+        f"for {no_progress_for:.0f}s; failing fast"
     )
     return True
+
+
+def wait_for_vm_data_volumes_no_progress(vm, timeout: int = TIMEOUT_30MIN) -> None:
+    """Wait for every DataVolume of vm to succeed, failing fast when import stops progressing."""
+    for volume in vm.instance.spec.template.spec.volumes:
+        if "dataVolume" not in volume.keys():
+            continue
+        dv = DataVolume(name=volume.dataVolume.name, namespace=vm.namespace, client=vm.client)
+        dv.wait_for_dv_success(
+            timeout=timeout,
+            stop_status_func=dv_stop_status_no_progress,
+            dv=dv,
+            progress_state={},
+        )
