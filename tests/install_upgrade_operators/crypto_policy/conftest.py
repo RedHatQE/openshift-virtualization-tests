@@ -33,9 +33,8 @@ from tests.install_upgrade_operators.constants import (
 from tests.install_upgrade_operators.crypto_policy.constants import (
     CONSOLE_PLUGIN_SERVICE_PORT,
     CRYPTO_POLICY_SPEC_DICT,
-    CURVE_PROBE_EXCLUDED,
     CURVE_PROPAGATION_PENDING,
-    FIPS_GO_UNSUPPORTED_GROUPS,
+    FIPS_GO_EXCLUSIVE_UNSUPPORTED_GROUPS,
     KUBEVIRT_TLS_CONFIG_STR,
     MANAGED_CRS_LIST_WITH_AAQ,
     NON_FIPS_GROUPS,
@@ -45,7 +44,7 @@ from tests.install_upgrade_operators.crypto_policy.constants import (
     TLS_MODERN_PROFILE,
     TLS_PROPAGATION_CUSTOM_GROUPS,
     TLS_PROPAGATION_CUSTOM_PROFILE,
-    TLS_PROPAGATION_OMITTED_GROUP,
+    VIRT_OBSERVABILITY_CONTROLLER_METRICS_SERVICE,
 )
 from tests.install_upgrade_operators.crypto_policy.utils import (
     CurvePropagationExpectation,
@@ -190,19 +189,37 @@ def services_tls_runtime(cnv_services_with_template, admin_client, hco_namespace
     runtime_map: dict[str, str] = {}
     for service in cnv_services_with_template:
         service_name = service.name
-        if service_name in CURVE_PROBE_EXCLUDED:
+        if service_name == VIRT_OBSERVABILITY_CONTROLLER_METRICS_SERVICE:
             continue
         label_selector = ",".join(f"{key}={value}" for key, value in service.instance.spec.selector.items())
         pods = list(Pod.get(client=admin_client, namespace=hco_namespace.name, label_selector=label_selector))
         try:
-            output = pods[0].execute(command=["sh", "-c", "grep -q libssl /proc/1/maps && echo openssl || echo go"])
+            # Captures grep's own exit code before `if` consumes it, so a check failure
+            # (file unreadable, no grep in image) prints "unknown" instead of being
+            # indistinguishable from a genuine Go service (grep rc=1, pattern not found).
+            output = pods[0].execute(
+                command=[
+                    "sh",
+                    "-c",
+                    (
+                        "grep -q libssl /proc/1/maps; rc=$?; "
+                        "if [ $rc -eq 0 ]; then echo openssl; elif [ $rc -eq 1 ]; then echo go; else echo unknown; fi"
+                    ),
+                ]
+            )
         except ExecOnPodError, ApiException:
             # Leave service_name out of runtime_map rather than guessing a runtime:
             # curve_propagation_expectations already asserts every probed service is
             # present here and raises a clear, service-scoped error when it is not.
             LOGGER.exception(f"Failed to detect TLS runtime for service {service_name}")
             continue
-        runtime_map[service_name] = output.strip()
+        runtime = output.strip()
+        if runtime == "unknown":
+            # Same reasoning as the except block above: an inconclusive check is not a
+            # runtime, so leave it out rather than risk it being read as "go".
+            LOGGER.warning(f"TLS runtime check inconclusive for service {service_name}: in-pod grep failed")
+            continue
+        runtime_map[service_name] = runtime
     LOGGER.info(f"TLS runtime detection: {runtime_map}")
     return runtime_map
 
@@ -313,7 +330,11 @@ def probe_groups(fips_enabled_cluster):
     """TLS groups probed by the curve propagation test.
     On FIPS clusters, groups in `NON_FIPS_GROUPS` are removed because the worker OpenSSL cannot offer them.
     """
-    groups = [*TLS_PROPAGATION_CUSTOM_GROUPS, TLS_PROPAGATION_OMITTED_GROUP]
+    # secp384r1 (classical, not a hybrid) is the negative probe: unlike the PQC hybrids,
+    # Go doesn't reject it unconditionally under FIPS, and the FIPS worker's OpenSSL
+    # supports it (X25519 doesn't). Verified live: both Go and OpenSSL services negotiate
+    # it by default and reject it once omitted from the Custom profile.
+    groups = [*TLS_PROPAGATION_CUSTOM_GROUPS, "secp384r1"]
     if fips_enabled_cluster:
         groups = [group for group in groups if group not in NON_FIPS_GROUPS]
     return groups
@@ -364,18 +385,16 @@ def expected_negotiable_curves_by_service(
     expected_by_service: dict[str, set[str]] = {}
     for service in cnv_services_with_template:
         service_name = service.name
-        if service_name in CURVE_PROBE_EXCLUDED:
+        if service_name == VIRT_OBSERVABILITY_CONTROLLER_METRICS_SERVICE:
             continue
         expected_negotiable = set(TLS_PROPAGATION_CUSTOM_GROUPS)
         if fips_enabled_cluster:
             assert service_name in services_tls_runtime, f"TLS runtime not detected for service {service_name}"
-            # Under FIPS, Go services reject every ML-KEM hybrid and X25519 (matching the
-            # PQC audit test), while OpenSSL services still negotiate the NIST-paired hybrids
-            # but not the Curve25519-based groups.
+            # Under FIPS, neither runtime negotiates NON_FIPS_GROUPS; Go additionally rejects
+            # the NIST-paired hybrids that OpenSSL still negotiates (matching the PQC audit test).
+            expected_negotiable.difference_update(NON_FIPS_GROUPS)
             if services_tls_runtime[service_name] == "go":
-                expected_negotiable.difference_update(FIPS_GO_UNSUPPORTED_GROUPS)
-            else:
-                expected_negotiable.difference_update(NON_FIPS_GROUPS)
+                expected_negotiable.difference_update(FIPS_GO_EXCLUSIVE_UNSUPPORTED_GROUPS)
         # The console-plugin handler strips Curve25519-based groups unconditionally
         # (GetFIPSCompliantGroups), so it never negotiates them on any cluster.
         if service_name == KUBEVIRT_CONSOLE_PLUGIN_SERVICE:
@@ -406,5 +425,5 @@ def curve_propagation_expectations(
             "pending_jira": pending_jira_by_service[service.name],
         }
         for service in cnv_services_with_template
-        if service.name not in CURVE_PROBE_EXCLUDED
+        if service.name != VIRT_OBSERVABILITY_CONTROLLER_METRICS_SERVICE
     }

@@ -172,12 +172,9 @@ CURVE_PROPAGATION_PENDING = {
     KUBEVIRT_CONSOLE_PLUGIN_SERVICE: "CNV-99597",
 }
 
-# Services whose TLS endpoint cannot be verified with an openssl s_client handshake:
-# - virt-observability-controller-metrics: controller-runtime mTLS metrics endpoint;
-#   a client certificate is required to complete the handshake.
-CURVE_PROBE_EXCLUDED = {
-    "virt-observability-controller-metrics",
-}
+# Excluded from the curve probe: a controller-runtime mTLS metrics endpoint, so a bare
+# openssl s_client probe (no client cert) can't be verified against it.
+VIRT_OBSERVABILITY_CONTROLLER_METRICS_SERVICE = "virt-observability-controller-metrics"
 
 # Classical (non-PQC) curve names, as used by both the TLSSecurityProfile `groups`
 # field and openssl's `-groups` argument.
@@ -188,19 +185,13 @@ TLS_GROUP_X25519 = "X25519"
 # Curve set applied by the TLS-curve propagation test. secp521r1 and SecP256r1MLKEM768
 # are not in the default (Intermediate) group list, so a service following the profile
 # negotiates them only once this profile reaches it (verified live on FIPS). secp384r1
-# is deliberately omitted - see TLS_PROPAGATION_OMITTED_GROUP below.
+# is deliberately omitted - see probe_groups in conftest.py.
 TLS_PROPAGATION_CUSTOM_GROUPS = [
     TLS_GROUP_SECP256R1,
     TLS_GROUP_SECP521R1,
     PQC_GROUP_X25519_MLKEM768,
     PQC_GROUP_SECP256R1_MLKEM768,
 ]
-
-# secp384r1 (classical, not a hybrid) is the negative probe: unlike the PQC hybrids, Go
-# doesn't reject it unconditionally under FIPS, and the FIPS worker's OpenSSL supports it
-# (X25519 doesn't). Verified live: both Go and OpenSSL services negotiate it by default
-# and reject it once omitted - real enforcement evidence, works for FIPS and non-FIPS alike.
-TLS_PROPAGATION_OMITTED_GROUP = "secp384r1"
 
 # Custom TLS profile applied (HCO-direct) by the curve-propagation test. TLS 1.2 with
 # dual-auth ciphers (RSA + ECDSA, avoiding cert/cipher mismatch) carrying the curated
@@ -223,12 +214,10 @@ TLS_PROPAGATION_CUSTOM_PROFILE = {
 # on Go services under FIPS, nor on the console-plugin on any cluster.
 NON_FIPS_GROUPS = [TLS_GROUP_X25519, PQC_GROUP_X25519_MLKEM768]
 
-# Groups a Go service cannot negotiate under FIPS: every post-quantum (ML-KEM) hybrid is
-# not FIPS-certified and X25519 is not FIPS-approved, so Go rejects them all (matching the
-# PQC audit test). OpenSSL services still negotiate the NIST-paired hybrids under FIPS.
-FIPS_GO_UNSUPPORTED_GROUPS = [
-    TLS_GROUP_X25519,
-    PQC_GROUP_X25519_MLKEM768,
+# NIST-paired ML-KEM hybrids a Go service rejects under FIPS even though they ARE
+# FIPS-certified (matching the PQC audit test); OpenSSL services still negotiate them.
+# Distinct from NON_FIPS_GROUPS above, which neither runtime negotiates under FIPS.
+FIPS_GO_EXCLUSIVE_UNSUPPORTED_GROUPS = [
     PQC_GROUP_SECP256R1_MLKEM768,
     PQC_GROUP_SECP384R1_MLKEM1024,
 ]

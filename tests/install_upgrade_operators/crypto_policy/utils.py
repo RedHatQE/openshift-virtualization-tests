@@ -7,6 +7,7 @@ import pytest
 from benedict import benedict
 from kubernetes.client.exceptions import ApiException
 from kubernetes.dynamic import DynamicClient
+from kubernetes.dynamic.exceptions import NotFoundError
 from ocp_resources.hyperconverged import HyperConverged
 from ocp_resources.node import Node
 from ocp_resources.resource import Resource, ResourceEditor
@@ -35,8 +36,10 @@ from utilities.constants.components import CLUSTER
 from utilities.constants.hco import TLS_SECURITY_PROFILE
 from utilities.constants.timeouts import (
     TIMEOUT_2MIN,
+    TIMEOUT_10SEC,
     TIMEOUT_60MIN,
 )
+from utilities.exceptions import MissingResourceException
 from utilities.hco import ResourceEditorValidateHCOReconcile, wait_for_hco_conditions
 from utilities.infra import ExecCommandOnPod
 from utilities.operator import wait_for_cluster_operator_stabilize
@@ -344,7 +347,7 @@ def get_node_available_tls_groups(utility_pods: list, node: Node) -> list[str]:
     return [group.strip() for group in output.strip().split(":") if group.strip()]
 
 
-def compose_openssl_probe_command(service: Service, groups: str, connect_timeout: int = 10) -> str:
+def compose_openssl_probe_command(service: Service, groups: str, connect_timeout: int = TIMEOUT_10SEC) -> str:
     """Builds an openssl s_client command probing the given TLS group(s).
 
     Explicitly requests TLS 1.3, since the PQC hybrid groups (e.g. SecP256r1MLKEM768)
@@ -359,8 +362,14 @@ def compose_openssl_probe_command(service: Service, groups: str, connect_timeout
 
     Returns:
         str: The openssl command string.
+
+    Raises:
+        MissingResourceException: If the service no longer exists on the cluster.
     """
-    service_spec = service.instance.spec
+    try:
+        service_spec = service.instance.spec
+    except NotFoundError as error:
+        raise MissingResourceException(f"Service {service.name}") from error
     return (
         f"echo | timeout {connect_timeout}"
         f" openssl s_client -connect {service_spec.clusterIP}:{service_spec.ports[0].port}"
