@@ -17,9 +17,7 @@ from tests.utils import (
 from utilities.constants.images import OS_FLAVOR_WINDOWS
 from utilities.constants.virt import (
     FIVE_GI_MEMORY,
-    FOUR_CPU_SOCKETS,
     FOUR_GI_MEMORY,
-    SIX_CPU_SOCKETS,
     SIX_GI_MEMORY,
     TEN_CPU_SOCKETS,
     TWELVE_GI_MEMORY,
@@ -33,6 +31,15 @@ if TYPE_CHECKING:
     from kubernetes.dynamic import DynamicClient
 
     from utilities.virt import VirtualMachineForTests
+
+
+INITIAL_CPU_SOCKETS = 2
+INITIAL_CPU_CORES = 2
+INITIAL_CPU_THREADS = 1
+
+TARGET_CPU_SOCKETS = INITIAL_CPU_SOCKETS + 1
+
+EXPECTED_GUEST_VCPUS = INITIAL_CPU_CORES * TARGET_CPU_SOCKETS * INITIAL_CPU_THREADS
 
 pytestmark = [pytest.mark.rwx_default_storage, pytest.mark.data_collector_scope(scope="module")]
 
@@ -64,13 +71,25 @@ def hotplug_vm_snapshot(vm_with_hotplug_support):
     [
         pytest.param(
             {"os_dict": RHEL_LATEST},
-            {"template_labels": RHEL_LATEST_LABELS, "vm_name": "rhel-latest-cpu-hotplug-vm"},
+            {
+                "template_labels": RHEL_LATEST_LABELS,
+                "vm_name": "rhel-latest-cpu-hotplug-vm",
+                "cpu_cores": INITIAL_CPU_CORES,
+                "cpu_sockets": INITIAL_CPU_SOCKETS,
+                "cpu_threads": INITIAL_CPU_THREADS,
+            },
             id="RHEL-VM",
             marks=pytest.mark.s390x,
         ),
         pytest.param(
             {"os_dict": WINDOWS_LATEST},
-            {"template_labels": WINDOWS_LATEST_LABELS, "vm_name": "windows-latest-cpu-hotplug-vm"},
+            {
+                "template_labels": WINDOWS_LATEST_LABELS,
+                "vm_name": "windows-latest-cpu-hotplug-vm",
+                "cpu_cores": INITIAL_CPU_CORES,
+                "cpu_sockets": INITIAL_CPU_SOCKETS,
+                "cpu_threads": INITIAL_CPU_THREADS,
+            },
             id="WIN-VM",
             marks=[pytest.mark.special_infra, pytest.mark.high_resource_vm, pytest.mark.windows],
         ),
@@ -79,12 +98,12 @@ def hotplug_vm_snapshot(vm_with_hotplug_support):
 )
 class TestCPUHotPlug:
     @pytest.mark.parametrize(
-        "hotplugged_sockets_memory_guest", [pytest.param({"sockets": SIX_CPU_SOCKETS})], indirect=True
+        "hotplugged_sockets_memory_guest", [pytest.param({"sockets": TARGET_CPU_SOCKETS})], indirect=True
     )
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::hotplug_cpu")
     @pytest.mark.polarion("CNV-10695")
     def test_hotplug_cpu(self, hotplugged_sockets_memory_guest, vm_with_hotplug_support):
-        wait_for_guest_os_cpu_count(vm=vm_with_hotplug_support, spec_cpu_amount=SIX_CPU_SOCKETS)
+        wait_for_guest_os_cpu_count(vm=vm_with_hotplug_support, spec_cpu_amount=EXPECTED_GUEST_VCPUS)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu"])
     @pytest.mark.polarion("CNV-10696")
@@ -101,7 +120,7 @@ class TestCPUHotPlug:
 
     @pytest.mark.parametrize(
         "hotplugged_sockets_memory_guest",
-        [pytest.param({"sockets": FOUR_CPU_SOCKETS, "skip_migration": True})],
+        [pytest.param({"sockets": INITIAL_CPU_SOCKETS, "skip_migration": True})],
         indirect=True,
     )
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu"])
@@ -114,8 +133,11 @@ class TestCPUHotPlug:
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu"])
     @pytest.mark.polarion("CNV-10699")
     def test_hotplug_cpu_above_max_value(self, vm_with_hotplug_support):
-        with pytest.raises(UnprocessibleEntityError):
+        try:
             hotplug_spec_vm(vm=vm_with_hotplug_support, sockets=TEN_CPU_SOCKETS)
+        except UnprocessibleEntityError:
+            pass
+        else:
             pytest.fail("Socket value set higher than max value!")
 
 
@@ -129,7 +151,11 @@ class TestCPUHotPlug:
         ),
         pytest.param(
             {"os_dict": WINDOWS_LATEST},
-            {"template_labels": WINDOWS_LATEST_LABELS, "vm_name": "windows-latest-memory-hotplug-vm"},
+            {
+                "template_labels": WINDOWS_LATEST_LABELS,
+                "vm_name": "windows-latest-memory-hotplug-vm",
+                "cpu_cores": INITIAL_CPU_CORES,
+            },
             id="WIN-VM",
             marks=[pytest.mark.special_infra, pytest.mark.high_resource_vm, pytest.mark.windows],
         ),
@@ -171,8 +197,11 @@ class TestMemoryHotPlug:
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_memory"])
     @pytest.mark.polarion("CNV-10681")
     def test_hotplug_memory_above_max_value(self, vm_with_hotplug_support):
-        with pytest.raises(UnprocessibleEntityError):
+        try:
             hotplug_spec_vm(vm=vm_with_hotplug_support, memory_guest=TWELVE_GI_MEMORY)
+        except UnprocessibleEntityError:
+            pass
+        else:
             pytest.fail("Memory value set higher than max value!")
 
     @pytest.mark.parametrize(

@@ -9,8 +9,8 @@ from ocp_resources.virtual_machine import VirtualMachine
 @dataclass
 class VMSpec:
     template: Template
-    runStrategy: str = VirtualMachine.RunStrategy.HALTED  # noqa: N815
-    dataVolumeTemplates: list[dict[str, Any]] | None = None  # noqa: N815
+    runStrategy: str = VirtualMachine.RunStrategy.HALTED
+    dataVolumeTemplates: list[dict[str, Any]] | None = None
 
 
 @dataclass
@@ -29,10 +29,18 @@ class Metadata:
 class VMISpec:
     domain: Domain
     architecture: str | None = None
+    hostname: str | None = None
     networks: list[Network] | None = None
     volumes: list[Volume] | None = None
-    terminationGracePeriodSeconds: int | None = None  # noqa: N815
+    terminationGracePeriodSeconds: int | None = None
     affinity: Affinity | None = None
+    resourceClaims: list[ResourceClaim] | None = None
+
+
+@dataclass
+class ResourceClaim:
+    name: str
+    resourceClaimTemplateName: str
 
 
 @dataclass
@@ -50,7 +58,7 @@ class CPU:
 @dataclass
 class Memory:
     guest: str
-    maxGuest: str | None = None  # noqa: N815
+    maxGuest: str | None = None
 
 
 @dataclass
@@ -58,7 +66,7 @@ class Devices:
     disks: list[SpecDisk] | None = None
     interfaces: list[Interface] | None = None
     rng: dict[Any, Any] | None = None
-    autoattachPodInterface: bool | None = None  # noqa: N815
+    autoattachPodInterface: bool | None = None
 
 
 @dataclass
@@ -78,10 +86,10 @@ class Interface:
     masquerade: dict[Any, Any] | None = None
     bridge: dict[Any, Any] | None = None
     sriov: dict[Any, Any] | None = None
-    passtBinding: dict[Any, Any] | None = None  # noqa: N815
+    passtBinding: dict[Any, Any] | None = None
     binding: NetBinding | None = None
     state: str | None = None
-    macAddress: str | None = None  # noqa: N815
+    macAddress: str | None = None
 
 
 @dataclass
@@ -94,56 +102,63 @@ class Network:
     name: str
     pod: dict[Any, Any] | None = None
     multus: Multus | None = None
+    resourceClaim: NetworkResourceClaim | None = None
+
+
+@dataclass
+class NetworkResourceClaim:
+    claimName: str
+    requestName: str
 
 
 @dataclass
 class Multus:
-    networkName: str  # noqa: N815
+    networkName: str
 
 
 @dataclass
 class Affinity:
-    podAntiAffinity: PodAntiAffinity | None = None  # noqa: N815
-    podAffinity: PodAffinity | None = None  # noqa: N815
-    nodeAffinity: NodeAffinity | None = None  # noqa: N815
+    podAntiAffinity: PodAntiAffinity | None = None
+    podAffinity: PodAffinity | None = None
+    nodeAffinity: NodeAffinity | None = None
 
 
 @dataclass
 class NodeAffinity:
-    requiredDuringSchedulingIgnoredDuringExecution: NodeSelectorTerms  # noqa: N815
+    requiredDuringSchedulingIgnoredDuringExecution: NodeSelectorTerms
 
 
 @dataclass
 class NodeSelectorTerms:
-    nodeSelectorTerms: list[NodeSelectorTerm]  # noqa: N815
+    nodeSelectorTerms: list[NodeSelectorTerm]
 
 
 @dataclass
 class NodeSelectorTerm:
-    matchExpressions: list[LabelSelectorRequirement]  # noqa: N815
+    matchExpressions: list[LabelSelectorRequirement]
 
 
 @dataclass
 class PodAntiAffinity:
-    requiredDuringSchedulingIgnoredDuringExecution: list[PodAffinityTerm]  # noqa: N815
+    requiredDuringSchedulingIgnoredDuringExecution: list[PodAffinityTerm]
 
 
 @dataclass
 class PodAffinity:
-    requiredDuringSchedulingIgnoredDuringExecution: list[PodAffinityTerm]  # noqa: N815
+    requiredDuringSchedulingIgnoredDuringExecution: list[PodAffinityTerm]
 
 
 @dataclass
 class PodAffinityTerm:
-    labelSelector: LabelSelector  # noqa: N815
-    topologyKey: str  # noqa: N815
-    namespaceSelector: dict[str, Any] | None = None  # noqa: N815
+    labelSelector: LabelSelector
+    topologyKey: str
+    namespaceSelector: dict[str, Any] | None = None
     namespaces: list[str] | None = None
 
 
 @dataclass
 class LabelSelector:
-    matchExpressions: list[LabelSelectorRequirement]  # noqa: N815
+    matchExpressions: list[LabelSelectorRequirement]
 
 
 @dataclass
@@ -156,9 +171,9 @@ class LabelSelectorRequirement:
 @dataclass
 class Volume:
     name: str
-    containerDisk: ContainerDisk | None = None  # noqa: N815
-    cloudInitNoCloud: CloudInitNoCloud | None = None  # noqa: N815
-    dataVolume: DataVolumeRef | None = None  # noqa: N815
+    containerDisk: ContainerDisk | None = None
+    cloudInitNoCloud: CloudInitNoCloud | None = None
+    dataVolume: DataVolumeRef | None = None
 
 
 @dataclass
@@ -173,5 +188,5 @@ class ContainerDisk:
 
 @dataclass
 class CloudInitNoCloud:
-    networkData: str  # noqa: N815
-    userData: str | None = None  # noqa: N815
+    networkData: str
+    userData: str | None = None

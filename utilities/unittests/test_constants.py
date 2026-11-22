@@ -27,7 +27,9 @@ from utilities.constants.components import (
     HOSTPATH_PROVISIONER_OPERATOR,
     HYPERCONVERGED_CLUSTER,
 )
-from utilities.constants.hco import DATA_IMPORT_CRON_ENABLE
+from utilities.constants.hco import (
+    DATA_IMPORT_CRON_ENABLE,
+)
 from utilities.constants.images import (
     OS_FLAVOR_CIRROS,
     OS_FLAVOR_FEDORA,

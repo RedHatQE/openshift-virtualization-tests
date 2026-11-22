@@ -613,62 +613,116 @@ class TestBackupErrorHandling:
         """
 
 
+# VM order for the concurrent wave. Fixtures choose full vs incremental with
+# concurrent_backup_type(); this sequence stays here so a wrong mix fails the tests.
+EXPECTED_CONCURRENT_BACKUP_TYPES: tuple[str, ...] = (
+    CBT_BACKUP_TYPE_INCREMENTAL,
+    CBT_BACKUP_TYPE_INCREMENTAL,
+    CBT_BACKUP_TYPE_INCREMENTAL,
+    CBT_BACKUP_TYPE_FULL,
+    CBT_BACKUP_TYPE_FULL,
+)
+
+
+# Required at collection for storage_class_matrix__module__.
+@pytest.mark.tier3
+@pytest.mark.usefixtures("storage_class_name_scope_module")
 class TestConcurrentBackups:
     """
-    Concurrent backup operations on multiple VMs.
+    Concurrent full and incremental backups on multiple VMs (backup success only).
 
     Preconditions:
-        - 5 running VMs with CBT enabled
+        - Five running VMs with CBT enabled
         - Test data written to each VM
+        - A completed full backup on the three VMs that take an incremental backup
     """
 
-    __test__ = False  # STD placeholder - not yet implemented
-
     @pytest.mark.polarion("CNV-16011")
-    @pytest.mark.manual
-    def test_concurrent_backups_push_mode_restore(self):
+    def test_concurrent_backups_push_mode(
+        self,
+        completed_concurrent_push_backups,
+    ):
         """
-        Test that concurrent backups (push mode) on multiple VMs complete successfully and all VMs can be restored.
+        Test that simultaneous push-mode full and incremental backups all complete.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Preconditions:
-            - Backup PVCs available for each VM
+            - Five running CBT-enabled VMs with test data written to each VM
+            - A completed full backup on the three VMs that take an incremental backup
+            - Backup PVC available for each VM
 
         Steps:
-            1. Create backup trackers for all VMs
-            2. Start simultaneous backups in push mode on all VMs
-            3. Wait for all backups to complete
-            4. Delete all original VMs
-            5. Restore all VMs from their respective backups
-            6. Start all restored VMs
+            1. Create a backup tracker and a backup PVC for each VM
+            2. Complete a full backup on three of the VMs and write new test data to those VMs
+            3. After step 2 finishes, start these backups together:
+               - An incremental backup on the three VMs from step 2
+               - A full backup on the other two
+            4. Wait until every backup in that simultaneous set completes
 
         Expected:
-            - All restored VMs boot successfully and test data is present in each VM
+            - All five simultaneous backups complete and include the boot disk, three typed
+              Incremental and two typed Full
         """
+        assert len(completed_concurrent_push_backups) == len(EXPECTED_CONCURRENT_BACKUP_TYPES), (
+            f"Expected {len(EXPECTED_CONCURRENT_BACKUP_TYPES)} simultaneous push backups, "
+            f"got {len(completed_concurrent_push_backups)}"
+        )
+        for backup, expected_backup_type in zip(
+            completed_concurrent_push_backups,
+            EXPECTED_CONCURRENT_BACKUP_TYPES,
+            strict=True,
+        ):
+            assert_backup_status_includes_volumes(
+                backup_name=backup.name,
+                backup_status=backup.instance.to_dict()["status"],
+                expected_volume_names=[DV_DISK],
+                expected_backup_type=expected_backup_type,
+            )
 
     @pytest.mark.polarion("CNV-16012")
-    @pytest.mark.manual
-    def test_concurrent_backups_pull_mode_restore(self):
+    def test_concurrent_backups_pull_mode(
+        self,
+        ready_concurrent_pull_backups,
+    ):
         """
-        Test that concurrent backups (pull mode) on multiple VMs complete successfully and all VMs can be restored.
+        Test that simultaneous pull-mode full and incremental backups all become ready for export.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Preconditions:
-            - Scratch PVCs available for each VM (pull mode)
+            - Five running CBT-enabled VMs with test data written to each VM
+            - A completed full backup on the three VMs that take an incremental backup
+            - Scratch PVC available for each VM
 
         Steps:
-            1. Create backup trackers for all VMs
-            2. Start simultaneous backups in pull mode on all VMs
-            3. Wait for all backups to complete
-            4. Delete all original VMs
-            5. Restore all VMs from their respective backups
-            6. Start all restored VMs
+            1. Create a backup tracker and a scratch PVC for each VM
+            2. Complete a full backup on three of the VMs, delete those exports, and write new
+               test data to those VMs
+            3. After step 2 finishes, start these backups together:
+               - An incremental backup on the three VMs from step 2
+               - A full backup on the other two
+            4. Wait until every backup in that simultaneous set is ready for export
 
         Expected:
-            - All restored VMs boot successfully and test data is present in each VM
+            - All five simultaneous backups are ready for export and include the boot disk,
+              three typed Incremental and two typed Full
         """
+        assert len(ready_concurrent_pull_backups) == len(EXPECTED_CONCURRENT_BACKUP_TYPES), (
+            f"Expected {len(EXPECTED_CONCURRENT_BACKUP_TYPES)} simultaneous pull backups, "
+            f"got {len(ready_concurrent_pull_backups)}"
+        )
+        for backup, expected_backup_type in zip(
+            ready_concurrent_pull_backups,
+            EXPECTED_CONCURRENT_BACKUP_TYPES,
+            strict=True,
+        ):
+            assert_backup_status_includes_volumes(
+                backup_name=backup.name,
+                backup_status=backup.instance.to_dict()["status"],
+                expected_volume_names=[DV_DISK],
+                expected_backup_type=expected_backup_type,
+            )
 
 
 # Required at collection for storage_class_matrix__module__.

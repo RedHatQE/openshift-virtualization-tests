@@ -35,7 +35,6 @@ from utilities.constants import Images
 from utilities.constants.images import OS_FLAVOR_FEDORA, OS_FLAVOR_RHEL
 from utilities.constants.instance_types import U1_SMALL
 from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5SEC
-from utilities.exceptions import StorageMigrationError
 from utilities.infra import create_ns
 from utilities.jira import is_jira_open
 from utilities.storage import (
@@ -521,26 +520,24 @@ def combined_mode_mig_migration(
         client=admin_client,
         multi_namespace_virtual_machine_storage_migration_plan_ref={"name": combined_mode_mig_plan.name},
     ) as mig_migration:
-        try:
-            wait_for_storage_migration_phase(mig_migration=mig_migration, expected_phase=mig_migration.Status.COMPLETED)
-        except StorageMigrationError:
-            non_completed_phases = {
-                namespace.get("phase")
-                for namespace in (mig_migration.instance.status.namespaces or [])
-                if namespace.get("phase") != mig_migration.Status.COMPLETED
-            }
-            if non_completed_phases == {"WaitForLiveMigrationToComplete"} and is_jira_open(jira_id="CNV-99047"):
-                pytest.xfail(reason="Offline VM storage migration stuck in WaitForLiveMigrationToComplete, CNV-99047")
-            raise
+        wait_for_storage_migration_phase(mig_migration=mig_migration, expected_phase=mig_migration.Status.COMPLETED)
         yield mig_migration
 
 
 @pytest.fixture()
-def second_vm_namespace(admin_client, unprivileged_client, unique_suffix):
+def second_vm_namespace(admin_client, unprivileged_client, unique_suffix_scope_function):
+    """Create a second, function-scoped namespace for storage migration cleanup tests.
+
+    Yields:
+        Namespace: The created namespace object, named uniquely per test function.
+
+    Side effects:
+        Creates the namespace on cluster setup and deletes it on teardown.
+    """
     yield from create_ns(
         admin_client=admin_client,
         unprivileged_client=unprivileged_client,
-        name=f"test-scmig-cleanup-second-ns-{unique_suffix}",
+        name=f"test-scmig-cleanup-second-ns-{unique_suffix_scope_function}",
     )
 
 
@@ -621,17 +618,7 @@ def combined_policy_mig_migration(
             "name": combined_policy_and_combined_mode_mig_plan.name
         },
     ) as mig_migration:
-        try:
-            wait_for_storage_migration_phase(mig_migration=mig_migration, expected_phase=mig_migration.Status.COMPLETED)
-        except StorageMigrationError:
-            non_completed_phases = {
-                namespace.get("phase")
-                for namespace in (mig_migration.instance.status.namespaces or [])
-                if namespace.get("phase") != mig_migration.Status.COMPLETED
-            }
-            if non_completed_phases == {"WaitForLiveMigrationToComplete"} and is_jira_open(jira_id="CNV-99047"):
-                pytest.xfail(reason="Offline VM storage migration stuck in WaitForLiveMigrationToComplete, CNV-99047")
-            raise
+        wait_for_storage_migration_phase(mig_migration=mig_migration, expected_phase=mig_migration.Status.COMPLETED)
         yield mig_migration
 
 

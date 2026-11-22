@@ -19,7 +19,6 @@ from tests.virt.node.gpu.constants import (
     VGPU_DEVICE_NAME_STR,
     VGPU_PRETTY_NAME_STR,
 )
-from utilities.constants.hco import DEFAULT_HCO_CONDITIONS
 from utilities.constants.images import OS_FLAVOR_WINDOWS
 from utilities.constants.timeouts import (
     TCP_TIMEOUT_30SEC,
@@ -31,6 +30,7 @@ from utilities.constants.timeouts import (
 )
 from utilities.hco import (
     ResourceEditorValidateHCOReconcile,
+    get_hco_expected_conditions,
     is_hco_tainted,
     update_hco_annotations,
     wait_for_hco_conditions,
@@ -67,13 +67,12 @@ def append_feature_gate_to_hco(feature_gate, resource, client, namespace):
             ],
             value=feature_gate,
         )
+        expected_conditions = get_hco_expected_conditions(hco_instance=resource.instance)
+        expected_conditions["TaintedConfiguration"] = Resource.Condition.Status.TRUE
         wait_for_hco_conditions(
             admin_client=client,
             hco_namespace=namespace,
-            expected_conditions={
-                **DEFAULT_HCO_CONDITIONS,
-                "TaintedConfiguration": Resource.Condition.Status.TRUE,
-            },
+            expected_conditions=expected_conditions,
         )
         yield
     assert not is_hco_tainted(admin_client=client, hco_namespace=namespace.name)
@@ -81,12 +80,29 @@ def append_feature_gate_to_hco(feature_gate, resource, client, namespace):
 
 @contextmanager
 def running_sleep_in_linux(vm):
+    """Run a guest sleep process in a Linux VM and verify its PID is retained.
+
+    Processes left over from an earlier run are killed before the sleep process
+    starts, and the sleep process is killed again on exit, including when the
+    body raises. The PID fetched after the body must match the one fetched at
+    start.
+
+    Args:
+        vm: Linux VM in which the sleep process runs.
+
+    Yields:
+        None: The body runs while the sleep process is alive.
+    """
     process = "sleep"
     kill_processes_by_name_linux(vm=vm, process_name=process, check_rc=False)
     pid_orig = start_and_fetch_processid_on_linux_vm(vm=vm, process_name=process, args="1000", use_nohup=True)
-    yield
-    pid_after = fetch_pid_from_linux_vm(vm=vm, process_name=process)
-    kill_processes_by_name_linux(vm=vm, process_name=process)
+    try:
+        yield
+        pid_after = fetch_pid_from_linux_vm(vm=vm, process_name=process)
+    finally:
+        # Tolerate an already-exited sleep process so the PID assertion below is not masked
+        # by a pkill failure in cleanup.
+        kill_processes_by_name_linux(vm=vm, process_name=process, check_rc=False)
     assert pid_orig == pid_after, f"PID mismatch: {pid_orig} != {pid_after}"
 
 

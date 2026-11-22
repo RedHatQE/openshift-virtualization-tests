@@ -16,7 +16,6 @@ from typing import Any
 
 import pytest
 import shortuuid
-from _pytest.config import Config
 from _pytest.nodes import Collector, Node
 from _pytest.reports import CollectReport, TestReport
 from _pytest.runner import CallInfo
@@ -58,10 +57,13 @@ from utilities.pytest_utils import (
     config_default_storage_class,
     deploy_run_in_progress_config_map,
     deploy_run_in_progress_namespace,
+    filter_deprecated_api_tests,
     filter_hpp_tests,
     filter_multiarch_tests,
     filter_ocs_tests,
     filter_post_test_alerts_tests,
+    filter_sno_only_tests,
+    filter_upgrade_tests,
     get_artifactory_server_url,
     get_base_matrix_name,
     get_cnv_version_explorer_url,
@@ -69,7 +71,6 @@ from utilities.pytest_utils import (
     get_tests_cluster_markers,
     mark_nmstate_dependent_tests,
     patch_paramiko_for_fips,
-    remove_tests_from_list,
     reorder_early_fixtures,
     run_in_progress_config_map,
     separator,
@@ -105,6 +106,7 @@ pytest_plugins = [
     "tests.fixtures.network.mac_pool",
     "tests.fixtures.network.nmstate",
     "tests.fixtures.network.sriov",
+    "tests.fixtures.network.ovs_dpdk",
     "tests.fixtures.storage.storage_classes",
     "tests.fixtures.images.golden_images",
     "tests.fixtures.storage.data_volumes",
@@ -141,10 +143,11 @@ EXCLUDE_MARKER_FROM_TIER2_MARKER = [
     "mtv",
     "multiarch",
     "mixed_os_nodes",
+    "ovs_dpdk",
 ]
 
 TEAM_MARKERS = {
-    "chaos": ["chaos", "deprecated_api"],
+    "chaos": ["chaos"],
     "virt": ["virt", "deprecated_api", "post_test_alerts"],
     "network": ["network", "deprecated_api", "post_test_alerts"],
     "storage": ["storage", "deprecated_api", "post_test_alerts"],
@@ -511,24 +514,9 @@ def pytest_cmdline_main(config):
             LOGGER.warning(f"Using default storage class {conformance_storage_class}")
 
 
-def add_polarion_parameters_to_user_properties(item: Item, matrix_name: str) -> None:
-    if matrix_config := py_config.get(matrix_name):
-        values = re.findall("(#.*?#)", item.name)  # Extract all substrings enclosed in '#' from item.name
-        for value in values:
-            value = value.strip("#")
-            for param in matrix_config:
-                if isinstance(param, dict):
-                    param = [*param][0]
-
-                if value == param:
-                    item.user_properties.append((f"polarion-parameter-{matrix_name}", value))
-
-
 def add_test_id_markers(item: Item, marker_name: str) -> None:
     for marker in item.iter_markers(name=marker_name):
         test_id = marker.args[0]
-        if marker_name == "polarion":
-            marker_name = f"{marker_name}-testcase-id"
         item.user_properties.append((marker_name, test_id))
 
 
@@ -542,88 +530,6 @@ def mark_tests_by_team(item: Item) -> None:
     for team, vals in TEAM_MARKERS.items():
         if item.location[0].split("/")[1] in vals:
             item.add_marker(marker=team)
-
-
-def filter_upgrade_tests(
-    items: list[Item],
-    config: Config,
-) -> tuple[list[Item], list[Item]]:
-    upgrade_tests, non_upgrade_tests, always_keep = [], [], []
-    upgrade_markers = {"upgrade", "upgrade_custom"}
-    chosen_upgrade_markers = {marker for marker in upgrade_markers if config.getoption(f"--{marker}")}
-    upgrade_markers_to_collect = chosen_upgrade_markers or upgrade_markers
-
-    for item in items:
-        if "post_test_alerts" in item.keywords:
-            always_keep.append(item)
-        elif upgrade_markers_to_collect.intersection(set(item.keywords)):
-            upgrade_tests.append(item)
-        else:
-            non_upgrade_tests.append(item)
-
-    # If upgrade marker configured, select specific upgrade tests by marker, and discard the others.
-    if chosen_upgrade_markers:
-        upgrade_tests, discard = remove_upgrade_tests_based_on_config(
-            cnv_source=config.getoption("--cnv-source"),
-            upgrade_tests=upgrade_tests,
-        )
-        return [*upgrade_tests, *always_keep], [*non_upgrade_tests, *discard]
-
-    # If no upgrade marker in config, discard all upgrade tests.
-    return [*non_upgrade_tests, *always_keep], upgrade_tests
-
-
-def remove_upgrade_tests_based_on_config(
-    cnv_source: str,
-    upgrade_tests: list[Item],
-) -> tuple[list[Item], list[Item]]:
-    """
-    Filter the correct upgrade tests to execute based on config, since only one lane can be chosen.
-    If performing OCP upgrade, keep only the tests with pytest.mark.ocp_upgrade.
-    If performing EUS upgrade, keep only the tests with pytest.mark.eus_upgrade.
-    If performing CNV upgrade, keep only the tests with pytest.mark.cnv_upgrade.
-    In addition, determine if we are running the cnv upgrade test for production source or for stage/osbs.
-
-    Args:
-        cnv_source(str): cnv source option.
-        upgrade_tests(list): list of upgrade tests.
-    """
-    keep: list[Item] = []
-    marker_str = f"{py_config['upgraded_product']}_upgrade"
-
-    for test in upgrade_tests:
-        if marker_str == "cnv_upgrade" and "cnv_upgrade_process" in test.name:
-            # choose the right cnv_upgrade test according to cnv_source.
-            # production cnv_upgrade_test if prod source, otherwise the stage/osbs one
-            if (cnv_source == "production") == ("production_source" in test.name):
-                keep.append(test)
-        elif marker_str in test.keywords:
-            keep.append(test)
-
-    discard = [test for test in upgrade_tests if test not in keep]
-    return keep, discard
-
-
-def filter_deprecated_api_tests(items: list[Item], config: Config) -> list[Item]:
-    # filter out deprecated api tests, if explicitly asked or if running upgrade/install tests
-    if (
-        config.getoption("--skip-deprecated-api-test")
-        or config.getoption("--install")
-        or config.getoption("--upgrade")
-        or config.getoption("--upgrade_custom")
-    ):
-        discard_tests, items_to_return = remove_tests_from_list(items=items, filter_str="deprecated_api")
-        config.hook.pytest_deselected(items=discard_tests)
-        return items_to_return
-    return items
-
-
-def filter_sno_only_tests(items: list[Item], config: Config) -> list[Item]:
-    if config.getoption("-m") and "sno" not in config.getoption("-m"):
-        discard_tests, items_to_return = remove_tests_from_list(items=items, filter_str="single_node_tests")
-        config.hook.pytest_deselected(items=discard_tests)
-        return items_to_return
-    return items
 
 
 def pytest_configure(config):
@@ -662,13 +568,12 @@ def pytest_collection_modifyitems(session, config, items):
     Modify the test items during pytest collection to include necessary test metadata.
 
     This function performs the following actions:
-    1. Adds Polarion parameters to user properties.
-    2. Adds test ID markers for Polarion and Jira.
-    3. Marks tests by team.
-    4. Adds the tier2 marker for tests without an exclusion marker.
-    5. Filters upgrade tests based on the --upgrade option.
-    6. Dynamically mark NMState-dependent tests.
-    7. Auto-adds the quarantined marker for xfail-quarantined tests.
+    1. Adds test ID markers for Jira to user properties.
+    2. Marks tests by team.
+    3. Adds the tier2 marker for tests without an exclusion marker.
+    4. Filters upgrade tests based on the --upgrade option.
+    5. Dynamically mark NMState-dependent tests.
+    6. Auto-adds the quarantined marker for xfail-quarantined tests.
 
     Args:
         session (pytest.Session): The pytest session object.
@@ -688,9 +593,6 @@ def pytest_collection_modifyitems(session, config, items):
                     skip = pytest.mark.skip(reason=f"Dynamic matrix {_matrix_name} returned empty list")
                     item.add_marker(marker=skip)
 
-            add_polarion_parameters_to_user_properties(item=item, matrix_name=matrix_name)
-
-        add_test_id_markers(item=item, marker_name="polarion")
         add_test_id_markers(item=item, marker_name="jira")
 
         # Must be called before add_tier2_marker; make sure team markers are added before tier2 tests collection

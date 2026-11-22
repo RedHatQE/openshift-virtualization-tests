@@ -7,8 +7,6 @@ https://redhat.atlassian.net/browse/RFE-7066 # <skip-jira-utils-check>
 
 from typing import Final
 
-import pytest
-
 from libs.net.ip import filter_link_local_addresses
 from libs.net.vmspec import lookup_iface_status
 from tests.network.l2_bridge.bandwidth.lib_helpers import (
@@ -21,7 +19,6 @@ from tests.network.l2_bridge.bandwidth.lib_helpers import (
 _BANDWIDTH_TOLERANCE: Final[float] = 1.1
 
 
-@pytest.mark.polarion("CNV-15244")
 def test_bandwidth_limit_enforced_on_secondary_interface(
     subtests,
     server_vm,
@@ -29,6 +26,9 @@ def test_bandwidth_limit_enforced_on_secondary_interface(
     bandwidth_nad,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-1548 # <skip-jira-utils-check>
+    Polarion: CNV-15244
+
     Test that bandwidth throttling is enforced on a secondary network interface.
 
     Preconditions:

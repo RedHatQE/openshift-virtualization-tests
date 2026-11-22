@@ -2,13 +2,18 @@
 
 import secrets
 from contextlib import ExitStack
+from logging import getLogger
 
 import pytest
 from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.secret import Secret
 from pytest_testconfig import config as py_config
 
-from tests.storage.cbt.constants import CBT_ENABLED_LABEL
+from tests.storage.cbt.constants import (
+    CBT_BACKUP_TYPE_FULL,
+    CBT_CONCURRENT_VM_COUNT,
+    CBT_ENABLED_LABEL,
+)
 from tests.storage.cbt.utils import (
     cbt_backup_pvc,
     cbt_backup_tracker,
@@ -16,7 +21,9 @@ from tests.storage.cbt.utils import (
     cbt_enabled_vm,
     cbt_push_backup,
     cbt_source_ref,
+    concurrent_backup_type,
     delete_cbt_pull_backup_and_wait_for_export,
+    delete_cbt_pull_backups_and_wait_for_exports,
     deploy_cbt_pull_backup,
     incremental_test_data,
     incremental_test_data_file,
@@ -25,8 +32,11 @@ from tests.storage.cbt.utils import (
     wait_for_pull_backup_export_ready,
     wait_for_push_backup_complete,
     write_cbt_guest_file,
+    write_incremental_data_for_concurrent_vms,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile, hco_feature_gates_patch
+
+LOGGER = getLogger(name=__name__)
 
 
 @pytest.fixture(scope="module")
@@ -59,12 +69,6 @@ def cbt_hco_configured(
         hco_namespace=hco_namespace.name,
     ):
         yield
-
-
-@pytest.fixture(scope="module")
-def rwx_storage_class_name_scope_module(storage_class_matrix_rwx_matrix__module__):
-    """Storage class name from the RWX-only storage class matrix."""
-    return [*storage_class_matrix_rwx_matrix__module__][0]
 
 
 @pytest.fixture()
@@ -460,3 +464,265 @@ def ready_pull_backup_after_live_migration(
                 namespace=namespace.name,
                 client=unprivileged_client,
             )
+
+
+@pytest.fixture()
+def concurrent_cbt_vms(
+    unprivileged_client,
+    namespace,
+    cbt_hco_configured,
+    rhel9_data_source_scope_session,
+    unique_suffix,
+    storage_class_name_scope_module,
+):
+    """Running CBT-enabled VMs with test data written to each boot disk.
+
+    Returns:
+        list[VirtualMachineForTests]: Running VMs, in index order. The first
+            CBT_CONCURRENT_INCREMENTAL_COUNT VMs are the ones that take an incremental backup.
+    """
+    with ExitStack() as stack:
+        vms = []
+        for vm_index in range(1, CBT_CONCURRENT_VM_COUNT + 1):
+            LOGGER.info(f"Creating concurrent CBT VM {vm_index} of {CBT_CONCURRENT_VM_COUNT}")
+            vm = stack.enter_context(
+                cm=cbt_enabled_vm(
+                    name=f"cbt-conc-{vm_index}-{unique_suffix}",
+                    namespace=namespace.name,
+                    client=unprivileged_client,
+                    data_source=rhel9_data_source_scope_session,
+                    storage_class=storage_class_name_scope_module,
+                    unique_suffix=unique_suffix,
+                )
+            )
+            vms.append(vm)
+        yield vms
+
+
+@pytest.fixture()
+def concurrent_cbt_backup_trackers(
+    unprivileged_client,
+    namespace,
+    concurrent_cbt_vms,
+):
+    """Backup tracker for each concurrent CBT VM, in the same order as the VMs.
+
+    Returns:
+        list[VirtualMachineBackupTracker]: Tracker for each VM.
+    """
+    with ExitStack() as stack:
+        trackers = []
+        for vm in concurrent_cbt_vms:
+            trackers.append(
+                stack.enter_context(
+                    cm=cbt_backup_tracker(
+                        namespace=namespace.name,
+                        client=unprivileged_client,
+                        vm=vm,
+                    )
+                )
+            )
+        yield trackers
+
+
+@pytest.fixture()
+def concurrent_push_backup_pvcs(
+    unprivileged_client,
+    namespace,
+    concurrent_cbt_vms,
+    unique_suffix,
+):
+    """Push-mode backup PVC for each concurrent CBT VM, in the same order as the VMs.
+
+    Returns:
+        list[PersistentVolumeClaim]: Backup PVC for each VM.
+    """
+    with ExitStack() as stack:
+        pvcs = []
+        for vm_index, vm in enumerate(concurrent_cbt_vms, start=1):
+            pvcs.append(
+                stack.enter_context(
+                    cm=cbt_backup_pvc(
+                        name=f"cbt-backup-{vm_index}-{unique_suffix}",
+                        namespace=namespace.name,
+                        client=unprivileged_client,
+                        vm=vm,
+                        storage_class=py_config["default_storage_class"],
+                    )
+                )
+            )
+        yield pvcs
+
+
+@pytest.fixture()
+def concurrent_pull_staging_pvcs(
+    unprivileged_client,
+    namespace,
+    concurrent_cbt_vms,
+    unique_suffix,
+):
+    """Pull-mode staging PVC for each concurrent CBT VM, in the same order as the VMs.
+
+    Returns:
+        list[PersistentVolumeClaim]: Staging PVC for each VM.
+    """
+    with ExitStack() as stack:
+        pvcs = []
+        for vm_index, vm in enumerate(concurrent_cbt_vms, start=1):
+            pvcs.append(
+                stack.enter_context(
+                    cm=cbt_backup_pvc(
+                        name=f"cbt-staging-{vm_index}-{unique_suffix}",
+                        namespace=namespace.name,
+                        client=unprivileged_client,
+                        vm=vm,
+                        storage_class=py_config["default_storage_class"],
+                    )
+                )
+            )
+        yield pvcs
+
+
+@pytest.fixture()
+def completed_concurrent_push_backups(
+    unprivileged_client,
+    namespace,
+    concurrent_cbt_vms,
+    concurrent_cbt_backup_trackers,
+    concurrent_push_backup_pvcs,
+    unique_suffix,
+):
+    """Simultaneous push-mode backups across all concurrent VMs.
+
+    VMs whose concurrent backup is incremental first get a completed full backup and new
+    guest data. Every concurrent backup is created before any of them is waited on.
+
+    Returns:
+        list[VirtualMachineBackup]: Concurrent-wave backups, in the same order as the VMs.
+    """
+    with ExitStack() as stack:
+        preparatory_backups = []
+        for backup_index, vm in enumerate(concurrent_cbt_vms):
+            if concurrent_backup_type(backup_index=backup_index) == CBT_BACKUP_TYPE_FULL:
+                continue
+            LOGGER.info(f"Starting preparatory full push backup for VM {vm.name}")
+            preparatory_backups.append((
+                vm,
+                stack.enter_context(
+                    cm=cbt_push_backup(
+                        name=f"prep-full-push-{backup_index + 1}-{unique_suffix}",
+                        namespace=namespace.name,
+                        client=unprivileged_client,
+                        pvc_name=concurrent_push_backup_pvcs[backup_index].name,
+                        source=cbt_source_ref(resource=concurrent_cbt_backup_trackers[backup_index]),
+                        force_full_backup=True,
+                    )
+                ),
+            ))
+        for vm, preparatory_backup in preparatory_backups:
+            wait_for_push_backup_complete(
+                backup=preparatory_backup,
+                wait_timeout=cbt_backup_wait_timeout(vm=vm),
+            )
+        write_incremental_data_for_concurrent_vms(vms=concurrent_cbt_vms)
+        concurrent_backups = []
+        for backup_index, vm in enumerate(concurrent_cbt_vms):
+            force_full_backup = concurrent_backup_type(backup_index=backup_index) == CBT_BACKUP_TYPE_FULL
+            backup_name_prefix = "full" if force_full_backup else "incr"
+            LOGGER.info(f"Starting concurrent push backup {backup_name_prefix} for VM {vm.name}")
+            concurrent_backups.append((
+                vm,
+                stack.enter_context(
+                    cm=cbt_push_backup(
+                        name=f"{backup_name_prefix}-push-{backup_index + 1}-{unique_suffix}",
+                        namespace=namespace.name,
+                        client=unprivileged_client,
+                        pvc_name=concurrent_push_backup_pvcs[backup_index].name,
+                        source=cbt_source_ref(resource=concurrent_cbt_backup_trackers[backup_index]),
+                        force_full_backup=force_full_backup,
+                    )
+                ),
+            ))
+        LOGGER.info(f"Waiting for {len(concurrent_backups)} simultaneous push-mode backups")
+        for vm, concurrent_backup in concurrent_backups:
+            wait_for_push_backup_complete(
+                backup=concurrent_backup,
+                wait_timeout=cbt_backup_wait_timeout(vm=vm),
+            )
+        yield [concurrent_backup for _, concurrent_backup in concurrent_backups]
+
+
+@pytest.fixture()
+def ready_concurrent_pull_backups(
+    unprivileged_client,
+    namespace,
+    concurrent_cbt_vms,
+    concurrent_cbt_backup_trackers,
+    concurrent_pull_staging_pvcs,
+    pull_mode_token_secret,
+    unique_suffix,
+):
+    """Simultaneous pull-mode backups across all concurrent VMs.
+
+    VMs whose concurrent backup is incremental first get a completed full backup. That export
+    is deleted, then new guest data is written. Every concurrent backup is created before any
+    of them is waited on. Name and status stay on the backup objects until this fixture exits.
+
+    Returns:
+        list[VirtualMachineBackup]: Concurrent-wave backups, in the same order as the VMs.
+    """
+    deployed_backups = []
+    try:
+        preparatory_backups = []
+        for backup_index, vm in enumerate(concurrent_cbt_vms):
+            if concurrent_backup_type(backup_index=backup_index) == CBT_BACKUP_TYPE_FULL:
+                continue
+            LOGGER.info(f"Starting preparatory full pull backup for VM {vm.name}")
+            preparatory_backup = deploy_cbt_pull_backup(
+                name=f"prep-full-pull-{backup_index + 1}-{unique_suffix}",
+                namespace=namespace.name,
+                client=unprivileged_client,
+                token_secret_name=pull_mode_token_secret.name,
+                pvc_name=concurrent_pull_staging_pvcs[backup_index].name,
+                source=cbt_source_ref(resource=concurrent_cbt_backup_trackers[backup_index]),
+                force_full_backup=True,
+            )
+            preparatory_backups.append((vm, preparatory_backup))
+            deployed_backups.append(preparatory_backup)
+        for vm, preparatory_backup in preparatory_backups:
+            wait_for_pull_backup_export_ready(
+                backup=preparatory_backup,
+                wait_timeout=cbt_backup_wait_timeout(vm=vm),
+            )
+            delete_cbt_pull_backup_and_wait_for_export(backup=preparatory_backup)
+            deployed_backups.remove(preparatory_backup)
+        write_incremental_data_for_concurrent_vms(vms=concurrent_cbt_vms)
+        concurrent_backups = []
+        for backup_index, vm in enumerate(concurrent_cbt_vms):
+            force_full_backup = concurrent_backup_type(backup_index=backup_index) == CBT_BACKUP_TYPE_FULL
+            backup_name_prefix = "full" if force_full_backup else "incr"
+            LOGGER.info(f"Starting concurrent pull backup {backup_name_prefix} for VM {vm.name}")
+            concurrent_backup = deploy_cbt_pull_backup(
+                name=f"{backup_name_prefix}-pull-{backup_index + 1}-{unique_suffix}",
+                namespace=namespace.name,
+                client=unprivileged_client,
+                token_secret_name=pull_mode_token_secret.name,
+                pvc_name=concurrent_pull_staging_pvcs[backup_index].name,
+                source=cbt_source_ref(resource=concurrent_cbt_backup_trackers[backup_index]),
+                force_full_backup=force_full_backup,
+            )
+            concurrent_backups.append((vm, concurrent_backup))
+            deployed_backups.append(concurrent_backup)
+        LOGGER.info(f"Waiting for {len(concurrent_backups)} simultaneous pull-mode backups")
+        for vm, concurrent_backup in concurrent_backups:
+            wait_for_pull_backup_export_ready(
+                backup=concurrent_backup,
+                wait_timeout=cbt_backup_wait_timeout(vm=vm),
+            )
+        yield [concurrent_backup for _, concurrent_backup in concurrent_backups]
+    finally:
+        delete_cbt_pull_backups_and_wait_for_exports(
+            backups=deployed_backups,
+            namespace=namespace.name,
+            client=unprivileged_client,
+        )

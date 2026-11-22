@@ -27,10 +27,11 @@ def create_dry_run_vm(name, namespace, networks, unprivileged_client, macs=None)
         macs=macs,
         dry_run="All",
     )
-    yield vm
-
-    if vm.exists:
-        vm.clean_up()
+    try:
+        yield vm
+    finally:
+        if vm.exists:
+            vm.clean_up()
 
 
 @pytest.fixture()

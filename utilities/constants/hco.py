@@ -23,6 +23,10 @@ DEFAULT_HCO_CONDITIONS = {
     Resource.Condition.DEGRADED: Resource.Condition.Status.FALSE,
     Resource.Condition.UPGRADEABLE: Resource.Condition.Status.TRUE,
 }
+
+VIRT_NETWORK_RESOURCES_INJECTOR_READY = "VirtNetworkResourcesInjectorReady"
+
+
 DEFAULT_KUBEVIRT_CONDITIONS = {
     Resource.Condition.AVAILABLE: Resource.Condition.Status.TRUE,
     Resource.Condition.PROGRESSING: Resource.Condition.Status.FALSE,
