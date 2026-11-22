@@ -1839,8 +1839,8 @@ def _extract_imported_names(line: str) -> set[str] | None:
     return names
 
 
-def _top_level_symbol_at_line(symbol_map: SymbolMap | None, line_number: int) -> str | None:
-    """Return the top-level symbol enclosing a line of an old file.
+def _old_symbol_at_line(symbol_map: SymbolMap | None, line_number: int) -> tuple[str | None, str | None]:
+    """Return the symbols enclosing a line of an old file.
 
     Args:
         symbol_map: Line→symbol map of the old file, or ``None`` when it could
@@ -1848,20 +1848,27 @@ def _top_level_symbol_at_line(symbol_map: SymbolMap | None, line_number: int) ->
         line_number: 1-based line number in the old file.
 
     Returns:
-        The enclosing top-level symbol name, or ``None`` when the map is
-        unavailable or the line is module-level.
+        ``(top_level_name, member_name)``.  ``member_name`` is ``None`` for a
+        module-level or class-scope line, and both names are ``None`` when the
+        map is unavailable or the line belongs to no symbol.
     """
     if symbol_map is None:
-        return None
+        return None, None
     for start_line, end_line, symbol_name in symbol_map.top_level:
         if start_line <= line_number <= end_line:
-            return symbol_name
-    return None
+            class_info = symbol_map.class_members.get(symbol_name)
+            if class_info is not None:
+                for member_name, (member_start, member_end) in class_info.members.items():
+                    if member_start <= line_number <= member_end:
+                        return symbol_name, member_name
+            return symbol_name, None
+    return None, None
 
 
 def _collect_removal_symbols(
     diff_content: str,
     body_modified_symbols: set[str],
+    modified_members: dict[str, set[str]],
     get_old_symbol_map: Callable[[], SymbolMap | None],
 ) -> tuple[set[str], bool]:
     """Collect the symbols a diff removes and flag deletions it cannot attribute.
@@ -1869,19 +1876,27 @@ def _collect_removal_symbols(
     Deleted functions/classes and the names a deleted import bound are removal
     symbols.  A deleted import or a deleted definition is attributed through
     those removal symbols.  Any other deleted line is attributed only when the
-    top-level symbol that enclosed it in the old file is also in
-    ``body_modified_symbols`` — the same symbol has changed lines on the new
-    side, so this is a genuine in-place edit.  A deletion of a line that
-    belonged to another symbol, to module level, or to a symbol whose old
+    same code is known to have changed on the new side: the line's class member
+    must be in ``modified_members`` for a class-scope line, and its top-level
+    symbol must be in ``body_modified_symbols`` otherwise.  A deletion of a line
+    that belonged to another member, to module level, or to a symbol whose old
     enclosing range is unknown (the old file could not be fetched or parsed)
     maps to no changed new-file line and cannot be attributed, so it is reported
     as unattributed instead of looking like a clean change.  Deleted imports
     that cannot be parsed (star import, unbalanced parentheses) are unattributed
     for the same reason.
 
+    A removed blank line normally removes nothing, but inside a string literal
+    (a docstring, for example) it changes the value, so it follows the same
+    attribution rule.  A blank line between definitions belongs to no symbol and
+    is ignored.
+
     Args:
         diff_content: Unified diff text.
         body_modified_symbols: Symbols with changed lines on the new-file side.
+        modified_members: Class name to the members with changed new-file lines.
+            A class missing from this mapping has unknown member-level detail, so
+            its deletions fall back to the class-level check.
         get_old_symbol_map: Lazily returns the old-file line→symbol map, or
             ``None`` when the old source is unavailable.
 
@@ -1891,6 +1906,21 @@ def _collect_removal_symbols(
     removal_symbols: set[str] = _extract_deleted_symbols_from_diff(diff_content=diff_content)
     has_unattributed = False
     statements = list(_iter_diff_statements(diff_content=diff_content))
+
+    def deletion_is_attributed(old_line_number: int) -> bool:
+        """Whether the code that held this old line also changed on the new side."""
+        old_symbol, old_member = _old_symbol_at_line(symbol_map=get_old_symbol_map(), line_number=old_line_number)
+        if old_symbol is None:
+            return False
+        if old_symbol in removal_symbols or (old_member is not None and old_member in removal_symbols):
+            # The container itself is deleted or renamed, so its removal symbol
+            # already accounts for every line it held.
+            return True
+        if old_member is not None:
+            modified_in_class = modified_members.get(old_symbol)
+            if modified_in_class is not None:
+                return old_member in modified_in_class
+        return old_symbol in body_modified_symbols
 
     index = 0
     while index < len(statements):
@@ -1905,7 +1935,14 @@ def _collect_removal_symbols(
         deleted_definition_indent: int | None = None
         for statement, old_line in run:
             if not statement.strip():
-                # A removed blank line removes no statement.
+                # A removed blank line removes no statement, but it changes the
+                # value of a string literal it sits in.
+                if (
+                    sign == "-"
+                    and _old_symbol_at_line(symbol_map=get_old_symbol_map(), line_number=old_line)[0] is not None
+                    and not deletion_is_attributed(old_line_number=old_line)
+                ):
+                    has_unattributed = True
                 continue
             if statement.startswith(("import ", "from ")):
                 # Only a module-level import (column 0) binds an API name here;
@@ -1931,22 +1968,28 @@ def _collect_removal_symbols(
             # line is attributed on its own: a deleted def is recognised wherever
             # it starts, and its body is skipped by indentation.
             for offset, line in enumerate(statement.splitlines()):
-                if not line.strip():
-                    # A removed blank line removes no statement.
-                    continue
                 indentation = len(line) - len(line.lstrip())
-                if deleted_definition_indent is not None and indentation > deleted_definition_indent:
-                    # Line belongs to the body of the deleted definition above it.
+                if deleted_definition_indent is not None and (
+                    not line.strip() or indentation > deleted_definition_indent
+                ):
+                    # Blank line or body line of the deleted definition above it.
                     continue
                 deleted_definition_indent = None
+                if not line.strip():
+                    # A removed blank line changes nothing between definitions,
+                    # but it changes the value of a string literal it sits in.
+                    if _old_symbol_at_line(symbol_map=get_old_symbol_map(), line_number=old_line + offset)[0] is None:
+                        continue
+                    if not deletion_is_attributed(old_line_number=old_line + offset):
+                        has_unattributed = True
+                    continue
                 if _deleted_definition_name(statement=line.strip()) is not None:
                     deleted_definition_indent = indentation
                     continue
                 if has_unattributed or not body_modified_symbols:
                     has_unattributed = True
                     continue
-                old_symbol = _top_level_symbol_at_line(symbol_map=get_old_symbol_map(), line_number=old_line + offset)
-                if old_symbol is None or old_symbol not in body_modified_symbols:
+                if not deletion_is_attributed(old_line_number=old_line + offset):
                     has_unattributed = True
 
     return removal_symbols, has_unattributed
@@ -2116,6 +2159,63 @@ def _fetch_file_at_ref(
     return None
 
 
+def _classify_modified_members(
+    symbol_map: SymbolMap,
+    changed_lines: set[int],
+    class_symbols: set[str],
+) -> dict[str, set[str]]:
+    """Return the class members that changed on the new side of the diff.
+
+    A class only gets a member entry when every changed line inside it maps to
+    a specific member, so callers can treat a missing entry as "member-level
+    information unknown".
+
+    Args:
+        symbol_map: Line→symbol map of the new-file version.
+        changed_lines: Changed line numbers in the new file.
+        class_symbols: Names that may be classes.
+
+    Returns:
+        Class name to the set of modified member names, expanded transitively
+        through the class's internal call graph.
+    """
+    modified_members: dict[str, set[str]] = {}
+    for symbol_name in class_symbols:
+        class_info = symbol_map.class_members.get(symbol_name)
+        if class_info is None or not class_info.members:
+            continue
+
+        class_start, class_end = None, None
+        for start, end, name in symbol_map.top_level:
+            if name == symbol_name:
+                class_start, class_end = start, end
+                break
+        if class_start is None:
+            continue
+
+        member_modified: set[str] = set()
+        has_unmapped_line = False
+        for line_number in changed_lines:
+            if not (class_start <= line_number <= class_end):
+                continue
+            mapped = False
+            for member_name, (member_start, member_end) in class_info.members.items():
+                if member_start <= line_number <= member_end:
+                    member_modified.add(member_name)
+                    mapped = True
+                    break
+            if not mapped:
+                has_unmapped_line = True
+                break
+        if not has_unmapped_line and member_modified:
+            modified_members[symbol_name] = _expand_modified_members_transitively(
+                directly_modified=member_modified,
+                internal_calls=class_info.internal_calls,
+            )
+
+    return modified_members
+
+
 def _extract_modified_symbols(
     file_path: Path,
     base_branch: str,
@@ -2206,6 +2306,7 @@ def _extract_modified_symbols(
             removal_symbols, has_unattributed = _collect_removal_symbols(
                 diff_content=diff_content,
                 body_modified_symbols=set(),
+                modified_members={},
                 get_old_symbol_map=get_old_symbol_map,
             )
             return SymbolClassification(
@@ -2310,9 +2411,15 @@ def _extract_modified_symbols(
             else:
                 return None
 
+    modified_members = _classify_modified_members(
+        symbol_map=symbol_map,
+        changed_lines=changed_lines,
+        class_symbols=body_modified_symbols,
+    )
     removal_symbols, has_unattributed_deletions = _collect_removal_symbols(
         diff_content=diff_content,
         body_modified_symbols=body_modified_symbols,
+        modified_members=modified_members,
         get_old_symbol_map=get_old_symbol_map,
     )
     has_unattributed = has_unattributed or has_unattributed_deletions
@@ -2320,47 +2427,6 @@ def _extract_modified_symbols(
     # Removal-derived names always stay reported: a name removed here and
     # re-bound by an import from a different module can still change behaviour.
     modified_symbols = body_modified_symbols | removal_symbols
-
-    # --- Member-level analysis for modified classes ---
-    modified_members: dict[str, set[str]] = {}
-    for symbol_name in modified_symbols:
-        if symbol_name not in symbol_map.class_members:
-            continue
-        class_info = symbol_map.class_members[symbol_name]
-        if not class_info.members:
-            continue
-
-        # Find class boundaries once (not per changed line)
-        class_start, class_end = None, None
-        for start, end, name in symbol_map.top_level:
-            if name == symbol_name:
-                class_start, class_end = start, end
-                break
-        if class_start is None:
-            continue
-
-        member_modified: set[str] = set()
-        has_unmapped_line = False
-        for line_number in changed_lines:
-            if not (class_start <= line_number <= class_end):
-                continue
-            # Check if line maps to a specific member
-            mapped = False
-            for member_name, (member_start, member_end) in class_info.members.items():
-                if member_start <= line_number <= member_end:
-                    member_modified.add(member_name)
-                    mapped = True
-                    break
-            if not mapped:
-                has_unmapped_line = True
-                break
-        if not has_unmapped_line and member_modified:
-            # All changed lines mapped to specific members — apply member-level narrowing
-            expanded = _expand_modified_members_transitively(
-                directly_modified=member_modified,
-                internal_calls=class_info.internal_calls,
-            )
-            modified_members[symbol_name] = expanded
 
     # --- Additive-change classification ---
 

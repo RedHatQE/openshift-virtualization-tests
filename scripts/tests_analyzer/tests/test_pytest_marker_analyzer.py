@@ -2087,11 +2087,11 @@ class TestSymbolAttributionRemovals:
         mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
         with (
             patch(
-                "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+                target="scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
                 return_value=mock_result,
             ),
             patch(
-                "scripts.tests_analyzer.pytest_marker_analyzer._fetch_old_file_source",
+                target="scripts.tests_analyzer.pytest_marker_analyzer._fetch_old_file_source",
                 return_value="def helper():\n    setup()\n    return False\n",
             ),
         ):
@@ -2155,11 +2155,11 @@ class TestSymbolAttributionRemovals:
         mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
         with (
             patch(
-                "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+                target="scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
                 return_value=mock_result,
             ),
             patch(
-                "scripts.tests_analyzer.pytest_marker_analyzer._fetch_old_file_source",
+                target="scripts.tests_analyzer.pytest_marker_analyzer._fetch_old_file_source",
                 return_value="TIMEOUT = 30\ndef helper():\n    return True\n",
             ),
         ):
@@ -2193,11 +2193,11 @@ class TestSymbolAttributionRemovals:
         mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
         with (
             patch(
-                "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+                target="scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
                 return_value=mock_result,
             ),
             patch(
-                "scripts.tests_analyzer.pytest_marker_analyzer._fetch_old_file_source",
+                target="scripts.tests_analyzer.pytest_marker_analyzer._fetch_old_file_source",
                 return_value="def removed():\n    return False\ndef helper():\n    return True\n",
             ),
         ):
@@ -2231,11 +2231,11 @@ class TestSymbolAttributionRemovals:
         mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
         with (
             patch(
-                "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+                target="scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
                 return_value=mock_result,
             ),
             patch(
-                "scripts.tests_analyzer.pytest_marker_analyzer._fetch_old_file_source",
+                target="scripts.tests_analyzer.pytest_marker_analyzer._fetch_old_file_source",
                 return_value=None,
             ),
         ):
@@ -2249,6 +2249,243 @@ class TestSymbolAttributionRemovals:
         assert result is not None, "an unavailable old file must not make the diff unresolvable"
         assert result.has_unattributed_changes is True, (
             "an unattributable deletion must stay conservative instead of looking clean"
+        )
+
+
+class TestBlankLineAndMemberAttribution:
+    """Removed blank lines and class members are attributed to their own code."""
+
+    def test_removed_blank_line_inside_docstring_is_unattributed(self, tmp_path: Path) -> None:
+        """A blank line inside a docstring changes the string value."""
+        file_path = tmp_path / "module.py"
+        file_path.write_text(
+            'def helper():\n    """\n    Do the thing.\n\n    More detail.\n    """\n    return True\n'
+        )
+
+        diff_content = "--- a/module.py\n+++ b/module.py\n@@ -5,1 +4,0 @@\n-\n"
+        mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
+        with (
+            patch(
+                target="scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+                return_value=mock_result,
+            ),
+            patch(
+                target="scripts.tests_analyzer.pytest_marker_analyzer._fetch_old_file_source",
+                return_value='def helper():\n    """\n    Do the thing.\n\n    More detail.\n    """\n    return True\n',
+            ),
+        ):
+            result = _extract_modified_symbols(
+                file_path=file_path,
+                base_branch="main",
+                repo_root=tmp_path,
+                github_pr_info=None,
+            )
+
+        assert result is not None, "a resolvable diff must produce a classification, not None"
+        assert result.has_unattributed_changes is True, (
+            "removing a blank line from a docstring changes its value and must not look clean"
+        )
+
+    def test_removed_blank_line_between_definitions_is_ignored(self, tmp_path: Path) -> None:
+        """A blank separator between definitions carries no behaviour."""
+        source = "def first():\n    return 1\n\n\ndef second():\n    return 2\n"
+        file_path = tmp_path / "module.py"
+        file_path.write_text("def first():\n    return 1\n\ndef second():\n    return 2\n")
+
+        diff_content = "--- a/module.py\n+++ b/module.py\n@@ -4,1 +3,0 @@\n-\n"
+        mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
+        with (
+            patch(
+                target="scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+                return_value=mock_result,
+            ),
+            patch(
+                target="scripts.tests_analyzer.pytest_marker_analyzer._fetch_old_file_source",
+                return_value=source,
+            ),
+        ):
+            result = _extract_modified_symbols(
+                file_path=file_path,
+                base_branch="main",
+                repo_root=tmp_path,
+                github_pr_info=None,
+            )
+
+        assert result is not None, "a resolvable diff must produce a classification, not None"
+        assert result.has_unattributed_changes is False, (
+            "a blank line between definitions belongs to no symbol and changes nothing"
+        )
+
+    def test_removed_blank_line_in_modified_function_is_attributed(self, tmp_path: Path) -> None:
+        """A docstring blank line is attributed when the same function also changed."""
+        old_source = 'def helper():\n    """\n    Do the thing.\n\n    More detail.\n    """\n    return True\n'
+        file_path = tmp_path / "module.py"
+        file_path.write_text('def helper():\n    """\n    Do the thing.\n    More detail.\n    """\n    return False\n')
+
+        diff_content = "--- a/module.py\n+++ b/module.py\n@@ -5,1 +4,0 @@\n-\n@@ -7,1 +6,1 @@\n-    return True\n+    return False\n"
+        mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
+        with (
+            patch(
+                target="scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+                return_value=mock_result,
+            ),
+            patch(
+                target="scripts.tests_analyzer.pytest_marker_analyzer._fetch_old_file_source",
+                return_value=old_source,
+            ),
+        ):
+            result = _extract_modified_symbols(
+                file_path=file_path,
+                base_branch="main",
+                repo_root=tmp_path,
+                github_pr_info=None,
+            )
+
+        assert result is not None, "a resolvable diff must produce a classification, not None"
+        assert result.modified_symbols == {"helper"}, "the changed function stays reported"
+        assert result.has_unattributed_changes is False, (
+            "the blank line belongs to helper, which is modified on the new side"
+        )
+
+    def test_deletion_in_unmodified_method_of_modified_class_is_unattributed(self, tmp_path: Path) -> None:
+        """A class-level match is not enough: the deleted line's method must have changed."""
+        old_source = (
+            "class Service:\n"
+            "    def first(self):\n"
+            "        setup()\n"
+            "        return 1\n"
+            "\n"
+            "    def second(self):\n"
+            "        return 2\n"
+        )
+        file_path = tmp_path / "module.py"
+        file_path.write_text(
+            "class Service:\n    def first(self):\n        setup()\n\n    def second(self):\n        return 3\n"
+        )
+
+        diff_content = (
+            "--- a/module.py\n"
+            "+++ b/module.py\n"
+            "@@ -4,1 +4,0 @@\n"
+            "-        return 1\n"
+            "@@ -7,1 +6,1 @@\n"
+            "-        return 2\n"
+            "+        return 3\n"
+        )
+        mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
+        with (
+            patch(
+                target="scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+                return_value=mock_result,
+            ),
+            patch(
+                target="scripts.tests_analyzer.pytest_marker_analyzer._fetch_old_file_source",
+                return_value=old_source,
+            ),
+        ):
+            result = _extract_modified_symbols(
+                file_path=file_path,
+                base_branch="main",
+                repo_root=tmp_path,
+                github_pr_info=None,
+            )
+
+        assert result is not None, "a resolvable diff must produce a classification, not None"
+        assert result.modified_symbols == {"Service"}, "the class is reported as modified"
+        assert result.modified_members == {"Service": {"second"}}, "only the second method changed"
+        assert result.has_unattributed_changes is True, (
+            "the deleted line belongs to first(), which has no changed line on the new side"
+        )
+
+    def test_deletion_in_modified_method_is_attributed(self, tmp_path: Path) -> None:
+        """An in-place edit of one method stays attributed at member level."""
+        old_source = (
+            "class Service:\n    def first(self):\n        return 1\n\n    def second(self):\n        return 2\n"
+        )
+        file_path = tmp_path / "module.py"
+        file_path.write_text(
+            "class Service:\n    def first(self):\n        return 3\n\n    def second(self):\n        return 2\n"
+        )
+
+        diff_content = "--- a/module.py\n+++ b/module.py\n@@ -3,1 +3,1 @@\n-        return 1\n+        return 3\n"
+        mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
+        with (
+            patch(
+                target="scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+                return_value=mock_result,
+            ),
+            patch(
+                target="scripts.tests_analyzer.pytest_marker_analyzer._fetch_old_file_source",
+                return_value=old_source,
+            ),
+        ):
+            result = _extract_modified_symbols(
+                file_path=file_path,
+                base_branch="main",
+                repo_root=tmp_path,
+                github_pr_info=None,
+            )
+
+        assert result is not None, "a resolvable diff must produce a classification, not None"
+        assert result.modified_members == {"Service": {"first"}}, "the edited method is tracked"
+        assert result.has_unattributed_changes is False, (
+            "the deleted line belongs to the same method that changed on the new side"
+        )
+
+    def test_deletion_falls_back_to_class_when_members_are_unmapped(self, tmp_path: Path) -> None:
+        """A class-level change without member mapping keeps class-level attribution."""
+        old_source = (
+            "class Service:\n"
+            "    def first(self):\n"
+            "        setup()\n"
+            "        return 1\n"
+            "\n"
+            "    def second(self):\n"
+            "        return 2\n"
+        )
+        file_path = tmp_path / "module.py"
+        file_path.write_text(
+            "class Service:\n"
+            "    timeout = 5\n"
+            "\n"
+            "    def first(self):\n"
+            "        setup()\n"
+            "\n"
+            "    def second(self):\n"
+            "        return 2\n"
+        )
+
+        diff_content = (
+            "--- a/module.py\n"
+            "+++ b/module.py\n"
+            "@@ -1,1 +1,2 @@\n"
+            " class Service:\n"
+            "+    timeout = 5\n"
+            "@@ -4,1 +5,0 @@\n"
+            "-        return 1\n"
+        )
+        mock_result = type("Result", (), {"returncode": 0, "stdout": diff_content, "stderr": ""})()
+        with (
+            patch(
+                target="scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+                return_value=mock_result,
+            ),
+            patch(
+                target="scripts.tests_analyzer.pytest_marker_analyzer._fetch_old_file_source",
+                return_value=old_source,
+            ),
+        ):
+            result = _extract_modified_symbols(
+                file_path=file_path,
+                base_branch="main",
+                repo_root=tmp_path,
+                github_pr_info=None,
+            )
+
+        assert result is not None, "a resolvable diff must produce a classification, not None"
+        assert result.modified_members == {}, "an unmapped class line leaves member detail unknown"
+        assert result.has_unattributed_changes is False, (
+            "without member detail the deletion is attributed at class level"
         )
 
 
@@ -2277,7 +2514,7 @@ class TestFetchOldFileSourceRevision:
         show_result = MagicMock(returncode=0, stdout="def helper():\n    return False\n", stderr="")
 
         with patch(
-            "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+            target="scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
             side_effect=[merge_base_result, show_result],
         ) as run_mock:
             content = _fetch_old_file_source(
@@ -2301,7 +2538,7 @@ class TestFetchOldFileSourceRevision:
         merge_base_result = MagicMock(returncode=1, stdout="", stderr="fatal: no merge base")
 
         with patch(
-            "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+            target="scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
             side_effect=[merge_base_result],
         ) as run_mock:
             content = _fetch_old_file_source(
@@ -2326,11 +2563,11 @@ class TestFetchOldFileSourceRevision:
 
         with (
             patch(
-                "scripts.tests_analyzer.pytest_marker_analyzer._fetch_pr_head_sha",
+                target="scripts.tests_analyzer.pytest_marker_analyzer._fetch_pr_head_sha",
                 return_value="headsha",
             ),
             patch(
-                "scripts.tests_analyzer.pytest_marker_analyzer.urllib.request.urlopen",
+                target="scripts.tests_analyzer.pytest_marker_analyzer.urllib.request.urlopen",
                 side_effect=[compare_response, contents_response],
             ) as urlopen_mock,
         ):
@@ -2354,7 +2591,7 @@ class TestFetchOldFileSourceRevision:
         show_result = MagicMock(returncode=0, stdout="def helper():\n    return False\n", stderr="")
 
         with patch(
-            "scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
+            target="scripts.tests_analyzer.pytest_marker_analyzer.subprocess.run",
             side_effect=[merge_base_result, show_result, show_result],
         ) as run_mock:
             for _ in range(2):
