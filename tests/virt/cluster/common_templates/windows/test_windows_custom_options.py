@@ -193,7 +193,6 @@ def custom_windows_vm(
                 }
             },
             id=WINDOWS_2019_OS,
-            marks=pytest.mark.polarion("CNV-7496"),
         ),
     ],
     indirect=True,
