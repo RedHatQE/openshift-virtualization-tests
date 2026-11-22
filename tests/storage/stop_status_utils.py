@@ -11,6 +11,8 @@ from utilities.constants.timeouts import TIMEOUT_10MIN, TIMEOUT_30MIN
 if TYPE_CHECKING:
     from typing import Any
 
+    from utilities.virt import VirtualMachineForTests
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -52,7 +54,7 @@ def dv_stop_status_no_progress(
             writes ``last_seen`` and ``updated_at`` into it. An absent or deleted
             DataVolume keeps waiting; if the timer was already armed it is still
             enforced. Timer arms only after a real progress percentage is seen
-            (not ``None`` / ``""`` / ``N/A``).
+            (not ``None`` / ``""`` / ``N/A``); unavailable progress clears the tracker.
         no_progress_timeout: Seconds with no phase/progress change before stopping.
 
     Returns:
@@ -65,13 +67,14 @@ def dv_stop_status_no_progress(
             dv_instance.get("status", {}).get("progress"),
         )
         if phase_and_progress[1] in (None, "", "N/A"):
+            progress_state.clear()
             return False
         if phase_and_progress != progress_state.get("last_seen"):
             LOGGER.info(f"DV {dv.name} phase/progress={phase_and_progress}")
             progress_state.update(last_seen=phase_and_progress, updated_at=monotonic())
             return False
 
-    # Missing DV (dshchedr) or unchanged phase/progress: same no_progress check.
+    # Missing DV or unchanged phase/progress: same no_progress check.
     updated_at = progress_state.get("updated_at")
     if updated_at is None:
         return False
@@ -86,7 +89,7 @@ def dv_stop_status_no_progress(
     return True
 
 
-def wait_for_vm_data_volumes_no_progress(vm, timeout: int = TIMEOUT_30MIN) -> None:
+def wait_for_vm_data_volumes_no_progress(vm: VirtualMachineForTests, timeout: int = TIMEOUT_30MIN) -> None:
     """Wait for every DataVolume of vm to succeed, failing fast when import stops progressing."""
     for volume in vm.instance.spec.template.spec.volumes:
         if "dataVolume" not in volume.keys():
