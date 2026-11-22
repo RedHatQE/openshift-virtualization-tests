@@ -50,11 +50,7 @@ def dv_stop_status_no_progress(
 
     Args:
         dv: DataVolume to check.
-        progress_state: Per-DataVolume tracker. Must start as ``{}``; the function
-            writes ``last_seen`` and ``updated_at`` into it. An absent or deleted
-            DataVolume keeps waiting; if the timer was already armed it is still
-            enforced. Timer arms only after a real progress percentage is seen
-            (not ``None`` / ``""`` / ``N/A``); unavailable progress clears the tracker.
+        progress_state: Must start as ``{}``. Writes ``last_seen`` and ``updated_at``.
         no_progress_timeout: Seconds with no phase/progress change before stopping.
 
     Returns:
