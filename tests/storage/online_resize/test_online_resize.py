@@ -154,6 +154,7 @@ def test_disk_expand_then_clone_success(
         source_pvc_name=rhel_dv_for_online_resize.name,
         source_pvc_namespace=rhel_dv_for_online_resize.namespace,
     ) as cdv:
+        cdv.wait_for_dv_success(timeout=TIMEOUT_4MIN)
         cdv.wait_for_condition(
             condition=DataVolume.Condition.Type.READY,
             status=DataVolume.Condition.Status.TRUE,

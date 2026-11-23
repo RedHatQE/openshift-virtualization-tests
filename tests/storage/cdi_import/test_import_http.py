@@ -25,7 +25,6 @@ from tests.storage.utils import (
     wait_for_dv_condition_message,
 )
 from utilities.constants import Images
-from utilities.constants.pytest import QUARANTINED
 from utilities.constants.timeouts import TIMEOUT_1MIN, TIMEOUT_2MIN, TIMEOUT_5MIN
 from utilities.ssp import validate_os_info_vmi_vs_windows_os
 from utilities.storage import (
@@ -47,10 +46,6 @@ SMALL_DV_SIZE = "200Mi"
 LATEST_WINDOWS_OS_DICT = py_config.get("latest_windows_os_dict", {})
 
 
-@pytest.mark.xfail(
-    reason=f"{QUARANTINED}: Automation bug after wait_for_condition change; tracked in CNV-73197",
-    run=False,
-)
 @pytest.mark.sno
 @pytest.mark.polarion("CNV-876")
 @pytest.mark.s390x
