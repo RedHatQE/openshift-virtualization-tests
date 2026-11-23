@@ -51,16 +51,10 @@ RHEL_OS_MAPPING: dict[str, dict[str, Any]] = {
         OS_STR: "rhel8.10",
         DATA_SOURCE_STR: "rhel8",
     },
-    "rhel-9-5": {
-        IMAGE_NAME_STR: "RHEL9_5_IMG",
-        OS_VERSION_STR: "9.5",
-        OS_STR: "rhel9.5",
-        DATA_SOURCE_STR: "rhel9",
-    },
-    "rhel-9-6": {
-        IMAGE_NAME_STR: "RHEL9_6_IMG",
-        OS_VERSION_STR: "9.6",
-        OS_STR: "rhel9.6",
+    "rhel-9-8": {
+        IMAGE_NAME_STR: "RHEL9_8_IMG",
+        OS_VERSION_STR: "9.8",
+        OS_STR: "rhel9.8",
         DATA_SOURCE_STR: "rhel9",
     },
 }
