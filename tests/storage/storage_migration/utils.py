@@ -7,6 +7,7 @@ from ocp_resources.multi_namespace_virtual_machine_storage_migration import Mult
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
+from pyhelper_utils.exceptions import CommandExecFailed
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
@@ -17,14 +18,15 @@ from tests.storage.storage_migration.constants import (
     MOUNT_HOTPLUGGED_DEVICE_PATHS,
     STORAGE_MIGRATION_IN_PROGRESS_PHASE,
 )
-from tests.storage.utils import check_file_in_vm
 from utilities.constants.images import OS_FLAVOR_FEDORA
 from utilities.constants.instance_types import U1_SMALL
 from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5SEC, TIMEOUT_10MIN, TIMEOUT_10SEC
 from utilities.exceptions import StorageMigrationError
 from utilities.storage import (
     data_volume_template_with_source_ref_dict,
+    run_command_on_vm_and_check_output,
     wait_for_vm_volume_ready,
+    write_file_via_ssh,
 )
 from utilities.virt import VirtualMachineForTests, get_vm_boot_time, running_vm
 
@@ -103,6 +105,66 @@ def verify_vm_storage_class_updated(vm: VirtualMachineForTests, target_storage_c
     )
 
 
+def verify_file_exists_in_vm(vm: VirtualMachineForTests, file_name: str) -> None:
+    """Verify that a file exists in the VM's guest filesystem, checked over SSH.
+
+    Uses the ``test -f`` exit status rather than command output, so the check only asserts
+    that the file is present on the source disk.
+
+    Args:
+        vm: VM to check the file in.
+        file_name: Name or path of the file, relative to the SSH user's home directory.
+
+    Raises:
+        AssertionError: If the file does not exist in the VM.
+    """
+    try:
+        run_ssh_commands(
+            host=vm.ssh_exec,
+            commands=shlex.split(f"test -f {shlex.quote(file_name)}"),
+            wait_timeout=TIMEOUT_2MIN,
+            sleep=TIMEOUT_5SEC,
+        )
+    except CommandExecFailed as error:
+        raise AssertionError(f"File '{file_name}' does not exist in VM {vm.name} after writing it") from error
+
+
+def verify_file_content_in_vm(vm: VirtualMachineForTests, file_name: str, file_content: str) -> None:
+    """Verify that a file in the VM has the expected content, read over SSH.
+
+    Reads the file through the VM's SSH connection instead of the serial console, so the check
+    is deterministic and independent of console prompt timing.
+
+    Args:
+        vm: VM to read the file from.
+        file_name: Name or path of the file, relative to the SSH user's home directory.
+        file_content: Expected file content.
+
+    Raises:
+        AssertionError: If the file content does not match ``file_content``.
+    """
+    run_command_on_vm_and_check_output(vm=vm, command=f"cat {shlex.quote(file_name)}", expected_result=file_content)
+
+
+def write_file_to_vm_via_ssh(vm: VirtualMachineForTests, file_name: str, file_content: str) -> None:
+    """Write content to a file in the VM over SSH, then verify the file exists on disk.
+
+    Writing over SSH (instead of the serial console) avoids console prompt timing issues, and
+    checking existence confirms the data actually reached the source disk before the VM is stopped
+    for migration.
+
+    Args:
+        vm: Running VM to write the file to.
+        file_name: Name or path of the file, relative to the SSH user's home directory.
+        file_content: Content to write to the file.
+
+    Raises:
+        AssertionError: If the file does not exist in the VM after writing.
+    """
+    write_file_via_ssh(vm=vm, filename=file_name, content=file_content)
+    verify_file_exists_in_vm(vm=vm, file_name=file_name)
+
+
 def verify_storage_migration_succeeded(
     vms_boot_time_before_storage_migration: dict[str, str],
     online_vms_for_storage_class_migration: list[VirtualMachineForTests],
@@ -113,7 +175,7 @@ def verify_storage_migration_succeeded(
         vm_list=online_vms_for_storage_class_migration, initial_boot_time=vms_boot_time_before_storage_migration
     )
     for vm in vms_with_written_file_before_migration:
-        check_file_in_vm(
+        verify_file_content_in_vm(
             vm=vm,
             file_name=FILE_BEFORE_STORAGE_MIGRATION,
             file_content=CONTENT,

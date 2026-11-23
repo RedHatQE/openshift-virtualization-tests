@@ -35,6 +35,7 @@ from tests.storage.storage_migration.utils import (
     get_vm_volume_node,
     wait_for_storage_migration_in_progress,
     wait_for_storage_migration_phase,
+    write_file_to_vm_via_ssh,
 )
 from tests.storage.utils import create_windows_directory, get_storage_class_for_storage_migration
 from tests.utils import create_windows2022_vm
@@ -50,7 +51,6 @@ from utilities.storage import (
     data_volume_template_with_source_ref_dict,
     virtctl_volume,
     wait_for_vm_volume_ready,
-    write_file,
     write_file_windows_vm,
 )
 from utilities.virt import (
@@ -250,11 +250,10 @@ def booted_vms_for_storage_class_migration(vms_for_storage_class_migration, dv_w
 @pytest.fixture(scope="class")
 def written_file_to_vms_before_migration(booted_vms_for_storage_class_migration):
     for vm in booted_vms_for_storage_class_migration:
-        write_file(
+        write_file_to_vm_via_ssh(
             vm=vm,
-            filename=FILE_BEFORE_STORAGE_MIGRATION,
-            content=CONTENT,
-            stop_vm=False,
+            file_name=FILE_BEFORE_STORAGE_MIGRATION,
+            file_content=CONTENT,
         )
     yield booted_vms_for_storage_class_migration
 
@@ -742,16 +741,15 @@ def vm_with_written_file_for_scmig(
 
     Yields:
         VirtualMachineForTests: The VM, still running, with ``FILE_BEFORE_STORAGE_MIGRATION``
-            written so post-migration content can be verified.
+            written and verified to exist so post-migration content can be checked.
 
     Side effects:
-        Starts the VM if it is not running and writes the marker file; the VM is left running.
+        Writes the marker file over SSH and verifies it exists; the VM is left running.
     """
-    write_file(
+    write_file_to_vm_via_ssh(
         vm=running_vm_for_offline_scmig,
-        filename=FILE_BEFORE_STORAGE_MIGRATION,
-        content=CONTENT,
-        stop_vm=False,
+        file_name=FILE_BEFORE_STORAGE_MIGRATION,
+        file_content=CONTENT,
     )
     yield running_vm_for_offline_scmig
 
@@ -838,16 +836,15 @@ def vm_with_volume_mode_and_written_file_for_scmig(
 
     Yields:
         VirtualMachineForTests: The VM, still running, with ``FILE_BEFORE_STORAGE_MIGRATION``
-            written so post-migration content can be verified.
+            written and verified to exist so post-migration content can be checked.
 
     Side effects:
-        Writes the marker file; the VM is left running.
+        Writes the marker file over SSH and verifies it exists; the VM is left running.
     """
-    write_file(
+    write_file_to_vm_via_ssh(
         vm=running_vm_with_volume_mode_for_scmig,
-        filename=FILE_BEFORE_STORAGE_MIGRATION,
-        content=CONTENT,
-        stop_vm=False,
+        file_name=FILE_BEFORE_STORAGE_MIGRATION,
+        file_content=CONTENT,
     )
     yield running_vm_with_volume_mode_for_scmig
 
@@ -1081,16 +1078,15 @@ def vm_with_written_file_on_hotplugged_disks(
     """Write the pre-migration marker file into the guest filesystem of the hotplugged-disks VM.
 
     Yields:
-        VirtualMachineForTests: The VM, still running, with the marker file written.
+        VirtualMachineForTests: The VM, still running, with the marker file written and verified to exist.
 
     Side effects:
-        Writes the marker file to the VM's guest filesystem; the VM is left running.
+        Writes the marker file over SSH and verifies it exists; the VM is left running.
     """
-    write_file(
+    write_file_to_vm_via_ssh(
         vm=written_files_to_mounted_hotplugged_disks,
-        filename=FILE_BEFORE_STORAGE_MIGRATION,
-        content=CONTENT,
-        stop_vm=False,
+        file_name=FILE_BEFORE_STORAGE_MIGRATION,
+        file_content=CONTENT,
     )
     yield written_files_to_mounted_hotplugged_disks
 

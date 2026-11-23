@@ -19,6 +19,7 @@ from tests.storage.storage_migration.constants import (
 from tests.storage.storage_migration.utils import (
     get_vm_volume_node,
     mount_hotplugged_disks,
+    verify_file_content_in_vm,
     verify_files_in_hotplugged_disks,
     verify_source_dvs_deleted,
     verify_source_dvs_exist,
@@ -30,7 +31,6 @@ from tests.storage.storage_migration.utils import (
     verify_vms_boot_time_after_storage_migration,
     wait_for_storage_migration_phase,
 )
-from tests.storage.utils import check_file_in_vm
 from utilities.constants.pytest import QUARANTINED
 from utilities.constants.storage import VOLUME_MODE
 from utilities.virt import running_vm
@@ -100,7 +100,11 @@ BLOCK_TO_BLOCK_PARAMS = (
             {"target_storage_class": py_config[STORAGE_CLASS_A]},
             FILESYSTEM,
             FILESYSTEM,
-            marks=pytest.mark.jira("CNV-101491", run=False),
+            marks=pytest.mark.xfail(
+                reason=f"{QUARANTINED}: Offline migration to a WaitForFirstConsumer storage class never completes "
+                "while the VM stays stopped; the target DataVolume remains PendingPopulation. CNV-101491",
+                run=False,
+            ),
             id="source_b_target_a_filesystem_to_filesystem",
         ),
         pytest.param(
@@ -108,7 +112,11 @@ BLOCK_TO_BLOCK_PARAMS = (
             {"target_storage_class": py_config[STORAGE_CLASS_A]},
             BLOCK,
             FILESYSTEM,
-            marks=pytest.mark.jira("CNV-101491", run=False),
+            marks=pytest.mark.xfail(
+                reason=f"{QUARANTINED}: Offline migration to a WaitForFirstConsumer storage class never completes "
+                "while the VM stays stopped; the target DataVolume remains PendingPopulation. CNV-101491",
+                run=False,
+            ),
             id="source_b_target_a_block_to_filesystem",
         ),
     ],
@@ -170,7 +178,7 @@ class TestOfflineVMStorageMigrationVolumeModes:
         verify_vm_pvcs_volume_mode(vm=stopped_vm_with_volume_mode_for_scmig, volume_mode=target_volume_mode)
         stopped_vm_with_volume_mode_for_scmig.start(wait=True)
         running_vm(vm=stopped_vm_with_volume_mode_for_scmig)
-        check_file_in_vm(
+        verify_file_content_in_vm(
             vm=stopped_vm_with_volume_mode_for_scmig,
             file_name=FILE_BEFORE_STORAGE_MIGRATION,
             file_content=CONTENT,
@@ -317,7 +325,7 @@ class TestOfflineStorageMigrationCleanupPolicy:
         )
         stopped_vm_with_written_file_for_scmig.start(wait=True)
         running_vm(vm=stopped_vm_with_written_file_for_scmig)
-        check_file_in_vm(
+        verify_file_content_in_vm(
             vm=stopped_vm_with_written_file_for_scmig,
             file_name=FILE_BEFORE_STORAGE_MIGRATION,
             file_content=CONTENT,
@@ -362,7 +370,7 @@ class TestOfflineStorageMigrationCleanupPolicy:
         )
         stopped_vm_with_written_file_for_scmig.start(wait=True)
         running_vm(vm=stopped_vm_with_written_file_for_scmig)
-        check_file_in_vm(
+        verify_file_content_in_vm(
             vm=stopped_vm_with_written_file_for_scmig,
             file_name=FILE_BEFORE_STORAGE_MIGRATION,
             file_content=CONTENT,
@@ -423,7 +431,7 @@ class TestOfflineVMStorageMigrationWithHotplugDisks:
         )
         stopped_vm_with_written_files_on_hotplugged_disks.start(wait=True)
         running_vm(vm=stopped_vm_with_written_files_on_hotplugged_disks)
-        check_file_in_vm(
+        verify_file_content_in_vm(
             vm=stopped_vm_with_written_files_on_hotplugged_disks,
             file_name=FILE_BEFORE_STORAGE_MIGRATION,
             file_content=CONTENT,
@@ -509,7 +517,7 @@ class TestOfflineVMSameClassMigrationAcrossNodes:
         )
         stopped_vm_with_written_file_for_scmig.start(wait=True)
         running_vm(vm=stopped_vm_with_written_file_for_scmig)
-        check_file_in_vm(
+        verify_file_content_in_vm(
             vm=stopped_vm_with_written_file_for_scmig,
             file_name=FILE_BEFORE_STORAGE_MIGRATION,
             file_content=CONTENT,
@@ -638,7 +646,7 @@ class TestVMStartDuringStorageMigration:
         )
         running_vm(vm=started_vm_during_offline_scmig)
         verify_vm_storage_class_updated(vm=started_vm_during_offline_scmig, target_storage_class=target_storage_class)
-        check_file_in_vm(
+        verify_file_content_in_vm(
             vm=started_vm_during_offline_scmig,
             file_name=FILE_BEFORE_STORAGE_MIGRATION,
             file_content=CONTENT,
