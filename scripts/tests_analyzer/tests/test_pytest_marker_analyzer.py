@@ -2842,9 +2842,13 @@ class TestRunGithubModeCheckoutGithubPrInfo:
         assert actual_github_pr_info is not None, (
             "github_pr_info must not be None in checkout mode; it is needed as fallback when local git diff fails"
         )
-        assert actual_github_pr_info["repo"] == "org/repo"
-        assert actual_github_pr_info["pr_number"] == 42
-        assert actual_github_pr_info["token"] == "fake-token"
+        assert actual_github_pr_info["repo"] == "org/repo", (
+            f"checkout mode must pass the repository through, got {actual_github_pr_info['repo']}"
+        )
+        assert actual_github_pr_info["pr_number"] == 42, (
+            f"checkout mode must pass the PR number through, got {actual_github_pr_info['pr_number']}"
+        )
+        assert actual_github_pr_info["token"] == "fake-token", "checkout mode must pass the token through"
 
 
 class TestCheckConftestPathwayNoFixtureMatch:
