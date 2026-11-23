@@ -1870,7 +1870,7 @@ def _collect_removal_symbols(
     body_modified_symbols: set[str],
     modified_members: dict[str, set[str]],
     get_old_symbol_map: Callable[[], SymbolMap | None],
-) -> tuple[set[str], bool]:
+) -> tuple[set[str], bool, set[str]]:
     """Collect the symbols a diff removes and flag deletions it cannot attribute.
 
     Deleted functions/classes and the names a deleted import bound are removal
