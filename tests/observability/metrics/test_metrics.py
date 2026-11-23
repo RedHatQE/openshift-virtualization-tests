@@ -11,9 +11,10 @@ from tests.observability.metrics.utils import (
 from utilities.constants.monitoring import KUBEVIRT_HCO_HYPERCONVERGED_CR_EXISTS
 from utilities.monitoring import validate_metrics_value
 
-pytestmark = [pytest.mark.post_upgrade, pytest.mark.sno]
+pytestmark = [pytest.mark.post_upgrade]
 
 
+@pytest.mark.sno
 class TestMetricsLinux:
     @pytest.mark.polarion("CNV-11906")
     @pytest.mark.s390x
@@ -34,6 +35,7 @@ class TestMetricsLinux:
 
 @pytest.mark.tier3
 @pytest.mark.windows
+@pytest.mark.sno
 class TestMetricsWindows:
     @pytest.mark.polarion("CNV-11880")
     def test_cnv_vmi_monitoring_metrics_windows_vm(
@@ -54,6 +56,7 @@ class TestMetricsWindows:
 @pytest.mark.polarion("CNV-10438")
 @pytest.mark.s390x
 @pytest.mark.conformance
+@pytest.mark.sno
 def test_cnv_installation_with_hco_cr_metrics(
     prometheus,
 ):
@@ -64,6 +67,7 @@ def test_cnv_installation_with_hco_cr_metrics(
     )
 
 
+@pytest.mark.sno
 class TestVMIMetricsLinuxVms:
     @pytest.mark.polarion("CNV-11862")
     @pytest.mark.s390x
@@ -128,6 +132,7 @@ class TestVMIMetricsLinuxVms:
 
 @pytest.mark.tier3
 @pytest.mark.windows
+@pytest.mark.sno
 class TestVMIMetricsWindowsVms:
     @pytest.mark.polarion("CNV-11861")
     def test_kubevirt_vmi_info_windows(self, prometheus, windows_vm_for_test, vmi_guest_os_kernel_release_info_windows):
@@ -200,8 +205,8 @@ class TestVMIMetricsWindowsVms:
 
 class TestLinuxVMAndVMIInfoUidLifecycle:
     """
-    kubevirt_vm_info / kubevirt_vmi_info uid behavior across virtual machine stop/start and
-    delete/recreate lifecycle transitions.
+    kubevirt_vm_info / kubevirt_vmi_info uid behavior across virtual machine stop/start,
+    delete/recreate, and live migration lifecycle transitions.
 
     Jira: https://redhat.atlassian.net/browse/CNV-95594  # <skip-jira-utils-check>
 
@@ -218,6 +223,9 @@ class TestLinuxVMAndVMIInfoUidLifecycle:
         new value across a virtual machine stop/start cycle.
 
         Jira: https://redhat.atlassian.net/browse/CNV-95594  # <skip-jira-utils-check>
+
+        Markers:
+            - sno
 
         Preconditions:
             - Running Linux virtual machine, not shared with other tests in this module
@@ -250,6 +258,9 @@ class TestLinuxVMAndVMIInfoUidLifecycle:
         deleted virtual machine's uid.
 
         Jira: https://redhat.atlassian.net/browse/CNV-95594  # <skip-jira-utils-check>
+
+        Markers:
+            - sno
 
         Preconditions:
             - Running Linux virtual machine, not shared with other tests in this module
@@ -295,8 +306,8 @@ class TestLinuxVMAndVMIInfoUidLifecycle:
 
 class TestWindowsVMAndVMIInfoUidLifecycle:
     """
-    kubevirt_vm_info / kubevirt_vmi_info uid behavior across virtual machine stop/start and
-    delete/recreate lifecycle transitions.
+    kubevirt_vm_info / kubevirt_vmi_info uid behavior across virtual machine stop/start,
+    delete/recreate, and live migration lifecycle transitions.
 
     Jira: https://redhat.atlassian.net/browse/CNV-95594  # <skip-jira-utils-check>
 
@@ -315,6 +326,9 @@ class TestWindowsVMAndVMIInfoUidLifecycle:
         new value across a virtual machine stop/start cycle.
 
         Jira: https://redhat.atlassian.net/browse/CNV-95594  # <skip-jira-utils-check>
+
+        Markers:
+            - sno
 
         Preconditions:
             - Running Windows virtual machine, not shared with other tests in this module
@@ -347,6 +361,9 @@ class TestWindowsVMAndVMIInfoUidLifecycle:
         deleted virtual machine's uid.
 
         Jira: https://redhat.atlassian.net/browse/CNV-95594  # <skip-jira-utils-check>
+
+        Markers:
+            - sno
 
         Preconditions:
             - Running Windows virtual machine, not shared with other tests in this module
