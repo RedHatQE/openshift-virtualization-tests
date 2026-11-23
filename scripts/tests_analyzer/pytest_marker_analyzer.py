@@ -31,11 +31,13 @@ import tempfile
 import urllib.error
 import urllib.parse
 import urllib.request
+from collections.abc import Callable, Iterator
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from pyhelper_utils.shell import run_command
 from simple_logger.logger import get_logger
 
 # Configure logging
@@ -53,6 +55,15 @@ MAX_FILES_PER_PR = 10000
 
 # Parallelization settings
 MAX_WORKERS = min(32, (os.cpu_count() or 1) + 4)
+
+
+class AnalyzerGitError(RuntimeError):
+    """Raised when a git operation needed for change detection fails.
+
+    Signals that the analyzer cannot determine the PR change set. Callers must
+    fail loudly (non-zero exit) instead of reporting "no changes", which would
+    silently skip every test.
+    """
 
 
 def validate_repo_name(repo: str) -> None:
@@ -1303,16 +1314,133 @@ def _build_line_to_symbol_map(source: str) -> SymbolMap:
     )
 
 
-def _get_old_file_symbols(
+_OLD_REVISION_CACHE: dict[tuple[str, str, int], str | None] = {}
+
+
+def _resolve_git_merge_base(base_branch: str, repo_root: Path) -> str | None:
+    """Return the local merge base of ``base_branch`` and ``HEAD``.
+
+    Args:
+        base_branch: Base branch or ref to compare against.
+        repo_root: Repository root path.
+
+    Returns:
+        Merge-base commit SHA, or ``None`` when git cannot resolve it.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "merge-base", base_branch, "HEAD"],
+            capture_output=True,
+            text=True,
+            cwd=repo_root,
+            timeout=10,
+        )
+    except (subprocess.SubprocessError, OSError) as exc:
+        logger.warning(msg="Failed to resolve merge base", extra={"base": base_branch, "error": str(exc)})
+        return None
+    if result.returncode != 0 or not result.stdout.strip():
+        logger.warning(
+            msg="git merge-base failed",
+            extra={"base": base_branch, "returncode": result.returncode, "stderr": result.stderr.strip()},
+        )
+        return None
+    return result.stdout.strip()
+
+
+def _fetch_merge_base_sha(github_pr_info: dict[str, Any], base_branch: str) -> str | None:
+    """Return the merge base of the pull request's head and ``base_branch``.
+
+    Args:
+        github_pr_info: Dict with ``repo``, ``pr_number``, and optional ``token``.
+        base_branch: Base ref of the pull request.
+
+    Returns:
+        Merge-base commit SHA, or ``None`` when the GitHub API cannot resolve it
+        or the PR number is unknown.
+    """
+    if github_pr_info.get("pr_number") is None:
+        logger.warning(
+            msg="Cannot resolve merge base without a PR number",
+            extra={"repo": github_pr_info.get("repo"), "base": base_branch},
+        )
+        return None
+
+    head_sha = _fetch_pr_head_sha(github_pr_info=github_pr_info)
+    if not head_sha:
+        return None
+
+    repo = github_pr_info["repo"]
+    token = github_pr_info.get("token")
+    url = f"https://api.github.com/repos/{repo}/compare/{base_branch}...{head_sha}"
+    headers = {
+        "Accept": "application/vnd.github.v3+json",
+        "User-Agent": "pytest-marker-analyzer",
+    }
+    if token:
+        headers["Authorization"] = f"token {token}"
+
+    try:
+        request = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(request, timeout=GITHUB_API_TIMEOUT_SECONDS) as response:
+            return json.loads(response.read().decode())["merge_base_commit"]["sha"]
+    except (urllib.error.URLError, json.JSONDecodeError, KeyError, OSError) as exc:
+        logger.warning(
+            msg="Failed to resolve merge base with the base branch",
+            extra={"base": base_branch, "error": str(exc)},
+        )
+        return None
+
+
+def _resolve_old_revision(
+    base_branch: str,
+    repo_root: Path,
+    github_pr_info: dict[str, Any] | None,
+) -> str | None:
+    """Resolve the revision the changed-file diff is computed against.
+
+    ``git diff <base>...HEAD`` and the GitHub pull-request file patch both
+    describe the changes since the merge base with ``base_branch``, never since
+    its tip.  Reading the old version of a file from the tip would map old line
+    numbers onto a different revision whenever the base branch advanced, so the
+    merge base is used in both modes.  The result is cached per run.
+
+    Args:
+        base_branch: Base branch or ref to compare against.
+        repo_root: Repository root path.
+        github_pr_info: Optional dict with ``repo``, ``pr_number``, and
+            ``token`` keys for GitHub API access.
+
+    Returns:
+        Merge-base revision, or ``None`` when it cannot be resolved — callers
+        must then stay conservative.
+    """
+    cache_key = (
+        str(repo_root),
+        base_branch,
+        github_pr_info.get("pr_number", 0) if github_pr_info else 0,
+    )
+    if cache_key not in _OLD_REVISION_CACHE:
+        _OLD_REVISION_CACHE[cache_key] = (
+            _fetch_merge_base_sha(github_pr_info=github_pr_info, base_branch=base_branch)
+            if github_pr_info
+            else _resolve_git_merge_base(base_branch=base_branch, repo_root=repo_root)
+        )
+    return _OLD_REVISION_CACHE[cache_key]
+
+
+def _fetch_old_file_source(
     file_path: Path,
     base_branch: str,
     repo_root: Path,
     github_pr_info: dict[str, Any] | None,
-) -> tuple[set[str], dict[str, set[str]]] | None:
-    """Fetch the base-branch version of a file and return its top-level symbol names.
+) -> str | None:
+    """Fetch the version of a file the changed-file diff is computed against.
 
-    Used to distinguish genuinely new symbols (not present in the base version)
-    from modified ones (present in both versions).
+    Works in both analysis modes: the GitHub Contents API is used when
+    ``github_pr_info`` is provided (remote PR analysis), otherwise ``git show``
+    reads the file in the local checkout.  Both read the merge base with
+    ``base_branch`` rather than its tip, the revision ``git diff <base>...HEAD``
+    and the pull-request patch describe.
 
     Args:
         file_path: Absolute path to the file in the working tree.
@@ -1322,11 +1450,9 @@ def _get_old_file_symbols(
             ``token`` keys for GitHub API access.
 
     Returns:
-        Tuple of (symbol_names, class_members) where symbol_names is the set
-        of top-level symbol names and class_members maps class names to their
-        member method names. Returns ``(set(), {})`` if the file is new.
-        Returns ``None`` on unexpected errors, signaling the caller to use
-        conservative (file-level) fallback behavior.
+        The file content at the merge base, or ``None`` when it cannot be
+        obtained (absent there, unexpected encoding, unresolvable merge base,
+        API or git error).  Callers must stay conservative on ``None``.
     """
     old_source: str | None = None
 
@@ -1335,12 +1461,20 @@ def _get_old_file_symbols(
     except ValueError:
         relative_path = str(file_path)
 
+    old_revision = _resolve_old_revision(
+        base_branch=base_branch,
+        repo_root=repo_root,
+        github_pr_info=github_pr_info,
+    )
+    if old_revision is None:
+        return None
+
     if github_pr_info:
         # Remote mode: use GitHub Contents API
         repo = github_pr_info["repo"]
         token = github_pr_info.get("token")
         encoded_path = urllib.parse.quote(string=relative_path, safe="/")
-        url = f"https://api.github.com/repos/{repo}/contents/{encoded_path}?ref={base_branch}"
+        url = f"https://api.github.com/repos/{repo}/contents/{encoded_path}?ref={old_revision}"
 
         headers = {
             "Accept": "application/vnd.github.v3+json",
@@ -1362,8 +1496,6 @@ def _get_old_file_symbols(
                     )
                     return None
         except urllib.error.HTTPError as exc:
-            if exc.code == 404:
-                return set(), {}  # File is new
             logger.warning(
                 msg="GitHub Contents API error fetching base file",
                 extra={"file": relative_path, "http_code": exc.code},
@@ -1379,20 +1511,13 @@ def _get_old_file_symbols(
         # Local mode: use git show
         try:
             result = subprocess.run(
-                ["git", "show", f"{base_branch}:{relative_path}"],
+                ["git", "show", f"{old_revision}:{relative_path}"],
                 capture_output=True,
                 text=True,
                 cwd=repo_root,
                 timeout=10,
             )
             if result.returncode != 0:
-                stderr_lower = result.stderr.lower()
-                if (
-                    "does not exist" in stderr_lower
-                    or "not exist" in stderr_lower
-                    or "exists on disk, but not in" in stderr_lower
-                ):
-                    return set(), {}  # File is new (path not found in base branch)
                 logger.warning(
                     msg="git show failed for base file",
                     extra={"file": relative_path, "returncode": result.returncode, "stderr": result.stderr.strip()},
@@ -1406,39 +1531,86 @@ def _get_old_file_symbols(
             )
             return None
 
+    return old_source
+
+
+def _get_old_line_to_symbol_map(
+    file_path: Path,
+    base_branch: str,
+    repo_root: Path,
+    github_pr_info: dict[str, Any] | None,
+) -> SymbolMap | None:
+    """Build a line→symbol map from the base-branch version of a file.
+
+    Used to attribute a deleted line to the symbol that used to enclose it.
+
+    Args:
+        file_path: Absolute path to the file in the working tree.
+        base_branch: Base branch or ref to compare against.
+        repo_root: Repository root path.
+        github_pr_info: Optional dict with ``repo``, ``pr_number``, and
+            ``token`` keys for GitHub API access.
+
+    Returns:
+        SymbolMap of the base version, or ``None`` when its source cannot be
+        fetched or parsed — the caller must then stay conservative.
+    """
+    old_source = _fetch_old_file_source(
+        file_path=file_path,
+        base_branch=base_branch,
+        repo_root=repo_root,
+        github_pr_info=github_pr_info,
+    )
     if old_source is None:
         return None
 
-    # Parse old source to extract top-level symbol names
     try:
-        tree = ast.parse(old_source)
+        return _build_line_to_symbol_map(source=old_source)
     except SyntaxError:
         logger.warning(
             msg="Failed to parse base version of file",
-            extra={"file": relative_path},
+            extra={"file": str(file_path)},
         )
         return None
 
-    symbols: set[str] = set()
-    class_members: dict[str, set[str]] = {}
-    for node in ast.iter_child_nodes(tree):
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            symbols.add(node.name)
-        elif isinstance(node, ast.ClassDef):
-            symbols.add(node.name)
-            members: set[str] = set()
-            for child in ast.iter_child_nodes(node):
-                if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                    members.add(child.name)
-            class_members[node.name] = members
-        elif isinstance(node, ast.Assign):
-            for target in node.targets:
-                if isinstance(target, ast.Name):
-                    symbols.add(target.id)
-        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
-            symbols.add(node.target.id)
 
-    return symbols, class_members
+def _get_old_file_symbols(
+    file_path: Path,
+    base_branch: str,
+    repo_root: Path,
+    github_pr_info: dict[str, Any] | None,
+) -> tuple[set[str], dict[str, set[str]]] | None:
+    """Return the top-level symbol names of the base-branch version of a file.
+
+    Used to distinguish genuinely new symbols (not present in the base version)
+    from modified ones (present in both versions).
+
+    Args:
+        file_path: Absolute path to the file in the working tree.
+        base_branch: Base branch or ref to compare against.
+        repo_root: Repository root path.
+        github_pr_info: Optional dict with ``repo``, ``pr_number``, and
+            ``token`` keys for GitHub API access.
+
+    Returns:
+        Tuple of (symbol_names, class_members) where symbol_names is the set
+        of top-level symbol names and class_members maps class names to their
+        member method names.  Returns ``None`` when the base version cannot be
+        fetched or parsed, signaling the caller to stay conservative.
+    """
+    old_symbol_map = _get_old_line_to_symbol_map(
+        file_path=file_path,
+        base_branch=base_branch,
+        repo_root=repo_root,
+        github_pr_info=github_pr_info,
+    )
+    if old_symbol_map is None:
+        return None
+
+    return (
+        {symbol_name for _, _, symbol_name in old_symbol_map.top_level},
+        {class_name: set(info.members) for class_name, info in old_symbol_map.class_members.items()},
+    )
 
 
 def _parse_diff_for_changed_lines(diff_content: str) -> set[int]:
@@ -1504,12 +1676,99 @@ def _diff_has_deletions(diff_content: str) -> bool:
     return any(line.startswith("-") and not line.startswith("---") for line in diff_content.splitlines())
 
 
+# Quoted segments are stripped before counting parentheses so that a literal
+# like "(" does not unbalance a statement. Escapes, nested quotes and multi-line
+# strings are not modelled, which can still leave a count wrong.
+_QUOTED_SEGMENT_PATTERN = re.compile(pattern=r"""(?:"[^"]*"|'[^']*')""")
+
+
+def _iter_diff_statements(diff_content: str) -> Iterator[tuple[str, str, int]]:
+    """Iterate the changed statements of a unified diff.
+
+    Continuation lines of a statement with unbalanced parentheses are joined so
+    that a multi-line import is inspected as a whole instead of being ignored or
+    misread line by line.  Grouping is only reliable for balanced statements:
+    parentheses inside string literals are stripped before counting, but
+    imperfect literal detection (escapes, nested quotes, multi-line strings) can
+    still leave the count unbalanced, in which case the following deleted lines
+    are joined into the same statement.  Callers must therefore not rely on a
+    statement starting a definition; deleted definitions are detected per line
+    (see ``_extract_deleted_symbols_from_diff``).
+
+    Args:
+        diff_content: Unified diff text.
+
+    Yields:
+        A ``(sign, statement, old_line_number)`` triple per changed statement,
+        where ``sign`` is the diff marker of its first line (``"+"`` or
+        ``"-"``), ``statement`` is that line's content plus the content of
+        following lines carrying the same marker while parentheses are
+        unbalanced, and ``old_line_number`` is the 1-based line in the old file
+        that the statement's first line carries (for a run of additions, the
+        old-file position the run is inserted at).  File headers, hunk headers
+        and context lines are yielded as ``("", "", old_line_number)`` so
+        callers can tell where a run of changed statements ends.
+    """
+    lines = diff_content.splitlines()
+    old_line_number = 0
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        sign = line[:1]
+        hunk_header = re.match(pattern=r"^@@ -(\d+)", string=line)
+        if hunk_header:
+            old_line_number = int(hunk_header.group(1))
+            index += 1
+            yield "", "", old_line_number
+            continue
+        if sign not in {"+", "-"} or line.startswith(("---", "+++")):
+            index += 1
+            yield "", "", old_line_number
+            if not line.startswith(("---", "+++", "\\")):
+                # Context lines exist in both versions, so they advance the counter too.
+                old_line_number += 1
+            continue
+        statement_old_line = old_line_number
+        parts: list[str] = []
+        open_parentheses = 0
+        while index < len(lines) and lines[index][:1] == sign:
+            content = lines[index][1:]
+            parts.append(content)
+            unquoted = _QUOTED_SEGMENT_PATTERN.sub(repl="", string=content)
+            open_parentheses += unquoted.count("(") - unquoted.count(")")
+            if sign == "-":
+                old_line_number += 1
+            index += 1
+            if open_parentheses == 0:
+                break
+        yield sign, "\n".join(parts), statement_old_line
+
+
+def _deleted_definition_name(statement: str) -> str | None:
+    """Return the name of the function or class defined by a statement.
+
+    Args:
+        statement: Stripped statement text, e.g. ``def foo(...):``.
+
+    Returns:
+        The defined name, or ``None`` when the statement defines neither a
+        function nor a class.
+    """
+    func_match = re.match(pattern=r"(?:async\s+)?def\s+(\w+)\s*\(", string=statement)
+    if func_match:
+        return func_match.group(1)
+    class_match = re.match(pattern=r"class\s+(\w+)[\s:(]", string=statement)
+    return class_match.group(1) if class_match else None
+
+
 def _extract_deleted_symbols_from_diff(diff_content: str) -> set[str]:
     """Extract names of functions and classes that were deleted in a diff.
 
-    Scans deletion lines (``-``) for ``def`` and ``class`` statements to
-    identify symbols that were removed.  This avoids the need to fetch
-    and parse the old file source.
+    Scans every deletion line (``-``) individually for ``def`` and ``class``
+    statements to identify symbols that were removed.  Per-line scanning keeps
+    a following deleted definition from being swallowed by a preceding one whose
+    statement grouping stayed open (an unbalanced parenthesis).  This avoids the
+    need to fetch and parse the old file source.
 
     Note:
         When a class with methods is deleted, both the class name *and* its member
@@ -1528,17 +1787,219 @@ def _extract_deleted_symbols_from_diff(diff_content: str) -> set[str]:
     for line in diff_content.splitlines():
         if not line.startswith("-") or line.startswith("---"):
             continue
-        stripped = line[1:].strip()
-        # Match function definitions
-        func_match = re.match(pattern=r"(?:async\s+)?def\s+(\w+)\s*\(", string=stripped)
-        if func_match:
-            deleted_symbols.add(func_match.group(1))
-            continue
-        # Match class definitions
-        class_match = re.match(pattern=r"class\s+(\w+)[\s:(]", string=stripped)
-        if class_match:
-            deleted_symbols.add(class_match.group(1))
+        deleted_name = _deleted_definition_name(statement=line[1:].strip())
+        if deleted_name is not None:
+            deleted_symbols.add(deleted_name)
     return deleted_symbols
+
+
+_IMPORT_ALIAS_PATTERN = re.compile(pattern=r"^([A-Za-z_][\w.]*)(?:\s+as\s+([A-Za-z_]\w*))?$")
+
+
+def _extract_imported_names(line: str) -> set[str] | None:
+    """Extract the module-level names bound by an import statement.
+
+    Args:
+        line: Stripped source line (or diff statement) starting with
+            ``import `` or ``from ``.  Multi-line statements may be passed
+            with their continuation lines.
+
+    Returns:
+        Set of names the statement binds.  Empty set for a multi-line import
+        opener (``from x import (``) whose names live on continuation lines.
+        ``None`` when the names cannot be determined (star import, unusual
+        syntax) — the caller must then stay conservative.
+    """
+    # Strip comments per line so a multi-line import keeps the names that
+    # follow a trailing comment.
+    statement = "\n".join(part.split("#")[0] for part in line.splitlines()).strip()
+    if statement.startswith("import "):
+        operands = statement.removeprefix("import ")
+    else:
+        _, import_separator, operands = statement.partition(" import ")
+        if not import_separator:
+            return None
+
+    operands = operands.strip().strip("()").strip()
+    if not operands:
+        return set()
+
+    names: set[str] = set()
+    for operand in operands.split(","):
+        operand = operand.strip()
+        if not operand:
+            # Trailing comma (as in "from x import (a,)")
+            continue
+        match = _IMPORT_ALIAS_PATTERN.match(string=operand)
+        if match is None:
+            # Star import or unexpected syntax — cannot narrow
+            return None
+        alias_name, imported_alias = match.group(1), match.group(2)
+        names.add(imported_alias or alias_name.split(".")[0])
+    return names
+
+
+def _old_symbol_at_line(symbol_map: SymbolMap | None, line_number: int) -> tuple[str | None, str | None]:
+    """Return the symbols enclosing a line of an old file.
+
+    Args:
+        symbol_map: Line→symbol map of the old file, or ``None`` when it could
+            not be built.
+        line_number: 1-based line number in the old file.
+
+    Returns:
+        ``(top_level_name, member_name)``.  ``member_name`` is ``None`` for a
+        module-level or class-scope line, and both names are ``None`` when the
+        map is unavailable or the line belongs to no symbol.
+    """
+    if symbol_map is None:
+        return None, None
+    for start_line, end_line, symbol_name in symbol_map.top_level:
+        if start_line <= line_number <= end_line:
+            class_info = symbol_map.class_members.get(symbol_name)
+            if class_info is not None:
+                for member_name, (member_start, member_end) in class_info.members.items():
+                    if member_start <= line_number <= member_end:
+                        return symbol_name, member_name
+            return symbol_name, None
+    return None, None
+
+
+def _collect_removal_symbols(
+    diff_content: str,
+    body_modified_symbols: set[str],
+    modified_members: dict[str, set[str]],
+    get_old_symbol_map: Callable[[], SymbolMap | None],
+) -> tuple[set[str], bool, set[str]]:
+    """Collect the symbols a diff removes and flag deletions it cannot attribute.
+
+    Deleted functions/classes and the names a deleted import bound are removal
+    symbols.  A deleted import or a deleted definition is attributed through
+    those removal symbols.  Any other deleted line is attributed only when the
+    same code is known to have changed on the new side: the line's class member
+    must be in ``modified_members`` for a class-scope line, and its top-level
+    symbol must be in ``body_modified_symbols`` otherwise.  A deletion of a line
+    that belonged to another member, to module level, or to a symbol whose old
+    enclosing range is unknown (the old file could not be fetched or parsed)
+    maps to no changed new-file line and cannot be attributed, so it is reported
+    as unattributed instead of looking like a clean change.  Deleted imports
+    that cannot be parsed (star import, unbalanced parentheses) are unattributed
+    for the same reason.
+
+    A removed blank line normally removes nothing, but inside a string literal
+    (a docstring, for example) it changes the value, so it follows the same
+    attribution rule.  A blank line between definitions belongs to no symbol and
+    is ignored.
+
+    Args:
+        diff_content: Unified diff text.
+        body_modified_symbols: Symbols with changed lines on the new-file side.
+        modified_members: Class name to the members with changed new-file lines.
+            A class missing from this mapping has unknown member-level detail, so
+            its deletions fall back to the class-level check.
+        get_old_symbol_map: Lazily returns the old-file line→symbol map, or
+            ``None`` when the old source is unavailable.
+
+    Returns:
+        Tuple of (removal symbol names, has unattributed changes, classes whose
+        member narrowing a class-scope deletion invalidates).
+    """
+    removal_symbols: set[str] = _extract_deleted_symbols_from_diff(diff_content=diff_content)
+    has_unattributed = False
+    classes_with_class_scope_deletions: set[str] = set()
+    statements = list(_iter_diff_statements(diff_content=diff_content))
+
+    def deletion_is_attributed(old_line_number: int) -> bool:
+        """Whether the code that held this old line also changed on the new side."""
+        old_symbol, old_member = _old_symbol_at_line(symbol_map=get_old_symbol_map(), line_number=old_line_number)
+        if old_symbol is None:
+            return False
+        if old_symbol in removal_symbols or (old_member is not None and old_member in removal_symbols):
+            # The container itself is deleted or renamed, so its removal symbol
+            # already accounts for every line it held.
+            return True
+        if old_member is not None:
+            modified_in_class = modified_members.get(old_symbol)
+            if modified_in_class is not None:
+                return old_member in modified_in_class
+        elif old_symbol in modified_members:
+            # The line sat at class scope (a decorator, a class attribute or the
+            # class docstring), which every member depends on, so member
+            # narrowing for this class is no longer trustworthy.
+            classes_with_class_scope_deletions.add(old_symbol)
+        return old_symbol in body_modified_symbols
+
+    index = 0
+    while index < len(statements):
+        sign, first_statement, first_old_line = statements[index]
+        index += 1
+        if sign not in {"+", "-"}:
+            continue
+        run = [(first_statement, first_old_line)]
+        while index < len(statements) and statements[index][0] == sign:
+            run.append((statements[index][1], statements[index][2]))
+            index += 1
+        deleted_definition_indent: int | None = None
+        for statement, old_line in run:
+            if not statement.strip():
+                # A removed blank line removes no statement, but it changes the
+                # value of a string literal it sits in.
+                if (
+                    sign == "-"
+                    and _old_symbol_at_line(symbol_map=get_old_symbol_map(), line_number=old_line)[0] is not None
+                    and not deletion_is_attributed(old_line_number=old_line)
+                ):
+                    has_unattributed = True
+                continue
+            if statement.startswith(("import ", "from ")):
+                # Only a module-level import (column 0) binds an API name here;
+                # an indented line starting with "from " is prose in a docstring.
+                if statement.count("(") != statement.count(")"):
+                    # Incomplete multi-line import: its continuation lines are
+                    # not in the diff, so the bound names are unknown.
+                    has_unattributed = True
+                    continue
+                imported_names = _extract_imported_names(line=statement)
+                if imported_names is None:
+                    # Star import or unparsable import edit — cannot narrow
+                    has_unattributed = True
+                elif sign == "-":
+                    # Any removed import unbinds its names in this module, whatever
+                    # the source: dropping ``from pyhelper_utils.shell import
+                    # run_command`` breaks ``ssp.run_command()`` for callers.
+                    removal_symbols.update(imported_names)
+                continue
+            if sign != "-":
+                continue
+            # Grouping may have joined lines (unbalanced parenthesis), so each
+            # line is attributed on its own: a deleted def is recognised wherever
+            # it starts, and its body is skipped by indentation.
+            for offset, line in enumerate(statement.splitlines()):
+                indentation = len(line) - len(line.lstrip())
+                if deleted_definition_indent is not None and (
+                    not line.strip() or indentation > deleted_definition_indent
+                ):
+                    # Blank line or body line of the deleted definition above it.
+                    continue
+                deleted_definition_indent = None
+                if not line.strip():
+                    # A removed blank line changes nothing between definitions,
+                    # but it changes the value of a string literal it sits in.
+                    if _old_symbol_at_line(symbol_map=get_old_symbol_map(), line_number=old_line + offset)[0] is None:
+                        continue
+                    if not deletion_is_attributed(old_line_number=old_line + offset):
+                        has_unattributed = True
+                    continue
+                if _deleted_definition_name(statement=line.strip()) is not None:
+                    deleted_definition_indent = indentation
+                    continue
+                if has_unattributed or not body_modified_symbols:
+                    has_unattributed = True
+                    continue
+                if not deletion_is_attributed(old_line_number=old_line + offset):
+                    has_unattributed = True
+
+    return removal_symbols, has_unattributed, classes_with_class_scope_deletions
 
 
 def _get_diff_content(
@@ -1705,6 +2166,63 @@ def _fetch_file_at_ref(
     return None
 
 
+def _classify_modified_members(
+    symbol_map: SymbolMap,
+    changed_lines: set[int],
+    class_symbols: set[str],
+) -> dict[str, set[str]]:
+    """Return the class members that changed on the new side of the diff.
+
+    A class only gets a member entry when every changed line inside it maps to
+    a specific member, so callers can treat a missing entry as "member-level
+    information unknown".
+
+    Args:
+        symbol_map: Line→symbol map of the new-file version.
+        changed_lines: Changed line numbers in the new file.
+        class_symbols: Names that may be classes.
+
+    Returns:
+        Class name to the set of modified member names, expanded transitively
+        through the class's internal call graph.
+    """
+    modified_members: dict[str, set[str]] = {}
+    for symbol_name in class_symbols:
+        class_info = symbol_map.class_members.get(symbol_name)
+        if class_info is None or not class_info.members:
+            continue
+
+        class_start, class_end = None, None
+        for start, end, name in symbol_map.top_level:
+            if name == symbol_name:
+                class_start, class_end = start, end
+                break
+        if class_start is None:
+            continue
+
+        member_modified: set[str] = set()
+        has_unmapped_line = False
+        for line_number in changed_lines:
+            if not (class_start <= line_number <= class_end):
+                continue
+            mapped = False
+            for member_name, (member_start, member_end) in class_info.members.items():
+                if member_start <= line_number <= member_end:
+                    member_modified.add(member_name)
+                    mapped = True
+                    break
+            if not mapped:
+                has_unmapped_line = True
+                break
+        if not has_unmapped_line and member_modified:
+            modified_members[symbol_name] = _expand_modified_members_transitively(
+                directly_modified=member_modified,
+                internal_calls=class_info.internal_calls,
+            )
+
+    return modified_members
+
+
 def _extract_modified_symbols(
     file_path: Path,
     base_branch: str,
@@ -1747,11 +2265,15 @@ def _extract_modified_symbols(
         or parse errors).  A ``None`` return signals the
         caller to fall back to file-level dependency tracking.
 
-        When some changed lines fall outside any named symbol (e.g. import
-        reorderings or comments between functions), the returned
-        ``SymbolClassification`` will have ``has_unattributed_changes=True``
-        but still contain any symbols that *were* identified from other
-        changed lines.
+        When some changed lines fall outside any named symbol (e.g. comments
+        between functions), the returned ``SymbolClassification`` will have
+        ``has_unattributed_changes=True`` but still contain any symbols that
+        *were* identified from other changed lines.  Import-line edits are
+        attributed to the imported names instead and do not set
+        ``has_unattributed_changes``; a deleted line that is neither an import
+        nor part of a deleted definition does, unless the symbol enclosing it in
+        the old file is itself modified, because it otherwise maps to no
+        changed new-file line and cannot be attributed.
     """
     diff_content = _get_diff_content(
         file_path=file_path,
@@ -1768,16 +2290,37 @@ def _extract_modified_symbols(
         return None
 
     has_deletions = _diff_has_deletions(diff_content=diff_content)
+    old_symbol_map_state: dict[str, SymbolMap | None] = {}
+
+    def get_old_symbol_map() -> SymbolMap | None:
+        """Return the old-file line→symbol map, fetching it at most once."""
+        if "map" not in old_symbol_map_state:
+            old_symbol_map_state["map"] = _get_old_line_to_symbol_map(
+                file_path=file_path,
+                base_branch=base_branch,
+                repo_root=repo_root,
+                github_pr_info=github_pr_info,
+            )
+        return old_symbol_map_state["map"]
 
     changed_lines = _parse_diff_for_changed_lines(diff_content=diff_content)
     if not changed_lines:
         if has_deletions:
             if file_status == "renamed":
                 return SymbolClassification(modified_symbols=set(), new_symbols=set())
-            # Pure deletion — extract deleted symbol names from the diff
-            # to enable symbol-level narrowing instead of conservative fallback
-            deleted_symbols = _extract_deleted_symbols_from_diff(diff_content=diff_content)
-            return SymbolClassification(modified_symbols=deleted_symbols, new_symbols=set())
+            # Pure deletion — the removal symbols extracted from the diff enable
+            # symbol-level narrowing instead of a conservative fallback.
+            removal_symbols, has_unattributed, _ = _collect_removal_symbols(
+                diff_content=diff_content,
+                body_modified_symbols=set(),
+                modified_members={},
+                get_old_symbol_map=get_old_symbol_map,
+            )
+            return SymbolClassification(
+                modified_symbols=removal_symbols,
+                new_symbols=set(),
+                has_unattributed_changes=has_unattributed,
+            )
         return SymbolClassification(modified_symbols=set(), new_symbols=set())
 
     try:
@@ -1817,14 +2360,15 @@ def _extract_modified_symbols(
         )
         return None
 
-    has_unattributed = False
     source_lines = source.splitlines()
-    modified_symbols: set[str] = set()
+
+    has_unattributed = False
+    body_modified_symbols: set[str] = set()
     for line_number in changed_lines:
         found = False
         for start_line, end_line, symbol_name in symbol_map.top_level:
             if start_line <= line_number <= end_line:
-                modified_symbols.add(symbol_name)
+                body_modified_symbols.add(symbol_name)
                 found = True
                 break
         if not found:
@@ -1833,11 +2377,16 @@ def _extract_modified_symbols(
             # or potentially impactful executable code.
             if line_number <= len(source_lines):
                 line_content = source_lines[line_number - 1].strip()
-                if not line_content or line_content.startswith((
+                if not line_content:
+                    has_unattributed = True
+                elif line_content.startswith(("import ", "from ")):
+                    # Import edits are attributed to the imported names (via
+                    # removal_symbols), so they are not unattributed changes.
+                    if _extract_imported_names(line=line_content) is None:
+                        has_unattributed = True
+                elif line_content.startswith((
                     "#",
                     "@",
-                    "import ",
-                    "from ",
                     '"""',
                     "'''",
                     '"',
@@ -1869,46 +2418,29 @@ def _extract_modified_symbols(
             else:
                 return None
 
-    # --- Member-level analysis for modified classes ---
-    modified_members: dict[str, set[str]] = {}
-    for symbol_name in modified_symbols:
-        if symbol_name not in symbol_map.class_members:
-            continue
-        class_info = symbol_map.class_members[symbol_name]
-        if not class_info.members:
-            continue
+    modified_members = _classify_modified_members(
+        symbol_map=symbol_map,
+        changed_lines=changed_lines,
+        class_symbols=body_modified_symbols,
+    )
+    removal_symbols, has_unattributed_deletions, class_scope_deletions = _collect_removal_symbols(
+        diff_content=diff_content,
+        body_modified_symbols=body_modified_symbols,
+        modified_members=modified_members,
+        get_old_symbol_map=get_old_symbol_map,
+    )
+    has_unattributed = has_unattributed or has_unattributed_deletions
 
-        # Find class boundaries once (not per changed line)
-        class_start, class_end = None, None
-        for start, end, name in symbol_map.top_level:
-            if name == symbol_name:
-                class_start, class_end = start, end
-                break
-        if class_start is None:
-            continue
+    if has_unattributed_deletions:
+        # An unattributed deletion may have removed something at class scope in a
+        # class we cannot name, so no member narrowing is trustworthy either.
+        modified_members = {}
+    for class_name in class_scope_deletions:
+        modified_members.pop(class_name, None)
 
-        member_modified: set[str] = set()
-        has_unmapped_line = False
-        for line_number in changed_lines:
-            if not (class_start <= line_number <= class_end):
-                continue
-            # Check if line maps to a specific member
-            mapped = False
-            for member_name, (member_start, member_end) in class_info.members.items():
-                if member_start <= line_number <= member_end:
-                    member_modified.add(member_name)
-                    mapped = True
-                    break
-            if not mapped:
-                has_unmapped_line = True
-                break
-        if not has_unmapped_line and member_modified:
-            # All changed lines mapped to specific members — apply member-level narrowing
-            expanded = _expand_modified_members_transitively(
-                directly_modified=member_modified,
-                internal_calls=class_info.internal_calls,
-            )
-            modified_members[symbol_name] = expanded
+    # Removal-derived names always stay reported: a name removed here and
+    # re-bound by an import from a different module can still change behaviour.
+    modified_symbols = body_modified_symbols | removal_symbols
 
     # --- Additive-change classification ---
 
@@ -1954,14 +2486,9 @@ def _extract_modified_symbols(
 
     # Deletions exist — need to check old file to distinguish rewrites
     # from genuine additions.
-    old_result = _get_old_file_symbols(
-        file_path=file_path,
-        base_branch=base_branch,
-        repo_root=repo_root,
-        github_pr_info=github_pr_info,
-    )
-    if old_result is None:
-        # Error fetching old file — conservative: treat all candidates as modified
+    old_symbol_map = get_old_symbol_map()
+    if old_symbol_map is None:
+        # Old file unavailable — conservative: treat all candidates as modified
         return SymbolClassification(
             modified_symbols=modified_symbols,
             new_symbols=set(),
@@ -1969,7 +2496,10 @@ def _extract_modified_symbols(
             has_unattributed_changes=has_unattributed,
         )
 
-    old_symbols, old_class_members = old_result
+    old_symbols = {symbol_name for _, _, symbol_name in old_symbol_map.top_level}
+    old_class_members = {
+        class_name: set(class_info.members) for class_name, class_info in old_symbol_map.class_members.items()
+    }
 
     truly_new: set[str] = set()
     for symbol_name in candidate_new:
@@ -2192,15 +2722,15 @@ def _check_conftest_pathway(
             if (
                 classification is not None
                 and not classification.modified_symbols
-                and classification.new_symbols
                 and not classification.has_unattributed_changes
             ):
-                # Only new symbols added — cannot break existing tests
+                # Only new symbols added, or nothing observable changed —
+                # cannot break existing tests
                 conftest_resolved = True
                 continue
             if classification is not None and not classification.modified_symbols:
-                # Empty modified_symbols without new_symbols — could be pure deletion
-                # or unmapped module-level edits; fall back to conservative behavior
+                # Empty modified_symbols with unattributed changes — module-level
+                # edits we could not attribute; fall back to conservative behavior
                 matching_deps.append(
                     f"{changed_file.relative_to(repo_root)} (opaque import via {conftest_path.relative_to(repo_root)})"
                 )
@@ -3560,8 +4090,21 @@ class MarkerTestAnalyzer:
             self.conftest_files.append(root_conftest)
         logger.info(msg="Found conftest.py files", extra={"file_count": len(self.conftest_files)})
 
-    def get_changed_files(self, base_branch: str = "main", files: list[str] | None = None) -> list[Path]:
-        """Get list of changed files either from git or from provided list."""
+    def get_changed_files(self, base_branch: str | None = None, files: list[str] | None = None) -> list[Path]:
+        """Get list of changed files either from git or from provided list.
+
+        Args:
+            base_branch: Branch to diff against. Required when ``files`` is not provided;
+                there is no default because diffing against the wrong branch reports
+                unrelated changes as affected test dependencies.
+            files: Explicit files to analyze instead of running a git diff.
+
+        Raises:
+            ValueError: If ``files`` is not provided and ``base_branch`` is empty.
+            AnalyzerGitError: If the branch name is invalid, the base ref cannot
+                be resolved, or ``git diff`` fails. Returning an empty change set
+                in these cases would silently skip every test.
+        """
         if files:
             # Use provided files with validation
             validated_files = []
@@ -3583,10 +4126,27 @@ class MarkerTestAnalyzer:
                     logger.warning(msg="File is outside repository", extra={"file": file_path_str})
             return validated_files
 
+        if not base_branch:
+            raise ValueError("base_branch is required when files is not provided")
+
         # Validate branch name (alphanumeric, dash, underscore, slash, dot)
         if not re.match(pattern=r"^[a-zA-Z0-9/_.-]+$", string=base_branch):
-            logger.error(msg="Invalid branch name", extra={"branch": base_branch})
-            return []
+            raise AnalyzerGitError(f"invalid base branch name '{base_branch}'; pass a valid --base")
+
+        # Verify the base ref resolves before diffing: an unresolvable base
+        # (typo, unfetched remote branch) would otherwise produce an empty diff.
+        try:
+            resolved, _, _ = run_command(
+                command=["git", "rev-parse", "--verify", "--quiet", f"{base_branch}^{{commit}}"],
+                cwd=self.repo_root,
+                check=False,
+                verify_stderr=False,
+                log_errors=False,
+            )
+        except (subprocess.SubprocessError, OSError) as exc:
+            raise AnalyzerGitError(f"could not run git in {self.repo_root}: {exc}") from exc
+        if not resolved:
+            raise AnalyzerGitError(f"base branch '{base_branch}' could not be resolved; pass a valid --base")
 
         # Get changed files from git
         try:
@@ -3595,15 +4155,17 @@ class MarkerTestAnalyzer:
                 cwd=self.repo_root,
                 capture_output=True,
                 text=True,
-                check=True,
             )
-            changed = [self.repo_root / line.strip() for line in result.stdout.splitlines() if line.strip()]
-            logger.info(msg="Found changed files from git", extra={"file_count": len(changed)})
-            return changed
+        except (subprocess.SubprocessError, OSError) as exc:
+            raise AnalyzerGitError(f"git diff against base '{base_branch}' failed in {self.repo_root}: {exc}") from exc
+        if result.returncode != 0:
+            raise AnalyzerGitError(
+                f"git diff against base '{base_branch}' failed in {self.repo_root}: {result.stderr.strip()}"
+            )
 
-        except subprocess.CalledProcessError as e:
-            logger.error(msg="Failed to get changed files from git", extra={"error": str(e)})
-            return []
+        changed = [self.repo_root / line.strip() for line in result.stdout.splitlines() if line.strip()]
+        logger.info(msg="Found changed files from git", extra={"file_count": len(changed)})
+        return changed
 
     def analyze_impact(self, changed_files: list[Path]) -> AnalysisResult:
         """Analyze if changed files impact marked tests (parallelized).
@@ -4010,7 +4572,12 @@ def run_local_mode(args: argparse.Namespace) -> tuple[AnalysisResult | None, int
         return None, 1
 
     analyzer.analyze_dependencies()
-    changed_files = analyzer.get_changed_files(base_branch=args.base, files=args.files)  # keyword args used
+
+    try:
+        changed_files = analyzer.get_changed_files(base_branch=args.base, files=args.files)  # keyword args used
+    except AnalyzerGitError as exc:
+        logger.error(msg=str(exc))
+        return None, 1
 
     if not changed_files:
         logger.warning(msg="No changed files found")
@@ -4051,8 +4618,12 @@ def main() -> int:
     )
     parser.add_argument(
         "--base",
-        default="main",
-        help="Base branch to compare against (default: main)",
+        default=None,
+        help=(
+            "Base branch to compare against (required in local mode). "
+            "Pass the branch the work targets, e.g. origin/main or origin/cnv-5.0. "
+            "GitHub PR mode takes the base from the PR instead."
+        ),
     )
 
     # GitHub mode arguments
@@ -4138,6 +4709,11 @@ def main() -> int:
     if github_mode:
         result, exit_code = run_github_mode(args=args)
     else:
+        if not args.base:
+            parser.error(
+                "--base is required in local mode: pass the branch this work targets, "
+                "e.g. --base origin/main or --base origin/cnv-5.0"
+            )
         result, exit_code = run_local_mode(args=args)
 
     if exit_code != 0 or result is None:
