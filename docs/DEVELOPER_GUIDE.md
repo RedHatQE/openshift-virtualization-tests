@@ -205,7 +205,7 @@ If the request is skipped (4-hour cooldown, or label present without usable labe
 ### Dependency bumps
 
 - **Update `pyproject.toml` and `uv.lock`**:
-  - When a specific minimum version is required (for example a CVE fix, including for a transitive dependency, or a required feature/fix), add or update the minimum version in `pyproject.toml` (`dependencies` under `[project]`, or `[project.optional-dependencies]` / `[dependency-groups]`) first. Then regenerate `uv.lock` with `uv lock --upgrade-package <package>` (see [Getting started](GETTING_STARTED.md#installation)).
+  - When a specific minimum version is required (for example a CVE fix, including for a transitive dependency, or a required feature/fix), add or update the minimum version in `pyproject.toml` (`dependencies` under `[project]`, `[project.optional-dependencies]` / `[dependency-groups]`, or `constraint-dependencies` under `[tool.uv]`) first, preserving any platform markers. Then regenerate `uv.lock` with `uv lock --upgrade-package <package>` (see [Getting started](GETTING_STARTED.md#installation)).
   - Verify lockfile consistency with `uv lock --check` and sync your environment with `uv sync --locked`.
 - **Check the upstream package repository for breaking changes**:
   - Review the package's release notes, changelog, or diff between the previous locked version and the new version in its upstream repository for breaking changes, deprecations, or removed APIs.
