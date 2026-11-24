@@ -205,8 +205,9 @@ If the request is skipped (4-hour cooldown, or label present without usable labe
 ### Dependency bumps
 
 - **Update `pyproject.toml` and `uv.lock`**:
-  - When a specific minimum version is required (for example a CVE fix or a required feature/fix), run `uv add '<package>>=<version>'` to update `pyproject.toml` and `uv.lock` together (use `--optional <extra>` or `--group <group>` for optional/dev dependencies, and `--marker "<marker>"` to preserve platform markers).
-  - To refresh `uv.lock` without changing minimum versions, run `uv lock --upgrade-package <package>` (see [Getting started](GETTING_STARTED.md#installation)).
+  - **Direct dependency (bump minimum version):** run `uv add '<package>>=<version>'` to update `pyproject.toml` and `uv.lock` together (add `--upgrade-package <package>` to also pull the latest release if `uv.lock` already satisfies `>=<version>`; use `--optional <extra>` or `--group <group>` for optional/dev dependencies, and `--marker "<marker>"` to preserve platform markers).
+  - **Transitive-only dependency (minimum version without adding a direct dependency):** add a constraint under `[tool.uv]` `constraint-dependencies` in `pyproject.toml` (for example `constraint-dependencies = ["<package>>=<version>"]`), then run `uv lock --upgrade-package <package>`.
+  - **Lockfile-only refresh (no `pyproject.toml` change):** run `uv lock --upgrade-package <package>` (or `uv lock --upgrade` for all packages; see [Getting started](GETTING_STARTED.md#installation)).
   - Verify lockfile consistency with `uv lock --check` and sync your environment with `uv sync --locked`.
 - **Check the upstream package repository for breaking changes**:
   - Review the package's release notes, changelog, or diff between the previous locked version and the new version in its upstream repository for breaking changes, deprecations, or removed APIs.
