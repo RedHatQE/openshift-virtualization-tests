@@ -26,6 +26,10 @@ class MissingEnvironmentVariableError(Exception):
     pass
 
 
+class JiraServiceAccountError(Exception):
+    pass
+
+
 # code from https://stackoverflow.com/questions/19924104/python-multiprocessing-handling-child-errors-in-parent
 class ProcessWithException(Process):
     def __init__(self, *args, **kwargs):
