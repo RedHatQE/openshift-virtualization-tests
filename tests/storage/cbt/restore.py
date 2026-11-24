@@ -95,10 +95,9 @@ class CbtVolumeRestoreSpec:
 
 @dataclass(frozen=True)
 class _RestoredDiskStorageClassProperties:
-    """Storage class of the backup PVC, and the volume mode and access mode of that class.
+    """Storage class of the restored disk, and the volume mode and access mode of that class.
 
-    The backup PVC is a filesystem volume so it can hold qcow2 files. The restored disk uses
-    that storage class's profile.
+    The restored disk uses the source VM boot disk's storage class.
     """
 
     storage_class: str
@@ -129,17 +128,19 @@ def assert_restored_rhel_vm_data(vm: VirtualMachineForTests) -> None:
 def restored_cbt_vm_from_push_backup(
     backups: list[VirtualMachineBackup],
     backup_pvc_name: str,
+    storage_class: str,
     namespace: str,
     client: DynamicClient,
 ) -> Generator[VirtualMachineForTests]:
     """Rebuild the boot disk from the full push backup and start a VM with the backup's VM name.
 
-    The caller deletes the source VM first. This function reads the backup, the backup PVC's
-    storage class, and that class's storage profile.
+    The caller deletes the source VM first. This function reads the backup and the source VM
+    storage class's storage profile.
 
     Args:
         backups: Completed push backups. A full-backup restore contains exactly one backup.
         backup_pvc_name: PVC that holds the qcow2 backup.
+        storage_class: Storage class of the source VM boot disk. The restored disk uses this class.
         namespace: Namespace for the restored VM and target PVC.
         client: Client used to create the restored VM, PVC, and restore pod.
 
@@ -150,18 +151,18 @@ def restored_cbt_vm_from_push_backup(
         Writes the restored boot disk, and deletes the restored VM and target PVC on exit.
 
     Raises:
-        CbtRestoreError: When the backup count, type, or volume list is not one full volume; the backup,
-            tracker, backup PVC, or StorageProfile is missing; the backup does not contain one matching
-            qcow2; qemu-img info does not return its virtual size; the restore PVC does not bind; the
-            restore pod does not start; or the restored VM or target PVC is not deleted before the wait
-            timeout. A cleanup failure is logged instead when another error is already propagating.
+        CbtRestoreError: When the backup count, type, or volume list is not one full volume; the backup
+            or tracker is missing; the source disk storage class has no StorageProfile or claim property
+            set; the backup does not contain one matching qcow2; qemu-img info does not return its virtual
+            size; the restore PVC does not bind; the restore pod does not start; or the restored VM or
+            target PVC is not deleted before the wait timeout. A cleanup failure is logged instead when
+            another error is already propagating.
     """
     backup = _single_full_backup(backups=backups)
     vm_name = _backed_up_vm_name(backup=backup, namespace=namespace, client=client)
     volume_name = _full_backup_volume_name(backup=backup)
-    backup_storage = _get_restored_disk_storage_class_properties(
-        backup_pvc_name=backup_pvc_name,
-        namespace=namespace,
+    disk_storage = _get_restored_disk_storage_class_properties(
+        storage_class=storage_class,
         client=client,
     )
     qcow2_file, virtual_size_bytes = _inspect_backup_qcow2(
@@ -174,10 +175,10 @@ def restored_cbt_vm_from_push_backup(
     )
     volume_spec = CbtVolumeRestoreSpec(
         volume_name=volume_name,
-        size=_target_pvc_size(virtual_size_bytes=virtual_size_bytes, volume_mode=backup_storage.volume_mode),
-        storage_class=backup_storage.storage_class,
-        volume_mode=backup_storage.volume_mode,
-        access_mode=backup_storage.access_mode,
+        size=_target_pvc_size(virtual_size_bytes=virtual_size_bytes, volume_mode=disk_storage.volume_mode),
+        storage_class=disk_storage.storage_class,
+        volume_mode=disk_storage.volume_mode,
+        access_mode=disk_storage.access_mode,
     )
     target_pvc: PersistentVolumeClaim | None = None
     restored_vm: VirtualMachineForTests | None = None
@@ -311,21 +312,14 @@ def _full_backup_volume_name(backup: VirtualMachineBackup) -> str:
 
 
 def _get_restored_disk_storage_class_properties(
-    backup_pvc_name: str, namespace: str, client: DynamicClient
+    storage_class: str, client: DynamicClient
 ) -> _RestoredDiskStorageClassProperties:
-    """Return the storage class of the backup PVC and that class's disk claim shape.
+    """Return the restored disk's storage class and that class's disk claim shape.
 
     Raises:
-        CbtRestoreError: When the backup PVC or the StorageProfile of its class does not exist,
-            or the profile has no claim property set. A lookup error is chained when one was raised.
+        CbtRestoreError: When the StorageProfile does not exist or has no claim property set.
+            A lookup error is chained when one was raised.
     """
-    pvc = PersistentVolumeClaim(name=backup_pvc_name, namespace=namespace, client=client)
-    try:
-        storage_class = pvc.instance.to_dict()["spec"]["storageClassName"]
-    except NotFoundError as missing_pvc:
-        raise CbtRestoreError(f"Backup PVC {backup_pvc_name} not found in namespace {namespace}") from missing_pvc
-    except KeyError as missing_field:
-        raise CbtRestoreError(f"Backup PVC {backup_pvc_name} has no storage class ({missing_field})") from missing_field
     profile = StorageProfile(name=storage_class, client=client)
     try:
         volume_mode = profile.first_claim_property_set_volume_mode()

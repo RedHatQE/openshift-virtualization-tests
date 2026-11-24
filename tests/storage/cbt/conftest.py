@@ -316,6 +316,7 @@ def restored_vm_from_push_chain(
     with restored_cbt_vm_from_push_backup(
         backups=completed_push_backup_chain,
         backup_pvc_name=push_backup_pvc.name,
+        storage_class=deleted_cbt_source_vm.data_volume_template["spec"]["storage"]["storageClassName"],
         namespace=namespace.name,
         client=unprivileged_client,
     ) as restored_vm:
