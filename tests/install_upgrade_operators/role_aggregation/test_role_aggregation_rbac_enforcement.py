@@ -34,7 +34,6 @@ class TestRoleAggregationAdmin:
           in the namespace
     """
 
-    @pytest.mark.polarion("CNV-16028")
     # Re-enabled test requires the disabled test's side effects (aggregation state)
     @pytest.mark.dependency(name="test_disabled_admin")
     @pytest.mark.usefixtures("aggregation_disabled")
@@ -44,6 +43,8 @@ class TestRoleAggregationAdmin:
         from listing virtual machines when role aggregation is disabled.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-iuo/CNV-63822-role-aggregation-opt-out.md
+
+        Polarion: CNV-16028
 
         Preconditions:
             - RoleBinding granting the unprivileged user the admin ClusterRole
@@ -60,7 +61,6 @@ class TestRoleAggregationAdmin:
         """
         wait_for_vm_list_permission(client=unprivileged_client, namespace_name=namespace.name, is_allowed=False)
 
-    @pytest.mark.polarion("CNV-16029")
     # Aggregation must be disabled before re-enabling to test the transition
     @pytest.mark.dependency(depends=["test_disabled_admin"])
     @pytest.mark.usefixtures("aggregation_reenabled")
@@ -72,6 +72,8 @@ class TestRoleAggregationAdmin:
         call on VirtualMachine resources when role aggregation is re-enabled.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-iuo/CNV-63822-role-aggregation-opt-out.md
+
+        Polarion: CNV-16029
 
         Preconditions:
             - RoleBinding granting the unprivileged user the admin ClusterRole
@@ -104,7 +106,6 @@ class TestRoleAggregationEdit:
           in the namespace
     """
 
-    @pytest.mark.polarion("CNV-16262")
     # Re-enabled test requires the disabled test's side effects (aggregation state)
     @pytest.mark.dependency(name="test_disabled_edit")
     @pytest.mark.usefixtures("aggregation_disabled")
@@ -114,6 +115,8 @@ class TestRoleAggregationEdit:
         from listing virtual machines when role aggregation is disabled.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-iuo/CNV-63822-role-aggregation-opt-out.md
+
+        Polarion: CNV-16262
 
         Preconditions:
             - RoleBinding granting the unprivileged user the edit ClusterRole
@@ -130,7 +133,6 @@ class TestRoleAggregationEdit:
         """
         wait_for_vm_list_permission(client=unprivileged_client, namespace_name=namespace.name, is_allowed=False)
 
-    @pytest.mark.polarion("CNV-16260")
     # Aggregation must be disabled before re-enabling to test the transition
     @pytest.mark.dependency(depends=["test_disabled_edit"])
     @pytest.mark.usefixtures("aggregation_reenabled")
@@ -140,6 +142,8 @@ class TestRoleAggregationEdit:
         using a server-side dry-run when role aggregation is re-enabled.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-iuo/CNV-63822-role-aggregation-opt-out.md
+
+        Polarion: CNV-16260
 
         Preconditions:
             - RoleBinding granting the unprivileged user the edit ClusterRole
@@ -170,7 +174,6 @@ class TestRoleAggregationView:
           in the namespace
     """
 
-    @pytest.mark.polarion("CNV-16263")
     # Re-enabled test requires the disabled test's side effects (aggregation state)
     @pytest.mark.dependency(name="test_disabled_view")
     @pytest.mark.usefixtures("aggregation_disabled")
@@ -180,6 +183,8 @@ class TestRoleAggregationView:
         from listing virtual machines when role aggregation is disabled.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-iuo/CNV-63822-role-aggregation-opt-out.md
+
+        Polarion: CNV-16263
 
         Preconditions:
             - RoleBinding granting the unprivileged user the view ClusterRole
@@ -196,7 +201,6 @@ class TestRoleAggregationView:
         """
         wait_for_vm_list_permission(client=unprivileged_client, namespace_name=namespace.name, is_allowed=False)
 
-    @pytest.mark.polarion("CNV-16261")
     # Aggregation must be disabled before re-enabling to test the transition
     @pytest.mark.dependency(depends=["test_disabled_view"])
     @pytest.mark.usefixtures("aggregation_reenabled")
@@ -206,6 +210,8 @@ class TestRoleAggregationView:
         resources when role aggregation is re-enabled.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-iuo/CNV-63822-role-aggregation-opt-out.md
+
+        Polarion: CNV-16261
 
         Preconditions:
             - RoleBinding granting the unprivileged user the view ClusterRole

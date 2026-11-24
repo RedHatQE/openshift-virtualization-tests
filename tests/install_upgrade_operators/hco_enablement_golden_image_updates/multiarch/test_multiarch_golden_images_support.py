@@ -40,7 +40,6 @@ class TestDisabledMultiarchGoldenImagesSupport:
         - "enableMultiArchBootImageImport" feature gate disabled in HCO CR
     """
 
-    @pytest.mark.polarion("CNV-15977")
     @pytest.mark.parametrize(
         "resource_type",
         [
@@ -61,6 +60,8 @@ class TestDisabledMultiarchGoldenImagesSupport:
         after disabling multi-architecture golden images support.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-iuo/multiarch_arm_support.md
+
+        Polarion: CNV-15977
 
         Parametrize:
             - resource_type:
@@ -91,7 +92,6 @@ class TestDisabledMultiarchGoldenImagesSupport:
             f"{arch_specific_resources}"
         )
 
-    @pytest.mark.polarion("CNV-15978")
     def test_architecture_agnostic_data_sources_rollback(
         self,
         admin_client,
@@ -104,6 +104,8 @@ class TestDisabledMultiarchGoldenImagesSupport:
         disabling multi-architecture golden images support, and point to a pvc/snapshot source.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-iuo/multiarch_arm_support.md
+
+        Polarion: CNV-15978
 
         Steps:
             1. Get architecture-agnostic DataSources from golden images namespace.
@@ -132,13 +134,14 @@ class TestDisabledMultiarchGoldenImagesSupport:
                     f"DataSource {ds_name} does not reference a pvc/snapshot source: {source}"
                 )
 
-    @pytest.mark.polarion("CNV-15979")
     def test_kubevirt_hco_multi_arch_boot_images_enabled_metric(self, prometheus):
         """
         Test that the metric is indicating that multi-arch
         golden images support is disabled on a multiarch cluster.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-iuo/multiarch_arm_support.md
+
+        Polarion: CNV-15979
 
         Steps:
             1. Query the metric.
@@ -154,7 +157,6 @@ class TestDisabledMultiarchGoldenImagesSupport:
         )
 
     @pytest.mark.usefixtures("single_arch_node_placement")
-    @pytest.mark.polarion("CNV-15980")
     def test_kubevirt_hco_multi_arch_boot_images_enabled_metric_single_arch_node_placement(
         self,
         prometheus,
@@ -164,6 +166,8 @@ class TestDisabledMultiarchGoldenImagesSupport:
         workloads to a single architecture.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-iuo/multiarch_arm_support.md
+
+        Polarion: CNV-15980
 
         Preconditions:
             - nodePlacement restricts workloads to a single architecture in HCO CR.
@@ -195,8 +199,8 @@ class TestEnabledMultiarchGoldenImagesSupport:
     @pytest.mark.parametrize(
         "resource_type, expected_condition",
         [
-            pytest.param(DataImportCron, DataImportCron.Condition.UP_TO_DATE, marks=pytest.mark.polarion("CNV-15981")),
-            pytest.param(DataSource, DataSource.Condition.READY, marks=pytest.mark.polarion("CNV-15982")),
+            pytest.param(DataImportCron, DataImportCron.Condition.UP_TO_DATE),
+            pytest.param(DataSource, DataSource.Condition.READY),
         ],
     )
     def test_architecture_specific_golden_image_resources(
@@ -212,6 +216,9 @@ class TestEnabledMultiarchGoldenImagesSupport:
         for each common DataImportCronTemplate and each supported cluster architecture.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-iuo/multiarch_arm_support.md
+
+        Polarion: CNV-15981
+        Polarion: CNV-15982
 
         Parametrize:
             - resource_type, expected_condition:
@@ -236,7 +243,6 @@ class TestEnabledMultiarchGoldenImagesSupport:
             ready_condition=expected_condition,
         )
 
-    @pytest.mark.polarion("CNV-16020")
     def test_architecture_agnostic_data_sources(
         self,
         admin_client,
@@ -250,6 +256,8 @@ class TestEnabledMultiarchGoldenImagesSupport:
         the default architecture-specific DataSource.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-iuo/multiarch_arm_support.md
+
+        Polarion: CNV-16020
 
         Steps:
             1. Get architecture-agnostic DataSources from golden images namespace.
@@ -298,7 +306,6 @@ class TestMultiarchGoldenImageAnnotationMetrics:
         [pytest.param(get_unsupported_arch_template, id="unsupported_arch")],
         indirect=True,
     )
-    @pytest.mark.polarion("CNV-15983")
     def test_kubevirt_hco_dataimportcrontemplate_with_supported_architectures_metric(
         self,
         hco_with_custom_template,
@@ -309,6 +316,8 @@ class TestMultiarchGoldenImageAnnotationMetrics:
         architecture annotation on a golden image.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-iuo/multiarch_arm_support.md
+
+        Polarion: CNV-15983
 
         Preconditions:
             - HCO CR is patched with a custom DataImportCronTemplate annotated
@@ -335,7 +344,6 @@ class TestMultiarchGoldenImageAnnotationMetrics:
         [pytest.param(get_no_arch_annotation_template, id="no_arch_annotation")],
         indirect=True,
     )
-    @pytest.mark.polarion("CNV-15984")
     def test_kubevirt_hco_dataimportcrontemplate_with_architecture_annotation_metric(
         self,
         hco_with_custom_template,
@@ -346,6 +354,8 @@ class TestMultiarchGoldenImageAnnotationMetrics:
         architecture annotation on a golden image.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-iuo/multiarch_arm_support.md
+
+        Polarion: CNV-15984
 
         Preconditions:
             - HCO CR is patched with a custom DataImportCronTemplate without
