@@ -15,13 +15,11 @@ from tests.storage.cbt.constants import (
     CBT_BACKUP_CHAIN_INCREMENTAL_COUNT,
     CBT_BACKUP_TYPE_FULL,
     CBT_BACKUP_TYPE_INCREMENTAL,
-    CBT_CONCURRENT_VM_COUNT,
     CBT_MULTI_DISK_DATA_DISK_COUNT,
 )
 from tests.storage.cbt.utils import (
     assert_backup_status_includes_volumes,
     attached_data_disk_names,
-    concurrent_backup_type,
 )
 from utilities.constants.virt import DV_DISK
 
@@ -615,6 +613,17 @@ class TestBackupErrorHandling:
         """
 
 
+# VM order for the concurrent wave. Fixtures choose full vs incremental with
+# concurrent_backup_type(); this sequence stays here so a wrong mix fails the tests.
+EXPECTED_CONCURRENT_BACKUP_TYPES: tuple[str, ...] = (
+    CBT_BACKUP_TYPE_INCREMENTAL,
+    CBT_BACKUP_TYPE_INCREMENTAL,
+    CBT_BACKUP_TYPE_INCREMENTAL,
+    CBT_BACKUP_TYPE_FULL,
+    CBT_BACKUP_TYPE_FULL,
+)
+
+
 # Required at collection for storage_class_matrix__module__.
 @pytest.mark.tier3
 @pytest.mark.usefixtures("storage_class_name_scope_module")
@@ -655,16 +664,20 @@ class TestConcurrentBackups:
             - All five simultaneous backups complete and include the boot disk, three typed
               Incremental and two typed Full
         """
-        assert len(completed_concurrent_push_backups) == CBT_CONCURRENT_VM_COUNT, (
-            f"Expected {CBT_CONCURRENT_VM_COUNT} simultaneous push backups, "
+        assert len(completed_concurrent_push_backups) == len(EXPECTED_CONCURRENT_BACKUP_TYPES), (
+            f"Expected {len(EXPECTED_CONCURRENT_BACKUP_TYPES)} simultaneous push backups, "
             f"got {len(completed_concurrent_push_backups)}"
         )
-        for backup_index, backup in enumerate(completed_concurrent_push_backups):
+        for backup, expected_backup_type in zip(
+            completed_concurrent_push_backups,
+            EXPECTED_CONCURRENT_BACKUP_TYPES,
+            strict=True,
+        ):
             assert_backup_status_includes_volumes(
                 backup_name=backup.name,
                 backup_status=backup.instance.to_dict()["status"],
                 expected_volume_names=[DV_DISK],
-                expected_backup_type=concurrent_backup_type(backup_index=backup_index),
+                expected_backup_type=expected_backup_type,
             )
 
     @pytest.mark.polarion("CNV-16012")
@@ -695,15 +708,20 @@ class TestConcurrentBackups:
             - All five simultaneous backups are ready for export and include the boot disk,
               three typed Incremental and two typed Full
         """
-        assert len(ready_concurrent_pull_backups) == CBT_CONCURRENT_VM_COUNT, (
-            f"Expected {CBT_CONCURRENT_VM_COUNT} simultaneous pull backups, got {len(ready_concurrent_pull_backups)}"
+        assert len(ready_concurrent_pull_backups) == len(EXPECTED_CONCURRENT_BACKUP_TYPES), (
+            f"Expected {len(EXPECTED_CONCURRENT_BACKUP_TYPES)} simultaneous pull backups, "
+            f"got {len(ready_concurrent_pull_backups)}"
         )
-        for backup_index, backup in enumerate(ready_concurrent_pull_backups):
+        for backup, expected_backup_type in zip(
+            ready_concurrent_pull_backups,
+            EXPECTED_CONCURRENT_BACKUP_TYPES,
+            strict=True,
+        ):
             assert_backup_status_includes_volumes(
                 backup_name=backup.name,
                 backup_status=backup.instance.to_dict()["status"],
                 expected_volume_names=[DV_DISK],
-                expected_backup_type=concurrent_backup_type(backup_index=backup_index),
+                expected_backup_type=expected_backup_type,
             )
 
 

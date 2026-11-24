@@ -69,39 +69,49 @@ class TestGenerateOsMatrixDict:
         """Test RHEL OS matrix generation with single version"""
         mock_images.Rhel = mock_os_images["rhel"]
 
-        result = generate_os_matrix_dict(os_name="rhel", supported_operating_systems=["rhel-9-5"])
+        result = generate_os_matrix_dict(os_name="rhel", supported_operating_systems=["rhel-9-8"])
 
-        assert len(result) == 1
-        assert "rhel-9-5" in result[0]
-        rhel_config = result[0]["rhel-9-5"]
-        assert rhel_config["os_version"] == "9.5"
-        assert rhel_config["image_name"] == "rhel-9.5.qcow2"
-        assert rhel_config["image_path"] == "cnv-tests/rhel-images/rhel-9.5.qcow2"
-        assert rhel_config["dv_size"] == "20Gi"
-        assert rhel_config["template_labels"]["os"] == "rhel9.5"
-        assert rhel_config["template_labels"]["workload"] == "server"
-        assert rhel_config["template_labels"]["flavor"] == "tiny"
-        assert "latest_release" not in rhel_config
+        assert len(result) == 1, "expected one RHEL 9.8 guest"
+        assert "rhel-9-8" in result[0], "RHEL 9.8 guest is missing"
+        rhel_config = result[0]["rhel-9-8"]
+        assert rhel_config["os_version"] == "9.8", "expected version 9.8"
+        assert rhel_config["image_name"] == "rhel-9.8.qcow2", "expected image file rhel-9.8.qcow2"
+        assert rhel_config["image_path"] == "cnv-tests/rhel-images/rhel-9.8.qcow2", "expected the rhel-9.8.qcow2 path"
+        assert rhel_config["dv_size"] == "20Gi", "expected disk size 20Gi"
+        assert rhel_config["template_labels"]["os"] == "rhel9.8", "expected operating system rhel9.8"
+        assert rhel_config["template_labels"]["workload"] == "server", "expected workload server"
+        assert rhel_config["template_labels"]["flavor"] == "tiny", "expected flavor tiny"
+        assert rhel_config["latest_released"] is True, "RHEL 9.8 should be the latest guest"
 
     @patch("utilities.os_utils.Images")
-    def test_generate_rhel_os_matrix_multiple_versions(self, mock_images, mock_os_images):
-        """Test RHEL OS matrix generation with multiple versions"""
+    def test_generate_rhel_os_matrix_for_maintained_versions(self, mock_images, mock_os_images):
+        """RHEL 8.10 stays in the matrix and RHEL 9.8 is the latest guest."""
         mock_images.Rhel = mock_os_images["rhel"]
 
-        result = generate_os_matrix_dict(os_name="rhel", supported_operating_systems=["rhel-8-10", "rhel-9-6"])
+        result = generate_os_matrix_dict(os_name="rhel", supported_operating_systems=["rhel-8-10", "rhel-9-8"])
 
-        assert len(result) == 2
+        assert len(result) == 2, "expected RHEL 8.10 and RHEL 9.8"
 
-        # Check RHEL 8.10
         rhel_810 = next(item for item in result if "rhel-8-10" in item)["rhel-8-10"]
-        assert rhel_810["os_version"] == "8.10"
-        assert rhel_810["image_name"] == "rhel-8.10.qcow2"
+        assert rhel_810["os_version"] == "8.10", "expected version 8.10"
+        assert rhel_810["image_name"] == "rhel-8.10.qcow2", "expected image file rhel-8.10.qcow2"
+        assert rhel_810["image_path"] == "cnv-tests/rhel-images/rhel-8.10.qcow2", "expected the rhel-8.10.qcow2 path"
+        assert rhel_810["dv_size"] == "20Gi", "expected disk size 20Gi"
+        assert rhel_810["template_labels"]["os"] == "rhel8.10", "expected operating system rhel8.10"
+        assert rhel_810["template_labels"]["workload"] == "server", "expected workload server"
+        assert rhel_810["template_labels"]["flavor"] == "tiny", "expected flavor tiny"
+        assert rhel_810["data_source"] == "rhel8", "expected source rhel8"
 
-        # Check RHEL 9.6 (latest)
-        rhel_96 = next(item for item in result if "rhel-9-6" in item)["rhel-9-6"]
-        assert rhel_96["os_version"] == "9.6"
-        assert rhel_96["image_name"] == "rhel-9.6.qcow2"
-        assert rhel_96["latest_released"] is True
+        rhel_98 = next(item for item in result if "rhel-9-8" in item)["rhel-9-8"]
+        assert rhel_98["os_version"] == "9.8", "expected version 9.8"
+        assert rhel_98["image_name"] == "rhel-9.8.qcow2", "expected image file rhel-9.8.qcow2"
+        assert rhel_98["image_path"] == "cnv-tests/rhel-images/rhel-9.8.qcow2", "expected the rhel-9.8.qcow2 path"
+        assert rhel_98["dv_size"] == "20Gi", "expected disk size 20Gi"
+        assert rhel_98["template_labels"]["os"] == "rhel9.8", "expected operating system rhel9.8"
+        assert rhel_98["template_labels"]["workload"] == "server", "expected workload server"
+        assert rhel_98["template_labels"]["flavor"] == "tiny", "expected flavor tiny"
+        assert rhel_98["data_source"] == "rhel9", "expected source rhel9"
+        assert rhel_98["latest_released"] is True, "RHEL 9.8 should be the latest guest"
 
     @patch("utilities.os_utils.Images")
     def test_generate_windows_os_matrix_with_uefi(self, mock_images, mock_os_images):
@@ -215,28 +225,28 @@ class TestGenerateOsMatrixDict:
     def test_generate_os_matrix_missing_image_attribute(self, mock_images, mock_os_images):
         """Test error handling when image attribute is missing"""
         mock_class = MagicMock()
-        mock_class.LATEST_RELEASE_STR = "rhel-9.6.qcow2"
+        mock_class.LATEST_RELEASE_STR = "rhel-9.8.qcow2"
         mock_class.DEFAULT_DV_SIZE = "20Gi"
-        # Missing RHEL9_5_IMG
-        del mock_class.RHEL9_5_IMG
+        # Missing RHEL9_8_IMG
+        del mock_class.RHEL9_8_IMG
         mock_images.Rhel = mock_class
 
-        with pytest.raises(ValueError, match="rhel is missing RHEL9_5_IMG attribute"):
-            generate_os_matrix_dict(os_name="rhel", supported_operating_systems=["rhel-9-5"])
+        with pytest.raises(ValueError, match="rhel is missing RHEL9_8_IMG attribute"):
+            generate_os_matrix_dict(os_name="rhel", supported_operating_systems=["rhel-9-8"])
 
     @patch("utilities.os_utils.Images")
     def test_generate_os_matrix_missing_dir_attribute(self, mock_images, mock_os_images):
         """Test error handling when DIR attribute is missing"""
         mock_class = MagicMock()
-        mock_class.LATEST_RELEASE_STR = "rhel-9.6.qcow2"
+        mock_class.LATEST_RELEASE_STR = "rhel-9.8.qcow2"
         mock_class.DEFAULT_DV_SIZE = "20Gi"
-        mock_class.RHEL9_5_IMG = "rhel-9.5.qcow2"
+        mock_class.RHEL9_8_IMG = "rhel-9.8.qcow2"
         # Missing DIR
         del mock_class.DIR
         mock_images.Rhel = mock_class
 
         with pytest.raises(ValueError, match="rhel is missing `DIR` attribute"):
-            generate_os_matrix_dict(os_name="rhel", supported_operating_systems=["rhel-9-5"])
+            generate_os_matrix_dict(os_name="rhel", supported_operating_systems=["rhel-9-8"])
 
     @patch("utilities.os_utils.Images")
     def test_generate_os_matrix_missing_uefi_dir_attribute(self, mock_images, mock_os_images):
@@ -264,14 +274,14 @@ class TestGenerateOsMatrixDict:
 
         result = generate_os_matrix_dict(
             os_name="rhel",
-            supported_operating_systems=["rhel-9-5"],
+            supported_operating_systems=["rhel-9-8"],
             arch="amd64",
         )
 
-        assert len(result) == 1
-        rhel_config = result[0]["rhel-9-5"]
-        assert rhel_config["template_labels"]["architecture"] == "amd64"
-        assert rhel_config["data_source"] == "rhel9-amd64"
+        assert len(result) == 1, "expected one RHEL 9.8 guest"
+        rhel_config = result[0]["rhel-9-8"]
+        assert rhel_config["template_labels"]["architecture"] == "amd64", "expected architecture amd64"
+        assert rhel_config["data_source"] == "rhel9-amd64", "expected source rhel9-amd64"
 
 
 class TestGenerateInstanceTypeRhelOsMatrix:
@@ -411,18 +421,17 @@ class TestOsMappingsConstants:
 
     def test_rhel_os_mapping_structure(self):
         """Test RHEL OS mapping has correct structure"""
-        assert "workload" in RHEL_OS_MAPPING
-        assert "flavor" in RHEL_OS_MAPPING
-        assert "rhel-8-10" in RHEL_OS_MAPPING
-        assert "rhel-9-5" in RHEL_OS_MAPPING
-        assert "rhel-9-6" in RHEL_OS_MAPPING
+        assert "workload" in RHEL_OS_MAPPING, "supported guests are missing a workload"
+        assert "flavor" in RHEL_OS_MAPPING, "supported guests are missing a flavor"
+        assert "rhel-8-10" in RHEL_OS_MAPPING, "RHEL 8.10 is missing from the supported guests"
+        assert "rhel-9-8" in RHEL_OS_MAPPING, "RHEL 9.8 is missing from the supported guests"
 
         # Check required keys in version entries
-        for version_key in ["rhel-8-10", "rhel-9-5", "rhel-9-6"]:
+        for version_key in ["rhel-8-10", "rhel-9-8"]:
             version_data = RHEL_OS_MAPPING[version_key]
-            assert "image_name" in version_data
-            assert "os_version" in version_data
-            assert "os" in version_data
+            assert "image_name" in version_data, f"{version_key} is missing an image file name"
+            assert "os_version" in version_data, f"{version_key} is missing a version"
+            assert "os" in version_data, f"{version_key} is missing an operating system name"
 
     def test_windows_os_mapping_structure(self):
         """Test Windows OS mapping has correct structure"""
