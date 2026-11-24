@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import logging
+import sys
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -32,13 +33,14 @@ from tests.storage.cbt.constants import (
     CBT_BACKUP_TYPE_FULL,
     CBT_BOOT_DISK_TEST_DATA_FILE,
     CBT_ENABLED_LABEL,
-    CBT_FILESYSTEM_RESTORE_HEADROOM_GIB,
+    CBT_FILESYSTEM_RESTORE_HEADROOM_PERCENT,
+    CBT_FILESYSTEM_RESTORE_MIN_HEADROOM_GIB,
     CBT_TARGET_DEVICE_PATH,
     CBT_TARGET_MOUNT_PATH,
     CBT_TARGET_VOLUME_NAME,
     CBT_TEST_DATA,
 )
-from tests.storage.cbt.utils import cbt_pvc_size_with_headroom
+from tests.storage.cbt.utils import BYTES_PER_GIB, cbt_pvc_size_with_headroom
 from utilities.constants.images import OS_FLAVOR_RHEL
 from utilities.constants.instance_types import RHEL9_PREFERENCE, U1_SMALL
 from utilities.constants.networking import POD_CONTAINER_SPEC
@@ -56,7 +58,12 @@ LOGGER = logging.getLogger(__name__)
 
 
 class CbtRestoreError(Exception):
-    """The push restore cannot proceed because a required backup assumption is not met."""
+    """A CBT push restore failed.
+
+    Raised when a backup assumption is not met, a required backup resource is missing,
+    the qcow2 cannot be selected or its virtual size cannot be read, or a restore PVC bind,
+    restore pod start, or cleanup wait times out.
+    """
 
 
 # restricted-v2 assigns the namespace UID and fsGroup. Leave runAsUser, fsGroup,
@@ -69,7 +76,15 @@ CBT_RUNNER_POD_SECURITY_CONTEXT: dict[str, Any] = {
 
 @dataclass(frozen=True)
 class CbtVolumeRestoreSpec:
-    """Volume from the backup and the PVC that will hold the restored raw disk."""
+    """Volume from the backup and the PVC that will hold the restored raw disk.
+
+    Attributes:
+        volume_name: Name of the backed-up volume.
+        size: Target PVC capacity as a Kubernetes quantity string, such as ``20Gi``.
+        storage_class: Storage class of the restored disk.
+        volume_mode: ``Filesystem`` or ``Block``.
+        access_mode: Access mode from the storage class profile, such as ``ReadWriteOnce``.
+    """
 
     volume_name: str
     size: str
@@ -91,11 +106,14 @@ class _RestoredDiskStorageClassProperties:
     access_mode: str
 
 
-def assert_restored_cbt_vm_data(vm: VirtualMachineForTests) -> None:
-    """Assert a restored VM still has the boot-disk file written before the backup.
+def assert_restored_rhel_vm_data(vm: VirtualMachineForTests) -> None:
+    """Assert a restored RHEL VM still has the Linux boot-disk test file.
+
+    The restored VM is always RHEL, so this helper reads the Linux guest path.
+    It does not cover a Windows guest.
 
     Args:
-        vm: Running restored VM.
+        vm: Running restored RHEL VM.
 
     Raises:
         AssertionError: When the guest file is missing or has different content.
@@ -132,7 +150,11 @@ def restored_cbt_vm_from_push_backup(
         Writes the restored boot disk, and deletes the restored VM and target PVC on exit.
 
     Raises:
-        CbtRestoreError: When the restored VM or the target PVC is not deleted before the wait timeout.
+        CbtRestoreError: When the backup count, type, or volume list is not one full volume; the backup,
+            tracker, backup PVC, or StorageProfile is missing; the backup does not contain one matching
+            qcow2; qemu-img info does not return its virtual size; the restore PVC does not bind; the
+            restore pod does not start; or the restored VM or target PVC is not deleted before the wait
+            timeout. A cleanup failure is logged instead when another error is already propagating.
     """
     backup = _single_full_backup(backups=backups)
     vm_name = _backed_up_vm_name(backup=backup, namespace=namespace, client=client)
@@ -185,19 +207,40 @@ def restored_cbt_vm_from_push_backup(
         running_vm(vm=restored_vm, ssh_timeout=TIMEOUT_5MIN)
         yield restored_vm
     finally:
-        try:
-            if restored_vm is not None:
+        earlier_failure = sys.exc_info()[0] is not None
+        cleanup_errors: list[Exception] = []
+        if restored_vm is not None:
+            try:
                 restored_vm.clean_up(wait=True)
                 require_vm_deleted(vm=restored_vm)
-        finally:
-            if target_pvc is not None and not target_pvc.clean_up(wait=True):
-                raise CbtRestoreError(f"Timed out deleting restore PVC {namespace}/{target_pvc.name}")
+            except Exception as cleanup_error:
+                # Aggregate cleanup failures so one does not hide another or an earlier test error.
+                cleanup_errors.append(cleanup_error)
+        if target_pvc is not None:
+            try:
+                if not target_pvc.clean_up(wait=True):
+                    raise CbtRestoreError(f"Timed out deleting restore PVC {namespace}/{target_pvc.name}")
+            except Exception as cleanup_error:
+                # Aggregate cleanup failures so one does not hide another or an earlier test error.
+                cleanup_errors.append(cleanup_error)
+        if earlier_failure:
+            for reported_error in cleanup_errors:
+                LOGGER.error(f"Restore cleanup failed: {reported_error}")
+        else:
+            for reported_error in cleanup_errors[1:]:
+                LOGGER.error(f"Restore cleanup failed: {reported_error}")
+            if cleanup_errors:
+                raise cleanup_errors[0]
 
 
 def require_vm_deleted(vm: VirtualMachineForTests) -> None:
     """Raise when a VM is still present after cleanup.
 
-    VirtualMachineForTests.clean_up returns True when VM deletion times out.
+    VirtualMachineForTests.clean_up unconditionally returns True and does not
+    report a deletion timeout, so VM existence must be checked separately.
+
+    Args:
+        vm: VM whose deletion was just attempted.
 
     Raises:
         CbtRestoreError: When the VM still exists.
@@ -480,22 +523,12 @@ def _select_volume_qcow2(
     """Return the one qcow2 for this volume in the full backup.
 
     KubeVirt writes ``<vm>/<checkpoint>/<backup>-<volume>.qcow2``. A file whose
-    stem is exactly ``<backup>-<volume>`` or the volume name is also accepted.
+    stem is exactly ``<backup>-<volume>`` or the volume name is accepted when it
+    is the only match for that backup.
 
     Raises:
         CbtRestoreError: When the backup does not contain exactly one matching qcow2.
     """
-    producer_filename = f"{backup_name}-{volume_name}.qcow2"
-    exact_candidates = [
-        f"{CBT_BACKUP_DIR}/{vm_name}/{checkpoint_name}/{producer_filename}",
-        f"{CBT_BACKUP_DIR}/{vm_name}/{backup_name}/{volume_name}.qcow2",
-        f"{CBT_BACKUP_DIR}/{vm_name}/{checkpoint_name}/{volume_name}.qcow2",
-        f"{CBT_BACKUP_DIR}/{backup_name}/{volume_name}.qcow2",
-        f"{CBT_BACKUP_DIR}/{checkpoint_name}/{volume_name}.qcow2",
-    ]
-    for candidate in exact_candidates:
-        if candidate in qcow2_files:
-            return candidate
     matched = _files_for_backup(
         qcow2_files=qcow2_files,
         vm_name=vm_name,
@@ -514,26 +547,44 @@ def _select_volume_qcow2(
 
 
 def _qcow2_virtual_size_bytes(pod: Pod, qcow2_file: str) -> int:
-    """Return the guest-visible size of a qcow2 file."""
+    """Return the guest-visible size of a qcow2 file.
+
+    Raises:
+        CbtRestoreError: When qemu-img info does not return a virtual-size. The original parse error is chained.
+    """
     output = pod.execute(
         command=["qemu-img", "info", "--output=json", "--force-share", qcow2_file],
         timeout=TIMEOUT_2MIN,
     )
-    return int(json.loads(output)["virtual-size"])
+    try:
+        return int(json.loads(output)["virtual-size"])
+    except (json.JSONDecodeError, KeyError, TypeError, ValueError) as parse_error:
+        raise CbtRestoreError(
+            f"Could not read virtual-size from qemu-img info for {qcow2_file}: {output}"
+        ) from parse_error
 
 
 def _target_pvc_size(virtual_size_bytes: int, volume_mode: str) -> str:
     """Return the target PVC capacity for the backup image.
 
-    A Filesystem PVC needs extra capacity so the raw disk.img fits beside filesystem metadata.
+    A Filesystem PVC is 6% larger than the disk, rounded up to at least 1 Gi, so the raw
+    disk.img fits for a non-root writer. ext4 reserves 5% for root.
     A block device is used as the disk itself, so it is only rounded up to the image size.
     """
-    headroom_gib = CBT_FILESYSTEM_RESTORE_HEADROOM_GIB if volume_mode == PersistentVolumeClaim.VolumeMode.FILE else 0
+    headroom_gib = 0
+    if volume_mode == PersistentVolumeClaim.VolumeMode.FILE:
+        source_gib = (virtual_size_bytes + BYTES_PER_GIB - 1) // BYTES_PER_GIB
+        proportional_headroom_gib = (source_gib * CBT_FILESYSTEM_RESTORE_HEADROOM_PERCENT + 99) // 100
+        headroom_gib = max(CBT_FILESYSTEM_RESTORE_MIN_HEADROOM_GIB, proportional_headroom_gib)
     return cbt_pvc_size_with_headroom(source_disk_size=f"{virtual_size_bytes}", headroom_gib=headroom_gib)
 
 
 def _list_qcow2_files(pod: Pod) -> list[str]:
-    """Return every qcow2 file under the backup mount."""
+    """Return every qcow2 file under the backup mount.
+
+    Raises:
+        CbtRestoreError: When the backup mount contains no qcow2 files.
+    """
     output = pod.execute(
         command=["find", CBT_BACKUP_DIR, "-name", "*.qcow2", "-type", "f"],
         timeout=TIMEOUT_2MIN,
@@ -557,7 +608,15 @@ def _push_restore_pod(
     volumes: list[dict[str, Any]],
     volume_devices: list[dict[str, Any]],
 ) -> Generator[Pod]:
-    """Start a pod that mounts the backup PVC and, when given, the restore target."""
+    """Start a pod that mounts the backup PVC and, when given, the restore target.
+
+    Yields:
+        Pod: Running restore pod.
+
+    Raises:
+        CbtRestoreError: When the pod is not Running before the wait timeout. The original timeout is chained.
+            A pod that is gone before its status can be read is reported in that error.
+    """
     container_spec: dict[str, Any] = {
         **POD_CONTAINER_SPEC,
         "name": "cbt-push-restore",
@@ -581,8 +640,10 @@ def _push_restore_pod(
                 sleep=TIMEOUT_5SEC,
             )
         except TimeoutExpiredError as wait_error:
-            restore_pod.get()
-            status = restore_pod.instance.to_dict().get("status", {})
+            try:
+                status = restore_pod.instance.to_dict().get("status", {})
+            except NotFoundError:
+                status = "<pod not found>"
             raise CbtRestoreError(
                 f"CBT push restore pod {restore_pod.name} did not start: {wait_error}. status={status}"
             ) from wait_error

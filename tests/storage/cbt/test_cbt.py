@@ -21,7 +21,7 @@ from tests.storage.cbt.constants import (
     CBT_CONCURRENT_VM_COUNT,
     CBT_MULTI_DISK_DATA_DISK_COUNT,
 )
-from tests.storage.cbt.restore import assert_restored_cbt_vm_data
+from tests.storage.cbt.restore import assert_restored_rhel_vm_data
 from tests.storage.cbt.utils import (
     assert_backup_status_includes_volumes,
     attached_data_disk_names,
@@ -77,7 +77,7 @@ class TestFullBackup:
             6. Start the restored VM
 
         Expected:
-            - Full backup includes the boot disk, and the restored VM boots with the original test data
+            - The restored VM boots with the original test data
         """
         full_backup = completed_push_backup_chain[0]
         assert_backup_status_includes_volumes(
@@ -86,7 +86,7 @@ class TestFullBackup:
             expected_volume_names=[DV_DISK],
             expected_backup_type=CBT_BACKUP_TYPE_FULL,
         )
-        assert_restored_cbt_vm_data(vm=restored_vm_from_push_chain)
+        assert_restored_rhel_vm_data(vm=restored_vm_from_push_chain)
 
     @pytest.mark.polarion("CNV-15996")
     @pytest.mark.parametrize(

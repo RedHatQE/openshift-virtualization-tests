@@ -15,7 +15,9 @@ CBT_DATA_DISK_SIZE: str = "1Gi"
 CBT_DATA_DISK_TEST_DATA: str = "cbt-data-disk-test-data-content"
 CBT_MULTI_DISK_DATA_DISK_COUNT: int = 2
 CBT_BACKUP_CHAIN_INCREMENTAL_COUNT: int = 3
-CBT_FILESYSTEM_RESTORE_HEADROOM_GIB: int = 1
+# Filesystem restore PVC headroom. ext4 reserves 5% for root and the restore pod is non-root.
+CBT_FILESYSTEM_RESTORE_HEADROOM_PERCENT: int = 6
+CBT_FILESYSTEM_RESTORE_MIN_HEADROOM_GIB: int = 1
 CBT_BACKUP_DIR: str = "/backup"
 CBT_TARGET_VOLUME_NAME: str = "target-disk"
 CBT_TARGET_MOUNT_PATH: str = "/target"
