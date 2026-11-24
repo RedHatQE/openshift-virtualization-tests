@@ -56,13 +56,15 @@ def poll_tcp_connectivity(
         client_target_ip: IP address the client connects to. Set this to reach the server through
             an intermediary address (e.g. a ClusterIP service VIP) while the server still binds to
             its own IP.
-        expect_connectivity: When True polls until connectivity exists; when False polls until it does not.
+        expect_connectivity: When True polls until connectivity exists; when False polls until the
+            client cannot connect while the iperf server is listening.
 
     Returns:
         True when the observed reachability matches expect_connectivity.
     """
-    try:
-        with TcpServer(vm=server_vm, port=IPERF_SERVER_PORT, bind_ip=server_ip, bind_dev=server_bind_dev):
+    reachable = False
+    with TcpServer(vm=server_vm, port=IPERF_SERVER_PORT, bind_ip=server_ip, bind_dev=server_bind_dev):
+        try:
             with VMTcpClient(
                 vm=client_vm,
                 server_ip=server_ip if client_target_ip is None else client_target_ip,
@@ -70,6 +72,6 @@ def poll_tcp_connectivity(
                 bind_dev=client_bind_dev,
             ):
                 reachable = True
-    except TimeoutExpiredError:
-        reachable = False
+        except TimeoutExpiredError:
+            pass
     return reachable if expect_connectivity else not reachable
