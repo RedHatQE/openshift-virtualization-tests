@@ -18,7 +18,7 @@ The project is structured as follows:
 - [py_config](../tests/global_config.py) contains tests-specific configuration which can be controlled from the command line.
 Please refer to [pytest-testconfig](https://github.com/wojole/pytest-testconfig) for more information.
 
-This layout is also the map used to trace which tests a package update can affect — see [Verifying dependency bumps](#verifying-dependency-bumps).
+This layout is also the map used to trace which tests a package update can affect — see [Dependency bumps](#dependency-bumps).
 
 
 # Contribution
@@ -202,96 +202,20 @@ If the label is still present and older than 4 hours, the workflow removes and r
 A thumbs-up on the comment means the workflow accepted the request and added or refreshed the label.
 If the request is skipped (4-hour cooldown, or label present without usable label history), the thumbs-up is replaced with 👎 — check the workflow Action logs and Jenkins job `github-events-listener`.
 
-### Verifying dependency bumps
+### Dependency bumps
 
-Use this procedure for any dependency or lockfile bump.
-To update packages and regenerate `uv.lock`, see [Getting started](GETTING_STARTED.md#installation).
-
-#### Baseline checks (no cluster required)
-
-Run these first on every bump:
-
-```bash
-# Manifest and lockfile consistency, and a clean installation from the lockfile
-uv lock --check
-uv sync --locked
-```
-
-Then stage `pyproject.toml`, `uv.lock`, and any other modified files (for example
-`git add pyproject.toml uv.lock`) and run the linters, type checks, and policy hooks as described
-in [Check the code](#check-the-code). The staged-diff policy hooks always inspect the staged Git
-index rather than the unstaged worktree, even with `--all-files`, so unstaged changes are skipped
-by those checks.
-
-Run the full suite as described in [tox](#tox). It covers pytest collection on `amd64`,
-`arm64`, `s390x`, and `multiarch`; upgrade modes (`--upgrade` for CNV, OCP, and EUS;
-`--upgrade_custom` for CNV and OCP); `tests/global_config_rh_it.py`; `-m smoke
---collect-only`; `--setup-plan`; every top-level `tests/` directory; `unused-code`; and
-`utilities-unittests`.
-
-If the bumped package is used by tooling under `scripts/`, run that tool's unit tests.
-These suites have their own `pytest.ini`/`conftest.py`, so isolate them from the root
-test configuration:
-
-```bash
-# Tool with a local pytest.ini
-uv run pytest -c scripts/<tool>/tests/pytest.ini --confcutdir=scripts/<tool>/tests scripts/<tool>/tests
-
-# Tool without a local pytest.ini
-uv run pytest -o addopts="" --confcutdir=scripts/<tool>/tests scripts/<tool>/tests
-```
-
-Finally verify container packaging:
-
-- Locally: `make build-container` (see [CONTAINERIZE_TESTS.md](CONTAINERIZE_TESTS.md)).
-- On a PR: `/build-and-push-container` (see
-  [Build and push a container with your changes](#build-and-push-a-container-with-your-changes)).
-
-#### Trace impact using the project structure
-
-This section relies on the layout described in [Project Structure](#project-structure).
-
-- Direct imports: `git grep -n "<module_name>" -- conftest.py tests utilities libs scripts`. The
-  Python import module name can differ from the package name in `pyproject.toml` (for example
-  `openshift-python-wrapper` → `ocp_resources`, `openshift-python-utilities` → `ocp_utilities`,
-  `pyhelper-utils` → `pyhelper_utils`, `timeout-sampler` → `timeout_sampler`, `pyvmomi` →
-  `pyVim`/`pyVmomi`).
-- Transitive dependencies (for example `cryptography`, `pyjwt`, `dnspython`): use
-  `uv tree --invert --package <package_name>` to find which direct dependency pulls it in,
-  then trace that direct dependency's usage.
-- On a PR, comment `/test-plan` (see [Request a test execution plan](#request-a-test-execution-plan))
-  for automated impact tracing.
-
-#### Select manual cluster tests by scope
-
-**Core / cross-cutting dependencies** — used by `conftest.py`, shared `utilities/`, `libs/`,
-cluster API/HTTP clients, or pytest itself (for example `openshift-python-wrapper`,
-`openshift-python-utilities`, `kubernetes`, `pyhelper-utils`, `timeout-sampler`, `requests`,
-`urllib3`, `pytest` and pytest plugins):
-
-- Start with the smoke suite (`uv run pytest -m smoke`, or `/rerun-smoke` on the PR — see
-  [Re-run smoke tests](#re-run-smoke-tests)), which exercises cluster API access, VM lifecycle,
-  storage clone/upload, and core session fixtures.
-- For high-impact bumps (for example `openshift-python-wrapper`, `kubernetes`, `pytest`), also
-  run representative tests across the affected `tests/<component>/` directories, or `-m gating`
-  via Jenkins.
-
-**Domain-specific dependencies** — imported only by specific components or utility modules:
-
-- `netaddr` in the networking utilities and `tests/network/`.
-- `pyvmomi` in `tests/network/provider_migration/`.
-- `pexpect` in console/VNC/libguestfs helpers.
-- `sqlalchemy` in `utilities/database.py`, exercised by `conftest.py` with `--data-collector` and
-  by `utilities/unittests/test_database.py`.
-- `pytest-jira` with `--jira`.
-- `jira` in `utilities/jira.py`, exercised by tests calling `is_jira_open()` and by
-  `utilities/unittests/test_jira.py`.
-
-Run the matching `tests/<component>/<feature>/` directory or test files directly against a
-cluster, along with any matching unit tests under `utilities/unittests/` or
-`scripts/<tool>/tests/`.
-
-See [Running Tests](RUNNING_TESTS.md) for CLI filtering options (`-m`, `-k`, `--tc-file`).
+- **Update `pyproject.toml` and `uv.lock`**:
+  - Regenerate `uv.lock` with `uv lock --upgrade-package <package>` (see [Getting started](GETTING_STARTED.md#installation)). When a specific minimum version is required (for example a CVE fix or a required feature/fix), also add or update the minimum version in `pyproject.toml` (`dependencies` under `[project]`, or `[project.optional-dependencies]` / `[dependency-groups]`).
+  - Verify lockfile consistency with `uv lock --check` and sync your environment with `uv sync --locked`.
+- **Check the upstream package repository for breaking changes**:
+  - Review the package's release notes, changelog, or diff between the previous locked version and the new version in its upstream repository for breaking changes, deprecations, or removed APIs.
+- **Use [Project Structure](#project-structure) to pick manual tests** (in addition to the standard checks in this guide):
+  - Find direct imports with `git grep -n "<module_name>" -- conftest.py tests utilities libs scripts` (note the Python import name can differ from the package name, e.g. `openshift-python-wrapper` → `ocp_resources`).
+  - For transitive dependencies, trace which direct dependency pulls them in with `uv tree --invert --package <package_name>`.
+  - Scope manual test runs to what is affected:
+    - **Core / cross-cutting dependencies** (`conftest.py`, shared `utilities/`, `libs/`, API/HTTP clients, or pytest plugins): run `uv run pytest -m smoke` (and representative tests in affected `tests/<component>/` directories for major or high-impact bumps).
+    - **Domain-specific dependencies** (used only by specific components or utilities): run the matching `tests/<component>/<feature>/` tests, plus `utilities/unittests/` (`uv run tox -e utilities-unittests`) or the matching `tests/` suite under `scripts/` (isolated from the root `conftest.py` via `--confcutdir=<tests_dir>` and either `-c <tests_dir>/pytest.ini` or `-o addopts=""`).
+  - See [Running Tests](RUNNING_TESTS.md) for CLI filtering options (`-m`, `-k`, `--tc-file`).
 
 ### Run the tests via a Jenkins job
 
