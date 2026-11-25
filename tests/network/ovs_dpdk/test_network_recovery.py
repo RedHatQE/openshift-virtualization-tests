@@ -11,7 +11,23 @@ Markers:
     - special_infra
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import pytest
+
+from libs.net.vmspec import lookup_iface_status_ip
+from tests.network.libs.connectivity import poll_tcp_connectivity
+from tests.network.ovs_dpdk.libovsdpdk import OVS_DPDK_INTERFACE_NAME
+
+if TYPE_CHECKING:
+    from libs.vm.vm import BaseVirtualMachine
+
+pytestmark = [
+    pytest.mark.ovs_dpdk,
+    pytest.mark.special_infra,
+]
 
 
 class TestConnectivityAfterDpdkBackingDriverRestart:
@@ -95,8 +111,17 @@ class TestConnectivityAfterDpdkBackingDriverRestart:
         """
 
 
-@pytest.mark.manual
-def test_connectivity_after_vm_restart():
+@pytest.mark.parametrize(
+    "ip_family",
+    [
+        pytest.param(4, marks=pytest.mark.ipv4, id="ipv4"),
+        pytest.param(6, marks=pytest.mark.ipv6, id="ipv6"),
+    ],
+)
+def test_connectivity_after_vm_restart(
+    ip_family: int,
+    under_test_ref_vms_after_vm_restart: tuple[BaseVirtualMachine, BaseVirtualMachine],
+):
     """
     Test that TCP connectivity from the under-test VM to the reference VM is successful
     after the under-test VM is restarted, for the parametrized IP family.
@@ -120,9 +145,13 @@ def test_connectivity_after_vm_restart():
     Expected:
         - The new TCP connection to the reference VM is successful
     """
-
-
-test_connectivity_after_vm_restart.__test__ = False
+    client_vm, server_vm = under_test_ref_vms_after_vm_restart
+    server_ip = str(lookup_iface_status_ip(vm=server_vm, iface_name=OVS_DPDK_INTERFACE_NAME, ip_family=ip_family))
+    assert poll_tcp_connectivity(
+        client_vm=client_vm,
+        server_vm=server_vm,
+        server_ip=server_ip,
+    ), f"TCP connectivity from {client_vm.name} to {server_vm.name} failed after VM restart"
 
 
 @pytest.mark.manual

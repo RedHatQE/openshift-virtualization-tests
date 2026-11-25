@@ -24,6 +24,7 @@ from tests.network.ovs_dpdk.libovsdpdk import (
     ovs_dpdk_hco_cnv_integration_patch,
     ovs_dpdk_resource_claim_template_spec,
     ovs_dpdk_vm,
+    verify_baseline_connectivity,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import create_ns, generate_namespace_name
@@ -181,3 +182,22 @@ def ovs_dpdk_under_test_migrated_vm(
     under_test_vm = under_test_ref_running_vms[0]
     migrate_vm_and_verify(vm=under_test_vm, client=admin_client)
     return under_test_vm
+
+
+@pytest.fixture(scope="module")
+def under_test_ref_vms_after_vm_restart(
+    under_test_ref_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine],
+) -> tuple[BaseVirtualMachine, BaseVirtualMachine]:
+    client_vm, server_vm = under_test_ref_running_vms
+    verify_baseline_connectivity(client_vm=client_vm, ref_vm=server_vm)
+    client_vm.restart(wait=True)
+    cloud_init_addresses = client_vm.cloud_init_network_data.ethernets[GUEST_OVS_DPDK_IFACE_NAME].addresses or []
+    wait_for_ifaces_status(
+        vm=client_vm,
+        ip_addresses_by_spec_net_name={
+            OVS_DPDK_INTERFACE_NAME: [
+                str(ipaddress.ip_interface(address=address).ip) for address in cloud_init_addresses
+            ],
+        },
+    )
+    return client_vm, server_vm
