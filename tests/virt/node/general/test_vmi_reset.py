@@ -33,11 +33,14 @@ def vm_reset_and_running(vm_for_test):
 
 @pytest.mark.parametrize("vm_for_test", [pytest.param("vm-for-reset-test")], indirect=True)
 class TestVMIReset:
-    @pytest.mark.polarion("CNV-12373")
     def test_reset_success(
         self,
         vm_for_test,
         boot_count_before_reset,
         vm_reset_and_running,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-6439 # <skip-jira-utils-check>
+        Polarion: CNV-12373
+        """
         assert get_vm_boot_count(vm=vm_for_test) - boot_count_before_reset == 1, "Expected 1 boot entry after VMI reset"

@@ -17,6 +17,9 @@ def assert_linux_label_was_added_in_nodes(nodes):
 @pytest.mark.gating
 @pytest.mark.conformance
 @pytest.mark.s390x
-@pytest.mark.polarion("CNV-5758")
 def test_linux_label_was_added(schedulable_nodes):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-5163 # <skip-jira-utils-check>
+    Polarion: CNV-5758
+    """
     assert_linux_label_was_added_in_nodes(nodes=schedulable_nodes)
