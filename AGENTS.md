@@ -292,7 +292,7 @@ When reviewing quarantine PRs, verify the **quarantine mechanism matches the fai
 
 **Known script behaviors (do not "fix" these):**
 - **Dockerfiles** — Bitwarden Secrets CLI (`bws`) is installed unpinned via curl and requires `unzip`; this is intentional.
-- **`tox.ini` `verify-bugs-are-open-gh`** — uses `pyutils-jira` env vars (`JIRA_TOKEN`, `JIRA_USER`; `JIRA_CLOUD_ID`/`JIRA_SA_CLIENT_ID`/`JIRA_SA_CLIENT_SECRET` switch it to Atlassian Cloud service-account auth once `python-utility-scripts>=2.1.0` is on PyPI — see the `[testenv:verify-bugs-are-open-gh]` comment in `tox.ini` for the rollout constraint); these are distinct from the `PYTEST_JIRA_*` vars used by `utilities/jira.py`. Do not conflate the two.
+- **`tox.ini` `verify-bugs-are-open-gh`** — uses `pyutils-jira` env vars (`JIRA_TOKEN`, `JIRA_USER`, `JIRA_CLOUD_ID`, `JIRA_SA_CLIENT_ID`, `JIRA_SA_CLIENT_SECRET`); these are distinct from the `PYTEST_JIRA_*` vars used by `utilities/jira.py`. Do not conflate the two.
 - **`.coderabbit.yaml`** — empty objects `code_generation: {}` and `issue_enrichment: {}` are required for schema validation; do not remove them.
 - **`scripts/coderabbit_retry/`** — idempotently retries rate-limited CodeRabbit reviews every 20 minutes, within a 15-minute workflow timeout, for eligible PRs updated in the last 2 days; it skips stale, conflicting, draft, WIP, and already-requested reviews.
 - **`scripts/reportportal/rp_utils/rp_client.py`** — uses contains-match semantics (`filter.cnt.attributeValue`) for bundle filtering; retry-upload intentionally lacks `polarion-testcase-id` preservation.
