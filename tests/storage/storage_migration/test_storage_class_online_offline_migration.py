@@ -473,7 +473,12 @@ class TestOfflineVMStorageMigrationWithHotplugDisks:
             {"source_storage_class": py_config[STORAGE_CLASS_A]},
             {"target_storage_class": py_config[STORAGE_CLASS_A]},
             {},
-            marks=pytest.mark.jira("CNV-101491", run=False),
+            marks=pytest.mark.xfail(
+                reason=f"{QUARANTINED}: Offline same-class migration to a WaitForFirstConsumer storage class "
+                "never completes while the VM stays stopped; the target DataVolume remains PendingPopulation "
+                "and the migration stays in WaitForLiveMigrationToComplete. CNV-101491",
+                run=False,
+            ),
             id="source_a_target_a",
         ),
     ],
