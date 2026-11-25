@@ -3,7 +3,6 @@ from ocp_resources.data_import_cron import DataImportCron
 from ocp_resources.data_source import DataSource
 from ocp_resources.image_stream import ImageStream
 from ocp_resources.pod import Pod
-from ocp_utilities.infra import get_pods_by_name_prefix
 
 from tests.install_upgrade_operators.constants import CUSTOM_DATASOURCE_NAME, ENABLE_MULTI_ARCH_BOOT_IMAGE_IMPORT
 from tests.install_upgrade_operators.hco_enablement_golden_image_updates.utils import (
@@ -22,6 +21,7 @@ from utilities.constants.hco import (
     SSP_CR_COMMON_TEMPLATES_LIST_KEY_NAME,
 )
 from utilities.hco import disable_common_boot_image_import_hco_spec
+from utilities.infra import get_pod_by_name_prefix
 from utilities.ssp import get_ssp_resource
 
 
@@ -37,12 +37,10 @@ def data_import_schedule_minute_and_hour_values(data_import_schedule):
 
 @pytest.fixture()
 def deleted_hco_operator_pod(admin_client, hco_namespace, hyperconverged_resource_scope_function):
-    get_pods_by_name_prefix(client=admin_client, pod_prefix=HCO_OPERATOR, namespace=hco_namespace.name)[0].delete(
-        wait=True
+    get_pod_by_name_prefix(client=admin_client, pod_prefix=HCO_OPERATOR, namespace=hco_namespace.name).delete(wait=True)
+    get_pod_by_name_prefix(client=admin_client, pod_prefix=HCO_OPERATOR, namespace=hco_namespace.name).wait_for_status(
+        status=Pod.Status.RUNNING
     )
-    get_pods_by_name_prefix(client=admin_client, pod_prefix=HCO_OPERATOR, namespace=hco_namespace.name)[
-        0
-    ].wait_for_status(status=Pod.Status.RUNNING)
     return get_random_minutes_hours_fields_from_data_import_schedule(
         target_string=hyperconverged_resource_scope_function.instance.status.get(HCO_CR_DATA_IMPORT_SCHEDULE_KEY)
     )

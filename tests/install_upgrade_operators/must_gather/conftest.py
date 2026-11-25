@@ -433,6 +433,7 @@ def must_gather_vms_from_alternate_namespace(
     vms_list = create_vms(
         name_prefix=MUST_GATHER_VM_NAME_PREFIX,
         namespace_name=must_gather_alternate_namespace.name,
+        client=unprivileged_client,
         vm_count=5,
     )
     for vm in vms_list:

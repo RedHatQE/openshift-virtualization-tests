@@ -593,8 +593,8 @@ def create_windows11_wsl2_vm(
         vm_name (str): The name of the VM
         storage_class (str): The storage class to use for the DataVolume
     """
-    artifactory_secret = get_artifactory_secret(namespace=namespace)
-    artifactory_config_map = get_artifactory_config_map(namespace=namespace)
+    artifactory_secret = get_artifactory_secret(namespace=namespace, client=client)
+    artifactory_config_map = get_artifactory_config_map(namespace=namespace, client=client)
     dv = DataVolume(
         client=client,
         name=dv_name,
