@@ -61,9 +61,9 @@ class ArchImages:
             RHEL8_10_IMG="rhel-810.qcow2",
             RHEL9_3_IMG="rhel-93.qcow2",
             RHEL9_4_IMG="rhel-94.qcow2",
-            RHEL9_6_IMG="rhel-96.qcow2",
+            RHEL9_8_IMG="rhel-98.qcow2",
         )
-        Rhel.LATEST_RELEASE_STR = Rhel.RHEL9_6_IMG
+        Rhel.LATEST_RELEASE_STR = Rhel.RHEL9_8_IMG
 
         Windows = Windows(
             WIN10_ISO_IMG="Win10_22H2_English_x64.iso",
@@ -83,7 +83,7 @@ class ArchImages:
         Fedora = Fedora(
             FEDORA42_IMG="Fedora-Cloud-Base-Generic-42-1.1.x86_64.qcow2",
             FEDORA43_IMG="Fedora-Cloud-Base-Generic-43-1.6.x86_64.qcow2",
-            FEDORA_CONTAINER_IMAGE="quay.io/openshift-cnv/qe-cnv-tests-fedora:41",
+            FEDORA_CONTAINER_IMAGE="quay.io/openshift-cnv/qe-cnv-tests-fedora:43",
             DISK_DEMO=FEDORA_DISK_DEMO,
         )
         Fedora.LATEST_RELEASE_STR = Fedora.FEDORA43_IMG
@@ -114,15 +114,14 @@ class ArchImages:
         )
 
         Rhel = Rhel(
-            RHEL9_5_IMG="rhel-95-aarch64.qcow2",
-            RHEL9_6_IMG="rhel-96-aarch64.qcow2",
+            RHEL9_8_IMG="rhel-98-aarch64.qcow2",
         )
-        Rhel.LATEST_RELEASE_STR = Rhel.RHEL9_6_IMG
+        Rhel.LATEST_RELEASE_STR = Rhel.RHEL9_8_IMG
 
         Windows = Windows()
         Fedora = Fedora(
             FEDORA42_IMG="Fedora-Cloud-Base-Generic-42-1.1.aarch64.qcow2",
-            FEDORA_CONTAINER_IMAGE="quay.io/openshift-cnv/qe-cnv-tests-fedora:41-arm64",
+            FEDORA_CONTAINER_IMAGE="quay.io/openshift-cnv/qe-cnv-tests-fedora:43",
             DISK_DEMO=FEDORA_DISK_DEMO,
         )
         Fedora.LATEST_RELEASE_STR = Fedora.FEDORA42_IMG
@@ -162,14 +161,13 @@ class ArchImages:
             RHEL8_10_IMG="rhel-810-s390x.qcow2",
             RHEL9_3_IMG="rhel-93-s390x.qcow2",
             RHEL9_4_IMG="rhel-94-s390x.qcow2",
-            RHEL9_5_IMG="rhel-95-s390x.qcow2",
-            RHEL9_6_IMG="rhel-96-s390x.qcow2",
+            RHEL9_8_IMG="rhel-98-s390x.qcow2",
         )
-        Rhel.LATEST_RELEASE_STR = Rhel.RHEL9_6_IMG
+        Rhel.LATEST_RELEASE_STR = Rhel.RHEL9_8_IMG
 
         Fedora = Fedora(
             FEDORA42_IMG="Fedora-Cloud-Base-Generic-42-1.1.s390x.qcow2",
-            FEDORA_CONTAINER_IMAGE="quay.io/openshift-cnv/qe-cnv-tests-fedora:41-s390x",
+            FEDORA_CONTAINER_IMAGE="quay.io/openshift-cnv/qe-cnv-tests-fedora:43",
             DISK_DEMO=FEDORA_DISK_DEMO,
         )
         Fedora.LATEST_RELEASE_STR = Fedora.FEDORA42_IMG
