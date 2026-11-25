@@ -618,6 +618,11 @@ class TestOfflineVMStorageMigrationFailureRollback:
             {"source_storage_class": py_config[STORAGE_CLASS_A]},
             {"target_storage_class": py_config[STORAGE_CLASS_B]},
             {},
+            marks=pytest.mark.xfail(
+                reason=f"{QUARANTINED}: Offline migration stays in WaitForLiveMigrationToComplete and never "
+                "reaches Completed when the VM is started during the migration. CNV-101491",
+                run=False,
+            ),
             id="source_a_target_b",
         ),
     ],
