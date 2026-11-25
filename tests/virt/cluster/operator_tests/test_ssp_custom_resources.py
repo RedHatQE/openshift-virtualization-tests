@@ -68,8 +68,11 @@ def virt_template_validator_without_podantiaffinity(
 
 @pytest.mark.post_upgrade
 @pytest.mark.s390x
-@pytest.mark.polarion("CNV-3737")
 def test_verify_ssp_cr_conditions(ssp_resource_scope_function):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-738 # <skip-jira-utils-check>
+    Polarion: CNV-3737
+    """
     LOGGER.info("Check SSP CR conditions.")
     resource_conditions = {
         condition.type: condition.status
@@ -86,26 +89,33 @@ def test_verify_ssp_cr_conditions(ssp_resource_scope_function):
 @pytest.mark.parametrize(
     "pods_list_with_given_prefix",
     [
-        pytest.param({"pods_prefix_name": SSP_OPERATOR}, marks=pytest.mark.polarion("CNV-7002")),
+        pytest.param({"pods_prefix_name": SSP_OPERATOR}),
         pytest.param(
             {"pods_prefix_name": VIRT_TEMPLATE_VALIDATOR},
-            marks=pytest.mark.polarion("CNV-7003"),
         ),
     ],
     indirect=True,
 )
 def test_priority_class_value(pods_list_with_given_prefix):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-5131 # <skip-jira-utils-check>
+    Polarion: CNV-7002
+    Polarion: CNV-7003
+    """
     verify_pods_priority_class_value(pods=pods_list_with_given_prefix, expected_value="system-cluster-critical")
 
 
 @pytest.mark.s390x
-@pytest.mark.polarion("CNV-8660")
 def test_podantiaffinity(
     virt_template_validator_pods,
     pods_with_same_node,
     virt_template_validator_without_affinity,
     virt_template_validator_without_podantiaffinity,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-6733 # <skip-jira-utils-check>
+    Polarion: CNV-8660
+    """
     assert not virt_template_validator_without_affinity, (
         f"Affinity is not defined in {virt_template_validator_without_affinity}"
     )
