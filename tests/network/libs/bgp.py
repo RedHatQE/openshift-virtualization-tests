@@ -20,7 +20,7 @@ from libs.net.vmspec import IpNotFound
 from utilities.constants.hco import DEFAULT_RESOURCE_CONDITIONS
 from utilities.constants.namespaces import NamespacesNames
 from utilities.constants.networking import NET_UTIL_CONTAINER_IMAGE
-from utilities.infra import get_resources_by_name_prefix, wait_for_consistent_resource_conditions
+from utilities.infra import wait_for_consistent_resource_conditions
 
 _EXTERNAL_FRR_IMAGE: Final[str] = "quay.io/frrouting/frr:10.6.0"
 CLUSTER_FRR_ASN: Final[int] = 64512
@@ -316,17 +316,18 @@ def _acquire_dhcp_ipv4(pod: Pod, iface_name: str) -> str:
     raise IpNotFound(f"IP address not found for interface {iface_name}")
 
 
-def wait_for_bgp_connection_established(node_names: list) -> None:
+def wait_for_bgp_connection_established(node_names: list, client: DynamicClient) -> None:
     """Waits for BGP sessions to be established.
 
     Args:
         node_names (list): A list of node names to check for BGP session establishment.
+        client (DynamicClient): The Kubernetes dynamic client.
 
     Raises:
         ResourceNotFoundError: If the BGPSessionState resource is not found for any of the nodes.
     """
     for node_name in node_names:
-        _get_bgp_session_state(node_name=node_name).wait_for_session_established()
+        _get_bgp_session_state(node_name=node_name, client=client).wait_for_session_established()
 
 
 @retry(
@@ -358,12 +359,14 @@ def wait_for_evpn_established(frr_pod: Pod, expected_neighbors: int) -> bool:
     sleep=5,
     exceptions_dict={ResourceNotFoundError: []},
 )
-def _get_bgp_session_state(node_name: str) -> BGPSessionState:
-    bgp_session_state = get_resources_by_name_prefix(
-        prefix=node_name, namespace=NamespacesNames.OPENSHIFT_FRR_K8S, api_resource_name=BGPSessionState
-    )  # type: ignore[no-untyped-call]
-    if bgp_session_state:
-        return bgp_session_state[0]
+def _get_bgp_session_state(node_name: str, client: DynamicClient) -> BGPSessionState:
+    bgp_session_states = [
+        bgp_session_state
+        for bgp_session_state in BGPSessionState.get(client=client, namespace=NamespacesNames.OPENSHIFT_FRR_K8S)
+        if bgp_session_state.name.startswith(node_name)
+    ]
+    if bgp_session_states:
+        return bgp_session_states[0]
 
     raise ResourceNotFoundError(
         f"BGPSessionState for node '{node_name}' not found in namespace '{NamespacesNames.OPENSHIFT_FRR_K8S}'"
