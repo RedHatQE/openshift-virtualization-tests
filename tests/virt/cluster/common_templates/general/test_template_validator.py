@@ -23,7 +23,6 @@ LOGGER = logging.getLogger(__name__)
     [
         pytest.param(
             {"os_dict": FEDORA_LATEST},
-            marks=pytest.mark.polarion("CNV-2960"),
         ),
     ],
     indirect=True,
@@ -31,6 +30,10 @@ LOGGER = logging.getLogger(__name__)
 def test_template_validation_min_memory(
     unprivileged_client, namespace, golden_image_data_source_for_test_scope_function
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-798 # <skip-jira-utils-check>
+    Polarion: CNV-2960
+    """
     LOGGER.info("Test template validator - minimum required memory")
 
     with pytest.raises(UnprocessibleEntityError, match=r".*This VM requires more memory.*"):
