@@ -356,7 +356,7 @@ def vm_node_with_chaos_label(vm_with_nginx_service):
 
 @pytest.fixture(scope="module")
 def artifactory_secret_chaos_namespace_scope_module(chaos_namespace):
-    artifactory_secret = get_artifactory_secret(namespace=chaos_namespace.name)
+    artifactory_secret = get_artifactory_secret(namespace=chaos_namespace.name, client=chaos_namespace.client)
     yield artifactory_secret
     if artifactory_secret.exists:
         artifactory_secret.clean_up()
@@ -364,7 +364,7 @@ def artifactory_secret_chaos_namespace_scope_module(chaos_namespace):
 
 @pytest.fixture(scope="module")
 def artifactory_config_map_chaos_namespace_scope_module(chaos_namespace):
-    artifactory_config_map = get_artifactory_config_map(namespace=chaos_namespace.name)
+    artifactory_config_map = get_artifactory_config_map(namespace=chaos_namespace.name, client=chaos_namespace.client)
     yield artifactory_config_map
     if artifactory_config_map.exists:
         artifactory_config_map.clean_up()

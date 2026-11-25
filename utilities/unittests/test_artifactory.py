@@ -274,33 +274,26 @@ class TestGetArtifactorySecret:
     @patch("utilities.artifactory.base64_encode_str")
     def test_get_artifactory_secret_creates_secret_with_correct_parameters(self, mock_base64_encode, mock_secret_class):
         """Test creates Secret with correct parameters"""
-        # Mock environment variables
         with patch.dict(os.environ, {"ARTIFACTORY_USER": "test-user", "ARTIFACTORY_TOKEN": "test-token"}):
-            # Mock base64 encoding
             mock_base64_encode.side_effect = lambda x: f"base64_{x}"
-
-            # Mock Secret instance
+            mock_client = MagicMock()
             mock_secret_instance = MagicMock()
             mock_secret_instance.exists = False
             mock_secret_class.return_value = mock_secret_instance
 
-            result = get_artifactory_secret(namespace="test-namespace")
+            result = get_artifactory_secret(namespace="test-namespace", client=mock_client)
 
-            # Verify Secret was created with correct parameters
             mock_secret_class.assert_called_once_with(
                 name=ARTIFACTORY_SECRET_NAME,
                 namespace="test-namespace",
                 accesskeyid="base64_test-user",
                 secretkey="base64_test-token",
-                client=None,
+                client=mock_client,
             )
-
-            # Verify base64 encoding was called
-            assert mock_base64_encode.call_count == 2
+            assert mock_base64_encode.call_count == 2, "Expected ARTIFACTORY_USER and ARTIFACTORY_TOKEN encoding"
             mock_base64_encode.assert_any_call("test-user")
             mock_base64_encode.assert_any_call("test-token")
-
-            assert result == mock_secret_instance
+            assert result == mock_secret_instance, "Expected get_artifactory_secret to return the Secret instance"
 
     @patch("utilities.artifactory.Secret")
     @patch("utilities.artifactory.base64_encode_str")
@@ -308,17 +301,14 @@ class TestGetArtifactorySecret:
         """Test deploys secret if it doesn't exist"""
         with patch.dict(os.environ, {"ARTIFACTORY_USER": "test-user", "ARTIFACTORY_TOKEN": "test-token"}):
             mock_base64_encode.side_effect = lambda x: f"base64_{x}"
-
-            # Mock Secret instance that doesn't exist
             mock_secret_instance = MagicMock()
             mock_secret_instance.exists = False
             mock_secret_class.return_value = mock_secret_instance
 
-            result = get_artifactory_secret(namespace="test-namespace")
+            result = get_artifactory_secret(namespace="test-namespace", client=MagicMock())
 
-            # Verify deploy was called
             mock_secret_instance.deploy.assert_called_once()
-            assert result == mock_secret_instance
+            assert result == mock_secret_instance, "Expected deployed Secret instance to be returned"
 
     @patch("utilities.artifactory.Secret")
     @patch("utilities.artifactory.base64_encode_str")
@@ -326,31 +316,28 @@ class TestGetArtifactorySecret:
         """Test returns existing secret if it exists"""
         with patch.dict(os.environ, {"ARTIFACTORY_USER": "test-user", "ARTIFACTORY_TOKEN": "test-token"}):
             mock_base64_encode.side_effect = lambda x: f"base64_{x}"
-
-            # Mock Secret instance that exists
             mock_secret_instance = MagicMock()
             mock_secret_instance.exists = True
             mock_secret_class.return_value = mock_secret_instance
 
-            result = get_artifactory_secret(namespace="test-namespace")
+            result = get_artifactory_secret(namespace="test-namespace", client=MagicMock())
 
-            # Verify deploy was NOT called
             mock_secret_instance.deploy.assert_not_called()
-            assert result == mock_secret_instance
+            assert result == mock_secret_instance, "Expected existing Secret instance to be returned"
 
     @patch("utilities.artifactory.Secret")
     def test_get_artifactory_secret_raises_key_error_if_user_not_set(self, mock_secret_class):
         """Test raises KeyError if ARTIFACTORY_USER not set"""
         with patch.dict(os.environ, {"ARTIFACTORY_TOKEN": "test-token"}, clear=True):
             with pytest.raises(KeyError):
-                get_artifactory_secret(namespace="test-namespace")
+                get_artifactory_secret(namespace="test-namespace", client=MagicMock())
 
     @patch("utilities.artifactory.Secret")
     def test_get_artifactory_secret_raises_key_error_if_token_not_set(self, mock_secret_class):
         """Test raises KeyError if ARTIFACTORY_TOKEN not set"""
         with patch.dict(os.environ, {"ARTIFACTORY_USER": "test-user"}, clear=True):
             with pytest.raises(KeyError):
-                get_artifactory_secret(namespace="test-namespace")
+                get_artifactory_secret(namespace="test-namespace", client=MagicMock())
 
     @patch("utilities.artifactory.Secret")
     @patch("utilities.artifactory.base64_encode_str")
@@ -358,17 +345,15 @@ class TestGetArtifactorySecret:
         """Test uses correct secret name constant"""
         with patch.dict(os.environ, {"ARTIFACTORY_USER": "test-user", "ARTIFACTORY_TOKEN": "test-token"}):
             mock_base64_encode.side_effect = lambda x: f"base64_{x}"
-
             mock_secret_instance = MagicMock()
             mock_secret_instance.exists = False
             mock_secret_class.return_value = mock_secret_instance
 
-            get_artifactory_secret(namespace="test-namespace")
+            get_artifactory_secret(namespace="test-namespace", client=MagicMock())
 
-            # Verify the name parameter matches the constant
             call_kwargs = mock_secret_class.call_args[1]
-            assert call_kwargs["name"] == ARTIFACTORY_SECRET_NAME
-            assert call_kwargs["name"] == "cnv-tests-artifactory-secret"
+            assert call_kwargs["name"] == ARTIFACTORY_SECRET_NAME, "Expected ARTIFACTORY_SECRET_NAME constant"
+            assert call_kwargs["name"] == "cnv-tests-artifactory-secret", "Expected fixed artifactory secret name"
 
 
 class TestGetArtifactoryConfigMap:
@@ -379,67 +364,53 @@ class TestGetArtifactoryConfigMap:
     @patch("utilities.artifactory.py_config", {"server_url": "test.artifactory.com"})
     def test_get_artifactory_config_map_creates_with_correct_parameters(self, mock_get_cert, mock_cm_class):
         """Test creates ConfigMap with correct parameters"""
-        # Mock certificate
         mock_cert = "-----BEGIN CERTIFICATE-----\nMOCK_CERT\n-----END CERTIFICATE-----"
         mock_get_cert.return_value = mock_cert
-
-        # Mock ConfigMap instance
+        mock_client = MagicMock()
         mock_cm_instance = MagicMock()
         mock_cm_instance.exists = False
         mock_cm_class.return_value = mock_cm_instance
 
-        result = get_artifactory_config_map(namespace="test-namespace")
+        result = get_artifactory_config_map(namespace="test-namespace", client=mock_client)
 
-        # Verify ConfigMap was created with correct parameters
         mock_cm_class.assert_called_once_with(
             name="artifactory-configmap",
             namespace="test-namespace",
             data={"tlsregistry.crt": mock_cert},
-            client=None,
+            client=mock_client,
         )
-
-        # Verify SSL certificate was retrieved
         mock_get_cert.assert_called_once_with(addr=("test.artifactory.com", 443))
-
-        assert result == mock_cm_instance
+        assert result == mock_cm_instance, "Expected get_artifactory_config_map to return the ConfigMap instance"
 
     @patch("utilities.artifactory.ConfigMap")
     @patch("utilities.artifactory.ssl.get_server_certificate")
     @patch("utilities.artifactory.py_config", {"server_url": "test.artifactory.com"})
     def test_get_artifactory_config_map_deploys_if_not_exists(self, mock_get_cert, mock_cm_class):
         """Test deploys ConfigMap if it doesn't exist"""
-        mock_cert = "-----BEGIN CERTIFICATE-----\nMOCK_CERT\n-----END CERTIFICATE-----"
-        mock_get_cert.return_value = mock_cert
-
-        # Mock ConfigMap instance that doesn't exist
+        mock_get_cert.return_value = "-----BEGIN CERTIFICATE-----\nMOCK_CERT\n-----END CERTIFICATE-----"
         mock_cm_instance = MagicMock()
         mock_cm_instance.exists = False
         mock_cm_class.return_value = mock_cm_instance
 
-        result = get_artifactory_config_map(namespace="test-namespace")
+        result = get_artifactory_config_map(namespace="test-namespace", client=MagicMock())
 
-        # Verify deploy was called
         mock_cm_instance.deploy.assert_called_once()
-        assert result == mock_cm_instance
+        assert result == mock_cm_instance, "Expected deployed ConfigMap instance to be returned"
 
     @patch("utilities.artifactory.ConfigMap")
     @patch("utilities.artifactory.ssl.get_server_certificate")
     @patch("utilities.artifactory.py_config", {"server_url": "test.artifactory.com"})
     def test_get_artifactory_config_map_returns_existing_if_exists(self, mock_get_cert, mock_cm_class):
         """Test returns existing ConfigMap if it exists"""
-        mock_cert = "-----BEGIN CERTIFICATE-----\nMOCK_CERT\n-----END CERTIFICATE-----"
-        mock_get_cert.return_value = mock_cert
-
-        # Mock ConfigMap instance that exists
+        mock_get_cert.return_value = "-----BEGIN CERTIFICATE-----\nMOCK_CERT\n-----END CERTIFICATE-----"
         mock_cm_instance = MagicMock()
         mock_cm_instance.exists = True
         mock_cm_class.return_value = mock_cm_instance
 
-        result = get_artifactory_config_map(namespace="test-namespace")
+        result = get_artifactory_config_map(namespace="test-namespace", client=MagicMock())
 
-        # Verify deploy was NOT called
         mock_cm_instance.deploy.assert_not_called()
-        assert result == mock_cm_instance
+        assert result == mock_cm_instance, "Expected existing ConfigMap instance to be returned"
 
     @patch("utilities.artifactory.ConfigMap")
     @patch("utilities.artifactory.ssl.get_server_certificate")
@@ -447,18 +418,17 @@ class TestGetArtifactoryConfigMap:
     def test_get_artifactory_config_map_raises_key_error_if_server_url_missing(self, mock_get_cert, mock_cm_class):
         """Test raises KeyError if server_url not in py_config"""
         with pytest.raises(KeyError):
-            get_artifactory_config_map(namespace="test-namespace")
+            get_artifactory_config_map(namespace="test-namespace", client=MagicMock())
 
     @patch("utilities.artifactory.ConfigMap")
     @patch("utilities.artifactory.ssl.get_server_certificate")
     @patch("utilities.artifactory.py_config", {"server_url": "test.artifactory.com"})
     def test_get_artifactory_config_map_ssl_connection_failure(self, mock_get_cert, mock_cm_class):
         """Test OSError is raised on SSL connection failure"""
-        # Mock SSL connection failure
         mock_get_cert.side_effect = OSError("Connection refused")
 
         with pytest.raises(OSError):
-            get_artifactory_config_map(namespace="test-namespace")
+            get_artifactory_config_map(namespace="test-namespace", client=MagicMock())
 
         mock_get_cert.assert_called_once_with(addr=("test.artifactory.com", 443))
 
@@ -467,16 +437,13 @@ class TestGetArtifactoryConfigMap:
     @patch("utilities.artifactory.py_config", {"server_url": "custom.server.com"})
     def test_get_artifactory_config_map_uses_custom_server_url(self, mock_get_cert, mock_cm_class):
         """Test uses server_url from py_config"""
-        mock_cert = "-----BEGIN CERTIFICATE-----\nMOCK_CERT\n-----END CERTIFICATE-----"
-        mock_get_cert.return_value = mock_cert
-
+        mock_get_cert.return_value = "-----BEGIN CERTIFICATE-----\nMOCK_CERT\n-----END CERTIFICATE-----"
         mock_cm_instance = MagicMock()
         mock_cm_instance.exists = False
         mock_cm_class.return_value = mock_cm_instance
 
-        get_artifactory_config_map(namespace="test-namespace")
+        get_artifactory_config_map(namespace="test-namespace", client=MagicMock())
 
-        # Verify SSL certificate was retrieved from custom server
         mock_get_cert.assert_called_once_with(addr=("custom.server.com", 443))
 
 

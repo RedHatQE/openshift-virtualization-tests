@@ -167,8 +167,8 @@ def windows_vm_with_data_volume_template(
     artifactory_config_map = None
 
     try:
-        artifactory_secret = get_artifactory_secret(namespace=namespace_for_backup.name)
-        artifactory_config_map = get_artifactory_config_map(namespace=namespace_for_backup.name)
+        artifactory_secret = get_artifactory_secret(namespace=namespace_for_backup.name, client=admin_client)
+        artifactory_config_map = get_artifactory_config_map(namespace=namespace_for_backup.name, client=admin_client)
 
         dv = DataVolume(
             name="oadp-windows-dv",
