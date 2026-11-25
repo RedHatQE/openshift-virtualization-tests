@@ -395,6 +395,12 @@ class TestOfflineStorageMigrationCleanupPolicy:
         pytest.param(
             {"source_storage_class": py_config[STORAGE_CLASS_A]},
             {"target_storage_class": py_config[STORAGE_CLASS_B]},
+            marks=pytest.mark.xfail(
+                reason=f"{QUARANTINED}: Offline migration can create the target DataVolume from the VM "
+                "template's golden-image sourceRef instead of cloning the source PVC, silently losing guest "
+                "data while the migration reports Completed. CNV-101811",
+                run=False,
+            ),
             id="source_a_target_b",
         ),
     ],
