@@ -1,13 +1,16 @@
+import logging
+
 import pytest
+from ocp_resources.data_protection_application import DataProtectionApplication
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.namespace import Namespace
+from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from pytest_testconfig import config as py_config
 
 from tests.data_protection.oadp.utils import (
     FILE_PATH_FOR_WINDOWS_BACKUP,
-    enable_csi_snapshot_early_frequent_polling,
 )
 from utilities.artifactory import (
     cleanup_artifactory_secret_and_config_map,
@@ -18,6 +21,7 @@ from utilities.artifactory import (
 from utilities.constants import Images
 from utilities.constants.images import OS_FLAVOR_RHEL, OS_FLAVOR_WIN_CONTAINER_DISK
 from utilities.constants.instance_types import RHEL10_PREFERENCE, U1_LARGE, U1_SMALL
+from utilities.constants.namespaces import NamespacesNames
 from utilities.constants.oadp import (
     BACKUP_STORAGE_LOCATION,
     FILE_NAME_FOR_BACKUP,
@@ -46,16 +50,27 @@ from utilities.storage import (
 )
 from utilities.virt import VirtualMachineForTests, running_vm
 
+LOGGER = logging.getLogger(__name__)
+
 
 @pytest.fixture(scope="session", autouse=True)
 def dpa_with_csi_snapshot_early_frequent_polling(admin_client):
     """DataProtectionApplication with CSI snapshot early frequent polling enabled.
 
-    Windows VSS backups need this Velero setting. The previous value is restored
-    after the session when this fixture changes it.
+    Windows VSS backups need this Velero setting.
     """
-    with enable_csi_snapshot_early_frequent_polling(client=admin_client) as dpa:
-        yield dpa
+    dpa = DataProtectionApplication(
+        name="dpa",
+        namespace=NamespacesNames.ADP_NAMESPACE,
+        client=admin_client,
+    )
+    LOGGER.info(f"Enabling enableCSISnapshotEarlyFrequentPolling on DataProtectionApplication {dpa.name}")
+    ResourceEditor(
+        patches={
+            dpa: {"spec": {"configuration": {"velero": {"enableCSISnapshotEarlyFrequentPolling": True}}}},
+        }
+    ).update()
+    yield dpa
 
 
 @pytest.fixture()
