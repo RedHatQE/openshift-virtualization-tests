@@ -1436,7 +1436,7 @@ requires-dist = [
     { name = "pytest-cov", marker = "extra == 'utilities-test'", specifier = ">=4.1.0" },
     { name = "pytest-dependency", specifier = ">=0.6.0" },
     { name = "pytest-html", specifier = ">=4.1.1" },
-    { name = "pytest-jira", specifier = ">=0.3.22" },
+    { name = "pytest-jira", specifier = ">=0.5.0" },
     { name = "pytest-mock", marker = "extra == 'utilities-test'", specifier = ">=3.14.0" },
     { name = "pytest-order", specifier = ">=1.3.0" },
     { name = "pytest-progress", specifier = ">=1.3.0" },
@@ -1945,7 +1945,7 @@ wheels = [
 
 [[package]]
 name = "pytest-jira"
-version = "0.3.24"
+version = "0.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "marshmallow" },
@@ -1955,9 +1955,9 @@ dependencies = [
     { name = "retry2" },
     { name = "six" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f0/cc/58100f57c741683a88423537b03873653bb7e16205ab38b44b53c862dbf2/pytest_jira-0.3.24.tar.gz", hash = "sha256:a9779689a31daa8aa668a555c50fd3b6b1cd05f83cee161623718b2f0736fcc8", size = 57047, upload-time = "2026-03-19T09:28:09.04Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a8/55/1c3955e6b5140c50bd4137102b725fae6130ddccc8ca94b190cee34b77d7/pytest_jira-0.5.0.tar.gz", hash = "sha256:aa67ccdbf8681902f5862072724ea47729e80e30c42258fcf7c087055d1dbbb0", size = 92250, upload-time = "2026-11-23T13:19:54.701Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/58/81/6cab10dec2d22ebf4c335351a062d85108d5b031d9070755db0f4c88a762/pytest_jira-0.3.24-py3-none-any.whl", hash = "sha256:d1eb35c7c6dafbb9024534bbf66d741ea3da790367d2bafd5c1f5e8f237ad82e", size = 17950, upload-time = "2026-03-19T09:28:09.933Z" },
+    { url = "https://files.pythonhosted.org/packages/0b/a7/c7230cd53cfd45491d33d73d660d053f61ac5cc8f270bcc3a2d94048ce9c/pytest_jira-0.5.0-py3-none-any.whl", hash = "sha256:ade2f131b926375e0fb6d132c8036208caeef434209dd6ec9131139c85724c5c", size = 34158, upload-time = "2026-11-23T13:19:53.714Z" },
 ]
 
 [[package]]
