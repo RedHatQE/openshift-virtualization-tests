@@ -12,7 +12,7 @@ from rrmngmnt import power_manager
 from timeout_sampler import TimeoutSampler
 
 from utilities.constants.timeouts import TIMEOUT_5SEC, TIMEOUT_10MIN
-from utilities.virt import migrate_vm_and_verify, running_vm
+from utilities.virt import migrate_vm_and_verify, wait_for_running_vm
 
 if TYPE_CHECKING:
     from kubernetes.dynamic import DynamicClient
@@ -112,7 +112,7 @@ def wait_for_non_transient_printable_status(vm: VirtualMachineForTests, timeout:
         sleep=TIMEOUT_5SEC,
         func=lambda: vm.printable_status,
     ):
-        if sample not in _TRANSIENT_VM_STATUSES:
+        if sample is not None and sample not in _TRANSIENT_VM_STATUSES:
             return sample
     return None
 
@@ -162,7 +162,7 @@ def verify_vm_ready_status(vm: VirtualMachineForTests, ready_status: bool | None
     LOGGER.info(f"Verify VM ready status: {ready_status}")
     vm.wait_for_ready_status(status=ready_status, timeout=TIMEOUT_10MIN)
     if ready_status:
-        running_vm(vm=vm)
+        wait_for_running_vm(vm=vm)
 
 
 def verify_vm_run_strategy(vm: VirtualMachineForTests, run_strategy: str) -> None:
