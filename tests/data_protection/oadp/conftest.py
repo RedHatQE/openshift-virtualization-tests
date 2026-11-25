@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 
 import pytest
 from ocp_resources.data_protection_application import DataProtectionApplication
@@ -50,11 +53,18 @@ from utilities.storage import (
 )
 from utilities.virt import VirtualMachineForTests, running_vm
 
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from kubernetes.dynamic import DynamicClient
+
 LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="session", autouse=True)
-def dpa_with_csi_snapshot_early_frequent_polling(admin_client):
+def dpa_with_csi_snapshot_early_frequent_polling(
+    admin_client: DynamicClient,
+) -> Generator[DataProtectionApplication]:
     """DataProtectionApplication with CSI snapshot early frequent polling enabled.
 
     Windows VSS backups need this Velero setting.
