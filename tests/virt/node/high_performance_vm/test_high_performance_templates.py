@@ -106,23 +106,35 @@ def increased_high_performance_vm_core_count_by_one(high_performance_vm):
 @pytest.mark.usefixtures("high_performance_vm", "cputune_is_in_dumpxml")
 class TestHighPerformanceTemplatesRHEL:
     @pytest.mark.dependency(name=f"{RHEL_TESTS_CLASS_NAME}::rhel_cpu_request")
-    @pytest.mark.polarion("CNV-6756")
     def test_rhel_cpu_request(self, admin_client, high_performance_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-9064 # <skip-jira-utils-check>
+        Polarion: CNV-6756
+        """
         assert key_is_in_cputune(high_performance_vm, "vcpupin", admin_client=admin_client)
 
     @pytest.mark.dependency(name=f"{RHEL_TESTS_CLASS_NAME}::rhel_emulator_thread")
-    @pytest.mark.polarion("CNV-6757")
     def test_rhel_emulator_thread(self, admin_client, high_performance_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-9064 # <skip-jira-utils-check>
+        Polarion: CNV-6757
+        """
         assert key_is_in_cputune(high_performance_vm, "emulatorpin", admin_client=admin_client)
 
     @pytest.mark.dependency(name=f"{RHEL_TESTS_CLASS_NAME}::rhel_iothread_policy")
-    @pytest.mark.polarion("CNV-6822")
     def test_rhel_iothread_policy(self, high_performance_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-9064 # <skip-jira-utils-check>
+        Polarion: CNV-6822
+        """
         assert vm_has_io_thread_policy(high_performance_vm, "shared")
 
     @pytest.mark.dependency(name=f"{RHEL_TESTS_CLASS_NAME}::rhel_iothread_pin")
-    @pytest.mark.polarion("CNV-6810")
     def test_rhel_iothread_pin(self, admin_client, high_performance_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-9064 # <skip-jira-utils-check>
+        Polarion: CNV-6810
+        """
         assert key_is_in_cputune(high_performance_vm, "iothreadpin", admin_client=admin_client)
 
     @pytest.mark.dependency(
@@ -133,10 +145,13 @@ class TestHighPerformanceTemplatesRHEL:
             f"{RHEL_TESTS_CLASS_NAME}::rhel_iothread_pin",
         ]
     )
-    @pytest.mark.polarion("CNV-6758")
     def test_rhel_change_cpu_core_count(
         self, admin_client, high_performance_vm, increased_high_performance_vm_core_count_by_one
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-9064 # <skip-jira-utils-check>
+        Polarion: CNV-6758
+        """
         assert check_vcpupin_count(high_performance_vm, admin_client=admin_client)
 
 
@@ -163,13 +178,19 @@ class TestHighPerformanceTemplatesRHEL:
 @pytest.mark.windows
 class TestHighPerformanceTemplatesWindows:
     @pytest.mark.dependency(name=f"{WINDOWS_TESTS_CLASS_NAME}::win_cpu_request")
-    @pytest.mark.polarion("CNV-6771")
     def test_win_cpu_request(self, admin_client, high_performance_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-9065 # <skip-jira-utils-check>
+        Polarion: CNV-6771
+        """
         assert key_is_in_cputune(high_performance_vm, "vcpupin", admin_client=admin_client)
 
     @pytest.mark.dependency(name=f"{WINDOWS_TESTS_CLASS_NAME}::win_emulator_thread")
-    @pytest.mark.polarion("CNV-6772")
     def test_win_emulator_thread(self, admin_client, high_performance_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-9065 # <skip-jira-utils-check>
+        Polarion: CNV-6772
+        """
         assert key_is_in_cputune(high_performance_vm, "emulatorpin", admin_client=admin_client)
 
     @pytest.mark.dependency(
@@ -178,8 +199,11 @@ class TestHighPerformanceTemplatesWindows:
             f"{WINDOWS_TESTS_CLASS_NAME}::win_emulator_thread",
         ]
     )
-    @pytest.mark.polarion("CNV-6773")
     def test_win_change_cpu_core_count(
         self, admin_client, high_performance_vm, increased_high_performance_vm_core_count_by_one
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-9065 # <skip-jira-utils-check>
+        Polarion: CNV-6773
+        """
         assert check_vcpupin_count(high_performance_vm, admin_client=admin_client)
