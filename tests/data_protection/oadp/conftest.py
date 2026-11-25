@@ -7,6 +7,7 @@ from pytest_testconfig import config as py_config
 
 from tests.data_protection.oadp.utils import (
     FILE_PATH_FOR_WINDOWS_BACKUP,
+    enable_csi_snapshot_early_frequent_polling,
 )
 from utilities.artifactory import (
     cleanup_artifactory_secret_and_config_map,
@@ -44,6 +45,17 @@ from utilities.storage import (
     write_file_windows_vm,
 )
 from utilities.virt import VirtualMachineForTests, running_vm
+
+
+@pytest.fixture(scope="session", autouse=True)
+def dpa_with_csi_snapshot_early_frequent_polling(admin_client):
+    """DataProtectionApplication with CSI snapshot early frequent polling enabled.
+
+    Windows VSS backups need this Velero setting. The previous value is restored
+    after the session when this fixture changes it.
+    """
+    with enable_csi_snapshot_early_frequent_polling(client=admin_client) as dpa:
+        yield dpa
 
 
 @pytest.fixture()

@@ -54,6 +54,7 @@ from utilities.constants.networking import (
 )
 from utilities.constants.oadp import (
     BACKUP_STORAGE_LOCATION,
+    DPA_NAME,
     FILE_NAME_FOR_BACKUP,
     TEXT_TO_TEST,
 )
@@ -213,6 +214,7 @@ class TestConstants:
         assert FILE_NAME_FOR_BACKUP == "file_before_backup.txt"
         assert TEXT_TO_TEST == "text"
         assert BACKUP_STORAGE_LOCATION == "dpa-1"
+        assert DPA_NAME == "dpa", f"DPA name must be dpa, got {DPA_NAME}"
 
     def test_tekton_constants(self):
         """Test Tekton pipeline and task name constants are defined."""
