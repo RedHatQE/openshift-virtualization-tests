@@ -201,9 +201,10 @@ def bgp_setup_ready(
     cudn_route_advertisements: None,
     frr_configuration_created: None,
     workers: list[Node],
+    admin_client: DynamicClient,
 ) -> None:
     node_names = [worker.name for worker in workers if worker.name != frr_external_pod.pod.instance.spec.nodeName]
-    wait_for_bgp_connection_established(node_names=node_names)
+    wait_for_bgp_connection_established(node_names=node_names, client=admin_client)
 
 
 @pytest.fixture(scope="module")
