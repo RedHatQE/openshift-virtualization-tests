@@ -47,8 +47,8 @@ def test_basic_connectivity(
 
     Parametrize:
         - ip_family:
-            - ipv4 [Markers: ipv4]
-            - ipv6 [Markers: ipv6]
+            - ipv4
+            - ipv6
 
     Preconditions:
         - Running under-test VM with a ResourceClaimTemplate-backed OVS-DPDK network device

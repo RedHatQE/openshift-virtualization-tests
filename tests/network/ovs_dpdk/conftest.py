@@ -10,6 +10,7 @@ from ocp_resources.kubevirt import KubeVirt
 from ocp_resources.namespace import Namespace
 from ocp_resources.resource_claim_template import ResourceClaimTemplate
 
+from libs.net.traffic_generator import active_tcp_connections
 from libs.net.vmspec import wait_for_ifaces_status
 from libs.vm.oper import run_vms
 from tests.network.ovs_dpdk.libovsdpdk import (
@@ -26,10 +27,12 @@ from tests.network.ovs_dpdk.libovsdpdk import (
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile
 from utilities.infra import create_ns, generate_namespace_name
+from utilities.virt import migrate_vm_and_verify
 
 if TYPE_CHECKING:
     from kubernetes.dynamic import DynamicClient
 
+    from libs.net.traffic_generator import TcpServer, VMTcpClient
     from libs.vm.vm import BaseVirtualMachine
 
 
@@ -127,3 +130,54 @@ def under_test_ref_running_vms(
             },
         )
     return ovs_dpdk_under_test_vm, ovs_dpdk_ref_vm
+
+
+@pytest.fixture(scope="module")
+def ovs_dpdk_active_tcp_by_family(
+    under_test_ref_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine],
+) -> Generator[dict[int, tuple[VMTcpClient, TcpServer]]]:
+    """
+    Start continuous TCP connections from the under-test VM to the reference VM, one per
+    IP family enabled on the OVS-DPDK interface.
+
+    The fixture owns the connections: traffic keeps flowing until the requesting test
+    module is torn down. Each connection is verified running before the fixture yields
+    (the iperf3 client and server retry their startup), so dependents can assume the
+    connections are live.
+
+    Yields:
+        dict[int, tuple[VMTcpClient, TcpServer]]: Active connections keyed by IP version (4 or 6).
+    """
+    under_test_vm, ref_vm = under_test_ref_running_vms
+    with active_tcp_connections(
+        client_vm=under_test_vm,
+        server_vm=ref_vm,
+        iface_name=OVS_DPDK_INTERFACE_NAME,
+    ) as connections:
+        connections_by_family = {
+            ipaddress.ip_address(address=client.server_ip).version: (client, server) for client, server in connections
+        }
+        yield connections_by_family
+
+
+@pytest.fixture(scope="module")
+def ovs_dpdk_under_test_migrated_vm(
+    admin_client: DynamicClient,
+    under_test_ref_running_vms: tuple[BaseVirtualMachine, BaseVirtualMachine],
+    ovs_dpdk_active_tcp_by_family: dict[int, tuple[VMTcpClient, TcpServer]],
+) -> BaseVirtualMachine:
+    """
+    Live-migrate the shared under-test VM while its TCP connections to the reference VM
+    are active, and wait for the migration to complete.
+
+    Depends on the active connections to guarantee they were established before the
+    migration starts, so their post-migration liveness proves preservation. Module scope
+    ensures the migration runs only once even if there is more than one connection (one
+    per configured IP-family).
+
+    Returns:
+        BaseVirtualMachine: The migrated under-test VM.
+    """
+    under_test_vm = under_test_ref_running_vms[0]
+    migrate_vm_and_verify(vm=under_test_vm, client=admin_client)
+    return under_test_vm
