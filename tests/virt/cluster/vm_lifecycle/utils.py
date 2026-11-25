@@ -205,7 +205,8 @@ def pause_unpause_vmi_and_verify_status(vm: VirtualMachineForTests) -> None:
         vm: VirtualMachine whose VMI is paused and unpaused.
     """
     vm.vmi.pause(wait=True)
-    assert vm.printable_status == vm.Status.PAUSED, f"VM is not paused, status: {vm.printable_status}"
+    # vmi.pause waits on the VMI condition; printableStatus can lag behind
+    vm.wait_for_specific_status(status=vm.Status.PAUSED)
     vm.vmi.unpause(wait=True)
     verify_vm_ready_status(vm=vm)
 
