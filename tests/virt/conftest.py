@@ -4,7 +4,7 @@ import shlex
 
 import bitmath
 import pytest
-from ocp_resources.daemonset import DaemonSet
+from ocp_resources.daemon_set import DaemonSet
 from ocp_resources.deployment import Deployment
 from ocp_resources.infrastructure import Infrastructure
 from ocp_resources.performance_profile import PerformanceProfile

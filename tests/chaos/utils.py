@@ -9,7 +9,7 @@ from contextlib import contextmanager
 from datetime import UTC, datetime
 
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
-from ocp_resources.daemonset import DaemonSet
+from ocp_resources.daemon_set import DaemonSet
 from ocp_resources.deployment import Deployment
 from ocp_resources.node import Node
 from ocp_resources.pod import Pod
