@@ -171,8 +171,11 @@ def migrated_encrypted_vm(
 @pytest.mark.windows
 class TestBitLockerVTPM:
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::persistent_tpm")
-    @pytest.mark.polarion("CNV-10318")
     def test_persistent_tpm(self, admin_client, windows_vtpm_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-15259 # <skip-jira-utils-check>
+        Polarion: CNV-10318
+        """
         xml_dict_tpm = windows_vtpm_vm.vmi.get_xml_dict(privileged_client=admin_client)["domain"]["devices"]["tpm"]
         assert xml_dict_tpm["@model"] == "tpm-crb", "TPM model should be tpm-crb!"
         assert xml_dict_tpm["backend"].get("@persistent_state") == "yes", "TPM is not persistent state in dumpxml!"
@@ -181,12 +184,18 @@ class TestBitLockerVTPM:
         name=f"{TESTS_CLASS_NAME}::bitlocker_encryption",
         depends=[f"{TESTS_CLASS_NAME}::persistent_tpm"],
     )
-    @pytest.mark.polarion("CNV-10308")
     def test_bitlocker_encryption(self, bitlocker_encrypted_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-15259 # <skip-jira-utils-check>
+        Polarion: CNV-10308
+        """
         restart_vm_wait_for_running_vm(vm=bitlocker_encrypted_vm)
 
     @pytest.mark.rwx_default_storage
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::bitlocker_encryption"])
-    @pytest.mark.polarion("CNV-10309")
     def test_migrate_encrypted_vm(self, migrated_encrypted_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-15259 # <skip-jira-utils-check>
+        Polarion: CNV-10309
+        """
         restart_vm_wait_for_running_vm(vm=migrated_encrypted_vm)

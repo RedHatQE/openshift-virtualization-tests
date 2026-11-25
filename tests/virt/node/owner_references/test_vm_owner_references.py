@@ -28,9 +28,11 @@ def fedora_vm(admin_client, unprivileged_client, namespace):
 @pytest.mark.gating
 @pytest.mark.conformance
 @pytest.mark.s390x
-@pytest.mark.polarion("CNV-1275")
 def test_owner_references_on_vm(fedora_vm, admin_client):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-622 # <skip-jira-utils-check>
+    Polarion: CNV-1275
+
     Check the Owner References is fill with right data
     like:
         ownerReferences:

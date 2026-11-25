@@ -1684,9 +1684,9 @@ class TestGenerateCommonTemplateMatrixDicts:
         """Sample RHEL OS matrix for testing"""
         return [
             {
-                "rhel-9-6": {
-                    "os_version": "9.6",
-                    "image_name": "rhel-9.6.qcow2",
+                "rhel-9-8": {
+                    "os_version": "9.8",
+                    "image_name": "rhel-9.8.qcow2",
                     "latest_released": True,
                 }
             }
@@ -1717,13 +1717,13 @@ class TestGenerateCommonTemplateMatrixDicts:
     ):
         """Test generating RHEL OS matrix from rhel_os_list"""
         mock_generate_os_matrix.return_value = sample_rhel_matrix
-        mock_generate_latest.return_value = sample_rhel_matrix[0]["rhel-9-6"]
+        mock_generate_latest.return_value = sample_rhel_matrix[0]["rhel-9-8"]
 
-        os_dict = {"rhel_os_list": ["rhel-9-6"]}
+        os_dict = {"rhel_os_list": ["rhel-9-8"]}
         generate_common_template_matrix_dicts(os_dict=os_dict)
 
         mock_generate_os_matrix.assert_called_once_with(
-            os_name="rhel", supported_operating_systems=["rhel-9-6"], arch=None
+            os_name="rhel", supported_operating_systems=["rhel-9-8"], arch=None
         )
         mock_generate_latest.assert_called_once()
         assert mock_py_config["rhel_os_matrix"] == sample_rhel_matrix
@@ -1825,12 +1825,12 @@ class TestGenerateCommonTemplateMatrixDicts:
         """Test generating multiple OS matrices in a single call"""
         mock_generate_os_matrix.side_effect = [sample_rhel_matrix, sample_fedora_matrix]
         mock_generate_latest.side_effect = [
-            sample_rhel_matrix[0]["rhel-9-6"],
+            sample_rhel_matrix[0]["rhel-9-8"],
             sample_fedora_matrix[0]["fedora-43"],
         ]
 
         os_dict = {
-            "rhel_os_list": ["rhel-9-6"],
+            "rhel_os_list": ["rhel-9-8"],
             "fedora_os_list": ["fedora-43"],
         }
         generate_common_template_matrix_dicts(os_dict=os_dict)
@@ -1851,10 +1851,10 @@ class TestGenerateCommonTemplateMatrixDicts:
     ):
         """Test that latest_rhel_os_dict is populated correctly"""
         mock_generate_os_matrix.return_value = sample_rhel_matrix
-        expected_latest = {"os_version": "9.6", "image_name": "rhel-9.6.qcow2", "latest_released": True}
+        expected_latest = {"os_version": "9.8", "image_name": "rhel-9.8.qcow2", "latest_released": True}
         mock_generate_latest.return_value = expected_latest
 
-        os_dict = {"rhel_os_list": ["rhel-9-6"]}
+        os_dict = {"rhel_os_list": ["rhel-9-8"]}
         generate_common_template_matrix_dicts(os_dict=os_dict)
 
         assert mock_py_config["latest_rhel_os_dict"] == expected_latest
@@ -1871,13 +1871,13 @@ class TestGenerateCommonTemplateMatrixDicts:
     ):
         """Test generating OS matrix with cpu_arch parameter"""
         mock_generate_os_matrix.return_value = sample_rhel_matrix
-        mock_generate_latest.return_value = sample_rhel_matrix[0]["rhel-9-6"]
+        mock_generate_latest.return_value = sample_rhel_matrix[0]["rhel-9-8"]
 
-        os_dict = {"rhel_os_list": ["rhel-9-6"]}
+        os_dict = {"rhel_os_list": ["rhel-9-8"]}
         generate_common_template_matrix_dicts(os_dict=os_dict, cpu_arch="arm64")
 
         mock_generate_os_matrix.assert_called_once_with(
-            os_name="rhel", supported_operating_systems=["rhel-9-6"], arch="arm64"
+            os_name="rhel", supported_operating_systems=["rhel-9-8"], arch="arm64"
         )
 
 
@@ -2122,7 +2122,7 @@ class TestUpdateLatestOsConfig:
         """Test that rhel_os_matrix is saved to system_rhel_os_matrix"""
         mock_session_config = MagicMock()
         mock_session_config.getoption.return_value = False
-        rhel_matrix = [{"rhel-9-6": {"os_version": "9.6"}}]
+        rhel_matrix = [{"rhel-9-8": {"os_version": "9.8"}}]
         mock_py_config["rhel_os_matrix"] = rhel_matrix
 
         update_latest_os_config(session_config=mock_session_config)
@@ -2136,14 +2136,16 @@ class TestUpdateLatestOsConfig:
         mock_session_config.getoption.side_effect = lambda opt: opt == "latest_rhel"
         mock_py_config["rhel_os_matrix"] = [
             {"rhel-8-10": {"os_version": "8.10"}},
-            {"rhel-9-6": {"os_version": "9.6", "latest_released": True}},
+            {"rhel-9-8": {"os_version": "9.8", "latest_released": True}},
         ]
-        mock_py_config["latest_rhel_os_dict"] = {"os_version": "9.6", "latest_released": True}
+        mock_py_config["latest_rhel_os_dict"] = {"os_version": "9.8", "latest_released": True}
         mock_py_config["latest_instance_type_rhel_os_dict"] = {"preference": "rhel.9", "latest_released": True}
 
         update_latest_os_config(session_config=mock_session_config)
 
-        assert mock_py_config["rhel_os_matrix"] == [{"rhel.9.6": {"os_version": "9.6", "latest_released": True}}]
+        assert mock_py_config["rhel_os_matrix"] == [{"rhel.9.8": {"os_version": "9.8", "latest_released": True}}], (
+            "expected only RHEL 9.8 when latest is selected"
+        )
         assert mock_py_config["instance_type_rhel_os_matrix"] == [
             {"rhel.9": {"preference": "rhel.9", "latest_released": True}}
         ]
@@ -2194,7 +2196,7 @@ class TestUpdateLatestOsConfig:
         """Test that matrices are not updated when latest_* options are not set"""
         mock_session_config = MagicMock()
         mock_session_config.getoption.return_value = False
-        original_rhel_matrix = [{"rhel-8-10": {"os_version": "8.10"}}, {"rhel-9-6": {"os_version": "9.6"}}]
+        original_rhel_matrix = [{"rhel-8-10": {"os_version": "8.10"}}, {"rhel-9-8": {"os_version": "9.8"}}]
         mock_py_config["rhel_os_matrix"] = original_rhel_matrix.copy()
 
         update_latest_os_config(session_config=mock_session_config)
@@ -2206,7 +2208,7 @@ class TestUpdateLatestOsConfig:
         """Test fallback to default values when latest_rhel_os_dict is missing"""
         mock_session_config = MagicMock()
         mock_session_config.getoption.side_effect = lambda opt: opt == "latest_rhel"
-        mock_py_config["rhel_os_matrix"] = [{"rhel-9-6": {"os_version": "9.6"}}]
+        mock_py_config["rhel_os_matrix"] = [{"rhel-9-8": {"os_version": "9.8"}}]
 
         update_latest_os_config(session_config=mock_session_config)
 
@@ -2239,15 +2241,17 @@ class TestUpdateLatestOsConfig:
         """Test handling multiple latest_* options simultaneously"""
         mock_session_config = MagicMock()
         mock_session_config.getoption.side_effect = lambda opt: opt in ("latest_rhel", "latest_windows")
-        mock_py_config["rhel_os_matrix"] = [{"rhel-9-6": {"os_version": "9.6"}}]
-        mock_py_config["latest_rhel_os_dict"] = {"os_version": "9.6"}
+        mock_py_config["rhel_os_matrix"] = [{"rhel-9-8": {"os_version": "9.8"}}]
+        mock_py_config["latest_rhel_os_dict"] = {"os_version": "9.8"}
         mock_py_config["latest_instance_type_rhel_os_dict"] = {"preference": "rhel.9"}
         mock_py_config["windows_os_matrix"] = [{"win-2025": {"os_version": "2025"}}]
         mock_py_config["latest_windows_os_dict"] = {"os_version": "2025"}
 
         update_latest_os_config(session_config=mock_session_config)
 
-        assert mock_py_config["rhel_os_matrix"] == [{"rhel.9.6": {"os_version": "9.6"}}]
+        assert mock_py_config["rhel_os_matrix"] == [{"rhel.9.8": {"os_version": "9.8"}}], (
+            "expected only RHEL 9.8 when latest is selected"
+        )
         assert mock_py_config["windows_os_matrix"] == [{"windows.2025": {"os_version": "2025"}}]
 
 
@@ -2353,13 +2357,13 @@ class TestUpdateCpuArchRelatedConfig:
         dic_matrix = [{"rhel10-amd64": {"instance_type": "u1.medium", "preference": "rhel.10"}}]
         auto_update_matrix = [{"centos-stream9-amd64": {"template_os": "centos-stream9"}}]
         os_matrix_amd64 = {
-            "rhel_os_list": ["rhel-9-6"],
+            "rhel_os_list": ["rhel-9-8"],
             "data_import_cron_matrix": dic_matrix,
             "auto_update_data_source_matrix": auto_update_matrix,
         }
         mock_py_config = {
             "cluster_type": "multiarch",
-            "os_matrix": {"amd64": os_matrix_amd64, "arm64": {"rhel_os_list": ["rhel-9-5"]}},
+            "os_matrix": {"amd64": os_matrix_amd64, "arm64": {"rhel_os_list": ["rhel-9-8"]}},
         }
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
@@ -2448,7 +2452,7 @@ class TestUpdateCpuArchRelatedConfig:
         mock_generate_instance,
     ):
         """Test that AMD64 cluster uses py_config without cpu_arch for instance type"""
-        mock_py_config = {"cluster_type": "amd64", "rhel_os_list": ["rhel-9-6"]}
+        mock_py_config = {"cluster_type": "amd64", "rhel_os_list": ["rhel-9-8"]}
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
             patch("utilities.constants.images.ArchImages") as mock_arch_images,
@@ -2475,7 +2479,7 @@ class TestUpdateCpuArchRelatedConfig:
         mock_generate_instance,
     ):
         """Test that non-AMD64 cluster uses py_config with cpu_arch for instance type"""
-        mock_py_config = {"cluster_type": "arm64", "rhel_os_list": ["rhel-9-6"]}
+        mock_py_config = {"cluster_type": "arm64", "rhel_os_list": ["rhel-9-8"]}
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
             patch("utilities.constants.images.ArchImages") as mock_arch_images,
@@ -2529,13 +2533,13 @@ class TestUpdateCpuArchRelatedConfig:
         dic_matrix = [{"rhel10-arm64": {"instance_type": "u1.medium", "preference": "rhel.10.arm64"}}]
         auto_update_matrix = [{"fedora-arm64": {"template_os": "fedora"}}]
         os_matrix_arm64 = {
-            "rhel_os_list": ["rhel-9-5"],
+            "rhel_os_list": ["rhel-9-8"],
             "data_import_cron_matrix": dic_matrix,
             "auto_update_data_source_matrix": auto_update_matrix,
         }
         mock_py_config = {
             "cluster_type": "multiarch",
-            "os_matrix": {"amd64": {"rhel_os_list": ["rhel-9-6"]}, "arm64": os_matrix_arm64},
+            "os_matrix": {"amd64": {"rhel_os_list": ["rhel-9-8"]}, "arm64": os_matrix_arm64},
         }
         with (
             patch("utilities.pytest_utils.py_config", mock_py_config),
@@ -2545,12 +2549,14 @@ class TestUpdateCpuArchRelatedConfig:
             mock_arch_images.ARM64 = MagicMock()
             update_cpu_arch_related_config(cpu_arch_option="arm64")
 
-            assert mock_py_config["cpu_arch"] == "arm64"
-            assert utilities.constants.Images is mock_arch_images.ARM64
+            assert mock_py_config["cpu_arch"] == "arm64", "expected architecture arm64"
+            assert utilities.constants.Images is mock_arch_images.ARM64, "expected arm64 image set"
             mock_generate_common.assert_called_once_with(os_dict=os_matrix_arm64, cpu_arch="arm64")
             mock_generate_instance.assert_called_once_with(os_dict=os_matrix_arm64, cpu_arch="arm64")
-            assert mock_py_config["data_import_cron_matrix"] == dic_matrix
-            assert mock_py_config["auto_update_data_source_matrix"] == auto_update_matrix
+            assert mock_py_config["data_import_cron_matrix"] == dic_matrix, "expected arm64 import entries"
+            assert mock_py_config["auto_update_data_source_matrix"] == auto_update_matrix, (
+                "expected arm64 source updates"
+            )
 
     @patch("utilities.pytest_utils.generate_instance_type_matrix_dicts")
     @patch("utilities.pytest_utils.generate_common_template_matrix_dicts")

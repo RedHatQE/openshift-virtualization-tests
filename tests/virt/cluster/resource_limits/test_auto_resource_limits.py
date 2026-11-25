@@ -64,7 +64,6 @@ def hotplugged_vm_with_cpu_auto_limits(vm_auto_resource_limits, unprivileged_cli
                 "name": "vm-for-cpu-limit",
             },
             {"cpu": True, "memory": False},
-            marks=pytest.mark.polarion("CNV-11216"),
             id="set_only_cpu",
         ),
         pytest.param(
@@ -75,7 +74,6 @@ def hotplugged_vm_with_cpu_auto_limits(vm_auto_resource_limits, unprivileged_cli
                 "name": "vm-for-memory-limit",
             },
             {"cpu": False, "memory": True},
-            marks=pytest.mark.polarion("CNV-11217"),
             id="set_only_memory",
         ),
     ],
@@ -87,6 +85,11 @@ def test_auto_limits_set_one_resource(
     vm_auto_resource_limits,
     expected_limits,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-32069 # <skip-jira-utils-check>
+    Polarion: CNV-11216
+    Polarion: CNV-11217
+    """
     pod_limits = (
         vm_auto_resource_limits.vmi
         .get_virt_launcher_pod(privileged_client=admin_client)
@@ -114,7 +117,7 @@ def test_auto_limits_set_one_resource(
                 "cpu_limits": "2",
                 "memory_limits": "2Gi",
             },
-            marks=(pytest.mark.polarion("CNV-11218"), pytest.mark.gating),
+            marks=(pytest.mark.gating),
         ),
     ],
     indirect=True,
@@ -125,6 +128,10 @@ def test_vm_with_limits_overrides_global_vlaues(
     resource_quota_for_auto_resource_limits_test,
     vm_auto_resource_limits,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-32069 # <skip-jira-utils-check>
+    Polarion: CNV-11218
+    """
     pod_limits = (
         vm_auto_resource_limits.vmi
         .get_virt_launcher_pod(privileged_client=admin_client)
@@ -153,7 +160,6 @@ def test_vm_with_limits_overrides_global_vlaues(
             {
                 "name": "vm-for-auto-limits-and-cpu-hotplug",
             },
-            marks=pytest.mark.polarion("CNV-11219"),
         ),
     ],
     indirect=True,
@@ -164,6 +170,10 @@ def test_auto_limits_with_cpu_hotplug(
     vm_auto_resource_limits,
     hotplugged_vm_with_cpu_auto_limits,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-32069 # <skip-jira-utils-check>
+    Polarion: CNV-11219
+    """
     pod_limits = (
         vm_auto_resource_limits.vmi
         .get_virt_launcher_pod(privileged_client=admin_client)

@@ -99,42 +99,60 @@ class TestLatestRHEL:
     """
 
     @pytest.mark.dependency(name=f"{RHEL_TESTS_CLASS_NAME}::rhel_default_cpu_values")
-    @pytest.mark.polarion("CNV-8891")
     @pytest.mark.s390x
     def test_default_cpu_values(
         self,
         network_interface_multiqueue_vm,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-197 # <skip-jira-utils-check>
+        Polarion: CNV-8891
+        """
         network_interface_multiqueue_vm.ssh_exec.executor().is_connective(tcp_timeout=TIMEOUT_2MIN)
 
     @pytest.mark.dependency(depends=[f"{RHEL_TESTS_CLASS_NAME}::rhel_default_cpu_values"])
-    @pytest.mark.polarion("CNV-8892")
     @pytest.mark.s390x
     def test_feature_disabled(self, admin_client, network_interface_multiqueue_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-197 # <skip-jira-utils-check>
+        Polarion: CNV-8892
+        """
         update_validate_cpu_in_vm(
             vm=network_interface_multiqueue_vm, admin_client=admin_client, network_multiqueue=False
         )
 
     @pytest.mark.dependency(depends=[f"{RHEL_TESTS_CLASS_NAME}::rhel_default_cpu_values"])
-    @pytest.mark.polarion("CNV-8893")
     @pytest.mark.s390x
     def test_four_cores(self, admin_client, network_interface_multiqueue_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-197 # <skip-jira-utils-check>
+        Polarion: CNV-8893
+        """
         update_validate_cpu_in_vm(vm=network_interface_multiqueue_vm, admin_client=admin_client, cores=4)
 
     @pytest.mark.dependency(depends=[f"{RHEL_TESTS_CLASS_NAME}::rhel_default_cpu_values"])
-    @pytest.mark.polarion("CNV-8894")
     @pytest.mark.s390x
     def test_four_sockets(self, admin_client, network_interface_multiqueue_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-197 # <skip-jira-utils-check>
+        Polarion: CNV-8894
+        """
         update_validate_cpu_in_vm(vm=network_interface_multiqueue_vm, admin_client=admin_client, sockets=4)
 
     @pytest.mark.dependency(depends=[f"{RHEL_TESTS_CLASS_NAME}::rhel_default_cpu_values"])
-    @pytest.mark.polarion("CNV-8895")
     def test_four_threads(self, admin_client, network_interface_multiqueue_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-197 # <skip-jira-utils-check>
+        Polarion: CNV-8895
+        """
         update_validate_cpu_in_vm(vm=network_interface_multiqueue_vm, admin_client=admin_client, threads=4)
 
     @pytest.mark.dependency(depends=[f"{RHEL_TESTS_CLASS_NAME}::rhel_default_cpu_values"])
-    @pytest.mark.polarion("CNV-8896")
     def test_two_cores_two_sockets_two_threads(self, admin_client, network_interface_multiqueue_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-197 # <skip-jira-utils-check>
+        Polarion: CNV-8896
+        """
         update_validate_cpu_in_vm(
             vm=network_interface_multiqueue_vm, admin_client=admin_client, cores=4, sockets=2, threads=2
         )
@@ -164,13 +182,19 @@ class TestLatestWindows:
     """
 
     @pytest.mark.dependency(name=f"{WINDOWS_TESTS_CLASS_NAME}::windows_default_cpu_values")
-    @pytest.mark.polarion("CNV-8897")
     def test_default_cpu_values(self, network_interface_multiqueue_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-197 # <skip-jira-utils-check>
+        Polarion: CNV-8897
+        """
         network_interface_multiqueue_vm.ssh_exec.executor().is_connective(tcp_timeout=TIMEOUT_2MIN)
 
     @pytest.mark.dependency(depends=[f"{WINDOWS_TESTS_CLASS_NAME}::windows_default_cpu_values"])
-    @pytest.mark.polarion("CNV-8898")
     def test_four_cores_two_sockets_two_threads(self, admin_client, network_interface_multiqueue_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-197 # <skip-jira-utils-check>
+        Polarion: CNV-8898
+        """
         update_validate_cpu_in_vm(
             vm=network_interface_multiqueue_vm, admin_client=admin_client, cores=4, sockets=2, threads=2
         )

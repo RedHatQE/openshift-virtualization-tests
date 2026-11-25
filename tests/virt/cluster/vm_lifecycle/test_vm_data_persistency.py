@@ -205,19 +205,22 @@ class TestRestartPersistenceLinux:
             pytest.param(
                 RHEL,
                 {"restart_type": "guest", "os_type": LINUX_STR},
-                marks=pytest.mark.polarion("CNV-5618"),
                 id="guest reboot",
             ),
             pytest.param(
                 RHEL,
                 {"restart_type": "API", "os_type": LINUX_STR},
-                marks=pytest.mark.polarion("CNV-5188"),
                 id="API reboot",
             ),
         ],
         indirect=True,
     )
     def test_restart_persistence_linux(self, persistence_vm, changed_os_preferences, restarted_persistence_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-5441 # <skip-jira-utils-check>
+        Polarion: CNV-5618
+        Polarion: CNV-5188
+        """
         verify_changes(vm=persistence_vm, os=RHEL)
 
 
@@ -241,17 +244,20 @@ class TestRestartPersistenceWindows:
             pytest.param(
                 WIN,
                 {"restart_type": "guest", "os_type": WIN},
-                marks=pytest.mark.polarion("CNV-5617"),
                 id="guest reboot",
             ),
             pytest.param(
                 WIN,
                 {"restart_type": "API", "os_type": WIN},
-                marks=pytest.mark.polarion("CNV-5619"),
                 id="API reboot",
             ),
         ],
         indirect=True,
     )
     def test_restart_persistence_windows(self, persistence_vm, changed_os_preferences, restarted_persistence_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-5441 # <skip-jira-utils-check>
+        Polarion: CNV-5617
+        Polarion: CNV-5619
+        """
         verify_changes(vm=persistence_vm, os=WIN)

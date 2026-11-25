@@ -45,7 +45,6 @@ class TestDeschedulerLoadAwareRebalancing:
     Tests for load-aware descheduler rebalancing driven by node CPU utilization and pressure (PSI).
     """
 
-    @pytest.mark.polarion("CNV-11960")
     def test_soft_taint_added_when_node_overloaded(
         self,
         node_to_run_stress,
@@ -55,6 +54,9 @@ class TestDeschedulerLoadAwareRebalancing:
         Test that the descheduler marks an overloaded node with the overutilized soft taint.
 
         Jira: https://redhat.atlassian.net/browse/CNV-80073  # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-51099 # <skip-jira-utils-check>
+        Polarion: CNV-11960
+
 
         Steps:
             1. Select the node running the most under-test VMs
@@ -65,7 +67,6 @@ class TestDeschedulerLoadAwareRebalancing:
         """
         wait_for_overutilized_soft_taint(node=node_to_run_stress, taint_expected=True)
 
-    @pytest.mark.polarion("CNV-11961")
     def test_rebalancing_when_node_overloaded(
         self,
         node_to_run_stress,
@@ -75,6 +76,9 @@ class TestDeschedulerLoadAwareRebalancing:
         Test that the descheduler rebalances VMs away from an overloaded node.
 
         Jira: https://redhat.atlassian.net/browse/CNV-80073  # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-51099 # <skip-jira-utils-check>
+        Polarion: CNV-11961
+
 
         Preconditions:
             - Under-test VMs on the selected node are under CPU stress
@@ -88,7 +92,6 @@ class TestDeschedulerLoadAwareRebalancing:
         """
         verify_at_least_one_vm_migrated(vms=cpu_stressed_evictable_vms, node_before=node_to_run_stress)
 
-    @pytest.mark.polarion("CNV-11962")
     def test_soft_taint_removed_when_node_not_overloaded(
         self,
         node_to_run_stress,
@@ -98,6 +101,9 @@ class TestDeschedulerLoadAwareRebalancing:
         Test that the descheduler clears the overutilized soft taint once a node is no longer overloaded.
 
         Jira: https://redhat.atlassian.net/browse/CNV-80073  # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-51099 # <skip-jira-utils-check>
+        Polarion: CNV-11962
+
 
         Preconditions:
             - The node was previously overloaded and rebalancing migrations have completed
@@ -110,7 +116,6 @@ class TestDeschedulerLoadAwareRebalancing:
         """
         wait_for_overutilized_soft_taint(node=node_to_run_stress, taint_expected=False, wait_timeout=TIMEOUT_15MIN)
 
-    @pytest.mark.polarion("CNV-12346")
     def test_psi_values_within_threshold(
         self,
         workers_psi_metric_values,
@@ -119,6 +124,9 @@ class TestDeschedulerLoadAwareRebalancing:
         Test that worker node PSI values stay within the descheduler deviation threshold.
 
         Jira: https://redhat.atlassian.net/browse/CNV-80073  # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-51099 # <skip-jira-utils-check>
+        Polarion: CNV-12346
+
 
         Steps:
             1. Query the combined utilization and pressure PSI metric for the worker nodes
@@ -142,7 +150,6 @@ class TestDeschedulerMemoryRebalancing:
     Tests for load-aware descheduler rebalancing driven by node memory utilization.
     """
 
-    @pytest.mark.polarion("CNV-16825")
     def test_rebalancing_when_node_memory_overloaded(
         self,
         node_to_run_stress,
@@ -152,6 +159,9 @@ class TestDeschedulerMemoryRebalancing:
         Test that the descheduler rebalances VMs away from a node overloaded on memory.
 
         Jira: https://redhat.atlassian.net/browse/CNV-80073  # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-51099 # <skip-jira-utils-check>
+        Polarion: CNV-16825
+
 
         Preconditions:
             - Under-test VMs on the selected node are consuming most of their guest memory

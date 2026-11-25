@@ -191,16 +191,22 @@ def pages_to_scan_initial_value(worker_node1, workers_utility_pods):
     "ksm_override_annotation_added_to_worker1",
 )
 class TestKernelSamepageMerging:
-    @pytest.mark.polarion("CNV-10522")
     @pytest.mark.dependency(name="test_ksm_activated_when_node_under_pressure")
     def test_ksm_activated_when_node_under_pressure(self, worker_node1, ksm_activated_on_node):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-23960 # <skip-jira-utils-check>
+        Polarion: CNV-10522
+        """
         node_metadata = worker_node1.instance.metadata
         assert_label_on_node(node_metadata=node_metadata, expected_value="true")
         assert_annotation_on_node(node_metadata=node_metadata, expected_value="true")
 
-    @pytest.mark.polarion("CNV-10732")
     @pytest.mark.dependency(depends=["test_ksm_activated_when_node_under_pressure"])
     def test_pages_to_scan_grows_when_ksm_active(self, worker_node1, workers_utility_pods, pages_to_scan_initial_value):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-23960 # <skip-jira-utils-check>
+        Polarion: CNV-10732
+        """
         wait_for_pages_to_scan_value_to_grow(
             node=worker_node1,
             utility_pods=workers_utility_pods,
@@ -208,19 +214,25 @@ class TestKernelSamepageMerging:
         )
 
     @pytest.mark.rwx_default_storage
-    @pytest.mark.polarion("CNV-10523")
     @pytest.mark.dependency(depends=["test_ksm_activated_when_node_under_pressure"])
     @pytest.mark.usefixtures("ksm_label_added_to_worker2")
     def test_migrate_vm_when_ksm_active(
         self, admin_client: DynamicClient, vms_for_ksm_test: list[VirtualMachineForTests]
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-23960 # <skip-jira-utils-check>
+        Polarion: CNV-10523
+        """
         migrate_vm_and_verify(vm=vms_for_ksm_test[0], client=admin_client)
 
-    @pytest.mark.polarion("CNV-10524")
     @pytest.mark.dependency(depends=["test_ksm_activated_when_node_under_pressure"])
     def test_ksm_not_active_on_non_managed_node(
         self, worker_node1, ksm_label_removed_from_worker1, ksm_deactivated_on_node
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-23960 # <skip-jira-utils-check>
+        Polarion: CNV-10524
+        """
         node_metadata = worker_node1.instance.metadata
         assert_label_on_node(node_metadata=node_metadata, expected_value="false")
         assert_annotation_on_node(node_metadata=node_metadata, expected_value="false")

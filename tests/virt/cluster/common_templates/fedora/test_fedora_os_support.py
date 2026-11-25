@@ -80,9 +80,14 @@ class TestCommonTemplatesFedora:
     @pytest.mark.ibm_bare_metal
     @pytest.mark.ocp_interop
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::create_vm")
-    @pytest.mark.polarion("CNV-3351")
     def test_create_vm(self, matrix_fedora_os_vm_from_template):
-        """Test CNV VM creation from template"""
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1220 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-5015 # <skip-jira-utils-check>
+        Polarion: CNV-3351
+
+        Test CNV VM creation from template
+        """
 
         LOGGER.info("Create VM from template.")
         matrix_fedora_os_vm_from_template.create(wait=True)
@@ -91,16 +96,24 @@ class TestCommonTemplatesFedora:
     @pytest.mark.ibm_bare_metal
     @pytest.mark.ocp_interop
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::start_vm", depends=[f"{TESTS_CLASS_NAME}::create_vm"])
-    @pytest.mark.polarion("CNV-3345")
     def test_start_vm(self, matrix_fedora_os_vm_from_template):
-        """Test CNV common templates VM initiation"""
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1220 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-5015 # <skip-jira-utils-check>
+        Polarion: CNV-3345
+
+        Test CNV common templates VM initiation
+        """
 
         running_vm(vm=matrix_fedora_os_vm_from_template)
 
     @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
-    @pytest.mark.polarion("CNV-2651")
     def test_vm_hyperv(self, admin_client, matrix_fedora_os_vm_from_template):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-5015 # <skip-jira-utils-check>
+        Polarion: CNV-2651
+        """
         LOGGER.info("Verify VMI HyperV values.")
         check_vm_xml_hyperv(
             vm=matrix_fedora_os_vm_from_template,
@@ -113,33 +126,50 @@ class TestCommonTemplatesFedora:
     @pytest.mark.ibm_bare_metal
     @pytest.mark.ocp_interop
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
-    @pytest.mark.polarion("CNV-3344")
     def test_vm_console(self, matrix_fedora_os_vm_from_template):
-        """Test CNV common templates VM console"""
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1220 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-5015 # <skip-jira-utils-check>
+        Polarion: CNV-3344
+
+        Test CNV common templates VM console
+        """
 
         LOGGER.info("Verify VM console connection.")
         wait_for_console(vm=matrix_fedora_os_vm_from_template)
 
     @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
-    @pytest.mark.polarion("CNV-3348")
     def test_os_version(self, matrix_fedora_os_vm_from_template):
-        """Test CNV common templates OS version"""
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1220 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-5015 # <skip-jira-utils-check>
+        Polarion: CNV-3348
+
+        Test CNV common templates OS version
+        """
 
         vm_os_version(vm=matrix_fedora_os_vm_from_template)
 
     @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
-    @pytest.mark.polarion("CNV-9666")
     def test_efi_secureboot_enabled_by_default(self, matrix_fedora_os_vm_from_template):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-15500 # <skip-jira-utils-check>
+        Polarion: CNV-9666
+        """
         assert_linux_efi(vm=matrix_fedora_os_vm_from_template)
         assert_secure_boot_mokutil_status(vm=matrix_fedora_os_vm_from_template)
 
     @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::create_vm"])
-    @pytest.mark.polarion("CNV-3347")
     def test_domain_label(self, matrix_fedora_os_vm_from_template):
-        """CNV common templates 'domain' label contains vm name"""
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-5015 # <skip-jira-utils-check>
+        Polarion: CNV-3347
+
+        CNV common templates 'domain' label contains vm name
+        """
         vm = matrix_fedora_os_vm_from_template
         domain_label = vm.instance.spec.template.metadata["labels"]["kubevirt.io/domain"]
         assert domain_label == vm.name, f"Wrong domain label: {domain_label}"
@@ -148,9 +178,13 @@ class TestCommonTemplatesFedora:
     @pytest.mark.ibm_bare_metal
     @pytest.mark.ocp_interop
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::vm_expose_ssh", depends=[f"{TESTS_CLASS_NAME}::start_vm"])
-    @pytest.mark.polarion("CNV-3349")
     def test_expose_ssh(self, matrix_fedora_os_vm_from_template):
-        """CNV common templates access VM via SSH"""
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-5015 # <skip-jira-utils-check>
+        Polarion: CNV-3349
+
+        CNV common templates access VM via SSH
+        """
 
         assert matrix_fedora_os_vm_from_template.ssh_exec.executor().is_connective(tcp_timeout=120), (
             "Failed to login via SSH"
@@ -160,77 +194,121 @@ class TestCommonTemplatesFedora:
     @pytest.mark.dependency(
         name=f"{TESTS_CLASS_NAME}::vmi_guest_agent_info", depends=[f"{TESTS_CLASS_NAME}::vm_expose_ssh"]
     )
-    @pytest.mark.polarion("CNV-3937")
     def test_vmi_guest_agent_info(self, matrix_fedora_os_vm_from_template):
-        """Test Guest OS agent info."""
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1013 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-5015 # <skip-jira-utils-check>
+        Polarion: CNV-3937
+
+        Test Guest OS agent info.
+        """
         validate_os_info_vmi_vs_linux_os(vm=matrix_fedora_os_vm_from_template)
 
     @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::vm_expose_ssh"])
-    @pytest.mark.polarion("CNV-3573")
     def test_virtctl_guest_agent_os_info(self, admin_client, matrix_fedora_os_vm_from_template):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1013 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-5015 # <skip-jira-utils-check>
+        Polarion: CNV-3573
+        """
         validate_os_info_virtctl_vs_linux_os(vm=matrix_fedora_os_vm_from_template, admin_client=admin_client)
 
     @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::vm_expose_ssh"])
-    @pytest.mark.polarion("CNV-3574")
     @pytest.mark.jira("CNV-98657", run=False)
     def test_virtctl_guest_agent_fs_info(self, admin_client, matrix_fedora_os_vm_from_template):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1013 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-5015 # <skip-jira-utils-check>
+        Polarion: CNV-3574
+        """
         validate_fs_info_virtctl_vs_linux_os(vm=matrix_fedora_os_vm_from_template, admin_client=admin_client)
 
     @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::vm_expose_ssh"])
-    @pytest.mark.polarion("CNV-4549")
     def test_virtctl_guest_agent_user_info(self, admin_client, matrix_fedora_os_vm_from_template):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1013 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-5015 # <skip-jira-utils-check>
+        Polarion: CNV-4549
+        """
         with console.Console(vm=matrix_fedora_os_vm_from_template):
             validate_user_info_virtctl_vs_linux_os(vm=matrix_fedora_os_vm_from_template, admin_client=admin_client)
 
     @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
-    @pytest.mark.polarion("CNV-3668")
     def test_vm_machine_type(self, matrix_fedora_os_vm_from_template):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-346 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-5015 # <skip-jira-utils-check>
+        Polarion: CNV-3668
+        """
         check_machine_type(vm=matrix_fedora_os_vm_from_template)
 
     @pytest.mark.sno
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::start_vm"])
-    @pytest.mark.polarion("CNV-5917")
     def test_pause_unpause_vm(self, matrix_fedora_os_vm_from_template):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1067 # <skip-jira-utils-check>
+        Polarion: CNV-5917
+        """
         validate_pause_unpause_linux_vm(vm=matrix_fedora_os_vm_from_template)
 
     @pytest.mark.rwx_default_storage
     @pytest.mark.ibm_bare_metal
     @pytest.mark.ocp_interop
-    @pytest.mark.polarion("CNV-5842")
     @pytest.mark.dependency(
         name=f"{TESTS_CLASS_NAME}::migrate_vm_and_verify", depends=[f"{TESTS_CLASS_NAME}::vm_expose_ssh"]
     )
     def test_migrate_vm(self, admin_client: DynamicClient, matrix_fedora_os_vm_from_template: VirtualMachineForTests):
-        """Test SSH connectivity after migration"""
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1220 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-5015 # <skip-jira-utils-check>
+        Polarion: CNV-5842
+
+        Test SSH connectivity after migration
+        """
         migrate_vm_and_verify(vm=matrix_fedora_os_vm_from_template, client=admin_client, check_ssh_connectivity=True)
         validate_libvirt_persistent_domain(vm=matrix_fedora_os_vm_from_template, admin_client=admin_client)
 
-    @pytest.mark.polarion("CNV-5901")
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::migrate_vm_and_verify"])
     def test_pause_unpause_after_migrate(self, matrix_fedora_os_vm_from_template, ping_process_in_fedora_os):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1067 # <skip-jira-utils-check>
+        Polarion: CNV-5901
+        """
         validate_pause_unpause_linux_vm(vm=matrix_fedora_os_vm_from_template, pre_pause_pid=ping_process_in_fedora_os)
 
-    @pytest.mark.polarion("CNV-6006")
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::migrate_vm_and_verify"])
     def test_verify_virtctl_guest_agent_data_after_migrate(self, matrix_fedora_os_vm_from_template):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1220 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-5015 # <skip-jira-utils-check>
+        Polarion: CNV-6006
+        """
         assert validate_virtctl_guest_agent_data_over_time(vm=matrix_fedora_os_vm_from_template), (
             "Guest agent stopped responding"
         )
 
-    @pytest.mark.polarion("CNV-12219")
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::vmi_guest_agent_info"])
     def test_vmi_guest_agent_info_after_guest_reboot(self, matrix_fedora_os_vm_from_template):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1013 # <skip-jira-utils-check>
+        Polarion: CNV-12219
+        """
         validate_virtctl_guest_agent_after_guest_reboot(vm=matrix_fedora_os_vm_from_template, os_type=LINUX_STR)
 
     @pytest.mark.sno
     @pytest.mark.ibm_bare_metal
     @pytest.mark.ocp_interop
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::create_vm"])
-    @pytest.mark.polarion("CNV-3346")
     def test_vm_deletion(self, matrix_fedora_os_vm_from_template):
-        """Test CNV common templates VM deletion"""
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-1220 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-5015 # <skip-jira-utils-check>
+        Polarion: CNV-3346
+
+        Test CNV common templates VM deletion
+        """
         matrix_fedora_os_vm_from_template.delete(wait=True)

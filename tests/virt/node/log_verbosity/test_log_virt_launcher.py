@@ -126,23 +126,29 @@ def migrated_vm_with_policy(
     indirect=True,
 )
 class TestProgressOfMigrationInVirtLauncher:
-    @pytest.mark.polarion("CNV-9057")
     def test_virt_launcher_log_verbosity(
         self,
         updated_log_verbosity_config,
         vm_for_migration_progress_test,
         admin_client,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-14403 # <skip-jira-utils-check>
+        Polarion: CNV-9057
+        """
         assert f"verbosity to {VIRT_LOG_VERBOSITY_LEVEL_6}" in vm_for_migration_progress_test.vmi.get_virt_launcher_pod(
             privileged_client=admin_client
         ).log(container="compute"), f"Not found correct log verbosity level: {VIRT_LOG_VERBOSITY_LEVEL_6} in logs"
 
     @pytest.mark.rwx_default_storage
-    @pytest.mark.polarion("CNV-9058")
     @pytest.mark.usefixtures(
         "migrated_vm_with_policy",
         "updated_log_verbosity_config",
         "vm_for_migration_progress_test",
     )
     def test_progress_of_vm_migration_in_virt_launcher_pod(self, source_pod_log_verbosity_test: Pod):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-14403 # <skip-jira-utils-check>
+        Polarion: CNV-9058
+        """
         wait_for_all_progress_keys_in_pod_log(pod=source_pod_log_verbosity_test)

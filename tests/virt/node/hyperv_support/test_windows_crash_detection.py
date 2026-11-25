@@ -92,7 +92,6 @@ def windows_vm_with_panic_device(
                 "vm_name": "windows-crash-detection-vm",
                 "template_labels": WINDOWS_LATEST_LABELS,
             },
-            marks=pytest.mark.polarion("CNV-15265"),
         ),
     ],
     indirect=True,
@@ -105,7 +104,11 @@ def test_windows_crash_detection_with_hyperv_panic(
     windows_vm_with_panic_device,
     windows_crashed,
 ):
-    """Test that KubeVirt detects Windows guest crash via Hyper-V panic device.
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-5968 # <skip-jira-utils-check>
+    Polarion: CNV-15265
+
+    Test that KubeVirt detects Windows guest crash via Hyper-V panic device.
 
     Preconditions:
         - PanicDevices feature gate enabled
