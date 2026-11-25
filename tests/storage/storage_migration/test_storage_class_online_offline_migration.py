@@ -85,6 +85,12 @@ BLOCK_TO_BLOCK_PARAMS = (
             {"target_storage_class": py_config[STORAGE_CLASS_B]},
             FILESYSTEM,
             FILESYSTEM,
+            marks=pytest.mark.xfail(
+                reason=f"{QUARANTINED}: Offline migration can create the target DataVolume from the VM "
+                "template's golden-image sourceRef instead of cloning the source PVC, silently losing guest "
+                "data while the migration reports Completed. CNV-101811",
+                run=False,
+            ),
             id="source_a_target_b_file_to_file",
         ),
         pytest.param(
