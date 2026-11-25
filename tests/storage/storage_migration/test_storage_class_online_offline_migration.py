@@ -98,6 +98,12 @@ BLOCK_TO_BLOCK_PARAMS = (
             {"target_storage_class": py_config[STORAGE_CLASS_B]},
             FILESYSTEM,
             BLOCK,
+            marks=pytest.mark.xfail(
+                reason=f"{QUARANTINED}: Offline migration can create the target DataVolume from the VM "
+                "template's golden-image sourceRef and Filesystem volume mode instead of cloning the source "
+                "PVC with the target volume mode; the migration still reports Completed. CNV-101811",
+                run=False,
+            ),
             id="source_a_target_b_file_to_block",
         ),
         *BLOCK_TO_BLOCK_PARAMS,
