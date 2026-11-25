@@ -99,10 +99,13 @@ def disabled_free_page_reporting_in_vm(free_page_reporting_vm):
 @pytest.mark.s390x
 class TestFreePageReporting:
     @pytest.mark.dependency()
-    @pytest.mark.polarion("CNV-10540")
     def test_free_page_reporting_enabled_by_default(
         self, admin_client, free_page_reporting_vm, hyperconverged_resource_scope_function
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-25921 # <skip-jira-utils-check>
+        Polarion: CNV-10540
+        """
         assert not hyperconverged_resource_scope_function.instance.to_dict()["spec"]["virtualization"][
             "virtualMachineOptions"
         ]["disableFreePageReporting"]
@@ -113,26 +116,32 @@ class TestFreePageReporting:
         )
 
     @pytest.mark.dependency(depends=["TestFreePageReporting::test_free_page_reporting_enabled_by_default"])
-    @pytest.mark.polarion("CNV-10544")
     def test_disable_free_page_reporting_on_vm_level(
         self,
         admin_client,
         free_page_reporting_vm,
         disabled_free_page_reporting_in_vm,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-25921 # <skip-jira-utils-check>
+        Polarion: CNV-10544
+        """
         assert_vmi_free_page_reporting(
             vm=free_page_reporting_vm,
             expected_free_page_reporting="off",
             admin_client=admin_client,
         )
 
-    @pytest.mark.polarion("CNV-10543")
     def test_disable_free_page_reporting_in_hco(
         self,
         admin_client,
         disabled_free_page_reporting_in_hco_cr,
         free_page_reporting_vm,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-25921 # <skip-jira-utils-check>
+        Polarion: CNV-10543
+        """
         restart_vm_wait_for_running_vm(vm=free_page_reporting_vm)
         assert_vmi_free_page_reporting(
             vm=free_page_reporting_vm,
@@ -141,8 +150,11 @@ class TestFreePageReporting:
         )
 
 
-@pytest.mark.polarion("CNV-10596")
 def test_free_page_reporting_in_vm_with_dedicated_cpu(admin_client, vm_with_dedicated_cpu):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-25921 # <skip-jira-utils-check>
+    Polarion: CNV-10596
+    """
     assert_vmi_free_page_reporting(
         vm=vm_with_dedicated_cpu,
         expected_free_page_reporting="off",
@@ -150,10 +162,13 @@ def test_free_page_reporting_in_vm_with_dedicated_cpu(admin_client, vm_with_dedi
     )
 
 
-@pytest.mark.polarion("CNV-10597")
 @pytest.mark.special_infra
 @pytest.mark.hugepages
 def test_free_page_reporting_in_vm_with_hugepages(admin_client, vm_with_hugepages):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-25921 # <skip-jira-utils-check>
+    Polarion: CNV-10597
+    """
     assert_vmi_free_page_reporting(
         vm=vm_with_hugepages,
         expected_free_page_reporting="off",

@@ -29,11 +29,9 @@ def cpu_flag_vm_positive(cluster_common_node_cpu, namespace, unprivileged_client
     params=[
         pytest.param(
             [{"model": "Bad-Skylake-Server"}, "bad-skylake-server"],
-            marks=(pytest.mark.polarion("CNV-1272")),
         ),
         pytest.param(
             [{"model": "commodore64"}, "commodore64"],
-            marks=(pytest.mark.polarion("CNV-1273")),
         ),
     ],
     ids=["CPU-flag: Bad-Skylake-Server", "CPU-flag: commodore64"],
@@ -53,6 +51,10 @@ def cpu_flag_vm_negative(request, unprivileged_client, namespace):
 
 def test_vm_with_cpu_flag_negative(cpu_flag_vm_negative):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-6429 # <skip-jira-utils-check>
+    Polarion: CNV-1272
+    Polarion: CNV-1273
+
     Negative test:
     Test VM with wrong cpu model,
     VM should not run in this case since cpu model not exist on any of the nodes
@@ -61,12 +63,14 @@ def test_vm_with_cpu_flag_negative(cpu_flag_vm_negative):
         cpu_flag_vm_negative.vmi.wait_until_running(timeout=TIMEOUT_1MIN)
 
 
-@pytest.mark.polarion("CNV-1269")
 @pytest.mark.s390x
 @pytest.mark.gating
 @pytest.mark.conformance
 def test_vm_with_cpu_flag_positive_case(cpu_flag_vm_positive, cluster_common_node_cpu):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-6429 # <skip-jira-utils-check>
+    Polarion: CNV-1269
+
     Test VM with cpu flag, test CPU model and SSH connectivity
     """
     cpu_flag_vm_positive.ssh_exec.executor().is_connective()

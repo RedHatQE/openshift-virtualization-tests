@@ -45,22 +45,19 @@ def vm_with_cpu_support(request, is_s390x_cluster, namespace, unprivileged_clien
     [
         pytest.param(
             {"sockets": 2, "cores": 2, "threads": 2},
-            marks=(pytest.mark.polarion("CNV-2820"), pytest.mark.gating, pytest.mark.conformance),
+            marks=(pytest.mark.gating, pytest.mark.conformance),
             id="case1: 2 cores, 2 threads, 2 sockets",
         ),
         pytest.param(
             {"sockets": None, "cores": 1, "threads": 2},
-            marks=(pytest.mark.polarion("CNV-2823")),
             id="case2: 1 cores, 2 threads, no sockets",
         ),
         pytest.param(
             {"sockets": 2, "cores": 1, "threads": None},
-            marks=(pytest.mark.polarion("CNV-2822")),
             id="case3: 1 cores, no threads, 2 sockets",
         ),
         pytest.param(
             {"sockets": None, "cores": 2, "threads": None},
-            marks=(pytest.mark.polarion("CNV-2821")),
             id="case4: 2 cores, no threads, no sockets",
         ),
     ],
@@ -69,6 +66,12 @@ def vm_with_cpu_support(request, is_s390x_cluster, namespace, unprivileged_clien
 @pytest.mark.s390x
 def test_vm_with_cpu_support(admin_client, vm_with_cpu_support):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-376 # <skip-jira-utils-check>
+    Polarion: CNV-2820
+    Polarion: CNV-2823
+    Polarion: CNV-2822
+    Polarion: CNV-2821
+
     Test VM with cpu support
     """
     check_vm_dumpxml(
@@ -100,9 +103,11 @@ def no_cpu_settings_vm(namespace, unprivileged_client):
 @pytest.mark.gating
 @pytest.mark.conformance
 @pytest.mark.s390x
-@pytest.mark.polarion("CNV-1485")
 def test_vm_with_no_cpu_settings(admin_client, no_cpu_settings_vm):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-376 # <skip-jira-utils-check>
+    Polarion: CNV-1485
+
     Test VM without cpu setting, check XML:
     <topology sockets='X' cores='1' threads='1'/>
     socket value will depend on maxSockets autocalculation on cluster
@@ -112,9 +117,11 @@ def test_vm_with_no_cpu_settings(admin_client, no_cpu_settings_vm):
 
 @pytest.mark.gating
 @pytest.mark.s390x
-@pytest.mark.polarion("CNV-2818")
 def test_vm_with_cpu_limitation(admin_client, namespace, unprivileged_client):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-376 # <skip-jira-utils-check>
+    Polarion: CNV-2818
+
     Test VM with cpu limitation, CPU requests and limits are equals
     """
     name = "vm-cpu-limitation"
@@ -133,10 +140,12 @@ def test_vm_with_cpu_limitation(admin_client, namespace, unprivileged_client):
         check_vm_dumpxml(vm=vm, admin_client=admin_client, sockets="1", cores="2", threads="1")
 
 
-@pytest.mark.polarion("CNV-2819")
 @pytest.mark.s390x
 def test_vm_with_cpu_limitation_negative(namespace, unprivileged_client):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-376 # <skip-jira-utils-check>
+    Polarion: CNV-2819
+
     Test VM with cpu limitation
     negative case: CPU requests is larger then limits
     """
