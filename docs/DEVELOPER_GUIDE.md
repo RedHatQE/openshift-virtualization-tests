@@ -147,7 +147,7 @@ Comment on your GitHub PR:
 /test-plan
 ```
 
-This triggers CodeRabbit to analyze the PR's changed files and post an inline review comment with a test execution plan (smoke/gating impact, affected tests to run).
+This triggers CodeRabbit to analyze the PR's changed files and post an inline review comment with a test execution plan (smoke/gating impact, affected tests to run). CodeRabbit also posts this test execution plan automatically once a non-bot PR is marked with the `verified` label.
 
 ### CodeRabbit post-merge learnings
 
