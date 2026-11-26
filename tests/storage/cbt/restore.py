@@ -19,9 +19,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from kubernetes.dynamic.exceptions import NotFoundError
+from ocp_resources.datavolume import DataVolume
+from ocp_resources.exceptions import ExecOnPodError
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.pod import Pod
-from ocp_resources.storage_profile import StorageProfile
 from ocp_resources.virtual_machine_backup_tracker import VirtualMachineBackupTracker
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
@@ -40,7 +41,7 @@ from tests.storage.cbt.constants import (
     CBT_TARGET_VOLUME_NAME,
     CBT_TEST_DATA,
 )
-from tests.storage.cbt.utils import BYTES_PER_GIB, cbt_pvc_size_with_headroom
+from tests.storage.cbt.utils import BYTES_PER_GIB
 from utilities.constants.images import OS_FLAVOR_RHEL
 from utilities.constants.instance_types import RHEL9_PREFERENCE, U1_SMALL
 from utilities.constants.networking import POD_CONTAINER_SPEC
@@ -61,13 +62,13 @@ class CbtRestoreError(Exception):
     """A CBT push restore failed.
 
     Raised when a backup assumption is not met, a required backup resource is missing,
-    the qcow2 cannot be selected or its virtual size cannot be read, or a restore PVC bind,
-    restore pod start, or cleanup wait times out.
+    the qcow2 cannot be selected, a qemu-img command fails or its virtual size cannot be read,
+    or a restore PVC bind, restore pod start, or cleanup wait times out.
     """
 
 
-# restricted-v2 assigns the namespace UID and fsGroup. Leave runAsUser, fsGroup,
-# and hostUsers unset so admission succeeds and the container can call setgroups.
+# restricted-v2 checks the container security context. Leave runAsUser, fsGroup, and
+# hostUsers unset here so it assigns the namespace UID and fsGroup.
 CBT_RUNNER_POD_SECURITY_CONTEXT: dict[str, Any] = {
     "seccompProfile": {"type": "RuntimeDefault"},
     "runAsNonRoot": True,
@@ -83,7 +84,7 @@ class CbtVolumeRestoreSpec:
         size: Target PVC capacity as a Kubernetes quantity string, such as ``20Gi``.
         storage_class: Storage class of the restored disk.
         volume_mode: ``Filesystem`` or ``Block``.
-        access_mode: Access mode from the storage class profile, such as ``ReadWriteOnce``.
+        access_mode: Access mode of the source VM boot disk, such as ``ReadWriteOnce``.
     """
 
     volume_name: str
@@ -95,9 +96,9 @@ class CbtVolumeRestoreSpec:
 
 @dataclass(frozen=True)
 class _RestoredDiskStorageClassProperties:
-    """Storage class of the restored disk, and the volume mode and access mode of that class.
+    """Storage class, volume mode, and access mode of the source VM boot disk.
 
-    The restored disk uses the source VM boot disk's storage class.
+    The restored disk uses these values from that disk's PVC.
     """
 
     storage_class: str
@@ -129,18 +130,24 @@ def restored_cbt_vm_from_push_backup(
     backups: list[VirtualMachineBackup],
     backup_pvc_name: str,
     storage_class: str,
+    volume_mode: str,
+    access_mode: str,
     namespace: str,
     client: DynamicClient,
 ) -> Generator[VirtualMachineForTests]:
     """Rebuild the boot disk from the full push backup and start a VM with the backup's VM name.
 
-    The caller deletes the source VM first. This function reads the backup and the source VM
-    storage class's storage profile.
+    The caller records the source VM boot disk and deletes that VM first. The restored disk uses
+    the recorded storage class, volume mode, and access mode. Push restore assumes a RHEL source
+    VM matching the Linux path of ``cbt_enabled_vm``: ``U1_SMALL``, the RHEL 9 preference, and the
+    RHEL OS flavor.
 
     Args:
         backups: Completed push backups. A full-backup restore contains exactly one backup.
         backup_pvc_name: PVC that holds the qcow2 backup.
-        storage_class: Storage class of the source VM boot disk. The restored disk uses this class.
+        storage_class: Storage class of the source VM boot disk.
+        volume_mode: Volume mode of the source VM boot disk.
+        access_mode: Access mode of the source VM boot disk.
         namespace: Namespace for the restored VM and target PVC.
         client: Client used to create the restored VM, PVC, and restore pod.
 
@@ -152,19 +159,14 @@ def restored_cbt_vm_from_push_backup(
 
     Raises:
         CbtRestoreError: When the backup count, type, or volume list is not one full volume; the backup
-            or tracker is missing; the source disk storage class has no StorageProfile or claim property
-            set; the backup does not contain one matching qcow2; qemu-img info does not return its virtual
-            size; the restore PVC does not bind; the restore pod does not start; or the restored VM or
-            target PVC is not deleted before the wait timeout. A cleanup failure is logged instead when
-            another error is already propagating.
+            or tracker is missing; the backup does not contain one matching qcow2; qemu-img info, convert,
+            or compare fails or info does not return a virtual size; the restore PVC does not bind; the
+            restore pod does not start; or the restored VM or target PVC is not deleted before the wait
+            timeout. A cleanup failure is logged instead when another error is already propagating.
     """
     backup = _single_full_backup(backups=backups)
     vm_name = _backed_up_vm_name(backup=backup, namespace=namespace, client=client)
     volume_name = _full_backup_volume_name(backup=backup)
-    disk_storage = _get_restored_disk_storage_class_properties(
-        storage_class=storage_class,
-        client=client,
-    )
     qcow2_file, virtual_size_bytes = _inspect_backup_qcow2(
         vm_name=vm_name,
         volume_name=volume_name,
@@ -175,10 +177,10 @@ def restored_cbt_vm_from_push_backup(
     )
     volume_spec = CbtVolumeRestoreSpec(
         volume_name=volume_name,
-        size=_target_pvc_size(virtual_size_bytes=virtual_size_bytes, volume_mode=disk_storage.volume_mode),
-        storage_class=disk_storage.storage_class,
-        volume_mode=disk_storage.volume_mode,
-        access_mode=disk_storage.access_mode,
+        size=_target_pvc_size(virtual_size_bytes=virtual_size_bytes, volume_mode=volume_mode),
+        storage_class=storage_class,
+        volume_mode=volume_mode,
+        access_mode=access_mode,
     )
     target_pvc: PersistentVolumeClaim | None = None
     restored_vm: VirtualMachineForTests | None = None
@@ -311,23 +313,30 @@ def _full_backup_volume_name(backup: VirtualMachineBackup) -> str:
     return volume_names[0]
 
 
-def _get_restored_disk_storage_class_properties(
-    storage_class: str, client: DynamicClient
-) -> _RestoredDiskStorageClassProperties:
-    """Return the restored disk's storage class and that class's disk claim shape.
+def read_source_vm_boot_disk_claim(vm: VirtualMachineForTests) -> _RestoredDiskStorageClassProperties:
+    """Return the storage class, volume mode, and access mode of the source VM boot disk.
+
+    The values come from that disk's PVC, and the PVC must record a volume mode.
 
     Raises:
-        CbtRestoreError: When the StorageProfile does not exist or has no claim property set.
-            A lookup error is chained when one was raised.
+        CbtRestoreError: When the boot disk PVC is missing or has no storage class, volume mode,
+            or access mode. A lookup error is chained when one was raised.
     """
-    profile = StorageProfile(name=storage_class, client=client)
+    pvc_name = vm.data_volume_template["metadata"]["name"]
+    pvc = DataVolume(name=pvc_name, namespace=vm.namespace, client=vm.client).pvc
     try:
-        volume_mode = profile.first_claim_property_set_volume_mode()
-        access_modes = profile.first_claim_property_set_access_modes()
-    except NotFoundError as missing_profile:
-        raise CbtRestoreError(f"StorageProfile {storage_class} not found") from missing_profile
+        spec = pvc.instance.to_dict()["spec"]
+        storage_class = spec["storageClassName"]
+        volume_mode = spec["volumeMode"]
+        access_modes = spec["accessModes"]
+    except NotFoundError as missing_pvc:
+        raise CbtRestoreError(f"Source VM boot disk PVC {vm.namespace}/{pvc_name} not found") from missing_pvc
+    except KeyError as missing_field:
+        raise CbtRestoreError(
+            f"Source VM boot disk PVC {vm.namespace}/{pvc_name} has no {missing_field}"
+        ) from missing_field
     if not volume_mode or not access_modes:
-        raise CbtRestoreError(f"StorageProfile {storage_class} has no claim property set")
+        raise CbtRestoreError(f"Source VM boot disk PVC {vm.namespace}/{pvc_name} has no volume mode or access mode")
     return _RestoredDiskStorageClassProperties(
         storage_class=storage_class,
         volume_mode=volume_mode,
@@ -380,7 +389,11 @@ def _inspect_backup_qcow2(
             checkpoint_name=checkpoint_name,
             volume_name=volume_name,
         )
-        return qcow2_file, _qcow2_virtual_size_bytes(pod=inspect_pod, qcow2_file=qcow2_file)
+        return qcow2_file, _qcow2_virtual_size_bytes(
+            pod=inspect_pod,
+            qcow2_file=qcow2_file,
+            backup_pvc_name=backup_pvc_name,
+        )
 
 
 def _restore_push_volume(
@@ -398,8 +411,8 @@ def _restore_push_volume(
     A WaitForFirstConsumer storage class does not bind until then.
 
     Raises:
-        CbtRestoreError: When the target PVC is not Bound before the wait timeout.
-            The original timeout is chained.
+        CbtRestoreError: When the target PVC is not Bound before the wait timeout, or qemu-img
+            convert or compare fails. The original error is chained.
     """
     target_file = _target_file(volume_mode=volume_spec.volume_mode)
     target_mounts, target_devices, target_volumes = _target_pod_volumes(
@@ -421,14 +434,24 @@ def _restore_push_volume(
         except TimeoutExpiredError as wait_error:
             raise CbtRestoreError(f"Restore PVC {target_pvc.namespace}/{target_pvc.name} is not Bound") from wait_error
         LOGGER.info(f"Converting {qcow2_file} onto {target_file}")
-        restore_pod.execute(
+        _execute_on_restore_pod(
+            pod=restore_pod,
             command=["qemu-img", "convert", "-f", "qcow2", "-O", "raw", qcow2_file, target_file],
             timeout=TIMEOUT_30MIN,
+            failure=(
+                f"qemu-img convert of {qcow2_file} onto {target_file} failed on PVC "
+                f"{target_pvc.namespace}/{target_pvc.name}"
+            ),
         )
         LOGGER.info(f"Comparing {qcow2_file} with {target_file}")
-        restore_pod.execute(
+        _execute_on_restore_pod(
+            pod=restore_pod,
             command=["qemu-img", "compare", "-f", "qcow2", "-F", "raw", qcow2_file, target_file],
             timeout=TIMEOUT_30MIN,
+            failure=(
+                f"qemu-img compare of {qcow2_file} with {target_file} failed on PVC "
+                f"{target_pvc.namespace}/{target_pvc.name}"
+            ),
         )
 
 
@@ -470,7 +493,8 @@ def _deploy_restored_vm(
     """Create a halted VM that boots the restored disk under the backup's VM name.
 
     A VirtualMachineBackup does not store instancetype, preference, or OS.
-    The VM uses the CBT VM profile, the same one the source VM fixture uses.
+    Push restore assumes a RHEL source VM matching the Linux path of ``cbt_enabled_vm``:
+    ``U1_SMALL``, the RHEL 9 preference, and the RHEL OS flavor.
     """
     restored_vm = VirtualMachineForTests(
         name=vm_name,
@@ -540,15 +564,30 @@ def _select_volume_qcow2(
     )
 
 
-def _qcow2_virtual_size_bytes(pod: Pod, qcow2_file: str) -> int:
+def _execute_on_restore_pod(pod: Pod, command: list[str], timeout: int, failure: str) -> str:
+    """Run a command on a restore pod and return its output.
+
+    Raises:
+        CbtRestoreError: When the command fails or times out. The original command error is chained.
+    """
+    try:
+        return pod.execute(command=command, timeout=timeout)
+    except ExecOnPodError as exec_error:
+        raise CbtRestoreError(f"{failure}: {exec_error}") from exec_error
+
+
+def _qcow2_virtual_size_bytes(pod: Pod, qcow2_file: str, backup_pvc_name: str) -> int:
     """Return the guest-visible size of a qcow2 file.
 
     Raises:
-        CbtRestoreError: When qemu-img info does not return a virtual-size. The original parse error is chained.
+        CbtRestoreError: When qemu-img info fails or does not return a virtual-size.
+            The original command or parse error is chained.
     """
-    output = pod.execute(
+    output = _execute_on_restore_pod(
+        pod=pod,
         command=["qemu-img", "info", "--output=json", "--force-share", qcow2_file],
         timeout=TIMEOUT_2MIN,
+        failure=f"qemu-img info failed for {qcow2_file} on backup PVC {pod.namespace}/{backup_pvc_name}",
     )
     try:
         return int(json.loads(output)["virtual-size"])
@@ -561,16 +600,17 @@ def _qcow2_virtual_size_bytes(pod: Pod, qcow2_file: str) -> int:
 def _target_pvc_size(virtual_size_bytes: int, volume_mode: str) -> str:
     """Return the target PVC capacity for the backup image.
 
-    A Filesystem PVC is 6% larger than the disk, rounded up to at least 1 Gi, so the raw
-    disk.img fits for a non-root writer. ext4 reserves 5% for root.
+    A Filesystem PVC adds ``CBT_FILESYSTEM_RESTORE_HEADROOM_PERCENT`` percent, at least
+    ``CBT_FILESYSTEM_RESTORE_MIN_HEADROOM_GIB`` Gi, so the raw disk.img fits for a non-root
+    writer. ext4 reserves 5% for root.
     A block device is used as the disk itself, so it is only rounded up to the image size.
     """
+    source_gib = (virtual_size_bytes + BYTES_PER_GIB - 1) // BYTES_PER_GIB
     headroom_gib = 0
     if volume_mode == PersistentVolumeClaim.VolumeMode.FILE:
-        source_gib = (virtual_size_bytes + BYTES_PER_GIB - 1) // BYTES_PER_GIB
         proportional_headroom_gib = (source_gib * CBT_FILESYSTEM_RESTORE_HEADROOM_PERCENT + 99) // 100
         headroom_gib = max(CBT_FILESYSTEM_RESTORE_MIN_HEADROOM_GIB, proportional_headroom_gib)
-    return cbt_pvc_size_with_headroom(source_disk_size=f"{virtual_size_bytes}", headroom_gib=headroom_gib)
+    return f"{source_gib + headroom_gib}Gi"
 
 
 def _list_qcow2_files(pod: Pod) -> list[str]:

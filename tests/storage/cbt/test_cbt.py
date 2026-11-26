@@ -55,9 +55,9 @@ class TestFullBackup:
         [{"incremental_count": 0}],
         indirect=True,
     )
+    @pytest.mark.usefixtures("completed_push_backup_chain")
     def test_full_backup_push_mode(
         self,
-        completed_push_backup_chain,
         restored_vm_from_push_chain,
     ):
         """
@@ -79,13 +79,6 @@ class TestFullBackup:
         Expected:
             - The restored VM boots with the original test data
         """
-        full_backup = completed_push_backup_chain[0]
-        assert_backup_status_includes_volumes(
-            backup_name=full_backup.name,
-            backup_status=full_backup.instance.to_dict()["status"],
-            expected_volume_names=[DV_DISK],
-            expected_backup_type=CBT_BACKUP_TYPE_FULL,
-        )
         assert_restored_rhel_vm_data(vm=restored_vm_from_push_chain)
 
     @pytest.mark.polarion("CNV-15996")
