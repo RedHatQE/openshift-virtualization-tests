@@ -25,13 +25,11 @@ KUBEVIRT_VIRT_HANDLER_UP = "kubevirt_virt_handler_up"
         pytest.param(
             KUBEVIRT_VIRT_OPERATOR_LEADING_STATUS,
             virt_label_dict[VIRT_OPERATOR],
-            marks=pytest.mark.polarion("CNV-7112"),
             id=KUBEVIRT_VIRT_OPERATOR_LEADING_STATUS,
         ),
         pytest.param(
             KUBEVIRT_VIRT_CONTROLLER_LEADING_STATUS,
             virt_label_dict[VIRT_CONTROLLER],
-            marks=pytest.mark.polarion("CNV-7113"),
             id=KUBEVIRT_VIRT_CONTROLLER_LEADING_STATUS,
         ),
     ],
@@ -46,6 +44,10 @@ def test_virt_recording_rules(
     virt_pod_names_by_label,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-8829 # <skip-jira-utils-check>
+    Polarion: CNV-7112
+    Polarion: CNV-7113
+
     This test will check that recording rules for 'virt-operator and virt-controller'
     showing the pod information in the output.
     """
@@ -61,7 +63,6 @@ def test_virt_recording_rules(
         pytest.param(
             KUBEVIRT_VIRT_HANDLER_UP,
             virt_label_dict[VIRT_HANDLER],
-            marks=pytest.mark.polarion("CNV-7108"),
             id=KUBEVIRT_VIRT_HANDLER_UP,
         ),
     ],
@@ -76,6 +77,9 @@ def test_virt_up_recording_rules(
     virt_pod_names_by_label,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-8829 # <skip-jira-utils-check>
+    Polarion: CNV-7108
+
     This test will check that 'up' recording rules for 'virt_api',
     'virt_controller','virt_operator', 'virt_handler' showing 'sum()' of pods in the output.
     More details on 'up': https://help.sumologic.com/Metrics/Kubernetes_Metrics#up-metrics

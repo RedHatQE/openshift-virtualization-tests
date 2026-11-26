@@ -44,7 +44,6 @@ def fedora_vm_without_name_in_label(
 
 
 class TestVmiNodeCpuAffinityLinux:
-    @pytest.mark.polarion("CNV-7295")
     @pytest.mark.s390x
     def test_kubevirt_vmi_node_cpu_affinity(
         self,
@@ -52,6 +51,10 @@ class TestVmiNodeCpuAffinityLinux:
         vm_with_cpu_spec,
         expected_cpu_affinity_metric_value,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-8746 # <skip-jira-utils-check>
+        Polarion: CNV-7295
+        """
         validate_metrics_value(
             prometheus=prometheus,
             metric_name=KUBEVIRT_VMI_NODE_CPU_AFFINITY.format(vm_name=vm_with_cpu_spec.name),
@@ -62,8 +65,11 @@ class TestVmiNodeCpuAffinityLinux:
 @pytest.mark.tier3
 @pytest.mark.windows
 class TestVmiNodeCpuAffinityWindows:
-    @pytest.mark.polarion("CNV-11883")
     def test_kubevirt_vmi_node_cpu_affinity_windows_vm(self, admin_client, prometheus, windows_vm_for_test):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-59696 # <skip-jira-utils-check>
+        Polarion: CNV-11883
+        """
         validate_vmi_node_cpu_affinity_with_prometheus(
             vm=windows_vm_for_test,
             prometheus=prometheus,
@@ -72,10 +78,12 @@ class TestVmiNodeCpuAffinityWindows:
 
 
 class TestVmNameInLabel:
-    @pytest.mark.polarion("CNV-8582")
     @pytest.mark.s390x
     def test_vm_name_in_virt_launcher_label(self, fedora_vm_without_name_in_label, admin_client):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-14781 # <skip-jira-utils-check>
+        Polarion: CNV-8582
+
         when VM created from vm.yaml,for the kind=VirtualMachine, doesn't have
         the VM name in label, then virt-launcher pod should have the
         VM name in the label populated automatically
@@ -93,9 +101,12 @@ class TestVmNameInLabel:
 
 class TestVirtHCOSingleStackIpv6:
     @pytest.mark.ipv6
-    @pytest.mark.polarion("CNV-11740")
     @pytest.mark.s390x
     def test_metric_kubevirt_hco_single_stack_ipv6(self, prometheus):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-36659 # <skip-jira-utils-check>
+        Polarion: CNV-11740
+        """
         validate_metrics_value(
             prometheus=prometheus,
             metric_name="kubevirt_hco_single_stack_ipv6",

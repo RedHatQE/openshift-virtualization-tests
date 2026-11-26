@@ -3,10 +3,13 @@ import pytest
 from tests.observability.metrics.utils import expected_metric_labels_and_values, get_metric_labels_non_empty_value
 
 
-@pytest.mark.polarion("CNV-11744")
 @pytest.mark.s390x
 @pytest.mark.conformance
 def test_metric_kubevirt_cdi_storageprofile_info(prometheus, storage_class_labels_for_testing):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-36659 # <skip-jira-utils-check>
+    Polarion: CNV-11744
+    """
     expected_metric_labels_and_values(
         values_from_prometheus=get_metric_labels_non_empty_value(
             prometheus=prometheus,
