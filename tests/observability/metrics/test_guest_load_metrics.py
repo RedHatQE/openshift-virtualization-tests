@@ -1,12 +1,9 @@
-import pytest
-
 from tests.observability.metrics.constants import GUEST_LOAD_TIME_PERIODS
 from tests.observability.metrics.utils import validate_metric_value_greater_than_initial_value
 
 
 class TestVMIGuestLoad:
     # TODO: when the pr for updating the fedora will be merged, adjust the test.
-    @pytest.mark.polarion("CNV-12369")
     def test_kubevirt_vmi_guest_load(
         self,
         prometheus,
@@ -16,6 +13,10 @@ class TestVMIGuestLoad:
         stressed_vm_cpu_fedora,
         subtests,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-61452 # <skip-jira-utils-check>
+        Polarion: CNV-12369
+        """
         for guest_load_time_period in GUEST_LOAD_TIME_PERIODS:
             with subtests.test(msg=guest_load_time_period):
                 metric_name = f"{guest_load_time_period}{{name='{fedora_vm_with_stress_ng.name}'}}"

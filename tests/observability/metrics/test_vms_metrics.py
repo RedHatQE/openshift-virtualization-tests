@@ -152,45 +152,56 @@ def vm_metric_1_vmim(admin_client, vm_metric_1):
 
 
 class TestVMStatusLastTransitionMetrics:
-    @pytest.mark.polarion("CNV-9661")
     @pytest.mark.s390x
     def test_vm_running_status_metrics(self, prometheus, vm_metric_1):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-15606 # <skip-jira-utils-check>
+        Polarion: CNV-9661
+        """
         check_vm_last_transition_metric_value(
             prometheus=prometheus,
             metric="kubevirt_vm_running_status_last_transition_timestamp_seconds",
             vm=vm_metric_1,
         )
 
-    @pytest.mark.polarion("CNV-9662")
     @pytest.mark.s390x
     def test_vm_error_status_metrics(self, prometheus, vm_in_error_state):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-15606 # <skip-jira-utils-check>
+        Polarion: CNV-9662
+        """
         check_vm_last_transition_metric_value(
             prometheus=prometheus,
             metric="kubevirt_vm_error_status_last_transition_timestamp_seconds",
             vm=vm_in_error_state,
         )
 
-    @pytest.mark.polarion("CNV-9665")
     @pytest.mark.s390x
     def test_vm_migrating_status_metrics(
         self, skip_if_no_common_cpu, prometheus, vm_metric_1, migration_policy_with_bandwidth, vm_metric_1_vmim
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-15606 # <skip-jira-utils-check>
+        Polarion: CNV-9665
+        """
         check_vm_last_transition_metric_value(
             prometheus=prometheus,
             metric="kubevirt_vm_migrating_status_last_transition_timestamp_seconds",
             vm=vm_metric_1,
         )
 
-    @pytest.mark.polarion("CNV-9664")
     @pytest.mark.s390x
     def test_vm_non_running_status_metrics(self, prometheus, vm_metric_1, stopped_vm_metric_1):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-15606 # <skip-jira-utils-check>
+        Polarion: CNV-9664
+        """
         check_vm_last_transition_metric_value(
             prometheus=prometheus,
             metric="kubevirt_vm_non_running_status_last_transition_timestamp_seconds",
             vm=vm_metric_1,
         )
 
-    @pytest.mark.polarion("CNV-9751")
     @pytest.mark.s390x
     @pytest.mark.xfail(
         reason=f"{QUARANTINED}: Storage Classes act differently when "
@@ -198,6 +209,10 @@ class TestVMStatusLastTransitionMetrics:
         run=False,
     )
     def test_vm_starting_status_metrics(self, prometheus, vm_in_starting_state):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-15606 # <skip-jira-utils-check>
+        Polarion: CNV-9751
+        """
         check_vm_last_transition_metric_value(
             prometheus=prometheus,
             metric="kubevirt_vm_starting_status_last_transition_timestamp_seconds",
@@ -212,27 +227,36 @@ class TestVMStatusLastTransitionMetrics:
 )
 @pytest.mark.usefixtures("vm_for_test")
 class TestVmConsolesAndVmCreateDateTimestampMetrics:
-    @pytest.mark.polarion("CNV-11024")
     @pytest.mark.s390x
     def test_kubevirt_console_active_connections(self, prometheus, vm_for_test, connected_vm_console_successfully):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-29829 # <skip-jira-utils-check>
+        Polarion: CNV-11024
+        """
         validate_metrics_value(
             prometheus=prometheus,
             metric_name=KUBEVIRT_CONSOLE_ACTIVE_CONNECTIONS_BY_VMI.format(vm_name=vm_for_test.name),
             expected_value="1",
         )
 
-    @pytest.mark.polarion("CNV-10842")
     @pytest.mark.s390x
     def test_kubevirt_vnc_active_connections(self, prometheus, vm_for_test, connected_vnc_console):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-29829 # <skip-jira-utils-check>
+        Polarion: CNV-10842
+        """
         validate_metrics_value(
             prometheus=prometheus,
             metric_name=KUBEVIRT_VNC_ACTIVE_CONNECTIONS_BY_VMI.format(vm_name=vm_for_test.name),
             expected_value="1",
         )
 
-    @pytest.mark.polarion("CNV-11805")
     @pytest.mark.s390x
     def test_metric_kubevirt_vm_create_date_timestamp_seconds(self, prometheus, vm_for_test):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-48213 # <skip-jira-utils-check>
+        Polarion: CNV-11805
+        """
         validate_metrics_value(
             prometheus=prometheus,
             metric_name=f"kubevirt_vm_create_date_timestamp_seconds{{name='{vm_for_test.name}'}}",
@@ -248,13 +272,11 @@ class TestVmiFileSystemMetricsLinux:
             pytest.param(
                 CAPACITY,
                 CAPACITY,
-                marks=pytest.mark.polarion("CNV-11406"),
                 id="test_metric_kubevirt_vmi_filesystem_capacity_bytes",
             ),
             pytest.param(
                 USED,
                 USED,
-                marks=pytest.mark.polarion("CNV-11407"),
                 id="test_metric_kubevirt_vmi_filesystem_used_bytes",
             ),
         ],
@@ -270,6 +292,11 @@ class TestVmiFileSystemMetricsLinux:
         disk_file_system_info_linux,
         capacity_or_used,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-28605 # <skip-jira-utils-check>
+        Polarion: CNV-11406
+        Polarion: CNV-11407
+        """
         compare_metric_file_system_values_with_vm_file_system_values(
             prometheus=prometheus,
             vm_for_test=vm_for_test,
@@ -287,12 +314,10 @@ class TestVmiFileSystemMetricsWindows:
         [
             pytest.param(
                 CAPACITY,
-                marks=pytest.mark.polarion("CNV-11917"),
                 id="test_metric_kubevirt_vmi_filesystem_capacity_bytes",
             ),
             pytest.param(
                 USED,
-                marks=pytest.mark.polarion("CNV-11918"),
                 id="test_metric_kubevirt_vmi_filesystem_used_bytes",
             ),
         ],
@@ -305,6 +330,11 @@ class TestVmiFileSystemMetricsWindows:
         disk_file_system_info_windows,
         capacity_or_used,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-28605 # <skip-jira-utils-check>
+        Polarion: CNV-11917
+        Polarion: CNV-11918
+        """
         compare_metric_file_system_values_with_vm_file_system_values(
             prometheus=prometheus,
             vm_for_test=windows_vm_for_test,
@@ -316,7 +346,6 @@ class TestVmiFileSystemMetricsWindows:
 
 @pytest.mark.usefixtures("vm_with_cpu_spec")
 class TestVmResourceRequests:
-    @pytest.mark.polarion("CNV-11521")
     @pytest.mark.s390x
     def test_metric_kubevirt_vm_resource_requests(
         self,
@@ -325,6 +354,10 @@ class TestVmResourceRequests:
         vm_with_cpu_spec,
         modified_vm_cpu_requests,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-46973 # <skip-jira-utils-check>
+        Polarion: CNV-11521
+        """
         validate_metrics_value(
             prometheus=prometheus,
             metric_name=f"kubevirt_vm_resource_requests{{'name'='{vm_with_cpu_spec.name}',"
@@ -334,9 +367,7 @@ class TestVmResourceRequests:
 
 
 class TestVmiStatusAddresses:
-    @pytest.mark.parametrize(
-        "vm_for_test", [pytest.param("vmi-status-addresses", marks=pytest.mark.polarion("CNV-11534"))], indirect=True
-    )
+    @pytest.mark.parametrize("vm_for_test", ["vmi-status-addresses"], indirect=True)
     @pytest.mark.s390x
     @pytest.mark.ipv6
     def test_metric_kubevirt_vmi_status_addresses(
@@ -346,6 +377,10 @@ class TestVmiStatusAddresses:
         kubevirt_vmi_status_addresses_ip_labels_values,
         vm_virt_controller_ip_address,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-46973 # <skip-jira-utils-check>
+        Polarion: CNV-11534
+        """
         instance_value = urlparse(f"//{kubevirt_vmi_status_addresses_ip_labels_values.get('instance')}").hostname
 
         address_value = kubevirt_vmi_status_addresses_ip_labels_values.get("address")
@@ -357,13 +392,15 @@ class TestVmiStatusAddresses:
 
 
 class TestVmSnapshotSucceededTimeStamp:
-    @pytest.mark.parametrize(
-        "vm_for_test", [pytest.param("vm-snapshot-test", marks=pytest.mark.polarion("CNV-11536"))], indirect=True
-    )
+    @pytest.mark.parametrize("vm_for_test", ["vm-snapshot-test"], indirect=True)
     @pytest.mark.s390x
     def test_metric_kubevirt_vmsnapshot_succeeded_timestamp_seconds(
         self, prometheus, vm_for_test, vm_for_test_snapshot
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-46973 # <skip-jira-utils-check>
+        Polarion: CNV-11536
+        """
         validate_metrics_value(
             prometheus=prometheus,
             metric_name=f"kubevirt_vmsnapshot_succeeded_timestamp_seconds{{name='{vm_for_test.name}'}}",
@@ -372,11 +409,14 @@ class TestVmSnapshotSucceededTimeStamp:
 
 
 class TestVmResourceLimits:
-    @pytest.mark.polarion("CNV-11601")
     @pytest.mark.s390x
     def test_metric_kubevirt_vm_resource_limits(
         self, prometheus, cnv_vm_resources_limits_matrix__function__, vm_for_test_with_resource_limits
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-46973 # <skip-jira-utils-check>
+        Polarion: CNV-11601
+        """
         vm_for_test_with_resource_limits_instance = (
             vm_for_test_with_resource_limits.instance.spec.template.spec.domain.resources.limits
         )
@@ -391,13 +431,16 @@ class TestVmResourceLimits:
 
 
 class TestVmDiskAllocatedSizeLinux:
-    @pytest.mark.polarion("CNV-11817")
     @pytest.mark.s390x
     def test_metric_kubevirt_vm_disk_allocated_size_bytes(
         self,
         prometheus,
         vm_for_vm_disk_allocation_size_test,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-48213 # <skip-jira-utils-check>
+        Polarion: CNV-11817
+        """
         validate_metrics_value(
             prometheus=prometheus,
             metric_name=KUBEVIRT_VM_DISK_ALLOCATED_SIZE_BYTES.format(vm_name=vm_for_vm_disk_allocation_size_test.name),
@@ -408,8 +451,11 @@ class TestVmDiskAllocatedSizeLinux:
 @pytest.mark.tier3
 @pytest.mark.windows
 class TestVmDiskAllocatedSizeWindows:
-    @pytest.mark.polarion("CNV-11916")
     def test_metric_kubevirt_vm_disk_allocated_size_bytes_windows(self, prometheus, windows_vm_for_test):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-48213 # <skip-jira-utils-check>
+        Polarion: CNV-11916
+        """
         validate_metrics_value(
             prometheus=prometheus,
             metric_name=KUBEVIRT_VM_DISK_ALLOCATED_SIZE_BYTES.format(vm_name=windows_vm_for_test.name),
@@ -424,12 +470,10 @@ class TestVmVnicInfo:
             pytest.param(
                 "vm",
                 "kubevirt_vm_vnic_info{{name='{vm_name}'}}",
-                marks=pytest.mark.polarion("CNV-11812"),
             ),
             pytest.param(
                 "vmi",
                 "kubevirt_vmi_vnic_info{{name='{vm_name}'}}",
-                marks=pytest.mark.polarion("CNV-11811"),
             ),
         ],
         indirect=["vnic_info_from_vm_or_vmi_linux"],
@@ -439,6 +483,11 @@ class TestVmVnicInfo:
     def test_metric_kubevirt_vm_vnic_info_linux(
         self, prometheus, running_metric_vm, vnic_info_from_vm_or_vmi_linux, query
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-48213 # <skip-jira-utils-check>
+        Polarion: CNV-11812
+        Polarion: CNV-11811
+        """
         validate_vnic_info(
             prometheus=prometheus,
             vnic_info_to_compare=vnic_info_from_vm_or_vmi_linux,
@@ -447,8 +496,11 @@ class TestVmVnicInfo:
 
     @pytest.mark.tier3
     @pytest.mark.windows
-    @pytest.mark.polarion("CNV-12224")
     def test_metric_kubevirt_vmi_vnic_info_windows(self, prometheus, windows_vm_for_test, vnic_info_from_vmi_windows):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-48213 # <skip-jira-utils-check>
+        Polarion: CNV-12224
+        """
         validate_vnic_info(
             prometheus=prometheus,
             vnic_info_to_compare=vnic_info_from_vmi_windows,
@@ -460,11 +512,9 @@ class TestVmVnicInfo:
         [
             pytest.param(
                 "kubevirt_vm_vnic_info{{name='{vm_name}', vnic_name='secondary'}}",
-                marks=pytest.mark.polarion("CNV-16018"),
             ),
             pytest.param(
                 "kubevirt_vmi_vnic_info{{name='{vm_name}', vnic_name='secondary'}}",
-                marks=pytest.mark.polarion("CNV-16019"),
             ),
         ],
     )
@@ -472,6 +522,10 @@ class TestVmVnicInfo:
         self, prometheus, post_nad_swap_vm, expected_vnic_info_after_swap, query
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-1548 # <skip-jira-utils-check>
+        Polarion: CNV-16018
+        Polarion: CNV-16019
+
         Test that vnic_info metric updates the network label after a NAD swap.
 
         STP:
@@ -497,10 +551,13 @@ class TestVmVnicInfo:
 
 
 class TestVmiPhaseTransitionFromDeletion:
-    @pytest.mark.polarion("CNV-12990")
     def test_kubevirt_vmi_phase_transition_from_deletion_seconds_linux(
         self, prometheus, initial_vmi_deletion_metrics_values, running_metric_vm, deleted_vmi, subtests
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-61452 # <skip-jira-utils-check>
+        Polarion: CNV-12990
+        """
         metrics_to_check = [
             KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
             SUM_KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_BUCKET_SUCCEEDED,
@@ -520,7 +577,7 @@ class TestVmiPhaseTransitionFromDeletion:
         [
             pytest.param(
                 KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
-                marks=(pytest.mark.polarion("CNV-12204"), pytest.mark.tier3),
+                marks=(pytest.mark.tier3),
             )
         ],
         indirect=True,
@@ -529,6 +586,10 @@ class TestVmiPhaseTransitionFromDeletion:
     def test_kubevirt_vmi_phase_transition_from_deletion_seconds_sum_windows(
         self, prometheus, initial_metric_value, windows_vm_for_test, deleted_windows_vmi
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-36659 # <skip-jira-utils-check>
+        Polarion: CNV-12204
+        """
         validate_metric_value_greater_than_initial_value(
             prometheus=prometheus,
             metric_name=KUBEVIRT_VMI_PHASE_TRANSITION_TIME_FROM_DELETION_SECONDS_SUM_SUCCEEDED,
@@ -539,12 +600,7 @@ class TestVmiPhaseTransitionFromDeletion:
 class TestVmCreatedByPodTotal:
     @pytest.mark.parametrize(
         "vm_for_test",
-        [
-            pytest.param(
-                "vm-created-by-pod-total-vm",
-                marks=pytest.mark.polarion("CNV-12361"),
-            )
-        ],
+        ["vm-created-by-pod-total-vm"],
         indirect=True,
     )
     def test_kubevirt_vm_created_by_pod_total(
@@ -553,6 +609,10 @@ class TestVmCreatedByPodTotal:
         vm_created_pod_total_initial_metric_value,
         vm_for_test,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-61452 # <skip-jira-utils-check>
+        Polarion: CNV-12361
+        """
         validate_metrics_value(
             prometheus=prometheus,
             metric_name=KUBEVIRT_VM_CREATED_BY_POD_TOTAL.format(namespace=vm_for_test.namespace),
@@ -572,10 +632,12 @@ class TestVmiSyncTotal:
         - Prometheus access configured
     """
 
-    @pytest.mark.polarion("CNV-16271")
     @pytest.mark.usefixtures("initial_vmi_sync_total_values")
     def test_kubevirt_vmi_sync_total(self, prometheus, vm_for_migration_metrics_test):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-61452 # <skip-jira-utils-check>
+        Polarion: CNV-16271
+
         Test that kubevirt_vmi_sync_total metric is reported by both
         virt-controller and virt-handler after a VM starts.
 
@@ -592,12 +654,14 @@ class TestVmiSyncTotal:
             metric_query=KUBEVIRT_VMI_SYNC_TOTAL.format(vm_name=vm_for_migration_metrics_test.name),
         )
 
-    @pytest.mark.polarion("CNV-16272")
     @pytest.mark.usefixtures("migration_succeeded_scope_class")
     def test_kubevirt_vmi_sync_total_increases_after_migration(
         self, prometheus, initial_vmi_sync_total_values, vm_for_migration_metrics_test
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-61452 # <skip-jira-utils-check>
+        Polarion: CNV-16272
+
         Test that kubevirt_vmi_sync_total metric value increases after
         a VM live migration.
 
@@ -620,10 +684,12 @@ class TestVmiSyncTotal:
             initial_values=initial_vmi_sync_total_values,
         )
 
-    @pytest.mark.polarion("CNV-16273")
     @pytest.mark.usefixtures("deleted_vmi_sync_total_vm")
     def test_kubevirt_vmi_sync_total_cleared_after_vm_deletion(self, prometheus, vm_for_migration_metrics_test):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-61452 # <skip-jira-utils-check>
+        Polarion: CNV-16273
+
         Test that kubevirt_vmi_sync_total metric entry is removed
         after the VM is deleted.
 
