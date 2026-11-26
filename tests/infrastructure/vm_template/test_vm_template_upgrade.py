@@ -47,7 +47,6 @@ class TestVMTemplatePreUpgrade:
         - Run before cluster upgrade.
     """
 
-    @pytest.mark.polarion("CNV-16822")
     @pytest.mark.order(before=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
     # Post-upgrade tests depend on this to verify the template existed before the upgrade.
     @pytest.mark.dependency(name=f"{VM_TEMPLATE_PRE_UPGRADE_NODE_ID_PREFIX}::test_template_creation_before_upgrade")
@@ -71,7 +70,6 @@ class TestVMTemplatePreUpgrade:
             timeout=TIMEOUT_1MIN,
         )
 
-    @pytest.mark.polarion("CNV-16821")
     @pytest.mark.order(before=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
     # test_template_request_before_upgrade depends on this to ensure the source VM exists.
     @pytest.mark.dependency(
@@ -101,7 +99,6 @@ class TestVMTemplatePreUpgrade:
             f"from template {vm_template_before_upgrade.name}"
         )
 
-    @pytest.mark.polarion("CNV-16817")
     @pytest.mark.order(before=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
     @pytest.mark.usefixtures("vm_template_request_before_upgrade")
     # Post-upgrade tests depend on this to verify the template request existed before the upgrade.
@@ -151,7 +148,6 @@ class TestVMTemplatePostUpgrade:
         - Run after cluster upgrade.
     """
 
-    @pytest.mark.polarion("CNV-16818")
     @pytest.mark.order(after=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
     # Requires upgrade completion and pre-upgrade template and template request to have been created.
     @pytest.mark.dependency(
@@ -195,7 +191,6 @@ class TestVMTemplatePostUpgrade:
                 timeout=TIMEOUT_1MIN,
             )
 
-    @pytest.mark.polarion("CNV-16819")
     @pytest.mark.order(after=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
     # Requires upgrade completion and pre-upgrade template to have been created.
     @pytest.mark.dependency(

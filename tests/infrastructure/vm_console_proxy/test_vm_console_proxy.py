@@ -13,13 +13,19 @@ LOGGER = logging.getLogger(__name__)
 @pytest.mark.s390x
 class TestVmConsoleProxyEnablement:
     @pytest.mark.dependency(name="test_vm_proxy_cluster_resources_available")
-    @pytest.mark.polarion("CNV-10416")
     def test_vm_proxy_cluster_resources_available(self, vm_console_proxy_cluster_resource):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-26552 # <skip-jira-utils-check>
+        Polarion: CNV-10416
+        """
         assert_resource_existence_and_availability(resource=vm_console_proxy_cluster_resource, timeout=TIMEOUT_1MIN)
 
     @pytest.mark.dependency(name="test_vm_proxy_namespaced_resources_available")
-    @pytest.mark.polarion("CNV-10409")
     def test_vm_proxy_namespaced_resources_available(self, vm_console_proxy_namespace_resource):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-26552 # <skip-jira-utils-check>
+        Polarion: CNV-10409
+        """
         assert_resource_existence_and_availability(resource=vm_console_proxy_namespace_resource, timeout=TIMEOUT_1MIN)
 
     @pytest.mark.dependency(
@@ -29,7 +35,6 @@ class TestVmConsoleProxyEnablement:
         ],
         name="test_vm_console_proxy_token_access",
     )
-    @pytest.mark.polarion("CNV-10429")
     def test_vm_console_proxy_token_access(
         self,
         vm_for_console_proxy,
@@ -40,5 +45,9 @@ class TestVmConsoleProxyEnablement:
         generated_vnc_access_token,
         logged_with_token,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-26552 # <skip-jira-utils-check>
+        Polarion: CNV-10429
+        """
         with VNCConnection(vm=vm_for_console_proxy):
             LOGGER.info("VNC Connection to Virtual Machine is Successful")

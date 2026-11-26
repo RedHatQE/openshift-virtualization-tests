@@ -17,17 +17,23 @@ from utilities.virt import VirtualMachineForTests, running_vm
 @pytest.mark.post_upgrade
 @pytest.mark.gating
 @pytest.mark.conformance
-@pytest.mark.polarion("CNV-10358")
 @pytest.mark.s390x
 def test_common_instancetype_vendor_labels(base_vm_cluster_instancetypes):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-21976 # <skip-jira-utils-check>
+    Polarion: CNV-10358
+    """
     assert_mismatch_vendor_label(resources_list=base_vm_cluster_instancetypes)
 
 
 @pytest.mark.hugepages
 @pytest.mark.special_infra
 @pytest.mark.tier3
-@pytest.mark.polarion("CNV-10387")
 def test_cx1_instancetype_profile(unprivileged_client, namespace):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-21976 # <skip-jira-utils-check>
+    Polarion: CNV-10387
+    """
     with VirtualMachineForTests(
         client=unprivileged_client,
         name="rhel-vm-with-cx1",
@@ -39,8 +45,11 @@ def test_cx1_instancetype_profile(unprivileged_client, namespace):
 
 
 @pytest.mark.post_upgrade
-@pytest.mark.polarion("CNV-11288")
 def test_common_instancetype_owner(base_vm_cluster_instancetypes):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-26638 # <skip-jira-utils-check>
+    Polarion: CNV-11288
+    """
     failed_ins_type = []
     for vm_cluster_instancetype in base_vm_cluster_instancetypes:
         if (
@@ -57,7 +66,6 @@ def test_common_instancetype_owner(base_vm_cluster_instancetypes):
     "windows_validating_admission_policy_binding",
 )
 class TestDedicatedInstancetypeProfile:
-    @pytest.mark.polarion("CNV-13437")
     @pytest.mark.parametrize(
         "windows_vm_for_dedicated_cpu",
         [
@@ -74,9 +82,12 @@ class TestDedicatedInstancetypeProfile:
         self,
         windows_vm_for_dedicated_cpu,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-23458 # <skip-jira-utils-check>
+        Polarion: CNV-13437
+        """
         running_vm(vm=windows_vm_for_dedicated_cpu)
 
-    @pytest.mark.polarion("CNV-13438")
     @pytest.mark.parametrize(
         "windows_vm_for_dedicated_cpu",
         [
@@ -93,6 +104,10 @@ class TestDedicatedInstancetypeProfile:
         self,
         windows_vm_for_dedicated_cpu,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-23458 # <skip-jira-utils-check>
+        Polarion: CNV-13438
+        """
         expected_message = (
             f'Failure while starting VMI: virtualmachineinstances.kubevirt.io "{windows_vm_for_dedicated_cpu.name}" '
             "is forbidden: ValidatingAdmissionPolicy 'windows-vcpu-overcommit' with binding "
@@ -100,9 +115,12 @@ class TestDedicatedInstancetypeProfile:
         )
         wait_for_condition_message_value(resource=windows_vm_for_dedicated_cpu, expected_message=expected_message)
 
-    @pytest.mark.polarion("CNV-13746")
     def test_d1_on_rhel_vm(
         self,
         rhel_vm_for_dedicated_cpu,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-23458 # <skip-jira-utils-check>
+        Polarion: CNV-13746
+        """
         running_vm(vm=rhel_vm_for_dedicated_cpu)

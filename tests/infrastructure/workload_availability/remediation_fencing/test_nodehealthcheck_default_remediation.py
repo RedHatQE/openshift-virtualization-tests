@@ -55,10 +55,7 @@ def snr_remediation_template(admin_client, checkup_nodehealthcheck_operator_depl
 @pytest.mark.parametrize(
     "node_operation",
     [
-        pytest.param(
-            NODE_KUBELET_STOP,
-            marks=pytest.mark.polarion("CNV-8991"),
-        ),
+        NODE_KUBELET_STOP,
     ],
     indirect=True,
 )
@@ -69,4 +66,8 @@ def test_snr_based_vm_and_node_recovery_after_node_failure(
     vm_node_before_failure,
     performed_node_operation,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-13077 # <skip-jira-utils-check>
+    Polarion: CNV-8991
+    """
     verify_vm_and_node_recovery_after_node_failure(node=vm_node_before_failure, vm=nhc_vm_with_run_strategy_always)

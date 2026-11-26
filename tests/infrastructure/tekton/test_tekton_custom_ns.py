@@ -23,13 +23,16 @@ pytestmark = [pytest.mark.tier3, pytest.mark.special_infra, pytest.mark.tekton]
 @pytest.mark.usefixtures("extracted_kubevirt_tekton_resources", "processed_yaml_files")
 @pytest.mark.dependency(name="TestTektonResources")
 class TestTektonResources:
-    @pytest.mark.polarion("CNV-11254")
     def test_validate_tekton_pipeline_resources(
         self,
         unprivileged_client,
         custom_pipeline_namespace,
         cnv_tekton_pipelines_resource_matrix__class__,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-43056 # <skip-jira-utils-check>
+        Polarion: CNV-11254
+        """
         wait_for_tekton_resource_availability(
             tekton_namespace=custom_pipeline_namespace,
             tekton_resource_kind=Pipeline,
@@ -37,13 +40,16 @@ class TestTektonResources:
             client=unprivileged_client,
         )
 
-    @pytest.mark.polarion("CNV-11252")
     def test_validate_tekton_tasks_resources(
         self,
         unprivileged_client,
         custom_pipeline_namespace,
         cnv_tekton_tasks_resource_matrix__class__,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-43056 # <skip-jira-utils-check>
+        Polarion: CNV-11252
+        """
         wait_for_tekton_resource_availability(
             tekton_namespace=custom_pipeline_namespace,
             tekton_resource_kind=Task,
@@ -58,22 +64,10 @@ class TestTektonEfiPipelineExecution:
     @pytest.mark.parametrize(
         "pipeline_dv_name",
         [
-            pytest.param(
-                WIN_10,
-                marks=pytest.mark.polarion("CNV-10373"),
-            ),
-            pytest.param(
-                WIN_11,
-                marks=pytest.mark.polarion("CNV-10374"),
-            ),
-            pytest.param(
-                WIN_2K22,
-                marks=pytest.mark.polarion("CNV-10375"),
-            ),
-            pytest.param(
-                WIN_2K25,
-                marks=pytest.mark.polarion("CNV-11676"),
-            ),
+            WIN_10,
+            WIN_11,
+            WIN_2K22,
+            WIN_2K25,
         ],
     )
     def test_run_pipelines_in_custom_namespace(
@@ -83,6 +77,13 @@ class TestTektonEfiPipelineExecution:
         pipelinerun_from_pipeline_template,
         final_status_pipelinerun,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-47592 # <skip-jira-utils-check>
+        Polarion: CNV-10373
+        Polarion: CNV-10374
+        Polarion: CNV-10375
+        Polarion: CNV-11676
+        """
         assert (
             final_status_pipelinerun.status == Resource.Condition.Status.TRUE
             and final_status_pipelinerun.type == Resource.Condition.Phase.SUCCEEDED

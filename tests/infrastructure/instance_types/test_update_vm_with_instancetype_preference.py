@@ -88,12 +88,15 @@ def updated_vm_with_instancetype_and_preference(
 
 
 @pytest.mark.gating
-@pytest.mark.polarion("CNV-9680")
 def test_add_reference_to_existing_vm(
     updated_vm_with_instancetype_and_preference,
     vm_cluster_instance_type_to_update,
     rhel_9_vm_cluster_preference,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-10827 # <skip-jira-utils-check>
+    Polarion: CNV-9680
+    """
     vm_spec = updated_vm_with_instancetype_and_preference.instance.spec
     vm_instancetype_dict = vm_spec["instancetype"]
     vm_preference_dict = vm_spec["preference"]
