@@ -61,13 +61,17 @@ if TYPE_CHECKING:
 LOGGER = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session")
 def dpa_with_csi_snapshot_early_frequent_polling(
     admin_client: DynamicClient,
+    skip_if_no_storage_class_for_snapshot: None,
 ) -> Generator[DataProtectionApplication]:
     """DataProtectionApplication with CSI snapshot early frequent polling enabled.
 
-    Windows VSS backups need this Velero setting.
+    Windows VSS backups need this Velero setting
+    (https://redhat.atlassian.net/browse/OADP-7882). The Windows backup fixture
+    requests it. The snapshot-storage skip runs first, so a cluster without a
+    snapshot-capable storage class does not patch the DataProtectionApplication.
     """
     dpa = DataProtectionApplication(
         name="dpa",
@@ -246,6 +250,7 @@ def windows_vm_with_data_volume_template(
 
 @pytest.fixture()
 def velero_backup_first_namespace_without_datamover(
+    dpa_with_csi_snapshot_early_frequent_polling,
     admin_client,
     namespace_for_backup,
     windows_vm_with_data_volume_template,
