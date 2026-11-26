@@ -81,7 +81,6 @@ class TestCCLMSeveralVMs:
         Test that multiple VMs can be live migrated from the source cluster to the target cluster.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
-        Jira: https://redhat.atlassian.net/browse/CNV-50825 # <skip-jira-utils-check>
         Polarion: CNV-11995
 
 
@@ -104,7 +103,6 @@ class TestCCLMSeveralVMs:
         Test that VMs are not rebooted during cross-cluster live migration.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
-        Jira: https://redhat.atlassian.net/browse/CNV-50825 # <skip-jira-utils-check>
         Polarion: CNV-11910
 
 
@@ -128,7 +126,6 @@ class TestCCLMSeveralVMs:
         Test that files written before migration are preserved after cross-cluster live migration.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
-        Jira: https://redhat.atlassian.net/browse/CNV-50825 # <skip-jira-utils-check>
         Polarion: CNV-14332
 
 
@@ -156,7 +153,6 @@ class TestCCLMSeveralVMs:
         Test that source VMs on the source cluster are stopped after cross-cluster live migration.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
-        Jira: https://redhat.atlassian.net/browse/CNV-50825 # <skip-jira-utils-check>
         Polarion: CNV-14333
 
 
@@ -179,7 +175,6 @@ class TestCCLMSeveralVMs:
         Test that VMs can be compute live migrated within the target cluster after cross-cluster live migration.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
-        Jira: https://redhat.atlassian.net/browse/CNV-50825 # <skip-jira-utils-check>
         Polarion: CNV-12038
 
 
@@ -200,7 +195,6 @@ class TestCCLMSeveralVMs:
         Test that source VMs on the source cluster can be deleted after cross-cluster live migration.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
-        Jira: https://redhat.atlassian.net/browse/CNV-50825 # <skip-jira-utils-check>
         Polarion: CNV-14334
 
 
@@ -217,7 +211,6 @@ class TestCCLMSeveralVMs:
         Test that migrated VMs on the target cluster can be deleted after cross-cluster live migration.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
-        Jira: https://redhat.atlassian.net/browse/CNV-50825 # <skip-jira-utils-check>
         Polarion: CNV-15237
 
 
@@ -264,7 +257,6 @@ class TestCCLMWindowsWithVTPM:
         Test that a Windows VM can be live migrated from the source cluster to the target cluster.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
-        Jira: https://redhat.atlassian.net/browse/CNV-50825 # <skip-jira-utils-check>
         Polarion: CNV-11999
 
 
@@ -289,7 +281,6 @@ class TestCCLMWindowsWithVTPM:
         Test that the source Windows VM on the source cluster is stopped after cross-cluster live migration.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
-        Jira: https://redhat.atlassian.net/browse/CNV-50825 # <skip-jira-utils-check>
         Polarion: CNV-14335
 
 
@@ -314,7 +305,6 @@ class TestCCLMWindowsWithVTPM:
         Test that a Windows VM can be compute live migrated within the target cluster after cross-cluster live migration.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
-        Jira: https://redhat.atlassian.net/browse/CNV-50825 # <skip-jira-utils-check>
         Polarion: CNV-12474
 
 
@@ -335,7 +325,6 @@ class TestCCLMWindowsWithVTPM:
         Test that the source Windows VM on the source cluster can be deleted after cross-cluster live migration.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
-        Jira: https://redhat.atlassian.net/browse/CNV-50825 # <skip-jira-utils-check>
         Polarion: CNV-14336
 
 
@@ -352,7 +341,6 @@ class TestCCLMWindowsWithVTPM:
         Test that the migrated Windows VM on the target cluster can be deleted after cross-cluster live migration.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
-        Jira: https://redhat.atlassian.net/browse/CNV-50825 # <skip-jira-utils-check>
         Polarion: CNV-15236
 
 
@@ -405,7 +393,6 @@ class TestCCLMFromStorageAtoB:
         Test that a VM can be cross-cluster live migrated when source and target storage classes are different.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
-        Jira: https://redhat.atlassian.net/browse/CNV-50825 # <skip-jira-utils-check>
         Polarion: CNV-15955
 
 
@@ -430,7 +417,6 @@ class TestCCLMFromStorageAtoB:
         Test that VM is not rebooted during cross-cluster live migration.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
-        Jira: https://redhat.atlassian.net/browse/CNV-50825 # <skip-jira-utils-check>
         Polarion: CNV-15956
 
 
@@ -456,7 +442,6 @@ class TestCCLMFromStorageAtoB:
         Test that files written before migration are preserved after cross-cluster live migration.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
-        Jira: https://redhat.atlassian.net/browse/CNV-50825 # <skip-jira-utils-check>
         Polarion: CNV-15957
 
 
@@ -486,7 +471,6 @@ class TestCCLMFromStorageAtoB:
         Test that source VM on the source cluster is stopped after cross-cluster live migration.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
-        Jira: https://redhat.atlassian.net/browse/CNV-50825 # <skip-jira-utils-check>
         Polarion: CNV-15958
 
 
@@ -511,7 +495,6 @@ class TestCCLMFromStorageAtoB:
         Test that a VM can be compute live migrated within the target cluster after cross-cluster live migration.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
-        Jira: https://redhat.atlassian.net/browse/CNV-50825 # <skip-jira-utils-check>
         Polarion: CNV-15954
 
 
@@ -532,7 +515,6 @@ class TestCCLMFromStorageAtoB:
         Test that source VM on the source cluster can be deleted after cross-cluster live migration.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
-        Jira: https://redhat.atlassian.net/browse/CNV-50825 # <skip-jira-utils-check>
         Polarion: CNV-15959
 
 
@@ -549,7 +531,6 @@ class TestCCLMFromStorageAtoB:
         Test that migrated VM on the target cluster can be deleted after cross-cluster live migration.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
-        Jira: https://redhat.atlassian.net/browse/CNV-50825 # <skip-jira-utils-check>
         Polarion: CNV-15960
 
 
