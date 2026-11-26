@@ -163,7 +163,6 @@ class TestMustGatherVmDetails:
         executed_bridge_link_show_command,
     ):
         """
-        Jira: https://redhat.atlassian.net/browse/CNV-4834 # <skip-jira-utils-check>
         Jira: https://redhat.atlassian.net/browse/CNV-29382 # <skip-jira-utils-check>
         Polarion: CNV-2735
         Polarion: CNV-10280

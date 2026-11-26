@@ -60,7 +60,6 @@ class TestLiveMigrationConfigUpdate:
     ):
         """
         Jira: https://redhat.atlassian.net/browse/CNV-8296 # <skip-jira-utils-check>
-        Jira: https://redhat.atlassian.net/browse/CNV-54933 # <skip-jira-utils-check>
         Polarion: CNV-9674
         Polarion: CNV-9675
         Polarion: CNV-16551

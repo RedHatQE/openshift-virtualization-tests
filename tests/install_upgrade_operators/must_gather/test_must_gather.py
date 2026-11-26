@@ -154,7 +154,6 @@ class TestMustGatherCluster:
     ):
         """
         Jira: https://redhat.atlassian.net/browse/CNV-4834 # <skip-jira-utils-check>
-        Jira: https://redhat.atlassian.net/browse/KNIP-1123 # <skip-jira-utils-check>
         Polarion: CNV-2721
         Polarion: CNV-2705
         Polarion: CNV-2985

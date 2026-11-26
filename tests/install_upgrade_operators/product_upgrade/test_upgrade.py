@@ -34,7 +34,7 @@ class TestUpgrade:
         triggered_ocp_upgrade,
     ):
         """
-        Jira: https://redhat.atlassian.net/browse/CNV-4747 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/KNIP-264 # <skip-jira-utils-check>
         Polarion: CNV-8381
         """
         verify_upgrade_ocp(
@@ -68,8 +68,6 @@ class TestUpgrade:
     ):
         """
         Jira: https://redhat.atlassian.net/browse/KNIP-264 # <skip-jira-utils-check>
-        Jira: https://redhat.atlassian.net/browse/CNV-11483 # <skip-jira-utils-check>
-        Jira: https://redhat.atlassian.net/browse/CNV-4747 # <skip-jira-utils-check>
         Polarion: CNV-2991
 
         Test the CNV upgrade process (using OSBS/fbc sources). The main steps of the test are:
@@ -113,8 +111,6 @@ class TestUpgrade:
     ):
         """
         Jira: https://redhat.atlassian.net/browse/KNIP-264 # <skip-jira-utils-check>
-        Jira: https://redhat.atlassian.net/browse/CNV-11483 # <skip-jira-utils-check>
-        Jira: https://redhat.atlassian.net/browse/CNV-4747 # <skip-jira-utils-check>
         Polarion: CNV-9933
 
         Test the CNV upgrade process using the production source.

@@ -62,7 +62,6 @@ class TestDisconnectedVirtctlDownload:
     ):
         """
         Jira: https://redhat.atlassian.net/browse/CNV-5267 # <skip-jira-utils-check>
-        Jira: https://redhat.atlassian.net/browse/CNV-24934 # <skip-jira-utils-check>
         Polarion: CNV-6914
         Polarion: CNV-10098
         Polarion: CNV-6954
@@ -92,7 +91,6 @@ class TestDisconnectedVirtctlDownloadAndExecute:
     def test_download_and_execute_virtcli_binary_linux(self, downloaded_and_extracted_virtctl_binary_for_os, platform):
         """
         Jira: https://redhat.atlassian.net/browse/CNV-5267 # <skip-jira-utils-check>
-        Jira: https://redhat.atlassian.net/browse/CNV-24934 # <skip-jira-utils-check>
         Polarion: CNV-6913
         Polarion: CNV-10097
         """
