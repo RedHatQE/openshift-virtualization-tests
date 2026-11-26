@@ -69,9 +69,10 @@ def dpa_with_csi_snapshot_early_frequent_polling(
     """DataProtectionApplication with CSI snapshot early frequent polling enabled.
 
     Windows VSS backups need this Velero setting
-    (https://redhat.atlassian.net/browse/OADP-7882). The Windows backup fixture
-    requests it. The snapshot-storage skip runs first, so a cluster without a
-    snapshot-capable storage class does not patch the DataProtectionApplication.
+    (https://redhat.atlassian.net/browse/OADP-7882). # <skip-jira-utils-check>
+    The Windows backup fixture requests it. The snapshot-storage skip runs
+    first, so a cluster without a snapshot-capable storage class does not
+    patch the DataProtectionApplication.
     """
     dpa = DataProtectionApplication(
         name="dpa",
