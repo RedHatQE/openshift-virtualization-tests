@@ -119,13 +119,20 @@ def get_all_release_versions_from_docs(major_ver_num: int) -> list[int]:
         requests.RequestException: If the HTTP request to the documentation page fails.
     """
     url = f"https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/{major_ver_num}/"
-    response = requests.get(url=url, timeout=TIMEOUT_30SEC)
+    # docs.redhat.com returns 403 unless the User-Agent starts with "curl/"
+    response = requests.get(
+        url=url,
+        timeout=TIMEOUT_30SEC,
+        headers={"User-Agent": "curl/openshift-virtualization-tests"},
+    )
     response.raise_for_status()
 
     soup = BeautifulSoup(response.text, "html.parser")
     versions = []
     pattern = re.compile(
-        rf"/en/documentation/red_hat_enterprise_linux/{major_ver_num}/html/{major_ver_num}\.(\d+)_release_notes"
+        rf"/en/documentation/red_hat_enterprise_linux/{major_ver_num}/"
+        rf"(?:html/{major_ver_num}\.|whats_new-red_hat_enterprise_linux_{major_ver_num}_)"
+        rf"(\d+)_release_notes"
     )
 
     for link in soup.find_all("a", href=True):
