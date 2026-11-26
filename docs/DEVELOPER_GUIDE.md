@@ -11,9 +11,14 @@ The project is structured as follows:
     - [infra](../utilities/infra.py): Infrastructure-related (cluster resources) utility functions
     - [constants](../utilities/constants/): Shared constants package — see [Code Organization](CODE_ORGANIZATION.md#constants-utilitiesconstants)
   - [tests/fixtures](../tests/fixtures/): Shared pytest fixture implementations — see [Code Organization](CODE_ORGANIZATION.md#fixtures-testsfixtures-and-conftestpy)
+  - [unittests](../utilities/unittests): Mocked unit tests for utility modules, run with `uv run tox -e utilities-unittests`
+- [libs](../libs): Shared domain libraries (`infra`, `net`, `storage`, `vm`)
+- [scripts](../scripts): Standalone internal tooling and automation scripts (several include their own `tests/` suites)
 - [docs](../docs): Documentation — including [Code Organization](CODE_ORGANIZATION.md) for constants, utilities, and fixtures
 - [py_config](../tests/global_config.py) contains tests-specific configuration which can be controlled from the command line.
 Please refer to [pytest-testconfig](https://github.com/wojole/pytest-testconfig) for more information.
+
+This layout is also the map used to trace which tests a package update can affect — see [Dependency bumps](#dependency-bumps).
 
 
 # Contribution
@@ -142,7 +147,7 @@ Comment on your GitHub PR:
 /test-plan
 ```
 
-This triggers CodeRabbit to analyze the PR's changed files and post an inline review comment with a test execution plan (smoke/gating impact, affected tests to run).
+This triggers CodeRabbit to analyze the PR's changed files and post an inline review comment with a test execution plan (smoke/gating impact, affected tests to run). CodeRabbit also posts this test execution plan automatically once a non-bot PR is marked with the `verified` label.
 
 ### CodeRabbit post-merge learnings
 
@@ -196,6 +201,23 @@ If `retest-smoke` is already on the PR and was added less than 4 hours ago, the 
 If the label is still present and older than 4 hours, the workflow removes and re-adds it so Jenkins sees a fresh labeled event.
 A thumbs-up on the comment means the workflow accepted the request and added or refreshed the label.
 If the request is skipped (4-hour cooldown, or label present without usable label history), the thumbs-up is replaced with 👎 — check the workflow Action logs and Jenkins job `github-events-listener`.
+
+### Dependency bumps
+
+- **Update `pyproject.toml` and `uv.lock`**:
+  - **Direct dependency (bump minimum version):** run `uv add '<package>>=<version>'` to update `pyproject.toml` and `uv.lock` together (add `--upgrade-package <package>` to also pull the latest release if `uv.lock` already satisfies `>=<version>`; use `--optional <extra>` or `--group <group>` for optional/dev dependencies, and `--marker "<marker>"` to preserve platform markers).
+  - **Transitive-only dependency (minimum version without adding a direct dependency):** add a constraint under `[tool.uv]` `constraint-dependencies` in `pyproject.toml` (for example `constraint-dependencies = ["<package>>=<version>"]`), then run `uv lock --upgrade-package <package>`.
+  - **Lockfile-only refresh (no `pyproject.toml` change):** run `uv lock --upgrade-package <package>` (or `uv lock --upgrade` for all packages; see [Getting started](GETTING_STARTED.md#installation)).
+  - Verify lockfile consistency with `uv lock --check` and sync your environment with `uv sync --locked`.
+- **Check the upstream package repository for breaking changes**:
+  - Review the package's release notes, changelog, or diff between the previous locked version and the new version in its upstream repository for breaking changes, deprecations, or removed APIs.
+- **Use [Project Structure](#project-structure) to pick manual tests** (in addition to the standard checks in this guide):
+  - Find direct imports with `git grep -n "<module_name>" -- conftest.py tests utilities libs scripts` (note the Python import name can differ from the package name, e.g. `openshift-python-wrapper` → `ocp_resources`).
+  - For transitive dependencies, trace which direct dependency pulls them in with `uv tree --invert --package <package_name>`.
+  - Scope manual test runs to what is affected:
+    - **Core / cross-cutting dependencies** (`conftest.py`, shared `utilities/`, `libs/`, API/HTTP clients, or pytest plugins): run `uv run pytest -m smoke` (and representative tests in affected `tests/<component>/` directories for major or high-impact bumps).
+    - **Domain-specific dependencies** (used only by specific components or utilities): run the matching `tests/<component>/<feature>/` tests, plus `utilities/unittests/` (`uv run tox -e utilities-unittests`) or the matching `tests/` suite under `scripts/` (isolated from the root `conftest.py` via `--confcutdir=<tests_dir>` and either `-c <tests_dir>/pytest.ini` or `-o addopts=""`).
+  - See [Running Tests](RUNNING_TESTS.md) for CLI filtering options (`-m`, `-k`, `--tc-file`).
 
 ### Run the tests via a Jenkins job
 

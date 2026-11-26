@@ -84,9 +84,12 @@ def node_label_checker(node_label_dict, label_list, dict_key):
 
 
 @pytest.mark.s390x
-@pytest.mark.polarion("CNV-2797")
 def test_obsolete_cpus_in_node_labels(nodes_labels_dict, kubevirt_config):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-6429 # <skip-jira-utils-check>
+    Jira: https://redhat.atlassian.net/browse/CNV-5142 # <skip-jira-utils-check>
+    Polarion: CNV-2797
+
     Test obsolete CPUs. Obsolete CPUs don't appear in node labels.
     """
     test_dict = node_label_checker(
@@ -99,8 +102,11 @@ def test_obsolete_cpus_in_node_labels(nodes_labels_dict, kubevirt_config):
 
 @pytest.mark.gating
 @pytest.mark.conformance
-@pytest.mark.polarion("CNV-3607")
 def test_hardware_required_node_labels(nodes_labels_dict):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-5142 # <skip-jira-utils-check>
+    Polarion: CNV-3607
+    """
     kvm_info_nfd_labels = [
         "vpindex",
         "runtime",
@@ -126,8 +132,11 @@ def test_hardware_required_node_labels(nodes_labels_dict):
 @pytest.mark.gating
 @pytest.mark.conformance
 @pytest.mark.s390x
-@pytest.mark.polarion("CNV-6088")
 def test_hardware_non_required_node_labels(nodes_labels_dict):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-5968 # <skip-jira-utils-check>
+    Polarion: CNV-6088
+    """
     hw_supported_hyperv_features = [
         "vapic",
         "relaxes",
@@ -146,9 +155,11 @@ def test_hardware_non_required_node_labels(nodes_labels_dict):
 
 @pytest.mark.gating
 @pytest.mark.s390x
-@pytest.mark.polarion("CNV-6103")
 def test_updated_obsolete_cpus_in_node_labels(updated_kubevirt_cpus, nodes_labels_dict, kubevirt_config):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-5142 # <skip-jira-utils-check>
+    Polarion: CNV-6103
+
     Test user-added obsolete CPU does not appear in node labels.
     """
     test_dict = node_label_checker(

@@ -125,9 +125,11 @@ class TestVGPURHELGPUSSpec:
     Test vGPU with RHEL VM using GPUS Spec.
     """
 
-    @pytest.mark.polarion("CNV-7259")
     def test_permitted_hostdevices_vgpu_visible(self, gpu_vma, nodes_with_supported_gpus, supported_gpu_device):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-7278 # <skip-jira-utils-check>
+        Polarion: CNV-7259
+
         Test Permitted HostDevice is visible and count updated under Capacity/Allocatable
         section of the GPU Node.
         """
@@ -140,34 +142,42 @@ class TestVGPURHELGPUSSpec:
         )
 
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::test_access_vgpus_rhel_vm")
-    @pytest.mark.polarion("CNV-4761")
     def test_access_vgpus_rhel_vm(self, supported_gpu_device, gpu_vma):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-7278 # <skip-jira-utils-check>
+        Polarion: CNV-4761
+
         Test vGPU is accessible in VM with GPUs spec.
         """
         verify_gpu_device_exists_in_vm(vm=gpu_vma, supported_gpu_device=supported_gpu_device)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::test_access_vgpus_rhel_vm"])
-    @pytest.mark.polarion("CNV-8080")
     def test_pause_unpause_vgpus_rhel_vm(self, gpu_vma):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-7278 # <skip-jira-utils-check>
+        Polarion: CNV-8080
+
         Test VM with vGPU using GPUs spec, can be paused and unpaused successfully.
         """
         with running_sleep_in_linux(vm=gpu_vma):
             pause_unpause_vm_and_check_connectivity(vm=gpu_vma)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::test_access_vgpus_rhel_vm"])
-    @pytest.mark.polarion("CNV-4767")
     def test_restart_vgpus_rhel_vm(self, gpu_vma, supported_gpu_device):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-7278 # <skip-jira-utils-check>
+        Polarion: CNV-4767
+
         Test VM with vGPU using GPUs spec, can be restarted successfully.
         """
         restart_and_check_gpu_exists(vm=gpu_vma, supported_gpu_device=supported_gpu_device)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::test_access_vgpus_rhel_vm"])
-    @pytest.mark.polarion("CNV-8572")
     def test_access_vgpus_in_both_rhel_vm_using_same_gpu(self, gpu_vma, gpu_vmb):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-7278 # <skip-jira-utils-check>
+        Polarion: CNV-8572
+
         Test vGPU is accessible in both the RHEL VMs, using same GPU, using GPUs spec.
         """
         vm_with_no_gpu = [vm.name for vm in [gpu_vma, gpu_vmb] if get_num_gpu_devices_in_rhel_vm(vm=vm) != 1]
@@ -200,11 +210,13 @@ class TestNodeSpecificVGPURHELGPUSSpec:
     Test vGPU with RHEL VM using GPUS Spec and node-specific vGPU configuration via GPU operator.
     """
 
-    @pytest.mark.polarion("CNV-8744")
     def test_node_specific_permitted_hostdevices_vgpu_visible(
         self, gpu_vma, node_specific_vgpu_vm, nodes_with_supported_gpus, supported_gpu_device
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-7278 # <skip-jira-utils-check>
+        Polarion: CNV-8744
+
         Test Permitted HostDevice is visible and count updated under Capacity/Allocatable
         section for both nodes, configured via GPU operator's node-specific vGPU config.
         """
@@ -223,7 +235,6 @@ class TestNodeSpecificVGPURHELGPUSSpec:
             expected_count=supported_gpu_device[MDEV_GRID_AVAILABLE_INSTANCES_STR],
         )
 
-    @pytest.mark.polarion("CNV-8745")
     def test_access_vgpus_using_node_specific_vgpu(
         self,
         gpu_vma,
@@ -231,6 +242,9 @@ class TestNodeSpecificVGPURHELGPUSSpec:
         vm_with_no_gpu,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-7278 # <skip-jira-utils-check>
+        Polarion: CNV-8745
+
         Test vGPU is accessible in both RHEL VMs, including the node-specific vGPU type.
         """
         assert not vm_with_no_gpu, f"GPU does not exist in following vms: {vm_with_no_gpu}"

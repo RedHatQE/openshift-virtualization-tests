@@ -192,9 +192,11 @@ def verify_annotations_match(obj_annotations, expected):
 
 @pytest.mark.gating
 @pytest.mark.conformance
-@pytest.mark.polarion("CNV-1069")
 def test_base_templates_annotations(base_templates, common_templates_expected_list):
     """
+    Jira: https://redhat.atlassian.net/browse/KNIP-192 # <skip-jira-utils-check>
+    Polarion: CNV-1069
+
     Check all CNV templates exists, by label: template.kubevirt.io/type=base
     """
     base_templates = [template.name.split("-v")[0] for template in base_templates]
@@ -215,42 +217,36 @@ def test_base_templates_annotations(base_templates, common_templates_expected_li
             "rhel7",
             "rhel-7.7",
             "minimum",
-            marks=pytest.mark.polarion("CNV-3619"),
             id="test_rhel7_minimum_memory",
         ),
         pytest.param(
             "rhel8",
             "rhel-8.1",
             "minimum",
-            marks=pytest.mark.polarion("CNV-3620"),
             id="test_rhel8_minimum_memory",
         ),
         pytest.param(
             "rhel9",
             "rhel-9.0",
             "minimum",
-            marks=pytest.mark.polarion("CNV-6989"),
             id="test_rhel9_minimum_memory",
         ),
         pytest.param(
             "rhel7",
             "rhel-7.7",
             "maximum",
-            marks=pytest.mark.polarion("CNV-3622"),
             id="test_rhel7_maximum_memory",
         ),
         pytest.param(
             "rhel8",
             "rhel-8.1",
             "maximum",
-            marks=pytest.mark.polarion("CNV-3623"),
             id="test_rhel8_maximum_memory",
         ),
         pytest.param(
             "rhel9",
             "rhel-9.0",
             "maximum",
-            marks=pytest.mark.polarion("CNV-6988"),
             id="test_rhel9_maximum_memory",
         ),
     ],
@@ -263,6 +259,14 @@ def test_validate_rhel_min_max_memory(
     memory_test,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/KNIP-798 # <skip-jira-utils-check>
+    Polarion: CNV-3619
+    Polarion: CNV-3620
+    Polarion: CNV-6989
+    Polarion: CNV-3622
+    Polarion: CNV-3623
+    Polarion: CNV-6988
+
     Validate CNV RHEL templates for minimum and maximum memory, against osinfo db files.
     """
 
@@ -293,42 +297,36 @@ def test_validate_rhel_min_max_memory(
             "win-2k16",
             "windows2k16",
             "minimum",
-            marks=pytest.mark.polarion("CNV-3625"),
             id="test_win2k16_minimum_memory",
         ),
         pytest.param(
             "win-2k19",
             "windows2k19",
             "minimum",
-            marks=pytest.mark.polarion("CNV-3626"),
             id="test_win2k19_minimum_memory",
         ),
         pytest.param(
             "win-10",
             "windows10",
             "minimum",
-            marks=pytest.mark.polarion("CNV-3627"),
             id="test_win10_minimum_memory",
         ),
         pytest.param(
             "win-2k16",
             "windows2k16",
             "maximum",
-            marks=pytest.mark.polarion("CNV-3629"),
             id="test_win2k16_maximum_memory",
         ),
         pytest.param(
             "win-2k19",
             "windows2k19",
             "maximum",
-            marks=pytest.mark.polarion("CNV-3630"),
             id="test_win2k19_maximum_memory",
         ),
         pytest.param(
             "win-10",
             "windows10",
             "maximum",
-            marks=pytest.mark.polarion("CNV-3631"),
             id="test_win10_maximum_memory",
         ),
     ],
@@ -341,6 +339,14 @@ def test_validate_windows_min_max_memory(
     memory_test,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/KNIP-798 # <skip-jira-utils-check>
+    Polarion: CNV-3625
+    Polarion: CNV-3626
+    Polarion: CNV-3627
+    Polarion: CNV-3629
+    Polarion: CNV-3630
+    Polarion: CNV-3631
+
     Validate CNV Windows templates for minimum and maximum memory, against osinfo db files.
     """
 
@@ -361,8 +367,11 @@ def test_validate_windows_min_max_memory(
 
 
 @pytest.mark.s390x
-@pytest.mark.polarion("CNV-5002")
 def test_common_templates_golden_images_params(base_templates):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-4967 # <skip-jira-utils-check>
+    Polarion: CNV-5002
+    """
     unmatched_templates = {}
     for template in base_templates:
         template_parameters_dict = template.instance.to_dict()["parameters"]
@@ -395,9 +404,13 @@ def test_common_templates_golden_images_params(base_templates):
 
 
 @pytest.mark.s390x
-@pytest.mark.polarion("CNV-5599")
 def test_provide_support_annotations(base_templates, templates_provider_support_dict):
-    """Verify provider, provider-support-level and provider-url annotations"""
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-7352 # <skip-jira-utils-check>
+    Polarion: CNV-5599
+
+    Verify provider, provider-support-level and provider-url annotations
+    """
 
     unmatched_annotations = {}
     for template in base_templates:
@@ -413,9 +426,13 @@ def test_provide_support_annotations(base_templates, templates_provider_support_
 
 
 @pytest.mark.s390x
-@pytest.mark.polarion("CNV-6874")
 def test_vm_annotations_in_template(base_templates):
-    """Verify template VM object has os, workload and flavor annotations which match corresponding template labels"""
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-6624 # <skip-jira-utils-check>
+    Polarion: CNV-6874
+
+    Verify template VM object has os, workload and flavor annotations which match corresponding template labels
+    """
 
     def _verify_labels_annotations_match(vm_annotations, template_labels):
         """Verify VM annotations match template corresponding labels.
@@ -479,13 +496,16 @@ def test_vm_annotations_in_template(base_templates):
                 "ssh": False,
                 "guest_agent": False,
             },
-            marks=pytest.mark.polarion("CNV-6890"),
         ),
     ],
     indirect=True,
 )
 def test_vmi_annotations(data_volume_scope_function, vm_from_template_with_existing_dv):
-    """Verify that VM annotations are copied to the VMI object.
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-6624 # <skip-jira-utils-check>
+    Polarion: CNV-6890
+
+    Verify that VM annotations are copied to the VMI object.
     For this test the underlying OS is not important; using Cirros to reduce runtime.
     """
     vm_annotations = vm_from_template_with_existing_dv.instance.spec.template.metadata.annotations
@@ -508,14 +528,15 @@ def test_vmi_annotations(data_volume_scope_function, vm_from_template_with_exist
 @pytest.mark.parametrize(
     "os_base_templates",
     [
-        pytest.param(
-            "win",
-            marks=pytest.mark.polarion("CNV-7249"),
-        ),
+        "win",
     ],
     indirect=True,
 )
 def test_hyperv_features_exist_in_windows_templates(os_base_templates):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-5968 # <skip-jira-utils-check>
+    Polarion: CNV-7249
+    """
     templates_with_wrong_hyperv_labels = {}
     for template in os_base_templates:
         template_hyperv_features = template.instance.objects[0].spec.template.spec.domain.features.get("hyperv")
@@ -535,27 +556,30 @@ def test_hyperv_features_exist_in_windows_templates(os_base_templates):
         pytest.param(
             ["images", "containerdisks"],
             "fedora",
-            marks=pytest.mark.polarion("CNV-8476"),
         ),
         pytest.param(
             ["images", "containerdisks"],
             "centos",
-            marks=pytest.mark.polarion("CNV-8477"),
         ),
         pytest.param(
             ["containerdisks"],
             "rhel8",
-            marks=pytest.mark.polarion("CNV-8478"),
         ),
         pytest.param(
             ["containerdisks"],
             "rhel9",
-            marks=pytest.mark.polarion("CNV-8483"),
         ),
     ],
     indirect=["os_base_templates"],
 )
 def test_suggested_image_annotation_exists(os_base_templates, annotation_list):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-15503 # <skip-jira-utils-check>
+    Polarion: CNV-8476
+    Polarion: CNV-8477
+    Polarion: CNV-8478
+    Polarion: CNV-8483
+    """
     failed_templates_dict = {}
     for template in os_base_templates:
         for annotation in annotation_list:

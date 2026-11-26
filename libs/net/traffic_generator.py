@@ -248,6 +248,7 @@ def active_tcp_connections(
                     )
                 )
             )
+        LOGGER.info(f"Active TCP connections established: IPv{sorted({ip.version for ip in server_ips})}")
         yield active_conns
 
 

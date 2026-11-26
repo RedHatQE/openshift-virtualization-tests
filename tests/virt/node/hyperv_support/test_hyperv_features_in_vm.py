@@ -70,7 +70,6 @@ class TestWindowsHyperVFlags:
                     "vm_name": "win-vm-with-default-hyperv-features",
                     "template_labels": WINDOWS_LATEST_LABELS,
                 },
-                marks=(pytest.mark.polarion("CNV-7247")),
             ),
             pytest.param(
                 {
@@ -78,7 +77,6 @@ class TestWindowsHyperVFlags:
                     "template_labels": WINDOWS_LATEST_LABELS,
                     "vm_dict": {"spec": {"template": {"spec": {"domain": {"cpu": {"model": "host-passthrough"}}}}}},
                 },
-                marks=(pytest.mark.polarion("CNV-7248")),
             ),
         ],
         indirect=True,
@@ -88,6 +86,11 @@ class TestWindowsHyperVFlags:
         admin_client,
         hyperv_vm,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-5968 # <skip-jira-utils-check>
+        Polarion: CNV-7247
+        Polarion: CNV-7248
+        """
         LOGGER.info(
             f"Verify hyperv node selector labels are added to {VIRT_LAUNCHER} pod "
             "and they match the hosting node labels"
@@ -119,7 +122,6 @@ class TestWindowsHyperVFlags:
                     "template_labels": WINDOWS_LATEST_LABELS,
                     "hyperv_dict": {"vendorid": {"vendorid": "randomid"}},
                 },
-                marks=(pytest.mark.polarion("CNV-6087")),
             ),
         ],
         indirect=True,
@@ -129,6 +131,10 @@ class TestWindowsHyperVFlags:
         admin_client,
         hyperv_vm,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-5968 # <skip-jira-utils-check>
+        Polarion: CNV-6087
+        """
         LOGGER.info("Verify added hyperv feature is added to libvirt")
         vendor_id = hyperv_vm.vmi.get_xml_dict(privileged_client=admin_client)["domain"]["features"]["hyperv"][
             "vendor_id"
@@ -144,12 +150,15 @@ class TestWindowsHyperVFlags:
                     "template_labels": WINDOWS_LATEST_LABELS,
                     "hyperv_dict": {"evmcs": {}},
                 },
-                marks=pytest.mark.polarion("CNV-6202"),
             ),
         ],
         indirect=True,
     )
     def test_windows_vm_with_evmcs_feature(self, admin_client, hyperv_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-5968 # <skip-jira-utils-check>
+        Polarion: CNV-6202
+        """
         verify_evmcs_related_attributes(vmi_xml_dict=hyperv_vm.vmi.get_xml_dict(privileged_client=admin_client))
 
 
@@ -168,12 +177,15 @@ class TestFedoraHyperVFlags:
                     "template_labels": FEDORA_LATEST_LABELS,
                     "hyperv_dict": {"evmcs": {}},
                 },
-                marks=pytest.mark.polarion("CNV-6090"),
             ),
         ],
         indirect=True,
     )
     def test_fedora_vm_with_evmcs_feature(self, admin_client, hyperv_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-5968 # <skip-jira-utils-check>
+        Polarion: CNV-6090
+        """
         LOGGER.info("Verify added hyperv feature evmcs is added to libvirt")
         hyperv_vm_xml = hyperv_vm.vmi.get_xml_dict(privileged_client=admin_client)
         evmcs_feature = hyperv_vm_xml["domain"]["features"]["hyperv"]["evmcs"]

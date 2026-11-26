@@ -190,43 +190,47 @@ def verify_reconciled_secret_resource(resource, resource_dict):
         pytest.param(
             Role,
             MANAGED_RESOURCE_NAME1,
-            marks=(pytest.mark.polarion("CNV-5981")),
             id="test_strict_reconcile_role_only",
         ),
         pytest.param(
             ClusterRole,
             MANAGED_RESOURCE_NAME1,
-            marks=(pytest.mark.polarion("CNV-5983")),
             id="test_strict_reconcile_clusterrole_only",
         ),
         pytest.param(
             RoleBinding,
             MANAGED_RESOURCE_NAME1,
-            marks=(pytest.mark.polarion("CNV-5982"),),
             id="test_strict_reconcile_rolebinding",
         ),
         pytest.param(
             ClusterRoleBinding,
             MANAGED_RESOURCE_NAME1,
-            marks=(pytest.mark.polarion("CNV-5984"),),
             id="test_strict_reconcile_clusterrolebinding",
         ),
         pytest.param(
             ConfigMap,
             MANAGED_RESOURCE_NAME2,
-            marks=(pytest.mark.polarion("CNV-5979"),),
             id="test_strict_reconcile_configmap",
         ),
         pytest.param(
             Secret,
             MANAGED_RESOURCE_NAME2,
-            marks=(pytest.mark.polarion("CNV-5980")),
             id="test_strict_reconcile_secret",
         ),
     ],
 )
 def test_strict_reconcile_resources(admin_client, hco_namespace, resource_type, managed_resource_name):
-    """Test that virt-operator strictly reconciles managed KubeVirt resources successfully"""
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-8351 # <skip-jira-utils-check>
+    Polarion: CNV-5981
+    Polarion: CNV-5983
+    Polarion: CNV-5982
+    Polarion: CNV-5984
+    Polarion: CNV-5979
+    Polarion: CNV-5980
+
+    Test that virt-operator strictly reconciles managed KubeVirt resources successfully
+    """
     for resource in resource_type.get(
         client=admin_client,
         namespace=hco_namespace.name,

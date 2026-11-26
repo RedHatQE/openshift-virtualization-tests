@@ -2,7 +2,7 @@ import datetime
 import logging
 
 import pytest
-from ocp_resources.daemonset import DaemonSet
+from ocp_resources.daemon_set import DaemonSet
 from ocp_resources.deployment import Deployment
 from timeout_sampler import TimeoutSampler
 

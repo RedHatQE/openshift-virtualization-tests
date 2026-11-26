@@ -11,7 +11,7 @@ import pytest
 import requests
 from ocp_resources.cluster_role import ClusterRole
 from ocp_resources.config_map import ConfigMap
-from ocp_resources.daemonset import DaemonSet
+from ocp_resources.daemon_set import DaemonSet
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.hostpath_provisioner import HostPathProvisioner
 from ocp_resources.resource import Resource

@@ -53,9 +53,12 @@ def labelled_worker_node1(worker1_supported_cpu_models_labels, worker_node1):
 
 @pytest.mark.s390x
 class TestNodeLabellerSkipAnnotation:
-    @pytest.mark.polarion("CNV-7744")
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::test_node_labeller_added_skip_node_annotation")
     def test_node_labeller_added_skip_node_annotation(self, worker1_skip_node_annotated, labelled_worker_node1):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-5142 # <skip-jira-utils-check>
+        Polarion: CNV-7744
+        """
         ((node, label),) = labelled_worker_node1.items()
         LOGGER.info(f"Verify {label} on {node.name} is not reconciled after {int(RECONCILE_TIMEOUT / 60)} minutes.")
         try:
@@ -69,9 +72,12 @@ class TestNodeLabellerSkipAnnotation:
         except TimeoutExpiredError:
             return
 
-    @pytest.mark.polarion("CNV-7745")
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::test_node_labeller_added_skip_node_annotation"])
     def test_node_labeller_removed_skip_node_annotation(self, labelled_worker_node1):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-5142 # <skip-jira-utils-check>
+        Polarion: CNV-7745
+        """
         ((node, label),) = labelled_worker_node1.items()
         LOGGER.info(f"Verify {label} on {node.name} is reconciled")
         try:

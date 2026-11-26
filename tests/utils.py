@@ -80,8 +80,8 @@ LOGGER = logging.getLogger(__name__)
 def create_vms(
     name_prefix,
     namespace_name,
+    client,
     vm_count=NUM_TEST_VMS,
-    client=None,
     ssh=True,
     node_selector_labels=None,
     cpu_model=None,
@@ -92,10 +92,10 @@ def create_vms(
     Args:
         name_prefix (str): prefix to be used to name virtualmachines
         namespace_name (str): Namespace to be used for vm creation
+        client (DynamicClient): DynamicClient object used to create the VMs
         vm_count (int): Number of vms to be created
-        node_selector_labels (str): Labels for node selector.
-        client (DynamicClient): DynamicClient object
         ssh (bool): enable SSH on the VM
+        node_selector_labels (str): Labels for node selector.
         cpu_model (str): CPU model to be used for the VMs
 
     Returns:

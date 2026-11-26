@@ -109,17 +109,18 @@ def unique_namespace(admin_client, unprivileged_client):
 
 
 @pytest.fixture(scope="module")
-def vm_list(unique_namespace):
+def vm_list(unique_namespace, unprivileged_client):
     """
     Creates n vms, waits for them all to go to running state and cleans them up at the end
 
     Args:
         unique_namespace (Namespace): Creates namespaces to be used by the test
+        unprivileged_client (DynamicClient): Client used to create the VMs
 
     Yields:
         list: list of VirtualMachineForTests created
     """
-    vms_list = create_vms(name_prefix="key-metric-vm", namespace_name=unique_namespace.name)
+    vms_list = create_vms(name_prefix="key-metric-vm", namespace_name=unique_namespace.name, client=unprivileged_client)
     for vm in vms_list:
         running_vm(vm=vm)
         enable_swap_fedora_vm(vm=vm)
@@ -163,10 +164,11 @@ def single_metrics_namespace(admin_client, unprivileged_client):
 
 
 @pytest.fixture(scope="module")
-def single_metric_vm(single_metrics_namespace):
+def single_metric_vm(single_metrics_namespace, unprivileged_client):
     vm = create_vms(
         name_prefix="test-single-vm",
         namespace_name=single_metrics_namespace.name,
+        client=unprivileged_client,
         vm_count=SINGLE_VM,
     )[0]
     running_vm(vm=vm)

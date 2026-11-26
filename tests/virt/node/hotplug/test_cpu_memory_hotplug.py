@@ -101,21 +101,30 @@ class TestCPUHotPlug:
         "hotplugged_sockets_memory_guest", [pytest.param({"sockets": TARGET_CPU_SOCKETS})], indirect=True
     )
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::hotplug_cpu")
-    @pytest.mark.polarion("CNV-10695")
     def test_hotplug_cpu(self, hotplugged_sockets_memory_guest, vm_with_hotplug_support):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-28174 # <skip-jira-utils-check>
+        Polarion: CNV-10695
+        """
         wait_for_guest_os_cpu_count(vm=vm_with_hotplug_support, spec_cpu_amount=EXPECTED_GUEST_VCPUS)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu"])
-    @pytest.mark.polarion("CNV-10696")
     @pytest.mark.usefixtures("hotplug_vm_snapshot")
     def test_migrate_snapshot_hotplugged_vm(
         self, admin_client: DynamicClient, vm_with_hotplug_support: VirtualMachineForTests
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-28174 # <skip-jira-utils-check>
+        Polarion: CNV-10696
+        """
         migrate_vm_and_verify(vm=vm_with_hotplug_support, client=admin_client, check_ssh_connectivity=True)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu"])
-    @pytest.mark.polarion("CNV-10697")
     def test_restart_hotplug_vm(self, vm_with_hotplug_support):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-28174 # <skip-jira-utils-check>
+        Polarion: CNV-10697
+        """
         restart_vm_wait_for_running_vm(vm=vm_with_hotplug_support)
 
     @pytest.mark.parametrize(
@@ -124,15 +133,21 @@ class TestCPUHotPlug:
         indirect=True,
     )
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu"])
-    @pytest.mark.polarion("CNV-10698")
     def test_decrease_cpu_value(self, hotplugged_sockets_memory_guest, vm_with_hotplug_support):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-28174 # <skip-jira-utils-check>
+        Polarion: CNV-10698
+        """
         assert_restart_required_condition(
             vm=vm_with_hotplug_support, expected_message="Reduction of CPU socket count requires a restart"
         )
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_cpu"])
-    @pytest.mark.polarion("CNV-10699")
     def test_hotplug_cpu_above_max_value(self, vm_with_hotplug_support):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-28174 # <skip-jira-utils-check>
+        Polarion: CNV-10699
+        """
         try:
             hotplug_spec_vm(vm=vm_with_hotplug_support, sockets=TEN_CPU_SOCKETS)
         except UnprocessibleEntityError:
@@ -167,36 +182,51 @@ class TestMemoryHotPlug:
         "hotplugged_sockets_memory_guest", [pytest.param({"memory_guest": SIX_GI_MEMORY})], indirect=True
     )
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::hotplug_memory")
-    @pytest.mark.polarion("CNV-10676")
     def test_hotplug_memory(self, hotplugged_sockets_memory_guest, vm_with_hotplug_support):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-7384 # <skip-jira-utils-check>
+        Polarion: CNV-10676
+        """
         assert_guest_os_memory_amount(vm=vm_with_hotplug_support, spec_memory_amount=SIX_GI_MEMORY)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_memory"])
-    @pytest.mark.polarion("CNV-10677")
     @pytest.mark.usefixtures("hotplug_vm_snapshot")
     def test_migrate_snapshot_hotplugged_vm(
         self, admin_client: DynamicClient, vm_with_hotplug_support: VirtualMachineForTests
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-7384 # <skip-jira-utils-check>
+        Polarion: CNV-10677
+        """
         migrate_vm_and_verify(vm=vm_with_hotplug_support, client=admin_client, check_ssh_connectivity=True)
 
     @pytest.mark.parametrize(
         "hotplugged_sockets_memory_guest", [pytest.param({"memory_guest": FIVE_GI_MEMORY})], indirect=True
     )
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_memory"])
-    @pytest.mark.polarion("CNV-10679")
     def test_decrease_memory_value(
         self, xfail_windows_memory_hotunplug, hotplugged_sockets_memory_guest, vm_with_hotplug_support
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-7384 # <skip-jira-utils-check>
+        Polarion: CNV-10679
+        """
         assert_guest_os_memory_amount(vm=vm_with_hotplug_support, spec_memory_amount=FIVE_GI_MEMORY)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_memory"])
-    @pytest.mark.polarion("CNV-10678")
     def test_restart_hotplug_vm(self, vm_with_hotplug_support):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-7384 # <skip-jira-utils-check>
+        Polarion: CNV-10678
+        """
         restart_vm_wait_for_running_vm(vm=vm_with_hotplug_support)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_memory"])
-    @pytest.mark.polarion("CNV-10681")
     def test_hotplug_memory_above_max_value(self, vm_with_hotplug_support):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-7384 # <skip-jira-utils-check>
+        Polarion: CNV-10681
+        """
         try:
             hotplug_spec_vm(vm=vm_with_hotplug_support, memory_guest=TWELVE_GI_MEMORY)
         except UnprocessibleEntityError:
@@ -210,8 +240,11 @@ class TestMemoryHotPlug:
         indirect=True,
     )
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::hotplug_memory"])
-    @pytest.mark.polarion("CNV-10682")
     def test_reduce_memory_below_start_value(self, hotplugged_sockets_memory_guest, vm_with_hotplug_support):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-7384 # <skip-jira-utils-check>
+        Polarion: CNV-10682
+        """
         assert_restart_required_condition(
             vm=vm_with_hotplug_support,
             expected_message="memory updated in template spec to a value lower than what the VM started with",

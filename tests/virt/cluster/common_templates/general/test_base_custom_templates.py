@@ -95,7 +95,6 @@ class TestBaseCustomTemplates:
                     "new_template_name": "fedora-custom-template-for-test",
                 },
                 "vm-from-custom-template",
-                marks=pytest.mark.polarion("CNV-7957"),
             ),
             pytest.param(
                 {
@@ -110,7 +109,6 @@ class TestBaseCustomTemplates:
                     },
                 },
                 "vm-from-custom-template-volumes-validation",
-                marks=pytest.mark.polarion("CNV-5588"),
             ),
         ],
         indirect=["custom_template_from_base_template"],
@@ -123,6 +121,13 @@ class TestBaseCustomTemplates:
         custom_template_from_base_template,
         vm_name,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-11791 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-6624 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-6733 # <skip-jira-utils-check>
+        Polarion: CNV-7957
+        Polarion: CNV-5588
+        """
         with VirtualMachineForTestsFromTemplate(
             name=vm_name,
             namespace=namespace.name,
@@ -151,13 +156,16 @@ class TestBaseCustomTemplates:
         ],
         indirect=True,
     )
-    @pytest.mark.polarion("CNV-7958")
     def test_custom_template_vm_validation(
         self,
         unprivileged_client,
         golden_image_data_volume_template_for_test_scope_class,
         custom_template_from_base_template,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-11791 # <skip-jira-utils-check>
+        Polarion: CNV-7958
+        """
         with pytest.raises(UnprocessibleEntityError, match=r".*This VM has too many cores.*"):
             with VirtualMachineForTestsFromTemplate(
                 name="vm-from-custom-template-core-validation",

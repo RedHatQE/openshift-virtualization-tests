@@ -121,14 +121,20 @@ def migrated_wsl2_vm(admin_client: DynamicClient, windows_wsl2_vm: VirtualMachin
 @pytest.mark.windows
 class TestWSL2:
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME}::wsl2_guest")
-    @pytest.mark.polarion("CNV-6023")
     def test_wsl2_guest(self, windows_wsl2_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-8414 # <skip-jira-utils-check>
+        Polarion: CNV-6023
+        """
         verify_wsl2_guest_works(vm=windows_wsl2_vm)
         assert_windows_host_resource_usage(vm=windows_wsl2_vm)
 
     @pytest.mark.rwx_default_storage
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME}::wsl2_guest"])
-    @pytest.mark.polarion("CNV-5462")
     def test_migration_with_wsl2_guest(self, migrated_wsl2_vm):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-8414 # <skip-jira-utils-check>
+        Polarion: CNV-5462
+        """
         verify_wsl2_guest_works(vm=migrated_wsl2_vm)
         assert_windows_host_resource_usage(vm=migrated_wsl2_vm)

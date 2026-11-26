@@ -20,8 +20,11 @@ def vm_for_test_pvspinlock(
         yield vm
 
 
-@pytest.mark.polarion("CNV-6877")
 def test_disable_pvspinlock(admin_client, vm_for_test_pvspinlock):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-10072 # <skip-jira-utils-check>
+    Polarion: CNV-6877
+    """
     assert (
         vm_for_test_pvspinlock.vmi.get_xml_dict(privileged_client=admin_client)["domain"]["features"]["pvspinlock"][
             "@state"

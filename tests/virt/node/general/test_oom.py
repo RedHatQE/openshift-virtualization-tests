@@ -103,8 +103,11 @@ def wait_vm_oom(vm, admin_client):
         return True
 
 
-@pytest.mark.polarion("CNV-5321")
 def test_vm_fedora_oom(admin_client, fedora_oom_vm, fedora_oom_stress_started):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-1216 # <skip-jira-utils-check>
+    Polarion: CNV-5321
+    """
     verify_vm_not_crashed(vm=fedora_oom_vm, admin_client=admin_client)
 
 
@@ -122,7 +125,6 @@ def test_vm_fedora_oom(admin_client, fedora_oom_vm, fedora_oom_stress_started):
                 "cpu_threads": 1,
                 "exclude_from_descheduler": True,
             },
-            marks=pytest.mark.polarion("CNV-9893"),
         ),
     ],
     indirect=True,
@@ -131,4 +133,9 @@ def test_vm_fedora_oom(admin_client, fedora_oom_vm, fedora_oom_stress_started):
 @pytest.mark.high_resource_vm
 @pytest.mark.windows
 def test_vm_windows_oom(admin_client, vm_with_memory_load, windows_oom_stress_started):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-1216 # <skip-jira-utils-check>
+    Jira: https://redhat.atlassian.net/browse/CNV-19880 # <skip-jira-utils-check>
+    Polarion: CNV-9893
+    """
     verify_vm_not_crashed(vm=vm_with_memory_load, admin_client=admin_client)
