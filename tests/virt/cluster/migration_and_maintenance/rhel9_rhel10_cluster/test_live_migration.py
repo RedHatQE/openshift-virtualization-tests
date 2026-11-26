@@ -35,7 +35,6 @@ pytestmark = [
                 "template_labels": RHEL_LATEST_LABELS,
                 "vm_affinity": RHCOS10_AFFINITY,
             },
-            marks=pytest.mark.polarion("CNV-16274"),
             id="RHEL-VM",
         ),
         pytest.param(
@@ -56,6 +55,9 @@ def test_vm_migrates_from_rhcos10_to_rhcos9_node(
     dual_stream_migration_vm: VirtualMachineForTests,
 ) -> None:
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-49964 # <skip-jira-utils-check>
+    Polarion: CNV-16274
+
     Test that live migration from an RHCOS 10 worker node to an RHCOS 9 worker node
     completes successfully without restarting the VM.
 
@@ -93,7 +95,6 @@ def test_vm_migrates_from_rhcos10_to_rhcos9_node(
                 "template_labels": RHEL_LATEST_LABELS,
                 "vm_affinity": RHCOS9_AFFINITY,
             },
-            marks=pytest.mark.polarion("CNV-16275"),
             id="RHEL-VM",
         ),
         pytest.param(
@@ -114,6 +115,9 @@ def test_vm_migrates_from_rhcos9_to_rhcos10_node(
     dual_stream_migration_vm: VirtualMachineForTests,
 ) -> None:
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-49964 # <skip-jira-utils-check>
+    Polarion: CNV-16275
+
     Test that live migration from an RHCOS 9 worker node to an RHCOS 10 worker node
     completes successfully without restarting the VM.
 

@@ -31,16 +31,18 @@ pytestmark = [
 class TestUpgradeVGPU:
     """Pre-upgrade test"""
 
-    @pytest.mark.polarion("CNV-11782")
     @pytest.mark.order(before=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
     @pytest.mark.dependency(name=f"{VIRT_NODE_ID_PREFIX}::test_vgpu_vm_before_upgrade")
     def test_vgpu_vm_before_upgrade(self, supported_gpu_device, rhel_vm_for_upgrade_session_scope):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-7278 # <skip-jira-utils-check>
+        Polarion: CNV-11782
+        """
         running_vm(vm=rhel_vm_for_upgrade_session_scope, wait_for_cloud_init=True)
         verify_gpu_device_exists_in_vm(vm=rhel_vm_for_upgrade_session_scope, supported_gpu_device=supported_gpu_device)
 
     """ Post-upgrade test """
 
-    @pytest.mark.polarion("CNV-11783")
     @pytest.mark.order(after=IUO_CNV_ALERT_ORDERING_NODE_ID)
     @pytest.mark.dependency(
         depends=[
@@ -50,5 +52,9 @@ class TestUpgradeVGPU:
         scope="session",
     )
     def test_vgpu_vm_after_upgrade(self, supported_gpu_device, rhel_vm_for_upgrade_session_scope):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-7278 # <skip-jira-utils-check>
+        Polarion: CNV-11783
+        """
         running_vm(vm=rhel_vm_for_upgrade_session_scope, wait_for_cloud_init=True)
         verify_gpu_device_exists_in_vm(vm=rhel_vm_for_upgrade_session_scope, supported_gpu_device=supported_gpu_device)

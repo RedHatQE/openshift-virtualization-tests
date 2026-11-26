@@ -91,9 +91,12 @@ def added_vm_evictionstrategy(request, vm_for_test_from_template_scope_class):
 
 
 @pytest.mark.s390x
-@pytest.mark.polarion("CNV-10085")
 @pytest.mark.post_upgrade
 def test_evictionstrategy_not_in_templates(base_templates):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-13720 # <skip-jira-utils-check>
+    Polarion: CNV-10085
+    """
     templates_with_evictionstrategy = [
         template.name
         for template in base_templates
@@ -108,8 +111,11 @@ def test_evictionstrategy_not_in_templates(base_templates):
 @pytest.mark.gating
 @pytest.mark.conformance
 @pytest.mark.post_upgrade
-@pytest.mark.polarion("CNV-10086")
 def test_evictionstrategy_in_kubevirt(sno_cluster, kubevirt_config_scope_module):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-13720 # <skip-jira-utils-check>
+    Polarion: CNV-10086
+    """
     assert EVICTIONSTRATEGY in kubevirt_config_scope_module, f"{EVICTIONSTRATEGY} not present in Kubevirt"
     default_evictionstrategy_value = kubevirt_config_scope_module[EVICTIONSTRATEGY]
     expected_evictionstrategy_value = "None" if sno_cluster else LIVE_MIGRATE
@@ -130,17 +136,19 @@ def test_evictionstrategy_in_kubevirt(sno_cluster, kubevirt_config_scope_module)
     indirect=True,
 )
 class TestEvictionStrategy:
-    @pytest.mark.polarion("CNV-10087")
     def test_hco_evictionstrategy_livemigrate_vm_no_evictionstrategy(
         self, admin_client, unprivileged_client, vm_for_test_from_template_scope_class, drained_node
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-13720 # <skip-jira-utils-check>
+        Polarion: CNV-10087
+        """
         check_migration_process_after_node_drain(
             client=unprivileged_client,
             vm=vm_for_test_from_template_scope_class,
             admin_client=admin_client,
         )
 
-    @pytest.mark.polarion("CNV-10088")
     def test_hco_evictionstrategy_none_vm_no_evictionstrategy(
         self,
         vm_for_test_from_template_scope_class,
@@ -149,6 +157,10 @@ class TestEvictionStrategy:
         vmi_old_uid,
         drained_node,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-13720 # <skip-jira-utils-check>
+        Polarion: CNV-10088
+        """
         assert_vm_restarts_after_node_drain(
             source_node=drained_node, vmi=vm_for_test_from_template_scope_class.vmi, vmi_old_uid=vmi_old_uid
         )
@@ -158,10 +170,13 @@ class TestEvictionStrategy:
         [pytest.param({"evictionstrategy": "None"})],
         indirect=True,
     )
-    @pytest.mark.polarion("CNV-10073")
     def test_hco_evictionstrategy_livemigrate_vm_evictionstrategy_none(
         self, vm_for_test_from_template_scope_class, added_vm_evictionstrategy, vmi_old_uid, drained_node
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-13720 # <skip-jira-utils-check>
+        Polarion: CNV-10073
+        """
         assert_vm_restarts_after_node_drain(
             source_node=drained_node, vmi=vm_for_test_from_template_scope_class.vmi, vmi_old_uid=vmi_old_uid
         )
@@ -171,7 +186,6 @@ class TestEvictionStrategy:
         [pytest.param({"evictionstrategy": "LiveMigrate"})],
         indirect=True,
     )
-    @pytest.mark.polarion("CNV-10357")
     def test_hco_evictionstrategy_none_vm_evictionstrategy_livemigrate(
         self,
         admin_client,
@@ -181,6 +195,10 @@ class TestEvictionStrategy:
         added_vm_evictionstrategy,
         drained_node,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-13720 # <skip-jira-utils-check>
+        Polarion: CNV-10357
+        """
         check_migration_process_after_node_drain(
             client=unprivileged_client,
             vm=vm_for_test_from_template_scope_class,

@@ -110,13 +110,17 @@ def migration_job_sampler(client, namespace):
             return
 
 
-@pytest.mark.polarion("CNV-3006")
 def test_node_drain_using_console_fedora(
     admin_client,
     hco_namespace,
     compact_cluster,
     vm_container_disk_fedora,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-220 # <skip-jira-utils-check>
+    Jira: https://redhat.atlassian.net/browse/CNV-4757 # <skip-jira-utils-check>
+    Polarion: CNV-3006
+    """
     source_node = vm_container_disk_fedora.vmi.get_node(privileged_client=admin_client)
     drain_using_console(
         admin_client=admin_client,
@@ -143,7 +147,6 @@ def test_node_drain_using_console_fedora(
 @pytest.mark.ibm_bare_metal
 @pytest.mark.usefixtures("no_migration_job")
 class TestNodeMaintenanceRHEL:
-    @pytest.mark.polarion("CNV-2292")
     def test_node_drain_using_console_rhel(
         self,
         admin_client,
@@ -151,6 +154,10 @@ class TestNodeMaintenanceRHEL:
         compact_cluster,
         vm_for_test_from_template_scope_class,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-220 # <skip-jira-utils-check>
+        Polarion: CNV-2292
+        """
         vm = vm_for_test_from_template_scope_class
         drain_using_console(
             admin_client=admin_client,
@@ -179,7 +186,6 @@ class TestNodeMaintenanceRHEL:
 @pytest.mark.usefixtures("no_migration_job")
 class TestNodeCordonAndDrain:
     @pytest.mark.windows
-    @pytest.mark.polarion("CNV-2048")
     def test_node_drain_template_windows(
         self,
         admin_client,
@@ -187,6 +193,11 @@ class TestNodeCordonAndDrain:
         compact_cluster,
         vm_for_test_from_template_scope_class,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-220 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-4757 # <skip-jira-utils-check>
+        Polarion: CNV-2048
+        """
         vm = vm_for_test_from_template_scope_class
         drain_using_console_windows(
             admin_client=admin_client,
@@ -197,12 +208,15 @@ class TestNodeCordonAndDrain:
         )
 
     @pytest.mark.windows
-    @pytest.mark.polarion("CNV-4906")
     def test_node_cordon_template_windows(
         self,
         admin_client,
         vm_for_test_from_template_scope_class,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-4757 # <skip-jira-utils-check>
+        Polarion: CNV-4906
+        """
         vm = vm_for_test_from_template_scope_class
         with cordon_node(admin_client=admin_client, node=vm.vmi.get_node(privileged_client=admin_client)):
             try:

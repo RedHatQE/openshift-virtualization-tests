@@ -42,9 +42,13 @@ def unprivileged_user_vm(unprivileged_client, namespace):
         yield vm
 
 
-@pytest.mark.polarion("CNV-11968")
 def test_unprivileged_client_migrate_vm_negative(unprivileged_client, unprivileged_user_vm):
-    """Test that namespace admin can't migrate a VM."""
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-511 # <skip-jira-utils-check>
+    Polarion: CNV-11968
+
+    Test that namespace admin can't migrate a VM.
+    """
     try:
         migrate_vm_and_verify(vm=unprivileged_user_vm, client=unprivileged_client, wait_for_migration_success=False)
     except ForbiddenError:
@@ -53,8 +57,12 @@ def test_unprivileged_client_migrate_vm_negative(unprivileged_client, unprivileg
         pytest.fail("Namespace admin shouldn't be able to migrate VM without kubevirt.io:migrate RoleBinding!")
 
 
-@pytest.mark.polarion("CNV-11967")
 @pytest.mark.usefixtures("unprivileged_user_migrate_rolebinding")
 def test_unprivileged_client_migrate_vm(unprivileged_client, unprivileged_user_vm):
-    """Test that namespace admin can migrate a VM when has kubevirt.io:migrate RoleBinding."""
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-511 # <skip-jira-utils-check>
+    Polarion: CNV-11967
+
+    Test that namespace admin can migrate a VM when has kubevirt.io:migrate RoleBinding.
+    """
     migrate_vm_and_verify(vm=unprivileged_user_vm, client=unprivileged_client)
