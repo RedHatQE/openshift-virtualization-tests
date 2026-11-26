@@ -61,8 +61,11 @@ def updated_hco_cr_custom_template_scope_class(
 @pytest.mark.usefixtures("updated_hco_cr_custom_template_scope_class")
 class TestCustomTemplates:
     @pytest.mark.order(before="test_add_custom_data_import_cron_template_disable_spec")
-    @pytest.mark.polarion("CNV-8707")
     def test_custom_template_status(self, hyperconverged_status_templates_scope_function):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-15392 # <skip-jira-utils-check>
+        Polarion: CNV-8707
+        """
         custom_template_name = CUSTOM_CRON_TEMPLATE["metadata"]["name"]
         custom_templates_name = [
             template["metadata"]["name"]
@@ -76,19 +79,21 @@ class TestCustomTemplates:
         )
 
     @pytest.mark.order(before="test_add_custom_data_import_cron_template_disable_spec")
-    @pytest.mark.polarion("CNV-7884")
     def test_add_custom_data_import_cron_template(
         self,
         hyperconverged_status_templates_scope_function,
         ssp_spec_templates_scope_function,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-8296 # <skip-jira-utils-check>
+        Polarion: CNV-7884
+        """
         validate_custom_template_added(
             hyperconverged_status_templates_scope_function=hyperconverged_status_templates_scope_function,
             ssp_spec_templates_scope_function=ssp_spec_templates_scope_function,
         )
 
     @pytest.mark.dependency(name="test_add_custom_data_import_cron_template_disable_spec")
-    @pytest.mark.polarion("CNV-7914")
     @pytest.mark.usefixtures("disabled_boot_image_import_excluding_custom_datasource")
     def test_add_custom_data_import_cron_template_disable_spec(
         self,
@@ -98,6 +103,10 @@ class TestCustomTemplates:
         ssp_spec_templates_scope_function,
         image_stream_names,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-8296 # <skip-jira-utils-check>
+        Polarion: CNV-7914
+        """
         wait_for_auto_boot_config_stabilization(admin_client=admin_client, hco_namespace=hco_namespace)
         error_message_base = "With enableCommonBootImageImport spec disabled,"
         validate_custom_template_added(

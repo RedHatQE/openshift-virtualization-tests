@@ -25,7 +25,6 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.mark.jira("RHSTOR-6566", run=False)  # <skip-jira-utils-check>
-@pytest.mark.polarion("CNV-9330")
 def test_update_api_server(
     admin_client,
     hco_namespace,
@@ -37,6 +36,10 @@ def test_update_api_server(
     fips_enabled_cluster,
     services_to_check_connectivity,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-15705 # <skip-jira-utils-check>
+    Polarion: CNV-9330
+    """
     LOGGER.info(f"Validating crypto policy {cnv_crypto_policy_matrix__function__} settings on APIServer.")
     assert_crypto_policy_propagated_to_components(
         crypto_policy=cnv_crypto_policy_matrix__function__,

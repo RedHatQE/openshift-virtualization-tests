@@ -98,7 +98,6 @@ def hco_with_default_cpu_model_set(
         yield cluster_common_node_cpu
 
 
-@pytest.mark.polarion("CNV-9024")
 def test_default_value_for_cpu_model(
     hco_spec_scope_module,
     kubevirt_hyperconverged_spec_scope_module,
@@ -106,6 +105,9 @@ def test_default_value_for_cpu_model(
     default_vmi_cpu_model,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-19733 # <skip-jira-utils-check>
+    Polarion: CNV-9024
+
     Default value for defaultCPUModel should be 'None' in HCO
     Default value for CPU model in kubevirt should be 'None'
     and for VMI should be 'host-model' for AMD64 cluster and
@@ -126,7 +128,6 @@ def test_default_value_for_cpu_model(
     )
 
 
-@pytest.mark.polarion("CNV-9025")
 def test_set_hco_default_cpu_model(
     hyperconverged_resource_scope_function,
     hco_with_default_cpu_model_set,
@@ -135,6 +136,9 @@ def test_set_hco_default_cpu_model(
     updated_vmi_cpu_model,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-19733 # <skip-jira-utils-check>
+    Polarion: CNV-9025
+
     After HCO defaultCPUModel is set, it should reflect in
     kubevirt. New VM created should also reflect that in VMI
     """
@@ -152,7 +156,6 @@ def test_set_hco_default_cpu_model(
     )
 
 
-@pytest.mark.polarion("CNV-9026")
 def test_set_hco_default_cpu_model_with_existing_vm(
     hyperconverged_resource_scope_function,
     fedora_vm_scope_module,
@@ -162,6 +165,9 @@ def test_set_hco_default_cpu_model_with_existing_vm(
     updated_vmi_cpu_model,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-19733 # <skip-jira-utils-check>
+    Polarion: CNV-9026
+
     When HCO defaultCPUModel is set, it should reflect in kubevirt
     and also with VMI. If VM is already running even before updating
     defaultCPUModel in HCO,then restarting the VM should reflect the

@@ -79,7 +79,6 @@ def multiple_json_patched(admin_client, hco_namespace, prometheus, hyperconverge
     "multiple_json_patched",
 )
 class TestMultipleJsonPatch:
-    @pytest.mark.polarion("CNV-8718")
     def test_multiple_json_patch(
         self,
         admin_client,
@@ -88,6 +87,10 @@ class TestMultipleJsonPatch:
         kubevirt_resource,
         cdi_resource_scope_function,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-9096 # <skip-jira-utils-check>
+        Polarion: CNV-8718
+        """
         wait_for_hco_conditions(
             admin_client=admin_client,
             hco_namespace=hco_namespace,
@@ -101,8 +104,11 @@ class TestMultipleJsonPatch:
         )
         validate_kubevirt_json_patch(kubevirt_resource=kubevirt_resource)
 
-    @pytest.mark.polarion("CNV-8720")
     def test_multiple_json_patch_metrics(self, prometheus, kubevirt_all_unsafe_modification_metrics_before_test):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-9096 # <skip-jira-utils-check>
+        Polarion: CNV-8720
+        """
         component_metrics_dict = {
             component: filter_metric_by_component(
                 metrics=kubevirt_all_unsafe_modification_metrics_before_test,
@@ -120,8 +126,11 @@ class TestMultipleJsonPatch:
                 previous_value=previous_value,
             )
 
-    @pytest.mark.polarion("CNV-8813")
     def test_multiple_json_patch_alert(self, prometheus):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-9096 # <skip-jira-utils-check>
+        Polarion: CNV-8813
+        """
         for component in COMPONENT_DICT.keys():
             LOGGER.info(f"Waiting for alert: {ALERT_NAME} for component: {component}")
             wait_for_alert(prometheus=prometheus, alert_name=ALERT_NAME, component_name=component)

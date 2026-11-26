@@ -79,7 +79,6 @@ class TestOperatorsModify:
                     "cdi_spec": EXPCT_CERTC_DEFAULTS,
                     "cnao_spec": CNAO_CERT_CONFIG_DEFAULT,
                 },
-                marks=pytest.mark.polarion("CNV-6698"),
                 id="modify_defaults_certconfig",
             ),
             pytest.param(
@@ -108,7 +107,6 @@ class TestOperatorsModify:
                     "cdi_spec": HCO_MOD_DEFAULT_CA_DUR,
                     "cnao_spec": CNAO_MOD_DEFAULT_CA_DUR_EXPECTED,
                 },
-                marks=pytest.mark.polarion("CNV-6699"),
                 id="Test_Modify_HCO_CR_CertConfig_ca_duration",
             ),
             pytest.param(
@@ -137,7 +135,6 @@ class TestOperatorsModify:
                     "cdi_spec": HCO_MOD_DEFAULT_CA_RB,
                     "cnao_spec": CNAO_MOD_DEFAULT_CA_RB_EXPECTED,
                 },
-                marks=pytest.mark.polarion("CNV-6700"),
                 id="Test_Modify_HCO_CR_CertConfig_ca_renewBefore",
             ),
             pytest.param(
@@ -166,7 +163,6 @@ class TestOperatorsModify:
                     "cdi_spec": HCO_MOD_DEFAULT_SER_DUR,
                     "cnao_spec": CNAO_MOD_DEFAULT_SER_DUR_EXPECTED,
                 },
-                marks=pytest.mark.polarion("CNV-6701"),
                 id="Test_Modify_HCO_CR_CertConfig_server_duration",
             ),
             pytest.param(
@@ -195,7 +191,6 @@ class TestOperatorsModify:
                     "cdi_spec": HCO_MOD_DEFAULT_SER_RB,
                     "cnao_spec": CNAO_MOD_DEFAULT_SER_RB_EXPECTED,
                 },
-                marks=pytest.mark.polarion("CNV-6702"),
                 id="Test_Modify_HCO_CR_CertConfig_server_renewBefore",
             ),
             pytest.param(
@@ -215,7 +210,6 @@ class TestOperatorsModify:
                     "cdi_spec": None,
                     "cnao_spec": None,
                 },
-                marks=pytest.mark.polarion("CNV-6703"),
                 id="Test_Modify_HCO_CR_liveMigrationConfig",
             ),
             pytest.param(
@@ -245,7 +239,6 @@ class TestOperatorsModify:
                     "cdi_spec": None,
                     "cnao_spec": None,
                 },
-                marks=pytest.mark.polarion("CNV-6705"),
                 id="Test_Modify_HCO_CR_liveMigrationConfig_completionTimeoutPerGiB",
             ),
             pytest.param(
@@ -275,7 +268,6 @@ class TestOperatorsModify:
                     "cdi_spec": None,
                     "cnao_spec": None,
                 },
-                marks=pytest.mark.polarion("CNV-6706"),
                 id="Test_Modify_HCO_CR_liveMigrationConfig_parallelMigrationsPerCluster",
             ),
             pytest.param(
@@ -295,7 +287,6 @@ class TestOperatorsModify:
                     "cdi_spec": None,
                     "cnao_spec": None,
                 },
-                marks=pytest.mark.polarion("CNV-6707"),
                 id="Test_Modify_HCO_CR_liveMigrationConfig_parallelOutboundMigrationsPerNode",
             ),
             pytest.param(
@@ -325,7 +316,6 @@ class TestOperatorsModify:
                     "cdi_spec": None,
                     "cnao_spec": None,
                 },
-                marks=pytest.mark.polarion("CNV-6708"),
                 id="Test_Modify_HCO_CR_liveMigrationConfig_progressTimeout",
             ),
         ],
@@ -340,6 +330,18 @@ class TestOperatorsModify:
         expected,
     ):
         """
+        Jira: https://redhat.atlassian.net/browse/CNV-8296 # <skip-jira-utils-check>
+        Polarion: CNV-6698
+        Polarion: CNV-6699
+        Polarion: CNV-6700
+        Polarion: CNV-6701
+        Polarion: CNV-6702
+        Polarion: CNV-6703
+        Polarion: CNV-6705
+        Polarion: CNV-6706
+        Polarion: CNV-6707
+        Polarion: CNV-6708
+
         Tests validates that on modifying single or multiple spec fields of HCO CR with default values,
         appropriate values are found in associated spec fields for networkaddonsconfig, cdi, kubevirt and
         hyperconverged kinds

@@ -23,23 +23,29 @@ pytestmark = pytest.mark.s390x
 @pytest.mark.usefixtures("updated_cluster_ingress_downloads_spec_links")
 class TestCustomConsoleCliDownload:
     @pytest.mark.dependency(name="test_custom_console_cli_download")
-    @pytest.mark.polarion("CNV-12277")
     def test_custom_console_cli_download(
         self,
         admin_client,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-56711 # <skip-jira-utils-check>
+        Polarion: CNV-12277
+        """
         validate_custom_cli_downloads_urls_updated(
             admin_client=admin_client,
             new_hostname=CUSTOMIZED_VIRT_DL,
         )
 
     @pytest.mark.dependency(depends=["test_custom_console_cli_download"])
-    @pytest.mark.polarion("CNV-12278")
     def test_custom_console_cli_download_links_downloadable(
         self,
         tmpdir,
         all_virtctl_urls_scope_function,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-56711 # <skip-jira-utils-check>
+        Polarion: CNV-12278
+        """
         invalid_urls = [
             url
             for url in all_virtctl_urls_scope_function

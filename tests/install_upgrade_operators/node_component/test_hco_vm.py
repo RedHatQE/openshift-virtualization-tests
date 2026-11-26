@@ -45,12 +45,15 @@ def hco_vm(unprivileged_client, namespace):
     [
         pytest.param(
             {"infra": NODE_PLACEMENT_INFRA, "workloads": NODE_PLACEMENT_WORKLOADS},
-            marks=(pytest.mark.polarion("CNV-5715"),),
         )
     ],
     indirect=True,
 )
 def test_remove_workload_label_from_node_while_vm_running(admin_client, hyperconverged_with_node_placement, hco_vm):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-5163 # <skip-jira-utils-check>
+    Polarion: CNV-5715
+    """
     vmi_node = hco_vm.vmi.get_node(privileged_client=admin_client)
     node_name = vmi_node.name
     LOGGER.info(f"Removing workload label from node: {node_name}")

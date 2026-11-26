@@ -26,7 +26,6 @@ class TestLiveMigrationConfigUpdate:
                     },
                 },
                 ALLOW_AUTO_CONVERGE,
-                marks=pytest.mark.polarion("CNV-9674"),
                 id="test_allow_auto_converge",
             ),
             pytest.param(
@@ -36,7 +35,6 @@ class TestLiveMigrationConfigUpdate:
                     },
                 },
                 ALLOW_POST_COPY,
-                marks=pytest.mark.polarion("CNV-9675"),
                 id="test_allow_post_copy",
             ),
             pytest.param(
@@ -48,7 +46,6 @@ class TestLiveMigrationConfigUpdate:
                     },
                 },
                 ALLOW_WORKLOAD_DISRUPTION,
-                marks=pytest.mark.polarion("CNV-16551"),
                 id="test_allow_workload_disruption",
             ),
         ],
@@ -61,6 +58,12 @@ class TestLiveMigrationConfigUpdate:
         hco_spec,
         kubevirt_hyperconverged_spec_scope_function,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-8296 # <skip-jira-utils-check>
+        Polarion: CNV-9674
+        Polarion: CNV-9675
+        Polarion: CNV-16551
+        """
         hco_value = hco_spec["virtualization"][LIVE_MIGRATION_CONFIG_KEY].get(expected)
         kubevirt_value = kubevirt_hyperconverged_spec_scope_function[KUBEVIRT_CR_CONFIGURATION_KEY][
             KUBEVIRT_CR_MIGRATIONS_KEY
