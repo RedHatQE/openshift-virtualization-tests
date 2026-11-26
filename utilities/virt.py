@@ -2303,10 +2303,11 @@ def get_oc_image_info(  # type: ignore[return]
     if pull_secret:
         base_command = f"{base_command} --registry-config={pull_secret}"
 
+    # Quay CDN dial timeouts often exceed 10s per oc attempt; allow retries.
     try:
         for sample in TimeoutSampler(
-            wait_timeout=TIMEOUT_10SEC,
-            sleep=TIMEOUT_1SEC,
+            wait_timeout=TIMEOUT_2MIN,
+            sleep=TIMEOUT_5SEC,
             exceptions_dict={JSONDecodeError: [], TypeError: []},
             func=_get_image_json,
             cmd=base_command,
