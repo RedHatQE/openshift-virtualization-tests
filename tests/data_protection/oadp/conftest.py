@@ -69,6 +69,7 @@ def dpa_with_csi_snapshot_early_frequent_polling(
     """DataProtectionApplication with early CSI snapshot polling enabled.
 
     Windows VSS backups need Velero to finish snapshots inside the guest freeze window.
+    See https://redhat.atlassian.net/browse/OADP-7882 # <skip-jira-utils-check>
     """
     dpa = DataProtectionApplication(
         name="dpa",
