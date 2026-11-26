@@ -28,7 +28,7 @@ class TestCustomConsoleCliDownload:
         admin_client,
     ):
         """
-        Jira: https://redhat.atlassian.net/browse/CNV-61452 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-56711 # <skip-jira-utils-check>
         Polarion: CNV-12277
         """
         validate_custom_cli_downloads_urls_updated(
@@ -43,7 +43,7 @@ class TestCustomConsoleCliDownload:
         all_virtctl_urls_scope_function,
     ):
         """
-        Jira: https://redhat.atlassian.net/browse/CNV-61452 # <skip-jira-utils-check>
+        Jira: https://redhat.atlassian.net/browse/CNV-56711 # <skip-jira-utils-check>
         Polarion: CNV-12278
         """
         invalid_urls = [

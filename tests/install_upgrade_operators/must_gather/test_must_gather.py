@@ -66,7 +66,7 @@ class TestMustGatherCluster:
             checks=VALIDATE_UID_NAME,
         )
 
-    def test_namespace(self, hco_namespace, must_gather_for_test):
+    def test_namespace(self, admin_client, hco_namespace, must_gather_for_test):
         """
         Jira: https://redhat.atlassian.net/browse/CNV-4834 # <skip-jira-utils-check>
         Polarion: CNV-2982
