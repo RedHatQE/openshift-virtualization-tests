@@ -280,6 +280,9 @@ reviews:
       - name: "PR Template Sections"
         mode: error
         instructions: |
+          Pre-merge summary: list all five custom checks by exact name with PASS or FAIL and
+          one concrete reason each; never only "pre-merge checks failing".
+
           Check the current PR description (the actual, live PR body — not a cached or
           per-file view of it) for required sections from `.github/pull_request_template.md`.
           Required sections (must be present, even if empty):
@@ -336,6 +339,12 @@ reviews:
       - name: "STP scenario coverage"
         mode: error
         instructions: |
+          PR description only — chat/review-thread incremental claims do not count. PASS when it
+          lists scenarios in this PR and epic Jira for remaining in-repo scenarios (AGENTS.md).
+          Uncovered scenarios alone are not FAIL. On FAIL, name this check, tabulate scenarios,
+          and cite missing PR-description fields (scenario list, epic, exclusion). Do not re-FAIL
+          after the author fixes only in chat; require a PR-body update.
+
           Apply when this PR adds, modifies, or deletes `test_*.py` under `tests/` that
           reference an `STP:`, `Jira:`, or `RFE:` URL in a module,
           class, or test docstring. SKIP `utilities/unittests/`.
@@ -350,9 +359,9 @@ reviews:
           referenced STP and compare its test scenarios to STD/test declarations in the PR diff.
 
           *New/existing tests:*
-          PASS if every STP scenario has a corresponding STD/test declaration in the PR (or
-          existing file), OR the PR description documents intentional exclusion with a
-          follow-up Jira link per excluded scenario.
+          PASS if each in-repo scenario is in this PR, on the merge base, excluded with per-scenario
+          Jira, or deferred under a documented epic as above. FAIL for misalignment in changed tests
+          or missing PR-description documentation — not for scenarios planned in later epic PRs.
           For every new or changed STP-linked test, also verify that:
           1. `Preconditions:`, `Steps:`, and `Expected:` docstring sections match the
              referenced STP scenario.
@@ -632,9 +641,8 @@ knowledge_base:
         STPs under stps/<sig>/ define scenarios and acceptance criteria.
 
         STRICT ENFORCEMENT (STD and test implementation PRs):
-        - CRITICAL: Every STD PR MUST cover ALL STP scenarios, except
-          explicitly excluded ones with justification and follow-up
-          Jira link. Missing scenarios block merge.
+        - CRITICAL: Epic-wide STP coverage (AGENTS.md incremental delivery); PR description
+          lists scenarios in this PR and epic Jira for the rest, or per-scenario exclusion Jira.
         - CRITICAL: Every new product test under `tests/` MUST contain exact
           `STP: <URL>` in its own function/method docstring when an STP exists, or
           `Jira: <issue URL>` only when none exists (Jira/RFE issue, not a support case).
@@ -660,7 +668,7 @@ knowledge_base:
         - Jira/RFE-only tests skip STP comparison but must retain
           traceability links on modification, and justify deletion.
           Historical labels and inherited links remain valid for legacy retention.
-        - Partial coverage without justification blocks merge.
+        - Partial coverage without PR epic/scenario list or exclusion docs blocks merge.
 
   # Enable code guidelines enforcement from AGENTS.md (single source of truth)
   code_guidelines:
