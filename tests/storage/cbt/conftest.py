@@ -3,6 +3,7 @@
 import secrets
 from contextlib import ExitStack
 from logging import getLogger
+from typing import TYPE_CHECKING
 
 import pytest
 from ocp_resources.kubevirt import KubeVirt
@@ -40,6 +41,17 @@ from tests.storage.cbt.utils import (
     write_incremental_data_for_concurrent_vms,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile, hco_feature_gates_patch
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from kubernetes.dynamic import DynamicClient
+    from ocp_resources.namespace import Namespace
+    from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
+    from ocp_resources.virtual_machine_backup import VirtualMachineBackup
+
+    from tests.storage.cbt.restore import _RestoredDiskStorageClassProperties
+    from utilities.virt import VirtualMachineForTests
 
 LOGGER = getLogger(name=__name__)
 
@@ -286,9 +298,9 @@ def completed_push_backup_chain(
 
 @pytest.fixture()
 def source_vm_boot_disk_claim(
-    vm_with_cbt_label,
-    completed_push_backup_chain,
-):
+    vm_with_cbt_label: VirtualMachineForTests,
+    completed_push_backup_chain: list[VirtualMachineBackup],
+) -> _RestoredDiskStorageClassProperties:
     """Storage class, volume mode, and access mode of the source VM boot disk.
 
     Read while the source VM still exists. The restored disk uses these values.
@@ -301,10 +313,10 @@ def source_vm_boot_disk_claim(
 
 @pytest.fixture()
 def deleted_cbt_source_vm(
-    vm_with_cbt_label,
-    completed_push_backup_chain,
-    source_vm_boot_disk_claim,
-):
+    vm_with_cbt_label: VirtualMachineForTests,
+    completed_push_backup_chain: list[VirtualMachineBackup],
+    source_vm_boot_disk_claim: _RestoredDiskStorageClassProperties,
+) -> Generator[VirtualMachineForTests]:
     """Source VM removed after the push backup, so the restored VM can reuse its name.
 
     The boot disk claim is read before this fixture deletes the VM.
@@ -326,13 +338,13 @@ def deleted_cbt_source_vm(
 
 @pytest.fixture()
 def restored_vm_from_push_chain(
-    unprivileged_client,
-    namespace,
-    deleted_cbt_source_vm,
-    completed_push_backup_chain,
-    push_backup_pvc,
-    source_vm_boot_disk_claim,
-):
+    unprivileged_client: DynamicClient,
+    namespace: Namespace,
+    deleted_cbt_source_vm: VirtualMachineForTests,
+    completed_push_backup_chain: list[VirtualMachineBackup],
+    push_backup_pvc: PersistentVolumeClaim,
+    source_vm_boot_disk_claim: _RestoredDiskStorageClassProperties,
+) -> Generator[VirtualMachineForTests]:
     """Running VM restored from the completed push-mode full backup.
 
     Push restore assumes a RHEL source VM matching the Linux path of ``cbt_enabled_vm``:
