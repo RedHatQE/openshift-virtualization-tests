@@ -329,8 +329,8 @@ class TestCreateRhelVm:
         ) as vm:
             assert vm == mock_vm
 
-        mock_get_secret.assert_called_once_with(namespace="test-namespace")
-        mock_get_config_map.assert_called_once_with(namespace="test-namespace")
+        mock_get_secret.assert_called_once_with(namespace="test-namespace", client=mock_client)
+        mock_get_config_map.assert_called_once_with(namespace="test-namespace", client=mock_client)
         mock_get_url.assert_called_once()
         mock_dv.to_dict.assert_called_once()
         assert mock_dv_class.call_args.kwargs["client"] is mock_client, (
