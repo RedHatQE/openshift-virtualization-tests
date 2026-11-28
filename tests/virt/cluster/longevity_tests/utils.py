@@ -366,8 +366,8 @@ def create_dv_vms(
 
 def create_multi_dvs(namespace, client, dv_params):
     namespace_name = namespace.name
-    artifactory_secret = get_artifactory_secret(namespace=namespace_name)
-    artifactory_config_map = get_artifactory_config_map(namespace=namespace_name)
+    artifactory_secret = get_artifactory_secret(namespace=namespace_name, client=client)
+    artifactory_config_map = get_artifactory_config_map(namespace=namespace_name, client=client)
     dvs = {}
     for dv in dv_params:
         dv_name = [*dv][0]

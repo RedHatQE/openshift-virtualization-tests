@@ -96,8 +96,8 @@ def windows_data_volume_template(
 ):
     os_matrix_key = [*windows_os_matrix__module__][0]
     os_params = windows_os_matrix__module__[os_matrix_key]
-    secret = get_artifactory_secret(namespace=namespace.name)
-    cert = get_artifactory_config_map(namespace=namespace.name)
+    secret = get_artifactory_secret(namespace=namespace.name, client=unprivileged_client)
+    cert = get_artifactory_config_map(namespace=namespace.name, client=unprivileged_client)
     win_dv = DataVolume(
         client=unprivileged_client,
         name=f"{os_matrix_key}-dv",

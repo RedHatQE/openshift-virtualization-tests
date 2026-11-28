@@ -170,8 +170,8 @@ def dvs_for_upgrade(
 ):
     golden_images_namespace_name = py_config["golden_images_namespace"]
     dvs_list = []
-    artifactory_secret = get_artifactory_secret(namespace=golden_images_namespace_name)
-    artifactory_config_map = get_artifactory_config_map(namespace=golden_images_namespace_name)
+    artifactory_secret = get_artifactory_secret(namespace=golden_images_namespace_name, client=admin_client)
+    artifactory_config_map = get_artifactory_config_map(namespace=golden_images_namespace_name, client=admin_client)
 
     for sc in py_config["storage_class_matrix"]:
         storage_class = [*sc][0]

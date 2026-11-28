@@ -373,7 +373,7 @@ def rhel_vm_name(request):
 
 @pytest.fixture(scope="module")
 def artifactory_secret_scope_module(namespace):
-    artifactory_secret = get_artifactory_secret(namespace=namespace.name)
+    artifactory_secret = get_artifactory_secret(namespace=namespace.name, client=namespace.client)
     yield artifactory_secret
     if artifactory_secret:
         artifactory_secret.clean_up()
@@ -381,7 +381,7 @@ def artifactory_secret_scope_module(namespace):
 
 @pytest.fixture(scope="module")
 def artifactory_config_map_scope_module(namespace):
-    artifactory_config_map = get_artifactory_config_map(namespace=namespace.name)
+    artifactory_config_map = get_artifactory_config_map(namespace=namespace.name, client=namespace.client)
     yield artifactory_config_map
     if artifactory_config_map:
         artifactory_config_map.clean_up()
