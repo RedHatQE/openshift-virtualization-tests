@@ -1,6 +1,13 @@
+from __future__ import annotations
+
+import logging
+from typing import TYPE_CHECKING
+
 import pytest
+from ocp_resources.data_protection_application import DataProtectionApplication
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.namespace import Namespace
+from ocp_resources.resource import ResourceEditor
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
 from pytest_testconfig import config as py_config
@@ -17,6 +24,7 @@ from utilities.artifactory import (
 from utilities.constants import Images
 from utilities.constants.images import OS_FLAVOR_RHEL, OS_FLAVOR_WIN_CONTAINER_DISK
 from utilities.constants.instance_types import RHEL10_PREFERENCE, U1_LARGE, U1_SMALL
+from utilities.constants.namespaces import NamespacesNames
 from utilities.constants.oadp import (
     BACKUP_STORAGE_LOCATION,
     FILE_NAME_FOR_BACKUP,
@@ -44,6 +52,37 @@ from utilities.storage import (
     write_file_windows_vm,
 )
 from utilities.virt import VirtualMachineForTests, running_vm
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from kubernetes.dynamic import DynamicClient
+
+LOGGER = logging.getLogger(__name__)
+
+
+@pytest.fixture(scope="session")
+def dpa_with_csi_snapshot_early_frequent_polling(
+    admin_client: DynamicClient,
+    skip_if_no_storage_class_for_snapshot: None,
+) -> Generator[DataProtectionApplication]:
+    """DataProtectionApplication with early CSI snapshot polling enabled.
+
+    Windows VSS backups need Velero to finish snapshots inside the guest freeze window.
+    See https://redhat.atlassian.net/browse/OADP-7882 # <skip-jira-utils-check>
+    """
+    dpa = DataProtectionApplication(
+        name="dpa",
+        namespace=NamespacesNames.ADP_NAMESPACE,
+        client=admin_client,
+    )
+    LOGGER.info(f"Enabling enableCSISnapshotEarlyFrequentPolling on DataProtectionApplication {dpa.name}")
+    ResourceEditor(
+        patches={
+            dpa: {"spec": {"configuration": {"velero": {"enableCSISnapshotEarlyFrequentPolling": True}}}},
+        }
+    ).update()
+    yield dpa
 
 
 @pytest.fixture()
