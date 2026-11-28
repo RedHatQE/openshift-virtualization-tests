@@ -1387,7 +1387,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/11/8c/5a03b7c28670dd355
 
 [[package]]
 name = "openshift-python-wrapper"
-version = "11.0.154"
+version = "11.0.155"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "authlib" },
@@ -1407,7 +1407,7 @@ dependencies = [
     { name = "timeout-sampler" },
     { name = "xmltodict" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/da/4b/64cb42010d909381fe5011146b64dccb70a55af44f3b5f5eb05d4e71a530/openshift_python_wrapper-11.0.154.tar.gz", hash = "sha256:96f8d89952b72b826dfbf05e9c251f3a844dc46db72912473fcaabbd84b390c1", size = 8293515, upload-time = "2026-11-14T07:42:13.23Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/62/8d/a854aaf6d3938fcb72f7472c43112081a990a203c81ad5d1648b5c65666b/openshift_python_wrapper-11.0.155.tar.gz", hash = "sha256:1be3b49245faaa28b2e3be1b7280ffb5a5a40cbdc53d222dc4778c573c3ebdc1", size = 8295290, upload-time = "2026-11-23T18:49:38.697Z" }
 
 [[package]]
 name = "openshift-python-wrapper-data-collector"
@@ -1510,7 +1510,7 @@ requires-dist = [
     { name = "kubernetes", specifier = ">=34.1.0" },
     { name = "netaddr", specifier = ">=1.3.0" },
     { name = "openshift-python-utilities", specifier = ">=6.0.0" },
-    { name = "openshift-python-wrapper", specifier = ">=11.0.154" },
+    { name = "openshift-python-wrapper", specifier = ">=11.0.155" },
     { name = "openstacksdk", specifier = ">=4.1.0" },
     { name = "pexpect", specifier = ">=4.9.0" },
     { name = "podman", specifier = ">=5.2.0" },
