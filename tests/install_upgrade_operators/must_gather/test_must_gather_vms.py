@@ -28,7 +28,6 @@ from tests.install_upgrade_operators.must_gather.utils import (
     validate_guest_console_logs_collected,
     validate_no_empty_files_collected_must_gather_vm,
 )
-from tests.os_params import FEDORA_LATEST
 from utilities.constants.architecture import ARM_64
 from utilities.constants.cluster import COUNT_FIVE
 
@@ -231,10 +230,10 @@ class TestMustGatherVmDetails:
         [
             pytest.param(
                 {
-                    "dv_name": "dv-fedora",
-                    "image": FEDORA_LATEST.get("image_path"),
+                    "source": "blank",
+                    "dv_name": "dv-blank",
                     "storage_class": py_config["default_storage_class"],
-                    "dv_size": FEDORA_LATEST.get("dv_size"),
+                    "dv_size": "64Mi",
                 },
                 id="test_blockjob",
             ),
