@@ -70,7 +70,6 @@ class TestCCLMSeveralVMs:
         - Boot IDs recorded for all source VMs before migration
     """
 
-    @pytest.mark.polarion("CNV-11995")
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME_SEVERAL_VMS}::test_migrate_vm_from_remote_to_local_cluster")
     def test_migrate_vm_from_remote_to_local_cluster(
         self,
@@ -82,6 +81,8 @@ class TestCCLMSeveralVMs:
         Test that multiple VMs can be live migrated from the source cluster to the target cluster.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
+        Polarion: CNV-11995
+
 
         Steps:
             1. Wait for the MTV migration to reach Succeeded condition
@@ -97,12 +98,13 @@ class TestCCLMSeveralVMs:
         )
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME_SEVERAL_VMS}::test_migrate_vm_from_remote_to_local_cluster"])
-    @pytest.mark.polarion("CNV-11910")
     def test_verify_vms_not_rebooted_after_migration(self, local_vms_after_cclm_migration, vms_boot_id_before_cclm):
         """
         Test that VMs are not rebooted during cross-cluster live migration.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
+        Polarion: CNV-11910
+
 
         Preconditions:
             - Source VMs successfully migrated to the target cluster
@@ -119,12 +121,13 @@ class TestCCLMSeveralVMs:
         )
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME_SEVERAL_VMS}::test_migrate_vm_from_remote_to_local_cluster"])
-    @pytest.mark.polarion("CNV-14332")
     def test_verify_file_persisted_after_migration(self, local_vms_after_cclm_migration):
         """
         Test that files written before migration are preserved after cross-cluster live migration.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
+        Polarion: CNV-14332
+
 
         Preconditions:
             - Source VMs successfully migrated to the target cluster
@@ -145,12 +148,13 @@ class TestCCLMSeveralVMs:
             )
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME_SEVERAL_VMS}::test_migrate_vm_from_remote_to_local_cluster"])
-    @pytest.mark.polarion("CNV-14333")
     def test_source_vms_are_stopped_after_cclm(self, vms_for_cclm):
         """
         Test that source VMs on the source cluster are stopped after cross-cluster live migration.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
+        Polarion: CNV-14333
+
 
         Preconditions:
             - Source VMs successfully migrated to the target cluster
@@ -164,7 +168,6 @@ class TestCCLMSeveralVMs:
         assert_vms_are_stopped(vms=vms_for_cclm)
 
     @pytest.mark.dependency(depends=[f"{TESTS_CLASS_NAME_SEVERAL_VMS}::test_migrate_vm_from_remote_to_local_cluster"])
-    @pytest.mark.polarion("CNV-12038")
     def test_compute_live_migrate_vms_after_cclm(
         self, admin_client: DynamicClient, local_vms_after_cclm_migration: list[VirtualMachineForTests]
     ):
@@ -172,6 +175,8 @@ class TestCCLMSeveralVMs:
         Test that VMs can be compute live migrated within the target cluster after cross-cluster live migration.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
+        Polarion: CNV-12038
+
 
         Preconditions:
             - Source VMs successfully migrated to the target cluster
@@ -185,12 +190,13 @@ class TestCCLMSeveralVMs:
         """
         verify_compute_live_migration_after_cclm(client=admin_client, local_vms=local_vms_after_cclm_migration)
 
-    @pytest.mark.polarion("CNV-14334")
     def test_source_vms_can_be_deleted(self, vms_for_cclm):
         """
         Test that source VMs on the source cluster can be deleted after cross-cluster live migration.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
+        Polarion: CNV-14334
+
 
         Steps:
             1. Delete each source VM on the source cluster
@@ -200,12 +206,13 @@ class TestCCLMSeveralVMs:
         """
         assert_vms_can_be_deleted(vms=vms_for_cclm)
 
-    @pytest.mark.polarion("CNV-15237")
     def test_target_vms_can_be_deleted(self, local_vms_after_cclm_migration):
         """
         Test that migrated VMs on the target cluster can be deleted after cross-cluster live migration.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
+        Polarion: CNV-15237
+
 
         Steps:
             1. Delete each migrated VM on the target cluster
@@ -241,7 +248,6 @@ class TestCCLMWindowsWithVTPM:
     """
 
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME_WINDOWS_VM}::test_migrate_windows_vm_from_remote_to_local_cluster")
-    @pytest.mark.polarion("CNV-11999")
     def test_migrate_windows_vm_from_remote_to_local_cluster(
         self,
         booted_vms_for_cclm,
@@ -251,6 +257,8 @@ class TestCCLMWindowsWithVTPM:
         Test that a Windows VM can be live migrated from the source cluster to the target cluster.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
+        Polarion: CNV-11999
+
 
         Steps:
             1. Wait for the MTV migration to reach Succeeded condition
@@ -268,12 +276,13 @@ class TestCCLMWindowsWithVTPM:
     @pytest.mark.dependency(
         depends=[f"{TESTS_CLASS_NAME_WINDOWS_VM}::test_migrate_windows_vm_from_remote_to_local_cluster"]
     )
-    @pytest.mark.polarion("CNV-14335")
     def test_source_vms_are_stopped_after_cclm(self, vms_for_cclm):
         """
         Test that the source Windows VM on the source cluster is stopped after cross-cluster live migration.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
+        Polarion: CNV-14335
+
 
         Preconditions:
             - Source VM successfully migrated to the target cluster
@@ -289,7 +298,6 @@ class TestCCLMWindowsWithVTPM:
     @pytest.mark.dependency(
         depends=[f"{TESTS_CLASS_NAME_WINDOWS_VM}::test_migrate_windows_vm_from_remote_to_local_cluster"]
     )
-    @pytest.mark.polarion("CNV-12474")
     def test_compute_live_migrate_windows_vms_after_cclm(
         self, admin_client: DynamicClient, local_vms_after_cclm_migration: list[VirtualMachineForTests]
     ):
@@ -297,6 +305,8 @@ class TestCCLMWindowsWithVTPM:
         Test that a Windows VM can be compute live migrated within the target cluster after cross-cluster live migration.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
+        Polarion: CNV-12474
+
 
         Preconditions:
             - Source VM successfully migrated to the target cluster
@@ -310,12 +320,13 @@ class TestCCLMWindowsWithVTPM:
         """
         verify_compute_live_migration_after_cclm(client=admin_client, local_vms=local_vms_after_cclm_migration)
 
-    @pytest.mark.polarion("CNV-14336")
     def test_source_vms_can_be_deleted(self, vms_for_cclm):
         """
         Test that the source Windows VM on the source cluster can be deleted after cross-cluster live migration.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
+        Polarion: CNV-14336
+
 
         Steps:
             1. Delete the source VM on the source cluster
@@ -325,12 +336,13 @@ class TestCCLMWindowsWithVTPM:
         """
         assert_vms_can_be_deleted(vms=vms_for_cclm)
 
-    @pytest.mark.polarion("CNV-15236")
     def test_target_vms_can_be_deleted(self, local_vms_after_cclm_migration):
         """
         Test that the migrated Windows VM on the target cluster can be deleted after cross-cluster live migration.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
+        Polarion: CNV-15236
+
 
         Steps:
             1. Delete the migrated VM on the target cluster
@@ -370,7 +382,6 @@ class TestCCLMFromStorageAtoB:
         - Boot ID recorded for the source VM before migration
     """
 
-    @pytest.mark.polarion("CNV-15955")
     @pytest.mark.dependency(name=f"{TESTS_CLASS_NAME_STORAGE_A_TO_B}::test_migrate_vm_from_remote_to_local_cluster")
     def test_migrate_vm_from_remote_to_local_cluster(
         self,
@@ -382,6 +393,8 @@ class TestCCLMFromStorageAtoB:
         Test that a VM can be cross-cluster live migrated when source and target storage classes are different.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
+        Polarion: CNV-15955
+
 
         Steps:
             1. Wait for the MTV migration to reach Succeeded condition
@@ -399,12 +412,13 @@ class TestCCLMFromStorageAtoB:
     @pytest.mark.dependency(
         depends=[f"{TESTS_CLASS_NAME_STORAGE_A_TO_B}::test_migrate_vm_from_remote_to_local_cluster"]
     )
-    @pytest.mark.polarion("CNV-15956")
     def test_verify_vms_not_rebooted_after_migration(self, local_vms_after_cclm_migration, vms_boot_id_before_cclm):
         """
         Test that VM is not rebooted during cross-cluster live migration.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
+        Polarion: CNV-15956
+
 
         Preconditions:
             - Source VM successfully migrated to the target cluster
@@ -423,12 +437,13 @@ class TestCCLMFromStorageAtoB:
     @pytest.mark.dependency(
         depends=[f"{TESTS_CLASS_NAME_STORAGE_A_TO_B}::test_migrate_vm_from_remote_to_local_cluster"]
     )
-    @pytest.mark.polarion("CNV-15957")
     def test_verify_file_persisted_after_migration(self, local_vms_after_cclm_migration):
         """
         Test that files written before migration are preserved after cross-cluster live migration.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
+        Polarion: CNV-15957
+
 
         Preconditions:
             - Source VM successfully migrated to the target cluster
@@ -451,12 +466,13 @@ class TestCCLMFromStorageAtoB:
     @pytest.mark.dependency(
         depends=[f"{TESTS_CLASS_NAME_STORAGE_A_TO_B}::test_migrate_vm_from_remote_to_local_cluster"]
     )
-    @pytest.mark.polarion("CNV-15958")
     def test_source_vms_are_stopped_after_cclm(self, vms_for_cclm):
         """
         Test that source VM on the source cluster is stopped after cross-cluster live migration.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
+        Polarion: CNV-15958
+
 
         Preconditions:
             - Source VM successfully migrated to the target cluster
@@ -472,7 +488,6 @@ class TestCCLMFromStorageAtoB:
     @pytest.mark.dependency(
         depends=[f"{TESTS_CLASS_NAME_STORAGE_A_TO_B}::test_migrate_vm_from_remote_to_local_cluster"]
     )
-    @pytest.mark.polarion("CNV-15954")
     def test_compute_live_migrate_vms_after_cclm(
         self, admin_client: DynamicClient, local_vms_after_cclm_migration: list[VirtualMachineForTests]
     ):
@@ -480,6 +495,8 @@ class TestCCLMFromStorageAtoB:
         Test that a VM can be compute live migrated within the target cluster after cross-cluster live migration.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
+        Polarion: CNV-15954
+
 
         Preconditions:
             - Source VM successfully migrated to the target cluster
@@ -493,12 +510,13 @@ class TestCCLMFromStorageAtoB:
         """
         verify_compute_live_migration_after_cclm(client=admin_client, local_vms=local_vms_after_cclm_migration)
 
-    @pytest.mark.polarion("CNV-15959")
     def test_source_vms_can_be_deleted(self, vms_for_cclm):
         """
         Test that source VM on the source cluster can be deleted after cross-cluster live migration.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
+        Polarion: CNV-15959
+
 
         Steps:
             1. Delete the source VM on the source cluster
@@ -508,12 +526,13 @@ class TestCCLMFromStorageAtoB:
         """
         assert_vms_can_be_deleted(vms=vms_for_cclm)
 
-    @pytest.mark.polarion("CNV-15960")
     def test_target_vms_can_be_deleted(self, local_vms_after_cclm_migration):
         """
         Test that migrated VM on the target cluster can be deleted after cross-cluster live migration.
 
         Jira: https://redhat.atlassian.net/browse/CNV-50823  # <skip-jira-utils-check>
+        Polarion: CNV-15960
+
 
         Steps:
             1. Delete the migrated VM on the target cluster

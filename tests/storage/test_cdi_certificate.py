@@ -151,7 +151,6 @@ def dv_of_multi_storage_cirros_vm(unprivileged_client, data_volume_template_meta
                     f"{Resource.ApiGroup.KUBEVIRT_IO}/immediate-data-volume-creation": "false",
                 },
             },
-            marks=pytest.mark.polarion("CNV-3686"),
         ),
     ],
     indirect=True,
@@ -163,6 +162,9 @@ def test_dv_delete_from_vm(
     dv_of_multi_storage_cirros_vm,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/KNIP-1131 # <skip-jira-utils-check>
+    Polarion: CNV-3686
+
     Check that create VM with dataVolumeTemplates, once DV is deleted, the owner VM will create one.
     This will trigger the import process so that cert code will be exercised one more time.
     """
@@ -173,7 +175,6 @@ def test_dv_delete_from_vm(
 
 
 @pytest.mark.sno
-@pytest.mark.polarion("CNV-3667")
 def test_upload_after_certs_renewal(
     unprivileged_client,
     namespace,
@@ -182,6 +183,9 @@ def test_upload_after_certs_renewal(
     download_image,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/KNIP-1131 # <skip-jira-utils-check>
+    Polarion: CNV-3667
+
     Check that CDI can do upload operation after certs get refreshed
     """
     dv_name = "cnv-3667"
@@ -215,7 +219,6 @@ def test_upload_after_certs_renewal(
     indirect=True,
 )
 @pytest.mark.sno
-@pytest.mark.polarion("CNV-3678")
 def test_import_clone_after_certs_renewal(
     unprivileged_client,
     refresh_cdi_certificates,
@@ -223,6 +226,9 @@ def test_import_clone_after_certs_renewal(
     namespace,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/KNIP-1131 # <skip-jira-utils-check>
+    Polarion: CNV-3678
+
     Check that CDI can do import and clone operation after certs get refreshed
     """
     with create_dv(
@@ -240,7 +246,6 @@ def test_import_clone_after_certs_renewal(
 
 
 @pytest.mark.sno
-@pytest.mark.polarion("CNV-3977")
 def test_upload_after_validate_aggregated_api_cert(
     unprivileged_client,
     namespace,
@@ -249,6 +254,9 @@ def test_upload_after_validate_aggregated_api_cert(
     download_image,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/KNIP-1131 # <skip-jira-utils-check>
+    Polarion: CNV-3977
+
     Check that upload is successful after verifying validity of aggregated api client certificate
     """
     dv_name = "cnv-3977"
@@ -302,7 +310,6 @@ def downloaded_cirros_image(tmpdir):
 
 
 @pytest.mark.s390x
-@pytest.mark.polarion("CNV-5708")
 @pytest.mark.xfail(
     reason=f"{QUARANTINED}: Test fails when running from container; tracked in CNV-18870",
     run=False,
@@ -313,6 +320,10 @@ def test_cert_exposure_rotation(
     namespace,
     downloaded_cirros_image,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-5128 # <skip-jira-utils-check>
+    Polarion: CNV-5708
+    """
     with virtctl_upload_dv(
         client=namespace.client,
         namespace=namespace.name,

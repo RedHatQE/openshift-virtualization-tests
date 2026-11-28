@@ -40,7 +40,6 @@ class TestFullBackup:
         - Test data written to VM
     """
 
-    @pytest.mark.polarion("CNV-15997")
     @pytest.mark.parametrize(
         "completed_push_backup_chain",
         [{"incremental_count": 0}],
@@ -51,6 +50,8 @@ class TestFullBackup:
         completed_push_backup_chain,
     ):
         """
+        Polarion: CNV-15997
+
         Test that a full backup in push mode completes successfully.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
@@ -74,7 +75,6 @@ class TestFullBackup:
             expected_backup_type=CBT_BACKUP_TYPE_FULL,
         )
 
-    @pytest.mark.polarion("CNV-15996")
     @pytest.mark.parametrize(
         "ready_pull_backup_chain",
         [{"incremental_count": 0}],
@@ -85,6 +85,8 @@ class TestFullBackup:
         ready_pull_backup_chain,
     ):
         """
+        Polarion: CNV-15996
+
         Test that a full backup in pull mode becomes ready for export.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
@@ -126,7 +128,6 @@ class TestIncrementalBackup:
         - Test data written to VM
     """
 
-    @pytest.mark.polarion("CNV-15998")
     @pytest.mark.parametrize(
         "completed_push_backup_chain",
         [{"incremental_count": 1}],
@@ -137,6 +138,8 @@ class TestIncrementalBackup:
         completed_push_backup_chain,
     ):
         """
+        Polarion: CNV-15998
+
         Test that an incremental backup in push mode completes successfully.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
@@ -161,7 +164,6 @@ class TestIncrementalBackup:
             expected_backup_type=CBT_BACKUP_TYPE_INCREMENTAL,
         )
 
-    @pytest.mark.polarion("CNV-16000")
     @pytest.mark.parametrize(
         "ready_pull_backup_chain",
         [{"incremental_count": 1}],
@@ -172,6 +174,8 @@ class TestIncrementalBackup:
         ready_pull_backup_chain,
     ):
         """
+        Polarion: CNV-16000
+
         Test that an incremental backup in pull mode becomes ready for export.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
@@ -214,7 +218,6 @@ class TestMultipleIncrementalBackups:
         - Test data written to VM
     """
 
-    @pytest.mark.polarion("CNV-16002")
     @pytest.mark.parametrize(
         "completed_push_backup_chain",
         [{"incremental_count": CBT_BACKUP_CHAIN_INCREMENTAL_COUNT}],
@@ -225,6 +228,8 @@ class TestMultipleIncrementalBackups:
         completed_push_backup_chain,
     ):
         """
+        Polarion: CNV-16002
+
         Test that a full backup followed by multiple sequential incremental backups all complete
         successfully in push mode.
 
@@ -257,7 +262,6 @@ class TestMultipleIncrementalBackups:
                 expected_backup_type=expected_backup_type,
             )
 
-    @pytest.mark.polarion("CNV-16001")
     @pytest.mark.parametrize(
         "ready_pull_backup_chain",
         [{"incremental_count": CBT_BACKUP_CHAIN_INCREMENTAL_COUNT}],
@@ -268,6 +272,8 @@ class TestMultipleIncrementalBackups:
         ready_pull_backup_chain,
     ):
         """
+        Polarion: CNV-16001
+
         Test that a full backup followed by multiple sequential incremental backups all become
         ready for export in pull mode.
 
@@ -318,7 +324,6 @@ class TestMultipleDiskBackup:
         - Test data written to all disks
     """
 
-    @pytest.mark.polarion("CNV-16003")
     @pytest.mark.parametrize(
         "completed_push_backup_chain",
         [{"incremental_count": 0}],
@@ -330,6 +335,8 @@ class TestMultipleDiskBackup:
         vm_with_cbt_label,
     ):
         """
+        Polarion: CNV-16003
+
         Test that a full backup in push mode completes successfully for a VM with multiple disks.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
@@ -359,7 +366,6 @@ class TestMultipleDiskBackup:
             expected_backup_type=CBT_BACKUP_TYPE_FULL,
         )
 
-    @pytest.mark.polarion("CNV-16004")
     @pytest.mark.parametrize(
         "ready_pull_backup_chain",
         [{"incremental_count": 0}],
@@ -371,6 +377,8 @@ class TestMultipleDiskBackup:
         vm_with_cbt_label,
     ):
         """
+        Polarion: CNV-16004
+
         Test that a full backup in pull mode becomes ready for export for a VM with multiple disks.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
@@ -422,12 +430,13 @@ class TestBackupAfterLiveMigration:
         - Full backup completed before migration
     """
 
-    @pytest.mark.polarion("CNV-16005")
     def test_incremental_backup_after_live_migration_push_mode(
         self,
         completed_push_backup_after_live_migration,
     ):
         """
+        Polarion: CNV-16005
+
         Test that an incremental backup in push mode completes successfully after live migration.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
@@ -456,12 +465,13 @@ class TestBackupAfterLiveMigration:
             expected_backup_type=CBT_BACKUP_TYPE_INCREMENTAL,
         )
 
-    @pytest.mark.polarion("CNV-16006")
     def test_incremental_backup_after_live_migration_pull_mode(
         self,
         ready_pull_backup_after_live_migration,
     ):
         """
+        Polarion: CNV-16006
+
         Test that an incremental backup in pull mode becomes ready for export after live migration.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
@@ -506,10 +516,11 @@ class TestHotplugBackup:
 
     __test__ = False  # STD placeholder - not yet implemented
 
-    @pytest.mark.polarion("CNV-16009")
     @pytest.mark.manual
     def test_backup_with_hotplugged_disk_push_mode_restore(self):
         """
+        Polarion: CNV-16009
+
         Test that a VM with hotplugged disk can be backed up (push mode) and restored with hotplugged disk data accessible.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
@@ -532,10 +543,11 @@ class TestHotplugBackup:
             - Restored VM boots successfully and test data from both original and hotplugged disks is present
         """
 
-    @pytest.mark.polarion("CNV-16010")
     @pytest.mark.manual
     def test_backup_with_hotplugged_disk_pull_mode_restore(self):
         """
+        Polarion: CNV-16010
+
         Test that a VM with hotplugged disk can be backed up (pull mode) and restored with hotplugged disk data accessible.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
@@ -570,10 +582,11 @@ class TestBackupErrorHandling:
 
     __test__ = False  # STD placeholder - not yet implemented
 
-    @pytest.mark.polarion("CNV-16023")
     @pytest.mark.manual
     def test_backup_fails_when_storage_full_push_mode(self):
         """
+        Polarion: CNV-16023
+
         [NEGATIVE] Test that backup fails gracefully when backup PVC is full.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
@@ -591,10 +604,11 @@ class TestBackupErrorHandling:
             - Backup fails with storage full error, leaves no partial backup data on the target PVC, and the VM remains accessible and unaffected
         """
 
-    @pytest.mark.polarion("CNV-16024")
     @pytest.mark.manual
     def test_backup_fails_when_storage_full_pull_mode(self):
         """
+        Polarion: CNV-16024
+
         [NEGATIVE] Test that backup fails gracefully when scratch PVC is full in pull mode.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
@@ -637,12 +651,13 @@ class TestConcurrentBackups:
         - A completed full backup on the three VMs that take an incremental backup
     """
 
-    @pytest.mark.polarion("CNV-16011")
     def test_concurrent_backups_push_mode(
         self,
         completed_concurrent_push_backups,
     ):
         """
+        Polarion: CNV-16011
+
         Test that simultaneous push-mode full and incremental backups all complete.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
@@ -680,12 +695,13 @@ class TestConcurrentBackups:
                 expected_backup_type=expected_backup_type,
             )
 
-    @pytest.mark.polarion("CNV-16012")
     def test_concurrent_backups_pull_mode(
         self,
         ready_concurrent_pull_backups,
     ):
         """
+        Polarion: CNV-16012
+
         Test that simultaneous pull-mode full and incremental backups all become ready for export.
 
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
@@ -745,7 +761,6 @@ class TestWindowsVMFullBackup:
         - Test data written to Windows VM
     """
 
-    @pytest.mark.polarion("CNV-16013")
     @pytest.mark.parametrize(
         "completed_push_backup_chain",
         [{"incremental_count": 0}],
@@ -756,6 +771,8 @@ class TestWindowsVMFullBackup:
         completed_push_backup_chain,
     ):
         """
+        Polarion: CNV-16013
+
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Test that a Windows VM full backup in push mode completes successfully.
@@ -783,7 +800,6 @@ class TestWindowsVMFullBackup:
             allow_extra_volumes=True,
         )
 
-    @pytest.mark.polarion("CNV-16014")
     @pytest.mark.parametrize(
         "ready_pull_backup_chain",
         [{"incremental_count": 0}],
@@ -794,6 +810,8 @@ class TestWindowsVMFullBackup:
         ready_pull_backup_chain,
     ):
         """
+        Polarion: CNV-16014
+
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Test that a Windows VM full backup in pull mode becomes ready for export.
@@ -843,7 +861,6 @@ class TestWindowsVMIncrementalBackup:
         - Test data written to Windows VM
     """
 
-    @pytest.mark.polarion("CNV-16015")
     @pytest.mark.parametrize(
         "completed_push_backup_chain",
         [{"incremental_count": 1}],
@@ -854,6 +871,8 @@ class TestWindowsVMIncrementalBackup:
         completed_push_backup_chain,
     ):
         """
+        Polarion: CNV-16015
+
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Test that a Windows VM incremental backup in push mode completes successfully.
@@ -882,7 +901,6 @@ class TestWindowsVMIncrementalBackup:
             allow_extra_volumes=True,
         )
 
-    @pytest.mark.polarion("CNV-16016")
     @pytest.mark.parametrize(
         "ready_pull_backup_chain",
         [{"incremental_count": 1}],
@@ -893,6 +911,8 @@ class TestWindowsVMIncrementalBackup:
         ready_pull_backup_chain,
     ):
         """
+        Polarion: CNV-16016
+
         STP: https://github.com/RedHatQE/openshift-virtualization-tests-design-docs/blob/main/stps/sig-storage/cbt.md
 
         Test that a Windows VM incremental backup in pull mode becomes ready for export.
