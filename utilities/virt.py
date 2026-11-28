@@ -41,6 +41,7 @@ from ocp_resources.virtual_machine_instance import VirtualMachineInstance
 from ocp_resources.virtual_machine_instance_migration import (
     VirtualMachineInstanceMigration,
 )
+from ocp_resources.virtual_machine_template import VirtualMachineTemplate
 from ocp_utilities.exceptions import CommandExecFailed
 from paramiko import ProxyCommandFailure
 from pyhelper_utils.shell import run_command, run_ssh_commands
@@ -3181,3 +3182,40 @@ def wait_for_virt_handler_pods_network_updated(
         )
         raise
     return False
+
+
+def process_and_create_vm(
+    vmt: VirtualMachineTemplate,
+    parameters: dict[str, Any] | None = None,
+    namespace: str | None = None,
+    client: DynamicClient | None = None,
+    wait: bool = True,
+) -> VirtualMachine:
+    """Process a VirtualMachineTemplate and deploy the rendered VirtualMachine.
+
+    Calls the template's ``process`` subresource to render a ``VirtualMachine`` spec, then
+    deploys that VM in the cluster. The ``/process`` subresource does not set a namespace on
+    the returned VM metadata, so the namespace is taken from the ``namespace`` argument,
+    falling back to the template's own namespace (``vmt.namespace``).
+
+    Args:
+        vmt: The template to process and deploy.
+        parameters: Key-value pairs of template parameters to substitute,
+            e.g. ``{"NAME": "my-vm"}``. Defaults to ``None`` (template defaults are used).
+        namespace: Namespace in which to create the VirtualMachine. Defaults to ``vmt.namespace``.
+        client: Optional Kubernetes API client. Defaults to ``vmt.client``.
+        wait: Wait for the VirtualMachine resource to be created. Defaults to ``True``.
+
+    Returns:
+        VirtualMachine: The deployed VirtualMachine object.
+    """
+    LOGGER.info(f"Processing VirtualMachineTemplate {vmt.name} in namespace {vmt.namespace}")
+    request_response = vmt.process(parameters=parameters, client=client)
+    vm_dict: dict[str, Any] = request_response.to_dict()["virtualMachine"]
+    vm_dict["metadata"]["namespace"] = namespace or vmt.namespace
+    virtual_machine = VirtualMachine(kind_dict=vm_dict, client=client or vmt.client)
+    LOGGER.info(
+        f"Deploying VM {virtual_machine.name} in namespace {virtual_machine.namespace} from template {vmt.name}"
+    )
+    virtual_machine.deploy(wait=wait)
+    return virtual_machine

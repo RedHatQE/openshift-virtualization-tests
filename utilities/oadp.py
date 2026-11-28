@@ -154,8 +154,8 @@ def create_rhel_vm(
     artifactory_config_map = None
 
     try:
-        artifactory_secret = get_artifactory_secret(namespace=namespace)
-        artifactory_config_map = get_artifactory_config_map(namespace=namespace)
+        artifactory_secret = get_artifactory_secret(namespace=namespace, client=client)
+        artifactory_config_map = get_artifactory_config_map(namespace=namespace, client=client)
 
         dv = DataVolume(
             name=dv_name,
