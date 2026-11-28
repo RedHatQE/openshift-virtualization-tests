@@ -42,12 +42,14 @@ pytestmark = [
     ],
     indirect=True,
 )
-@pytest.mark.polarion("CNV-5428")
 def test_pod_delete_openshift_apiserver(
     pod_deleting_process,
     chaos_vms_list_rhel9,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-6050 # <skip-jira-utils-check>
+    Polarion: CNV-5428
+
     Verifies that VMs can be created, started, stopped and deleted
     while openshift-apiserver pods are continuously being deleted.
     """
@@ -64,7 +66,6 @@ def test_pod_delete_openshift_apiserver(
         pytest.param(
             {"control_plane_node_to_reboot": "node_without_kmp_manager"},
             id="nodes_without_kmp_manager",
-            marks=pytest.mark.polarion("CNV-9293"),
         ),
     ],
     indirect=True,
@@ -75,6 +76,9 @@ def test_control_plane_node_restart(
     rebooting_control_plane_node,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-6050 # <skip-jira-utils-check>
+    Polarion: CNV-9293
+
     This test verifies that a RHEL VM can be created, started, stopped and deleted
     while a given control plane node (randomly selected either from the nodes that have
     kubemacpool-mac-controller-manager pod or from the nodes that don't have it) is rebooted.
@@ -106,13 +110,15 @@ def test_control_plane_node_restart(
     ],
     indirect=True,
 )
-@pytest.mark.polarion("CNV-5438")
 def test_odf_storage_outage(
     chaos_dv_rhel9,
     chaos_vm_rhel9_with_dv,
     downscaled_storage_provisioner_deployment,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-6050 # <skip-jira-utils-check>
+    Polarion: CNV-5438
+
     This scenario verifies that creating and running a VM using a DataVolume still succeeds
     even when various ODF components are disrupted
     """
@@ -136,7 +142,6 @@ def test_odf_storage_outage(
     ],
     indirect=True,
 )
-@pytest.mark.polarion("CNV-6994")
 def test_host_io_stress(
     vm_with_nginx_service,
     vm_node_with_chaos_label,
@@ -144,6 +149,9 @@ def test_host_io_stress(
     chaos_worker_background_process,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-8326 # <skip-jira-utils-check>
+    Polarion: CNV-6994
+
     This experiment tests the resilience of the worker node and CNV by running an NGINX server within a VM,
     stressing the worker IO and testing to make sure the server
     and its VMI remain responsive throughout chaos duration.
@@ -163,30 +171,42 @@ def test_host_io_stress(
 @pytest.mark.usefixtures("deleted_pod_by_name_prefix")
 @pytest.mark.parametrize("chaos_vms_instancetype_list", [pytest.param({"number_of_vms": 3})], indirect=True)
 class TestVMInstanceTypeOperationsPodDelete:
-    @pytest.mark.polarion("CNV-11108")
     @pytest.mark.first
     def test_deploy_vm(self, chaos_vms_instancetype_list, deleted_pod_by_name_prefix):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-38085 # <skip-jira-utils-check>
+        Polarion: CNV-11108
+        """
         for vm in chaos_vms_instancetype_list:
             vm.deploy(wait=False)
         for vm in chaos_vms_instancetype_list:
             running_vm(vm=vm)
 
-    @pytest.mark.polarion("CNV-11297")
     @pytest.mark.order(after="test_deploy_vm")
     def test_restart_vm(self, chaos_vms_instancetype_list, deleted_pod_by_name_prefix):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-38085 # <skip-jira-utils-check>
+        Polarion: CNV-11297
+        """
         for vm in chaos_vms_instancetype_list:
             vm.restart(wait=True)
 
-    @pytest.mark.polarion("CNV-11109")
     @pytest.mark.order(after="test_deploy_vm")
     def test_stop_vm(self, chaos_vms_instancetype_list, deleted_pod_by_name_prefix):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-38085 # <skip-jira-utils-check>
+        Polarion: CNV-11109
+        """
         for vm in chaos_vms_instancetype_list:
             vm.stop(wait=False)
         for vm in chaos_vms_instancetype_list:
             vm.wait_for_ready_status(status=None, timeout=TIMEOUT_2MIN)
 
-    @pytest.mark.polarion("CNV-11298")
     @pytest.mark.last
     def test_delete_vm(self, chaos_vms_instancetype_list, deleted_pod_by_name_prefix):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-38085 # <skip-jira-utils-check>
+        Polarion: CNV-11298
+        """
         for vm in chaos_vms_instancetype_list:
             vm.delete(wait=True)
