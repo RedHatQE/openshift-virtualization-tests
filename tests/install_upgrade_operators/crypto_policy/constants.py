@@ -9,6 +9,7 @@ from ocp_resources.network_addons_config import NetworkAddonsConfig
 from ocp_resources.ssp import SSP
 
 from tests.install_upgrade_operators.constants import KEY_PATH_SEPARATOR
+from utilities.constants.components import KUBEVIRT_CONSOLE_PLUGIN_SERVICE
 from utilities.constants.hco import (
     TLS_CUSTOM_POLICY,
     TLS_OLD_POLICY,
@@ -136,3 +137,87 @@ PQC_HANDSHAKE_FAILURE_INDICATOR = "alert handshake failure"
 OPENSSL_CONNECTION_SUCCESS_INDICATOR = "Certificate chain"
 
 CONSOLE_PLUGIN_SERVICE_PORT = 9443
+
+# Services whose backing component does not yet propagate configured TLS curves
+# (their epic stories under CNV-82576 are still open). Mapped to the tracking Jira so
+# is_jira_open gating tolerates current behavior now and auto-enables strict
+# assertions once each story is resolved.
+CURVE_PROPAGATION_PENDING = {
+    "aaq-server": "CNV-85522",
+    "aaq-prometheus-metrics": "CNV-85522",
+    "cdi-api": "CNV-84876",
+    "cdi-prometheus-metrics": "CNV-84876",
+    "cdi-uploadproxy": "CNV-84876",
+    "virt-api": "CNV-84875",
+    "kubevirt-operator-webhook": "CNV-84875",
+    "virt-exportproxy": "CNV-84875",
+    # virt-template-apiserver/-controller get curves from the KubeVirt CR's
+    # spec.configuration.tlsConfiguration.groups (same field CNV-84875 exposes), not from
+    # CNV-85154. Gated on CNV-84875: verified live the Groups field is still unpopulated
+    # and these pods' args carry no curve flag. virt-template-validator is unaffected
+    # (separate SSP-managed pod).
+    "virt-template-api-service": "CNV-84875",
+    "virt-template-controller-manager-metrics-service": "CNV-84875",
+    "virt-template-webhook-service": "CNV-84875",
+    "kubevirt-migration-prometheus": "CNV-84877",
+    # Unlike the other components under CNV-84804, HPP has no story of its own: its CRD
+    # has no TLS/security field, and its operator pod has no curve/cipher-related flags
+    # or env vars at all. Filed CNV-101104 to track this and gate on it instead of the
+    # epic.
+    "hpp-prometheus-metrics": "CNV-101104",
+    "hostpath-provisioner-operator-service": "CNV-101104",
+    # console-plugin writes the configured curves to its nginx configmap, but HCO does
+    # not roll the deployment, so the running pods keep serving stale curves until the
+    # bug is fixed. Gated so it auto-asserts once CNV-99597 is resolved.
+    KUBEVIRT_CONSOLE_PLUGIN_SERVICE: "CNV-99597",
+}
+
+# Excluded from the curve probe: a controller-runtime mTLS metrics endpoint, so a bare
+# openssl s_client probe (no client cert) can't be verified against it.
+VIRT_OBSERVABILITY_CONTROLLER_METRICS_SERVICE = "virt-observability-controller-metrics"
+
+# Classical (non-PQC) curve names, as used by both the TLSSecurityProfile `groups`
+# field and openssl's `-groups` argument.
+TLS_GROUP_SECP256R1 = "secp256r1"
+TLS_GROUP_SECP521R1 = "secp521r1"
+TLS_GROUP_X25519 = "X25519"
+
+# Curve set applied by the TLS-curve propagation test. secp521r1 and SecP256r1MLKEM768
+# are not in the default (Intermediate) group list, so a service following the profile
+# negotiates them only once this profile reaches it (verified live on FIPS). secp384r1
+# is deliberately omitted - see probe_groups in conftest.py.
+TLS_PROPAGATION_CUSTOM_GROUPS = [
+    TLS_GROUP_SECP256R1,
+    TLS_GROUP_SECP521R1,
+    PQC_GROUP_X25519_MLKEM768,
+    PQC_GROUP_SECP256R1_MLKEM768,
+]
+
+# Custom TLS profile applied (HCO-direct) by the curve-propagation test. TLS 1.2 with
+# dual-auth ciphers (RSA + ECDSA, avoiding cert/cipher mismatch) carrying the curated
+# curve set. minTLSVersion 1.2 still permits 1.3, so the ML-KEM hybrid groups (which
+# are TLS 1.3-only) are negotiated over 1.3. TLS 1.3 is avoided here because CDI
+# requires custom.ciphers, which HCO forbids at 1.3 - that version behavior is covered
+# by the separate tier3 profile-propagation test.
+TLS_PROPAGATION_CUSTOM_PROFILE = {
+    TLS_CUSTOM_POLICY: {
+        "minTLSVersion": TLS_CUSTOM_VERSION,
+        "ciphers": TLS_CUSTOM_CIPHERS,
+        "groups": TLS_PROPAGATION_CUSTOM_GROUPS,
+    },
+    "type": "Custom",
+}
+
+# Curve25519-based groups that are not FIPS-approved (NIST SP 800-56Ar3). Go's TLS
+# runtime drops them under FIPS, and the HCO console-plugin handler strips them
+# unconditionally (GetFIPSCompliantGroups), so they are not expected to negotiate
+# on Go services under FIPS, nor on the console-plugin on any cluster.
+NON_FIPS_GROUPS = [TLS_GROUP_X25519, PQC_GROUP_X25519_MLKEM768]
+
+# NIST-paired ML-KEM hybrids a Go service rejects under FIPS even though they ARE
+# FIPS-certified (matching the PQC audit test); OpenSSL services still negotiate them.
+# Distinct from NON_FIPS_GROUPS above, which neither runtime negotiates under FIPS.
+FIPS_GO_EXCLUSIVE_UNSUPPORTED_GROUPS = [
+    PQC_GROUP_SECP256R1_MLKEM768,
+    PQC_GROUP_SECP384R1_MLKEM1024,
+]

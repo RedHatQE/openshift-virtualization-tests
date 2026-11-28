@@ -1,4 +1,5 @@
 import logging
+from typing import TYPE_CHECKING
 
 import pytest
 from kubernetes.client.exceptions import ApiException
@@ -14,6 +15,13 @@ from ocp_resources.pod import Pod
 from ocp_resources.service import Service
 from ocp_resources.ssp import SSP
 
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from kubernetes.dynamic import DynamicClient
+    from ocp_resources.hyperconverged import HyperConverged
+    from ocp_resources.node import Node
+
 from tests.install_upgrade_operators.constants import (
     KEY_NAME_STR,
     KEY_PATH_SEPARATOR,
@@ -25,23 +33,32 @@ from tests.install_upgrade_operators.constants import (
 from tests.install_upgrade_operators.crypto_policy.constants import (
     CONSOLE_PLUGIN_SERVICE_PORT,
     CRYPTO_POLICY_SPEC_DICT,
+    CURVE_PROPAGATION_PENDING,
+    FIPS_GO_EXCLUSIVE_UNSUPPORTED_GROUPS,
     KUBEVIRT_TLS_CONFIG_STR,
     MANAGED_CRS_LIST_WITH_AAQ,
+    NON_FIPS_GROUPS,
     PQC_GROUP_SECP256R1_MLKEM768,
     PQC_GROUP_SECP384R1_MLKEM1024,
     PQC_GROUP_X25519_MLKEM768,
     TLS_MODERN_PROFILE,
+    TLS_PROPAGATION_CUSTOM_GROUPS,
+    TLS_PROPAGATION_CUSTOM_PROFILE,
+    VIRT_OBSERVABILITY_CONTROLLER_METRICS_SERVICE,
 )
 from tests.install_upgrade_operators.crypto_policy.utils import (
+    CurvePropagationExpectation,
     get_node_available_tls_groups,
     get_resource_crypto_policy,
     get_services_pqc_status,
+    set_hco_crypto_policy,
     update_apiserver_crypto_policy,
 )
 from utilities.constants.components import (
     CDI_KUBEVIRT_HYPERCONVERGED,
     CLUSTER,
     HYPERCONVERGED_CLUSTER_CLI_DOWNLOAD,
+    KUBEVIRT_CONSOLE_PLUGIN_SERVICE,
     KUBEVIRT_HCO_NAME,
     MIGCONTROLLER_KUBEVIRT_HYPERCONVERGED,
     SSP_KUBEVIRT_HYPERCONVERGED,
@@ -49,8 +66,12 @@ from utilities.constants.components import (
 from utilities.constants.hco import TLS_SECURITY_PROFILE
 from utilities.constants.timeouts import TIMEOUT_60MIN
 from utilities.exceptions import MissingResourceException
-from utilities.hco import enabled_aaq_in_hco, wait_for_hco_conditions
+from utilities.hco import (
+    enabled_aaq_in_hco,
+    wait_for_hco_conditions,
+)
 from utilities.infra import ExecCommandOnPod
+from utilities.jira import is_jira_open
 from utilities.operator import wait_for_cluster_operator_stabilize
 
 LOGGER = logging.getLogger(__name__)
@@ -168,14 +189,37 @@ def services_tls_runtime(cnv_services_with_template, admin_client, hco_namespace
     runtime_map: dict[str, str] = {}
     for service in cnv_services_with_template:
         service_name = service.name
+        if service_name == VIRT_OBSERVABILITY_CONTROLLER_METRICS_SERVICE:
+            continue
         label_selector = ",".join(f"{key}={value}" for key, value in service.instance.spec.selector.items())
         pods = list(Pod.get(client=admin_client, namespace=hco_namespace.name, label_selector=label_selector))
         try:
-            output = pods[0].execute(command=["sh", "-c", "grep -q libssl /proc/1/maps && echo openssl || echo go"])
-            runtime_map[service_name] = output.strip()
+            # Captures grep's own exit code before `if` consumes it, so a check failure
+            # (file unreadable, no grep in image) prints "unknown" instead of being
+            # indistinguishable from a genuine Go service (grep rc=1, pattern not found).
+            output = pods[0].execute(
+                command=[
+                    "sh",
+                    "-c",
+                    (
+                        "grep -q libssl /proc/1/maps; rc=$?; "
+                        "if [ $rc -eq 0 ]; then echo openssl; elif [ $rc -eq 1 ]; then echo go; else echo unknown; fi"
+                    ),
+                ]
+            )
         except ExecOnPodError, ApiException:
-            LOGGER.warning(f"Failed to detect runtime for {service_name}, defaulting to Go")
-            runtime_map[service_name] = "go"
+            # Leave service_name out of runtime_map rather than guessing a runtime:
+            # curve_propagation_expectations already asserts every probed service is
+            # present here and raises a clear, service-scoped error when it is not.
+            LOGGER.exception(f"Failed to detect TLS runtime for service {service_name}")
+            continue
+        runtime = output.strip()
+        if runtime == "unknown":
+            # Same reasoning as the except block above: an inconclusive check is not a
+            # runtime, so leave it out rather than risk it being read as "go".
+            LOGGER.warning(f"TLS runtime check inconclusive for service {service_name}: in-pod grep failed")
+            continue
+        runtime_map[service_name] = runtime
     LOGGER.info(f"TLS runtime detection: {runtime_map}")
     return runtime_map
 
@@ -265,3 +309,121 @@ def pqc_status_by_service(
         f" {len(unreachable)} unreachable ({unreachable})"
     )
     return results
+
+
+@pytest.fixture(scope="class")
+def custom_curve_profile_applied(
+    admin_client: DynamicClient, enabled_aaq: None, hyperconverged_resource_scope_class: HyperConverged
+) -> Generator[None]:
+    """Applies a Custom TLS curve profile directly to HCO, reconciles, and reverts on exit."""
+    with set_hco_crypto_policy(
+        admin_client=admin_client,
+        hco_resource=hyperconverged_resource_scope_class,
+        tls_spec=TLS_PROPAGATION_CUSTOM_PROFILE,
+        list_resource_reconcile=MANAGED_CRS_LIST_WITH_AAQ,
+    ):
+        yield
+
+
+@pytest.fixture(scope="module")
+def probe_groups(fips_enabled_cluster):
+    """TLS groups probed by the curve propagation test.
+    On FIPS clusters, groups in `NON_FIPS_GROUPS` are removed because the worker OpenSSL cannot offer them.
+    """
+    # secp384r1 (classical, not a hybrid) is the negative probe: unlike the PQC hybrids,
+    # Go doesn't reject it unconditionally under FIPS, and the FIPS worker's OpenSSL
+    # supports it (X25519 doesn't). Verified live: both Go and OpenSSL services negotiate
+    # it by default and reject it once omitted from the Custom profile.
+    groups = [*TLS_PROPAGATION_CUSTOM_GROUPS, "secp384r1"]
+    if fips_enabled_cluster:
+        groups = [group for group in groups if group not in NON_FIPS_GROUPS]
+    return groups
+
+
+@pytest.fixture(scope="module")
+def verified_node_curve_propagation_support(workers_utility_pods, worker_node1, probe_groups):
+    """Verifies that worker node OpenSSL supports every TLS group probed by the curve propagation test."""
+    available_groups = get_node_available_tls_groups(
+        utility_pods=workers_utility_pods,
+        node=worker_node1,
+    )
+    missing_groups = [group for group in probe_groups if group not in available_groups]
+    assert not missing_groups, f"TLS groups not found on node: {missing_groups}. Available: {available_groups}"
+
+
+@pytest.fixture(scope="module")
+def worker_exec(workers_utility_pods: list[Pod], worker_node1: Node) -> ExecCommandOnPod:
+    """ExecCommandOnPod instance shared by the curve propagation test's subtests."""
+    return ExecCommandOnPod(utility_pods=workers_utility_pods, node=worker_node1)
+
+
+@pytest.fixture(scope="class")
+def pending_jira_by_service(cnv_services_with_template: list[Service]) -> dict[str, str | None]:
+    """Resolves the curve-propagation pending-Jira gate for each CNV service.
+
+    A service's Jira is cleared to None once that Jira is no longer open, so the
+    propagation test auto-switches from xfail to a strict assertion once resolved.
+    """
+    jira_open_by_id: dict[str, bool] = {}
+    pending_by_service: dict[str, str | None] = {}
+    for service in cnv_services_with_template:
+        pending_jira = CURVE_PROPAGATION_PENDING.get(service.name)
+        if pending_jira:
+            if pending_jira not in jira_open_by_id:
+                jira_open_by_id[pending_jira] = is_jira_open(jira_id=pending_jira)
+            if not jira_open_by_id[pending_jira]:
+                pending_jira = None
+        pending_by_service[service.name] = pending_jira
+    return pending_by_service
+
+
+@pytest.fixture(scope="class")
+def expected_negotiable_curves_by_service(
+    cnv_services_with_template: list[Service], fips_enabled_cluster: bool, services_tls_runtime: dict[str, str]
+) -> dict[str, set[str]]:
+    """Computes the TLS curve set each CNV service is expected to negotiate under the Custom profile."""
+    expected_by_service: dict[str, set[str]] = {}
+    for service in cnv_services_with_template:
+        service_name = service.name
+        if service_name == VIRT_OBSERVABILITY_CONTROLLER_METRICS_SERVICE:
+            continue
+        expected_negotiable = set(TLS_PROPAGATION_CUSTOM_GROUPS)
+        if fips_enabled_cluster:
+            assert service_name in services_tls_runtime, f"TLS runtime not detected for service {service_name}"
+            # Under FIPS, neither runtime negotiates NON_FIPS_GROUPS; Go additionally rejects
+            # the NIST-paired hybrids that OpenSSL still negotiates (matching the PQC audit test).
+            expected_negotiable.difference_update(NON_FIPS_GROUPS)
+            if services_tls_runtime[service_name] == "go":
+                expected_negotiable.difference_update(FIPS_GO_EXCLUSIVE_UNSUPPORTED_GROUPS)
+        # The console-plugin handler strips Curve25519-based groups unconditionally
+        # (GetFIPSCompliantGroups), so it never negotiates them on any cluster.
+        if service_name == KUBEVIRT_CONSOLE_PLUGIN_SERVICE:
+            expected_negotiable.difference_update(NON_FIPS_GROUPS)
+        expected_by_service[service_name] = expected_negotiable
+    return expected_by_service
+
+
+@pytest.fixture(scope="class")
+def curve_propagation_expectations(
+    cnv_services_with_template: list[Service],
+    fips_enabled_cluster: bool,
+    pending_jira_by_service: dict[str, str | None],
+    expected_negotiable_curves_by_service: dict[str, set[str]],
+) -> dict[str, CurvePropagationExpectation]:
+    """Per-service expected curve negotiation outcome and pending-Jira gate.
+
+    Computed once as test setup so the test itself only decides which services need to
+    run, without deciding per-service business rules inline. The actual TLS probing
+    happens inside each subtest, so a single probe failure does not hide the results of
+    the others.
+    """
+    LOGGER.info(f"Curve propagation test running on a {'FIPS' if fips_enabled_cluster else 'non-FIPS'} cluster")
+    return {
+        service.name: {
+            "service": service,
+            "expected_negotiable": expected_negotiable_curves_by_service[service.name],
+            "pending_jira": pending_jira_by_service[service.name],
+        }
+        for service in cnv_services_with_template
+        if service.name != VIRT_OBSERVABILITY_CONTROLLER_METRICS_SERVICE
+    }
