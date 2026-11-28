@@ -88,7 +88,6 @@ def importer_pod(admin_client, namespace):
             {
                 "vm_priority_class_value": 1000000,
             },
-            marks=(pytest.mark.polarion("CNV-6808")),
         ),
     ],
     indirect=True,
@@ -99,6 +98,10 @@ def test_dv_template_has_the_same_priority_as_vm_when_not_specified(
     vm_with_priority_class,
     importer_pod,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-10967 # <skip-jira-utils-check>
+    Polarion: CNV-6808
+    """
     assert importer_pod.instance.spec.priority == priority_class["vm_priority_class"].value
 
 
@@ -111,7 +114,6 @@ def test_dv_template_has_the_same_priority_as_vm_when_not_specified(
                 "dv_priority_class_value": 1000000,
             },
             marks=(
-                pytest.mark.polarion("CNV-6811"),
                 pytest.mark.sno(),
                 pytest.mark.gating,
             ),
@@ -123,4 +125,8 @@ def test_dv_template_has_the_same_priority_as_vm_when_not_specified(
 def test_dv_template_has_the_different_priority_as_vm_when_specify(
     priority_class, vm_with_priority_class, importer_pod
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-10967 # <skip-jira-utils-check>
+    Polarion: CNV-6811
+    """
     assert importer_pod.instance.spec.priority != priority_class["vm_priority_class"].value

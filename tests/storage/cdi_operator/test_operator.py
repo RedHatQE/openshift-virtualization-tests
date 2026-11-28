@@ -4,9 +4,13 @@ from ocp_resources.pod import Pod
 
 
 @pytest.mark.destructive
-@pytest.mark.polarion("CNV-2512")
 def test_cr_deletion(admin_client, hco_namespace, cdi):
-    # Ensure 'Deployed' status
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-498 # <skip-jira-utils-check>
+    Polarion: CNV-2512
+
+    Ensure 'Deployed' status
+    """
     assert cdi.status == CDI.Status.DEPLOYED
 
     # Delete CDI resource
