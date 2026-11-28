@@ -32,13 +32,13 @@ from utilities.infra import (
     get_linux_os_info,
     run_virtctl_command,
 )
-from utilities.ssp import get_windows_os_info
 from utilities.virt import (
     VirtualMachineForTestsFromTemplate,
     delete_guestosinfo_keys,
     get_or_create_golden_image_data_source,
     get_virtctl_os_info,
 )
+from utilities.windows import get_windows_os_info
 
 LOGGER = logging.getLogger(__name__)
 
