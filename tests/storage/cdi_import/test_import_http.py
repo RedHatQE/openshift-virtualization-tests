@@ -119,7 +119,6 @@ def test_successful_import_image(
                 "configmap_name": INTERNAL_HTTP_CONFIGMAP_NAME,
                 "volume_mode": DataVolume.VolumeMode.FILE,  # Archive type only supports Filesystem volume mode
             },
-            marks=pytest.mark.polarion("CNV-2338"),
         ),
     ],
     indirect=True,
@@ -127,6 +126,10 @@ def test_successful_import_image(
 @pytest.mark.sno
 @pytest.mark.s390x
 def test_successful_import_secure_archive(internal_http_configmap, running_pod_with_dv_pvc):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-257 # <skip-jira-utils-check>
+    Polarion: CNV-2338
+    """
     assert_num_files_in_pod(pod=running_pod_with_dv_pvc, expected_num_of_files=3)
 
 
@@ -140,7 +143,6 @@ def test_successful_import_secure_archive(internal_http_configmap, running_pod_w
                 "source": HTTPS,
                 "configmap_name": INTERNAL_HTTP_CONFIGMAP_NAME,
             },
-            marks=pytest.mark.polarion("CNV-2719"),
         ),
     ],
     indirect=True,
@@ -148,6 +150,10 @@ def test_successful_import_secure_archive(internal_http_configmap, running_pod_w
 @pytest.mark.sno
 @pytest.mark.gating
 def test_successful_import_secure_image(internal_http_configmap, dv_from_http_import):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-257 # <skip-jira-utils-check>
+    Polarion: CNV-2719
+    """
     dv_from_http_import.wait_for_dv_success(stop_status_func=dv_stop_status_restart_threshold, dv=dv_from_http_import)
 
 
@@ -197,7 +203,6 @@ def test_successful_import_basic_auth(
                 "file_name": Images.Alpine.QCOW2_IMG_VERSIONED,
                 "content_type": DataVolume.ContentType.ARCHIVE,
             },
-            marks=pytest.mark.polarion("CNV-2144"),
         ),
     ],
     indirect=True,
@@ -205,6 +210,10 @@ def test_successful_import_basic_auth(
 def test_wrong_content_type(
     dv_from_http_import,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-488 # <skip-jira-utils-check>
+    Polarion: CNV-2144
+    """
     dv_from_http_import.wait_for_status(
         status=DataVolume.Status.IMPORT_IN_PROGRESS,
         timeout=TIMEOUT_2MIN,

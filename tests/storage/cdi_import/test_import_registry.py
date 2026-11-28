@@ -58,11 +58,14 @@ def test_disk_image_not_conform_to_registry_disk(
 
 
 @pytest.mark.sno
-@pytest.mark.polarion("CNV-2028")
 @pytest.mark.s390x
 def test_public_registry_multiple_data_volume(
     namespace, storage_class_name_scope_function, dvs_and_vms_from_public_registry
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-488 # <skip-jira-utils-check>
+    Polarion: CNV-2028
+    """
     for vm in dvs_and_vms_from_public_registry:
         running_vm(vm=vm)
 
@@ -74,12 +77,11 @@ def test_public_registry_multiple_data_volume(
         pytest.param(
             "import-public-registry-no-content-type-dv",
             None,
-            marks=(pytest.mark.polarion("CNV-2195"), pytest.mark.smoke()),
+            marks=(pytest.mark.smoke()),
         ),
         pytest.param(
             "import-public-registry-quay-dv",
             DataVolume.ContentType.KUBEVIRT,
-            marks=(pytest.mark.polarion("CNV-2026")),
         ),
     ],
     ids=[
@@ -94,6 +96,12 @@ def test_public_registry_data_volume(
     content_type,
     storage_class_name_scope_function,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-257 # <skip-jira-utils-check>
+    Jira: https://redhat.atlassian.net/browse/CNV-488 # <skip-jira-utils-check>
+    Polarion: CNV-2195
+    Polarion: CNV-2026
+    """
     with create_dv(
         client=unprivileged_client,
         source=REGISTRY_STR,
@@ -121,9 +129,12 @@ def test_public_registry_data_volume(
 # The following test is to show after imports fails because low capacity storage,
 # we can overcome by updating to the right requested volume size and import successfully
 @pytest.mark.sno
-@pytest.mark.polarion("CNV-2024")
 @pytest.mark.s390x
 def test_public_registry_data_volume_low_capacity(unprivileged_client, namespace, storage_class_name_scope_function):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-488 # <skip-jira-utils-check>
+    Polarion: CNV-2024
+    """
     dv_param = {
         "dv_name": "import-public-registry-low-capacity-dv",
         "source": REGISTRY_STR,
@@ -172,9 +183,12 @@ def test_public_registry_data_volume_low_capacity(unprivileged_client, namespace
 
 
 @pytest.mark.sno
-@pytest.mark.polarion("CNV-2150")
 @pytest.mark.s390x
 def test_public_registry_data_volume_archive(unprivileged_client, namespace, storage_class_name_scope_function):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-488 # <skip-jira-utils-check>
+    Polarion: CNV-2150
+    """
     with pytest.raises(ApiException, match=r".*ContentType must be kubevirt when Source is Registry.*"):
         with create_dv(
             client=unprivileged_client,
@@ -188,10 +202,14 @@ def test_public_registry_data_volume_archive(unprivileged_client, namespace, sto
             return
 
 
-@pytest.mark.polarion("CNV-5509")
 @pytest.mark.s390x
 def test_importer_pod_annotation(importer_pod_annotations, linux_nad):
-    """Verify "k8s.v1.cni.cncf.io/networks" can be passed to the importer pod"""
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-5802 # <skip-jira-utils-check>
+    Polarion: CNV-5509
+
+    Verify "k8s.v1.cni.cncf.io/networks" can be passed to the importer pod
+    """
     networks_annotation = f"{Resource.ApiGroup.K8S_V1_CNI_CNCF_IO}/networks"
     network_status_annotation = f"{Resource.ApiGroup.K8S_V1_CNI_CNCF_IO}/network-status"
 
