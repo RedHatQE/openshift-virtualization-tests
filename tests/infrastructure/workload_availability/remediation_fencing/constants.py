@@ -12,6 +12,7 @@ NODE_ACTIONS_DICT = {
 }
 NODE_HEALTH_DETECTION_OPERATOR = "node-health-check-operator"
 REMEDIATION_OPERATOR_NAMESPACE = "openshift-workload-availability"
+IPMI_DEFAULT_PORT = 623
 
 # constants for NodeHealthCheck CR
 SELECTOR_MATCH_EXPRESSIONS = [{"key": WORKER_NODE_LABEL_KEY, "operator": "Exists"}]
