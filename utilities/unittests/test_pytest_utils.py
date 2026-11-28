@@ -1285,13 +1285,13 @@ class TestGetCnvVersionExplorerUrl:
 
     @patch("utilities.pytest_utils.os.environ", {"CNV_VERSION_EXPLORER_URL": "https://version-explorer.com"})
     @patch("utilities.pytest_utils.LOGGER")
-    def test_get_cnv_version_explorer_url_upgrade_custom_eus(self, mock_logger):
-        """Test getting CNV version explorer URL with upgrade_custom=eus"""
+    def test_get_cnv_version_explorer_url_upgrade_custom_ocp(self, mock_logger):
+        """Test getting CNV version explorer URL with upgrade_custom=ocp"""
         mock_config = MagicMock()
         mock_config.getoption.side_effect = lambda option: {
             "install": False,
             "upgrade": None,
-            "upgrade_custom": "eus",
+            "upgrade_custom": "ocp",
         }.get(option, False)
 
         result = get_cnv_version_explorer_url(mock_config)
@@ -1312,7 +1312,11 @@ class TestGetCnvVersionExplorerUrl:
     def test_get_cnv_version_explorer_url_no_relevant_flags(self):
         """Test no action when no relevant flags are set"""
         mock_config = MagicMock()
-        mock_config.getoption.side_effect = lambda option: {"install": False, "upgrade": "regular"}.get(option, False)
+        mock_config.getoption.side_effect = lambda option: {
+            "install": False,
+            "upgrade": "regular",
+            "upgrade_custom": None,
+        }.get(option, False)
 
         result = get_cnv_version_explorer_url(mock_config)
 
