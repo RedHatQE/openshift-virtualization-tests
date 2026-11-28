@@ -21,13 +21,13 @@ DEPRECATED_API_ALERT = "KubeVirtDeprecatedAPIRequested"
 
 
 @pytest.mark.s390x
-@pytest.mark.polarion("CNV-16276")
 @pytest.mark.order("last")
 def test_no_deprecated_api_alert_after_tests(prometheus, session_start_time):
     """
     Test that KubeVirtDeprecatedAPIRequested alert was not triggered during test execution.
 
     Jira: https://redhat.atlassian.net/browse/CNV-80353  # <skip-jira-utils-check>
+    Polarion: CNV-16276
 
     Preconditions:
         - Prometheus is accessible on the cluster

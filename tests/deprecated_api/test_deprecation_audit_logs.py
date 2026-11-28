@@ -105,9 +105,14 @@ def deprecated_apis_calls(audit_logs):
 
 
 @pytest.mark.s390x
-@pytest.mark.polarion("CNV-6679")
 @pytest.mark.order("last")
 def test_deprecated_apis_in_audit_logs(deprecated_apis_calls):
+    """
+    Test that control-plane audit logs contain no calls to deprecated APIs.
+
+    Jira: https://redhat.atlassian.net/browse/CNV-10167 # <skip-jira-utils-check>
+    Polarion: CNV-6679
+    """
     LOGGER.info(f"Test deprecated API calls, max version for deprecation check: {DEPRECATED_API_MAX_VERSION}")
     if deprecated_apis_calls:
         raise DeprecatedAPIError(message=format_printed_deprecations_dict(deprecated_calls=deprecated_apis_calls))
