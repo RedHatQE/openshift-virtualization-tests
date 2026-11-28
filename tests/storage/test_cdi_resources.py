@@ -110,52 +110,42 @@ def data_volume_without_snapshot_capability_scope_function(
     [
         pytest.param(
             Pod,
-            marks=(pytest.mark.polarion("CNV-1034")),
             id="cdi-pods",
         ),
         pytest.param(
             ServiceAccount,
-            marks=(pytest.mark.polarion("CNV-3478")),
             id="cdi-service-accounts",
         ),
         pytest.param(
             Service,
-            marks=(pytest.mark.polarion("CNV-3479")),
             id="cdi-service",
         ),
         pytest.param(
             Deployment,
-            marks=(pytest.mark.polarion("CNV-3480")),
             id="cdi-deployment",
         ),
         pytest.param(
             ReplicaSet,
-            marks=(pytest.mark.polarion("CNV-3481")),
             id="cdi-replicatset",
         ),
         pytest.param(
             CustomResourceDefinition,
-            marks=(pytest.mark.polarion("CNV-3482")),
             id="cdi-crd",
         ),
         pytest.param(
             Role,
-            marks=(pytest.mark.polarion("CNV-3483")),
             id="cdi-role",
         ),
         pytest.param(
             RoleBinding,
-            marks=(pytest.mark.polarion("CNV-3484")),
             id="cdi-role-binding",
         ),
         pytest.param(
             ClusterRole,
-            marks=(pytest.mark.polarion("CNV-3485")),
             id="cdi-cluster-role",
         ),
         pytest.param(
             ClusterRoleBinding,
-            marks=(pytest.mark.polarion("CNV-3486")),
             id="cdi-cluster-role-binding",
         ),
     ],
@@ -163,6 +153,19 @@ def data_volume_without_snapshot_capability_scope_function(
 )
 @pytest.mark.s390x
 def test_verify_pod_cdi_label(cdi_resources_scope_module):
+    """
+    Jira: https://redhat.atlassian.net/browse/KNIP-43 # <skip-jira-utils-check>
+    Polarion: CNV-1034
+    Polarion: CNV-3478
+    Polarion: CNV-3479
+    Polarion: CNV-3480
+    Polarion: CNV-3481
+    Polarion: CNV-3482
+    Polarion: CNV-3483
+    Polarion: CNV-3484
+    Polarion: CNV-3485
+    Polarion: CNV-3486
+    """
     verify_label(cdi_resources=cdi_resources_scope_module)
 
 
@@ -256,57 +259,46 @@ def test_cloner_pods_cdi_label(
     [
         pytest.param(
             Pod,
-            marks=(pytest.mark.polarion("CNV-6907")),
             id="cdi-pods",
         ),
         pytest.param(
             ServiceAccount,
-            marks=(pytest.mark.polarion("CNV-7130")),
             id="cdi-service-accounts",
         ),
         pytest.param(
             Service,
-            marks=(pytest.mark.polarion("CNV-7131")),
             id="cdi-service",
         ),
         pytest.param(
             Deployment,
-            marks=(pytest.mark.polarion("CNV-7132")),
             id="cdi-deployment",
         ),
         pytest.param(
             CustomResourceDefinition,
-            marks=(pytest.mark.polarion("CNV-7134")),
             id="cdi-crd",
         ),
         pytest.param(
             Role,
-            marks=(pytest.mark.polarion("CNV-7138")),
             id="cdi-role",
         ),
         pytest.param(
             RoleBinding,
-            marks=(pytest.mark.polarion("CNV-8971")),
             id="cdi-role-binding",
         ),
         pytest.param(
             ClusterRole,
-            marks=(pytest.mark.polarion("CNV-7139")),
             id="cdi-cluster-role",
         ),
         pytest.param(
             ClusterRoleBinding,
-            marks=(pytest.mark.polarion("CNV-7136")),
             id="cdi-cluster-role-binding",
         ),
         pytest.param(
             ConfigMap,
-            marks=(pytest.mark.polarion("CNV-7137")),
             id="cdi-configmap",
         ),
         pytest.param(
             Secret,
-            marks=(pytest.mark.polarion("CNV-7135")),
             id="cdi-secret",
         ),
     ],
@@ -317,4 +309,18 @@ def test_verify_cdi_res_app_label(
     cdi_resources_scope_module,
     cnv_current_version,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-6112 # <skip-jira-utils-check>
+    Polarion: CNV-6907
+    Polarion: CNV-7130
+    Polarion: CNV-7131
+    Polarion: CNV-7132
+    Polarion: CNV-7134
+    Polarion: CNV-7138
+    Polarion: CNV-8971
+    Polarion: CNV-7139
+    Polarion: CNV-7136
+    Polarion: CNV-7137
+    Polarion: CNV-7135
+    """
     verify_cdi_app_label(cdi_resources=cdi_resources_scope_module, cnv_version=cnv_current_version)
