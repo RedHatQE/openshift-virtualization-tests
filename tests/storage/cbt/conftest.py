@@ -1,8 +1,9 @@
-"""CBT backup fixtures (backup success only)."""
+"""CBT backup fixtures."""
 
 import secrets
 from contextlib import ExitStack
 from logging import getLogger
+from typing import TYPE_CHECKING
 
 import pytest
 from ocp_resources.kubevirt import KubeVirt
@@ -13,6 +14,11 @@ from tests.storage.cbt.constants import (
     CBT_BACKUP_TYPE_FULL,
     CBT_CONCURRENT_VM_COUNT,
     CBT_ENABLED_LABEL,
+)
+from tests.storage.cbt.restore import (
+    read_source_vm_boot_disk_claim,
+    require_vm_deleted,
+    restored_cbt_vm_from_push_backup,
 )
 from tests.storage.cbt.utils import (
     cbt_backup_pvc,
@@ -35,6 +41,17 @@ from tests.storage.cbt.utils import (
     write_incremental_data_for_concurrent_vms,
 )
 from utilities.hco import ResourceEditorValidateHCOReconcile, hco_feature_gates_patch
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from kubernetes.dynamic import DynamicClient
+    from ocp_resources.namespace import Namespace
+    from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
+    from ocp_resources.virtual_machine_backup import VirtualMachineBackup
+
+    from tests.storage.cbt.restore import _RestoredDiskStorageClassProperties
+    from utilities.virt import VirtualMachineForTests
 
 LOGGER = getLogger(name=__name__)
 
@@ -277,6 +294,76 @@ def completed_push_backup_chain(
             wait_for_push_backup_complete(backup=incremental_backup, wait_timeout=backup_wait_timeout)
             backups.append(incremental_backup)
         yield backups
+
+
+@pytest.fixture()
+def source_vm_boot_disk_claim(
+    vm_with_cbt_label: VirtualMachineForTests,
+    completed_push_backup_chain: list[VirtualMachineBackup],
+) -> _RestoredDiskStorageClassProperties:
+    """Storage class, volume mode, and access mode of the source VM boot disk.
+
+    Read while the source VM still exists. The restored disk uses these values.
+    """
+    LOGGER.info(
+        f"Reading boot disk claim for VM {vm_with_cbt_label.name} after backup {completed_push_backup_chain[0].name}"
+    )
+    return read_source_vm_boot_disk_claim(vm=vm_with_cbt_label)
+
+
+@pytest.fixture()
+def deleted_cbt_source_vm(
+    vm_with_cbt_label: VirtualMachineForTests,
+    completed_push_backup_chain: list[VirtualMachineBackup],
+    source_vm_boot_disk_claim: _RestoredDiskStorageClassProperties,
+) -> Generator[VirtualMachineForTests]:
+    """Source VM removed after the push backup, so the restored VM can reuse its name.
+
+    The boot disk claim is read before this fixture deletes the VM.
+
+    Yields:
+        VirtualMachineForTests: The deleted source VM.
+
+    Raises:
+        CbtRestoreError: When the source VM is still present after deletion.
+    """
+    LOGGER.info(
+        f"Deleting source VM {vm_with_cbt_label.name} after push backup {completed_push_backup_chain[0].name}; "
+        f"boot disk volume mode is {source_vm_boot_disk_claim.volume_mode}"
+    )
+    vm_with_cbt_label.clean_up(wait=True)
+    require_vm_deleted(vm=vm_with_cbt_label)
+    yield vm_with_cbt_label
+
+
+@pytest.fixture()
+def restored_vm_from_push_chain(
+    unprivileged_client: DynamicClient,
+    namespace: Namespace,
+    deleted_cbt_source_vm: VirtualMachineForTests,
+    completed_push_backup_chain: list[VirtualMachineBackup],
+    push_backup_pvc: PersistentVolumeClaim,
+    source_vm_boot_disk_claim: _RestoredDiskStorageClassProperties,
+) -> Generator[VirtualMachineForTests]:
+    """Running VM restored from the completed push-mode full backup.
+
+    Push restore assumes a RHEL source VM matching the Linux path of ``cbt_enabled_vm``:
+    ``U1_SMALL``, the RHEL 9 preference, and the RHEL OS flavor.
+
+    Yields:
+        VirtualMachineForTests: Restored RHEL VM.
+    """
+    LOGGER.info(f"Restoring deleted source VM {deleted_cbt_source_vm.name} from the push backup")
+    with restored_cbt_vm_from_push_backup(
+        backups=completed_push_backup_chain,
+        backup_pvc_name=push_backup_pvc.name,
+        storage_class=source_vm_boot_disk_claim.storage_class,
+        volume_mode=source_vm_boot_disk_claim.volume_mode,
+        access_mode=source_vm_boot_disk_claim.access_mode,
+        namespace=namespace.name,
+        client=unprivileged_client,
+    ) as restored_vm:
+        yield restored_vm
 
 
 @pytest.fixture()
