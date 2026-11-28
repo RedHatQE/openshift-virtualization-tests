@@ -1,6 +1,7 @@
 import os
 import sys
 from functools import cache
+from itertools import combinations
 
 from ocp_resources.node import Node
 from pytest_testconfig import config as py_config
@@ -43,6 +44,41 @@ def get_cluster_architecture() -> set[str]:
             "Cluster architecture could not be determined (no nodes found and env var unset)."
         )
     return cluster_archs
+
+
+@cache
+def get_worker_arch_pairs() -> list[tuple[str, str]]:
+    """Return all unique sorted pairs of worker architectures present on worker nodes.
+
+    Reads worker node labels via the cluster API. When no kubeconfig is available
+    (e.g. tox collect-only runs), falls back to the OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH
+    env variable — the same mechanism used by get_cluster_architecture().
+
+    Examples:
+        2-arch cluster (arm64 + s390x)        -> [("arm64", "s390x")]
+        3-arch cluster (amd64 + arm64 + s390x) -> [("amd64", "arm64"),
+                                                    ("amd64", "s390x"),
+                                                    ("arm64", "s390x")]
+
+    Returns:
+        Sorted list of unique (arch_a, arch_b) tuples.
+    """
+    # Lazy import to avoid circular dependency
+    # TODO: remove when/if utilities modules are refactored
+    from utilities.constants.cluster import KUBERNETES_ARCH_LABEL, WORKER_NODE_LABEL_KEY  # noqa: PLC0415
+
+    # Needed for CI collect-only runs without a live cluster
+    if arch_env := os.environ.get("OPENSHIFT_VIRTUALIZATION_TEST_IMAGES_ARCH"):
+        archs = frozenset(arch_env.split(","))
+        return sorted(combinations(sorted(archs), 2))
+
+    nodes: list[Node] = list(Node.get(client=cache_admin_client()))
+    worker_archs = frozenset(
+        node.labels[KUBERNETES_ARCH_LABEL]
+        for node in nodes
+        if node.labels.get(WORKER_NODE_LABEL_KEY) is not None and node.labels.get(KUBERNETES_ARCH_LABEL)
+    )
+    return sorted(combinations(sorted(worker_archs), 2))
 
 
 def get_multiarch_cpu_arch() -> str | None:
