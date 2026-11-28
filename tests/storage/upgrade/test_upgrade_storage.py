@@ -55,7 +55,6 @@ class TestUpgradeStorage:
         run=False,
     )
     @pytest.mark.sno
-    @pytest.mark.polarion("CNV-5993")
     @pytest.mark.order(before=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
     @pytest.mark.dependency(name=f"{STORAGE_NODE_ID_PREFIX}::test_vm_snapshot_restore_before_upgrade")
     def test_vm_snapshot_restore_before_upgrade(
@@ -65,6 +64,10 @@ class TestUpgradeStorage:
         rhel_vm_for_upgrade_a,
         snapshots_for_upgrade_a,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-9264 # <skip-jira-utils-check>
+        Polarion: CNV-5993
+        """
         with VirtualMachineRestore(
             client=admin_client,
             name=f"restore-snapshot-{rhel_vm_for_upgrade_a.name}",
@@ -91,7 +94,6 @@ class TestUpgradeStorage:
             )
 
     @pytest.mark.sno
-    @pytest.mark.polarion("CNV-5995")
     @pytest.mark.order(before=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
     @pytest.mark.dependency(name=f"{STORAGE_NODE_ID_PREFIX}::test_vm_snapshot_created_before_upgrade")
     def test_vm_snapshot_created_before_upgrade(
@@ -99,9 +101,12 @@ class TestUpgradeStorage:
         skip_if_no_storage_class_for_snapshot,
         snapshots_for_upgrade_b,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-9264 # <skip-jira-utils-check>
+        Polarion: CNV-5995
+        """
         assert snapshots_for_upgrade_b.instance.status.readyToUse
 
-    @pytest.mark.polarion("CNV-7258")
     @pytest.mark.order(before=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
     @pytest.mark.dependency(name=f"{STORAGE_NODE_ID_PREFIX}::test_vm_with_hotplug_before_upgrade")
     def test_vm_with_hotplug_before_upgrade(
@@ -112,6 +117,10 @@ class TestUpgradeStorage:
         fedora_vm_for_hotplug_upg,
         hotplug_volume_upg,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-11471 # <skip-jira-utils-check>
+        Polarion: CNV-7258
+        """
         wait_for_vm_volume_ready(vm=fedora_vm_for_hotplug_upg, volume_name=blank_disk_dv_with_default_sc.name)
         assert_disk_serial(vm=fedora_vm_for_hotplug_upg)
         assert_disk_bus(
@@ -124,7 +133,6 @@ class TestUpgradeStorage:
     """ Post-upgrade tests """
 
     @pytest.mark.sno
-    @pytest.mark.polarion("CNV-5994")
     @pytest.mark.order(after=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
     @pytest.mark.dependency(
         name=SNAPSHOT_RESTORE_CHECK_AFTER_UPGRADE_ID,
@@ -138,6 +146,10 @@ class TestUpgradeStorage:
         self,
         rhel_vm_for_upgrade_a,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-9264 # <skip-jira-utils-check>
+        Polarion: CNV-5994
+        """
         running_vm(vm=rhel_vm_for_upgrade_a)
         # Verify first file exists (created before snapshot, should still be there after upgrade)
         run_command_on_vm_and_check_output(
@@ -154,7 +166,6 @@ class TestUpgradeStorage:
         )
 
     @pytest.mark.sno
-    @pytest.mark.polarion("CNV-5996")
     @pytest.mark.order(after=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
     @pytest.mark.dependency(
         name=SNAPSHOT_RESTORE_CREATE_AFTER_UPGRADE,
@@ -167,6 +178,10 @@ class TestUpgradeStorage:
     def test_vm_snapshot_restore_create_after_upgrade(
         self, admin_client, rhel_vm_for_upgrade_b, snapshots_for_upgrade_b
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-9264 # <skip-jira-utils-check>
+        Polarion: CNV-5996
+        """
         with VirtualMachineRestore(
             client=admin_client,
             name=f"restore-snapshot-{rhel_vm_for_upgrade_b.name}",
@@ -194,7 +209,6 @@ class TestUpgradeStorage:
                 expected_result="file not found",
             )
 
-    @pytest.mark.polarion("CNV-5310")
     @pytest.mark.order(after=IUO_UPGRADE_TEST_ORDERING_NODE_ID)
     @pytest.mark.dependency(
         name=HOTPLUG_VM_AFTER_UPGRADE_NODE_ID,
@@ -211,6 +225,10 @@ class TestUpgradeStorage:
         blank_disk_dv_with_default_sc: DataVolume,
         fedora_vm_for_hotplug_upg: VirtualMachineForTests,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/CNV-11471 # <skip-jira-utils-check>
+        Polarion: CNV-5310
+        """
         wait_for_vm_volume_ready(vm=fedora_vm_for_hotplug_upg, volume_name=blank_disk_dv_with_default_sc.name)
         assert_disk_serial(vm=fedora_vm_for_hotplug_upg)
         assert_disk_bus(
