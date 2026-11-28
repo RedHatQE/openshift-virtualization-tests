@@ -1,25 +1,33 @@
 import shlex
 
+from kubernetes.dynamic.exceptions import NotFoundError
 from ocp_resources.data_source import DataSource
 from ocp_resources.datavolume import DataVolume
 from ocp_resources.multi_namespace_virtual_machine_storage_migration import MultiNamespaceVirtualMachineStorageMigration
 from ocp_resources.persistent_volume_claim import PersistentVolumeClaim
 from ocp_resources.virtual_machine_cluster_instancetype import VirtualMachineClusterInstancetype
 from ocp_resources.virtual_machine_cluster_preference import VirtualMachineClusterPreference
+from pyhelper_utils.exceptions import CommandExecFailed
 from pyhelper_utils.shell import run_ssh_commands
 from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 from tests.storage.storage_migration.constants import (
     CONTENT,
     FILE_BEFORE_STORAGE_MIGRATION,
+    HOTPLUGGED_DEVICES,
     MOUNT_HOTPLUGGED_DEVICE_PATHS,
+    STORAGE_MIGRATION_IN_PROGRESS_PHASE,
 )
-from tests.storage.utils import check_file_in_vm
 from utilities.constants.images import OS_FLAVOR_FEDORA
 from utilities.constants.instance_types import U1_SMALL
 from utilities.constants.timeouts import TIMEOUT_2MIN, TIMEOUT_5SEC, TIMEOUT_10MIN, TIMEOUT_10SEC
 from utilities.exceptions import StorageMigrationError
-from utilities.storage import data_volume_template_with_source_ref_dict
+from utilities.storage import (
+    data_volume_template_with_source_ref_dict,
+    run_command_on_vm_and_check_output,
+    wait_for_vm_volume_ready,
+    write_file_via_ssh,
+)
 from utilities.virt import VirtualMachineForTests, get_vm_boot_time, running_vm
 
 
@@ -97,6 +105,66 @@ def verify_vm_storage_class_updated(vm: VirtualMachineForTests, target_storage_c
     )
 
 
+def verify_file_exists_in_vm(vm: VirtualMachineForTests, file_name: str) -> None:
+    """Verify that a file exists in the VM's guest filesystem, checked over SSH.
+
+    Uses the ``test -f`` exit status rather than command output, so the check only asserts
+    that the file is present on the source disk.
+
+    Args:
+        vm: VM to check the file in.
+        file_name: Name or path of the file, relative to the SSH user's home directory.
+
+    Raises:
+        AssertionError: If the file does not exist in the VM.
+    """
+    try:
+        run_ssh_commands(
+            host=vm.ssh_exec,
+            commands=shlex.split(f"test -f {shlex.quote(file_name)}"),
+            wait_timeout=TIMEOUT_2MIN,
+            sleep=TIMEOUT_5SEC,
+        )
+    except CommandExecFailed as error:
+        raise AssertionError(f"File '{file_name}' does not exist in VM {vm.name} after writing it") from error
+
+
+def verify_file_content_in_vm(vm: VirtualMachineForTests, file_name: str, file_content: str) -> None:
+    """Verify that a file in the VM has the expected content, read over SSH.
+
+    Reads the file through the VM's SSH connection instead of the serial console, so the check
+    is deterministic and independent of console prompt timing.
+
+    Args:
+        vm: VM to read the file from.
+        file_name: Name or path of the file, relative to the SSH user's home directory.
+        file_content: Expected file content.
+
+    Raises:
+        AssertionError: If the file content does not match ``file_content``.
+    """
+    run_command_on_vm_and_check_output(vm=vm, command=f"cat {shlex.quote(file_name)}", expected_result=file_content)
+
+
+def write_file_to_vm_via_ssh(vm: VirtualMachineForTests, file_name: str, file_content: str) -> None:
+    """Write content to a file in the VM over SSH, then verify the file exists on disk.
+
+    Writing over SSH (instead of the serial console) avoids console prompt timing issues, and
+    checking existence confirms the data actually reached the source disk before the VM is stopped
+    for migration.
+
+    Args:
+        vm: Running VM to write the file to.
+        file_name: Name or path of the file, relative to the SSH user's home directory.
+        file_content: Content to write to the file.
+
+    Raises:
+        AssertionError: If the file does not exist in the VM after writing.
+    """
+    write_file_via_ssh(vm=vm, filename=file_name, content=file_content)
+    verify_file_exists_in_vm(vm=vm, file_name=file_name)
+
+
 def verify_storage_migration_succeeded(
     vms_boot_time_before_storage_migration: dict[str, str],
     online_vms_for_storage_class_migration: list[VirtualMachineForTests],
@@ -107,7 +175,7 @@ def verify_storage_migration_succeeded(
         vm_list=online_vms_for_storage_class_migration, initial_boot_time=vms_boot_time_before_storage_migration
     )
     for vm in vms_with_written_file_before_migration:
-        check_file_in_vm(
+        verify_file_content_in_vm(
             vm=vm,
             file_name=FILE_BEFORE_STORAGE_MIGRATION,
             file_content=CONTENT,
@@ -187,6 +255,34 @@ def get_vm_dv_names(vm: VirtualMachineForTests) -> list[str]:
     ]
 
 
+def get_vm_volume_node(vm: VirtualMachineForTests) -> str | None:
+    """Return the node hosting the VM's first data volume.
+
+    Reads the ``volume.kubernetes.io/selected-node`` annotation of the PVC backing the VM's
+    first DataVolume. Only node-local provisioners (e.g. HPP / hostpath-csi) set this annotation;
+    it is ``None`` for storage that is not bound to a specific node.
+
+    Args:
+        vm: VM whose first data volume's node is returned.
+
+    Returns:
+        The node name hosting the volume, or ``None`` when the PVC has no selected-node annotation.
+
+    Raises:
+        StorageMigrationError: If the VM references no DataVolume, or its backing PVC does not exist.
+    """
+    dv_names = get_vm_dv_names(vm=vm)
+    if not dv_names:
+        raise StorageMigrationError(f"VM {vm.name} references no DataVolume to resolve a volume node from")
+    pvc_name = dv_names[0]
+    try:
+        return PersistentVolumeClaim(client=vm.client, namespace=vm.namespace, name=pvc_name).selected_node
+    except NotFoundError as error:
+        raise StorageMigrationError(
+            f"PVC {pvc_name} backing VM {vm.name} was not found while resolving its volume node"
+        ) from error
+
+
 def verify_source_dvs_deleted(vm: VirtualMachineForTests, source_dv_names: list[str]) -> None:
     """Verify that source DataVolumes are deleted after migration.
 
@@ -249,3 +345,181 @@ def build_namespaces_spec_for_storage_migration(
         })
 
     return [{"name": ns_name, "virtualMachines": vms} for ns_name, vms in namespaces_dict.items()]
+
+
+def build_namespaces_spec_with_target_volume_mode(
+    vms: list[VirtualMachineForTests], target_storage_class: str, target_volume_mode: str
+) -> list[dict]:
+    """Build the migration plan namespaces spec with an explicit target volume mode for every PVC.
+
+    Args:
+        vms: VMs to include in the migration plan.
+        target_storage_class: Target storage class for the migration.
+        target_volume_mode: Volume mode of the destination PVCs ("Block" or "Filesystem").
+
+    Returns:
+        Namespaces spec for MultiNamespaceVirtualMachineStorageMigrationPlan.
+    """
+    namespaces_spec = build_namespaces_spec_for_storage_migration(vms=vms, target_storage_class=target_storage_class)
+    for namespace_entry in namespaces_spec:
+        for vm_entry in namespace_entry["virtualMachines"]:
+            for target_pvc in vm_entry["targetMigrationPVCs"]:
+                target_pvc["destinationPVC"]["volumeMode"] = target_volume_mode
+    return namespaces_spec
+
+
+def wait_for_storage_migration_in_progress(
+    mig_migration: MultiNamespaceVirtualMachineStorageMigration, timeout: int = TIMEOUT_10MIN
+) -> None:
+    """Wait until all namespaces in the migration are actively migrating VM volumes.
+
+    Args:
+        mig_migration: Migration resource to monitor.
+        timeout: Maximum wait time in seconds.
+
+    Raises:
+        StorageMigrationError: If the migration completes before it is observed in progress,
+            or does not reach the in-progress phase within timeout.
+    """
+    last_sample = None
+    samples = TimeoutSampler(
+        wait_timeout=timeout,
+        sleep=TIMEOUT_5SEC,
+        func=lambda: mig_migration.instance.status,
+    )
+    try:
+        for sample in samples:
+            last_sample = sample
+            if sample and sample.namespaces:
+                phases = {namespace.get("phase") for namespace in sample.namespaces}
+                if phases == {STORAGE_MIGRATION_IN_PROGRESS_PHASE}:
+                    return
+                if mig_migration.Status.COMPLETED in phases:
+                    raise StorageMigrationError(
+                        f"Storage migration '{mig_migration.name}' completed before it was observed in progress. "
+                        f"Status: {sample}"
+                    )
+    except TimeoutExpiredError as err:
+        raise StorageMigrationError(
+            f"Timeout waiting for storage migration '{mig_migration.name}' to reach phase "
+            f"'{STORAGE_MIGRATION_IN_PROGRESS_PHASE}'. Last status sample: {last_sample}"
+        ) from err
+
+
+def verify_vm_pvcs_volume_mode(vm: VirtualMachineForTests, volume_mode: str) -> None:
+    """Verify that all PVCs referenced by the VM use the expected volume mode.
+
+    Args:
+        vm: VM whose PVCs are checked.
+        volume_mode: Expected PVC volume mode.
+    """
+    mismatched_pvcs = {}
+    for pvc_name in get_vm_dv_names(vm=vm):
+        pvc_volume_mode = PersistentVolumeClaim(
+            client=vm.client, namespace=vm.namespace, name=pvc_name
+        ).instance.spec.volumeMode
+        if pvc_volume_mode != volume_mode:
+            mismatched_pvcs[pvc_name] = pvc_volume_mode
+    assert not mismatched_pvcs, f"PVC volume mode does not match expected '{volume_mode}': {mismatched_pvcs}"
+
+
+def verify_vm_dv_names_unchanged(vm: VirtualMachineForTests, expected_dv_names: list[str]) -> None:
+    """Verify that the VM still references its original DataVolumes.
+
+    Args:
+        vm: VM to check.
+        expected_dv_names: DataVolume names the VM referenced before migration.
+    """
+    current_dv_names = get_vm_dv_names(vm=vm)
+    assert sorted(current_dv_names) == sorted(expected_dv_names), (
+        f"VM {vm.name} disk references changed. Expected: {expected_dv_names}, current: {current_dv_names}"
+    )
+
+
+def verify_vm_dv_names_changed(vm: VirtualMachineForTests, original_dv_names: list[str]) -> None:
+    """Verify that the VM references new DataVolumes after migration.
+
+    Args:
+        vm: VM to check.
+        original_dv_names: DataVolume names the VM referenced before migration.
+    """
+    current_dv_names = get_vm_dv_names(vm=vm)
+    assert sorted(current_dv_names) != sorted(original_dv_names), (
+        f"VM {vm.name} disk references did not change after migration; still referencing: {current_dv_names}"
+    )
+
+
+def verify_vm_pending_until_storage_migration_completed(
+    vm: VirtualMachineForTests,
+    mig_migration: MultiNamespaceVirtualMachineStorageMigration,
+    timeout: int = TIMEOUT_10MIN,
+) -> None:
+    """Verify that a VM started during migration does not become ready before its volumes are migrated.
+
+    The VM is sampled until the migration completes. The VM must be observed not ready at least
+    once, and it must never be ready while any of its DataVolumes has not succeeded.
+
+    Args:
+        vm: VM that was started while the migration was in progress.
+        mig_migration: Migration resource to monitor.
+        timeout: Maximum wait time in seconds for the migration to complete.
+
+    Raises:
+        StorageMigrationError: If the migration does not complete within timeout.
+    """
+    observed_vm_not_ready = False
+    last_sample = None
+    samples = TimeoutSampler(
+        wait_timeout=timeout,
+        sleep=TIMEOUT_5SEC,
+        func=lambda: mig_migration.instance.status,
+    )
+    try:
+        for sample in samples:
+            last_sample = sample
+            # Record the not-ready observation before the completion check: the migration can
+            # complete between the in-progress wait and the VM start, and the freshly started VM
+            # must still count as observed not ready before the loop exits.
+            vm_is_ready = vm.ready
+            if not vm_is_ready:
+                observed_vm_not_ready = True
+            if (
+                sample
+                and sample.namespaces
+                and all(namespace.get("phase") == mig_migration.Status.COMPLETED for namespace in sample.namespaces)
+            ):
+                break
+            if not vm_is_ready:
+                continue
+            not_succeeded_dvs = {}
+            for dv_name in get_vm_dv_names(vm=vm):
+                dv_phase = DataVolume(client=vm.client, namespace=vm.namespace, name=dv_name).instance.status.phase
+                if dv_phase != DataVolume.Status.SUCCEEDED:
+                    not_succeeded_dvs[dv_name] = dv_phase
+            assert not not_succeeded_dvs, (
+                f"VM {vm.name} became ready before its volumes were migrated. DataVolume phases: {not_succeeded_dvs}"
+            )
+    except TimeoutExpiredError as err:
+        raise StorageMigrationError(
+            f"Timeout waiting for storage migration '{mig_migration.name}' to complete. "
+            f"Last status sample: {last_sample}"
+        ) from err
+    assert observed_vm_not_ready, f"VM {vm.name} was never observed in a pending state during storage migration"
+
+
+def mount_hotplugged_disks(vm: VirtualMachineForTests, hotplug_volume_names: list[str]) -> None:
+    """Mount already formatted hotplugged disks in a VM, e.g. after the VM was restarted.
+
+    Args:
+        vm: Running VM with the hotplugged disks attached.
+        hotplug_volume_names: VM volume names of the hotplugged disks.
+    """
+    for volume_name in hotplug_volume_names:
+        wait_for_vm_volume_ready(vm=vm, volume_name=volume_name)
+    for device, mount_path in zip(HOTPLUGGED_DEVICES, MOUNT_HOTPLUGGED_DEVICE_PATHS, strict=True):
+        run_ssh_commands(
+            host=vm.ssh_exec,
+            commands=[shlex.split(cmd) for cmd in [f"sudo mkdir -p {mount_path}", f"sudo mount {device} {mount_path}"]],
+            wait_timeout=TIMEOUT_2MIN,
+            sleep=TIMEOUT_5SEC,
+        )
