@@ -45,7 +45,6 @@ pytestmark = [
                 "interval": TIMEOUT_5SEC,
                 "max_duration": TIMEOUT_5MIN,
             },
-            marks=pytest.mark.polarion("CNV-5455"),
             id="openshift-apiserver",
         ),
         pytest.param(
@@ -57,7 +56,6 @@ pytestmark = [
                 "interval": TIMEOUT_30SEC,
                 "max_duration": TIMEOUT_2MIN,
             },
-            marks=pytest.mark.polarion("CNV-5454"),
             id="virt_launcher",
         ),
     ],
@@ -70,6 +68,10 @@ def test_pod_delete_migration(
     admin_client,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-8326 # <skip-jira-utils-check>
+    Polarion: CNV-5455
+    Polarion: CNV-5454
+
     This experiment tests the robustness of the cluster
     by killing random function supported pods in their corresponding namespaces
     while a VM is being migrated and asserting that a given running VMI
@@ -97,7 +99,6 @@ def test_pod_delete_migration(
                 "background_command": f"{STRESS_NG}  --io 5 -t 120s",
                 "process_name": STRESS_NG,
             },
-            marks=pytest.mark.polarion("CNV-7302"),
             id="io-stress",
         ),
         pytest.param(
@@ -106,7 +107,6 @@ def test_pod_delete_migration(
                 "background_command": f"{STRESS_NG} --cpu 6 -t 120s",
                 "process_name": STRESS_NG,
             },
-            marks=pytest.mark.polarion("CNV-7344"),
             id="cpu-stress",
         ),
     ],
@@ -122,6 +122,10 @@ def test_stress_migration_target_node(
     tainted_node_for_vm_nginx_migration,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-8326 # <skip-jira-utils-check>
+    Polarion: CNV-7302
+    Polarion: CNV-7344
+
     This experiment generates I/O load on the target node of a VM migration. The expected result is for the VM to
     eventually be successfully migrated.
     """
@@ -151,7 +155,6 @@ def test_stress_migration_target_node(
                 "interval": TIMEOUT_5SEC,
                 "max_duration": TIMEOUT_5MIN,
             },
-            marks=pytest.mark.polarion("CNV-7257"),
             id="rook-ceph-operator",
         ),
         pytest.param(
@@ -164,7 +167,6 @@ def test_stress_migration_target_node(
                 "interval": TIMEOUT_5SEC,
                 "max_duration": TIMEOUT_5MIN,
             },
-            marks=pytest.mark.polarion("CNV-7754"),
             id="ocs-operator",
         ),
         pytest.param(
@@ -177,7 +179,6 @@ def test_stress_migration_target_node(
                 "interval": TIMEOUT_5SEC,
                 "max_duration": TIMEOUT_3MIN,
             },
-            marks=pytest.mark.polarion("CNV-7250"),
             id="rook-ceph-osd",
         ),
     ],
@@ -190,6 +191,11 @@ def test_pod_delete_storage_migration(
     tainted_node_for_vm_chaos_rhel9_with_dv_migration,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-8326 # <skip-jira-utils-check>
+    Polarion: CNV-7257
+    Polarion: CNV-7754
+    Polarion: CNV-7250
+
     This scenario verifies that the migration of a vm with a dv
     is completed while we disrupt different storage resources
     """
@@ -210,7 +216,6 @@ def test_pod_delete_storage_migration(
                 "background_command": f"{STRESS_NG}  --io 5 -t 120s",
                 "process_name": STRESS_NG,
             },
-            marks=pytest.mark.polarion("CNV-7251"),
             id="io-stress",
         ),
         pytest.param(
@@ -219,7 +224,6 @@ def test_pod_delete_storage_migration(
                 "background_command": f"{STRESS_NG} --cpu 6 -t 120s",
                 "process_name": STRESS_NG,
             },
-            marks=pytest.mark.polarion("CNV-7345"),
             id="cpu-stress",
         ),
     ],
@@ -234,6 +238,10 @@ def test_stress_migration_source_node(
     tainted_node_for_vm_nginx_migration,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-8326 # <skip-jira-utils-check>
+    Polarion: CNV-7251
+    Polarion: CNV-7345
+
     This experiment generates I/O load on the source node of a VM migration. The expected result is for the VM to
     eventually be successfully migrated.
     """
@@ -255,7 +263,6 @@ def test_stress_migration_source_node(
 )
 @pytest.mark.s390x
 @pytest.mark.gpfs
-@pytest.mark.polarion("CNV-6120")
 def test_migration_reboot_source_node(
     chaos_migration_policy,
     vm_with_nginx_service,
@@ -263,6 +270,9 @@ def test_migration_reboot_source_node(
     rebooted_source_node,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-8326 # <skip-jira-utils-check>
+    Polarion: CNV-6120
+
     This experiment restarts the source node during the VM migration.
     'bandwidthPerMigration' is for prolonging the duration of migration.
     The expected result is for the VM to eventually be successfully migrated.
@@ -280,7 +290,6 @@ def test_migration_reboot_source_node(
     run=False,
 )
 @pytest.mark.gpfs
-@pytest.mark.polarion("CNV-5456")
 def test_migration_reboot_target_node(
     chaos_migration_policy,
     labeled_source_node,
@@ -290,6 +299,9 @@ def test_migration_reboot_target_node(
     rebooted_target_node,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-8326 # <skip-jira-utils-check>
+    Polarion: CNV-5456
+
     This experiment restarts the target node during the VM migration.
     'bandwidthPerMigration' is for prolonging the duration of migration.
     The expected result is for the VM to eventually be successfully migrated.

@@ -18,7 +18,6 @@ LOGGER = logging.getLogger(__name__)
                 "vm_name": "vm-node-reboot-12011",
                 "rhel_image": RHEL_LATEST.get("image_name"),
             },
-            marks=pytest.mark.polarion("CNV-12011"),
         ),
     ],
     indirect=True,
@@ -28,6 +27,9 @@ def test_reboot_vm_node_during_backup(
     rebooted_vm_source_node,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-39546 # <skip-jira-utils-check>
+    Polarion: CNV-12011
+
     Reboot the worker node where the VM is located during OADP backup using DataMover.
     Validate that backup eventually PartiallyFailed.
     """
@@ -51,7 +53,6 @@ def test_reboot_vm_node_during_backup(
                 "vm_name": "vm-node-drain-12020",
                 "rhel_image": RHEL_LATEST.get("image_name"),
             },
-            marks=pytest.mark.polarion("CNV-12020"),
         ),
     ],
     indirect=True,
@@ -61,6 +62,9 @@ def test_drain_vm_node_during_backup(
     drain_vm_source_node,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-39546 # <skip-jira-utils-check>
+    Polarion: CNV-12020
+
     Drain the worker node where the VM is located during OADP backup using DataMover.
     Validate that backup eventually Completed.
     """
@@ -85,7 +89,6 @@ def test_drain_vm_node_during_backup(
                 "max_duration": 180,
             },
             "Completed",
-            marks=pytest.mark.polarion("CNV-12024"),
             id="openshift-adp-controller-manager",
         ),
         pytest.param(
@@ -97,7 +100,6 @@ def test_drain_vm_node_during_backup(
                 "max_duration": 300,
             },
             "Failed",
-            marks=pytest.mark.polarion("CNV-12026"),
             id="velero",
         ),
         pytest.param(
@@ -109,7 +111,6 @@ def test_drain_vm_node_during_backup(
                 "max_duration": 180,
             },
             "PartiallyFailed",
-            marks=pytest.mark.polarion("CNV-12022"),
             id="node-agent",
         ),
     ],
@@ -122,6 +123,11 @@ def test_delete_pods_during_backup(
     expected_status,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-39546 # <skip-jira-utils-check>
+    Polarion: CNV-12024
+    Polarion: CNV-12026
+    Polarion: CNV-12022
+
     This test verifies OADP Backup resilience under control-plane disruptions.
 
     Test flow:

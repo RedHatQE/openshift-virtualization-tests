@@ -36,7 +36,6 @@ pytestmark = [
                 "max_duration": TIMEOUT_5MIN,
             },
             {"number_of_snapshots": 3},
-            marks=pytest.mark.polarion("CNV-8260"),
             id="openshift-apiserver",
         ),
         pytest.param(
@@ -49,7 +48,6 @@ pytestmark = [
                 "max_duration": TIMEOUT_5MIN,
             },
             {"number_of_snapshots": 3},
-            marks=pytest.mark.polarion("CNV-8382"),
             id="snapshot-controller",
         ),
         pytest.param(
@@ -62,7 +60,6 @@ pytestmark = [
                 "max_duration": TIMEOUT_5MIN,
             },
             {"number_of_snapshots": 3},
-            marks=pytest.mark.polarion("CNV-8534"),
             id="cnv-control-plane-virt-api",
         ),
         pytest.param(
@@ -75,7 +72,6 @@ pytestmark = [
                 "max_duration": TIMEOUT_5MIN,
             },
             {"number_of_snapshots": 3},
-            marks=pytest.mark.polarion("CNV-8930"),
             id="rook-ceph-osd",
         ),
         pytest.param(
@@ -88,7 +84,6 @@ pytestmark = [
                 "max_duration": TIMEOUT_5MIN,
             },
             {"number_of_snapshots": 3},
-            marks=pytest.mark.polarion("CNV-8750"),
             id="csi-driver",
         ),
     ],
@@ -101,6 +96,14 @@ def test_pod_delete_snapshot(
     chaos_online_snapshots,
 ):
     """
+    Jira: https://redhat.atlassian.net/browse/CNV-6050 # <skip-jira-utils-check>
+    Jira: https://redhat.atlassian.net/browse/CNV-15927 # <skip-jira-utils-check>
+    Polarion: CNV-8260
+    Polarion: CNV-8382
+    Polarion: CNV-8534
+    Polarion: CNV-8930
+    Polarion: CNV-8750
+
     This experiment tests the robustness of the VM snapshot feature
     by killing random function supported pods in their corresponding namespace
     and asserting that VM snapshots can be taken, restored and deleted during the process.
