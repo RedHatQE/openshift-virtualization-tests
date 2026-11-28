@@ -91,8 +91,11 @@ def uploaded_cirros_dv(
         yield DataVolume(name=dv_name, namespace=namespace.name, client=namespace.client)
 
 
-@pytest.mark.polarion("CNV-8635")
 def test_import_vm_with_specify_fs_overhead(admin_client, updated_fs_overhead_20_with_hco, vm_for_fs_overhead_test):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-18002 # <skip-jira-utils-check>
+    Polarion: CNV-8635
+    """
     vm_metadata = vm_for_fs_overhead_test.data_volume_template["metadata"]
     assert_fs_overhead_added(
         actual_size=get_pvc_size_gib(
@@ -108,11 +111,14 @@ def test_import_vm_with_specify_fs_overhead(admin_client, updated_fs_overhead_20
     )
 
 
-@pytest.mark.polarion("CNV-8637")
 def test_upload_dv_with_specify_fs_overhead(
     updated_fs_overhead_20_with_hco,
     uploaded_cirros_dv,
 ):
+    """
+    Jira: https://redhat.atlassian.net/browse/CNV-18002 # <skip-jira-utils-check>
+    Polarion: CNV-8637
+    """
     assert_fs_overhead_added(
         actual_size=get_pvc_size_gib(pvc=uploaded_cirros_dv.pvc),
         requested_size=bitmath.GiB(int(bitmath.parse_string_unsafe(Images.Cirros.DEFAULT_DV_SIZE).value)),
