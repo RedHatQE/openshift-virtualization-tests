@@ -355,6 +355,16 @@ This is a test suite - internal APIs have NO backward compatibility requirements
   - `##### Special notes for reviewer:` — must be present (may be empty)
   - `##### jira-ticket:` — must be present (may be empty)
 
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:8cda819f727c184b9399b23f22dd9919d2c2ab8f7632343bb8d4dd351eda95e5 -->
+
+### Test Execution Plans
+
+- When an informational test execution plan is needed for a request from `openshift-virtualization-qe-bot-3` and changes affect session or collection fixtures, pytest hooks, or runtime behavior that unit tests mock, include lightweight real-cluster pytest commands and expected results for both the error/fix path and the happy-path regression.
+
+<!-- /coderabbit-ai-generated:v1 -->
+
 ### Utilities Unit Test Requirements
 
 Changes under `utilities/` require matching unit test coverage unless an exception below applies. If you add a function, add its tests. If you change behavior, update the assertions. Do not treat a passing `utilities-unittests` as proof of coverage — it only runs existing tests. Missing test coverage for new or modified utility code is a defect.
