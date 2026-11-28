@@ -177,9 +177,9 @@ class BaseVirtualMachine(VirtualMachine):
             data=yaml.safe_load(volumes[CLOUD_INIT_DISK_NAME].cloudInitNoCloud.networkData),
         )
 
-    def add_cloud_init(self, netdata: cloudinit.NetworkData) -> None:
+    def add_cloud_init(self, netdata: cloudinit.NetworkData, runcmd: list[str] | None = None) -> None:
         # Prevents cloud-init from overriding the default OS user credentials
-        userdata = cloudinit.UserData(users=[])
+        userdata = cloudinit.UserData(users=[], runcmd=runcmd)
         disk, volume = cloudinitdisk_storage(
             data=CloudInitNoCloud(
                 networkData=cloudinit.asyaml(no_cloud=netdata),
