@@ -385,12 +385,15 @@ def all_vms_objects(scale_vms):
 
 class TestScale:
     @pytest.mark.dependency(name="test_create_vms")
-    @pytest.mark.polarion("CNV-8447")
     def test_create_vms(
         self,
         fail_if_param_vms_zero,
         scale_vms,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-301 # <skip-jira-utils-check>
+        Polarion: CNV-8447
+        """
         log_nodes_load_data()
         for batch in scale_vms:
             for vm in batch:
@@ -400,8 +403,11 @@ class TestScale:
         name="test_start_vms",
         depends=["test_create_vms"],
     )
-    @pytest.mark.polarion("CNV-8448")
     def test_start_vms(self, scale_test_param, scale_vms, all_vms_objects, must_gather_image_url):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-301 # <skip-jira-utils-check>
+        Polarion: CNV-8448
+        """
         for batch in scale_vms:
             for vm in batch:
                 if vm.instance.spec.runStrategy == vm.RunStrategy.ALWAYS:
@@ -422,13 +428,16 @@ class TestScale:
 
     # TODO check the os internally to see if it didn't reboot
     @pytest.mark.dependency(name="test_scale_vms_running_stability", depends=["test_start_vms"])
-    @pytest.mark.polarion("CNV-8449")
     def test_scale_vms_running_stability(
         self,
         scale_test_param,
         all_vms_objects,
         must_gather_image_url,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-301 # <skip-jira-utils-check>
+        Polarion: CNV-8449
+        """
         log_nodes_load_data(vms=all_vms_objects)
         LOGGER.info("Verifying all VMS are running")
         try:
@@ -449,13 +458,16 @@ class TestScale:
             return
 
     @pytest.mark.dependency(depends=["test_scale_vms_running_stability"])
-    @pytest.mark.polarion("CNV-8993")
     def test_mass_vm_live_migration(
         self,
         skip_if_not_run_live_migration,
         scale_vms,
         vm_migration_info,
     ):
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-301 # <skip-jira-utils-check>
+        Polarion: CNV-8993
+        """
         for batch in scale_vms:
             for vm in batch:
                 wait_for_migration_finished(
@@ -467,7 +479,6 @@ class TestScale:
                 )
 
     @pytest.mark.order(after="test_scale_vms_running_stability")
-    @pytest.mark.polarion("CNV-8883")
     def test_delete_resources(
         self,
         skip_if_keep_resources,
@@ -477,5 +488,10 @@ class TestScale:
         scale_vms,
         all_vms_objects,
     ):
-        # TODO record time for the deletion of VMs and the cloned DVs
+        """
+        Jira: https://redhat.atlassian.net/browse/KNIP-301 # <skip-jira-utils-check>
+        Polarion: CNV-8883
+
+        TODO record time for the deletion of VMs and the cloned DVs
+        """
         delete_resources(resources=list(data_sources.values()) + golden_images_scale_dvs + all_vms_objects)
